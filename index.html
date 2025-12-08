@@ -120,7 +120,7 @@
                         // Voor nu heeft het formulier geen echte backend-koppeling. //
                         // "action" en "method" kun je later koppelen aan een formulierenservice. //
                     -->
-                    <form class="form" method="post">
+                    <form class="form" method="post" data-netlify="true" name="installateur">
                         <label>
                             <span>Bedrijfsnaam</span>
                             <input type="text" name="bedrijf" required>
@@ -154,6 +154,7 @@
                             <span>Opmerkingen / vragen</span>
                             <textarea name="opmerkingen" rows="3"></textarea>
                         </label>
+                        <input type="hidden" name="form-name" value="installateur">
                         <button type="submit" class="btn primary full-width">Aanmelden als installateur</button>
                         <p class="form-note">
                             We nemen contact met je op om je bedrijfsgegevens kort te verifiëren. 
@@ -208,7 +209,7 @@
                         // Ook dit formulier heeft nu nog geen backend-koppeling. //
                         // Later kun je dit koppelen aan e-mail / database. //
                     -->
-                    <form class="form" method="post">
+                    <form class="form" method="post" data-netlify="true" name="evrijder">
                         <label>
                             <span>Naam</span>
                             <input type="text" name="naam" required>
@@ -251,6 +252,7 @@
                             <input type="checkbox" name="akkoord" required>
                             <span>Ik begrijp dat dit geen garantie is op ERE’s of vergoedingen.</span>
                         </label>
+                        <input type="hidden" name="form-name" value="evrijder">
                         <button type="submit" class="btn primary full-width">Voorinschrijven</button>
                         <p class="form-note">
                             We gebruiken je gegevens alleen om je te informeren over de voortgang van Savri 
@@ -337,7 +339,7 @@
             <div class="column">
                 <div class="card">
                     <h3>Stel je vraag</h3>
-                    <form class="form" method="post">
+                    <form class="form" method="post" data-netlify="true" name="contact">
                         <label>
                             <span>Naam</span>
                             <input type="text" name="naam" required>
@@ -359,6 +361,7 @@
                             <span>Bericht</span>
                             <textarea name="bericht" rows="4" required></textarea>
                         </label>
+                        <input type="hidden" name="form-name" value="contact">
                         <button type="submit" class="btn secondary full-width">Verstuur</button>
                     </form>
                 </div>
