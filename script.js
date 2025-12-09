@@ -42,18 +42,33 @@ document.addEventListener("DOMContentLoaded", function () {
 
 // ========= Formulier handlers koppelen na het laden van de pagina =========
 document.addEventListener("DOMContentLoaded", () => {
-  // Formulier voor EV-rijders (directe leads)
+
+  // === Check of er ?ref=... in de URL staat ===
+  const params = new URLSearchParams(window.location.search);
+  const refCode = params.get("ref");
+
+  // === EV-rijder formulier koppelen ===
   const evForm = document.querySelector('form[name="evrijder"]');
   if (evForm) {
+
+    // Hidden installer_ref vullen
+    if (refCode) {
+      const refInput = evForm.querySelector('input[name="installer_ref"]');
+      if (refInput) {
+        refInput.value = refCode;
+      }
+    }
+
     evForm.addEventListener("submit", handleEvFormSubmit);
   }
 
-  // Formulier voor installateurs die een klant aanleveren
+  // === Installateur-form koppelen ===
   const installateurForm = document.querySelector('form[name="installateur"]');
   if (installateurForm) {
     installateurForm.addEventListener("submit", handleInstallateurFormSubmit);
   }
 });
+
 
 // ========= Validatie helpers =========
 
@@ -98,9 +113,10 @@ async function handleEvFormSubmit(event) {
   const address = form.querySelector('input[name="adres"]')?.value.trim();
   const laadpaalStatus = form.querySelector('select[name="laadpaal_status"]')?.value;
   const eigenTerrein = form.querySelector('select[name="eigen_terrein"]')?.value;
-  const installerName = form.querySelector('input[name="installateur"]')?.value.trim();
   const annualKwhStr = form.querySelector('input[name="kwh_per_jaar"]')?.value.trim(); // nieuw veld in HTML
   const akkoord = form.querySelector('input[name="akkoord"]')?.checked;
+  const installerRef = form.querySelector('input[name="installer_ref"]')?.value.trim();
+
 
   // // Basis sanity checks. //
   if (!fullName || !email || !akkoord) {
@@ -218,7 +234,7 @@ async function handleInstallateurFormSubmit(event) {
     eigenTerrein === "ja" ? true : eigenTerrein === "nee" ? false : null;
 
   const payload = {
-    source: "via_installateur",
+    source: "ev_direct",
     lead_type: "ev_user",
     full_name: fullName,
     email,
@@ -226,14 +242,16 @@ async function handleInstallateurFormSubmit(event) {
     address,
     own_premises: ownPremises,
     has_charger: hasCharger,
-    annual_kwh_estimate: null,   // kun je later toevoegen als veld
-    installer_name: installerName || null,
-    installer_company: installerCompany || null,
-    installer_email: installerEmail || null,
-    installer_phone: installerPhone || null,
+    annual_kwh_estimate: annualKwh,
+    installer_ref: installerRef || null,
+    installer_name: null,
+    installer_company: null,
+    installer_email: null,
+    installer_phone: null,
     consent_terms: !!akkoord,
-    notes: notes || null
-  };
+    notes: null
+ };
+
 
   const { error } = await supabaseClient.from("leads").insert([payload]);
 
