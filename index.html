@@ -120,45 +120,80 @@
                         // Voor nu heeft het formulier geen echte backend-koppeling. //
                         // "action" en "method" kun je later koppelen aan een formulierenservice. //
                     -->
-                    <form class="form" method="post" data-netlify="true" name="installateur">
+                    <form class="form" name="installateur">
+                        <h4>Klantgegevens</h4>
                         <label>
-                            <span>Bedrijfsnaam</span>
-                            <input type="text" name="bedrijf" required>
+                            <span>Naam klant</span>
+                            <input type="text" name="klant_naam" required>
                         </label>
                         <label>
-                            <span>Contactpersoon</span>
-                            <input type="text" name="contactpersoon" required>
+                            <span>E-mailadres klant</span>
+                            <input type="email" name="klant_email" required>
                         </label>
                         <label>
-                            <span>E-mailadres</span>
-                            <input type="email" name="email" required>
+                            <span>Mobiel nummer klant</span>
+                            <input type="tel" name="klant_telefoon" placeholder="06xxxxxxxx of +316xxxxxxxx">
                         </label>
                         <label>
-                            <span>Telefoonnummer</span>
-                            <input type="tel" name="telefoon">
+                            <span>Adres klant (postcode + huisnummer)</span>
+                            <input type="text" name="klant_adres" required>
                         </label>
                         <label>
-                            <span>Postcode en plaats</span>
-                            <input type="text" name="plaats">
-                        </label>
-                        <label>
-                            <span>Aantal laadpaalinstallaties per jaar</span>
-                            <select name="volume">
+                            <span>Heeft de klant al een laadpaal?</span>
+                            <select name="laadpaal_status" required>
                                 <option value="">Maak een keuze</option>
-                                <option value="<50">&lt; 50</option>
-                                <option value="50-250">50 – 250</option>
-                                <option value="250+">250+</option>
+                                <option value="ja">Ja</option>
+                                <option value="nee">Nee, maar wel gepland</option>
+                                <option value="onzeker">Onzeker</option>
                             </select>
                         </label>
                         <label>
-                            <span>Opmerkingen / vragen</span>
-                            <textarea name="opmerkingen" rows="3"></textarea>
+                            <span>Is / wordt de laadpaal op eigen terrein geplaatst?</span>
+                            <select name="eigen_terrein" required>
+                                <option value="">Maak een keuze</option>
+                                <option value="ja">Ja</option>
+                                <option value="nee">Nee</option>
+                                <option value="onzeker">Onzeker</option>
+                            </select>
                         </label>
-                        <input type="hidden" name="form-name" value="installateur">
-                        <button type="submit" class="btn primary full-width">Aanmelden als installateur</button>
+
+                        <h4>Gegevens installateur</h4>
+                        <label>
+                            <span>Bedrijfsnaam installateur</span>
+                            <input type="text" name="installateur_bedrijfsnaam" required>
+                        </label>
+                        <label>
+                            <span>Contactpersoon</span>
+                            <input type="text" name="installateur_contactpersoon">
+                        </label>
+                        <label>
+                            <span>E-mailadres installateur</span>
+                            <input type="email" name="installateur_email">
+                        </label>
+                        <label>
+                            <span>Telefoonnummer installateur</span>
+                            <input type="tel" name="installateur_telefoon">
+                        </label>
+
+                        <label>
+                            <span>Opmerkingen / bijzonderheden</span>
+                            <textarea name="opmerking" rows="3"></textarea>
+                        </label>
+
+                        <label class="checkbox">
+                            <input type="checkbox" name="akkoord" required>
+                            <span>
+                                Ik bevestig dat ik deze klant mag aanmelden bij Savri voor
+                                voorbereiding op mogelijke ERE’s (nog zonder garantie op toekenning of vergoeding).
+                            </span>
+                        </label>
+
+                        <button type="submit" class="btn primary full-width">
+                            Klant aanmelden
+                        </button>
                         <p class="form-note">
-                            We nemen contact met je op om je bedrijfsgegevens kort te verifiëren. 
-                            Er zijn op dit moment nog geen financiële afspraken over ERE’s – dit is een voorbereidingsfase.
+                            Na aanmelding nemen wij rechtstreeks contact op met de eindgebruiker zodra er
+                            meer duidelijk is over de NEa-regels en onboarding.
                         </p>
                     </form>
                 </div>
@@ -209,7 +244,7 @@
                         // Ook dit formulier heeft nu nog geen backend-koppeling. //
                         // Later kun je dit koppelen aan e-mail / database. //
                     -->
-                    <form class="form" method="post" data-netlify="true" name="evrijder">
+                    <form class="form" name="evrijder">
                         <label>
                             <span>Naam</span>
                             <input type="text" name="naam" required>
@@ -219,8 +254,16 @@
                             <input type="email" name="email" required>
                         </label>
                         <label>
+                            <span>Mobiel nummer</span>
+                            <input type="tel" name="telefoon" placeholder="06xxxxxxxx of +316xxxxxxxx">
+                        </label>
+                        <label>
                             <span>Postcode en huisnummer</span>
                             <input type="text" name="adres" required>
+                        </label>
+                        <label>
+                            <span>Geschat verbruik per jaar (kWh)</span>
+                            <input type="number" name="kwh_per_jaar" min="0" step="100">
                         </label>
                         <label>
                             <span>Heb je al een laadpaal?</span>
@@ -232,7 +275,7 @@
                             </select>
                         </label>
                         <label>
-                            <span>Is de laadpaal op eigen terrein?</span>
+                            <span>Is de (toekomstige) laadpaal op eigen terrein?</span>
                             <select name="eigen_terrein" required>
                                 <option value="">Maak een keuze</option>
                                 <option value="ja">Ja</option>
@@ -245,20 +288,17 @@
                             <input type="text" name="installateur">
                         </label>
                         <label class="checkbox">
-                            <!-- 
-                                // Checkbox waarmee je duidelijk maakt dat er geen garantie is //
-                                // Dit is juridisch en verwachtingsmanagement. //
-                            -->
                             <input type="checkbox" name="akkoord" required>
                             <span>Ik begrijp dat dit geen garantie is op ERE’s of vergoedingen.</span>
                         </label>
-                        <input type="hidden" name="form-name" value="evrijder">
+
                         <button type="submit" class="btn primary full-width">Voorinschrijven</button>
                         <p class="form-note">
                             We gebruiken je gegevens alleen om je te informeren over de voortgang van Savri 
                             en de mogelijkheden rondom ERE’s voor privé-laadpalen.
                         </p>
                     </form>
+
                 </div>
             </div>
         </div>
@@ -383,6 +423,11 @@
         // SCRIPT-KOPPELING //
         // script.js wordt gebruikt voor kleine interacties (bijv. jaartal invullen, smooth scroll). //
     -->
+
+    <!-- Supabase client via CDN -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <!-- Jouw eigen script -->
     <script src="script.js"></script>
-</body>
+  </body>
 </html>
+
