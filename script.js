@@ -139,13 +139,15 @@ async function handleEvFormSubmit(event) {
     notes: null
   };
 
-  const { error } = await supabaseClient.from("leads").insert([payload]);
+ const { error } = await supabaseClient.from("leads").insert([payload]);
 
-  if (error) {
-    console.error(error);
-    showFormError(form, "Er ging iets mis. Probeer het later opnieuw.");
-    return;
-  }
+if (error) {
+  console.error("Supabase insert error (ev):", error);
+  alert("Supabase EV-fout:\n" + (error.message || JSON.stringify(error, null, 2)));
+  showFormError(form, "Er ging iets mis bij het versturen. Probeer het later nog een keer.");
+  return;
+}
+
 
   form.reset();
   alert("Bedankt! Je voorinschrijving is ontvangen.");
@@ -215,13 +217,15 @@ async function handleInstallateurFormSubmit(event) {
     notes: notes || null
   };
 
-  const { error } = await supabaseClient.from("leads").insert([payload]);
+const { error } = await supabaseClient.from("leads").insert([payload]);
 
-  if (error) {
-    console.error(error);
-    showFormError(form, "Er ging iets mis. Probeer het later opnieuw.");
-    return;
-  }
+if (error) {
+  console.error("Supabase insert error (installateur):", error);
+  alert("Supabase installateur-fout:\n" + (error.message || JSON.stringify(error, null, 2)));
+  showFormError(form, "Er ging iets mis bij het versturen. Probeer het later nog een keer.");
+  return;
+}
+
 
   form.reset();
   alert("Klant is succesvol aangemeld.");
