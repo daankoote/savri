@@ -31,6 +31,7 @@
                 <a href="#hero">Home</a>
                 <a href="#installateurs">Voor installateurs</a>
                 <a href="#ev-rijders">Voor EV-rijders</a>
+                <a href="/installateur.html">Aanmelden als installateur</a>
                 <a href="#faq">FAQ</a>
                 <a href="#contact">Contact</a>
             </nav>
@@ -51,10 +52,11 @@
                     zodra het loket opengaat.
                 </p>
                 <div class="hero-buttons">
-                    <!-- // Knoppen die naar de relevante secties scrollen. // -->
-                    <a href="#installateurs" class="btn primary">Ik ben installateur</a>
-                    <a href="#ev-rijders" class="btn secondary">Ik heb een privé-laadpaal</a>
+                   <button class="btn primary tab-toggle" data-target="installateur">Ik ben installateur</button>
+                    <button class="btn secondary tab-toggle" data-target="ev">Ik heb een privé-laadpaal</button>
+                    <button class="btn ghost tab-toggle" data-target="anders">Anders</button>
                 </div>
+
             </div>
             <div class="hero-side">
                 <!-- 
@@ -77,7 +79,7 @@
         // SECTIE: VOOR INSTALLATEURS //
         // Uitleg waarom dit interessant is voor installateurs + aanmeldformulier. //
     -->
-    <section id="installateurs" class="section">
+    <section id="installateurs" class="section tab-panel" data-panel="installateur">
         <div class="container two-column">
             <div class="column">
                 <h2>Maak je klanten klaar voor ERE’s – zonder extra rompslomp.</h2>
@@ -205,7 +207,7 @@
         // SECTIE: VOOR EV-RIJDERS //
         // Uitleg voor particuliere laadpaalbezitters + voorinschrijfformulier. //
     -->
-    <section id="ev-rijders" class="section section-alt">
+    <section id="ev-rijders" class="section section-alt tab-panel" data-panel="ev">
         <div class="container two-column">
             <div class="column">
                 <h2>Meld je privé-laadpaal aan voor toekomstige ERE’s.</h2>
@@ -306,6 +308,38 @@
             </div>
         </div>
     </section>
+
+    <!-- 
+        // SECTIE: ALLE ANDERE //
+        // Ugrote locaties, sub-2M kWh, resellers etc. //
+    -->
+
+    <section id="anders" class="section section-alt tab-panel" data-panel="anders">
+    <div class="container two-column">
+        <div class="column">
+        <h2>Voor grotere locaties en partners</h2>
+        <p>
+            Beheer je een laadplein, parkeergarage of andere locatie met substantieel laadvolume,
+            maar kom je zelf niet aan de NEa-drempel van 2.000.000 kWh per jaar?
+        </p>
+        <p>
+            Savri bundelt volumes en organiseert het ERE-inboekproces. 
+            Laat je gegevens achter via het contactformulier hieronder
+            of plan een gesprek (later kun je hier een intake-link van maken).
+        </p>
+        </div>
+        <div class="column">
+        <div class="card">
+            <h3>Val je niet in de standaard categorieën?</h3>
+            <p>
+            Gebruik het contactformulier onderaan de pagina en vermeld dat het om een
+            grotere locatie gaat. We nemen gericht contact met je op.
+            </p>
+        </div>
+        </div>
+    </div>
+    </section>
+
 
     <!-- 
         // SECTIE: FAQ / OVER //

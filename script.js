@@ -66,6 +66,35 @@ document.addEventListener("DOMContentLoaded", () => {
   if (installateurForm) {
     installateurForm.addEventListener("submit", handleInstallateurFormSubmit);
   }
+
+  const installerSignupForm = document.getElementById("installer-signup-form");
+    if (installerSignupForm) {
+    installerSignupForm.addEventListener("submit", handleInstallerSignup);
+  }
+
+
+  // laten verdwijenn van de panels? <-- daan invoer
+  const panels = document.querySelectorAll(".tab-panel");
+  const toggles = document.querySelectorAll(".tab-toggle");
+
+  function activatePanel(target) {
+    panels.forEach(p => {
+      p.style.display = (p.dataset.panel === target) ? "block" : "none";
+    });
+    toggles.forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.target === target);
+    });
+  }
+
+  // default: installateur-modus
+  activatePanel("installateur");
+
+  toggles.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const target = btn.dataset.target;
+      activatePanel(target);
+    });
+  });
 });
 
 // ========= EV-rijder formulier =========
@@ -160,6 +189,7 @@ async function handleInstallateurFormSubmit(event) {
   const form = event.target;
   clearFormError(form);
 
+  const installerRef = form.querySelector('input[name="installer_ref"]')?.value.trim();
   const fullName = form.querySelector('input[name="klant_naam"]')?.value.trim();
   const email = form.querySelector('input[name="klant_email"]')?.value.trim();
   const phone = form.querySelector('input[name="klant_telefoon"]')?.value.trim();
@@ -174,9 +204,9 @@ async function handleInstallateurFormSubmit(event) {
   const notes = form.querySelector('textarea[name="opmerking"]')?.value.trim();
   const akkoord = form.querySelector('input[name="akkoord"]')?.checked;
 
-  if (!fullName || !email || !installerCompany || !akkoord) {
-    showFormError(form, "Verplichte velden ontbreken.");
-    return;
+  if (!installerRef || !fullName || !email || !akkoord) {
+  showFormError(form, "Code, klantnaam, e-mail en akkoord zijn verplicht.");
+  return;
   }
 
   if (!email.includes("@")) {
@@ -200,22 +230,25 @@ async function handleInstallateurFormSubmit(event) {
     null;
 
   const payload = {
-    source: "via_installateur",
-    lead_type: "ev_user",
-    full_name: fullName,
-    email,
-    phone,
-    address,
-    own_premises: ownPremises,
-    has_charger: hasCharger,
-    annual_kwh_estimate: null,
-    installer_name: installerName || null,
-    installer_company: installerCompany || null,
-    installer_email: installerEmail || null,
-    installer_phone: installerPhone || null,
-    consent_terms: !!akkoord,
-    notes: notes || null
+  source: "via_installateur",
+  lead_type: "ev_user",
+  full_name: fullName,
+  email,
+  phone,
+  address,
+  own_premises: ownPremises,
+  has_charger: hasCharger,
+  annual_kwh_estimate: null,
+  installer_ref: installerRef,
+  // installer_* kolommen mag je op null laten
+  installer_name: null,
+  installer_company: null,
+  installer_email: null,
+  installer_phone: null,
+  consent_terms: !!akkoord,
+  notes: notes || null,
   };
+
 
 const { error } = await supabaseClient.from("leads").insert([payload]);
 
@@ -229,4 +262,61 @@ if (error) {
 
   form.reset();
   alert("Klant is succesvol aangemeld.");
+}
+
+
+// ========= Installateur aanmeld form  =========
+
+function generateRefCode(length = 6) {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let out = "";
+  for (let i = 0; i < length; i++) {
+    out += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return out;
+}
+
+async function handleInstallerSignup(event) {
+  event.preventDefault();
+  const form = event.target;
+  clearFormError(form);
+
+  const company = form.company_name.value.trim();
+  const contact = form.contact_name.value.trim();
+  const email = form.email.value.trim();
+  const phone = form.phone.value.trim();
+  const akkoord = form.akkoord.checked;
+
+  if (!company || !contact || !email || !akkoord) {
+    showFormError(form, "Vul alle verplichte velden in.");
+    return;
+  }
+
+  const refCode = generateRefCode(6);
+
+  const payload = {
+    ref_code: refCode,
+    company_name: company,
+    contact_name: contact,
+    email,
+    phone,
+    active: true,
+    notes: null,
+  };
+
+  const { error } = await supabaseClient.from("installers").insert([payload]);
+
+  if (error) {
+    console.error("Supabase installer-signup error:", error);
+    alert("Er ging iets mis bij het opslaan. Probeer het later opnieuw.");
+    return;
+  }
+
+  // Voor nu: toon de code direct. Later vervang je dit door een nette e-mail.
+  form.reset();
+  alert(
+    "Bedankt voor je aanmelding.\nJe installateurscode is: " +
+      refCode +
+      "\nBewaar deze code goed, je hebt hem nodig om klanten aan te melden."
+  );
 }

@@ -171,6 +171,15 @@ nav a:hover {
     width: 100%;
 }
 
+/* --------- Panel en button actieve staat --------- */
+
+.tab-panel { display: none; }
+.tab-toggle.active {
+  /* geef de actieve knop een duidelijker state */
+  outline: 2px solid #0f172a;
+}
+
+
 /* --------- Kaarten, titels, lijsten --------- */
 
 .card {
