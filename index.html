@@ -110,23 +110,27 @@
 
             <div class="column">
                 <div class="card">
-                    <h3>Meld je aan als installateur-partner</h3>
+                    <h3>Vul als installateur de onderstaande gegevens in</h3>
                     <!-- 
                         // FORMULIER VOOR INSTALLATEURS //
                         // Voor nu heeft het formulier geen echte backend-koppeling. //
                         // "action" en "method" kun je later koppelen aan een formulierenservice. //
                     -->
                     <form class="form" name="installateur">
-                    <h4>Installateurscode</h4>
+                    <h4>Installateur</h4>
                     <label>
                         <span>Installateurscode</span>
-                        <input type="text" name="installer_ref" placeholder="Bijv. ABC123" required>
+                        <input type="text" name="installer_ref" required placeholder="Bijv. ABC123">
                     </label>
 
                     <h4>Klantgegevens</h4>
                     <label>
-                        <span>Naam klant</span>
-                        <input type="text" name="klant_naam" required>
+                        <span>Voornaam klant</span>
+                        <input type="text" name="klant_voornaam" required>
+                    </label>
+                    <label>
+                        <span>Achternaam klant</span>
+                        <input type="text" name="klant_achternaam" required>
                     </label>
                     <label>
                         <span>E-mailadres klant</span>
@@ -136,10 +140,15 @@
                         <span>Mobiel nummer klant</span>
                         <input type="tel" name="klant_telefoon" placeholder="06xxxxxxxx of +316xxxxxxxx">
                     </label>
-                    <label>
+                   <!-- <label>
                         <span>Adres klant (postcode + huisnummer)</span>
                         <input type="text" name="klant_adres" required>
+                    </label> -->
+                    <label>
+                        <span>Aantal laadpunten op locatie</span>
+                        <input type="number" name="charger_count" min="0" step="1" required>
                     </label>
+
                     <label>
                         <span>Heeft de klant al een laadpaal?</span>
                         <select name="laadpaal_status" required>
@@ -232,33 +241,24 @@
                     <form class="form" name="evrijder">
                         <input type="hidden" name="installer_ref">
                         <label>
-                            <span>Naam</span>
-                            <input type="text" name="naam" required>
+                            <span>Voornaam</span>
+                            <input type="text" name="voornaam" required>
+                        </label>
+                        <label>
+                            <span>Achternaam</span>
+                            <input type="text" name="achternaam" required>
                         </label>
                         <label>
                             <span>E-mailadres</span>
                             <input type="email" name="email" required>
                         </label>
                         <label>
-                            <span>Mobiel nummer</span>
+                            <span>Mobiel nummer (optioneel)</span>
                             <input type="tel" name="telefoon" placeholder="06xxxxxxxx of +316xxxxxxxx">
                         </label>
-                        <label>
-                            <span>Postcode en huisnummer</span>
-                            <input type="text" name="adres" required>
-                        </label>
-                        <label>
-                            <span>Geschat verbruik per jaar (kWh)</span>
-                            <input type="number" name="kwh_per_jaar" min="0" step="100">
-                        </label>
-                        <label>
-                            <span>Heb je al een laadpaal?</span>
-                            <select name="laadpaal_status" required>
-                                <option value="">Maak een keuze</option>
-                                <option value="ja">Ja</option>
-                                <option value="nee">Nee, maar wel gepland</option>
-                                <option value="onzeker">Onzeker</option>
-                            </select>
+                       <label>
+                            <span>Aantal laadpunten op locatie</span>
+                            <input type="number" name="charger_count" min="0" step="1" required>
                         </label>
                         <label>
                             <span>Is de (toekomstige) laadpaal op eigen terrein?</span>
@@ -269,12 +269,6 @@
                                 <option value="onzeker">Onzeker</option>
                             </select>
                         </label>
-                    <!--
-                        <label>
-                            <span>Naam van je installateur (optioneel)</span>
-                            <input type="text" name="installateur">
-                        </label> 
-                    -->
                         <label class="checkbox">
                             <input type="checkbox" name="akkoord" required>
                             <span>Ik begrijp dat dit geen garantie is op ERE’s of vergoedingen.</span>
