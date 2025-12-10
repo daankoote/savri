@@ -24,13 +24,7 @@
                 <span>Savri</span>
             </div>
             <nav>
-                <!-- 
-                    // Navigatielinks verwijzen naar de ID's van de secties hieronder. //
-                    // Voorbeeld: href="#installateurs" scrollt naar <section id="installateurs"> //
-                -->
                 <a href="#hero">Home</a>
-                <a href="#installateurs">Voor installateurs</a>
-                <a href="#ev-rijders">Voor EV-rijders</a>
                 <a href="/installateur.html">Aanmelden als installateur</a>
                 <a href="#faq">FAQ</a>
                 <a href="#contact">Contact</a>
@@ -123,80 +117,69 @@
                         // "action" en "method" kun je later koppelen aan een formulierenservice. //
                     -->
                     <form class="form" name="installateur">
-                        <h4>Klantgegevens</h4>
-                        <label>
-                            <span>Naam klant</span>
-                            <input type="text" name="klant_naam" required>
-                        </label>
-                        <label>
-                            <span>E-mailadres klant</span>
-                            <input type="email" name="klant_email" required>
-                        </label>
-                        <label>
-                            <span>Mobiel nummer klant</span>
-                            <input type="tel" name="klant_telefoon" placeholder="06xxxxxxxx of +316xxxxxxxx">
-                        </label>
-                        <label>
-                            <span>Adres klant (postcode + huisnummer)</span>
-                            <input type="text" name="klant_adres" required>
-                        </label>
-                        <label>
-                            <span>Heeft de klant al een laadpaal?</span>
-                            <select name="laadpaal_status" required>
-                                <option value="">Maak een keuze</option>
-                                <option value="ja">Ja</option>
-                                <option value="nee">Nee, maar wel gepland</option>
-                                <option value="onzeker">Onzeker</option>
-                            </select>
-                        </label>
-                        <label>
-                            <span>Is / wordt de laadpaal op eigen terrein geplaatst?</span>
-                            <select name="eigen_terrein" required>
-                                <option value="">Maak een keuze</option>
-                                <option value="ja">Ja</option>
-                                <option value="nee">Nee</option>
-                                <option value="onzeker">Onzeker</option>
-                            </select>
-                        </label>
+                    <h4>Installateurscode</h4>
+                    <label>
+                        <span>Installateurscode</span>
+                        <input type="text" name="installer_ref" placeholder="Bijv. ABC123" required>
+                    </label>
 
-                        <h4>Gegevens installateur</h4>
-                        <label>
-                            <span>Bedrijfsnaam installateur</span>
-                            <input type="text" name="installateur_bedrijfsnaam" required>
-                        </label>
-                        <label>
-                            <span>Contactpersoon</span>
-                            <input type="text" name="installateur_contactpersoon">
-                        </label>
-                        <label>
-                            <span>E-mailadres installateur</span>
-                            <input type="email" name="installateur_email">
-                        </label>
-                        <label>
-                            <span>Telefoonnummer installateur</span>
-                            <input type="tel" name="installateur_telefoon">
-                        </label>
+                    <h4>Klantgegevens</h4>
+                    <label>
+                        <span>Naam klant</span>
+                        <input type="text" name="klant_naam" required>
+                    </label>
+                    <label>
+                        <span>E-mailadres klant</span>
+                        <input type="email" name="klant_email" required>
+                    </label>
+                    <label>
+                        <span>Mobiel nummer klant</span>
+                        <input type="tel" name="klant_telefoon" placeholder="06xxxxxxxx of +316xxxxxxxx">
+                    </label>
+                    <label>
+                        <span>Adres klant (postcode + huisnummer)</span>
+                        <input type="text" name="klant_adres" required>
+                    </label>
+                    <label>
+                        <span>Heeft de klant al een laadpaal?</span>
+                        <select name="laadpaal_status" required>
+                        <option value="">Maak een keuze</option>
+                        <option value="ja">Ja</option>
+                        <option value="nee">Nee, maar wel gepland</option>
+                        <option value="onzeker">Onzeker</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>Is / wordt de laadpaal op eigen terrein geplaatst?</span>
+                        <select name="eigen_terrein" required>
+                        <option value="">Maak een keuze</option>
+                        <option value="ja">Ja</option>
+                        <option value="nee">Nee</option>
+                        <option value="onzeker">Onzeker</option>
+                        </select>
+                    </label>
 
-                        <label>
-                            <span>Opmerkingen / bijzonderheden</span>
-                            <textarea name="opmerking" rows="3"></textarea>
-                        </label>
+                    <h4>Opmerkingen / bijzonderheden (optioneel)</h4>
+                    <label>
+                        <span>Opmerkingen</span>
+                        <textarea name="opmerking" rows="3"></textarea>
+                    </label>
 
-                        <label class="checkbox">
-                            <input type="checkbox" name="akkoord" required>
-                            <span>
-                                Ik bevestig dat ik deze klant mag aanmelden bij Savri voor
-                                voorbereiding op mogelijke ERE’s (nog zonder garantie op toekenning of vergoeding).
-                            </span>
-                        </label>
+                    <label class="checkbox">
+                        <input type="checkbox" name="akkoord" required>
+                        <span>
+                        Ik bevestig dat ik deze klant mag aanmelden bij Savri voor
+                        voorbereiding op mogelijke ERE’s (nog zonder garantie op toekenning of vergoeding).
+                        </span>
+                    </label>
 
-                        <button type="submit" class="btn primary full-width">
-                            Klant aanmelden
-                        </button>
-                        <p class="form-note">
-                            Na aanmelding nemen wij rechtstreeks contact op met de eindgebruiker zodra er
-                            meer duidelijk is over de NEa-regels en onboarding.
-                        </p>
+                    <button type="submit" class="btn primary full-width">
+                        Klant aanmelden
+                    </button>
+                    <p class="form-note">
+                        Na aanmelding nemen wij rechtstreeks contact op met de eindgebruiker zodra er
+                        meer duidelijk is over de NEa-regels en onboarding.
+                    </p>
                     </form>
                 </div>
             </div>

@@ -24,49 +24,66 @@
                 <!-- // Merknaam Savri. Kan later vervangen worden door een logo-afbeelding. // -->
                 <span>Savri</span>
             </div>
-            <nav>
-                <!-- 
-                    // Navigatielinks verwijzen naar de ID's van de secties hieronder. //
-                    // Voorbeeld: href="#installateurs" scrollt naar <section id="installateurs"> //
-                -->
+             <nav>
                 <a href="#hero">Home</a>
-                <a href="#installateurs">Voor installateurs</a>
-                <a href="#ev-rijders">Voor EV-rijders</a>
                 <a href="/installateur.html">Aanmelden als installateur</a>
                 <a href="#faq">FAQ</a>
                 <a href="#contact">Contact</a>
             </nav>
         </div>
     </header>
+<main>
+  <section class="section">
+    <div class="container">
+      <div class="card">
+        <h1>Aanmelden als installateur</h1>
+        <p>
+          Meld je eenmalig aan als installateur. Je ontvangt een persoonlijke
+          installateurscode waarmee je klanten snel kunt aanmelden.
+        </p>
 
-  <form class="form" id="installer-signup-form">
-    <label>
-      <span>Bedrijfsnaam</span>
-      <input type="text" name="company_name" required>
-    </label>
-    <label>
-      <span>Contactpersoon</span>
-      <input type="text" name="contact_name" required>
-    </label>
-    <label>
-      <span>E-mailadres</span>
-      <input type="email" name="email" required>
-    </label>
-    <label>
-      <span>Mobiel nummer</span>
-      <input type="tel" name="phone">
-    </label>
-    <label class="checkbox">
-      <input type="checkbox" name="akkoord" required>
-      <span>Ik begrijp dat Savri nog in voorbereidingsfase is.</span>
-    </label>
-    <button type="submit" class="btn primary full-width">
-      Aanmelden als installateur
-    </button>
-    <p class="form-note">
-      Na aanmelding ontvang je een persoonlijke installateurscode.
-    </p>
-  </form>
+        <form class="form" id="installer-signup-form">
+          <label>
+            <span>Bedrijfsnaam</span>
+            <input type="text" name="company_name" required>
+          </label>
+
+          <label>
+            <span>KVK-nummer (optioneel)</span>
+            <input type="text" name="kvk">
+          </label>
+
+          <label>
+            <span>Contactpersoon</span>
+            <input type="text" name="contact_name" required>
+          </label>
+
+          <label>
+            <span>E-mailadres</span>
+            <input type="email" name="email" required>
+          </label>
+
+          <label>
+            <span>Mobiel nummer</span>
+            <input type="tel" name="phone" placeholder="06xxxxxxxx of +316xxxxxxxx">
+          </label>
+
+          <label class="checkbox">
+            <input type="checkbox" name="akkoord" required>
+            <span>Ik begrijp dat Savri nog in voorbereidingsfase is.</span>
+          </label>
+
+          <button type="submit" class="btn primary full-width">
+            Aanmelden als installateur
+          </button>
+          <p class="form-note">
+            Na aanmelding ontvang je een persoonlijke installateurscode.
+          </p>
+        </form>
+      </div>
+    </div>
+  </section>
+</main>
 
    <!-- 
         // FOOTER //

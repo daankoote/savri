@@ -282,6 +282,7 @@ async function handleInstallerSignup(event) {
   clearFormError(form);
 
   const company = form.company_name.value.trim();
+  const kvk = form.kvk.value.trim();
   const contact = form.contact_name.value.trim();
   const email = form.email.value.trim();
   const phone = form.phone.value.trim();
@@ -289,6 +290,16 @@ async function handleInstallerSignup(event) {
 
   if (!company || !contact || !email || !akkoord) {
     showFormError(form, "Vul alle verplichte velden in.");
+    return;
+  }
+
+  if (!email.includes("@") || !email.includes(".")) {
+    showFormError(form, "Controleer het e-mailadres.");
+    return;
+  }
+
+  if (phone && !isValidMobile(phone)) {
+    showFormError(form, "Vul een geldig mobiel nummer in (06 of +316).");
     return;
   }
 
@@ -300,6 +311,7 @@ async function handleInstallerSignup(event) {
     contact_name: contact,
     email,
     phone,
+    kvk_number: kvk || null,
     active: true,
     notes: null,
   };
@@ -312,7 +324,6 @@ async function handleInstallerSignup(event) {
     return;
   }
 
-  // Voor nu: toon de code direct. Later vervang je dit door een nette e-mail.
   form.reset();
   alert(
     "Bedankt voor je aanmelding.\nJe installateurscode is: " +
@@ -320,3 +331,4 @@ async function handleInstallerSignup(event) {
       "\nBewaar deze code goed, je hebt hem nodig om klanten aan te melden."
   );
 }
+
