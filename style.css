@@ -123,10 +123,46 @@ nav a:hover {
 }
 
 .hero-side .card {
-    /* // Kaart rechts in de hero met procesuitleg. // */
+/* // Kaart rechts in de hero met procesuitleg. // */
     background: #020617;
     border: 1px solid #1f2937;
 }
+
+/* Verplichte velden markering */
+.required-note {
+    color: #a8071a;
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+}
+
+.required-marker {
+    color: #a8071a;
+    margin-left: 0.2rem;
+}
+
+/* Error-staat van inputs/selects */
+.input-error {
+    border-color: #ff4d4f !important;
+    outline: none;
+}
+
+/* Zorg dat ook bij focus de error zichtbaar blijft */
+.input-error:focus {
+    border-color: #ff4d4f !important;
+    box-shadow: 0 0 0 1px rgba(255, 77, 79, 0.4);
+}
+
+/* Checkbox + label netjes naast elkaar */
+.checkbox-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.checkbox-row input[type="checkbox"] {
+    margin-top: 0.2rem;
+}
+
 
 /* --------- Buttons --------- */
 
@@ -261,6 +297,26 @@ p {
     /* // Labeltekst boven invoervelden. // */
     font-weight: 500;
 }
+
+.form-status {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.form-status--success {
+  background-color: #e6f7e9;
+  border: 1px solid #52c41a;
+  color: #135200;
+}
+
+.form-status--error {
+  background-color: #fff2f0;
+  border: 1px solid #ff4d4f;
+  color: #a8071a;
+}
+
 
 input[name="installer_ref"] {
   text-transform: uppercase;

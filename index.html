@@ -86,17 +86,15 @@
                 <h3>Waarom dit interessant is voor u</h3>
                 <ul class="list">
                     <li>Extra waarde (jaarlijkse vergoeding) voor uw klanten, zonder ingewikkelde extra processen.</li>
-                    <li>Na succesvolle uitkering van de ERE's en vergoedingen krijgt u voor elke toegevoegde laadpaal een vergoeding van ons... <b>elk jaar!</b></li>
-                    <li>Geen eigen ERE-kennis of compliance-team nodig.</li>
+                    <li>Een vergoeding van ons... <b>elk jaar!</b> (bij succesvolle ERE verkoop)</li>
                     <li>Proces ontworpen in lijn met de eisen van de NEa.</li>
                 </ul>
 
                 <h3>Wat we van jou vragen</h3>
                 <ul class="list">
-                    <li>Een eenmalige korte aanmelding van uw bedrijf, u krijgt een installateurs code van ons.</li>
-                    <li>Met de code vult u de basisgegevens van laadpaal-installaties (naam klant, klant email, type laadpaal en serienummer) in.</li>
-                    <li>Na versturen krijgt de klant een e-mail met de vervolgstappen.</li>
-                    <li>U staat nu in ons systeem met uw code bij de klant en wordt vergoed zodra alle ERE's zijn verkocht en de vergoedingen zijn uitgekeerd aan de klant.</li>    
+                    <li>Een eenmalige korte aanmelding van uw bedrijf.</li>
+                    <li>Basisgegevens van laadpaal-installaties.</li>
+                    <li>Thats it</li>
                 </ul>
                 
                 <h3>Voor laadpleinen en grotere locaties</h3>
@@ -113,13 +111,11 @@
 
             <div class="column">
                 <div class="card">
-                    <h3>Vul als installateur de onderstaande gegevens in</h3>
+                    <h3>Vul als installateur onderstaande gegevens in</h3>
                     <!-- 
                         // FORMULIER VOOR INSTALLATEURS //
-                        // Voor nu heeft het formulier geen echte backend-koppeling. //
-                        // "action" en "method" kun je later koppelen aan een formulierenservice. //
                     -->
-                    <form class="form" name="installateur">
+                    <form class="form" name="installateur" novalidate>
                     <h4>Installateur</h4>
                     <label>
                         <span>Installateurscode</span>
@@ -241,7 +237,7 @@
                         // Ook dit formulier heeft nu nog geen backend-koppeling. //
                         // Later kun je dit koppelen aan e-mail / database. //
                     -->
-                    <form class="form" name="evrijder">
+                    <form class="form" name="evrijder" novalidate>
                         <input type="hidden" name="installer_ref">
                         <label>
                             <span>Voornaam</span>
@@ -396,7 +392,7 @@
             <div class="column">
                 <div class="card">
                     <h3>Stel je vraag</h3>
-                    <form class="form" method="post" data-netlify="true" name="contact">
+                    <form class="form" method="post" data-netlify="true" name="contact" novalidate>
                         <label>
                             <span>Naam</span>
                             <input type="text" name="naam" required>
