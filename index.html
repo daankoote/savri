@@ -1,446 +1,402 @@
 <!DOCTYPE html>
 <html lang="nl">
-<head>
-    <!-- 
-        // Savri - ERE Inboekers //
-        // Single-page marketing site voor Savri //
-        // Doel: installateurs en EV-rijders laten pre-registreren. //
-    -->
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Savri – ERE inboeker voor privé-laadpalen</title>
-    <!-- // Koppeling naar het stylesheet met alle opmaak (kleuren, layout, fonts, spacing). // -->
-    <link rel="stylesheet" href="style.css">
-</head>
+    <link rel="stylesheet" href="style.css" />
+  </head>
 
-<body>
-    <!-- 
-        // HEADER + NAVIGATIE //
-        // Bovenbalk met merknaam en navigatie-links die naar secties op dezelfde pagina scrollen. //
-    -->
+  <body>
     <header>
-        <div class="container header-inner">
-            <div class="logo">
-                <!-- // Merknaam Savri. Kan later vervangen worden door een logo-afbeelding. // -->
-                <span>Savri</span>
-            </div>
-            <nav>
-                <a href="#hero">Home</a>
-                <a href="/installateur.html">Aanmelden als installateur</a>
-                <a href="#faq">FAQ</a>
-                <a href="#contact">Contact</a>
-            </nav>
-        </div>
+      <div class="container header-inner">
+        <div class="logo"><span>Savri</span></div>
+        <nav>
+          <a href="#hero">Home</a>
+          <a href="/installateur.html">Aanmelden als installateur</a>
+          <a href="#faq">FAQ</a>
+          <a href="#contact">Contact</a>
+        </nav>
+      </div>
     </header>
 
-    <!-- 
-        // HERO-SECTIE //
-        // Eerste scherm: korte uitleg wat Savri is en twee knoppen voor de primaire doelgroepen. //
-    -->
     <section id="hero" class="section hero">
-        <div class="container hero-inner">
-            <div class="hero-text">
-                <h1>ERE’s voor privé-laadpalen, zonder extra gedoe.</h1>
-                <p>
-                    Savri is een onafhankelijk platform dat privé-laadpalen registreert en valideert 
-                    volgens de eisen van de Nederlandse Emissieautoriteit (NEa). Voorbereid op ERE, 
-                    zodra het loket opengaat, wat gepland is op 1 Januari 2026.
-                </p>
-                <div class="hero-buttons">
-                   <button class="btn primary tab-toggle" data-target="installateur">Ik ben installateur</button>
-                    <button class="btn secondary tab-toggle" data-target="ev">Ik heb een privé-laadpaal</button>
-                    <button class="btn ghost tab-toggle" data-target="anders">Anders</button>
-                </div>
+      <div class="container hero-inner">
+        <div class="hero-text">
+          <h1>ERE’s voor privé-laadpalen, zonder extra gedoe.</h1>
+          <p>
+            Savri is een onafhankelijk platform dat privé-laadpalen registreert en valideert volgens de eisen van de
+            Nederlandse Emissieautoriteit (NEa). Voorbereid op ERE, zodra het loket opengaat, wat gepland is op
+            1 januari 2026.
+          </p>
 
-            </div>
-            <div class="hero-side">
-                <!-- 
-                    // Korte 3-stappen uitleg. //
-                    // Dit geeft bezoekers direct een beeld van het proces. //
-                -->
-                <div class="card">
-                    <h3>Hoe Savri werkt</h3>
-                    <ol>
-                        <li>Je laadpaal registreren via installateur of direct.</li>
-                        <li>Validatie volgens NEa-criteria (identiteit, locatie, hardware, verbruik).</li>
-                        <li>Klaarstaan zodra ERE’s worden toegekend voor privé-laadpalen.</li>
-                    </ol>
-                </div>
-            </div>
+          <div class="hero-buttons">
+            <button class="btn primary tab-toggle" data-target="installateur">Ik ben installateur</button>
+            <button class="btn secondary tab-toggle" data-target="ev">Ik heb een privé-laadpaal</button>
+            <button class="btn ghost tab-toggle" data-target="anders">Anders</button>
+          </div>
         </div>
+
+        <div class="hero-side">
+          <div class="card">
+            <h3>Hoe Savri werkt</h3>
+            <ol>
+              <li>Je laadpaal registreren via installateur of direct.</li>
+              <li>Validatie volgens NEa-criteria (identiteit, locatie, hardware, verbruik).</li>
+              <li>Klaarstaan zodra ERE’s worden toegekend voor privé-laadpalen.</li>
+            </ol>
+          </div>
+        </div>
+      </div>
     </section>
 
-    <!-- 
-        // SECTIE: VOOR INSTALLATEURS //
-        // Uitleg waarom dit interessant is voor installateurs + aanmeldformulier. //
-    -->
+    <!-- INSTALLATEUR -->
     <section id="installateurs" class="section tab-panel" data-panel="installateur">
-        <div class="container two-column">
-            <div class="column">
-                <h2>Maak uw klanten klaar voor ERE’s – zonder extra rompslomp.</h2>
-                <p>
-                    Savri verzorgt de registratie, validatie en audit-trail van privé-laadpalen. 
-                    U blijft het centrale aanspreekpunt voor uw klant, wij regelen de administratieve kant geheel automatisch.
-                </p>
+      <div class="container two-column">
+        <div class="column">
+          <h2>Maak uw klanten klaar voor ERE’s – zonder extra rompslomp.</h2>
+          <p>
+            Savri verzorgt de registratie, validatie en audit-trail van privé-laadpalen. U blijft het centrale
+            aanspreekpunt voor uw klant, wij regelen de administratieve kant geheel automatisch.
+          </p>
 
-                <h3>Waarom dit interessant is voor u</h3>
-                <ul class="list">
-                    <li>Extra waarde (jaarlijkse vergoeding) voor uw klanten, zonder ingewikkelde extra processen.</li>
-                    <li>Een vergoeding van ons... <b>elk jaar!</b> (bij succesvolle ERE verkoop)</li>
-                    <li>Proces ontworpen in lijn met de eisen van de NEa.</li>
-                </ul>
+          <h3>Waarom dit interessant is voor u</h3>
+          <ul class="list">
+            <li>Extra waarde (jaarlijkse vergoeding) voor uw klanten, zonder ingewikkelde extra processen.</li>
+            <li>Een vergoeding van ons… <b>elk jaar!</b> (bij succesvolle ERE-verkoop)</li>
+            <li>Proces ontworpen in lijn met de eisen van de NEa.</li>
+          </ul>
 
-                <h3>Wat we van jou vragen</h3>
-                <ul class="list">
-                    <li>Een eenmalige korte aanmelding van uw bedrijf.</li>
-                    <li>Basisgegevens van laadpaal-installaties.</li>
-                    <li>Thats it</li>
-                </ul>
-                
-                <h3>Voor laadpleinen en grotere locaties</h3>
-                <p>
-                    Beheert u een laadplein, parkeergarage of andere locatie met substantieel laadvolume 
-                    maar kom je zelf niet aan de NEa-drempel van 2.000.000 kWh per jaar? 
-                    Savri kan helpen om volume te bundelen en het ERE-inboekproces te organiseren.
-                </p>
-                <p>
-                    Neem contact op voor samenwerking of maatwerkafspraken via het contactformulier hieronder.
-                </p>
+          <h3>Wat we van u vragen</h3>
+          <ul class="list">
+            <li>Een korte aanmelding van uw bedrijf.</li>
+            <li>Basisgegevens van laadpaal-installaties.</li>
+            <li>Dat is alles.</li>
+          </ul>
 
-            </div>
-
-            <div class="column">
-                <div class="card">
-                    <h3>Vul als installateur onderstaande gegevens in</h3>
-                    <!-- 
-                        // FORMULIER VOOR INSTALLATEURS //
-                    -->
-                    <form class="form" name="installateur" novalidate>
-                    <h4>Installateur</h4>
-                    <label>
-                        <span>Installateurscode</span>
-                        <input type="text" name="installer_ref" required placeholder="Bijv. ABC123">
-                    </label>
-
-                    <h4>Klantgegevens</h4>
-                    <label>
-                        <span>Voornaam klant</span>
-                        <input type="text" name="klant_voornaam" required>
-                    </label>
-                    <label>
-                        <span>Achternaam klant</span>
-                        <input type="text" name="klant_achternaam" required>
-                    </label>
-                    <label>
-                        <span>E-mailadres klant</span>
-                        <input type="email" name="klant_email" required>
-                    </label>
-                    <label>
-                        <span>Mobiel nummer klant</span>
-                        <input type="tel" name="klant_telefoon" placeholder="06xxxxxxxx of +316xxxxxxxx">
-                    </label>
-                   <!-- <label>
-                        <span>Adres klant (postcode + huisnummer)</span>
-                        <input type="text" name="klant_adres" required>
-                    </label> -->
-                    <label>
-                        <span>Aantal laadpunten op locatie</span>
-                        <input type="number" name="charger_count" min="0" step="1" required>
-                    </label>
-
-                    <label>
-                        <span>Heeft de klant al een laadpaal?</span>
-                        <select name="laadpaal_status" required>
-                        <option value="">Maak een keuze</option>
-                        <option value="ja">Ja</option>
-                        <option value="nee">Nee, maar wel gepland</option>
-                        <option value="onzeker">Onzeker</option>
-                        </select>
-                    </label>
-                    <label>
-                        <span>Is / wordt de laadpaal op eigen terrein geplaatst?</span>
-                        <select name="eigen_terrein" required>
-                        <option value="">Maak een keuze</option>
-                        <option value="ja">Ja</option>
-                        <option value="nee">Nee</option>
-                        <option value="onzeker">Onzeker</option>
-                        </select>
-                    </label>
-
-                    <h4>Opmerkingen / bijzonderheden (optioneel)</h4>
-                    <label>
-                        <span>Opmerkingen</span>
-                        <textarea name="opmerking" rows="3"></textarea>
-                    </label>
-
-                    <label class="checkbox">
-                        <input type="checkbox" name="akkoord" required>
-                        <span>
-                        Ik bevestig dat ik deze klant mag aanmelden bij Savri voor
-                        voorbereiding op mogelijke ERE’s (nog zonder garantie op toekenning of vergoeding).
-                        </span>
-                    </label>
-
-                    <button type="submit" class="btn primary full-width">
-                        Klant aanmelden
-                    </button>
-                    <p class="form-note">
-                        Na aanmelding nemen wij rechtstreeks contact op met de eindgebruiker zodra er
-                        meer duidelijk is over de NEa-regels en onboarding.
-                    </p>
-                    </form>
-                </div>
-            </div>
+          <h3>Voor laadpleinen en grotere locaties</h3>
+          <p>
+            Beheert u een laadplein, parkeergarage of andere locatie met substantieel laadvolume maar komt u niet aan de
+            NEa-drempel van 2.000.000 kWh per jaar? Savri kan helpen om volume te bundelen en het ERE-inboekproces te
+            organiseren.
+          </p>
+          <p>Neem contact op voor samenwerking of maatwerkafspraken via het contactformulier hieronder.</p>
         </div>
+
+        <div class="column">
+          <div class="card">
+            <h3>Vul als installateur onderstaande gegevens in</h3>
+
+            <form class="form" name="installateur" novalidate>
+              <h4>Installateur</h4>
+              <label>
+                <span>Installateurscode</span>
+                <input type="text" name="installer_ref" required placeholder="Bijv. ABC123" />
+              </label>
+
+              <h4>Klantgegevens</h4>
+              <label>
+                <span>Voornaam klant</span>
+                <input type="text" name="klant_voornaam" required />
+              </label>
+              <label>
+                <span>Achternaam klant</span>
+                <input type="text" name="klant_achternaam" required />
+              </label>
+              <label>
+                <span>E-mailadres klant</span>
+                <input type="email" name="klant_email" required />
+              </label>
+              <label>
+                <span>Mobiel nummer klant (optioneel)</span>
+                <input type="tel" name="klant_telefoon" placeholder="06xxxxxxxx of +316xxxxxxxx" />
+              </label>
+
+              <label>
+                <span>Aantal laadpunten op locatie</span>
+                <select name="charger_count" required>
+                  <option value="">Selecteer aantal laadpunten</option>
+                  <option value="1">1 laadpunt</option>
+                  <option value="2">2 laadpunten</option>
+                  <option value="3">3 laadpunten</option>
+                  <option value="4">4 laadpunten</option>
+                  <option value="5">5 laadpunten</option>
+                  <option value="6">6 laadpunten</option>
+                  <option value="7">7 laadpunten</option>
+                  <option value="8">8 laadpunten</option>
+                  <option value="9">9 laadpunten</option>
+                  <option value="10">10 laadpunten</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Is / wordt de laadpaal op eigen terrein geplaatst?</span>
+                <select name="eigen_terrein" required>
+                  <option value="">Maak een keuze</option>
+                  <option value="ja">Ja</option>
+                  <option value="nee">Nee</option>
+                  <option value="onzeker">Onzeker</option>
+                </select>
+              </label>
+
+              <div class="checkbox-row">
+                <input type="checkbox" id="akkoord_installateur" name="akkoord" required />
+                <label for="akkoord_installateur">
+                  Ik bevestig dat ik deze klant mag aanmelden bij Savri voor voorbereiding op mogelijke ERE’s (nog zonder
+                  garantie op toekenning of vergoeding).
+                </label>
+              </div>
+
+              <button type="submit" class="btn primary full-width">Klant aanmelden</button>
+
+              <p class="form-note">
+                Na aanmelding nemen wij rechtstreeks contact op met de eindgebruiker zodra er meer duidelijk is over de
+                NEa-regels en onboarding.
+              </p>
+            </form>
+          </div>
+        </div>
+      </div>
     </section>
 
-    <!-- 
-        // SECTIE: VOOR EV-RIJDERS //
-        // Uitleg voor particuliere laadpaalbezitters + voorinschrijfformulier. //
-    -->
+    <!-- EV -->
     <section id="ev-rijders" class="section section-alt tab-panel" data-panel="ev">
-        <div class="container two-column">
-            <div class="column">
-                <h2>Meld je privé-laadpaal aan voor toekomstige ERE’s.</h2>
-                <p>
-                    Met Savri zorg je dat jouw laadpaal en laadverbruik klaarstaan zodra de NEa 
-                    ERE’s toekent voor privé-laadpalen. Dit is een voorbereidingsfase, geen garantie 
-                    op vergoedingen.
-                </p>
+      <div class="container two-column">
+        <div class="column">
+          <h2>Meld je privé-laadpaal aan voor toekomstige ERE’s.</h2>
+          <p>
+            Met Savri zorg je dat jouw laadpaal en laadverbruik klaarstaan zodra de NEa ERE’s toekent voor privé-laadpalen.
+            Dit is een voorbereidingsfase, geen garantie op vergoedingen.
+          </p>
 
-                <h3>Wat dit wél en niet is</h3>
-                <div class="split">
-                    <div>
-                        <h4>Wel</h4>
-                        <ul class="list">
-                            <li>Voorregistratie van jouw laadpaal en situatie.</li>
-                            <li>Controle of je in principe in aanmerking kunt komen.</li>
-                            <li>Voorbereiding van een audit-proof dossier.</li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h4>Niet</h4>
-                        <ul class="list">
-                            <li>Geen garantie op ERE’s of bedragen.</li>
-                            <li>Geen directe uitbetaling of belofte.</li>
-                            <li>Geen aanbieder van leningen of energiecontracten.</li>
-                        </ul>
-                    </div>
-                </div>
+          <h3>Wat dit wél en niet is</h3>
+          <div class="split">
+            <div>
+              <h4>Wel</h4>
+              <ul class="list">
+                <li>Voorregistratie van jouw laadpaal en situatie.</li>
+                <li>Controle of je in principe in aanmerking kunt komen.</li>
+                <li>Voorbereiding van een audit-proof dossier.</li>
+              </ul>
             </div>
-
-            <div class="column">
-                <div class="card">
-                    <h3>Voorinschrijving EV-rijder</h3>
-                    <!-- 
-                        // FORMULIER VOOR EV-RIJDERS //
-                        // Ook dit formulier heeft nu nog geen backend-koppeling. //
-                        // Later kun je dit koppelen aan e-mail / database. //
-                    -->
-                    <form class="form" name="evrijder" novalidate>
-                        <input type="hidden" name="installer_ref">
-                        <label>
-                            <span>Voornaam</span>
-                            <input type="text" name="voornaam" required>
-                        </label>
-                        <label>
-                            <span>Achternaam</span>
-                            <input type="text" name="achternaam" required>
-                        </label>
-                        <label>
-                            <span>E-mailadres</span>
-                            <input type="email" name="email" required>
-                        </label>
-                        <label>
-                            <span>Mobiel nummer (optioneel)</span>
-                            <input type="tel" name="telefoon" placeholder="06xxxxxxxx of +316xxxxxxxx">
-                        </label>
-                       <label>
-                            <span>Aantal laadpunten op locatie</span>
-                            <input type="number" name="charger_count" min="0" step="1" required>
-                        </label>
-                        <label>
-                            <span>Is de (toekomstige) laadpaal op eigen terrein?</span>
-                            <select name="eigen_terrein" required>
-                                <option value="">Maak een keuze</option>
-                                <option value="ja">Ja</option>
-                                <option value="nee">Nee</option>
-                                <option value="onzeker">Onzeker</option>
-                            </select>
-                        </label>
-                        <label class="checkbox">
-                            <input type="checkbox" name="akkoord" required>
-                            <span>Ik begrijp dat dit geen garantie is op ERE’s of vergoedingen.</span>
-                        </label>
-
-                        <button type="submit" class="btn primary full-width">Voorinschrijven</button>
-                        <p class="form-note">
-                            We gebruiken je gegevens alleen om je te informeren over de voortgang van Savri 
-                            en de mogelijkheden rondom ERE’s voor privé-laadpalen.
-                        </p>
-                    </form>
-
-                </div>
+            <div>
+              <h4>Niet</h4>
+              <ul class="list">
+                <li>Geen garantie op ERE’s of bedragen.</li>
+                <li>Geen directe uitbetaling of belofte.</li>
+                <li>Geen aanbieder van leningen of energiecontracten.</li>
+              </ul>
             </div>
+          </div>
         </div>
+
+        <div class="column">
+          <div class="card">
+            <h3>Voorinschrijving EV-rijder</h3>
+
+            <form class="form" name="evrijder" novalidate>
+              <input type="hidden" name="installer_ref" />
+
+              <label>
+                <span>Voornaam</span>
+                <input type="text" name="voornaam" required />
+              </label>
+
+              <label>
+                <span>Achternaam</span>
+                <input type="text" name="achternaam" required />
+              </label>
+
+              <label>
+                <span>E-mailadres</span>
+                <input type="email" name="email" required />
+              </label>
+
+              <label>
+                <span>Mobiel nummer (optioneel)</span>
+                <input type="tel" name="telefoon" placeholder="06xxxxxxxx of +316xxxxxxxx" />
+              </label>
+
+              <label>
+                <span>Aantal laadpunten op locatie</span>
+                <select name="charger_count" required>
+                  <option value="">Selecteer aantal laadpunten</option>
+                  <option value="1">1 laadpunt</option>
+                  <option value="2">2 laadpunten</option>
+                  <option value="3">3 laadpunten</option>
+                  <option value="4">4 laadpunten</option>
+                  <option value="5">5 laadpunten</option>
+                  <option value="6">6 laadpunten</option>
+                  <option value="7">7 laadpunten</option>
+                  <option value="8">8 laadpunten</option>
+                  <option value="9">9 laadpunten</option>
+                  <option value="10">10 laadpunten</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Is de (toekomstige) laadpaal op eigen terrein?</span>
+                <select name="eigen_terrein" required>
+                  <option value="">Maak een keuze</option>
+                  <option value="ja">Ja</option>
+                  <option value="nee">Nee</option>
+                  <option value="onzeker">Onzeker</option>
+                </select>
+              </label>
+
+              <div class="checkbox-row">
+                <input type="checkbox" id="akkoord_ev" name="akkoord" required />
+                <label for="akkoord_ev">Ik begrijp dat dit geen garantie is op ERE’s of vergoedingen.</label>
+              </div>
+
+              <button type="submit" class="btn primary full-width">Voorinschrijven</button>
+
+              <p class="form-note">
+                We gebruiken je gegevens alleen om je te informeren over de voortgang van Savri en de mogelijkheden rondom
+                ERE’s voor privé-laadpalen.
+              </p>
+            </form>
+          </div>
+        </div>
+      </div>
     </section>
 
-    <!-- 
-        // SECTIE: ALLE ANDERE //
-        // Ugrote locaties, sub-2M kWh, resellers etc. //
-    -->
-
+    <!-- ANDERS -->
     <section id="anders" class="section section-alt tab-panel" data-panel="anders">
-    <div class="container two-column">
+      <div class="container two-column">
         <div class="column">
-        <h2>Voor grotere locaties en partners</h2>
-        <p>
-            Beheer je een laadplein, parkeergarage of andere locatie met substantieel laadvolume,
-            maar kom je zelf niet aan de NEa-drempel van 2.000.000 kWh per jaar?
-        </p>
-        <p>
-            Savri bundelt volumes en organiseert het ERE-inboekproces. 
-            Laat je gegevens achter via het contactformulier hieronder
-            of plan een gesprek (later kun je hier een intake-link van maken).
-        </p>
+          <h2>Voor grotere locaties en partners</h2>
+          <p>
+            Beheer je een laadplein, parkeergarage of andere locatie met substantieel laadvolume, maar kom je zelf niet aan
+            de NEa-drempel van 2.000.000 kWh per jaar?
+          </p>
+          <p>
+            Savri bundelt volumes en organiseert het ERE-inboekproces. Laat je gegevens achter via het contactformulier
+            hieronder of plan een gesprek (later kun je hier een intake-link van maken).
+          </p>
         </div>
         <div class="column">
-        <div class="card">
+          <div class="card">
             <h3>Val je niet in de standaard categorieën?</h3>
             <p>
-            Gebruik het contactformulier onderaan de pagina en vermeld dat het om een
-            grotere locatie gaat. We nemen gericht contact met je op.
+              Gebruik het contactformulier onderaan de pagina en vermeld dat het om een grotere locatie gaat. We nemen
+              gericht contact met je op.
             </p>
+          </div>
         </div>
-        </div>
-    </div>
+      </div>
     </section>
 
-
-    <!-- 
-        // SECTIE: FAQ / OVER //
-        // Korte uitleg wie Savri is en een aantal veelgestelde vragen. //
-    -->
+    <!-- FAQ -->
     <section id="faq" class="section">
-        <div class="container">
-            <h2>Over Savri & veelgestelde vragen</h2>
-            <div class="faq-intro">
-                <p>
-                    Savri richt zich op één ding: het zorgvuldig registreren en valideren van 
-                    privé-laadpalen volgens de vereisten van de Nederlandse Emissieautoriteit (NEa).
-                    Geen energiecontracten, geen beleggingsproduct – alleen data, validatie en audit-trails.
-                </p>
-            </div>
+      <div class="container">
+        <h2>Over Savri & veelgestelde vragen</h2>
 
-            <div class="faq-grid">
-                <div class="faq-item">
-                    <h3>Wat zijn ERE’s?</h3>
-                    <p>
-                        Emissiereductie-eenheden (ERE’s) zijn certificaten die horen bij aantoonbare 
-                        reductie van CO₂-uitstoot. Voor bepaalde vormen van elektrisch laden kunnen ERE’s 
-                        worden toegekend.
-                    </p>
-                </div>
-                <div class="faq-item">
-                    <h3>Is dit al definitief?</h3>
-                    <p>
-                        Nee. De NEa werkt aan de kaders. Savri bereidt het proces en platform voor, 
-                        zodat we direct kunnen aansluiten zodra het loket voor ERE-inboekers opent.
-                    </p>
-                </div>
-                <div class="faq-item">
-                    <h3>Krijg ik gegarandeerd geld als ik me aanmeld?</h3>
-                    <p>
-                        Nee. Er is geen garantie op toekenning van ERE’s of op een vergoeding. 
-                        Aanmelding betekent alleen dat jouw situatie wordt voorbereid op mogelijke deelname.
-                    </p>
-                </div>
-                <div class="faq-item">
-                    <h3>Werkt Savri samen met de NEa?</h3>
-                    <p>
-                        Savri is zelfstandig, maar ontwerpt het validatieproces nadrukkelijk in lijn met 
-                        de eisen van de NEa en zal deze aanpak voorleggen zodra registratie mogelijk is.
-                    </p>
-                </div>
-                <div class="faq-item">
-                    <h3>Ben ik ergens toe verplicht?</h3>
-                    <p>
-                        Nee. Aanmelding is vrijblijvend en je kunt je gegevens laten verwijderen 
-                        als je niet meer mee wilt doen.
-                    </p>
-                </div>
-            </div>
+        <div class="faq-intro">
+          <p>
+            Savri richt zich op één ding: het zorgvuldig registreren en valideren van privé-laadpalen volgens de vereisten
+            van de Nederlandse Emissieautoriteit (NEa). Geen energiecontracten, geen beleggingsproduct – alleen data,
+            validatie en audit-trails.
+          </p>
         </div>
+
+        <div class="faq-grid">
+          <div class="faq-item">
+            <h3>Wat zijn ERE’s?</h3>
+            <p>
+              Emissiereductie-eenheden (ERE’s) zijn certificaten die horen bij aantoonbare reductie van CO₂-uitstoot. Voor
+              bepaalde vormen van elektrisch laden kunnen ERE’s worden toegekend.
+            </p>
+          </div>
+
+          <div class="faq-item">
+            <h3>Is dit al definitief?</h3>
+            <p>
+              Nee. De NEa werkt aan de kaders. Savri bereidt het proces en platform voor, zodat we direct kunnen aansluiten
+              zodra het loket voor ERE-inboekers opent.
+            </p>
+          </div>
+
+          <div class="faq-item">
+            <h3>Krijg ik gegarandeerd geld als ik me aanmeld?</h3>
+            <p>
+              Nee. Er is geen garantie op toekenning van ERE’s of op een vergoeding. Aanmelding betekent alleen dat jouw
+              situatie wordt voorbereid op mogelijke deelname.
+            </p>
+          </div>
+
+          <div class="faq-item">
+            <h3>Werkt Savri samen met de NEa?</h3>
+            <p>
+              Savri is zelfstandig, maar ontwerpt het validatieproces nadrukkelijk in lijn met de eisen van de NEa en zal
+              deze aanpak voorleggen zodra registratie mogelijk is.
+            </p>
+          </div>
+
+          <div class="faq-item">
+            <h3>Ben ik ergens toe verplicht?</h3>
+            <p>
+              Nee. Aanmelding is vrijblijvend en je kunt je gegevens laten verwijderen als je niet meer mee wilt doen.
+            </p>
+          </div>
+        </div>
+      </div>
     </section>
 
-    <!-- 
-        // SECTIE: CONTACT //
-        // Simpel contactformulier voor vragen. //
-    -->
+    <!-- CONTACT -->
     <section id="contact" class="section section-alt">
-        <div class="container two-column">
-            <div class="column">
-                <h2>Contact</h2>
-                <p>
-                    Heb je vragen over Savri, samenwerking als installateur of de voorbereidingen 
-                    rondom ERE’s voor privé-laadpalen?
-                </p>
-                <p>
-                    Laat je gegevens achter en we nemen contact met je op zodra er relevante updates zijn.
-                </p>
-            </div>
-            <div class="column">
-                <div class="card">
-                    <h3>Stel je vraag</h3>
-                    <form class="form" method="post" data-netlify="true" name="contact" novalidate>
-                        <label>
-                            <span>Naam</span>
-                            <input type="text" name="naam" required>
-                        </label>
-                        <label>
-                            <span>E-mailadres</span>
-                            <input type="email" name="email" required>
-                        </label>
-                        <label>
-                            <span>Onderwerp</span>
-                            <select name="onderwerp">
-                                <option value="">Maak een keuze</option>
-                                <option value="installateur">Ik ben installateur</option>
-                                <option value="ev-rijder">Ik ben EV-rijder</option>
-                                <option value="overig">Overig</option>
-                            </select>
-                        </label>
-                        <label>
-                            <span>Bericht</span>
-                            <textarea name="bericht" rows="4" required></textarea>
-                        </label>
-                        <input type="hidden" name="form-name" value="contact">
-                        <button type="submit" class="btn secondary full-width">Verstuur</button>
-                    </form>
-                </div>
-            </div>
+      <div class="container two-column">
+        <div class="column">
+          <h2>Contact</h2>
+          <p>Heb je vragen over Savri, samenwerking als installateur of de voorbereidingen rondom ERE’s voor privé-laadpalen?</p>
+          <p>Laat je gegevens achter en we nemen contact met je op zodra er relevante updates zijn.</p>
         </div>
+
+        <div class="column">
+          <div class="card">
+            <h3>Stel je vraag</h3>
+
+            <form class="form" method="post" data-netlify="true" name="contact" novalidate>
+              <label>
+                <span>Naam</span>
+                <input type="text" name="naam" required />
+              </label>
+
+              <label>
+                <span>E-mailadres</span>
+                <input type="email" name="email" required />
+              </label>
+
+              <label>
+                <span>Onderwerp</span>
+                <select name="onderwerp" required>
+                  <option value="">Maak een keuze</option>
+                  <option value="installateur">Ik ben installateur</option>
+                  <option value="ev-rijder">Ik ben EV-rijder</option>
+                  <option value="overig">Overig</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Bericht</span>
+                <textarea name="bericht" rows="4" required></textarea>
+              </label>
+
+              <input type="hidden" name="form-name" value="contact" />
+              <button type="submit" class="btn primary full-width">Verstuur</button>
+            </form>
+          </div>
+        </div>
+      </div>
     </section>
 
-    <!-- 
-        // FOOTER //
-        // Onderaan de pagina: kleine tekst + dynamisch jaartal via script.js. //
-    -->
     <footer>
-        <div class="container footer-inner">
-            <p>&copy; <span id="year"></span> Savri. Alle rechten voorbehouden.</p>
-        </div>
+      <div class="container footer-inner">
+        <p>&copy; <span id="year"></span> Savri. Alle rechten voorbehouden.</p>
+      </div>
     </footer>
 
-    <!-- 
-        // SCRIPT-KOPPELING //
-        // script.js wordt gebruikt voor kleine interacties (bijv. jaartal invullen, smooth scroll). //
-    -->
-
-    <!-- Supabase client via CDN -->
     <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-    <!-- Jouw eigen script -->
     <script src="script.js"></script>
   </body>
 </html>
-

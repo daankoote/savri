@@ -1,730 +1,426 @@
-// ========= Supabase configuratie =========
+// ======================================================
+// Supabase configuratie
+// ======================================================
 const SUPABASE_URL = "https://yzngrurkpfuqgexbhzgl.supabase.co";
 const SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6bmdydXJrcGZ1cWdleGJoemdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNjYxMjYsImV4cCI6MjA4MDg0MjEyNn0.L7atEcmNvX2Wic0eSM9jWGdFUadIhH21EUFNtzP4YCk";
 
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
+);
 
-// ========= Helpers =========
+// ======================================================
+// Helpers – validatie
+// ======================================================
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email || "");
+}
 
 function isValidMobile(phone) {
-  if (!phone) return false;
-  const trimmed = phone.trim();
-  const patternLocal = /^0[1-9][0-9]{8}$/; // 06xxxxxxxx
-  const patternIntl = /^\+31[1-9][0-9]{8}$/; // +316xxxxxxxx
-  return patternLocal.test(trimmed) || patternIntl.test(trimmed);
+  if (!phone) return true;
+  return /^0[1-9][0-9]{8}$|^\+31[1-9][0-9]{8}$/.test(phone.trim());
 }
 
-function isValidEmail(email) {
-  if (!email) return false;
-  const trimmed = email.trim();
-  return trimmed.includes("@") && trimmed.includes(".");
-}
-
-function markFieldError(field) {
+// ======================================================
+// Helpers – UI errors / success
+// ======================================================
+function showFieldError(field, message) {
   if (!field) return;
+
   field.classList.add("input-error");
+
+  let el = field.parentElement.querySelector(".field-error");
+  if (el) el.remove();
+
+  el = document.createElement("div");
+  el.className = "field-error";
+  el.textContent = message;
+
+  field.parentElement.appendChild(el);
 }
 
 function clearFieldError(field) {
   if (!field) return;
   field.classList.remove("input-error");
+
+  const el = field.parentElement.querySelector(".field-error");
+  if (el) el.remove();
 }
 
-function clearAllFieldErrors(formElement) {
-  if (!formElement) return;
-  const errored = formElement.querySelectorAll(".input-error");
-  errored.forEach((el) => el.classList.remove("input-error"));
+function clearAllFieldErrors(form) {
+  form.querySelectorAll(".input-error").forEach(clearFieldError);
 }
 
-function showFormError(formElement, message) {
-  if (!formElement) return;
-
-  // Verwijder bestaande status-banners rond dit formulier
-  const existing = formElement.parentElement.querySelector(".form-status");
-  if (existing) {
-    existing.remove();
-  }
-
-  const div = document.createElement("div");
-  div.className = "form-status form-status--error";
-  div.textContent = message;
-
-  formElement.parentElement.insertBefore(div, formElement);
-  formElement.parentElement.scrollIntoView({
-    behavior: "smooth",
-    block: "start",
-  });
-}
-
-function showSuccessMessage(formElement, message) {
-  if (!formElement) return;
-
-  // Verwijder bestaande status-banners rond dit formulier
-  const existing = formElement.parentElement.querySelector(".form-status");
-  if (existing) {
-    existing.remove();
-  }
+function showSuccessMessage(form, message) {
+  const existing = form.querySelector(".form-status");
+  if (existing) existing.remove();
 
   const div = document.createElement("div");
   div.className = "form-status form-status--success";
   div.textContent = message;
 
-  formElement.parentElement.insertBefore(div, formElement);
-  formElement.parentElement.scrollIntoView({
-    behavior: "smooth",
-    block: "start",
-  });
+  form.appendChild(div);
 }
 
-function clearFormStatus(formElement) {
-  if (!formElement) return;
-  const existing = formElement.parentElement.querySelector(".form-status");
-  if (existing) {
-    existing.remove();
-  }
-}
-
+// ======================================================
+// Helpers – misc
+// ======================================================
 function getValue(form, selector) {
   const el = form.querySelector(selector);
   return el ? el.value.trim() : "";
 }
 
-// ========= DOM Loaded =========
+function generateRefCode(length = 6) {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  return Array.from({ length }, () =>
+    chars[Math.floor(Math.random() * chars.length)]
+  ).join("");
+}
 
-document.addEventListener("DOMContentLoaded", () => {
-  // footer-year
-  const yearSpan = document.getElementById("year");
-  if (yearSpan) yearSpan.textContent = new Date().getFullYear();
-
-  // smooth scroll
-  document.querySelectorAll('a[href^="#"]').forEach((link) => {
-    link.addEventListener("click", (event) => {
-      const targetId = link.getAttribute("href").substring(1);
-      const el = document.getElementById(targetId);
-      if (el) {
-        event.preventDefault();
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    });
-  });
-
-  // ref-code uit URL
-  const params = new URLSearchParams(window.location.search);
-  const refCode = params.get("ref");
-
-  // EV-rijder formulier
-  const evForm = document.querySelector('form[name="evrijder"]');
-  if (evForm) {
-    if (refCode) {
-      const refInput = evForm.querySelector('input[name="installer_ref"]');
-      if (refInput) refInput.value = refCode.toUpperCase();
+// ======================================================
+// Email queue (Route A) – via Supabase Edge Function
+// ======================================================
+async function enqueueEmail({ to_email, subject, body, message_type = "generic", priority = 10 }) {
+  const res = await fetch(
+    `${SUPABASE_URL}/functions/v1/enqueue-email`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ to_email, subject, body, message_type, priority }),
     }
-    evForm.addEventListener("submit", handleEvFormSubmit);
+  );
+
+  if (!res.ok) {
+    const txt = await res.text();
+    console.error("enqueue-email failed:", txt);
+    // Belangrijk: we laten de form flow niet falen op mail-problemen,
+    // behalve bij installer_code (daar kun je ervoor kiezen wél hard te falen).
+    return { ok: false, error: txt };
   }
 
-  // Installateur meldt klant aan
-  const installateurForm = document.querySelector('form[name="installateur"]');
-  if (installateurForm) {
-    installateurForm.addEventListener("submit", handleInstallateurFormSubmit);
-  }
+  return { ok: true };
+}
 
-  // Installateur signup (eigen pagina)
-  const installerSignupForm = document.getElementById("installer-signup-form");
-  if (installerSignupForm) {
-    installerSignupForm.addEventListener("submit", handleInstallerSignup);
-  }
+// ======================================================
+// DOM Ready
+// ======================================================
+document.addEventListener("DOMContentLoaded", () => {
+  // jaar in footer
+  const year = document.getElementById("year");
+  if (year) year.textContent = new Date().getFullYear();
 
-  // Contactformulier (Netlify)
-  const contactForm = document.querySelector('form[name="contact"]');
-  if (contactForm) {
-    contactForm.addEventListener("submit", handleContactFormSubmit);
-  }
-
-  // tab-panels (installateur / ev / anders) alleen op index.html
+  // tabs (alleen index.html)
   const panels = document.querySelectorAll(".tab-panel");
   const toggles = document.querySelectorAll(".tab-toggle");
 
-  function activatePanel(target) {
-    panels.forEach((p) => {
-      p.style.display = p.dataset.panel === target ? "block" : "none";
-    });
-    toggles.forEach((btn) => {
-      btn.classList.toggle("active", btn.dataset.target === target);
-    });
+  if (panels.length) {
+    const activate = (target) => {
+      panels.forEach((p) => (p.style.display = p.dataset.panel === target ? "block" : "none"));
+      toggles.forEach((b) => b.classList.toggle("active", b.dataset.target === target));
+    };
+
+    activate("installateur");
+    toggles.forEach((btn) =>
+      btn.addEventListener("click", () => activate(btn.dataset.target))
+    );
   }
 
-  if (panels.length) {
-    // default: installateur zichtbaar
-    activatePanel("installateur");
-    toggles.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        activatePanel(btn.dataset.target);
-      });
-    });
+  // ref-code uit URL voor EV-form
+  const params = new URLSearchParams(window.location.search);
+  const ref = params.get("ref");
+  const evForm = document.querySelector('form[name="evrijder"]');
+  if (evForm && ref) {
+    const input = evForm.querySelector('input[name="installer_ref"]');
+    if (input) input.value = ref.toUpperCase();
   }
+
+  // forms koppelen
+  document
+    .querySelector('form[name="evrijder"]')
+    ?.addEventListener("submit", handleEvForm);
+
+  document
+    .querySelector('form[name="installateur"]')
+    ?.addEventListener("submit", handleInstallateurKlantForm);
+
+  document
+    .getElementById("installer-signup-form")
+    ?.addEventListener("submit", handleInstallerSignup);
+
+  document
+    .querySelector('form[name="contact"]')
+    ?.addEventListener("submit", handleContactForm);
 });
 
-// ========= EV-rijder formulier (index.html) =========
-
-async function handleEvFormSubmit(event) {
-  event.preventDefault();
-  const form = event.target;
-
-  clearFormStatus(form);
+// ======================================================
+// EV-rijder
+// ======================================================
+async function handleEvForm(e) {
+  e.preventDefault();
+  const form = e.target;
   clearAllFieldErrors(form);
 
-  const firstName = getValue(form, 'input[name="voornaam"]');
-  const lastName = getValue(form, 'input[name="achternaam"]');
-  const fullName = [firstName, lastName].filter(Boolean).join(" ");
-  const email = getValue(form, 'input[name="email"]');
-  const phone = getValue(form, 'input[name="telefoon"]');
+  let hasError = false;
 
-  // LET OP: charger_count is nu een <select>
-  const chargerCountStr = getValue(form, 'select[name="charger_count"]');
-  const eigenTerrein = getValue(form, 'select[name="eigen_terrein"]');
-  const akkoord = form.querySelector('input[name="akkoord"]')?.checked;
-  const installerRefRaw = getValue(form, 'input[name="installer_ref"]');
-  const installerRef = installerRefRaw ? installerRefRaw.toUpperCase() : null;
+  const first = form.querySelector('[name="voornaam"]');
+  const last = form.querySelector('[name="achternaam"]');
+  const email = form.querySelector('[name="email"]');
+  const phone = form.querySelector('[name="telefoon"]');
+  const chargers = form.querySelector('[name="charger_count"]');
+  const terrein = form.querySelector('[name="eigen_terrein"]');
+  const akkoord = form.querySelector('[name="akkoord"]');
 
-  // velden pakken voor error-styling
-  const firstNameInput = form.querySelector('input[name="voornaam"]');
-  const lastNameInput = form.querySelector('input[name="achternaam"]');
-  const emailInput = form.querySelector('input[name="email"]');
-  const phoneInput = form.querySelector('input[name="telefoon"]');
-  const chargerSelect = form.querySelector('select[name="charger_count"]');
-  const eigenTerreinSelect = form.querySelector('select[name="eigen_terrein"]');
-  const akkoordCheckbox = form.querySelector('input[name="akkoord"]');
-
-  // 1. Verplichte velden
-
-  if (!firstName) {
-    markFieldError(firstNameInput);
-    showFormError(form, "Vul je voornaam in.");
-    return;
+  if (!first.value) { showFieldError(first, "Vul je voornaam in."); hasError = true; }
+  if (!last.value) { showFieldError(last, "Vul je achternaam in."); hasError = true; }
+  if (!email.value) {
+    showFieldError(email, "Vul je e-mailadres in."); hasError = true;
+  } else if (!isValidEmail(email.value)) {
+    showFieldError(email, "Vul een geldig e-mailadres in."); hasError = true;
   }
-
-  if (!lastName) {
-    markFieldError(lastNameInput);
-    showFormError(form, "Vul je achternaam in.");
-    return;
+  if (phone.value && !isValidMobile(phone.value)) {
+    showFieldError(phone, "Vul een geldig mobiel nummer in (06 of +316).");
+    hasError = true;
   }
+  if (!chargers.value) { showFieldError(chargers, "Selecteer het aantal laadpunten."); hasError = true; }
+  if (!terrein.value) { showFieldError(terrein, "Maak een keuze."); hasError = true; }
+  if (!akkoord.checked) { showFieldError(akkoord, "Akkoord is verplicht."); hasError = true; }
 
-  if (!email) {
-    markFieldError(emailInput);
-    showFormError(form, "Vul je e-mailadres in.");
-    return;
-  }
+  if (hasError) return;
 
-  if (!chargerCountStr) {
-    markFieldError(chargerSelect);
-    showFormError(form, "Selecteer het aantal laadpunten.");
-    return;
-  }
-
-  if (!eigenTerrein) {
-    markFieldError(eigenTerreinSelect);
-    showFormError(form, "Geef aan of het om eigen terrein gaat.");
-    return;
-  }
-
-  if (!akkoord) {
-    markFieldError(akkoordCheckbox);
-    showFormError(
-      form,
-      "Bevestig dat je akkoord gaat met de voorwaarden."
-    );
-    return;
-  }
-
-  // 2. E-mailadres inhoudelijk controleren
-  if (!isValidEmail(email)) {
-    markFieldError(emailInput);
-    showFormError(form, "Vul een geldig e-mailadres in.");
-    return;
-  }
-
-  // 3. Aantal laadpunten valideren (1–10)
-  let chargerCount = null;
-  const n = parseInt(chargerCountStr, 10);
-  if (Number.isNaN(n) || n < 1 || n > 10) {
-    markFieldError(chargerSelect);
-    showFormError(form, "Selecteer het aantal laadpunten.");
-    return;
-  }
-  chargerCount = n;
-
-  // 4. ownPremises bepalen
-  const ownPremises =
-    eigenTerrein === "ja" ? true : eigenTerrein === "nee" ? false : null;
-
-  // Payload voor leads
   const payload = {
     source: "ev_direct",
     lead_type: "ev_user",
-    full_name: fullName,
-    email,
-    phone: phone || null,
-    address: null, // veld bestaat nog in DB, maar niet meer in formulier
-    own_premises: ownPremises,
-    has_charger: null, // idem
-    annual_kwh_estimate: null,
-    installer_ref: installerRef,
-    installer_name: null,
-    installer_company: null,
-    installer_email: null,
-    installer_phone: null,
-    consent_terms: !!akkoord,
-    notes: null,
-    charger_count: chargerCount,
+    full_name: `${first.value} ${last.value}`,
+    email: email.value,
+    phone: phone.value || null,
+    charger_count: parseInt(chargers.value, 10),
+    own_premises: terrein.value === "ja",
+    consent_terms: true,
   };
 
   const { error } = await supabaseClient.from("leads").insert([payload]);
-
   if (error) {
-    console.error("Supabase insert error (ev):", error);
-    showFormError(
-      form,
-      "Er ging iets mis bij het versturen. Probeer het later nog een keer."
-    );
-    alert(
-      "Supabase EV-fout:\n" +
-        (error.message || JSON.stringify(error, null, 2))
-    );
+    alert("Opslaan mislukt. Probeer later opnieuw.");
     return;
   }
 
-  // outbound email loggen
-  const displayName = firstName || fullName || "EV-rijder";
+  const mailBody =
+  `Beste ${first.value.trim()},\n\n` +
+  `Bedankt voor je aanmelding bij Savri.\n\n` +
+  `Je voorinschrijving is ontvangen. We nemen contact met je op zodra er meer duidelijkheid is.\n\n` +
+  `Met vriendelijke groet,\nSavri`;
 
-  const emailPayload = {
-    to_email: email,
-    subject: "Je aanmelding voor je laadpaal via Savri is gelukt",
-    body:
-      "Beste " +
-      displayName +
-      ",\n\n" +
-      "Bedankt voor je aanmelding bij Savri.\n\n" +
-      "Je voorinschrijving is ontvangen. We nemen contact met je op zodra de NEa " +
-      "haar definitieve regels en planning bekendmaakt.\n\n" +
-      "Met vriendelijke groet,\nSavri",
-  };
-
-  const { error: emailErr } = await supabaseClient
-    .from("outbound_emails")
-    .insert([emailPayload]);
-
-  if (emailErr) {
-    console.error("Kon outbound email niet wegschrijven (ev):", emailErr);
-  }
+  await enqueueEmail({
+    to_email: email.value.trim(),
+    subject: "Je aanmelding via Savri is ontvangen",
+    body: mailBody,
+    message_type: "lead_confirmation",
+    priority: 10,
+  });
 
   form.reset();
-  clearAllFieldErrors(form);
-  showSuccessMessage(
-    form,
-    "Bedankt voor je aanmelding. Je ontvangt een bevestiging per e-mail zodra we je inschrijving hebben verwerkt."
-  );
+  showSuccessMessage(form, "Bedankt voor je aanmelding. We houden je op de hoogte.");
 }
 
-// ========= Installateur → klant (index.html) =========
-
-async function handleInstallateurFormSubmit(event) {
-  event.preventDefault();
-  const form = event.target;
-
-  clearFormStatus(form);
+// ======================================================
+// Installateur → klant
+// ======================================================
+async function handleInstallateurKlantForm(e) {
+  e.preventDefault();
+  const form = e.target;
   clearAllFieldErrors(form);
 
-  const installerRefRaw = getValue(form, 'input[name="installer_ref"]');
-  const installerRef = installerRefRaw ? installerRefRaw.toUpperCase() : "";
+  let hasError = false;
 
-  const firstName = getValue(form, 'input[name="klant_voornaam"]');
-  const lastName = getValue(form, 'input[name="klant_achternaam"]');
-  const fullName = [firstName, lastName].filter(Boolean).join(" ");
+  const ref = form.querySelector('[name="installer_ref"]');
+  const first = form.querySelector('[name="klant_voornaam"]');
+  const last = form.querySelector('[name="klant_achternaam"]');
+  const email = form.querySelector('[name="klant_email"]');
+  const phone = form.querySelector('[name="klant_telefoon"]');
+  const chargers = form.querySelector('[name="charger_count"]');
+  const terrein = form.querySelector('[name="eigen_terrein"]');
+  const akkoord = form.querySelector('[name="akkoord"]');
 
-  const email = getValue(form, 'input[name="klant_email"]');
-  const phone = getValue(form, 'input[name="klant_telefoon"]');
+  if (!ref.value) { showFieldError(ref, "Installateurscode is verplicht."); hasError = true; }
+  if (!first.value) { showFieldError(first, "Voornaam ontbreekt."); hasError = true; }
+  if (!last.value) { showFieldError(last, "Achternaam ontbreekt."); hasError = true; }
+  if (!email.value || !isValidEmail(email.value)) {
+    showFieldError(email, "Geldig e-mailadres vereist."); hasError = true;
+  }
+  if (!chargers.value) { showFieldError(chargers, "Selecteer laadpunten."); hasError = true; }
+  if (!terrein.value) { showFieldError(terrein, "Maak een keuze."); hasError = true; }
+  if (!akkoord.checked) { showFieldError(akkoord, "Akkoord is verplicht."); hasError = true; }
 
-  const chargerCountStr = getValue(form, 'select[name="charger_count"]');
-  const laadpaalStatus = getValue(form, 'select[name="laadpaal_status"]');
-  const eigenTerrein = getValue(form, 'select[name="eigen_terrein"]');
-  const notes = getValue(form, 'textarea[name="opmerking"]');
-  const akkoord = form.querySelector('input[name="akkoord"]')?.checked;
-
-  // velden voor styling
-  const installerRefInput = form.querySelector('input[name="installer_ref"]');
-  const firstNameInput = form.querySelector('input[name="klant_voornaam"]');
-  const lastNameInput = form.querySelector('input[name="klant_achternaam"]');
-  const emailInput = form.querySelector('input[name="klant_email"]');
-  const phoneInput = form.querySelector('input[name="klant_telefoon"]');
-  const chargerSelect = form.querySelector('select[name="charger_count"]');
-  const laadpaalStatusSelect = form.querySelector(
-    'select[name="laadpaal_status"]'
-  );
-  const eigenTerreinSelect = form.querySelector('select[name="eigen_terrein"]');
-  const akkoordCheckbox = form.querySelector('input[name="akkoord"]');
-
-  // 1. Verplichte velden
-
-  if (!installerRef) {
-    markFieldError(installerRefInput);
-    showFormError(form, "Vul je installateurscode in.");
-    return;
+  if (phone.value && !isValidMobile(phone.value)) {
+    showFieldError(phone, "Ongeldig mobiel nummer."); hasError = true;
   }
 
-  if (!firstName) {
-    markFieldError(firstNameInput);
-    showFormError(form, "Vul de voornaam van de klant in.");
-    return;
-  }
-
-  if (!lastName) {
-    markFieldError(lastNameInput);
-    showFormError(form, "Vul de achternaam van de klant in.");
-    return;
-  }
-
-  if (!email) {
-    markFieldError(emailInput);
-    showFormError(form, "Vul het e-mailadres van de klant in.");
-    return;
-  }
-
-  if (!chargerCountStr) {
-    markFieldError(chargerSelect);
-    showFormError(form, "Selecteer het aantal laadpunten.");
-    return;
-  }
-
-  if (!laadpaalStatus) {
-    markFieldError(laadpaalStatusSelect);
-    showFormError(form, "Geef de status van de laadpaal op.");
-    return;
-  }
-
-  if (!eigenTerrein) {
-    markFieldError(eigenTerreinSelect);
-    showFormError(form, "Geef aan of het om eigen terrein gaat.");
-    return;
-  }
-
-  if (!akkoord) {
-    markFieldError(akkoordCheckbox);
-    showFormError(
-      form,
-      "Bevestig dat je akkoord gaat met de voorwaarden."
-    );
-    return;
-  }
-
-  // 2. E-mail
-  if (!isValidEmail(email)) {
-    markFieldError(emailInput);
-    showFormError(form, "Vul een geldig e-mailadres in van de klant.");
-    return;
-  }
-
-  // 3. Telefoon (optioneel)
-  if (phone && !isValidMobile(phone)) {
-    markFieldError(phoneInput);
-    showFormError(
-      form,
-      "Vul een geldig mobiel nummer in (06 of +316) van de klant."
-    );
-    return;
-  }
-
-  // 4. Laadpaal-status en ownPremises afleiden
-  let hasCharger = null;
-  if (laadpaalStatus === "ja") hasCharger = "ja";
-  else if (laadpaalStatus === "nee") hasCharger = "nee_gepland";
-  else if (laadpaalStatus === "onzeker") hasCharger = "onzeker";
-
-  const ownPremises =
-    eigenTerrein === "ja" ? true : eigenTerrein === "nee" ? false : null;
-
-  // 5. Aantal laadpunten (1–10)
-  let chargerCount = null;
-  const n = parseInt(chargerCountStr, 10);
-  if (Number.isNaN(n) || n < 1 || n > 10) {
-    markFieldError(chargerSelect);
-    showFormError(form, "Selecteer het aantal laadpunten.");
-    return;
-  }
-  chargerCount = n;
+  if (hasError) return;
 
   const payload = {
     source: "via_installateur",
     lead_type: "ev_user",
-    full_name: fullName,
-    email,
-    phone: phone || null,
-    address: null,
-    own_premises: ownPremises,
-    has_charger: hasCharger,
-    annual_kwh_estimate: null,
-    charger_count: chargerCount,
-    installer_ref: installerRef,
-    installer_name: null,
-    installer_company: null,
-    installer_email: null,
-    installer_phone: null,
-    consent_terms: !!akkoord,
-    notes: notes || null,
+    full_name: `${first.value} ${last.value}`,
+    email: email.value,
+    phone: phone.value || null,
+    charger_count: parseInt(chargers.value, 10),
+    own_premises: terrein.value === "ja",
+    installer_ref: ref.value.toUpperCase(),
+    consent_terms: true,
   };
 
   const { error } = await supabaseClient.from("leads").insert([payload]);
-
   if (error) {
-    console.error("Supabase insert error (installateur):", error);
-    showFormError(
-      form,
-      "Er ging iets mis bij het versturen. Probeer het later nog een keer."
-    );
-    alert(
-      "Supabase installateur-fout:\n" +
-        (error.message || JSON.stringify(error, null, 2))
-    );
+    alert("Opslaan mislukt. Probeer later opnieuw.");
     return;
   }
 
-  // outbound email loggen naar eindklant
-  const displayName = firstName || fullName || "klant";
-
-  const emailPayload = {
-    to_email: email,
-    subject: "Je laadpaal-aanmelding via je installateur is ontvangen",
-    body:
-      "Beste " +
-      displayName +
-      ",\n\n" +
-      "Je installateur heeft je aangemeld bij Savri voor de voorbereiding op mogelijke ERE’s.\n\n" +
-      "We nemen contact met je op zodra er concrete vervolgstappen zijn en de NEa haar regels heeft gepubliceerd.\n\n" +
-      "Met vriendelijke groet,\nSavri",
-  };
-
-  const { error: emailErr } = await supabaseClient
-    .from("outbound_emails")
-    .insert([emailPayload]);
-
-  if (emailErr) {
-    console.error(
-      "Kon outbound email niet wegschrijven (via installateur):",
-      emailErr
-    );
-  }
-
-  form.reset();
-  clearAllFieldErrors(form);
   showSuccessMessage(
     form,
-    "De klant is succesvol aangemeld. De klant ontvangt een bevestiging per e-mail."
+    `Dank je wel ${first.value} ${last.value} voor het aanmelden van de klant.`
   );
+
+  const mailBody =
+  `Beste ${first.value.trim()},\n\n` +
+  `Je aanmelding via Savri is ontvangen.\n\n` +
+  `We nemen contact met je op zodra er vervolgstappen zijn.\n\n` +
+  `Met vriendelijke groet,\nSavri`;
+
+  await enqueueEmail({
+    to_email: email.value.trim(),
+    subject: "Je aanmelding via Savri is ontvangen",
+    body: mailBody,
+    message_type: "lead_confirmation",
+    priority: 10,
+  });
+
+ form.reset();
+
 }
 
-// ========= Installateur signup (installateur.html) =========
-
-function generateRefCode(length = 6) {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let out = "";
-  for (let i = 0; i < length; i++) {
-    out += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return out;
-}
-
-async function handleInstallerSignup(event) {
-  event.preventDefault();
-  const form = event.target;
-
-  clearFormStatus(form);
+// ======================================================
+// Installateur signup
+// ======================================================
+async function handleInstallerSignup(e) {
+  e.preventDefault();
+  const form = e.target;
   clearAllFieldErrors(form);
 
-  const company = getValue(form, 'input[name="company_name"]');
-  const firstName = getValue(form, 'input[name="contact_first_name"]');
-  const lastName = getValue(form, 'input[name="contact_last_name"]');
-  const contact = [firstName, lastName].filter(Boolean).join(" ");
-  const email = getValue(form, 'input[name="email"]');
-  const phone = getValue(form, 'input[name="phone"]');
-  const kvk = getValue(form, 'input[name="kvk"]');
-  const akkoord = form.querySelector('input[name="akkoord"]')?.checked;
+  let hasError = false;
 
-  const companyInput = form.querySelector('input[name="company_name"]');
-  const contactFirstInput = form.querySelector(
-    'input[name="contact_first_name"]'
-  );
-  const contactLastInput = form.querySelector(
-    'input[name="contact_last_name"]'
-  );
-  const emailInput = form.querySelector('input[name="email"]');
-  const phoneInput = form.querySelector('input[name="phone"]');
-  const akkoordCheckbox = form.querySelector('input[name="akkoord"]');
+  const company = form.querySelector('[name="company_name"]');
+  const first = form.querySelector('[name="contact_first_name"]');
+  const last = form.querySelector('[name="contact_last_name"]');
+  const email = form.querySelector('[name="email"]');
+  const phone = form.querySelector('[name="phone"]');
+  const kvk = form.querySelector('[name="kvk"]');
+  const akkoord = form.querySelector('[name="akkoord"]');
 
-  // 1. Verplichte velden
+  if (!company.value) { showFieldError(company, "Bedrijfsnaam verplicht."); hasError = true; }
+  if (!first.value) { showFieldError(first, "Voornaam verplicht."); hasError = true; }
+  if (!last.value) { showFieldError(last, "Achternaam verplicht."); hasError = true; }
+  if (!email.value || !isValidEmail(email.value)) {
+    showFieldError(email, "Geldig e-mailadres vereist."); hasError = true;
+  }
+  if (!/^[0-9]{8}$/.test(kvk.value)) {
+    showFieldError(kvk, "KVK-nummer moet 8 cijfers zijn."); hasError = true;
+  }
+  if (!akkoord.checked) { showFieldError(akkoord, "Akkoord is verplicht."); hasError = true; }
 
-  if (!company) {
-    markFieldError(companyInput);
-    showFormError(form, "Vul de bedrijfsnaam in.");
-    return;
+  if (phone.value && !isValidMobile(phone.value)) {
+    showFieldError(phone, "Ongeldig mobiel nummer."); hasError = true;
   }
 
-  if (!firstName) {
-    markFieldError(contactFirstInput);
-    showFormError(form, "Vul de voornaam van de contactpersoon in.");
-    return;
-  }
+  if (hasError) return;
 
-  if (!lastName) {
-    markFieldError(contactLastInput);
-    showFormError(form, "Vul de achternaam van de contactpersoon in.");
-    return;
-  }
-
-  if (!email) {
-    markFieldError(emailInput);
-    showFormError(form, "Vul je e-mailadres in.");
-    return;
-  }
-
-  if (!akkoord) {
-    markFieldError(akkoordCheckbox);
-    showFormError(
-      form,
-      "Bevestig dat je akkoord gaat met de voorwaarden."
-    );
-    return;
-  }
-
-  // 2. E-mail
-  if (!isValidEmail(email)) {
-    markFieldError(emailInput);
-    showFormError(form, "Vul een geldig e-mailadres in.");
-    return;
-  }
-
-  // 3. Telefoon (optioneel)
-  if (phone && !isValidMobile(phone)) {
-    markFieldError(phoneInput);
-    showFormError(
-      form,
-      "Vul een geldig mobiel nummer in (06 of +316)."
-    );
-    return;
-  }
-
-  const refCode = generateRefCode(6);
+  const refCode = generateRefCode();
 
   const payload = {
     ref_code: refCode,
-    company_name: company,
-    contact_name: contact,
-    email,
-    phone: phone || null,
-    kvk: kvk || null,
+    company_name: company.value,
+    contact_name: `${first.value} ${last.value}`,
+    email: email.value,
+    phone: phone.value || null,
+    kvk: kvk.value,
     active: true,
-    notes: null,
   };
 
   const { error } = await supabaseClient.from("installers").insert([payload]);
-
   if (error) {
-    console.error("Supabase installer-signup error:", error);
-    showFormError(
-      form,
-      "Er ging iets mis bij het opslaan. Probeer het later opnieuw."
-    );
-    alert(
-      "Supabase installateur-signup-fout:\n" +
-        (error.message || JSON.stringify(error, null, 2))
-    );
+    alert("Aanmelding mislukt. Probeer later opnieuw.");
     return;
   }
 
-  const emailPayload = {
-    to_email: email,
+  showSuccessMessage(
+  form,
+  "Aanmelding ontvangen. Je ontvangt je installateurscode per e-mail."
+  );
+
+  const mailBody =
+  `Beste ${first.value.trim()} ${last.value.trim()},\n\n` +
+  `Bedankt voor je aanmelding bij Savri.\n\n` +
+  `Je persoonlijke installateurscode is: ${refCode}\n\n` +
+  `Gebruik deze code bij het aanmelden van klanten.\n\n` +
+  `Met vriendelijke groet,\nSavri`;
+
+  const mailResult = await enqueueEmail({
+    to_email: email.value.trim(),
     subject: "Je installateurscode voor Savri",
-    body:
-      "Beste " +
-      contact +
-      ",\n\n" +
-      "Bedankt voor je aanmelding bij Savri.\n\n" +
-      "Je persoonlijke installateurscode is: " +
-      refCode +
-      ".\n\n" +
-      "Gebruik deze code bij het aanmelden van laadpalen op savri.nl.\n\n" +
-      "Met vriendelijke groet,\nSavri",
+    body: mailBody,
+    message_type: "installer_code",
+    priority: 1,
+  });
+
+  // Optioneel: als installer-code mail faalt, wil je dat de gebruiker dat ziet:
+  if (!mailResult.ok) {
+    alert("Aanmelding opgeslagen, maar e-mail kon niet worden verstuurd. Neem contact op.");
+  }
+  
+  form.reset();
+}
+
+// ======================================================
+// Contact form
+// ======================================================
+async function handleContactForm(e) {
+  e.preventDefault();
+  const form = e.target;
+  clearAllFieldErrors(form);
+
+  let hasError = false;
+
+  const name = form.querySelector('[name="naam"]');
+  const email = form.querySelector('[name="email"]');
+  const subject = form.querySelector('[name="onderwerp"]');
+  const message = form.querySelector('[name="bericht"]');
+
+  if (!name.value) { showFieldError(name, "Naam is verplicht."); hasError = true; }
+  if (!email.value) {
+    showFieldError(email, "E-mailadres is verplicht."); hasError = true;
+  } else if (!isValidEmail(email.value)) {
+    showFieldError(email, "Vul een geldig e-mailadres in."); hasError = true;
+  }
+  if (!subject.value) { showFieldError(subject, "Kies een onderwerp."); hasError = true; }
+  if (!message.value) { showFieldError(message, "Bericht ontbreekt."); hasError = true; }
+
+  if (hasError) return;
+
+  const payload = {
+    name: name.value.trim(),
+    email: email.value.trim(),
+    subject: subject.value.trim(),
+    message: message.value.trim(),
   };
 
-  const { error: emailErr } = await supabaseClient
-    .from("outbound_emails")
-    .insert([emailPayload]);
+  const { error } = await supabaseClient.from("contact_messages").insert([payload]);
 
-  if (emailErr) {
-    console.error(
-      "Kon outbound email niet wegschrijven (installer signup):",
-      emailErr
-    );
+  if (error) {
+    alert("Contact versturen mislukt. Probeer later opnieuw.");
+    return;
   }
 
   form.reset();
-  clearAllFieldErrors(form);
-  showSuccessMessage(
-    form,
-    "Je aanmelding als installateur is ontvangen. Je ontvangt zo je persoonlijke installateurscode per e-mail."
-  );
+  showSuccessMessage(form, "Dank je wel. Je bericht is verzonden. We nemen contact met je op.");
 }
 
-// ========= Contactformulier (Netlify) =========
-
-async function handleContactFormSubmit(event) {
-  event.preventDefault();
-  const form = event.target;
-
-  clearFormStatus(form);
-  clearAllFieldErrors(form);
-
-  const nameValue = getValue(form, 'input[name="naam"]');
-  const emailValue = getValue(form, 'input[name="email"]');
-  const subjectValue = getValue(form, 'input[name="onderwerp"]');
-  const messageValue = getValue(form, 'textarea[name="bericht"]');
-
-  const nameInput = form.querySelector('input[name="naam"]');
-  const emailInput = form.querySelector('input[name="email"]');
-  const subjectInput = form.querySelector('input[name="onderwerp"]');
-  const messageInput = form.querySelector('textarea[name="bericht"]');
-
-  // Verplichte velden
-  if (!nameValue) {
-    markFieldError(nameInput);
-    showFormError(form, "Vul je naam in.");
-    return;
-  }
-
-  if (!emailValue) {
-    markFieldError(emailInput);
-    showFormError(form, "Vul je e-mailadres in.");
-    return;
-  }
-
-  if (!subjectValue) {
-    markFieldError(subjectInput);
-    showFormError(form, "Vul het onderwerp in.");
-    return;
-  }
-
-  if (!messageValue) {
-    markFieldError(messageInput);
-    showFormError(form, "Vul je bericht in.");
-    return;
-  }
-
-  if (!isValidEmail(emailValue)) {
-    markFieldError(emailInput);
-    showFormError(form, "Vul een geldig e-mailadres in.");
-    return;
-  }
-
-  // Als alles goed is, mag Netlify het formulier verder afhandelen
-  // door het alsnog "normaal" te submitten.
-  form.submit();
-}
