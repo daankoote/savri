@@ -80,27 +80,36 @@ function generateRefCode(length = 6) {
 
 // ======================================================
 // Email queue (Route A) – via Supabase Edge Function
+// LET OP: deze functie mag NOOIT de form flow slopen.
 // ======================================================
 async function enqueueEmail({ to_email, subject, body, message_type = "generic", priority = 10 }) {
-  const res = await fetch(
-    `${SUPABASE_URL}/functions/v1/enqueue-email`,
-    {
+  try {
+    const url = `${SUPABASE_URL}/functions/v1/enqueue-email`;
+
+    const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        // Belangrijk: Supabase Edge Functions verwachten meestal auth headers
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+      },
       body: JSON.stringify({ to_email, subject, body, message_type, priority }),
+    });
+
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      console.error("enqueueEmail failed:", res.status, txt);
+      return { ok: false, error: txt || `HTTP ${res.status}` };
     }
-  );
 
-  if (!res.ok) {
-    const txt = await res.text();
-    console.error("enqueue-email failed:", txt);
-    // Belangrijk: we laten de form flow niet falen op mail-problemen,
-    // behalve bij installer_code (daar kun je ervoor kiezen wél hard te falen).
-    return { ok: false, error: txt };
+    return { ok: true };
+  } catch (err) {
+    console.error("enqueueEmail exception:", err);
+    return { ok: false, error: String(err) };
   }
-
-  return { ok: true };
 }
+
 
 // ======================================================
 // DOM Ready
@@ -205,22 +214,28 @@ async function handleEvForm(e) {
     return;
   }
 
+
+  // na succesvolle insert:
+  form.reset();
+  showSuccessMessage(form, "Bedankt voor uw aanmelding. We houden je op de hoogte.");
+
   const mailBody =
   `Beste ${first.value.trim()},\n\n` +
   `Bedankt voor je aanmelding bij Savri.\n\n` +
   `Je voorinschrijving is ontvangen. We nemen contact met je op zodra er meer duidelijkheid is.\n\n` +
   `Met vriendelijke groet,\nSavri`;
 
-  await enqueueEmail({
+  // daarna pas mail queue-en (niet awaiten)
+  enqueueEmail({
     to_email: email.value.trim(),
     subject: "Je aanmelding via Savri is ontvangen",
-    body: mailBody,
+    body: "…",
     message_type: "lead_confirmation",
     priority: 10,
   });
 
   form.reset();
-  showSuccessMessage(form, "Bedankt voor je aanmelding. We houden je op de hoogte.");
+ 
 }
 
 // ======================================================
@@ -276,27 +291,28 @@ async function handleInstallateurKlantForm(e) {
     return;
   }
 
-  showSuccessMessage(
-    form,
-    `Dank je wel ${first.value} ${last.value} voor het aanmelden van de klant.`
-  );
+
+
+
+  // na succesvolle insert:
+  form.reset();
+  showSuccessMessage(form, "Bedankt voor het aanmelden van de klant. We houden u en de klant op de hoogte.");
 
   const mailBody =
   `Beste ${first.value.trim()},\n\n` +
-  `Je aanmelding via Savri is ontvangen.\n\n` +
+  `Uw aanmelding via Savri is ontvangen via uw installateur.\n\n` +
   `We nemen contact met je op zodra er vervolgstappen zijn.\n\n` +
   `Met vriendelijke groet,\nSavri`;
 
-  await enqueueEmail({
+  // daarna pas mail queue-en (niet awaiten)
+  enqueueEmail({
     to_email: email.value.trim(),
-    subject: "Je aanmelding via Savri is ontvangen",
-    body: mailBody,
+    subject: "Uw aanmelding op Savri via uw installateur is ontvangen",
+    body: "…",
     message_type: "lead_confirmation",
     priority: 10,
   });
-
- form.reset();
-
+ 
 }
 
 // ======================================================
@@ -357,12 +373,17 @@ async function handleInstallerSignup(e) {
   "Aanmelding ontvangen. Je ontvangt je installateurscode per e-mail."
   );
 
+  
+
+  form.reset();
+  showSuccessMessage(form, "Aanmelding ontvangen. Je ontvangt je installateurscode per e-mail.");
+
   const mailBody =
-  `Beste ${first.value.trim()} ${last.value.trim()},\n\n` +
-  `Bedankt voor je aanmelding bij Savri.\n\n` +
-  `Je persoonlijke installateurscode is: ${refCode}\n\n` +
-  `Gebruik deze code bij het aanmelden van klanten.\n\n` +
-  `Met vriendelijke groet,\nSavri`;
+    `Beste ${first.value.trim()} ${last.value.trim()},\n\n` +
+    `Bedankt voor je aanmelding bij Savri.\n\n` +
+    `Je persoonlijke installateurscode is: ${refCode}\n\n` +
+    `Gebruik deze code bij het aanmelden van klanten.\n\n` +
+    `Met vriendelijke groet,\nSavri`;
 
   const mailResult = await enqueueEmail({
     to_email: email.value.trim(),
@@ -372,12 +393,11 @@ async function handleInstallerSignup(e) {
     priority: 1,
   });
 
-  // Optioneel: als installer-code mail faalt, wil je dat de gebruiker dat ziet:
   if (!mailResult.ok) {
-    alert("Aanmelding opgeslagen, maar e-mail kon niet worden verstuurd. Neem contact op.");
+    // optioneel: extra melding, maar je signup is al gelukt
+    alert("Aanmelding is opgeslagen, maar e-mail kon niet worden klaargezet. Neem contact op als je geen code ontvangt.");
   }
-  
-  form.reset();
+
 }
 
 // ======================================================
@@ -420,7 +440,19 @@ async function handleContactForm(e) {
     return;
   }
 
+
+  // na succesvolle insert:
   form.reset();
   showSuccessMessage(form, "Dank je wel. Je bericht is verzonden. We nemen contact met je op.");
+
+  // daarna pas mail queue-en (niet awaiten)
+  enqueueEmail({
+    to_email: email.value.trim(),
+    subject: "…",
+    body: "…",
+    message_type: "lead_confirmation",
+    priority: 10,
+  });
+
 }
 
