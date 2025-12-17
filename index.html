@@ -3,14 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Savri – ERE inboeker voor privé-laadpalen</title>
+    <title>Enval – ERE inboeker voor privé-laadpalen</title>
     <link rel="stylesheet" href="style.css" />
   </head>
 
   <body>
     <header>
       <div class="container header-inner">
-        <div class="logo"><span>Savri</span></div>
+        <div class="logo">
+          <a href="/"> Enval </a> <!--nu zonder logo--> 
+          <!-- <a href="/"> <img src="/logo.svg" alt="Enval"> zodra met logo </a> --> 
+        </div>
         <nav>
           <a href="#hero">Home</a>
           <a href="/installateur.html">Aanmelden als installateur</a>
@@ -25,21 +28,21 @@
         <div class="hero-text">
           <h1>ERE’s voor privé-laadpalen, zonder extra gedoe.</h1>
           <p>
-            Savri is een onafhankelijk platform dat privé-laadpalen registreert en valideert volgens de eisen van de
+            Enval is een onafhankelijk platform dat privé-laadpalen registreert en valideert volgens de eisen van de
             Nederlandse Emissieautoriteit (NEa). Voorbereid op ERE, zodra het loket opengaat, wat gepland is op
             1 januari 2026.
           </p>
 
           <div class="hero-buttons">
-            <button class="btn primary tab-toggle" data-target="installateur">Ik ben installateur</button>
-            <button class="btn secondary tab-toggle" data-target="ev">Ik heb een privé-laadpaal</button>
-            <button class="btn ghost tab-toggle" data-target="anders">Anders</button>
+            <button class="btn outline tab-toggle" data-target="installateur" type="button">Ik ben installateur</button>
+            <button class="btn outline tab-toggle" data-target="ev" type="button">Ik heb een privé-laadpaal</button>
+            <button class="btn outline tab-toggle" data-target="anders" type="button">Anders</button>
           </div>
         </div>
 
         <div class="hero-side">
           <div class="card">
-            <h3>Hoe Savri werkt</h3>
+            <h3>Hoe Enval werkt</h3>
             <ol>
               <li>Je laadpaal registreren via installateur of direct.</li>
               <li>Validatie volgens NEa-criteria (identiteit, locatie, hardware, verbruik).</li>
@@ -56,7 +59,7 @@
         <div class="column">
           <h2>Maak uw klanten klaar voor ERE’s – zonder extra rompslomp.</h2>
           <p>
-            Savri verzorgt de registratie, validatie en audit-trail van privé-laadpalen. U blijft het centrale
+            Enval verzorgt de registratie, validatie en audit-trail van privé-laadpalen. U blijft het centrale
             aanspreekpunt voor uw klant, wij regelen de administratieve kant geheel automatisch.
           </p>
 
@@ -73,14 +76,6 @@
             <li>Basisgegevens van laadpaal-installaties.</li>
             <li>Dat is alles.</li>
           </ul>
-
-          <h3>Voor laadpleinen en grotere locaties</h3>
-          <p>
-            Beheert u een laadplein, parkeergarage of andere locatie met substantieel laadvolume maar komt u niet aan de
-            NEa-drempel van 2.000.000 kWh per jaar? Savri kan helpen om volume te bundelen en het ERE-inboekproces te
-            organiseren.
-          </p>
-          <p>Neem contact op voor samenwerking of maatwerkafspraken via het contactformulier hieronder.</p>
         </div>
 
         <div class="column">
@@ -142,7 +137,7 @@
               <div class="checkbox-row">
                 <input type="checkbox" id="akkoord_installateur" name="akkoord" required />
                 <label for="akkoord_installateur">
-                  Ik bevestig dat ik deze klant mag aanmelden bij Savri voor voorbereiding op mogelijke ERE’s (nog zonder
+                  Ik bevestig dat ik deze klant mag aanmelden bij Enval voor voorbereiding op mogelijke ERE’s (nog zonder
                   garantie op toekenning of vergoeding).
                 </label>
               </div>
@@ -165,7 +160,7 @@
         <div class="column">
           <h2>Meld je privé-laadpaal aan voor toekomstige ERE’s.</h2>
           <p>
-            Met Savri zorg je dat jouw laadpaal en laadverbruik klaarstaan zodra de NEa ERE’s toekent voor privé-laadpalen.
+            Met Enval zorg je dat jouw laadpaal en laadverbruik klaarstaan zodra de NEa ERE’s toekent voor privé-laadpalen.
             Dit is een voorbereidingsfase, geen garantie op vergoedingen.
           </p>
 
@@ -252,7 +247,7 @@
               <button type="submit" class="btn primary full-width">Voorinschrijven</button>
 
               <p class="form-note">
-                We gebruiken je gegevens alleen om je te informeren over de voortgang van Savri en de mogelijkheden rondom
+                We gebruiken je gegevens alleen om je te informeren over de voortgang van Enval en de mogelijkheden rondom
                 ERE’s voor privé-laadpalen.
               </p>
             </form>
@@ -271,8 +266,8 @@
             de NEa-drempel van 2.000.000 kWh per jaar?
           </p>
           <p>
-            Savri bundelt volumes en organiseert het ERE-inboekproces. Laat je gegevens achter via het contactformulier
-            hieronder of plan een gesprek (later kun je hier een intake-link van maken).
+            Enval bundelt volumes en organiseert het ERE-inboekproces. Laat je gegevens achter via het contactformulier
+            hieronder.
           </p>
         </div>
         <div class="column">
@@ -290,11 +285,11 @@
     <!-- FAQ -->
     <section id="faq" class="section">
       <div class="container">
-        <h2>Over Savri & veelgestelde vragen</h2>
+        <h2>Over Enval & veelgestelde vragen</h2>
 
         <div class="faq-intro">
           <p>
-            Savri richt zich op één ding: het zorgvuldig registreren en valideren van privé-laadpalen volgens de vereisten
+            Enval richt zich op één ding: het zorgvuldig registreren en valideren van privé-laadpalen volgens de vereisten
             van de Nederlandse Emissieautoriteit (NEa). Geen energiecontracten, geen beleggingsproduct – alleen data,
             validatie en audit-trails.
           </p>
@@ -312,7 +307,7 @@
           <div class="faq-item">
             <h3>Is dit al definitief?</h3>
             <p>
-              Nee. De NEa werkt aan de kaders. Savri bereidt het proces en platform voor, zodat we direct kunnen aansluiten
+              Nee. De NEa werkt aan de kaders. Enval bereidt het proces en platform voor, zodat we direct kunnen aansluiten
               zodra het loket voor ERE-inboekers opent.
             </p>
           </div>
@@ -326,9 +321,9 @@
           </div>
 
           <div class="faq-item">
-            <h3>Werkt Savri samen met de NEa?</h3>
+            <h3>Werkt Enval samen met de NEa?</h3>
             <p>
-              Savri is zelfstandig, maar ontwerpt het validatieproces nadrukkelijk in lijn met de eisen van de NEa en zal
+              Enval is zelfstandig, maar ontwerpt het validatieproces nadrukkelijk in lijn met de eisen van de NEa en zal
               deze aanpak voorleggen zodra registratie mogelijk is.
             </p>
           </div>
@@ -348,18 +343,23 @@
       <div class="container two-column">
         <div class="column">
           <h2>Contact</h2>
-          <p>Heb je vragen over Savri, samenwerking als installateur of de voorbereidingen rondom ERE’s voor privé-laadpalen?</p>
-          <p>Laat je gegevens achter en we nemen contact met je op zodra er relevante updates zijn.</p>
+          <p>Heb je vragen over Enval, samenwerking als installateur of de voorbereidingen rondom ERE’s?</p>
+          <p>Laat je gegevens achter en we nemen contact met je op.</p>
         </div>
 
         <div class="column">
           <div class="card">
             <h3>Stel je vraag</h3>
 
-            <form class="form" method="post" data-netlify="true" name="contact" novalidate>
+            <form class="form" name="contact" novalidate>
               <label>
-                <span>Naam</span>
-                <input type="text" name="naam" required />
+                <span>Voornaam</span>
+                <input type="text" name="first_name" required />
+              </label>
+
+              <label>
+                <span>Achternaam (optioneel)</span>
+                <input type="text" name="last_name" />
               </label>
 
               <label>
@@ -382,7 +382,6 @@
                 <textarea name="bericht" rows="4" required></textarea>
               </label>
 
-              <input type="hidden" name="form-name" value="contact" />
               <button type="submit" class="btn primary full-width">Verstuur</button>
             </form>
           </div>
@@ -392,7 +391,7 @@
 
     <footer>
       <div class="container footer-inner">
-        <p>&copy; <span id="year"></span> Savri. Alle rechten voorbehouden.</p>
+        <p>&copy; <span id="year"></span> Enval. Alle rechten voorbehouden.</p>
       </div>
     </footer>
 
