@@ -208,13 +208,13 @@ async function handleEvForm(e) {
 
   let hasError = false;
 
-  if (!first.value.trim()) { showFieldError(first, "Vul je voornaam in."); hasError = true; }
-  if (!last.value.trim()) { showFieldError(last, "Vul je achternaam in."); hasError = true; }
+  if (!first.value.trim()) { showFieldError(first, "Vul uw voornaam in."); hasError = true; }
+  if (!last.value.trim()) { showFieldError(last, "Vul uw achternaam in."); hasError = true; }
 
   if (!email.value.trim()) {
-    showFieldError(email, "Vul je e-mailadres in."); hasError = true;
+    showFieldError(email, "Geldig e-mailadres verplicht."); hasError = true;
   } else if (!isValidEmail(email.value)) {
-    showFieldError(email, "Vul een geldig e-mailadres in."); hasError = true;
+    showFieldError(email, "Controleer uw e-mailadres."); hasError = true;
   }
 
   if (phone.value && !isValidMobile(phone.value)) {
@@ -250,13 +250,16 @@ async function handleEvForm(e) {
   // mail queue (niet blokkeren)
   const body =
     `Beste ${first.value.trim()},\n\n` +
-    `Bedankt voor je aanmelding bij Enval.\n\n` +
-    `Je voorinschrijving is ontvangen. We nemen contact met je op zodra er meer duidelijkheid is.\n\n` +
-    `Met vriendelijke groet,\nEnval`;
+    `Bedankt voor uw aanmelding bij Enval.\n\n` +
+    `We nemen contact met u op zodra er meer duidelijkheid is bij de NEa over de registratie voorwaarden.\n\n` +
+    `Naar verwachting zullen we u vragen om de laadpaal data, waaronder het serienummer en de aankoop- en installatiefactuur.\n\n` +
+    `Indien u vragenheeft kunt u contact opnemen via: contact@enval.nl \n\n` + 
+    `Met vriendelijke groet,\n\n + 
+    Enval`;
 
   queueEmail({
     to_email: email.value.trim(),
-    subject: "Je aanmelding via Enval is ontvangen",
+    subject: "Uw aanmelding via Enval is ontvangen",
     body,
     message_type: "lead_confirmation",
     priority: 5,
@@ -266,7 +269,7 @@ async function handleEvForm(e) {
 
   // reset alles
   keepAndReset(form, [], 'input[name="voornaam"]');
-  showToast("Aanmelding opgeslagen. Bevestiging wordt per e-mail klaargezet.", "success");
+  showToast("Aanmelding opgeslagen. We hebben u de bevestiging per e-mail toegstuurd.", "success");
 }
 
 // ======================================================
@@ -289,17 +292,17 @@ async function handleInstallateurKlantForm(e) {
   let hasError = false;
 
   if (!ref.value.trim()) { showFieldError(ref, "Installateurscode is verplicht."); hasError = true; }
-  if (!first.value.trim()) { showFieldError(first, "Voornaam ontbreekt."); hasError = true; }
-  if (!last.value.trim()) { showFieldError(last, "Achternaam ontbreekt."); hasError = true; }
+  if (!first.value.trim()) { showFieldError(first, "Vul uw voornaam in."); hasError = true; }
+  if (!last.value.trim()) { showFieldError(last, "Vul uw achternaam in."); hasError = true; }
 
   if (!email.value.trim()) {
-    showFieldError(email, "E-mailadres is verplicht."); hasError = true;
+    showFieldError(email, "Geldig e-mailadres is verplicht."); hasError = true;
   } else if (!isValidEmail(email.value)) {
-    showFieldError(email, "Geldig e-mailadres vereist."); hasError = true;
+    showFieldError(email, "Controleer uw e-mailadres."); hasError = true;
   }
 
   if (phone.value && !isValidMobile(phone.value)) {
-    showFieldError(phone, "Ongeldig mobiel nummer."); hasError = true;
+    showFieldError(phone, "Vul een geldig mobiel nummer in (06 of +316)."); hasError = true;
   }
 
   if (!chargers.value) { showFieldError(chargers, "Selecteer laadpunten."); hasError = true; }
