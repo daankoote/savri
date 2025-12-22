@@ -2,9 +2,19 @@
 // Config
 // ======================================================
 const SUPABASE_URL = "https://yzngrurkpfuqgexbhzgl.supabase.co";
+const SUPABASE_ANON_KEY =
+  "PASTE_HIER_JE_ANON_KEY_1_OP_1"; // dezelfde als je eerder had
+
 const API_BASE = `${SUPABASE_URL}/functions/v1`;
 
-
+// Altijd dezelfde headers voor Edge Functions
+function edgeHeaders() {
+  return {
+    "Content-Type": "application/json",
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+  };
+}
 
 // ======================================================
 // Validatie helpers
@@ -242,7 +252,7 @@ async function handleEvForm(e) {
 
   const res = await fetch(`${API_BASE}/api-lead-submit`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: edgeHeaders(),
     body: JSON.stringify({
       flow: "ev_direct",
       first_name: payload.first_name,
@@ -328,7 +338,7 @@ async function handleInstallateurKlantForm(e) {
 
  const res = await fetch(`${API_BASE}/api-lead-submit`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: edgeHeaders(),
     body: JSON.stringify({
       flow: "installer_to_customer",
       installer_ref: ref.value.trim().toUpperCase(),
@@ -410,7 +420,7 @@ async function handleInstallerSignup(e) {
 
   const res = await fetch(`${API_BASE}/api-lead-submit`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: edgeHeaders(),
     body: JSON.stringify({
       flow: "installer_signup",
       company_name: company.value.trim(),
@@ -476,7 +486,7 @@ async function handleContactForm(e) {
 
   const res = await fetch(`${API_BASE}/api-lead-submit`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: edgeHeaders(),
     body: JSON.stringify({
       flow: "contact",
       first_name: first.value.trim(),
