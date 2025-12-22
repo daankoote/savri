@@ -6,6 +6,8 @@ const SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6bmdydXJrcGZ1cWdleGJoemdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNjYxMjYsImV4cCI6MjA4MDg0MjEyNn0.L7atEcmNvX2Wic0eSM9jWGdFUadIhH21EUFNtzP4YCk";
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const API_BASE = `${SUPABASE_URL}/functions/v1`;
+
 
 // ======================================================
 // Validatie helpers
@@ -102,57 +104,57 @@ function keepAndReset(form, keepSelectors = [], focusSelector = null) {
 // - Eerst Edge Function proberen (als jij die later wil gebruiken)
 // - Anders direct insert in outbound_emails (jouw huidige werkende route)
 // ======================================================
-async function tryEdgeFunctionEmail(payload) {
-  const url = `${SUPABASE_URL}/functions/v1/enqueue-email`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-    },
-    body: JSON.stringify(payload),
-  });
+//async function tryEdgeFunctionEmail(payload) {
+//  const url = `${SUPABASE_URL}/functions/v1/enqueue-email`;
+//  const res = await fetch(url, {
+//    method: "POST",
+//    headers: {
+//      "Content-Type": "application/json",
+//      apikey: SUPABASE_ANON_KEY,
+//      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+//    },
+//    body: JSON.stringify(payload),
+//  });
 
-  if (!res.ok) {
-    const txt = await res.text().catch(() => "");
-    return { ok: false, error: txt || `HTTP ${res.status}` };
-  }
-  return { ok: true };
-}
+//  if (!res.ok) {
+//    const txt = await res.text().catch(() => "");
+//    return { ok: false, error: txt || `HTTP ${res.status}` };
+//  }
+//  return { ok: true };
+//}
 
-async function queueEmail({ to_email, subject, body, message_type = "generic", priority = 10 }) {
-  const payload = { to_email, subject, body, message_type, priority };
+//async function queueEmail({ to_email, subject, body, message_type = "generic", priority = 10 }) {
+//  const payload = { to_email, subject, body, message_type, priority };
 
-  // 1) Edge Function (optioneel)
-  try {
-    const edge = await tryEdgeFunctionEmail(payload);
-    if (edge.ok) return { ok: true, via: "edge" };
-  } catch (_) {
-    // negeren → fallback
-  }
+ // // 1) Edge Function (optioneel)
+ // try {
+ //   const edge = await tryEdgeFunctionEmail(payload);
+ //   if (edge.ok) return { ok: true, via: "edge" };
+ // } catch (_) {
+ //   // negeren → fallback
+ // }
 
-  // 2) Fallback: direct insert in outbound_emails
-  const { error } = await supabaseClient.from("outbound_emails").insert([payload]);
-  if (error) return { ok: false, error: error.message || String(error) };
+ // // 2) Fallback: direct insert in outbound_emails
+  //const { error } = await supabaseClient.from("outbound_emails").insert([payload]);
+ // if (error) return { ok: false, error: error.message || String(error) };
 
-  return { ok: true, via: "table" };
-}
+//  return { ok: true, via: "table" };
+//}
 
-// ======================================================
-// Installer ref validation via RPC
-// ======================================================
-async function validateInstallerRef(ref) {
-  const code = (ref || "").trim().toUpperCase();
-  if (!code) return false;
+//// ======================================================
+//// Installer ref validation via RPC
+//// ======================================================
+//async function validateInstallerRef(ref) {
+//  const code = (ref || "").trim().toUpperCase();
+//  if (!code) return false;
 
-  const { data, error } = await supabaseClient.rpc("validate_installer_ref", { p_ref: code });
-  if (error) {
-    console.error("validate_installer_ref RPC error:", error);
-    return false;
-  }
-  return !!data;
-}
+//  const { data, error } = await supabaseClient.rpc("validate_installer_ref", { p_ref: code });
+//  if (error) {
+//    console.error("validate_installer_ref RPC error:", error);
+//    return false;
+//  }
+//  return !!data;
+//}
 
 // ======================================================
 // DOM Ready
@@ -240,36 +242,31 @@ async function handleEvForm(e) {
     consent_terms: true,
   };
 
-  const { error } = await supabaseClient.from("leads").insert([payload]);
-  if (error) {
-    console.error("leads insert error (ev):", error);
-    showToast("Opslaan mislukt. Probeer later opnieuw.", "error");
+
+  const res = await fetch(`${API_BASE}/api-lead-submit`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      flow: "ev_direct",
+      first_name: payload.first_name,
+      last_name: payload.last_name,
+      email: payload.email,
+      phone: payload.phone,
+      charger_count: payload.charger_count,
+      own_premises: payload.own_premises
+    }),
+  });
+
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || !json.ok) {
+    console.error("api-lead-submit ev_direct failed:", json);
+    showToast(json.error || "Opslaan mislukt. Probeer later opnieuw.", "error");
     return;
   }
 
-  // mail queue (niet blokkeren)
-  const body =
-    `Beste ${first.value.trim()},\n\n` +
-    `Bedankt voor uw aanmelding bij Enval.\n\n` +
-    `We nemen contact met u op zodra er meer duidelijkheid is bij de NEa over de registratie voorwaarden.\n\n` +
-    `Naar verwachting zullen we u vragen om de laadpaal data, waaronder het serienummer en de aankoop- en installatiefactuur.\n\n` +
-    `Indien u vragenheeft kunt u contact opnemen via: contact@enval.nl \n\n` + 
-    `Met vriendelijke groet,\n\n` + 
-    `Enval`;
-
-  queueEmail({
-    to_email: email.value.trim(),
-    subject: "Uw aanmelding via Enval is ontvangen",
-    body,
-    message_type: "lead_confirmation",
-    priority: 5,
-  }).then((r) => {
-    if (!r.ok) console.error("queueEmail failed (ev):", r.error);
-  });
-
-  // reset alles
   keepAndReset(form, [], 'input[name="voornaam"]');
-  showToast("Aanmelding opgeslagen. We hebben u de bevestiging per e-mail toegstuurd.", "success");
+  showToast("Aanmelding ontvangen. Je ontvangt e-mail met dossierlink.", "success");
+
 }
 
 // ======================================================
@@ -311,12 +308,12 @@ async function handleInstallateurKlantForm(e) {
 
   if (hasError) return;
 
-  // installer code check (RPC)
-  const ok = await validateInstallerRef(ref.value);
-  if (!ok) {
-    showFieldError(ref, "Installateurscode niet correct / bekend.");
-    return;
-  }
+  //// installer code check (RPC)
+  //const ok = await validateInstallerRef(ref.value);
+  //if (!ok) {
+  //  showFieldError(ref, "Installateurscode niet correct / bekend.");
+  //  return;
+  //}
 
   const payload = {
     source: "via_installateur",
@@ -332,33 +329,29 @@ async function handleInstallateurKlantForm(e) {
     consent_terms: true,
   };
 
-  const { error } = await supabaseClient.from("leads").insert([payload]);
-  if (error) {
-    console.error("leads insert error (installer->klant):", error);
-    showToast("Opslaan mislukt. Probeer later opnieuw.", "error");
+ const res = await fetch(`${API_BASE}/api-lead-submit`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      flow: "installer_to_customer",
+      installer_ref: ref.value.trim().toUpperCase(),
+      first_name: first.value.trim(),
+      last_name: last.value.trim(),
+      email: email.value.trim(),
+      phone: phone.value.trim() || null,
+      charger_count: parseInt(chargers.value, 10),
+      own_premises: terrein.value === "ja",
+    }),
+  });
+
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || !json.ok) {
+    showFieldError(ref, json.error || "Installateurscode niet correct / bekend.");
     return;
   }
 
-  // mail queue (niet blokkeren)
-  const body =
-    `Beste ${first.value.trim()},\n\n` +
-    `Je aanmelding via Enval is ontvangen via je installateur.\n\n` +
-    `We nemen contact met je op zodra er vervolgstappen zijn.\n\n` +
-    `Met vriendelijke groet,\nEnval`;
-
-  queueEmail({
-    to_email: email.value.trim(),
-    subject: "Je aanmelding op Enval via je installateur is ontvangen",
-    body,
-    message_type: "lead_confirmation",
-    priority: 5,
-  }).then((r) => {
-    if (!r.ok) console.error("queueEmail failed (installer->klant):", r.error);
-  });
-
-  // reset: alleen installer_ref behouden
   keepAndReset(form, ['input[name="installer_ref"]'], 'input[name="klant_voornaam"]');
-  showToast("Klant opgeslagen. Bevestiging wordt per e-mail klaargezet.", "success");
+  showToast("Klant aangemeld. Dossierlink wordt per e-mail verstuurd.", "success");
 
 }
 
@@ -418,38 +411,28 @@ async function handleInstallerSignup(e) {
     active: true,
   };
 
-  const { error } = await supabaseClient.from("installers").insert([payload]);
-  if (error) {
-    console.error("installers insert error:", error);
-    showToast("Aanmelding mislukt. Probeer later opnieuw.", "error");
-    return;
-  }
-
-  // Mail queue met code (kritiek → priority 1)
-  const body =
-    `Beste ${first.value.trim()} ${last.value.trim()},\n\n` +
-    `Bedankt voor je aanmelding bij Enval.\n\n` +
-    `Je persoonlijke installateurscode is: ${refCode}\n\n` +
-    `Gebruik deze code bij het aanmelden van klanten.\n\n` +
-    `Met vriendelijke groet,\nEnval`;
-
-  const mailResult = await queueEmail({
-    to_email: email.value.trim(),
-    subject: "Je installateurscode voor Enval",
-    body,
-    message_type: "installer_code",
-    priority: 1,
+  const res = await fetch(`${API_BASE}/api-lead-submit`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      flow: "installer_signup",
+      company_name: company.value.trim(),
+      contact_first_name: first.value.trim(),
+      contact_last_name: last.value.trim(),
+      email: email.value.trim(),
+      phone: phone.value.trim() || null,
+      kvk: kvk.value.trim(),
+    }),
   });
 
-// reset alles + focus op voornaam
-  keepAndReset(form, [], 'input[name="contact_first_name"]');
-
-  if (!mailResult.ok) {
-    showToast("Aanmelding opgeslagen, maar e-mail kon niet worden klaargezet.", "error");
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || !json.ok) {
+    showToast(json.error || "Aanmelding mislukt. Probeer later opnieuw.", "error");
     return;
   }
 
-  showToast("Aanmelding opgeslagen. Je code wordt per e-mail klaargezet.", "success");
+  keepAndReset(form, [], 'input[name="contact_first_name"]');
+  showToast("Aanmelding ontvangen. Je ontvangt e-mail + account activatie (magic link).", "success");
 }
 
 // ======================================================
@@ -465,6 +448,10 @@ async function handleContactForm(e) {
   const email = form.querySelector('[name="email"]');
   const subject = form.querySelector('[name="onderwerp"]');
   const message = form.querySelector('[name="bericht"]');
+  const confirmationBody =
+  `Dank voor uw bericht.\n` +
+  `We hebben uw onderstaande bericht ontvangen en zullen zo snel mogelijk reageren.\n\n` +
+  `----------------------------------------\n\n`;
 
   let hasError = false;
 
@@ -490,32 +477,26 @@ async function handleContactForm(e) {
     message: message.value.trim(),
   };
 
-  const { error } = await supabaseClient.from("contact_messages").insert([payload]);
-  if (error) {
-    console.error("contact_messages insert error:", error);
-    showToast("Contact versturen mislukt. Probeer later opnieuw.", "error");
+  const res = await fetch(`${API_BASE}/api-lead-submit`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      flow: "contact",
+      first_name: first.value.trim(),
+      last_name: last.value.trim() || null,
+      email: email.value.trim(),
+      subject: subject.value.trim(),
+      message: message.value.trim(),
+    }),
+  });
+
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || !json.ok) {
+    showToast(json.error || "Contact versturen mislukt. Probeer later opnieuw.", "error");
     return;
   }
 
-  // Mail naar daankoote@gmail.com queue-en (niet blokkeren)
-  const mailBody =
-  `Nieuwe contactaanvraag via enval.nl\n\n` +
-  `Voornaam: ${payload.first_name}\n` +
-  `Achternaam: ${payload.last_name || "-"}\n` +
-  `E-mail: ${payload.email}\n` +
-  `Onderwerp: ${payload.subject}\n\n` +
-  `Bericht:\n${payload.message}\n`;
-
-  queueEmail({
-    to_email: "daankoote@gmail.com",
-    subject: `Contactformulier: ${payload.subject}`,
-    body: mailBody,
-    message_type: "contact",
-    priority: 10,
-  }).then((r) => {
-    if (!r.ok) console.error("queueEmail failed (contact):", r.error);
-  });
-
   keepAndReset(form, [], 'input[name="first_name"]');
   showToast("Dank je wel. Je bericht is ontvangen.", "success");
+
 }

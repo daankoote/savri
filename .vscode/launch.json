@@ -10,5 +10,12 @@
             "name": "Open index.html",
             "file": "/Users/daankoote/Library/CloudStorage/OneDrive-KOHOLBV/Desktop/Savri/Site/index.html"
         }
+
+        {
+            "name": "Open installateur.html",
+            "type": "chrome",
+            "request": "launch",
+            "file": "${workspaceFolder}/installateur.html"
+        }
     ]
 }
