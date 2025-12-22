@@ -1,12 +1,9 @@
 // ======================================================
-// Supabase configuratie
+// Config
 // ======================================================
 const SUPABASE_URL = "https://yzngrurkpfuqgexbhzgl.supabase.co";
-const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6bmdydXJrcGZ1cWdleGJoemdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNjYxMjYsImV4cCI6MjA4MDg0MjEyNn0.L7atEcmNvX2Wic0eSM9jWGdFUadIhH21EUFNtzP4YCk";
-
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const API_BASE = `${SUPABASE_URL}/functions/v1`;
+
 
 
 // ======================================================
