@@ -168,8 +168,11 @@ nav a:hover { text-decoration: underline; }
 .full-width { width: 100%; }
 
 
-/* Tabs */
-.tab-panel { display: none; }
+
+/* Tabs (fail-safe) Default = zichtbaar, alleen verbergen als JS echt draait */
+.tab-panel { display: block; }
+.js .tab-panel { display: none; }
+
 
 
 /* Cards / Typography */
