@@ -254,8 +254,8 @@ async function handleEvForm(e) {
     `We nemen contact met u op zodra er meer duidelijkheid is bij de NEa over de registratie voorwaarden.\n\n` +
     `Naar verwachting zullen we u vragen om de laadpaal data, waaronder het serienummer en de aankoop- en installatiefactuur.\n\n` +
     `Indien u vragenheeft kunt u contact opnemen via: contact@enval.nl \n\n` + 
-    `Met vriendelijke groet,\n\n + 
-    Enval`;
+    `Met vriendelijke groet,\n\n` + 
+    `Enval`;
 
   queueEmail({
     to_email: email.value.trim(),
@@ -497,7 +497,7 @@ async function handleContactForm(e) {
     return;
   }
 
-  // Mail naar contact@enval.nl queue-en (niet blokkeren)
+  // Mail naar daankoote@gmail.com queue-en (niet blokkeren)
   const mailBody =
   `Nieuwe contactaanvraag via enval.nl\n\n` +
   `Voornaam: ${payload.first_name}\n` +
@@ -507,7 +507,7 @@ async function handleContactForm(e) {
   `Bericht:\n${payload.message}\n`;
 
   queueEmail({
-    to_email: "contact@enval.nl",
+    to_email: "daankoote@gmail.com",
     subject: `Contactformulier: ${payload.subject}`,
     body: mailBody,
     message_type: "contact",
