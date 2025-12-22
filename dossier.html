@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Enval – Dossier</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 0; padding: 24px; }
+    .card { max-width: 760px; margin: 0 auto; border: 1px solid #e5e5e5; border-radius: 12px; padding: 18px; }
+    .row { margin: 10px 0; }
+    .muted { color: #666; font-size: 14px; }
+    .error { color: #b00020; white-space: pre-wrap; }
+    .ok { color: #0a7a2f; }
+    button { padding: 10px 14px; border-radius: 10px; border: 1px solid #ddd; background: #111; color: #fff; cursor: pointer; }
+    input, select { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #ddd; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Dossier</h1>
+    <div class="row muted" id="status">Laden…</div>
+    <div class="row error" id="err"></div>
+
+    <div id="content" style="display:none;">
+      <div class="row"><strong>Status:</strong> <span id="dossierStatus"></span></div>
+      <div class="row"><strong>Naam:</strong> <span id="naam"></span></div>
+      <div class="row"><strong>E-mail:</strong> <span id="email"></span></div>
+      <div class="row"><strong>Aantal laadpunten:</strong> <span id="chargers"></span></div>
+
+      <hr />
+
+      <h2>Document upload (test)</h2>
+      <div class="row">
+        <label>Type document</label>
+        <select id="docType">
+          <option value="id">ID</option>
+          <option value="kvk">KVK</option>
+          <option value="mandaat">Mandaat</option>
+          <option value="overig">Overig</option>
+        </select>
+      </div>
+      <div class="row">
+        <label>Bestand</label>
+        <input type="file" id="file" />
+      </div>
+      <div class="row">
+        <button id="uploadBtn">Upload</button>
+      </div>
+
+      <div class="row muted" id="uploadStatus"></div>
+    </div>
+  </div>
+
+  <script>
+    // ===== Config (zelfde als op je andere pagina’s) =====
+    const SUPABASE_URL = "https://yzngrurkpfuqgexbhzgl.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6bmdydXJrcGZ1cWdleGJoemdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNjYxMjYsImV4cCI6MjA4MDg0MjEyNn0.L7atEcmNvX2Wic0eSM9jWGdFUadIhH21EUFNtzP4YCk";
+    const API_BASE = `${SUPABASE_URL}/functions/v1`;
+
+    function edgeHeaders() {
+      return {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      };
+    }
+
+    function qs(name) {
+      return new URLSearchParams(window.location.search).get(name);
+    }
+
+    const dossier_id = qs("d");
+    const token = qs("t");
+
+    const statusEl = document.getElementById("status");
+    const errEl = document.getElementById("err");
+    const contentEl = document.getElementById("content");
+
+    function setError(msg) {
+      errEl.textContent = msg || "";
+    }
+
+    async function loadDossier() {
+      if (!dossier_id || !token) {
+        statusEl.textContent = "Ongeldige link (missing d/t).";
+        setError("Controleer de link uit je e-mail.");
+        return;
+      }
+
+      statusEl.textContent = "Dossier ophalen…";
+      setError("");
+
+      const res = await fetch(`${API_BASE}/api-dossier-get`, {
+        method: "POST",
+        headers: edgeHeaders(),
+        body: JSON.stringify({ dossier_id, token }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.ok) {
+        statusEl.textContent = "Niet gelukt.";
+        setError(json.error || `HTTP ${res.status}`);
+        return;
+      }
+
+      const d = json.dossier;
+
+      document.getElementById("dossierStatus").textContent = d.status || "-";
+      document.getElementById("naam").textContent = `${d.customer_first_name || ""} ${d.customer_last_name || ""}`.trim() || "-";
+      document.getElementById("email").textContent = d.customer_email || "-";
+      document.getElementById("chargers").textContent = String(d.charger_count ?? "-");
+
+      statusEl.textContent = "Geladen.";
+      contentEl.style.display = "block";
+    }
+
+    async function uploadDocument() {
+      const uploadStatus = document.getElementById("uploadStatus");
+      uploadStatus.textContent = "";
+      setError("");
+
+      const f = document.getElementById("file").files?.[0];
+      const doc_type = document.getElementById("docType").value;
+
+      if (!f) {
+        setError("Kies eerst een bestand.");
+        return;
+      }
+
+      uploadStatus.textContent = "Upload URL aanvragen…";
+
+      // 1) signed upload url
+      const res1 = await fetch(`${API_BASE}/api-dossier-upload-url`, {
+        method: "POST",
+        headers: edgeHeaders(),
+        body: JSON.stringify({
+          dossier_id,
+          token,
+          doc_type,
+          filename: f.name,
+          content_type: f.type || "application/octet-stream",
+          size_bytes: f.size,
+        }),
+      });
+
+      const j1 = await res1.json().catch(() => ({}));
+      if (!res1.ok || !j1.ok) {
+        setError(j1.error || `Upload URL failed (HTTP ${res1.status})`);
+        uploadStatus.textContent = "";
+        return;
+      }
+
+      // 2) PUT file to signed_url
+      uploadStatus.textContent = "Bestand uploaden…";
+      const put = await fetch(j1.signed_url, {
+        method: "PUT",
+        headers: { "Content-Type": f.type || "application/octet-stream" },
+        body: f,
+      });
+
+      if (!put.ok) {
+        setError(`Upload failed (HTTP ${put.status})`);
+        uploadStatus.textContent = "";
+        return;
+      }
+
+      uploadStatus.textContent = "Upload klaar.";
+    }
+
+    document.getElementById("uploadBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      uploadDocument();
+    });
+
+    loadDossier();
+  </script>
+</body>
+</html>
