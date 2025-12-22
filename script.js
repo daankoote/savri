@@ -2,9 +2,7 @@
 // Config
 // ======================================================
 const SUPABASE_URL = "https://yzngrurkpfuqgexbhzgl.supabase.co";
-const SUPABASE_ANON_KEY =
-  "PASTE_HIER_JE_ANON_KEY_1_OP_1"; // dezelfde als je eerder had
-
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6bmdydXJrcGZ1cWdleGJoemdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNjYxMjYsImV4cCI6MjA4MDg0MjEyNn0.L7atEcmNvX2Wic0eSM9jWGdFUadIhH21EUFNtzP4YCk"; // dezelfde als je eerder had
 const API_BASE = `${SUPABASE_URL}/functions/v1`;
 
 // Altijd dezelfde headers voor Edge Functions
