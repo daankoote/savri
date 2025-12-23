@@ -63,17 +63,17 @@
 
       <div class="hr"></div>
 
-      <!-- P0-2 Adres (MVP input + later BAG lookup) -->
+      <!-- P0-2 Adres -->
       <div class="step">
         <h2>2) Adres (MVP)</h2>
         <div class="row muted small">
-          P0: we verzamelen postcode + huisnummer. BAG-check bouwen we als aparte Edge Function in de volgende stap.
+          P0: we verzamelen postcode + huisnummer. BAG-check doen we via de knop “Adres verifiëren (BAG)”.
         </div>
 
         <div class="row grid2">
           <div>
             <label>Postcode</label>
-            <input id="postcode" placeholder="1234 AB" />
+            <input id="postcode" placeholder="1234AB" />
           </div>
           <div>
             <label>Huisnummer</label>
@@ -91,11 +91,6 @@
           <button id="verifyAddressBtn" type="button">Adres verifiëren (BAG)</button>
           <span class="muted" id="bagInfo"></span>
         </div>
-
-        
-
-
-
 
         <div class="row">
           Status:
@@ -257,6 +252,7 @@
 
     function setBadge(id, ok, text) {
       const el = document.getElementById(id);
+      if (!el) return;
       el.classList.remove("ok", "no");
       el.classList.add("badge", ok ? "ok" : "no");
       el.textContent = text;
@@ -275,7 +271,6 @@
     async function tryCompleteEmailVerification() {
       if (!verifyToken) return;
 
-      // We proberen één keer te verifiëren op page load. Daarna verwijderen we niets uit URL (simpel).
       const { res, json } = await apiPost("api-dossier-email-verify-complete", {
         dossier_id,
         token,
@@ -283,7 +278,6 @@
       });
 
       if (!res.ok || !json.ok) {
-        // niet hard falen -> user kan alsnog dossier openen
         console.warn("Email verify failed:", json);
         return;
       }
@@ -291,10 +285,13 @@
 
     function renderDocs(docs) {
       const docsEl = document.getElementById("docs");
+      if (!docsEl) return;
+
       if (!docs?.length) {
         docsEl.innerHTML = `<div class="muted">Nog geen documenten geüpload.</div>`;
         return;
       }
+
       docsEl.innerHTML = docs.map(x => {
         const when = x.created_at ? new Date(x.created_at).toLocaleString("nl-NL") : "-";
         return `<div class="row">
@@ -313,20 +310,35 @@
       // Email badge
       const emailOk = !!d.email_verified_at;
       setBadge("emailBadge", emailOk, emailOk ? "Bevestigd" : "Niet bevestigd");
-      document.getElementById("emailInfo").textContent = emailOk ? ` (bevestigd op ${new Date(d.email_verified_at).toLocaleString("nl-NL")})` : "";
+      document.getElementById("emailInfo").textContent =
+        emailOk ? ` (bevestigd op ${new Date(d.email_verified_at).toLocaleString("nl-NL")})` : "";
 
-      // Address badge (P0: alleen opslaan; later BAG-check maakt verified_at)
+      // Address badge + info
       const addrOk = !!d.address_verified_at;
-      setBadge("addressBadge", addrOk, addrOk ? "Gevalideerd" : "Nog niet gevalideerd");
+      setBadge("addressBadge", addrOk, addrOk ? "Geverifieerd" : "Nog niet gevalideerd");
+
       const addrTxt = [d.address_postcode, d.address_house_number, d.address_suffix].filter(Boolean).join(" ");
       document.getElementById("addressInfo").textContent = addrTxt ? ` (opgeslagen: ${addrTxt})` : "";
+
+      // BAG extra info
+      const bagInfoEl = document.getElementById("bagInfo");
+      if (bagInfoEl) {
+        const parts = [];
+        if (d.address_street) parts.push(d.address_street);
+        if (d.address_city) parts.push(d.address_city);
+        if (parts.length) {
+          bagInfoEl.textContent = ` (${parts.join(", ")}${d.address_bag_id ? " • BAG: " + d.address_bag_id : ""})`;
+        } else {
+          bagInfoEl.textContent = "";
+        }
+      }
 
       // Prefill address inputs
       document.getElementById("postcode").value = d.address_postcode || "";
       document.getElementById("huisnr").value = d.address_house_number || "";
       document.getElementById("toevoeging").value = d.address_suffix || "";
 
-      // Consents (we lezen uit consents array)
+      // Consents
       const consentMap = {};
       (consents || []).forEach(c => { consentMap[c.consent_type] = c.accepted; });
 
@@ -338,7 +350,7 @@
       setBadge("consentBadge", consentOk, consentOk ? "Compleet" : "Niet compleet");
       document.getElementById("consentInfo").textContent = consentOk ? "" : " (vink alle 3 aan)";
 
-      // Charger prefill + badge (komt uit api-dossier-get -> json.charger)
+      // Charger prefill + badge
       const brandEl = document.getElementById("chargerBrand");
       const modelEl = document.getElementById("chargerModel");
       const serialEl = document.getElementById("chargerSerial");
@@ -354,7 +366,6 @@
         document.getElementById("chargerInfo").textContent =
           charger.serial ? ` (serienummer: ${charger.serial})` : "";
       } else {
-        // laat de user invullen
         setBadge("chargerBadge", false, "Nog niet ingevuld");
         document.getElementById("chargerInfo").textContent = "";
       }
@@ -380,28 +391,21 @@
         return;
       }
 
-      hydrateFromDossier(json.dossier, json.documents || [], json.consents || [], json.charger || null);
+      // ✅ BELANGRIJK: api-dossier-get geeft chargers: [] terug (niet 'charger')
+      const firstCharger = (json.chargers && json.chargers.length) ? json.chargers[0] : null;
+
+      hydrateFromDossier(
+        json.dossier,
+        json.documents || [],
+        json.consents || [],
+        firstCharger
+      );
+
       statusEl.textContent = "Geladen.";
       contentEl.style.display = "block";
-
-      const d = json.dossier;
-
-      const addr = [];
-      if (d.address_street) addr.push(d.address_street);
-      if (d.address_city) addr.push(d.address_city);
-      if (addr.length) {
-        const bagInfoEl = document.getElementById("bagInfo");
-        if (bagInfoEl) {
-          bagInfoEl.textContent =
-            ` (${addr.join(", ")}${d.address_bag_id ? " • BAG: " + d.address_bag_id : ""})`;
-        }
-        setBadge("addressBadge", true, "Geverifieerd");
-      }
-
-
     }
 
-    // P0: Email verify start
+    // Email verify start
     async function sendVerifyEmail() {
       setError("");
       document.getElementById("emailInfo").textContent = " (bezig...)";
@@ -416,7 +420,7 @@
       document.getElementById("emailInfo").textContent = " (bevestigingsmail is verstuurd)";
     }
 
-    // P0: Address save (MVP only; BAG-check later)
+    // Address save
     async function saveAddress() {
       setError("");
 
@@ -446,12 +450,6 @@
         return;
       }
 
-      // P0: opgeslagen maar nog niet BAG-gevalideerd
-      setBadge("addressBadge", false, "Nog niet gevalideerd");
-      document.getElementById("addressInfo").textContent =
-        ` (opgeslagen: ${json.postcode} ${json.house_number}${json.suffix ? " " + json.suffix : ""})`;
-
-      // refresh dossier data
       await loadDossier();
     }
 
@@ -473,23 +471,13 @@
         return;
       }
 
-      // Update UI (badge + tekst)
-      setBadge("addressBadge", true, "Geverifieerd");
-      const info = `${json.street}, ${json.city}${json.bag_id ? " • BAG: " + json.bag_id : ""}`;
-      if (el) el.textContent = ` (${info})`;
-
       await loadDossier();
     }
 
-    document.getElementById("verifyAddressBtn")?.addEventListener("click", (e) => {
-      e.preventDefault();
-      verifyAddress();
-    });
-
-
-    // P0: Charger save
+    // Charger save
     async function saveCharger() {
       setError("");
+
       const brand = document.getElementById("chargerBrand").value;
       const model = (document.getElementById("chargerModel").value || "").trim();
       const serial = (document.getElementById("chargerSerial").value || "").trim();
@@ -516,11 +504,10 @@
         return;
       }
 
-      setBadge("chargerBadge", true, "Opgeslagen");
-      document.getElementById("chargerInfo").textContent = "";
+      await loadDossier();
     }
 
-    // P0: Consents save 
+    // Consents save
     async function saveConsents() {
       setError("");
 
@@ -532,7 +519,7 @@
         dossier_id,
         token,
         consents: { terms, privacy, mandaat },
-        actor_email: null, // server pakt dossier email
+        actor_email: null,
       });
 
       if (!res.ok || !json.ok) {
@@ -540,15 +527,10 @@
         return;
       }
 
-      const okAll = !!json.all_required_accepted;
-      setBadge("consentBadge", okAll, okAll ? "Compleet" : "Niet compleet");
-      document.getElementById("consentInfo").textContent = okAll ? "" : " (vink alle 3 aan)";
-
       await loadDossier();
     }
 
-
-    // Upload (zoals je had)
+    // Upload
     async function uploadDocument() {
       const uploadStatus = document.getElementById("uploadStatus");
       uploadStatus.textContent = "";
@@ -599,6 +581,7 @@
     document.getElementById("refreshBtn").addEventListener("click", (e) => { e.preventDefault(); loadDossier(); });
     document.getElementById("saveChargerBtn").addEventListener("click", (e) => { e.preventDefault(); saveCharger(); });
     document.getElementById("saveAddressBtn").addEventListener("click", (e) => { e.preventDefault(); saveAddress(); });
+    document.getElementById("verifyAddressBtn").addEventListener("click", (e) => { e.preventDefault(); verifyAddress(); });
     document.getElementById("saveConsentsBtn").addEventListener("click", (e) => { e.preventDefault(); saveConsents(); });
 
     (async () => {
