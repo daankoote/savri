@@ -268,6 +268,17 @@
       return { res, json };
     }
 
+    async function evaluateDossier() {
+      if (!dossier_id || !token) return;
+      // geen UI spam, alleen harde errors tonen
+      const { res, json } = await apiPost("api-dossier-evaluate", { dossier_id, token });
+      if (!res.ok || !json.ok) {
+        console.warn("evaluate failed:", json);
+        // niet hard blokken, dossier kan nog steeds laden
+      }
+    }
+
+
     async function tryCompleteEmailVerification() {
       if (!verifyToken) return;
 
@@ -451,7 +462,9 @@
         return;
       }
 
+      await evaluateDossier();
       await loadDossier();
+
     }
 
     async function verifyAddress() {
@@ -472,7 +485,9 @@
         return;
       }
 
+      await evaluateDossier();
       await loadDossier();
+
     }
 
     // Charger save
@@ -505,7 +520,9 @@
         return;
       }
 
+      await evaluateDossier();
       await loadDossier();
+
     }
 
     // Consents save
@@ -528,7 +545,9 @@
         return;
       }
 
+      await evaluateDossier();
       await loadDossier();
+
     }
 
     // Upload
@@ -573,7 +592,9 @@
       }
 
       uploadStatus.textContent = "Upload klaar.";
+      await evaluateDossier();
       await loadDossier();
+
     }
 
     // Bindings
@@ -587,8 +608,10 @@
 
     (async () => {
       await tryCompleteEmailVerification();
+      await evaluateDossier();
       await loadDossier();
     })();
+
   </script>
 </body>
 </html>
