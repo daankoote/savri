@@ -88,7 +88,14 @@
 
         <div class="row">
           <button id="saveAddressBtn" class="secondary">Adres opslaan</button>
+          <button id="verifyAddressBtn" type="button">Adres verifiëren (BAG)</button>
+          <span class="muted" id="bagInfo"></span>
         </div>
+
+        
+
+
+
 
         <div class="row">
           Status:
@@ -355,6 +362,16 @@
       hydrateFromDossier(json.dossier, json.documents || [], json.consents || []);
       statusEl.textContent = "Geladen.";
       contentEl.style.display = "block";
+
+      const addr = [];
+      if (d.address_street) addr.push(d.address_street);
+      if (d.address_city) addr.push(d.address_city);
+      if (addr.length) {
+        document.getElementById("bagInfo").textContent =
+          ` (${addr.join(", ")}${d.address_bag_id ? " • BAG: " + d.address_bag_id : ""})`;
+        setBadge("addressBadge", true, "Geverifieerd");
+      }
+
     }
 
     // P0: Email verify start
@@ -410,6 +427,37 @@
       // refresh dossier data
       await loadDossier();
     }
+
+    async function verifyAddress() {
+      setError("");
+      const el = document.getElementById("bagInfo");
+      if (el) el.textContent = " (BAG check bezig…)";
+
+      const res = await fetch(`${API_BASE}/api-dossier-address-verify`, {
+        method: "POST",
+        headers: edgeHeaders(),
+        body: JSON.stringify({ dossier_id, token }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.ok) {
+        if (el) el.textContent = "";
+        setError(json.error || `HTTP ${res.status}`);
+        return;
+      }
+
+      // Update UI (badge + tekst)
+      setBadge("addressBadge", true, "Geverifieerd");
+      const info = `${json.street}, ${json.city}${json.bag_id ? " • BAG: " + json.bag_id : ""}`;
+      if (el) el.textContent = ` (${info})`;
+
+      await loadDossier();
+    }
+
+    document.getElementById("verifyAddressBtn")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      verifyAddress();
+    });
 
 
     // P0: Charger save
