@@ -304,7 +304,7 @@
       }).join("");
     }
 
-    function hydrateFromDossier(d, docs, consents) {
+    function hydrateFromDossier(d, docs, consents, charger) {
       document.getElementById("dossierStatus").textContent = d.status || "-";
       document.getElementById("naam").textContent = `${d.customer_first_name || ""} ${d.customer_last_name || ""}`.trim() || "-";
       document.getElementById("email").textContent = d.customer_email || "-";
@@ -338,6 +338,27 @@
       setBadge("consentBadge", consentOk, consentOk ? "Compleet" : "Niet compleet");
       document.getElementById("consentInfo").textContent = consentOk ? "" : " (vink alle 3 aan)";
 
+      // Charger prefill + badge (komt uit api-dossier-get -> json.charger)
+      const brandEl = document.getElementById("chargerBrand");
+      const modelEl = document.getElementById("chargerModel");
+      const serialEl = document.getElementById("chargerSerial");
+      const yearEl = document.getElementById("installYear");
+
+      if (charger) {
+        if (brandEl) brandEl.value = charger.brand || "";
+        if (modelEl) modelEl.value = charger.model || "";
+        if (serialEl) serialEl.value = charger.serial || "";
+        if (yearEl) yearEl.value = charger.install_year ? String(charger.install_year) : "";
+
+        setBadge("chargerBadge", true, "Opgeslagen");
+        document.getElementById("chargerInfo").textContent =
+          charger.serial ? ` (serienummer: ${charger.serial})` : "";
+      } else {
+        // laat de user invullen
+        setBadge("chargerBadge", false, "Nog niet ingevuld");
+        document.getElementById("chargerInfo").textContent = "";
+      }
+
       renderDocs(docs);
     }
 
@@ -359,18 +380,24 @@
         return;
       }
 
-      hydrateFromDossier(json.dossier, json.documents || [], json.consents || []);
+      hydrateFromDossier(json.dossier, json.documents || [], json.consents || [], json.charger || null);
       statusEl.textContent = "Geladen.";
       contentEl.style.display = "block";
+
+      const d = json.dossier;
 
       const addr = [];
       if (d.address_street) addr.push(d.address_street);
       if (d.address_city) addr.push(d.address_city);
       if (addr.length) {
-        document.getElementById("bagInfo").textContent =
-          ` (${addr.join(", ")}${d.address_bag_id ? " • BAG: " + d.address_bag_id : ""})`;
+        const bagInfoEl = document.getElementById("bagInfo");
+        if (bagInfoEl) {
+          bagInfoEl.textContent =
+            ` (${addr.join(", ")}${d.address_bag_id ? " • BAG: " + d.address_bag_id : ""})`;
+        }
         setBadge("addressBadge", true, "Geverifieerd");
       }
+
 
     }
 
