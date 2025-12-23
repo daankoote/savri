@@ -5,54 +5,223 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Enval – Dossier</title>
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 0; padding: 24px; }
-    .card { max-width: 760px; margin: 0 auto; border: 1px solid #e5e5e5; border-radius: 12px; padding: 18px; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 0; padding: 24px; background:#fafafa; }
+    .card { max-width: 860px; margin: 0 auto; background:#fff; border: 1px solid #e5e5e5; border-radius: 12px; padding: 18px; }
     .row { margin: 10px 0; }
     .muted { color: #666; font-size: 14px; }
     .error { color: #b00020; white-space: pre-wrap; }
     .ok { color: #0a7a2f; }
+    h2 { margin-top: 22px; }
     button { padding: 10px 14px; border-radius: 10px; border: 1px solid #ddd; background: #111; color: #fff; cursor: pointer; }
+    button.secondary { background:#fff; color:#111; }
+    button:disabled { opacity:.5; cursor:not-allowed; }
     input, select { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #ddd; }
+    .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .step { border:1px solid #eee; border-radius: 12px; padding: 12px; background:#fcfcfc; }
+    .badge { display:inline-block; padding:3px 8px; border-radius:999px; font-size:12px; border:1px solid #ddd; }
+    .badge.ok { border-color:#a7e3b8; color:#0a7a2f; }
+    .badge.no { border-color:#f1b2bb; color:#b00020; }
+    .hr { border-top:1px solid #eee; margin: 16px 0; }
+    .small { font-size:13px; }
   </style>
 </head>
 <body>
   <div class="card">
     <h1>Dossier</h1>
+
     <div class="row muted" id="status">Laden…</div>
     <div class="row error" id="err"></div>
 
     <div id="content" style="display:none;">
-      <div class="row"><strong>Status:</strong> <span id="dossierStatus"></span></div>
-      <div class="row"><strong>Naam:</strong> <span id="naam"></span></div>
-      <div class="row"><strong>E-mail:</strong> <span id="email"></span></div>
-      <div class="row"><strong>Aantal laadpunten:</strong> <span id="chargers"></span></div>
 
-      <hr />
-
-      <h2>Document upload (test)</h2>
-      <div class="row">
-        <label>Type document</label>
-        <select id="docType">
-          <option value="id">ID</option>
-          <option value="kvk">KVK</option>
-          <option value="mandaat">Mandaat</option>
-          <option value="overig">Overig</option>
-        </select>
-      </div>
-      <div class="row">
-        <label>Bestand</label>
-        <input type="file" id="file" />
-      </div>
-      <div class="row">
-        <button id="uploadBtn">Upload</button>
+      <!-- Samenvatting -->
+      <div class="step">
+        <div class="row"><strong>Status:</strong> <span id="dossierStatus"></span></div>
+        <div class="row"><strong>Naam:</strong> <span id="naam"></span></div>
+        <div class="row"><strong>E-mail:</strong> <span id="email"></span></div>
+        <div class="row"><strong>Aantal laadpunten:</strong> <span id="chargers"></span></div>
       </div>
 
-      <div class="row muted" id="uploadStatus"></div>
+      <div class="hr"></div>
+
+      <!-- P0-1 Email verificatie -->
+      <div class="step">
+        <h2>1) E-mail bevestigen</h2>
+        <div class="row">
+          Status:
+          <span id="emailBadge" class="badge no">Niet bevestigd</span>
+          <span class="muted small" id="emailInfo"></span>
+        </div>
+        <div class="row grid2">
+          <button id="sendVerifyBtn" class="secondary">Stuur bevestigingsmail</button>
+          <button id="refreshBtn" class="secondary">Ververs dossier</button>
+        </div>
+        <div class="row muted small">
+          Tip: als je al op een bevestigingslink hebt geklikt, druk op “Ververs dossier”.
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <!-- P0-2 Adres (MVP input + later BAG lookup) -->
+      <div class="step">
+        <h2>2) Adres (MVP)</h2>
+        <div class="row muted small">
+          P0: we verzamelen postcode + huisnummer. BAG-check bouwen we als aparte Edge Function in de volgende stap.
+        </div>
+
+        <div class="row grid2">
+          <div>
+            <label>Postcode</label>
+            <input id="postcode" placeholder="1234 AB" />
+          </div>
+          <div>
+            <label>Huisnummer</label>
+            <input id="huisnr" placeholder="12" />
+          </div>
+        </div>
+
+        <div class="row">
+          <label>Toevoeging (optioneel)</label>
+          <input id="toevoeging" placeholder="A / 2 / bis" />
+        </div>
+
+        <div class="row">
+          <button id="saveAddressBtn" class="secondary">Adres opslaan</button>
+        </div>
+
+        <div class="row">
+          Status:
+          <span id="addressBadge" class="badge no">Nog niet gevalideerd</span>
+          <span class="muted small" id="addressInfo"></span>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <!-- P0-3 Charger basis -->
+      <div class="step">
+        <h2>3) Laadpaal gegevens</h2>
+        <div class="row muted small">
+          Vul merk, model en serienummer in. We doen meteen een duplicaatcheck op serienummer.
+        </div>
+
+        <div class="row">
+          <label>Merk</label>
+          <select id="chargerBrand">
+            <option value="">Kies een merk</option>
+            <option value="Alfen">Alfen</option>
+            <option value="Wallbox">Wallbox</option>
+            <option value="Zaptec">Zaptec</option>
+            <option value="Easee">Easee</option>
+            <option value="Tesla">Tesla</option>
+            <option value="Mennekes">Mennekes</option>
+            <option value="EVBox">EVBox</option>
+            <option value="Webasto">Webasto</option>
+            <option value="Overig">Overig</option>
+          </select>
+        </div>
+
+        <div class="row">
+          <label>Model</label>
+          <input id="chargerModel" placeholder="Bijv. Eve Single / Pulsar Plus / ..." />
+        </div>
+
+        <div class="row grid2">
+          <div>
+            <label>Serienummer</label>
+            <input id="chargerSerial" placeholder="Serienummer" />
+          </div>
+          <div>
+            <label>Installatiejaar (optioneel)</label>
+            <input id="installYear" placeholder="2024" />
+          </div>
+        </div>
+
+        <div class="row">
+          <button id="saveChargerBtn" class="secondary">Opslaan</button>
+        </div>
+
+        <div class="row">
+          Status:
+          <span id="chargerBadge" class="badge no">Nog niet ingevuld</span>
+          <span class="muted small" id="chargerInfo"></span>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <!-- P0-4 Consent -->
+      <div class="step">
+        <h2>4) Akkoord & mandaat</h2>
+        <div class="row muted small">
+          P0: we laten dit als checkbox + document upload. Later maken we dit een echte “sign flow”.
+        </div>
+
+        <div class="row">
+          <label><input type="checkbox" id="consentTerms" /> Ik ga akkoord met de algemene voorwaarden</label>
+        </div>
+        <div class="row">
+          <label><input type="checkbox" id="consentPrivacy" /> Ik ga akkoord met de privacyverklaring</label>
+        </div>
+        <div class="row">
+          <label><input type="checkbox" id="consentMandate" /> Ik geef mandaat voor verwerking van mijn gegevens</label>
+        </div>
+
+        <div class="row">
+          <button id="saveConsentsBtn" class="secondary">Akkoorden opslaan</button>
+        </div>
+
+        <div class="row">
+          Status:
+          <span id="consentBadge" class="badge no">Niet compleet</span>
+          <span class="muted small" id="consentInfo"></span>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <!-- Upload -->
+      <div class="step">
+        <h2>5) Documenten uploaden</h2>
+        <div class="row muted small">
+          Upload minimaal: factuur (eigendom) + foto laadpunt (privégebruik). De rest later.
+        </div>
+
+        <div class="row">
+          <label>Type document</label>
+          <select id="docType">
+            <option value="factuur">Factuur (aankoop/installatie)</option>
+            <option value="foto_laadpunt">Foto laadpunt</option>
+            <option value="mandaat">Mandaat (document)</option>
+            <option value="id">ID</option>
+            <option value="kvk">KVK</option>
+            <option value="overig">Overig</option>
+          </select>
+        </div>
+
+        <div class="row">
+          <label>Bestand</label>
+          <input type="file" id="file" />
+        </div>
+
+        <div class="row">
+          <button id="uploadBtn">Upload</button>
+        </div>
+
+        <div class="row muted" id="uploadStatus"></div>
+
+        <div class="hr"></div>
+
+        <h2>Geüploade documenten</h2>
+        <div class="row" id="docs"></div>
+      </div>
+
     </div>
   </div>
 
   <script>
-    // ===== Config (zelfde als op je andere pagina’s) =====
+    // ===== Config =====
     const SUPABASE_URL = "https://yzngrurkpfuqgexbhzgl.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6bmdydXJrcGZ1cWdleGJoemdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNjYxMjYsImV4cCI6MjA4MDg0MjEyNn0.L7atEcmNvX2Wic0eSM9jWGdFUadIhH21EUFNtzP4YCk";
     const API_BASE = `${SUPABASE_URL}/functions/v1`;
@@ -71,13 +240,98 @@
 
     const dossier_id = qs("d");
     const token = qs("t");
+    const verifyToken = qs("v"); // email verify token
 
     const statusEl = document.getElementById("status");
     const errEl = document.getElementById("err");
     const contentEl = document.getElementById("content");
 
-    function setError(msg) {
-      errEl.textContent = msg || "";
+    function setError(msg) { errEl.textContent = msg || ""; }
+
+    function setBadge(id, ok, text) {
+      const el = document.getElementById(id);
+      el.classList.remove("ok", "no");
+      el.classList.add("badge", ok ? "ok" : "no");
+      el.textContent = text;
+    }
+
+    async function apiPost(path, bodyObj) {
+      const res = await fetch(`${API_BASE}/${path}`, {
+        method: "POST",
+        headers: edgeHeaders(),
+        body: JSON.stringify(bodyObj),
+      });
+      const json = await res.json().catch(() => ({}));
+      return { res, json };
+    }
+
+    async function tryCompleteEmailVerification() {
+      if (!verifyToken) return;
+
+      // We proberen één keer te verifiëren op page load. Daarna verwijderen we niets uit URL (simpel).
+      const { res, json } = await apiPost("api-dossier-email-verify-complete", {
+        dossier_id,
+        token,
+        verify_token: verifyToken,
+      });
+
+      if (!res.ok || !json.ok) {
+        // niet hard falen -> user kan alsnog dossier openen
+        console.warn("Email verify failed:", json);
+        return;
+      }
+    }
+
+    function renderDocs(docs) {
+      const docsEl = document.getElementById("docs");
+      if (!docs?.length) {
+        docsEl.innerHTML = `<div class="muted">Nog geen documenten geüpload.</div>`;
+        return;
+      }
+      docsEl.innerHTML = docs.map(x => {
+        const when = x.created_at ? new Date(x.created_at).toLocaleString("nl-NL") : "-";
+        return `<div class="row">
+          <strong>${x.doc_type || "-"}</strong> — ${x.filename || "-"}<br/>
+          <span class="muted">${when} • status: ${x.status || "-"}</span>
+        </div>`;
+      }).join("");
+    }
+
+    function hydrateFromDossier(d, docs, consents) {
+      document.getElementById("dossierStatus").textContent = d.status || "-";
+      document.getElementById("naam").textContent = `${d.customer_first_name || ""} ${d.customer_last_name || ""}`.trim() || "-";
+      document.getElementById("email").textContent = d.customer_email || "-";
+      document.getElementById("chargers").textContent = String(d.charger_count ?? "-");
+
+      // Email badge
+      const emailOk = !!d.email_verified_at;
+      setBadge("emailBadge", emailOk, emailOk ? "Bevestigd" : "Niet bevestigd");
+      document.getElementById("emailInfo").textContent = emailOk ? ` (bevestigd op ${new Date(d.email_verified_at).toLocaleString("nl-NL")})` : "";
+
+      // Address badge (P0: alleen opslaan; later BAG-check maakt verified_at)
+      const addrOk = !!d.address_verified_at;
+      setBadge("addressBadge", addrOk, addrOk ? "Gevalideerd" : "Nog niet gevalideerd");
+      const addrTxt = [d.address_postcode, d.address_house_number, d.address_suffix].filter(Boolean).join(" ");
+      document.getElementById("addressInfo").textContent = addrTxt ? ` (opgeslagen: ${addrTxt})` : "";
+
+      // Prefill address inputs
+      document.getElementById("postcode").value = d.address_postcode || "";
+      document.getElementById("huisnr").value = d.address_house_number || "";
+      document.getElementById("toevoeging").value = d.address_suffix || "";
+
+      // Consents (we lezen uit consents array)
+      const consentMap = {};
+      (consents || []).forEach(c => { consentMap[c.consent_type] = c.accepted; });
+
+      document.getElementById("consentTerms").checked = !!consentMap["terms"];
+      document.getElementById("consentPrivacy").checked = !!consentMap["privacy"];
+      document.getElementById("consentMandate").checked = !!consentMap["mandaat"];
+
+      const consentOk = !!consentMap["terms"] && !!consentMap["privacy"] && !!consentMap["mandaat"];
+      setBadge("consentBadge", consentOk, consentOk ? "Compleet" : "Niet compleet");
+      document.getElementById("consentInfo").textContent = consentOk ? "" : " (vink alle 3 aan)";
+
+      renderDocs(docs);
     }
 
     async function loadDossier() {
@@ -90,30 +344,136 @@
       statusEl.textContent = "Dossier ophalen…";
       setError("");
 
-      const res = await fetch(`${API_BASE}/api-dossier-get`, {
-        method: "POST",
-        headers: edgeHeaders(),
-        body: JSON.stringify({ dossier_id, token }),
-      });
+      const { res, json } = await apiPost("api-dossier-get", { dossier_id, token });
 
-      const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.ok) {
         statusEl.textContent = "Niet gelukt.";
         setError(json.error || `HTTP ${res.status}`);
         return;
       }
 
-      const d = json.dossier;
-
-      document.getElementById("dossierStatus").textContent = d.status || "-";
-      document.getElementById("naam").textContent = `${d.customer_first_name || ""} ${d.customer_last_name || ""}`.trim() || "-";
-      document.getElementById("email").textContent = d.customer_email || "-";
-      document.getElementById("chargers").textContent = String(d.charger_count ?? "-");
-
+      hydrateFromDossier(json.dossier, json.documents || [], json.consents || []);
       statusEl.textContent = "Geladen.";
       contentEl.style.display = "block";
     }
 
+    // P0: Email verify start
+    async function sendVerifyEmail() {
+      setError("");
+      document.getElementById("emailInfo").textContent = " (bezig...)";
+
+      const { res, json } = await apiPost("api-dossier-email-verify-start", { dossier_id, token });
+      if (!res.ok || !json.ok) {
+        setError(json.error || `HTTP ${res.status}`);
+        document.getElementById("emailInfo").textContent = "";
+        return;
+      }
+
+      document.getElementById("emailInfo").textContent = " (bevestigingsmail is verstuurd)";
+    }
+
+    // P0: Address save (MVP only; BAG-check later)
+    async function saveAddress() {
+      setError("");
+
+      const pcRaw = (document.getElementById("postcode").value || "");
+      const hnRaw = (document.getElementById("huisnr").value || "");
+      const sufRaw = (document.getElementById("toevoeging").value || "");
+
+      const postcode = pcRaw.toUpperCase().replace(/\s+/g, "").trim();
+      const house_number = hnRaw.trim();
+      const suffix = sufRaw.trim();
+
+      if (!postcode || !house_number) {
+        setError("Postcode en huisnummer zijn verplicht.");
+        return;
+      }
+
+      const { res, json } = await apiPost("api-dossier-address-save", {
+        dossier_id,
+        token,
+        postcode,
+        house_number,
+        suffix: suffix || null,
+      });
+
+      if (!res.ok || !json.ok) {
+        setError(json.error || `HTTP ${res.status}`);
+        return;
+      }
+
+      // P0: opgeslagen maar nog niet BAG-gevalideerd
+      setBadge("addressBadge", false, "Nog niet gevalideerd");
+      document.getElementById("addressInfo").textContent =
+        ` (opgeslagen: ${json.postcode} ${json.house_number}${json.suffix ? " " + json.suffix : ""})`;
+
+      // refresh dossier data
+      await loadDossier();
+    }
+
+
+    // P0: Charger save
+    async function saveCharger() {
+      setError("");
+      const brand = document.getElementById("chargerBrand").value;
+      const model = (document.getElementById("chargerModel").value || "").trim();
+      const serial = (document.getElementById("chargerSerial").value || "").trim();
+      const year = (document.getElementById("installYear").value || "").trim();
+
+      if (!brand || !model || !serial) {
+        setError("Merk, model en serienummer zijn verplicht.");
+        return;
+      }
+
+      const install_year = year ? Number(year) : null;
+      if (year && (!Number.isInteger(install_year) || install_year < 1990 || install_year > 2100)) {
+        setError("Installatiejaar is ongeldig.");
+        return;
+      }
+
+      const { res, json } = await apiPost("api-dossier-charger-save", {
+        dossier_id, token, brand, model, serial, install_year,
+      });
+
+      if (!res.ok || !json.ok) {
+        setError(json.error || `HTTP ${res.status}`);
+        setBadge("chargerBadge", false, "Niet opgeslagen");
+        return;
+      }
+
+      setBadge("chargerBadge", true, "Opgeslagen");
+      document.getElementById("chargerInfo").textContent = "";
+    }
+
+    // P0: Consents save 
+    async function saveConsents() {
+      setError("");
+
+      const terms = !!document.getElementById("consentTerms").checked;
+      const privacy = !!document.getElementById("consentPrivacy").checked;
+      const mandaat = !!document.getElementById("consentMandate").checked;
+
+      const { res, json } = await apiPost("api-dossier-consents-save", {
+        dossier_id,
+        token,
+        consents: { terms, privacy, mandaat },
+        actor_email: null, // server pakt dossier email
+      });
+
+      if (!res.ok || !json.ok) {
+        setError(json.error || `HTTP ${res.status}`);
+        return;
+      }
+
+      const okAll = !!json.all_required_accepted;
+      setBadge("consentBadge", okAll, okAll ? "Compleet" : "Niet compleet");
+      document.getElementById("consentInfo").textContent = okAll ? "" : " (vink alle 3 aan)";
+
+      await loadDossier();
+    }
+
+
+    // Upload (zoals je had)
     async function uploadDocument() {
       const uploadStatus = document.getElementById("uploadStatus");
       uploadStatus.textContent = "";
@@ -122,35 +482,25 @@
       const f = document.getElementById("file").files?.[0];
       const doc_type = document.getElementById("docType").value;
 
-      if (!f) {
-        setError("Kies eerst een bestand.");
-        return;
-      }
+      if (!f) { setError("Kies eerst een bestand."); return; }
 
       uploadStatus.textContent = "Upload URL aanvragen…";
 
-      // 1) signed upload url
-      const res1 = await fetch(`${API_BASE}/api-dossier-upload-url`, {
-        method: "POST",
-        headers: edgeHeaders(),
-        body: JSON.stringify({
-          dossier_id,
-          token,
-          doc_type,
-          filename: f.name,
-          content_type: f.type || "application/octet-stream",
-          size_bytes: f.size,
-        }),
+      const { res: res1, json: j1 } = await apiPost("api-dossier-upload-url", {
+        dossier_id,
+        token,
+        doc_type,
+        filename: f.name,
+        content_type: f.type || "application/octet-stream",
+        size_bytes: f.size,
       });
 
-      const j1 = await res1.json().catch(() => ({}));
       if (!res1.ok || !j1.ok) {
         setError(j1.error || `Upload URL failed (HTTP ${res1.status})`);
         uploadStatus.textContent = "";
         return;
       }
 
-      // 2) PUT file to signed_url
       uploadStatus.textContent = "Bestand uploaden…";
       const put = await fetch(j1.signed_url, {
         method: "PUT",
@@ -165,14 +515,21 @@
       }
 
       uploadStatus.textContent = "Upload klaar.";
+      await loadDossier();
     }
 
-    document.getElementById("uploadBtn").addEventListener("click", (e) => {
-      e.preventDefault();
-      uploadDocument();
-    });
+    // Bindings
+    document.getElementById("uploadBtn").addEventListener("click", (e) => { e.preventDefault(); uploadDocument(); });
+    document.getElementById("sendVerifyBtn").addEventListener("click", (e) => { e.preventDefault(); sendVerifyEmail(); });
+    document.getElementById("refreshBtn").addEventListener("click", (e) => { e.preventDefault(); loadDossier(); });
+    document.getElementById("saveChargerBtn").addEventListener("click", (e) => { e.preventDefault(); saveCharger(); });
+    document.getElementById("saveAddressBtn").addEventListener("click", (e) => { e.preventDefault(); saveAddress(); });
+    document.getElementById("saveConsentsBtn").addEventListener("click", (e) => { e.preventDefault(); saveConsents(); });
 
-    loadDossier();
+    (async () => {
+      await tryCompleteEmailVerification();
+      await loadDossier();
+    })();
   </script>
 </body>
 </html>
