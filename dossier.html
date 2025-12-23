@@ -398,7 +398,8 @@
         json.dossier,
         json.documents || [],
         json.consents || [],
-        (json.chargers && json.chargers.length ? json.chargers[0] : null)
+       // (json.chargers && json.chargers.length ? json.chargers[0] : null)
+        firstCharger
       );
 
       statusEl.textContent = "Geladen.";
