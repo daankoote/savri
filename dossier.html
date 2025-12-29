@@ -101,12 +101,27 @@
 
       <div class="hr"></div>
 
-      <!-- P0-3 Charger basis -->
+      
+      <!-- P0-3 Chargers -->
       <div class="step">
-        <h2>3) Laadpaal gegevens</h2>
+        <h2>3) Laadpalen</h2>
         <div class="row muted small">
-          Vul merk, model en serienummer in. We doen meteen een duplicaatcheck op serienummer.
+          Voeg alle laadpalen toe. Je dossier kan pas door zodra het aantal opgeslagen laadpalen gelijk is aan “Aantal laadpunten”.
         </div>
+
+        <div class="row">
+          <strong>Opgeslagen laadpalen:</strong>
+          <span id="chargerCountInfo" class="muted"></span>
+        </div>
+
+        <div class="row" id="chargersList"></div>
+
+        <div class="hr"></div>
+
+        <h3>Laadpaal toevoegen / bewerken</h3>
+
+        <!-- hidden edit id -->
+        <input type="hidden" id="chargerId" value="" />
 
         <div class="row">
           <label>Merk</label>
@@ -140,16 +155,18 @@
           </div>
         </div>
 
-        <div class="row">
+        <div class="row grid2">
           <button id="saveChargerBtn" class="secondary">Opslaan</button>
+          <button id="cancelEditChargerBtn" class="secondary" type="button">Annuleer bewerken</button>
         </div>
 
         <div class="row">
           Status:
-          <span id="chargerBadge" class="badge no">Nog niet ingevuld</span>
+          <span id="chargerBadge" class="badge no">Nog niet compleet</span>
           <span class="muted small" id="chargerInfo"></span>
         </div>
       </div>
+
 
       <div class="hr"></div>
 
@@ -312,7 +329,7 @@
       }).join("");
     }
 
-    function hydrateFromDossier(d, docs, consents, charger) {
+    function hydrateFromDossier(d, docs, consents, chargers) {
       const STATUS_LABEL = {
         incomplete: "Incomplete",
         ready_for_review: "Ready for review",
@@ -369,28 +386,100 @@
       setBadge("consentBadge", consentOk, consentOk ? "Compleet" : "Niet compleet");
       document.getElementById("consentInfo").textContent = consentOk ? "" : " (vink alle 3 aan)";
 
-      // Charger prefill + badge
-      const brandEl = document.getElementById("chargerBrand");
-      const modelEl = document.getElementById("chargerModel");
-      const serialEl = document.getElementById("chargerSerial");
-      const yearEl = document.getElementById("installYear");
+     
+      // Chargers (multi)
+      renderChargers(d, chargers || []);
 
-      if (charger) {
-        if (brandEl) brandEl.value = charger.brand || "";
-        if (modelEl) modelEl.value = charger.model || "";
-        if (serialEl) serialEl.value = charger.serial || "";
-        if (yearEl) yearEl.value = charger.install_year ? String(charger.install_year) : "";
-
-        setBadge("chargerBadge", true, "Opgeslagen");
-        document.getElementById("chargerInfo").textContent =
-          charger.serial ? ` (serienummer: ${charger.serial})` : "";
-      } else {
-        setBadge("chargerBadge", false, "Nog niet ingevuld");
-        document.getElementById("chargerInfo").textContent = "";
-      }
 
       renderDocs(docs);
     }
+
+
+    function esc(s) {
+      return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      }[c]));
+    }
+
+    function clearChargerForm() {
+      document.getElementById("chargerId").value = "";
+      document.getElementById("chargerBrand").value = "";
+      document.getElementById("chargerModel").value = "";
+      document.getElementById("chargerSerial").value = "";
+      document.getElementById("installYear").value = "";
+    }
+
+    function fillChargerForm(ch) {
+      document.getElementById("chargerId").value = ch.id || "";
+      document.getElementById("chargerBrand").value = ch.brand || "";
+      document.getElementById("chargerModel").value = ch.model || "";
+      document.getElementById("chargerSerial").value = ch.serial || "";
+      document.getElementById("installYear").value = ch.install_year ? String(ch.install_year) : "";
+    }
+
+    function renderChargers(d, chargers) {
+      const listEl = document.getElementById("chargersList");
+      const infoEl = document.getElementById("chargerCountInfo");
+
+      const target = Number(d.charger_count || 0) || 0;
+      const current = chargers.length;
+
+      if (infoEl) infoEl.textContent = ` (${current}/${target || "?"})`;
+
+      if (!listEl) return;
+
+      if (!current) {
+        listEl.innerHTML = `<div class="muted">Nog geen laadpalen opgeslagen.</div>`;
+      } else {
+        listEl.innerHTML = chargers.map((ch, i) => {
+          const yr = ch.install_year ? ` • ${esc(ch.install_year)}` : "";
+          return `
+            <div class="row" style="border:1px solid #eee; border-radius:12px; padding:10px; background:#fff;">
+              <div><strong>Laadpaal ${i + 1}</strong></div>
+              <div class="muted small">
+                ${esc(ch.brand)} • ${esc(ch.model)} • SN: <strong>${esc(ch.serial)}</strong>${yr}
+              </div>
+              <div class="row grid2" style="margin-top:8px;">
+                <button class="secondary" type="button" data-edit-charger-id="${esc(ch.id)}">Bewerken</button>
+                <button class="secondary" type="button" data-delete-charger-id="${esc(ch.id)}">Verwijderen</button>
+              </div>
+            </div>
+          `;
+        }).join("");
+
+        // bind edit/delete
+        listEl.querySelectorAll("[data-edit-charger-id]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const id = btn.getAttribute("data-edit-charger-id");
+            const ch = chargers.find(x => x.id === id);
+            if (ch) fillChargerForm(ch);
+          });
+        });
+
+        listEl.querySelectorAll("[data-delete-charger-id]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const id = btn.getAttribute("data-delete-charger-id");
+            await deleteCharger(id);
+          });
+        });
+
+      }
+
+      
+
+
+      // badge: compleet pas als current >= target (keuze B)
+      const ok = target > 0 ? current >= target : current > 0;
+      setBadge("chargerBadge", ok, ok ? "Compleet" : "Nog niet compleet");
+      document.getElementById("chargerInfo").textContent = target
+        ? ` (je moet ${target} laadpaal/palen opslaan)`
+        : "";
+    }
+
 
     async function loadDossier() {
       if (!dossier_id || !token) {
@@ -425,15 +514,13 @@
       const json2 = again.json;
 
 
-      // ✅ BELANGRIJK: api-dossier-get geeft chargers: [] terug (niet 'charger')
-      const firstCharger = (json2.chargers && json2.chargers.length) ? json2.chargers[0] : null;
-
       hydrateFromDossier(
         json2.dossier,
         json2.documents || [],
         json2.consents || [],
-        firstCharger
+        json2.chargers || []
       );
+
 
       statusEl.textContent = "Geladen.";
       contentEl.style.display = "block";
@@ -532,9 +619,18 @@
         return;
       }
 
+      const charger_id = (document.getElementById("chargerId").value || "").trim() || null;
+
       const { res, json } = await apiPost("api-dossier-charger-save", {
-        dossier_id, token, brand, model, serial, install_year,
+        dossier_id,
+        token,
+        charger_id,
+        brand,
+        model,
+        serial,
+        install_year,
       });
+
 
       if (!res.ok || !json.ok) {
         setError(json.error || `HTTP ${res.status}`);
@@ -542,10 +638,30 @@
         return;
       }
 
+      clearChargerForm();
+
+
       await evaluateDossier();
       await loadDossier();
 
     }
+
+    async function deleteCharger(charger_id) {
+      setError("");
+      if (!charger_id) return;
+
+      const { res, json } = await apiPost("api-dossier-charger-delete", { dossier_id, token, charger_id });
+      if (!res.ok || !json.ok) {
+        setError(json.error || `HTTP ${res.status}`);
+        return;
+      }
+
+      clearChargerForm();
+      await evaluateDossier();
+      await loadDossier();
+    }
+
+
 
     // Consents save
     async function saveConsents() {
@@ -627,6 +743,9 @@
     document.getElementById("saveAddressBtn").addEventListener("click", (e) => { e.preventDefault(); saveAddress(); });
     document.getElementById("verifyAddressBtn").addEventListener("click", (e) => { e.preventDefault(); verifyAddress(); });
     document.getElementById("saveConsentsBtn").addEventListener("click", (e) => { e.preventDefault(); saveConsents(); });
+    document.getElementById("cancelEditChargerBtn").addEventListener("click", (e) => { e.preventDefault(); clearChargerForm(); });
+    
+
 
     (async () => {
       await tryCompleteEmailVerification();
