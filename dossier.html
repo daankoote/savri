@@ -313,7 +313,15 @@
     }
 
     function hydrateFromDossier(d, docs, consents, charger) {
-      document.getElementById("dossierStatus").textContent = d.status || "-";
+      const STATUS_LABEL = {
+        incomplete: "Incomplete",
+        ready_for_review: "Ready for review",
+        in_review: "In Review",
+        ready_for_booking: "Ready for booking",
+      };
+
+      document.getElementById("dossierStatus").textContent = STATUS_LABEL[d.status] || d.status || "-";
+
       document.getElementById("naam").textContent = `${d.customer_first_name || ""} ${d.customer_last_name || ""}`.trim() || "-";
       document.getElementById("email").textContent = d.customer_email || "-";
       document.getElementById("chargers").textContent = String(d.charger_count ?? "-");
@@ -402,14 +410,28 @@
         return;
       }
 
+      // 1) eerst evalueren zodat status + dossier_checks kloppen
+      await apiPost("api-dossier-evaluate", { dossier_id, token });
+
+      // 2) dan opnieuw dossier ophalen zodat UI de nieuwe status/checks ziet
+      const again = await apiPost("api-dossier-get", { dossier_id, token });
+      if (!again.res.ok || !again.json.ok) {
+        statusEl.textContent = "Niet gelukt.";
+        setError(again.json.error || `HTTP ${again.res.status}`);
+        return;
+      }
+
+      // vervang json door again.json vanaf hier
+      const json2 = again.json;
+
+
       // ✅ BELANGRIJK: api-dossier-get geeft chargers: [] terug (niet 'charger')
-      const firstCharger = (json.chargers && json.chargers.length) ? json.chargers[0] : null;
+      const firstCharger = (json2.chargers && json2.chargers.length) ? json2.chargers[0] : null;
 
       hydrateFromDossier(
-        json.dossier,
-        json.documents || [],
-        json.consents || [],
-       // (json.chargers && json.chargers.length ? json.chargers[0] : null)
+        json2.dossier,
+        json2.documents || [],
+        json2.consents || [],
         firstCharger
       );
 
