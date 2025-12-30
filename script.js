@@ -2,10 +2,10 @@
 // Config
 // ======================================================
 const SUPABASE_URL = "https://yzngrurkpfuqgexbhzgl.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6bmdydXJrcGZ1cWdleGJoemdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNjYxMjYsImV4cCI6MjA4MDg0MjEyNn0.L7atEcmNvX2Wic0eSM9jWGdFUadIhH21EUFNtzP4YCk"; // dezelfde als je eerder had
+const SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6bmdydXJrcGZ1cWdleGJoemdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNjYxMjYsImV4cCI6MjA4MDg0MjEyNn0.L7atEcmNvX2Wic0eSM9jWGdFUadIhH21EUFNtzP4YCk";
 const API_BASE = `${SUPABASE_URL}/functions/v1`;
 
-// Altijd dezelfde headers voor Edge Functions
 function edgeHeaders() {
   return {
     "Content-Type": "application/json",
@@ -72,16 +72,6 @@ function showToast(message, type = "success") {
   }, 4200);
 }
 
-// ======================================================
-// Misc
-// ======================================================
-function generateRefCode(length = 6) {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let out = "";
-  for (let i = 0; i < length; i++) out += chars[Math.floor(Math.random() * chars.length)];
-  return out;
-}
-
 function keepAndReset(form, keepSelectors = [], focusSelector = null) {
   const keep = {};
   keepSelectors.forEach((sel) => {
@@ -103,64 +93,6 @@ function keepAndReset(form, keepSelectors = [], focusSelector = null) {
   }
 }
 
-
-// ======================================================
-// Email queue
-// - Eerst Edge Function proberen (als jij die later wil gebruiken)
-// - Anders direct insert in outbound_emails (jouw huidige werkende route)
-// ======================================================
-//async function tryEdgeFunctionEmail(payload) {
-//  const url = `${SUPABASE_URL}/functions/v1/enqueue-email`;
-//  const res = await fetch(url, {
-//    method: "POST",
-//    headers: {
-//      "Content-Type": "application/json",
-//      apikey: SUPABASE_ANON_KEY,
-//      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-//    },
-//    body: JSON.stringify(payload),
-//  });
-
-//  if (!res.ok) {
-//    const txt = await res.text().catch(() => "");
-//    return { ok: false, error: txt || `HTTP ${res.status}` };
-//  }
-//  return { ok: true };
-//}
-
-//async function queueEmail({ to_email, subject, body, message_type = "generic", priority = 10 }) {
-//  const payload = { to_email, subject, body, message_type, priority };
-
- // // 1) Edge Function (optioneel)
- // try {
- //   const edge = await tryEdgeFunctionEmail(payload);
- //   if (edge.ok) return { ok: true, via: "edge" };
- // } catch (_) {
- //   // negeren → fallback
- // }
-
- // // 2) Fallback: direct insert in outbound_emails
-  //const { error } = await supabaseClient.from("outbound_emails").insert([payload]);
- // if (error) return { ok: false, error: error.message || String(error) };
-
-//  return { ok: true, via: "table" };
-//}
-
-//// ======================================================
-//// Installer ref validation via RPC
-//// ======================================================
-//async function validateInstallerRef(ref) {
-//  const code = (ref || "").trim().toUpperCase();
-//  if (!code) return false;
-
-//  const { data, error } = await supabaseClient.rpc("validate_installer_ref", { p_ref: code });
-//  if (error) {
-//    console.error("validate_installer_ref RPC error:", error);
-//    return false;
-//  }
-//  return !!data;
-//}
-
 // ======================================================
 // DOM Ready
 // ======================================================
@@ -181,7 +113,7 @@ document.addEventListener("DOMContentLoaded", () => {
     toggles.forEach((btn) => btn.addEventListener("click", () => activate(btn.dataset.target)));
   }
 
-  // ref in URL voor EV form
+  // ref in URL voor EV form (optioneel)
   const params = new URLSearchParams(window.location.search);
   const ref = params.get("ref");
   const evForm = document.querySelector('form[name="evrijder"]');
@@ -234,31 +166,17 @@ async function handleEvForm(e) {
 
   if (hasError) return;
 
-  const payload = {
-    source: "ev_direct",
-    lead_type: "ev_user",
-    first_name: first.value.trim(),
-    last_name: last.value.trim(),
-    full_name: `${first.value.trim()} ${last.value.trim()}`.trim(), // tijdelijk laten staan
-    email: email.value.trim(),
-    phone: phone.value.trim() || null,
-    charger_count: parseInt(chargers.value, 10),
-    own_premises: terrein.value === "ja",
-    consent_terms: true,
-  };
-
-
   const res = await fetch(`${API_BASE}/api-lead-submit`, {
     method: "POST",
     headers: edgeHeaders(),
     body: JSON.stringify({
       flow: "ev_direct",
-      first_name: payload.first_name,
-      last_name: payload.last_name,
-      email: payload.email,
-      phone: payload.phone,
-      charger_count: payload.charger_count,
-      own_premises: payload.own_premises
+      first_name: first.value.trim(),
+      last_name: last.value.trim(),
+      email: email.value.trim(),
+      phone: phone.value.trim() || null,
+      charger_count: parseInt(chargers.value, 10),
+      own_premises: terrein.value === "ja",
     }),
   });
 
@@ -271,7 +189,6 @@ async function handleEvForm(e) {
 
   keepAndReset(form, [], 'input[name="voornaam"]');
   showToast("Aanmelding ontvangen. Je ontvangt e-mail met dossierlink.", "success");
-
 }
 
 // ======================================================
@@ -294,13 +211,13 @@ async function handleInstallateurKlantForm(e) {
   let hasError = false;
 
   if (!ref.value.trim()) { showFieldError(ref, "Installateurscode is verplicht."); hasError = true; }
-  if (!first.value.trim()) { showFieldError(first, "Vul uw voornaam in."); hasError = true; }
-  if (!last.value.trim()) { showFieldError(last, "Vul uw achternaam in."); hasError = true; }
+  if (!first.value.trim()) { showFieldError(first, "Vul de voornaam in."); hasError = true; }
+  if (!last.value.trim()) { showFieldError(last, "Vul de achternaam in."); hasError = true; }
 
   if (!email.value.trim()) {
     showFieldError(email, "Geldig e-mailadres is verplicht."); hasError = true;
   } else if (!isValidEmail(email.value)) {
-    showFieldError(email, "Controleer uw e-mailadres."); hasError = true;
+    showFieldError(email, "Controleer het e-mailadres."); hasError = true;
   }
 
   if (phone.value && !isValidMobile(phone.value)) {
@@ -313,28 +230,7 @@ async function handleInstallateurKlantForm(e) {
 
   if (hasError) return;
 
-  //// installer code check (RPC)
-  //const ok = await validateInstallerRef(ref.value);
-  //if (!ok) {
-  //  showFieldError(ref, "Installateurscode niet correct / bekend.");
-  //  return;
-  //}
-
-  const payload = {
-    source: "via_installateur",
-    lead_type: "ev_user",
-    first_name: first.value.trim(),
-    last_name: last.value.trim(),
-    full_name: `${first.value.trim()} ${last.value.trim()}`.trim(), // tijdelijk laten staan
-    email: email.value.trim(),
-    phone: phone.value.trim() || null,
-    charger_count: parseInt(chargers.value, 10),
-    own_premises: terrein.value === "ja",
-    installer_ref: ref.value.trim().toUpperCase(),
-    consent_terms: true,
-  };
-
- const res = await fetch(`${API_BASE}/api-lead-submit`, {
+  const res = await fetch(`${API_BASE}/api-lead-submit`, {
     method: "POST",
     headers: edgeHeaders(),
     body: JSON.stringify({
@@ -357,7 +253,6 @@ async function handleInstallateurKlantForm(e) {
 
   keepAndReset(form, ['input[name="installer_ref"]'], 'input[name="klant_voornaam"]');
   showToast("Klant aangemeld. Dossierlink wordt per e-mail verstuurd.", "success");
-
 }
 
 // ======================================================
@@ -400,22 +295,6 @@ async function handleInstallerSignup(e) {
 
   if (hasError) return;
 
-  const refCode = generateRefCode(6);
-
-  const payload = {
-    ref_code: refCode,
-    company_name: company.value.trim(),
-    // tijdelijk: bestaande kolom contact_name blijft gevuld,
-    // later kun je deze droppen als je wil
-    contact_first_name: first.value.trim(),
-    contact_last_name: last.value.trim(),
-    contact_name: `${first.value.trim()} ${last.value.trim()}`.trim(), // tijdelijk laten staan als je legacy wil
-    email: email.value.trim(),
-    phone: phone.value.trim() || null,
-    kvk: kvk.value.trim(),
-    active: true,
-  };
-
   const res = await fetch(`${API_BASE}/api-lead-submit`, {
     method: "POST",
     headers: edgeHeaders(),
@@ -453,10 +332,6 @@ async function handleContactForm(e) {
   const email = form.querySelector('[name="email"]');
   const subject = form.querySelector('[name="onderwerp"]');
   const message = form.querySelector('[name="bericht"]');
-  const confirmationBody =
-  `Dank voor uw bericht.\n` +
-  `We hebben uw onderstaande bericht ontvangen en zullen zo snel mogelijk reageren.\n\n` +
-  `----------------------------------------\n\n`;
 
   let hasError = false;
 
@@ -472,15 +347,6 @@ async function handleContactForm(e) {
   if (!message.value.trim()) { showFieldError(message, "Bericht ontbreekt."); hasError = true; }
 
   if (hasError) return;
-
-  const payload = {
-    first_name: first.value.trim(),
-    last_name: last.value.trim() || null,
-    name: `${first.value.trim()} ${last.value.trim()}`.trim(), // backward compat met je huidige kolom
-    email: email.value.trim(),
-    subject: subject.value.trim(),
-    message: message.value.trim(),
-  };
 
   const res = await fetch(`${API_BASE}/api-lead-submit`, {
     method: "POST",
@@ -503,5 +369,4 @@ async function handleContactForm(e) {
 
   keepAndReset(form, [], 'input[name="first_name"]');
   showToast("Dank je wel. Je bericht is ontvangen.", "success");
-
 }

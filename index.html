@@ -2,7 +2,9 @@
 <html lang="nl">
   <head>
     <meta charset="UTF-8" />
-    <script> document.documentElement.classList.add("js"); </script>
+    <script>
+      document.documentElement.classList.add("js");
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Enval – inboeker voor privé-laadpalen</title>
     <link rel="stylesheet" href="style.css" />
@@ -12,14 +14,16 @@
     <header>
       <div class="container header-inner">
         <div class="logo">
-          <a href="/"> Enval </a> <!--nu zonder logo--> 
-          <!-- <a href="/"> <img src="/logo.svg" alt="Enval"> zodra met logo </a> --> 
+          <a href="/index.html">Enval</a>
+          <!-- <a href="/"><img src="/logo.svg" alt="Enval" /></a> -->
         </div>
         <nav>
-          <a href="#hero">Home</a>
+          <a href="/index.html#hero">Home</a>
           <a href="/installateur.html">Aanmelden als installateur</a>
-          <a href="#faq">FAQ</a>
-          <a href="#contact">Contact</a>
+          <a href="/hoe-het-werkt.html">Hoe het werkt</a>
+          <a href="/regelgeving.html">Regelgeving</a>
+          <a href="/index.html#faq">FAQ</a>
+          <a href="/index.html#contact">Contact</a>
         </nav>
       </div>
     </header>
@@ -37,18 +41,11 @@
           </p>
 
           <div class="hero-buttons">
-            <button class="btn outline tab-toggle" data-target="installateur" type="button">
-              Ik ben installateur
-            </button>
-            <button class="btn outline tab-toggle" data-target="ev" type="button">
-              Ik heb een privé-laadpaal
-            </button>
-            <button class="btn outline tab-toggle" data-target="anders" type="button">
-              Grotere locatie / partner
-            </button>
+            <button class="btn outline tab-toggle" data-target="installateur" type="button">Ik ben installateur</button>
+            <button class="btn outline tab-toggle" data-target="ev" type="button">Ik heb een privé-laadpaal</button>
+            <button class="btn outline tab-toggle" data-target="anders" type="button">Grotere locatie / partner</button>
           </div>
         </div>
-
 
         <div class="hero-side">
           <div class="card">
@@ -93,8 +90,8 @@
         <div class="column">
           <h2>Geef uw klanten op voor het verkrijgen van een vergoeding.</h2>
           <p>
-            Enval verzorgt de registratie, validatie en audit-trail van privé-laadpalen. U blijft het centrale
-            aanspreekpunt voor uw klant, wij regelen de administratieve kant geheel automatisch.
+            Enval verzorgt de registratie, validatie en audit-trail van privé-laadpalen. U blijft het centrale aanspreekpunt
+            voor uw klant, wij regelen de administratieve kant geheel automatisch.
           </p>
 
           <h3>Waarom dit interessant is voor u</h3>
@@ -170,16 +167,14 @@
               <div class="checkbox-row">
                 <input type="checkbox" id="akkoord_installateur" name="akkoord" required />
                 <label for="akkoord_installateur">
-                  Ik bevestig dat ik deze klant mag aanmelden bij Enval voor voorbereiding op mogelijke ERE’s (nog zonder
-                  garantie op toekenning of vergoeding).
+                  Ik bevestig dat ik deze klant mag aanmelden bij Enval voor voorbereiding op mogelijke ERE’s
+                  (zonder garantie op toekenning of vergoeding).
                 </label>
               </div>
 
               <button type="submit" class="btn primary full-width">Klant aanmelden</button>
 
-              <p class="form-note">
-                Na aanmelding nemen wij rechtstreeks contact op met de klant, u hoeft niets meer te doen.
-              </p>
+              <p class="form-note">Na aanmelding nemen wij rechtstreeks contact op met de klant, u hoeft niets meer te doen.</p>
             </form>
           </div>
         </div>
@@ -191,28 +186,26 @@
       <div class="container two-column">
         <div class="column">
           <h2>Registreer uw privé-laadpaal.</h2>
-          <p>
-            Met Enval zorgt u dat ervoor dat uw privé-laadpaal in aanmerking komt voor een jaarlijkse vergoeding.
-          </p>
+          <p>Met Enval zorgt u ervoor dat uw privé-laadpaal kan worden voorbereid op een jaarlijkse vergoeding.</p>
 
-          <h3>Wat doet Enavl voor u</h3>
+          <h3>Wat Enval voor u doet</h3>
           <div class="split">
             <div>
               <h4>Wel</h4>
               <ul class="list">
-                <li>Eenvoudig eenmalig aanmeld proces.</li>
-                <li>Automatische verbruiks uitlezing.</li>
-                <li>Jaarlijkse vergoeding.</li>
-                <li>Verzorgde administratieve verplichtingen.</li>
+                <li>Eenvoudig eenmalig aanmeldproces</li>
+                <li>Automatische verbruiksuitlezing</li>
+                <li>Voorbereiding op jaarlijkse vergoeding</li>
+                <li>Verzorgde administratieve verplichtingen</li>
               </ul>
             </div>
             <div>
               <h4>Niet</h4>
               <ul class="list">
-                <li>Geen langdurige contractverplichtingen.</li>
-                <li>Geen onduidelijke voorwaarden.</li>
-                <li>Geen aanbieder van leningen of energiecontracten.</li>
-                <li>Geen risico's.</li>
+                <li>Geen langdurige contractverplichtingen</li>
+                <li>Geen onduidelijke voorwaarden</li>
+                <li>Geen leningen of energiecontracten</li>
+                <li>Geen garanties op ERE’s of vergoeding</li>
               </ul>
             </div>
           </div>
@@ -280,9 +273,8 @@
               <button type="submit" class="btn primary full-width">Voorinschrijven</button>
 
               <p class="form-note">
-                We gebruiken uw gegevens alleen om u te informeren 
-                zodra dit nodig is of om informatie aan vragen voor 
-                het registratieproces van uw laadpaal ERE’s voor privé-laadpalen.
+                We gebruiken uw gegevens alleen om u te informeren zodra dit nodig is of om informatie op te vragen
+                voor het registratieproces.
               </p>
             </form>
           </div>
@@ -299,23 +291,16 @@
             Beheert u een laadplein, parkeergarage of andere locatie met substantieel laadvolume, maar komt u zelf niet aan
             de NEa-drempel van 2.000.000 kWh per jaar?
           </p>
-          <p>
-            Enval bundelt volumes en organiseert het ERE-inboekproces. Laat uw gegevens achter via het contactformulier
-            hieronder.
-          </p>
+          <p>Enval bundelt volumes en organiseert het ERE-inboekproces. Laat uw gegevens achter via het contactformulier.</p>
         </div>
         <div class="column">
           <div class="card">
-            <h3>Valt u niet in de standaard categorieën?</h3>
-            <p>
-              Gebruik het contactformulier onderaan de pagina en vermeld dat het om een grotere locatie gaat. We nemen
-              gericht contact met u op.
-            </p>
+            <h3>Valt u niet in de standaardcategorieën?</h3>
+            <p>Gebruik het contactformulier onderaan de pagina en vermeld dat het om een grotere locatie gaat.</p>
           </div>
         </div>
       </div>
     </section>
-
 
     <section class="section section-alt">
       <div class="container">
@@ -323,8 +308,7 @@
 
         <p>
           De regelgeving rondom RED3 en ERE’s is in ontwikkeling.
-          Wat vaststaat: correcte vastlegging vooraf verkleint het risico
-          op afkeuring en vertraging later.
+          Wat vaststaat: correcte vastlegging vooraf verkleint het risico op afkeuring en vertraging later.
         </p>
 
         <ul class="list">
@@ -343,12 +327,11 @@
 
         <div class="faq-intro">
           <p>
-            Enval richt zich op drie dingen: <br>
-            1. Het zorgvuldig registreren en valideren van privé-laadpalen volgens de vereisten van de Nederlandse Emissieautoriteit (NEa). <br>
-            2. Het faciliteren van inboeken en ERE-verkoop via een erkende route <br>
-            3. Het verzorgen van de administratie en audit volgens de vereisten van de NEA <br><br>
-            
-            Geen energiecontracten, geen beleggingsproduct, geen langdurige contracten, geen onduidelijke voorwaarden en geen risico's.
+            Enval richt zich op drie dingen:<br />
+            1. Registreren en valideren van privé-laadpalen volgens de vereisten van de NEa.<br />
+            2. Faciliteren van inboeken en ERE-verkoop via een erkende route.<br />
+            3. Administratie en audit-trail volgens de vereisten van de NEa.<br /><br />
+            Geen energiecontracten, geen beleggingsproduct, geen langdurige contracten, geen onduidelijke voorwaarden en geen garanties.
           </p>
         </div>
 
@@ -356,8 +339,8 @@
           <div class="faq-item">
             <h3>Wat zijn ERE’s?</h3>
             <p>
-              Emissiereductie-eenheden (ERE’s) zijn certificaten die horen bij aantoonbare reductie van CO₂-uitstoot. Voor
-              bepaalde vormen van elektrisch laden kunnen ERE’s worden toegekend.
+              Emissiereductie-eenheden (ERE’s) zijn certificaten die horen bij aantoonbare reductie van CO₂-uitstoot.
+              Voor bepaalde vormen van elektrisch laden kunnen ERE’s worden toegekend.
             </p>
           </div>
 
@@ -365,32 +348,29 @@
             <h3>Is dit al definitief?</h3>
             <p>
               Nee. De NEa werkt aan de kaders. Enval bereidt het proces en platform voor, zodat we direct kunnen aansluiten
-              zodra het loket voor ERE-inboekers opent. Naar verwachting is dit begin 2026. 
+              zodra het loket voor ERE-inboekers opent. Naar verwachting is dit begin 2026.
             </p>
           </div>
 
           <div class="faq-item">
             <h3>Krijg ik gegarandeerd geld als ik me aanmeld?</h3>
             <p>
-              Nee. Er is geen garantie op toekenning van ERE’s of op een vergoeding. Aanmelding betekent alleen dat jouw
-              situatie wordt voorbereid op mogelijke deelname. ERE's en vergoeding zijn afhankelijk van correcte installatie 
-              voorwaarden en aantoonbaar verbruik van kwh door de laadpaal.
+              Nee. Er is geen garantie op toekenning van ERE’s of op een vergoeding. Aanmelding betekent alleen dat uw
+              situatie wordt voorbereid op mogelijke deelname. ERE’s en vergoeding zijn afhankelijk van correcte installatie-
+              voorwaarden en aantoonbaar verbruik.
             </p>
           </div>
 
           <div class="faq-item">
             <h3>Werkt Enval samen met de NEa?</h3>
             <p>
-              Enval is zelfstandig, maar ontwerpt het registratie-, validatie- en auditproces nadrukkelijk in lijn 
-              met de eisen van de NEa en zal deze stappen volledig uit handen nemen.
+              Enval is zelfstandig, maar ontwerpt het registratie-, validatie- en auditproces in lijn met de eisen van de NEa.
             </p>
           </div>
 
           <div class="faq-item">
             <h3>Ben ik ergens toe verplicht?</h3>
-            <p>
-              Nee. Aanmelding is vrijblijvend en u kunt uw gegevens laten verwijderen als u niet meer mee wilt doen.
-            </p>
+            <p>Nee. Aanmelding is vrijblijvend en u kunt uw gegevens laten verwijderen als u niet meer mee wilt doen.</p>
           </div>
         </div>
       </div>
@@ -449,7 +429,7 @@
 
     <footer>
       <div class="container footer-inner">
-        <p>&copy; <span id="year"></span> Enval 2026. Alle rechten voorbehouden.</p>
+        <p>&copy; <span id="year"></span> Enval. Alle rechten voorbehouden.</p>
       </div>
     </footer>
 

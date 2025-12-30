@@ -1,17 +1,14 @@
 :root{
-  /* Brand (kies 1 hoofdkleur) */
-  --brand: #0f766e;        /* donker groen-teal (rustiger dan jouw blauw) */
+  --brand: #0f766e;
   --brand-600: #0d6b63;
-  --brand-500: #10b981;    /* hover tint */
+  --brand-500: #10b981;
   --brand-50:  #ecfdf5;
 
-  /* Neutrals */
   --ink: #0f172a;
   --bg: #f8fafc;
   --panel: #ffffff;
   --muted: #64748b;
 
-  /* Donkere secties (header/hero) – zachter dan #020617 */
   --dark: #0b1220;
   --dark-2: #0e1a2f;
   --dark-border: #223049;
@@ -28,7 +25,6 @@ body {
   background: var(--bg);
   line-height: 1.5;
 }
-
 
 .container {
   max-width: 1100px;
@@ -52,7 +48,6 @@ header {
   border-bottom: 1px solid var(--dark-border);
 }
 
-
 .header-inner {
   display: flex;
   align-items: center;
@@ -67,7 +62,6 @@ header {
   letter-spacing: 0.03em;
 }
 .logo a:hover{ text-decoration: underline; }
-
 
 nav a {
   margin-left: 1.5rem;
@@ -114,7 +108,6 @@ nav a:hover { text-decoration: underline; }
 .hero-side .card h3 { margin-top: 0; }
 .hero-side .card ol { margin: 0; padding-left: 1.25rem; }
 
-
 /* Buttons */
 .btn {
   display: inline-block;
@@ -132,7 +125,6 @@ nav a:hover { text-decoration: underline; }
 .btn:hover { transform: translateY(-1px); }
 .btn:active { transform: translateY(0px); }
 
-/* “Outline” default (jouw wens voor de 3 keuze-buttons) */
 .btn.outline {
   background: #fff;
   color: var(--brand);
@@ -144,7 +136,6 @@ nav a:hover { text-decoration: underline; }
   box-shadow: 0 10px 22px rgba(15, 118, 110, 0.14);
 }
 
-/* Active state (als tab geselecteerd is) */
 .btn.outline.active,
 .tab-toggle.active {
   background: var(--brand);
@@ -153,7 +144,6 @@ nav a:hover { text-decoration: underline; }
   box-shadow: 0 12px 26px rgba(15, 118, 110, 0.22);
 }
 
-/* Primary (voor submit buttons) */
 .btn.primary {
   background: var(--brand);
   color: #fff;
@@ -164,16 +154,11 @@ nav a:hover { text-decoration: underline; }
   border-color: var(--brand-500);
 }
 
-/* Utility */
 .full-width { width: 100%; }
 
-
-
-/* Tabs (fail-safe) Default = zichtbaar, alleen verbergen als JS echt draait */
+/* Tabs */
 .tab-panel { display: block; }
 .js .tab-panel { display: none; }
-
-
 
 /* Cards / Typography */
 .card {
