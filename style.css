@@ -154,6 +154,12 @@ nav a:hover { text-decoration: underline; }
   border-color: var(--brand-500);
 }
 
+button.is-loading {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+
 .full-width { width: 100%; }
 
 /* Tabs */
@@ -320,3 +326,4 @@ footer {
   border: 1px solid #ff4d4f;
   color: #a8071a;
 }
+

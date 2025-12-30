@@ -94,6 +94,23 @@ function keepAndReset(form, keepSelectors = [], focusSelector = null) {
 }
 
 // ======================================================
+// UI helpers: submit lock (D1/D2)
+// ======================================================
+function lockSubmit(btn, locked, textWhenLocked = "Verwerken…") {
+  if (!btn) return;
+  if (locked) {
+    btn.dataset.originalText = btn.textContent;
+    btn.disabled = true;
+    btn.classList.add("is-loading");
+    btn.textContent = textWhenLocked;
+  } else {
+    btn.disabled = false;
+    btn.classList.remove("is-loading");
+    btn.textContent = btn.dataset.originalText || btn.textContent;
+  }
+}
+
+// ======================================================
 // DOM Ready
 // ======================================================
 document.addEventListener("DOMContentLoaded", () => {
@@ -137,6 +154,9 @@ async function handleEvForm(e) {
   const form = e.target;
   clearAllFieldErrors(form);
 
+  const btn = form.querySelector('button[type="submit"]');
+  if (btn?.disabled) return;
+
   const first = form.querySelector('[name="voornaam"]');
   const last = form.querySelector('[name="achternaam"]');
   const email = form.querySelector('[name="email"]');
@@ -166,29 +186,35 @@ async function handleEvForm(e) {
 
   if (hasError) return;
 
-  const res = await fetch(`${API_BASE}/api-lead-submit`, {
-    method: "POST",
-    headers: edgeHeaders(),
-    body: JSON.stringify({
-      flow: "ev_direct",
-      first_name: first.value.trim(),
-      last_name: last.value.trim(),
-      email: email.value.trim(),
-      phone: phone.value.trim() || null,
-      charger_count: parseInt(chargers.value, 10),
-      own_premises: terrein.value === "ja",
-    }),
-  });
+  lockSubmit(btn, true);
 
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok || !json.ok) {
-    console.error("api-lead-submit ev_direct failed:", json);
-    showToast(json.error || "Opslaan mislukt. Probeer later opnieuw.", "error");
-    return;
+  try {
+    const res = await fetch(`${API_BASE}/api-lead-submit`, {
+      method: "POST",
+      headers: edgeHeaders(),
+      body: JSON.stringify({
+        flow: "ev_direct",
+        first_name: first.value.trim(),
+        last_name: last.value.trim(),
+        email: email.value.trim(),
+        phone: phone.value.trim() || null,
+        charger_count: parseInt(chargers.value, 10),
+        own_premises: terrein.value === "ja",
+      }),
+    });
+
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || !json.ok) {
+      console.error("api-lead-submit ev_direct failed:", json);
+      showToast(json.error || "Opslaan mislukt. Probeer later opnieuw.", "error");
+      return;
+    }
+
+    keepAndReset(form, [], 'input[name="voornaam"]');
+    showToast("Aanmelding ontvangen. Je ontvangt e-mail met dossierlink.", "success");
+  } finally {
+    lockSubmit(btn, false);
   }
-
-  keepAndReset(form, [], 'input[name="voornaam"]');
-  showToast("Aanmelding ontvangen. Je ontvangt e-mail met dossierlink.", "success");
 }
 
 // ======================================================
@@ -198,6 +224,9 @@ async function handleInstallateurKlantForm(e) {
   e.preventDefault();
   const form = e.target;
   clearAllFieldErrors(form);
+
+  const btn = form.querySelector('button[type="submit"]');
+  if (btn?.disabled) return;
 
   const ref = form.querySelector('[name="installer_ref"]');
   const first = form.querySelector('[name="klant_voornaam"]');
@@ -230,29 +259,35 @@ async function handleInstallateurKlantForm(e) {
 
   if (hasError) return;
 
-  const res = await fetch(`${API_BASE}/api-lead-submit`, {
-    method: "POST",
-    headers: edgeHeaders(),
-    body: JSON.stringify({
-      flow: "installer_to_customer",
-      installer_ref: ref.value.trim().toUpperCase(),
-      first_name: first.value.trim(),
-      last_name: last.value.trim(),
-      email: email.value.trim(),
-      phone: phone.value.trim() || null,
-      charger_count: parseInt(chargers.value, 10),
-      own_premises: terrein.value === "ja",
-    }),
-  });
+  lockSubmit(btn, true);
 
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok || !json.ok) {
-    showFieldError(ref, json.error || "Installateurscode niet correct / bekend.");
-    return;
+  try {
+    const res = await fetch(`${API_BASE}/api-lead-submit`, {
+      method: "POST",
+      headers: edgeHeaders(),
+      body: JSON.stringify({
+        flow: "installer_to_customer",
+        installer_ref: ref.value.trim().toUpperCase(),
+        first_name: first.value.trim(),
+        last_name: last.value.trim(),
+        email: email.value.trim(),
+        phone: phone.value.trim() || null,
+        charger_count: parseInt(chargers.value, 10),
+        own_premises: terrein.value === "ja",
+      }),
+    });
+
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || !json.ok) {
+      showFieldError(ref, json.error || "Installateurscode niet correct / bekend.");
+      return;
+    }
+
+    keepAndReset(form, ['input[name="installer_ref"]'], 'input[name="klant_voornaam"]');
+    showToast("Klant aangemeld. Dossierlink wordt per e-mail verstuurd.", "success");
+  } finally {
+    lockSubmit(btn, false);
   }
-
-  keepAndReset(form, ['input[name="installer_ref"]'], 'input[name="klant_voornaam"]');
-  showToast("Klant aangemeld. Dossierlink wordt per e-mail verstuurd.", "success");
 }
 
 // ======================================================
@@ -262,6 +297,9 @@ async function handleInstallerSignup(e) {
   e.preventDefault();
   const form = e.target;
   clearAllFieldErrors(form);
+
+  const btn = form.querySelector('button[type="submit"]');
+  if (btn?.disabled) return;
 
   const company = form.querySelector('[name="company_name"]');
   const first = form.querySelector('[name="contact_first_name"]');
@@ -295,28 +333,34 @@ async function handleInstallerSignup(e) {
 
   if (hasError) return;
 
-  const res = await fetch(`${API_BASE}/api-lead-submit`, {
-    method: "POST",
-    headers: edgeHeaders(),
-    body: JSON.stringify({
-      flow: "installer_signup",
-      company_name: company.value.trim(),
-      contact_first_name: first.value.trim(),
-      contact_last_name: last.value.trim(),
-      email: email.value.trim(),
-      phone: phone.value.trim() || null,
-      kvk: kvk.value.trim(),
-    }),
-  });
+  lockSubmit(btn, true);
 
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok || !json.ok) {
-    showToast(json.error || "Aanmelding mislukt. Probeer later opnieuw.", "error");
-    return;
+  try {
+    const res = await fetch(`${API_BASE}/api-lead-submit`, {
+      method: "POST",
+      headers: edgeHeaders(),
+      body: JSON.stringify({
+        flow: "installer_signup",
+        company_name: company.value.trim(),
+        contact_first_name: first.value.trim(),
+        contact_last_name: last.value.trim(),
+        email: email.value.trim(),
+        phone: phone.value.trim() || null,
+        kvk: kvk.value.trim(),
+      }),
+    });
+
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || !json.ok) {
+      showToast(json.error || "Aanmelding mislukt. Probeer later opnieuw.", "error");
+      return;
+    }
+
+    keepAndReset(form, [], 'input[name="contact_first_name"]');
+    showToast("Aanmelding ontvangen. Je ontvangt e-mail + account activatie (magic link).", "success");
+  } finally {
+    lockSubmit(btn, false);
   }
-
-  keepAndReset(form, [], 'input[name="contact_first_name"]');
-  showToast("Aanmelding ontvangen. Je ontvangt e-mail + account activatie (magic link).", "success");
 }
 
 // ======================================================
@@ -326,6 +370,9 @@ async function handleContactForm(e) {
   e.preventDefault();
   const form = e.target;
   clearAllFieldErrors(form);
+
+  const btn = form.querySelector('button[type="submit"]');
+  if (btn?.disabled) return;
 
   const first = form.querySelector('[name="first_name"]');
   const last = form.querySelector('[name="last_name"]');
@@ -348,25 +395,31 @@ async function handleContactForm(e) {
 
   if (hasError) return;
 
-  const res = await fetch(`${API_BASE}/api-lead-submit`, {
-    method: "POST",
-    headers: edgeHeaders(),
-    body: JSON.stringify({
-      flow: "contact",
-      first_name: first.value.trim(),
-      last_name: last.value.trim() || null,
-      email: email.value.trim(),
-      subject: subject.value.trim(),
-      message: message.value.trim(),
-    }),
-  });
+  lockSubmit(btn, true);
 
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok || !json.ok) {
-    showToast(json.error || "Contact versturen mislukt. Probeer later opnieuw.", "error");
-    return;
+  try {
+    const res = await fetch(`${API_BASE}/api-lead-submit`, {
+      method: "POST",
+      headers: edgeHeaders(),
+      body: JSON.stringify({
+        flow: "contact",
+        first_name: first.value.trim(),
+        last_name: last.value.trim() || null,
+        email: email.value.trim(),
+        subject: subject.value.trim(),
+        message: message.value.trim(),
+      }),
+    });
+
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || !json.ok) {
+      showToast(json.error || "Contact versturen mislukt. Probeer later opnieuw.", "error");
+      return;
+    }
+
+    keepAndReset(form, [], 'input[name="first_name"]');
+    showToast("Dank je wel. Je bericht is ontvangen.", "success");
+  } finally {
+    lockSubmit(btn, false);
   }
-
-  keepAndReset(form, [], 'input[name="first_name"]');
-  showToast("Dank je wel. Je bericht is ontvangen.", "success");
 }
