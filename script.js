@@ -1,26 +1,24 @@
 // Test script
-console.log("ENVAL SCRIPT.JS v2025-12-31-01 LOADED");
+console.log("ENVAL SCRIPT.JS v2026-01-03-01 LOADED");
 
 // ======================================================
-// Config
+// Config (komt uit /config.js)
 // ======================================================
-const SUPABASE_URL = "https://yzngrurkpfuqgexbhzgl.supabase.co";
-const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6bmdydXJrcGZ1cWdleGJoemdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNjYxMjYsImV4cCI6MjA4MDg0MjEyNn0.L7atEcmNvX2Wic0eSM9jWGdFUadIhH21EUFNtzP4YCk";
-const API_BASE = `${SUPABASE_URL}/functions/v1`;
+const SUPABASE_URL = window.ENVAL?.SUPABASE_URL;
+const SUPABASE_ANON_KEY = window.ENVAL?.SUPABASE_ANON_KEY;
+const API_BASE = window.ENVAL?.API_BASE;
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !API_BASE) {
+  console.error("ENVAL config ontbreekt. Laad eerst /config.js vóór script.js");
+}
+
 
 function edgeHeaders(idempotencyKey) {
-  const h = {
-    "Content-Type": "application/json",
-    apikey: SUPABASE_ANON_KEY,
-    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-  };
-
-  // Alleen toevoegen als je er één meegeeft
-  if (idempotencyKey) h["Idempotency-Key"] = idempotencyKey;
-
-  return h;
+  const extra = {};
+  if (idempotencyKey) extra["Idempotency-Key"] = idempotencyKey;
+  return window.ENVAL.edgeHeaders(extra);
 }
+
 
 function newIdempotencyKey() {
   // modern browsers
