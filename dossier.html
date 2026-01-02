@@ -245,12 +245,21 @@
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6Inl6bmdydXJrcGZ1cWdleGJoemdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNjYxMjYsImV4cCI6MjA4MDg0MjEyNn0.L7atEcmNvX2Wic0eSM9jWGdFUadIhH21EUFNtzP4YCk";
       const API_BASE = `${SUPABASE_URL}/functions/v1`;
 
-      function edgeHeaders() {
-        return {
+      function newIdempotencyKey() {
+        if (crypto?.randomUUID) return crypto.randomUUID();
+        const bytes = new Uint8Array(16);
+        crypto.getRandomValues(bytes);
+        return Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
+      }
+
+      function edgeHeaders(idempotencyKey) {
+        const h = {
           "Content-Type": "application/json",
           apikey: SUPABASE_ANON_KEY,
           Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
         };
+        if (idempotencyKey) h["Idempotency-Key"] = idempotencyKey;
+        return h;
       }
 
       function $(id) { return document.getElementById(id); }
@@ -266,9 +275,10 @@
       }
 
       async function apiPost(fnName, body) {
+        const idem = newIdempotencyKey();
         const res = await fetch(`${API_BASE}/${fnName}`, {
           method: "POST",
-          headers: edgeHeaders(),
+          headers: edgeHeaders(idem),
           body: JSON.stringify(body),
         });
         const json = await res.json().catch(() => ({}));
@@ -283,7 +293,7 @@
         if (status === "ready_for_booking") return { cls: "pill ok", text: "Klaar voor inboeken" };
         if (status === "ready_for_review") return { cls: "pill warn", text: "Klaar voor review" };
         if (status === "in_review") return { cls: "pill warn", text: "In review" };
-        return { cls: "pill", text: "Onvolledig" }; // default for "incomplete" or unknown
+        return { cls: "pill", text: "Onvolledig" };
       }
 
       function explainStatus(status) {
@@ -303,9 +313,9 @@
       const urlParams = new URLSearchParams(location.search);
       const dossier_id = urlParams.get("d");
       const token = urlParams.get("t");
-      const verifyToken = urlParams.get("v"); // optioneel
+      const verifyToken = urlParams.get("v");
 
-      let current = null; // dossier-get response
+      let current = null;
 
       // ---------------- INIT ----------------
       document.addEventListener("DOMContentLoaded", async () => {
@@ -349,11 +359,9 @@
 
         await reloadAll();
 
-        // Als v aanwezig is: probeer email-verify-complete (1x)
         if (verifyToken) {
           try {
             await apiPost("api-dossier-email-verify-complete", { dossier_id, token, verify_token: verifyToken });
-            // remove v from url (clean)
             const cleanUrl = new URL(location.href);
             cleanUrl.searchParams.delete("v");
             history.replaceState({}, "", cleanUrl.toString());
@@ -371,7 +379,7 @@
           $("statusPill").textContent = "laden…";
           current = await apiPost("api-dossier-get", { dossier_id, token });
           renderAll();
-          await evaluateAndRender(); // één keer, centraal
+          await evaluateAndRender();
         } catch (e) {
           showToast(e.message, "error");
           $("statusPill").className = "pill err";
@@ -381,9 +389,7 @@
 
       async function evaluateAndRender() {
         try {
-          // Alleen callen als function bestaat (jij hebt hem)
           const ev = await apiPost("api-dossier-evaluate", { dossier_id, token });
-          // daarna opnieuw dossier ophalen om status en checks consistent te hebben
           current = await apiPost("api-dossier-get", { dossier_id, token });
           renderStatus();
           renderChecks();
@@ -394,7 +400,6 @@
           renderConsents();
           return ev;
         } catch (e) {
-          // evaluator kan falen zonder dat dossier kapot is; toon fout maar laat UI staan
           renderStatus();
           $("statusExplain").textContent = `Status niet te herberekenen: ${e.message}`;
         }
@@ -420,7 +425,6 @@
       }
 
       function renderChecks() {
-        // optioneel: toon niets fancy; evaluator schrijft checks
         const checks = current?.checks || [];
         if (!checks.length) return;
       }
@@ -448,7 +452,6 @@
 
         $("addressState").textContent = `Ingevuld: ${entered} | ${verified} ${resolved}`.trim();
 
-        // prefills
         const f = $("addressForm");
         f.querySelector('[name="postcode"]').value = d.address_postcode || "";
         f.querySelector('[name="house_number"]').value = d.address_house_number || "";
@@ -528,7 +531,6 @@
         const cons = current?.consents || [];
         const latest = {};
         for (const c of cons) {
-          // neem newest per type (cons is al desc in get)
           if (!latest[c.consent_type]) latest[c.consent_type] = c;
         }
         $("cTerms").checked = latest["terms"]?.accepted === true;
@@ -576,7 +578,6 @@
         const brand = (f.querySelector('[name="brand"]').value || "").trim();
         const model = (f.querySelector('[name="model"]').value || "").trim();
         const power_kw_raw = (f.querySelector('[name="power_kw"]').value || "").trim();
-
         const power_kw = power_kw_raw ? Number(power_kw_raw.replace(",", ".")) : null;
 
         try {
@@ -642,7 +643,6 @@
 
           $("uploadState").textContent = "Uploaden…";
 
-          // signed_url is a signed upload URL (Supabase signed upload)
           const putRes = await fetch(meta.signed_url, {
             method: "PUT",
             headers: { "Content-Type": file.type || "application/octet-stream" },

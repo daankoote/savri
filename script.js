@@ -203,9 +203,6 @@ document.addEventListener("DOMContentLoaded", () => {
 // EV-rijder
 // ======================================================
 async function handleEvForm(e) {
-  console.count("SUBMIT_" + (e?.target?.getAttribute("name") || e?.target?.id || "form"));
-
-  
   e.preventDefault();
   const form = e.target;
   clearAllFieldErrors(form);
@@ -302,9 +299,6 @@ async function handleEvForm(e) {
 // Installateur → klant
 // ======================================================
 async function handleInstallateurKlantForm(e) {
-console.count("SUBMIT_" + (e?.target?.getAttribute("name") || e?.target?.id || "form"));
-
-
   e.preventDefault();
   const form = e.target;
   clearAllFieldErrors(form);
@@ -408,9 +402,6 @@ console.count("SUBMIT_" + (e?.target?.getAttribute("name") || e?.target?.id || "
 // Installateur signup
 // ======================================================
 async function handleInstallerSignup(e) {
- console.count("SUBMIT_" + (e?.target?.getAttribute("name") || e?.target?.id || "form"));
-
- 
   e.preventDefault();
   const form = e.target;
   clearAllFieldErrors(form);
@@ -507,9 +498,6 @@ async function handleInstallerSignup(e) {
 // Contact
 // ======================================================
 async function handleContactForm(e) {
- console.count("SUBMIT_" + (e?.target?.getAttribute("name") || e?.target?.id || "form"));
-
- 
   e.preventDefault();
   const form = e.target;
   clearAllFieldErrors(form);
