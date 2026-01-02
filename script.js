@@ -1,6 +1,61 @@
 // Test script
 console.log("ENVAL SCRIPT.JS v2025-12-31-01 LOADED");
 
+
+// Bovenin script.js (globaal)
+let inFlight = false;
+
+async function postJson(url, payload) {
+  if (inFlight) return;         // harde blokker
+  inFlight = true;
+
+  // UI: disable + spinner (pas selectors aan)
+  const btn = document.querySelector('button[type="submit"]');
+  const form = btn?.closest("form");
+  if (btn) {
+    btn.dataset.prevText = btn.textContent || "";
+    btn.textContent = "Versturen...";
+    btn.disabled = true;
+  }
+  if (form) {
+    [...form.querySelectorAll("input,select,textarea,button")].forEach(el => el.disabled = true);
+  }
+
+  try {
+    const idem = crypto.randomUUID();
+
+    const res = await fetch(url, {
+      method: "POST",
+      mode: "cors",                 // <-- NOOIT no-cors
+      credentials: "omit",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": idem,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data?.ok === false) {
+      throw new Error(data?.error || `HTTP ${res.status}`);
+    }
+    return data;
+  } finally {
+    inFlight = false;
+
+    // UI restore
+    if (form) {
+      [...form.querySelectorAll("input,select,textarea,button")].forEach(el => el.disabled = false);
+    }
+    if (btn) {
+      btn.textContent = btn.dataset.prevText || "Verzenden";
+      btn.disabled = false;
+    }
+  }
+}
+
+
+
 // ======================================================
 // Config
 // ======================================================
