@@ -154,10 +154,9 @@ nav a:hover { text-decoration: underline; }
   border-color: var(--brand-500);
 }
 
-button.is-loading {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
+button.is-loading { opacity: 0.7; cursor: not-allowed;}
+button.is-loading::after { content: " ⏳"; }
+
 
 
 .full-width { width: 100%; }
