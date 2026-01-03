@@ -92,12 +92,15 @@ function toggleChargerNotes() {
   notesRow.classList.toggle("hidden", !needsNotes);
 
   if (needsNotes) {
-    if (!notesInput.value) notesInput.value = "Vul hier merk en model in: ";
     notesInput.required = true;
+    // ✅ alleen placeholder, geen auto-value
+    notesInput.placeholder = "Vul merk en model in (bijv. MyBrand X200)";
   } else {
     notesInput.required = false;
+    notesInput.value = "";
   }
 }
+
 
 
 function populateBrandModel() {
@@ -206,17 +209,35 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 
     $("chargerForm")?.addEventListener("submit", onChargerSave);
-    $("btnChargerReset")?.addEventListener("click", () => {
-        $("chargerForm").reset();
-        $("chargerForm").querySelector('[name="charger_id"]').value = "";
-    });
-
     $("uploadForm")?.addEventListener("submit", onUpload);
     $("consentsForm")?.addEventListener("submit", onConsentsSave);
 
     await reloadAll();
   
 });
+
+// ------------- locking dossiers ------------
+
+function setDossierLocked(locked) {
+  // disable alle forms + belangrijke knoppen
+  const forms = ["addressForm", "chargerForm", "uploadForm", "consentsForm"];
+  forms.forEach((id) => {
+    const f = $(id);
+    if (!f) return;
+    f.querySelectorAll("input, select, button, textarea").forEach((el) => {
+      // laat "Ververs" en "Review dossier" buiten forms staan, dus safe
+      el.disabled = !!locked;
+    });
+  });
+
+  // extra: verberg delete buttons in lijstjes (chargers/docs)
+  document.querySelectorAll("button[data-act='del'], button[data-doc-del]").forEach((b) => {
+    b.disabled = !!locked;
+  });
+}
+
+
+
 
 // ---------------- loaders ----------------
 async function reloadAll() {
@@ -238,15 +259,36 @@ async function reloadAll() {
 }
 
 async function evaluateAndRender() {
+  const yes = confirm(
+    "Klopt alle informatie?\n\nNa doorgaan wordt het dossier voor review ingediend.\nDaarna kun je niets meer wijzigen.\n\nDoorgaan?"
+  );
+  if (!yes) return;
+
+  const btn = $("btnEvaluate");
+  if (btn?.disabled) return;
+
+  lockSubmit(btn, true, "Verwerken…");
+
   try {
-    await apiPost("api-dossier-evaluate", { dossier_id, token });
+    const r = await apiPost("api-dossier-submit-review", { dossier_id, token });
+
     current = await apiPost("api-dossier-get", { dossier_id, token });
     renderAll();
+
+    if (r.all_required_pass) {
+      showToast("Dossier is ingediend voor review.", "success");
+    } else {
+      showToast("Niet alles is compleet. Controleer de stappen en probeer opnieuw.", "error");
+    }
   } catch (e) {
     console.error(e);
-    if ($("statusExplain")) $("statusExplain").textContent = `Status niet te herberekenen: ${e.message}`;
+    showToast(`Review mislukt: ${e.message}`, "error");
+  } finally {
+    lockSubmit(btn, false);
   }
 }
+
+
 
 // ---------------- render ----------------
 function renderAll() {
@@ -261,12 +303,17 @@ function renderAll() {
 function renderStatus() {
   const status = current?.dossier?.status || "incomplete";
   const p = pillForStatus(status);
+
   if ($("statusPill")) {
     $("statusPill").className = p.cls;
     $("statusPill").textContent = p.text;
   }
   if ($("statusExplain")) $("statusExplain").textContent = explainStatus(status);
+
+  // ✅ lock UI wanneer dossier in review staat
+  setDossierLocked(status === "in_review");
 }
+
 
 // Jouw wens: toon email als beschikbaar, zonder “extra verificatie uitgeschakeld” vibe
 function renderAccessBlock() {
@@ -284,41 +331,28 @@ function renderAccessBlock() {
 }
 
 function renderAddressState() {
-    const d = current?.dossier || {};
-    const f = $("addressForm");
-    if (!f) return;
+  const d = current?.dossier || {};
+  const f = $("addressForm");
+  if (!f) return;
 
-    f.querySelector('[name="postcode"]').value = d.address_postcode || "";
-    f.querySelector('[name="house_number"]').value = d.address_house_number || "";
-    f.querySelector('[name="suffix"]').value = d.address_suffix || "";
+  f.querySelector('[name="postcode"]').value = d.address_postcode || "";
+  f.querySelector('[name="house_number"]').value = d.address_house_number || "";
+  f.querySelector('[name="suffix"]').value = d.address_suffix || "";
 
-    // read-only uit DB (als al opgeslagen)
-    const street = d.address_street || "";
-    const city = d.address_city || "";
-    const f2 = $("addressForm");
-    if (f2) {
-        f2.querySelector('[name="street_ro"]').value = street;
-        f2.querySelector('[name="city_ro"]').value = city;
-    }
+  // read-only velden tonen: DB heeft voorrang, anders preview
+  const street = d.address_street || (addressVerifiedPreview?.street || "");
+  const city = d.address_city || (addressVerifiedPreview?.city || "");
 
-    // Save knop: als DB al verified heeft, allow save nog steeds (tot review), maar UX preview is niet nodig
-    if (d.address_verified_at) {
-    setAddressSaveEnabled(true);
-    } else {
-    setAddressSaveEnabled(!!addressVerifiedPreview);
-    }
+  f.querySelector('[name="street_ro"]').value = street;
+  f.querySelector('[name="city_ro"]').value = city;
 
+  // save enabled als preview bestaat (of al verified in DB)
+  setAddressSaveEnabled(!!addressVerifiedPreview || !!d.address_verified_at);
 
-    const parts = [];
-    if (d.address_postcode) parts.push(d.address_postcode);
-    if (d.address_house_number) parts.push(d.address_house_number + (d.address_suffix ? d.address_suffix : ""));
-    const entered = parts.length ? parts.join(" ") : "—";
-
-    const verified = d.address_verified_at ? `✅ gecontroleerd: ${d.address_verified_at}` : "⏳ nog niet gecontroleerd";
-    const resolved = (d.address_street || d.address_city) ? `→ ${d.address_street || ""} ${d.address_city || ""}` : "";
-
-    if ($("addressState")) $("addressState").textContent = `Ingevuld: ${entered} | ${verified} ${resolved}`.trim();
+  const verified = d.address_verified_at ? `✅ gecontroleerd: ${d.address_verified_at}` : "⏳ nog niet gecontroleerd";
+  if ($("addressState")) $("addressState").textContent = `${verified}`.trim();
 }
+
 
 function normalizePostcodeFront(pc) {
   return String(pc || "").toUpperCase().replace(/\s+/g, "").trim();
@@ -344,10 +378,8 @@ function clearAddressPreview() {
 }
 
 function onAddressInputChanged() {
-  // reset preview elke wijziging
   clearAddressPreview();
 
-  // debounce verify
   if (addressVerifyTimer) clearTimeout(addressVerifyTimer);
   addressVerifyTimer = setTimeout(async () => {
     const f = $("addressForm");
@@ -357,7 +389,7 @@ function onAddressInputChanged() {
     const house_number = (f.querySelector('[name="house_number"]').value || "").trim();
     const suffix = (f.querySelector('[name="suffix"]').value || "").trim();
 
-    // minimale front check alleen voor UX (geen security)
+    // alleen UX guard (geen security)
     if (!/^[0-9]{4}[A-Z]{2}$/.test(postcode)) {
       if ($("addressState")) $("addressState").textContent = "Vul een geldige postcode in (1234AB).";
       return;
@@ -368,36 +400,29 @@ function onAddressInputChanged() {
     }
 
     try {
-      if ($("addressState")) $("addressState").textContent = "Adres controleren…";
+      if ($("addressState")) $("addressState").textContent = "Adres ophalen…";
 
-      // Let op: verify function moet postcode/house_number/suffix accepteren (zo niet: zeg het, dan pas ik de edge function aan)
-      const r = await apiPost("api-dossier-address-verify", {
-        dossier_id,
-        token,
+      const r = await apiPost("api-dossier-address-preview", {
         postcode,
         house_number,
-        suffix,
+        suffix: suffix || null,
       });
 
-      // Verwacht: r.street, r.city (of r.address.street/r.address.city)
-      const street = r.street || r?.address?.street || "";
-      const city = r.city || r?.address?.city || "";
-
-      if (!street || !city) {
-        if ($("addressState")) $("addressState").textContent = "Adres niet gevonden. Controleer je invoer.";
-        return;
-      }
+      const street = r.street || "";
+      const city = r.city || "";
+      if (!street || !city) throw new Error("Adres niet gevonden.");
 
       addressVerifiedPreview = { street, city };
       setAddressPreview(street, city);
       setAddressSaveEnabled(true);
       if ($("addressState")) $("addressState").textContent = `✅ Gevonden: ${street}, ${city}`;
     } catch (e) {
-      if ($("addressState")) $("addressState").textContent = `Adres niet gevonden: ${e.message}`;
       clearAddressPreview();
+      if ($("addressState")) $("addressState").textContent = `Adres niet gevonden: ${e.message}`;
     }
   }, 450);
 }
+
 
 
 
@@ -440,20 +465,71 @@ function renderChargers() {
 
 function renderDocs() {
   const docs = current?.documents || [];
-  if (!$("docsList")) return;
+  const el = $("docsList");
+  if (!el) return;
 
   if (!docs.length) {
-    $("docsList").textContent = "Nog geen documenten geüpload.";
+    el.textContent = "Nog geen documenten geüpload.";
     return;
   }
 
-  $("docsList").innerHTML = docs.map((d) => {
+  el.innerHTML = docs.map((d) => {
     const dt = d.doc_type || "-";
     const fn = d.filename || "-";
     const when = d.created_at || "";
-    return `• ${escapeHtml(dt)} – ${escapeHtml(fn)} <span class="muted small mono">${escapeHtml(when)}</span><br/>`;
+    return `
+      <div class="row" style="justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div class="small">
+          • <b>${escapeHtml(dt)}</b> – ${escapeHtml(fn)}
+          <span class="muted small mono">${escapeHtml(when)}</span>
+        </div>
+        <div class="row">
+          <button class="btn outline small" type="button" data-doc-open="${escapeHtml(d.id)}">Open</button>
+          <button class="btn outline small" type="button" data-doc-del="${escapeHtml(d.id)}">Verwijder</button>
+        </div>
+      </div>
+    `;
   }).join("");
+
+  el.querySelectorAll("button[data-doc-open]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const document_id = btn.getAttribute("data-doc-open");
+      if (!document_id) return;
+
+      lockSubmit(btn, true, "Verwerken…");
+      try {
+        const r = await apiPost("api-dossier-doc-download-url", { dossier_id, token, document_id });
+        // open in new tab
+        window.open(r.signed_url, "_blank", "noopener,noreferrer");
+      } catch (e) {
+        showToast(e.message, "error");
+      } finally {
+        lockSubmit(btn, false);
+      }
+    });
+  });
+
+  el.querySelectorAll("button[data-doc-del]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const document_id = btn.getAttribute("data-doc-del");
+      if (!document_id) return;
+
+      if (!confirm("Weet je zeker dat je dit document wilt verwijderen?")) return;
+
+      lockSubmit(btn, true, "Verwerken…");
+      try {
+        await apiPost("api-dossier-doc-delete", { dossier_id, token, document_id });
+        showToast("Document verwijderd.", "success");
+        await reloadAll();
+      } catch (e) {
+        showToast(e.message, "error");
+      } finally {
+        lockSubmit(btn, false);
+      }
+    });
+  });
 }
+
 
 function renderConsents() {
   const cons = current?.consents || [];
@@ -463,34 +539,58 @@ function renderConsents() {
   if ($("cTerms")) $("cTerms").checked = latest["terms"]?.accepted === true;
   if ($("cPrivacy")) $("cPrivacy").checked = latest["privacy"]?.accepted === true;
   if ($("cMandaat")) $("cMandaat").checked = latest["mandaat"]?.accepted === true;
+
+  // Timestamp tonen (laatste accepted_at)
+  const stamps = ["terms", "privacy", "mandaat"]
+    .map((k) => latest[k]?.accepted_at)
+    .filter(Boolean)
+    .sort()
+    .reverse();
+
+  const last = stamps[0] || null;
+
+  if ($("consentsStamp")) {
+    $("consentsStamp").textContent = last
+      ? `✅ Toestemmingen opgeslagen op: ${last}`
+      : "";
+  }
 }
+
 
 // ---------------- actions ----------------
 async function onAddressSave(e) {
   e.preventDefault();
   const f = e.target;
-  const postcode = f.querySelector('[name="postcode"]').value.trim();
-  const house_number = f.querySelector('[name="house_number"]').value.trim();
-  const suffix = f.querySelector('[name="suffix"]').value.trim();
 
-    // UX guard: alleen opslaan als er een preview is (of al verified in DB)
-    const d = current?.dossier || {};
-    if (!d.address_verified_at && !addressVerifiedPreview) {
-        showToast("Controleer eerst het adres (automatisch) voordat je opslaat.", "error");
-        return;
-    }
+  const postcode = normalizePostcodeFront(f.querySelector('[name="postcode"]').value);
+  const house_number = (f.querySelector('[name="house_number"]').value || "").trim();
+  const suffix = (f.querySelector('[name="suffix"]').value || "").trim();
 
+  // UX: pas opslaan als preview ok is (server check komt later bij review)
+  if (!addressVerifiedPreview) {
+    showToast("Adres nog niet gevonden. Controleer postcode/huisnummer/toevoeging.", "error");
+    return;
+  }
+
+  const btn = $("btnAddressSave");
+  if (btn?.disabled) return;
 
   try {
+    lockSubmit(btn, true, "Verwerken…");
+
     if ($("addressState")) $("addressState").textContent = "Opslaan…";
-    await apiPost("api-dossier-address-save", { dossier_id, token, postcode, house_number, suffix });
+    await apiPost("api-dossier-address-save", { dossier_id, token, postcode, house_number, suffix: suffix || null });
+
     showToast("Adres opgeslagen.", "success");
     await reloadAll();
   } catch (e2) {
     showToast(e2.message, "error");
     if ($("addressState")) $("addressState").textContent = e2.message;
+  } finally {
+    lockSubmit(btn, false);
   }
 }
+
 
 async function onAddressVerify() {
   try {
@@ -508,12 +608,16 @@ async function onChargerSave(e) {
   e.preventDefault();
   const f = e.target;
 
+  const btn = f.querySelector('button[type="submit"]');
+  if (btn?.disabled) return;
+
   const charger_id = f.querySelector('[name="charger_id"]').value || null;
   const serial_number = (f.querySelector('[name="serial_number"]').value || "").trim();
   const brand = ($("chargerBrand")?.value || "").trim();
   let model = ($("chargerModel")?.value || "").trim();
 
-  const notes = (f.querySelector('[name="notes"]')?.value || "").trim();
+  const notesInput = f.querySelector('[name="notes"]');
+  const notes = (notesInput?.value || "").trim();
 
   const power_kw_raw = (f.querySelector('[name="power_kw"]').value || "").trim();
   const power_kw = power_kw_raw ? Number(power_kw_raw.replace(",", ".")) : null;
@@ -521,16 +625,18 @@ async function onChargerSave(e) {
   if (!serial_number) return showToast("Serienummer is verplicht.", "error");
   if (!brand) return showToast("Kies een merk.", "error");
 
-  // --- Anders-logica (DB-safe) ---
+  // Anders-logica: nooit null in DB
   if (brand === "Anders") {
-    model = "Onbekend"; // DB not-null safe
-    if (!notes || notes.length < 6) return showToast("Vul bij Anders merk/model in bij Toelichting.", "error");
+    model = "Onbekend";
+    if (!notes || notes.length < 3) return showToast("Vul merk + model in bij Toelichting.", "error");
   } else {
     if (!model) return showToast("Kies een model.", "error");
     if (model === "Anders") {
-      if (!notes || notes.length < 6) return showToast("Vul bij Anders model de Toelichting in.", "error");
+      if (!notes || notes.length < 3) return showToast("Vul model in bij Toelichting.", "error");
     }
   }
+
+  lockSubmit(btn, true, "Verwerken…");
 
   try {
     await apiPost("api-dossier-charger-save", {
@@ -539,7 +645,7 @@ async function onChargerSave(e) {
       charger_id,
       serial_number,
       brand,
-      model, // nooit null
+      model,
       power_kw,
       notes: (brand === "Anders" || model === "Anders") ? notes : null,
     });
@@ -551,8 +657,11 @@ async function onChargerSave(e) {
     await reloadAll();
   } catch (e2) {
     showToast(e2.message, "error");
+  } finally {
+    lockSubmit(btn, false);
   }
 }
+
 
 
 
@@ -578,12 +687,18 @@ async function onConsentsSave(e) {
 async function onUpload(e) {
   e.preventDefault();
   const f = e.target;
+
+  const btn = f.querySelector('button[type="submit"]');
+  if (btn?.disabled) return;
+
   const doc_type = f.querySelector('[name="doc_type"]').value;
   const fileInput = f.querySelector('[name="file"]');
-  const file = fileInput.files && fileInput.files[0];
+  const file = fileInput?.files && fileInput.files[0];
 
   if (!doc_type) return showToast("Kies documenttype.", "error");
   if (!file) return showToast("Kies bestand.", "error");
+
+  lockSubmit(btn, true, "Verwerken…");
 
   try {
     if ($("uploadState")) $("uploadState").textContent = "Upload voorbereiden…";
@@ -607,10 +722,14 @@ async function onUpload(e) {
 
     if ($("uploadState")) $("uploadState").textContent = "Geüpload.";
     showToast("Upload gelukt.", "success");
+
     f.reset();
     await reloadAll();
   } catch (e2) {
     if ($("uploadState")) $("uploadState").textContent = e2.message;
     showToast(e2.message, "error");
+  } finally {
+    lockSubmit(btn, false);
   }
 }
+

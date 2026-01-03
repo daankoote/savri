@@ -109,7 +109,6 @@
 
                 <div class="row">
                   <button type="submit" class="btn primary">Laadpaal opslaan</button>
-                  <button id="btnChargerReset" type="button" class="btn outline">Form leegmaken</button>
                 </div>
               </form>
 
@@ -162,22 +161,53 @@
 
             <div class="card">
               <h2 style="margin-top:0;">5) Toestemmingen</h2>
+
               <form id="consentsForm" class="form" novalidate>
-                <div class="checkbox-row"><input type="checkbox" id="cTerms" /><label for="cTerms">Ik ga akkoord met de voorwaarden</label></div>
-                <div class="checkbox-row"><input type="checkbox" id="cPrivacy" /><label for="cPrivacy">Ik ga akkoord met de privacyverklaring</label></div>
-                <div class="checkbox-row"><input type="checkbox" id="cMandaat" /><label for="cMandaat">Ik geef mandaat (indien van toepassing)</label></div>
+                <div class="checkbox-row">
+                  <input type="checkbox" id="cTerms" />
+                  <label for="cTerms">
+                    Ik ga akkoord met de
+                    <a href="/voorwaarden.html" target="_blank" rel="noopener noreferrer">voorwaarden</a>
+                  </label>
+                </div>
+
+                <div class="checkbox-row">
+                  <input type="checkbox" id="cPrivacy" />
+                  <label for="cPrivacy">
+                    Ik ga akkoord met de
+                    <a href="/privacyverklaring.html" target="_blank" rel="noopener noreferrer">privacyverklaring</a>
+                  </label>
+                </div>
+
+                <div class="checkbox-row">
+                  <input type="checkbox" id="cMandaat" />
+                  <label for="cMandaat">
+                    Ik geef middels dit mandaat aan Enval toestemming.
+                    <a href="/mandaat.html" target="_blank" rel="noopener noreferrer">Lees mandaat</a>
+                  </label>
+                </div>
+
                 <button class="btn primary" type="submit">Opslaan</button>
+
                 <div id="consentsState" class="small muted"></div>
+                <div id="consentsStamp" class="small muted"></div>
               </form>
             </div>
+
 
             <div class="card">
               <h2 style="margin-top:0;">Dossierstatus</h2>
               <div id="statusExplain" class="muted small">laden…</div>
+
               <div class="row" style="margin-top:10px;">
-                <button id="btnEvaluate" class="btn outline" type="button">Herbereken status</button>
+                <button id="btnEvaluate" class="btn outline" type="button">Review dossier</button>
+              </div>
+
+              <div class="small muted" style="margin-top:10px;">
+                Na review worden controles uitgevoerd. Als alles klopt kan dit dossier door naar inboeken.
               </div>
             </div>
+
           </div>
 
           <div style="height:24px;"></div>
