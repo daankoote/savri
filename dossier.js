@@ -126,11 +126,13 @@ function populateBrandModel() {
     }
 
     if (brand === "Anders") {
-      modelSel.disabled = true;
-      modelSel.innerHTML = `<option value="">Vul merk/model later in</option>`;
-      toggleChargerNotes();
-      return;
+        modelSel.disabled = true;
+        modelSel.innerHTML = `<option value="Onbekend">Vul merk/model in bij Toelichting</option>`;
+        modelSel.value = "Onbekend";
+        toggleChargerNotes();
+        return;
     }
+
 
     const models = BRAND_MODELS[brand] || [];
     modelSel.disabled = false;
@@ -163,39 +165,56 @@ const token = urlParams.get("t");
 
 let current = null;
 
+// --- address verify UX state ---
+let addressVerifyTimer = null;
+let addressVerifiedPreview = null; // { street, city } zodra verify ok is
+
+
 // ---------------- boot ----------------
 document.addEventListener("DOMContentLoaded", async () => {
-  if ($("year")) $("year").textContent = new Date().getFullYear();
+    if ($("year")) $("year").textContent = new Date().getFullYear();
 
-  if (!dossier_id || !token) {
-    showToast("Ongeldige dossierlink (d/t ontbreekt).", "error");
-    if ($("statusPill")) {
-      $("statusPill").className = "pill err";
-      $("statusPill").textContent = "Ongeldige link";
+    if (!dossier_id || !token) {
+        showToast("Ongeldige dossierlink (d/t ontbreekt).", "error");
+        if ($("statusPill")) {
+        $("statusPill").className = "pill err";
+        $("statusPill").textContent = "Ongeldige link";
+        }
+        return;
     }
-    return;
-  }
 
-  if ($("dossierId")) $("dossierId").textContent = dossier_id;
+    if ($("dossierId")) $("dossierId").textContent = dossier_id;
 
-  populateBrandModel();
+    populateBrandModel();
 
-  $("btnRefresh")?.addEventListener("click", reloadAll);
-  $("btnEvaluate")?.addEventListener("click", evaluateAndRender);
+    $("btnRefresh")?.addEventListener("click", reloadAll);
+    $("btnEvaluate")?.addEventListener("click", evaluateAndRender);
 
-  $("addressForm")?.addEventListener("submit", onAddressSave);
-  $("btnVerifyAddress")?.addEventListener("click", onAddressVerify);
+        $("addressForm")?.addEventListener("submit", onAddressSave);
 
-  $("chargerForm")?.addEventListener("submit", onChargerSave);
-  $("btnChargerReset")?.addEventListener("click", () => {
-    $("chargerForm").reset();
-    $("chargerForm").querySelector('[name="charger_id"]').value = "";
-  });
+        // UX: auto-verify op input (debounce)
+        const af = $("addressForm");
+        if (af) {
+        ["postcode", "house_number", "suffix"].forEach((nm) => {
+            const el = af.querySelector(`[name="${nm}"]`);
+            if (el) el.addEventListener("input", onAddressInputChanged);
+        });
+        }
 
-  $("uploadForm")?.addEventListener("submit", onUpload);
-  $("consentsForm")?.addEventListener("submit", onConsentsSave);
+        // Handmatige knop verbergen (bestaat nog in HTML maar je gebruikt hem niet)
+        $("btnVerifyAddress")?.addEventListener("click", onAddressVerify);
 
-  await reloadAll();
+
+    $("chargerForm")?.addEventListener("submit", onChargerSave);
+    $("btnChargerReset")?.addEventListener("click", () => {
+        $("chargerForm").reset();
+        $("chargerForm").querySelector('[name="charger_id"]').value = "";
+    });
+
+    $("uploadForm")?.addEventListener("submit", onUpload);
+    $("consentsForm")?.addEventListener("submit", onConsentsSave);
+
+    await reloadAll();
   
 });
 
@@ -205,7 +224,8 @@ async function reloadAll() {
     if ($("statusPill")) $("statusPill").textContent = "laden…";
     current = await apiPost("api-dossier-get", { dossier_id, token });
     renderAll();
-    await evaluateAndRender();
+    // evaluatie pas bij stap 6 (finalize/review). Niet bij elke reload.
+
   } catch (e) {
     console.error(e);
     showToast(e.message || "Fout bij laden", "error");
@@ -264,24 +284,123 @@ function renderAccessBlock() {
 }
 
 function renderAddressState() {
-  const d = current?.dossier || {};
+    const d = current?.dossier || {};
+    const f = $("addressForm");
+    if (!f) return;
+
+    f.querySelector('[name="postcode"]').value = d.address_postcode || "";
+    f.querySelector('[name="house_number"]').value = d.address_house_number || "";
+    f.querySelector('[name="suffix"]').value = d.address_suffix || "";
+
+    // read-only uit DB (als al opgeslagen)
+    const street = d.address_street || "";
+    const city = d.address_city || "";
+    const f2 = $("addressForm");
+    if (f2) {
+        f2.querySelector('[name="street_ro"]').value = street;
+        f2.querySelector('[name="city_ro"]').value = city;
+    }
+
+    // Save knop: als DB al verified heeft, allow save nog steeds (tot review), maar UX preview is niet nodig
+    if (d.address_verified_at) {
+    setAddressSaveEnabled(true);
+    } else {
+    setAddressSaveEnabled(!!addressVerifiedPreview);
+    }
+
+
+    const parts = [];
+    if (d.address_postcode) parts.push(d.address_postcode);
+    if (d.address_house_number) parts.push(d.address_house_number + (d.address_suffix ? d.address_suffix : ""));
+    const entered = parts.length ? parts.join(" ") : "—";
+
+    const verified = d.address_verified_at ? `✅ gecontroleerd: ${d.address_verified_at}` : "⏳ nog niet gecontroleerd";
+    const resolved = (d.address_street || d.address_city) ? `→ ${d.address_street || ""} ${d.address_city || ""}` : "";
+
+    if ($("addressState")) $("addressState").textContent = `Ingevuld: ${entered} | ${verified} ${resolved}`.trim();
+}
+
+function normalizePostcodeFront(pc) {
+  return String(pc || "").toUpperCase().replace(/\s+/g, "").trim();
+}
+
+function setAddressPreview(street, city) {
   const f = $("addressForm");
   if (!f) return;
 
-  f.querySelector('[name="postcode"]').value = d.address_postcode || "";
-  f.querySelector('[name="house_number"]').value = d.address_house_number || "";
-  f.querySelector('[name="suffix"]').value = d.address_suffix || "";
-
-  const parts = [];
-  if (d.address_postcode) parts.push(d.address_postcode);
-  if (d.address_house_number) parts.push(d.address_house_number + (d.address_suffix ? d.address_suffix : ""));
-  const entered = parts.length ? parts.join(" ") : "—";
-
-  const verified = d.address_verified_at ? `✅ gecontroleerd: ${d.address_verified_at}` : "⏳ nog niet gecontroleerd";
-  const resolved = (d.address_street || d.address_city) ? `→ ${d.address_street || ""} ${d.address_city || ""}` : "";
-
-  if ($("addressState")) $("addressState").textContent = `Ingevuld: ${entered} | ${verified} ${resolved}`.trim();
+  f.querySelector('[name="street_ro"]').value = street || "";
+  f.querySelector('[name="city_ro"]').value = city || "";
 }
+
+function setAddressSaveEnabled(enabled) {
+  const btn = $("btnAddressSave");
+  if (btn) btn.disabled = !enabled;
+}
+
+function clearAddressPreview() {
+  addressVerifiedPreview = null;
+  setAddressPreview("", "");
+  setAddressSaveEnabled(false);
+}
+
+function onAddressInputChanged() {
+  // reset preview elke wijziging
+  clearAddressPreview();
+
+  // debounce verify
+  if (addressVerifyTimer) clearTimeout(addressVerifyTimer);
+  addressVerifyTimer = setTimeout(async () => {
+    const f = $("addressForm");
+    if (!f) return;
+
+    const postcode = normalizePostcodeFront(f.querySelector('[name="postcode"]').value);
+    const house_number = (f.querySelector('[name="house_number"]').value || "").trim();
+    const suffix = (f.querySelector('[name="suffix"]').value || "").trim();
+
+    // minimale front check alleen voor UX (geen security)
+    if (!/^[0-9]{4}[A-Z]{2}$/.test(postcode)) {
+      if ($("addressState")) $("addressState").textContent = "Vul een geldige postcode in (1234AB).";
+      return;
+    }
+    if (!/^[1-9][0-9]{0,4}$/.test(house_number)) {
+      if ($("addressState")) $("addressState").textContent = "Vul een geldig huisnummer in.";
+      return;
+    }
+
+    try {
+      if ($("addressState")) $("addressState").textContent = "Adres controleren…";
+
+      // Let op: verify function moet postcode/house_number/suffix accepteren (zo niet: zeg het, dan pas ik de edge function aan)
+      const r = await apiPost("api-dossier-address-verify", {
+        dossier_id,
+        token,
+        postcode,
+        house_number,
+        suffix,
+      });
+
+      // Verwacht: r.street, r.city (of r.address.street/r.address.city)
+      const street = r.street || r?.address?.street || "";
+      const city = r.city || r?.address?.city || "";
+
+      if (!street || !city) {
+        if ($("addressState")) $("addressState").textContent = "Adres niet gevonden. Controleer je invoer.";
+        return;
+      }
+
+      addressVerifiedPreview = { street, city };
+      setAddressPreview(street, city);
+      setAddressSaveEnabled(true);
+      if ($("addressState")) $("addressState").textContent = `✅ Gevonden: ${street}, ${city}`;
+    } catch (e) {
+      if ($("addressState")) $("addressState").textContent = `Adres niet gevonden: ${e.message}`;
+      clearAddressPreview();
+    }
+  }, 450);
+}
+
+
+
 
 function renderChargers() {
   const tbody = $("chargersTbody");
@@ -354,6 +473,14 @@ async function onAddressSave(e) {
   const house_number = f.querySelector('[name="house_number"]').value.trim();
   const suffix = f.querySelector('[name="suffix"]').value.trim();
 
+    // UX guard: alleen opslaan als er een preview is (of al verified in DB)
+    const d = current?.dossier || {};
+    if (!d.address_verified_at && !addressVerifiedPreview) {
+        showToast("Controleer eerst het adres (automatisch) voordat je opslaat.", "error");
+        return;
+    }
+
+
   try {
     if ($("addressState")) $("addressState").textContent = "Opslaan…";
     await apiPost("api-dossier-address-save", { dossier_id, token, postcode, house_number, suffix });
@@ -394,10 +521,9 @@ async function onChargerSave(e) {
   if (!serial_number) return showToast("Serienummer is verplicht.", "error");
   if (!brand) return showToast("Kies een merk.", "error");
 
-  // --- Anders-logica ---
+  // --- Anders-logica (DB-safe) ---
   if (brand === "Anders") {
-    // model mag nooit null zijn (DB constraint)
-    model = "Onbekend";
+    model = "Onbekend"; // DB not-null safe
     if (!notes || notes.length < 6) return showToast("Vul bij Anders merk/model in bij Toelichting.", "error");
   } else {
     if (!model) return showToast("Kies een model.", "error");
@@ -413,7 +539,7 @@ async function onChargerSave(e) {
       charger_id,
       serial_number,
       brand,
-      model,               // <-- nooit null
+      model, // nooit null
       power_kw,
       notes: (brand === "Anders" || model === "Anders") ? notes : null,
     });
@@ -421,13 +547,13 @@ async function onChargerSave(e) {
     showToast("Laadpaal opgeslagen.", "success");
     f.reset();
     f.querySelector('[name="charger_id"]').value = "";
-    // verberg notes weer
     toggleChargerNotes();
     await reloadAll();
   } catch (e2) {
     showToast(e2.message, "error");
   }
 }
+
 
 
 async function onConsentsSave(e) {

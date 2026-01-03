@@ -77,12 +77,20 @@
                 <label><span>Postcode</span><input type="text" name="postcode" placeholder="1234AB" required /></label>
                 <label><span>Huisnummer</span><input type="text" name="house_number" placeholder="28" required /></label>
                 <label><span>Toevoeging (optioneel)</span><input type="text" name="suffix" placeholder="1H" /></label>
+
+                <!-- Read-only: wordt gevuld door verify -->
+                <label><span>Straat</span><input type="text" name="street_ro" readonly /></label>
+                <label><span>Plaats</span><input type="text" name="city_ro" readonly /></label>
+
                 <div class="row">
-                  <button type="submit" class="btn primary">Opslaan</button>
-                  <button id="btnVerifyAddress" class="btn outline" type="button">Adres controleren</button>
+                  <button id="btnAddressSave" type="submit" class="btn primary" disabled>Opslaan</button>
+                  <!-- knop blijft bestaan maar verborgen; jij wil geen handmatige check -->
+                  <button id="btnVerifyAddress" class="btn outline" type="button" style="display:none;">Adres controleren</button>
                 </div>
+
                 <div id="addressState" class="small muted"></div>
               </form>
+
             </div>
 
             <div class="card">
