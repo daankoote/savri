@@ -425,15 +425,37 @@ function renderChargers() {
   const required = Number(d.charger_count || 0) || 0;
   const chargers = current?.chargers || [];
   const have = chargers.length;
-  const remaining = required > 0 ? Math.max(0, required - have) : 0;
 
+  const remaining = required > 0 ? Math.max(0, required - have) : 0;
+  const over = required > 0 ? Math.max(0, have - required) : 0;
+
+  // hint text
   if ($("chargerHint")) {
     if (required > 0) {
-      $("chargerHint").innerHTML = remaining === 0
-        ? `<span class="ok"><b>Compleet:</b></span> ${have}/${required} laadpalen ingevoerd.`
-        : `<b>Nog te doen:</b> ${remaining} laadpaal(en). (${have}/${required})`;
+      if (remaining === 0 && over === 0) {
+        $("chargerHint").innerHTML = `<span class="ok"><b>Compleet:</b></span> ${have}/${required} laadpalen ingevoerd.`;
+      } else if (remaining === 0 && over > 0) {
+        $("chargerHint").innerHTML =
+          `<span class="danger"><b>Te veel laadpalen:</b></span> ${have}/${required}. Verwijder ${over} laadpaal(en).`;
+      } else {
+        $("chargerHint").innerHTML = `<b>Nog te doen:</b> ${remaining} laadpaal(en). (${have}/${required})`;
+      }
     } else {
       $("chargerHint").textContent = "Voeg minimaal 1 laadpaal toe.";
+    }
+  }
+
+  // disable save button if complete (exact count reached)
+  const locked = isLocked();
+  const btnSave = $("btnChargerSave");
+  if (btnSave) {
+    // als required bekend is: blokkeren zodra have >= required
+    if (!locked && required > 0 && have >= required) {
+      btnSave.disabled = true;
+      btnSave.title = "Je hebt al het maximale aantal laadpalen ingevoerd.";
+    } else {
+      btnSave.disabled = !!locked;
+      btnSave.title = "";
     }
   }
 
@@ -441,8 +463,6 @@ function renderChargers() {
     tbody.innerHTML = `<tr><td colspan="5" class="muted">Nog geen laadpalen toegevoegd.</td></tr>`;
     return;
   }
-
-  const locked = isLocked();
 
   tbody.innerHTML = chargers.map((c) => `
     <tr>
@@ -477,6 +497,7 @@ function renderChargers() {
     });
   });
 }
+
 
 function renderDocs() {
   const docs = current?.documents || [];
@@ -720,6 +741,34 @@ async function onUpload(e) {
   if (!doc_type) return showToast("Kies documenttype.", "error");
   if (!file) return showToast("Kies bestand.", "error");
 
+  // allowlist (ext + mime)
+  const allowedExt = new Set(["pdf", "png", "jpg", "jpeg", "doc", "docx"]);
+  const allowedMime = new Set([
+    "application/pdf",
+    "image/png",
+    "image/jpeg",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ]);
+
+  const name = (file.name || "").trim();
+  const ext = name.toLowerCase().split(".").pop() || "";
+  const mime = (file.type || "").trim();
+
+  if (!allowedExt.has(ext)) {
+    return showToast("Ongeldig bestandstype. Alleen: PDF, PNG, JPG/JPEG, DOC, DOCX.", "error");
+  }
+  // mime kan soms leeg zijn; als het gevuld is, moet het matchen
+  if (mime && !allowedMime.has(mime)) {
+    return showToast("Ongeldig bestandstype. Alleen: PDF, PNG, JPG/JPEG, DOC, DOCX.", "error");
+  }
+
+  // size limit (voorbeeld: 15MB)
+  const maxBytes = 15 * 1024 * 1024;
+  if (file.size > maxBytes) {
+    return showToast("Bestand is te groot. Max 15MB.", "error");
+  }
+
   lockSubmit(btn, true);
 
   try {
@@ -743,7 +792,7 @@ async function onUpload(e) {
     if (!putRes.ok) throw new Error(`Upload failed: ${putRes.status}`);
 
     if ($("uploadState")) $("uploadState").textContent = "Geüpload.";
-    showToast("Upload gelukt.", "success");
+    showToast("Upload gelukt. Meerdere documenten per type is toegestaan (extra bewijs).", "success");
     f.reset();
     await reloadAll();
   } catch (e2) {
