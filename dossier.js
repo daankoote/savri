@@ -1,5 +1,5 @@
 // /dossier.js  (NON-module, gebruikt window.ENVAL uit /config.js)
-console.log("DOSSIER.JS LOADED v2026-01-02-01");
+// console.log("DOSSIER.JS LOADED v2026-01-02-01");
 
 // ---------------- helpers ----------------
 function $(id) {
@@ -14,6 +14,29 @@ function escapeHtml(s) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
+
+// ======================================================
+// UI helpers: submit lock
+// ======================================================
+function lockSubmit(btn, locked, textWhenLocked = "Verwerken…") {
+  if (!btn) return;
+
+  // zet originele tekst slechts 1x
+  if (!btn.dataset.originalText) {
+    btn.dataset.originalText = (btn.textContent || "").trim();
+  }
+
+  if (locked) {
+    btn.disabled = true;
+    btn.classList.add("is-loading");
+    btn.textContent = textWhenLocked;
+  } else {
+    btn.disabled = false;
+    btn.classList.remove("is-loading");
+    btn.textContent = btn.dataset.originalText || btn.textContent;
+  }
+}
+
 
 function showToast(message, type = "success") {
   const existing = document.querySelector(".toast");
