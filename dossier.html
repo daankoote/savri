@@ -16,12 +16,16 @@
       @media (min-width:768px){ .grid2 { grid-template-columns: 1fr 1fr; } }
       .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
       .table { width:100%; border-collapse:collapse; }
-      .table th, .table td { border-bottom:1px solid #e2e8f0; padding:10px 6px; text-align:left; font-size:0.95rem; }
+      .table th, .table td { border-bottom:1px solid #e2e8f0; padding:10px 6px; text-align:left; font-size:0.95rem; vertical-align:top; }
       .table th { font-size:0.85rem; color:#64748b; font-weight:600; }
       .right { text-align:right; }
       .small { font-size:0.85rem; }
       .hidden { display:none !important; }
       .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+      .is-loading { opacity: 0.75; }
+      .notice { background:#f8fafc; border:1px solid #e2e8f0; padding:10px; border-radius:10px; }
+      .danger { color:#b91c1c; }
+      .ok { color:#15803d; }
     </style>
   </head>
 
@@ -57,7 +61,11 @@
 
             <div style="margin-top:14px;">
               <div class="muted">
-                Vul onderstaande stappen in. Na elke stap herberekenen we automatisch de dossierstatus.
+                Vul onderstaande stappen in. Na elke stap kun je het dossier laten controleren via <b>Review dossier</b>.
+              </div>
+              <div id="lockedBanner" class="notice hidden" style="margin-top:10px;">
+                <b>Dit dossier is ingediend en staat in review.</b><br/>
+                Wijzigingen zijn nu vergrendeld.
               </div>
             </div>
           </div>
@@ -65,10 +73,37 @@
           <div class="grid2" style="margin-top:18px;">
             <div class="card">
               <h2 style="margin-top:0;">1) Toegang</h2>
-              <div id="emailState" class="muted">laden…</div>
-              <div class="small muted" style="margin-top:10px;">
-                Deze dossierlink bevestigt toegang. Extra e-mail verificatie is uitgeschakeld.
-              </div>
+
+              <div class="muted small">E-mail (vast):</div>
+              <div id="emailState" class="mono" style="margin:6px 0 12px 0;">laden…</div>
+
+              <form id="accessForm" class="form" novalidate>
+                <label><span>Mobiel (optioneel)</span><input type="text" name="customer_phone" placeholder="06..." /></label>
+
+                <label>
+                  <span>Aantal laadpunten (vast na review)</span>
+                  <select name="charger_count" required>
+                    <option value="">Kies…</option>
+                    <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+                    <option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option>
+                    <option value="9">9</option><option value="10">10</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>Op eigen terrein?</span>
+                  <select name="own_premises" required>
+                    <option value="">Kies…</option>
+                    <option value="ja">Ja</option>
+                    <option value="nee">Nee</option>
+                  </select>
+                </label>
+
+                <button id="btnAccessSave" class="btn primary" type="submit">Opslaan</button>
+                <div id="accessState" class="small muted"></div>
+              </form>
+
+              <div id="accessSummary" class="notice small" style="margin-top:12px;">laden…</div>
             </div>
 
             <div class="card">
@@ -78,23 +113,21 @@
                 <label><span>Huisnummer</span><input type="text" name="house_number" placeholder="28" required /></label>
                 <label><span>Toevoeging (optioneel)</span><input type="text" name="suffix" placeholder="1H" /></label>
 
-                <!-- Read-only: wordt gevuld door verify -->
                 <label><span>Straat</span><input type="text" name="street_ro" readonly /></label>
                 <label><span>Plaats</span><input type="text" name="city_ro" readonly /></label>
 
                 <div class="row">
                   <button id="btnAddressSave" type="submit" class="btn primary" disabled>Opslaan</button>
-                  <!-- knop blijft bestaan maar verborgen; jij wil geen handmatige check -->
-                  <button id="btnVerifyAddress" class="btn outline" type="button" style="display:none;">Adres controleren</button>
                 </div>
 
                 <div id="addressState" class="small muted"></div>
               </form>
-
             </div>
 
             <div class="card">
-              <h2 style="margin-top:0;">3) Laadpaal</h2>
+              <h2 style="margin-top:0;">3) Laadpalen</h2>
+              <div id="chargerHint" class="notice small" style="margin-bottom:10px;">laden…</div>
+
               <form id="chargerForm" class="form" novalidate>
                 <input type="hidden" name="charger_id" />
                 <label><span>Serienummer (verplicht)</span><input type="text" name="serial_number" placeholder="SN123456" required /></label>
@@ -104,11 +137,13 @@
 
                 <label><span>Vermogen kW (optioneel)</span><input type="text" name="power_kw" placeholder="11" /></label>
 
-                <label id="chargerNotesRow" class="hidden"><span>Toelichting (verplicht bij Anders)</span><input type="text" name="notes" placeholder="Vul merk en model in (bijv. MyBrand X200)" /></label>
-
+                <label id="chargerNotesRow" class="hidden">
+                  <span>Toelichting (verplicht bij Anders)</span>
+                  <input type="text" name="notes" placeholder="Vul merk en model in (bijv. MyBrand X200)" />
+                </label>
 
                 <div class="row">
-                  <button type="submit" class="btn primary">Laadpaal opslaan</button>
+                  <button id="btnChargerSave" type="submit" class="btn primary">Laadpaal opslaan</button>
                 </div>
               </form>
 
@@ -119,11 +154,12 @@
                       <th>Serienummer</th>
                       <th>Merk</th>
                       <th>Model</th>
+                      <th>Toelichting</th>
                       <th class="right">Acties</th>
                     </tr>
                   </thead>
                   <tbody id="chargersTbody">
-                    <tr><td colspan="4" class="muted">laden…</td></tr>
+                    <tr><td colspan="5" class="muted">laden…</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -131,83 +167,71 @@
 
             <div class="card">
               <h2 style="margin-top:0;">4) Documenten uploaden</h2>
-              <div class="muted small">Upload je document. We maken eerst een upload-url aan, daarna upload je direct naar opslag.</div>
+              <div id="docsHint" class="notice small" style="margin-bottom:10px;">laden…</div>
 
               <form id="uploadForm" class="form" novalidate>
                 <label>
                   <span>Type document</span>
                   <select name="doc_type" required>
                     <option value="">Kies…</option>
-                    <option value="factuur">Factuur Installatie (incl. Serienummer + Adres)</option>
-                    <option value="foto_laadpunt">Foto Laadpunt (incl. Serienummer)</option>
-                   <!--  <option value="mandaat">Mandaat</option>
-                    <option value="id">ID</option>
-                    <option value="kvk">KVK</option>
-                    <option value="overig">Overig</option> -->
+                    <option value="factuur">Factuur Installatie</option>
+                    <option value="foto_laadpunt">Foto Laadpunt</option>
                   </select>
                 </label>
 
                 <label><span>Bestand</span><input type="file" name="file" required /></label>
 
-                <button class="btn primary" type="submit">Upload</button>
+                <button id="btnUpload" class="btn primary" type="submit">Upload</button>
                 <div id="uploadState" class="small muted"></div>
               </form>
 
               <div style="margin-top:14px;">
-                <div class="muted small" style="margin-bottom:8px;">Geüploade documenten</div>
-                <div id="docsList" class="small muted">laden…</div>
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Type</th>
+                      <th>Bestand</th>
+                      <th>Wanneer</th>
+                      <th class="right">Acties</th>
+                    </tr>
+                  </thead>
+                  <tbody id="docsTbody">
+                    <tr><td colspan="4" class="muted">laden…</td></tr>
+                  </tbody>
+                </table>
               </div>
             </div>
 
             <div class="card">
               <h2 style="margin-top:0;">5) Toestemmingen</h2>
-
               <form id="consentsForm" class="form" novalidate>
                 <div class="checkbox-row">
                   <input type="checkbox" id="cTerms" />
-                  <label for="cTerms">
-                    Ik ga akkoord met de
-                    <a href="/voorwaarden.html" target="_blank" rel="noopener noreferrer">voorwaarden</a>
-                  </label>
+                  <label for="cTerms">Ik ga akkoord met de <a href="/voorwaarden.html" target="_blank" rel="noopener">voorwaarden</a></label>
                 </div>
-
                 <div class="checkbox-row">
                   <input type="checkbox" id="cPrivacy" />
-                  <label for="cPrivacy">
-                    Ik ga akkoord met de
-                    <a href="/privacyverklaring.html" target="_blank" rel="noopener noreferrer">privacyverklaring</a>
-                  </label>
+                  <label for="cPrivacy">Ik ga akkoord met de <a href="/privacyverklaring.html" target="_blank" rel="noopener">privacyverklaring</a></label>
                 </div>
-
                 <div class="checkbox-row">
                   <input type="checkbox" id="cMandaat" />
-                  <label for="cMandaat">
-                    Ik geef middels dit mandaat aan Enval toestemming.
-                    <a href="/mandaat.html" target="_blank" rel="noopener noreferrer">Lees mandaat</a>
-                  </label>
+                  <label for="cMandaat">Ik geef middels dit <a href="/mandaat.html" target="_blank" rel="noopener">mandaat</a> toestemming.</label>
                 </div>
 
-                <button class="btn primary" type="submit">Opslaan</button>
-
+                <button id="btnConsentsSave" class="btn primary" type="submit">Opslaan</button>
                 <div id="consentsState" class="small muted"></div>
                 <div id="consentsStamp" class="small muted"></div>
               </form>
             </div>
 
-
             <div class="card">
-              <h2 style="margin-top:0;">Dossierstatus</h2>
+              <h2 style="margin-top:0;">Review</h2>
               <div id="statusExplain" class="muted small">laden…</div>
-
               <div class="row" style="margin-top:10px;">
                 <button id="btnEvaluate" class="btn outline" type="button">Review dossier</button>
               </div>
-
-              <div class="small muted" style="margin-top:10px;">
-                Na review worden controles uitgevoerd. Als alles klopt kan dit dossier door naar inboeken.
-              </div>
+              <div id="reviewState" class="small muted" style="margin-top:8px;"></div>
             </div>
-
           </div>
 
           <div style="height:24px;"></div>
@@ -221,7 +245,6 @@
       </div>
     </footer>
 
-    <!-- BELANGRIJK: config eerst -->
     <script src="/config.js"></script>
     <script src="/dossier.js"></script>
   </body>
