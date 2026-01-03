@@ -96,6 +96,9 @@
 
                 <label><span>Vermogen kW (optioneel)</span><input type="text" name="power_kw" placeholder="11" /></label>
 
+                <label id="chargerNotesRow" class="hidden"><span>Toelichting (verplicht bij Anders)</span><input type="text" name="notes" placeholder="Vul merk en model in (bijv. MyBrand X200)" /></label>
+
+
                 <div class="row">
                   <button type="submit" class="btn primary">Laadpaal opslaan</button>
                   <button id="btnChargerReset" type="button" class="btn outline">Form leegmaken</button>
@@ -128,12 +131,12 @@
                   <span>Type document</span>
                   <select name="doc_type" required>
                     <option value="">Kies…</option>
-                    <option value="factuur">Factuur</option>
-                    <option value="foto_laadpunt">Foto laadpunt</option>
-                    <option value="mandaat">Mandaat</option>
+                    <option value="factuur">Factuur Installatie (incl. Serienummer + Adres)</option>
+                    <option value="foto_laadpunt">Foto Laadpunt (incl. Serienummer)</option>
+                   <!--  <option value="mandaat">Mandaat</option>
                     <option value="id">ID</option>
                     <option value="kvk">KVK</option>
-                    <option value="overig">Overig</option>
+                    <option value="overig">Overig</option> -->
                   </select>
                 </label>
 

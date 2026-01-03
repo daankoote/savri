@@ -80,13 +80,36 @@ const BRAND_MODELS = {
   "Tesla": ["Wall Connector Gen 3", "Wall Connector Gen 2"],
 };
 
+function toggleChargerNotes() {
+  const notesRow = $("chargerNotesRow");
+  const notesInput = document.querySelector('#chargerForm [name="notes"]');
+  if (!notesRow || !notesInput) return;
+
+  const brand = ($("chargerBrand")?.value || "").trim();
+  const model = ($("chargerModel")?.value || "").trim();
+
+  const needsNotes = (brand === "Anders") || (model === "Anders");
+  notesRow.classList.toggle("hidden", !needsNotes);
+
+  if (needsNotes) {
+    if (!notesInput.value) notesInput.value = "Vul hier merk en model in: ";
+    notesInput.required = true;
+  } else {
+    notesInput.required = false;
+  }
+}
+
+
 function populateBrandModel() {
   const brandSel = $("chargerBrand");
   const modelSel = $("chargerModel");
   if (!brandSel || !modelSel) return;
 
-  brandSel.innerHTML = `<option value="">Kies…</option>` +
-    Object.keys(BRAND_MODELS).map((b) => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join("") +
+  brandSel.innerHTML =
+    `<option value="">Kies…</option>` +
+    Object.keys(BRAND_MODELS)
+      .map((b) => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`)
+      .join("") +
     `<option value="Anders">Anders…</option>`;
 
   modelSel.innerHTML = `<option value="">Kies eerst merk…</option>`;
@@ -94,23 +117,44 @@ function populateBrandModel() {
 
   brandSel.addEventListener("change", () => {
     const brand = brandSel.value;
+
     if (!brand) {
       modelSel.disabled = true;
       modelSel.innerHTML = `<option value="">Kies eerst merk…</option>`;
+      toggleChargerNotes();
       return;
     }
+
     if (brand === "Anders") {
       modelSel.disabled = true;
       modelSel.innerHTML = `<option value="">Vul merk/model later in</option>`;
+      toggleChargerNotes();
       return;
     }
+
     const models = BRAND_MODELS[brand] || [];
     modelSel.disabled = false;
-    modelSel.innerHTML = `<option value="">Kies…</option>` + models.map((m) =>
-      `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`
-    ).join("") + `<option value="Anders">Anders…</option>`;
+    modelSel.innerHTML =
+      `<option value="">Kies…</option>` +
+      models.map((m) => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join("") +
+      `<option value="Anders">Anders…</option>`;
+
+    toggleChargerNotes();
   });
+
+  modelSel.addEventListener("change", () => {
+    toggleChargerNotes();
+  });
+
+  // init state
+  toggleChargerNotes();
 }
+
+
+
+
+
+
 
 // ---------------- STATE ----------------
 const urlParams = new URLSearchParams(location.search);
@@ -152,6 +196,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("consentsForm")?.addEventListener("submit", onConsentsSave);
 
   await reloadAll();
+  
 });
 
 // ---------------- loaders ----------------
@@ -339,14 +384,27 @@ async function onChargerSave(e) {
   const charger_id = f.querySelector('[name="charger_id"]').value || null;
   const serial_number = (f.querySelector('[name="serial_number"]').value || "").trim();
   const brand = ($("chargerBrand")?.value || "").trim();
-  const model = ($("chargerModel")?.value || "").trim();
+  let model = ($("chargerModel")?.value || "").trim();
+
+  const notes = (f.querySelector('[name="notes"]')?.value || "").trim();
 
   const power_kw_raw = (f.querySelector('[name="power_kw"]').value || "").trim();
   const power_kw = power_kw_raw ? Number(power_kw_raw.replace(",", ".")) : null;
 
   if (!serial_number) return showToast("Serienummer is verplicht.", "error");
   if (!brand) return showToast("Kies een merk.", "error");
-  if (brand !== "Anders" && !model) return showToast("Kies een model.", "error");
+
+  // --- Anders-logica ---
+  if (brand === "Anders") {
+    // model mag nooit null zijn (DB constraint)
+    model = "Onbekend";
+    if (!notes || notes.length < 6) return showToast("Vul bij Anders merk/model in bij Toelichting.", "error");
+  } else {
+    if (!model) return showToast("Kies een model.", "error");
+    if (model === "Anders") {
+      if (!notes || notes.length < 6) return showToast("Vul bij Anders model de Toelichting in.", "error");
+    }
+  }
 
   try {
     await apiPost("api-dossier-charger-save", {
@@ -355,17 +413,22 @@ async function onChargerSave(e) {
       charger_id,
       serial_number,
       brand,
-      model: model || null,
+      model,               // <-- nooit null
       power_kw,
+      notes: (brand === "Anders" || model === "Anders") ? notes : null,
     });
+
     showToast("Laadpaal opgeslagen.", "success");
     f.reset();
     f.querySelector('[name="charger_id"]').value = "";
+    // verberg notes weer
+    toggleChargerNotes();
     await reloadAll();
   } catch (e2) {
     showToast(e2.message, "error");
   }
 }
+
 
 async function onConsentsSave(e) {
   e.preventDefault();
