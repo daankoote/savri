@@ -352,3 +352,7 @@ footer {
 .btnstack .btn {
   min-width: 96px; /* maakt Open/Verwijder even groot */
 }
+
+/* Dossier: top card en grid exact dezelfde breedte (geen shrink/weirdness) */
+.section .container > .card { width: 100%; }
+.grid2 { width: 100%; }

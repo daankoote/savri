@@ -1,5 +1,5 @@
 // /dossier.js  (NON-module, gebruikt window.ENVAL uit /config.js)
-console.log("DOSSIER.JS LOADED v2026-01-04-LOCKED-UX test 1700");
+console.log("DOSSIER.JS LOADED v2026-01-04-LOCKED-UX test 1711");
 
 // ---------------- helpers ----------------
 function $(id) { return document.getElementById(id); }
@@ -320,18 +320,44 @@ function renderStatus() {
 
 function renderAccess() {
   const d = current?.dossier || {};
-  const email = d.customer_email || d.email || d.contact_email || "";
 
-  if ($("emailState")) {
-    $("emailState").textContent = email ? email : "—";
-  }
+  const email = d.customer_email || d.email || d.contact_email || "";
+  if ($("emailState")) $("emailState").textContent = email ? email : "—";
+
+  // Pak naamvelden zo robuust mogelijk (verschillende mogelijke kolomnamen)
+  const first =
+    d.first_name ||
+    d.customer_first_name ||
+    d.contact_first_name ||
+    d.firstname ||
+    d.voornaam ||
+    "";
+
+  const last =
+    d.last_name ||
+    d.customer_last_name ||
+    d.contact_last_name ||
+    d.lastname ||
+    d.achternaam ||
+    "";
 
   // form values
   const f = $("accessForm");
   if (f) {
-    f.querySelector('[name="customer_phone"]').value = d.customer_phone || "";
-    f.querySelector('[name="charger_count"]').value = d.charger_count ? String(d.charger_count) : "";
-    f.querySelector('[name="own_premises"]').value = d.own_premises === true ? "ja" : (d.own_premises === false ? "nee" : "");
+    // ✅ Prefill naam (dit was je missing stuk)
+    const inFirst = f.querySelector('[name="first_name"]');
+    const inLast = f.querySelector('[name="last_name"]');
+    if (inFirst) inFirst.value = first || "";
+    if (inLast) inLast.value = last || "";
+
+    // rest (zoals je al deed)
+    const inPhone = f.querySelector('[name="customer_phone"]');
+    const inCount = f.querySelector('[name="charger_count"]');
+    const inOwn = f.querySelector('[name="own_premises"]');
+
+    if (inPhone) inPhone.value = d.customer_phone || "";
+    if (inCount) inCount.value = d.charger_count ? String(d.charger_count) : "";
+    if (inOwn) inOwn.value = d.own_premises === true ? "ja" : (d.own_premises === false ? "nee" : "");
   }
 
   const ownTxt = d.own_premises === true ? "Ja" : (d.own_premises === false ? "Nee" : "—");
@@ -346,8 +372,11 @@ function renderAccess() {
       `Mobiel: <b>${phoneTxt}</b>`;
   }
 
-  if ($("accessState")) $("accessState").textContent = d.locked_at ? `Vergrendeld sinds: ${formatDateNL(d.locked_at)}` : "";
+  if ($("accessState")) {
+    $("accessState").textContent = d.locked_at ? `Vergrendeld sinds: ${formatDateNL(d.locked_at)}` : "";
+  }
 }
+
 
 function normalizePostcodeFront(pc) {
   return String(pc || "").toUpperCase().replace(/\s+/g, "").trim();
