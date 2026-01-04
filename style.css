@@ -161,6 +161,8 @@ button.is-loading::after { content: " ⏳"; }
 
 .full-width { width: 100%; }
 
+.missing-list { margin: 8px 0 0 18px; }
+
 /* Tabs */
 .tab-panel { display: block; }
 .js .tab-panel { display: none; }
