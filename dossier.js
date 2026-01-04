@@ -504,41 +504,79 @@ function renderDocs() {
   const tbody = $("docsTbody");
   if (!tbody) return;
 
-  const d = current?.dossier || {};
-  const required = Number(d.charger_count || 0) || 0;
-  const requiredPerType = required > 0 ? required : 1;
+  const locked = isLocked();
 
-  const counts = { factuur: 0, foto_laadpunt: 0 };
-  docs.forEach((x) => {
-    const t = String(x.doc_type || "").toLowerCase();
-    if (t === "factuur") counts.factuur++;
-    if (t === "foto_laadpunt") counts.foto_laadpunt++;
-  });
+  const chargers = current?.chargers || [];
+  const chargerById = {};
+  chargers.forEach((c) => { chargerById[String(c.id)] = c; });
 
-  if ($("docsHint")) {
-    const okF = counts.factuur >= requiredPerType;
-    const okP = counts.foto_laadpunt >= requiredPerType;
-
-    $("docsHint").innerHTML =
-      `Vereist per type: <b>${requiredPerType}</b><br/>` +
-      `Facturen: <b>${counts.factuur}/${requiredPerType}</b> ${okF ? "✅" : "⏳"}<br/>` +
-      `Foto’s laadpunt: <b>${counts.foto_laadpunt}/${requiredPerType}</b> ${okP ? "✅" : "⏳"}`;
+  // 1) Populate charger dropdown for upload
+  const sel = $("docChargerId");
+  if (sel) {
+    sel.innerHTML = `<option value="">Kies laadpaal…</option>` + chargers.map((c) => {
+      const id = String(c.id);
+      const sn = c.serial_number ? String(c.serial_number) : "—";
+      const b = c.brand ? String(c.brand) : "";
+      const m = c.model ? String(c.model) : "";
+      const label = `${sn} — ${b} ${m}`.trim();
+      return `<option value="${escapeHtml(id)}">${escapeHtml(label)}</option>`;
+    }).join("");
+    sel.disabled = !!locked || chargers.length === 0;
   }
 
+  // 2) Hint per charger: factuur + foto_laadpunt
+  const needHint = $("docChargerHint");
+  if (needHint) {
+    if (!chargers.length) {
+      needHint.textContent = "Voeg eerst laadpalen toe in stap 3.";
+    } else {
+      const per = {};
+      chargers.forEach((c) => { per[String(c.id)] = { factuur: 0, foto_laadpunt: 0, serial: c.serial_number || "" }; });
+
+      docs.forEach((x) => {
+        const dt = String(x.doc_type || "").toLowerCase();
+        const chId = x.charger_id ? String(x.charger_id) : "";
+        if (!chId || !per[chId]) return;
+        if (dt === "factuur") per[chId].factuur += 1;
+        if (dt === "foto_laadpunt") per[chId].foto_laadpunt += 1;
+      });
+
+      const lines = chargers.map((c) => {
+        const chId = String(c.id);
+        const sn = c.serial_number ? String(c.serial_number) : "—";
+        const p = per[chId] || { factuur: 0, foto_laadpunt: 0 };
+        const okF = p.factuur >= 1;
+        const okP = p.foto_laadpunt >= 1;
+        return `• ${sn}: factuur ${okF ? "✅" : "⏳"} / foto ${okP ? "✅" : "⏳"}`;
+      });
+
+      needHint.innerHTML = `<b>Status per laadpaal</b><br/>` + lines.map(escapeHtml).join("<br/>");
+    }
+  }
+
+  // 3) Render table
   if (!docs.length) {
-    tbody.innerHTML = `<tr><td colspan="4" class="muted">Nog geen documenten geüpload.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="muted">Nog geen documenten geüpload.</td></tr>`;
     return;
   }
-
-  const locked = isLocked();
 
   tbody.innerHTML = docs.map((x) => {
     const typeLabel = String(x.doc_type || "-");
     const when = x.created_at ? formatDateNL(x.created_at) : "-";
     const filename = x.filename || "-";
+
+    const chId = x.charger_id ? String(x.charger_id) : "";
+    const ch = chId ? chargerById[chId] : null;
+    const chargerLabel = ch
+      ? `${ch.serial_number || "—"}`
+      : (typeLabel.toLowerCase() === "factuur" || typeLabel.toLowerCase() === "foto_laadpunt"
+          ? "— (niet gekoppeld)"
+          : "—");
+
     return `
       <tr>
         <td>${escapeHtml(typeLabel)}</td>
+        <td>${escapeHtml(chargerLabel)}</td>
         <td>${escapeHtml(filename)}</td>
         <td class="small muted">${escapeHtml(when)}</td>
         <td class="right">
@@ -550,13 +588,13 @@ function renderDocs() {
     `;
   }).join("");
 
-  // OPEN => juiste endpoint: api-dossier-doc-download-url
+  // Open
   tbody.querySelectorAll("button[data-act='open']").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const id = btn.getAttribute("data-id");
       try {
         btn.disabled = true;
-        const r = await apiPost("api-dossier-doc-download-url", { dossier_id, token, document_id: id });
+        const r = await apiPost("api-dossier-document-open", { dossier_id, token, document_id: id });
         if (!r.signed_url) throw new Error("Geen signed_url ontvangen.");
         window.open(r.signed_url, "_blank", "noopener");
       } catch (e) {
@@ -569,7 +607,7 @@ function renderDocs() {
 
   if (locked) return;
 
-  // DELETE => juiste endpoint: api-dossier-doc-delete
+  // Delete
   tbody.querySelectorAll("button[data-act='del']").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const id = btn.getAttribute("data-id");
@@ -736,10 +774,19 @@ async function onUpload(e) {
   if (btn?.disabled) return;
 
   const doc_type = f.querySelector('[name="doc_type"]').value;
+  const charger_id = (f.querySelector('[name="charger_id"]')?.value || "").trim();
+
   const fileInput = f.querySelector('[name="file"]');
   const file = fileInput.files && fileInput.files[0];
 
   if (!doc_type) return showToast("Kies documenttype.", "error");
+
+  // Voor factuur/foto_laadpunt is charger verplicht
+  const dt = String(doc_type || "").toLowerCase();
+  if ((dt === "factuur" || dt === "foto_laadpunt") && !charger_id) {
+    return showToast("Kies eerst voor welke laadpaal dit document is.", "error");
+  }
+
   if (!file) return showToast("Kies bestand.", "error");
 
   // allowlist (ext + mime)
@@ -759,12 +806,10 @@ async function onUpload(e) {
   if (!allowedExt.has(ext)) {
     return showToast("Ongeldig bestandstype. Alleen: PDF, PNG, JPG/JPEG, DOC, DOCX.", "error");
   }
-  // mime kan soms leeg zijn; als het gevuld is, moet het matchen
   if (mime && !allowedMime.has(mime)) {
     return showToast("Ongeldig bestandstype. Alleen: PDF, PNG, JPG/JPEG, DOC, DOCX.", "error");
   }
 
-  // size limit (voorbeeld: 15MB)
   const maxBytes = 15 * 1024 * 1024;
   if (file.size > maxBytes) {
     return showToast("Bestand is te groot. Max 15MB.", "error");
@@ -779,6 +824,7 @@ async function onUpload(e) {
       dossier_id,
       token,
       doc_type,
+      charger_id: charger_id || null,
       filename: file.name,
       content_type: file.type || "application/octet-stream",
       size_bytes: file.size,
@@ -793,7 +839,7 @@ async function onUpload(e) {
     if (!putRes.ok) throw new Error(`Upload failed: ${putRes.status}`);
 
     if ($("uploadState")) $("uploadState").textContent = "Geüpload.";
-    showToast("Upload gelukt. Meerdere documenten per type is toegestaan (extra bewijs).", "success");
+    showToast("Upload gelukt.", "success");
     f.reset();
     await reloadAll();
   } catch (e2) {
@@ -803,6 +849,7 @@ async function onUpload(e) {
     lockSubmit(btn, false);
   }
 }
+
 
 async function onConsentsSave(e) {
   e.preventDefault();

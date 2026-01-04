@@ -179,6 +179,11 @@
                   </select>
                 </label>
 
+                <label for="docChargerId">Voor welke laadpaal?</label>
+                <select name="charger_id" id="docChargerId" required><option value="">Kies laadpaal…</option></select>
+                <div class="small muted" id="docChargerHint"></div>
+
+
                 <label><span>Bestand</span><input type="file" name="file" required accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,application/pdf,image/png,image/jpeg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" /></label>
 
                 <button id="btnUpload" class="btn primary" type="submit">Upload</button>
