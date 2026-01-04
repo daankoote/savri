@@ -78,8 +78,9 @@
               <div id="emailState" class="mono" style="margin:6px 0 12px 0;">laden…</div>
 
               <form id="accessForm" class="form" novalidate>
-                <label><span>Voornaam</span><input type="text" id="firstName" name="first_name" required /></label>
-                <label><span>Achternaam</span><input type="text" id="lastName" name="last_name" required /></label>
+                <label><span>Voornaam</span><input type="text" name="first_name" placeholder="Voornaam" required /></label>
+                <label><span>Achternaam</span><input type="text" name="last_name" placeholder="Achternaam" required /></label>
+
                 <label><span>Mobiel (optioneel)</span><input type="text" name="customer_phone" placeholder="06xxxxxxxx of +316xxxxxxxx" /></label>
 
                 <label>
@@ -101,7 +102,7 @@
                   </select>
                 </label>
 
-                <button id="btnAccessSave" class="btn primary" type="submit">Opslaan</button>
+                <button id="btnAccessSave" class="btn primary full-width" type="submit">Opslaan</button>
                 <div id="accessState" class="small muted"></div>
               </form>
 
@@ -119,7 +120,7 @@
                 <label><span>Plaats</span><input type="text" name="city_ro" readonly /></label>
 
                 <div class="row">
-                  <button id="btnAddressSave" type="submit" class="btn primary" disabled>Opslaan</button>
+                  <button id="btnAddressSave" type="submit" class="btn primary full-width" disabled>Opslaan</button>
                 </div>
 
                 <div id="addressState" class="small muted"></div>
@@ -145,7 +146,7 @@
                 </label>
 
                 <div class="row">
-                  <button id="btnChargerSave" type="submit" class="btn primary">Opslaan</button>
+                  <button id="btnChargerSave" type="submit" class="btn primary full-width">Opslaan</button>
                 </div>
               </form>
 
@@ -185,10 +186,9 @@
                 <select name="charger_id" id="docChargerId" required><option value="">Kies laadpaal…</option></select>
                 <div class="small muted" id="docChargerHint"></div>
 
-
                 <label><span>Bestand</span><input type="file" name="file" required accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,application/pdf,image/png,image/jpeg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" /></label>
 
-                <button id="btnUpload" class="btn primary" type="submit">Upload</button>
+                <button id="btnUpload" class="btn primary full-width" type="submit">Upload</button>
                 <div id="uploadState" class="small muted"></div>
               </form>
 
@@ -226,7 +226,7 @@
                   <label for="cMandaat">Ik geef middels dit <a href="/mandaat.html" target="_blank" rel="noopener">mandaat</a> toestemming.</label>
                 </div>
 
-                <button id="btnConsentsSave" class="btn primary" type="submit">Opslaan</button>
+                <button id="btnConsentsSave" class="btn primary full-width" type="submit">Opslaan</button>
                 <div id="consentsState" class="small muted"></div>
                 <div id="consentsStamp" class="small muted"></div>
               </form>

@@ -550,18 +550,21 @@ function renderDocs() {
   // 1) Populate charger dropdown for upload
   const sel = $("docChargerId");
   if (sel) {
-    sel.innerHTML = `<option value="">Kies laadpaal…</option>` + chargers.map((c) => {
-      const id = String(c.id);
-      const sn = c.serial_number ? String(c.serial_number) : "—";
-      const b = c.brand ? String(c.brand) : "";
-      const m = c.model ? String(c.model) : "";
-      const label = `${sn} — ${b} ${m}`.trim();
-      return `<option value="${escapeHtml(id)}">${escapeHtml(label)}</option>`;
-    }).join("");
+    sel.innerHTML =
+      `<option value="">Kies laadpaal…</option>` +
+      chargers.map((c) => {
+        const id = String(c.id);
+        const sn = c.serial_number ? String(c.serial_number) : "—";
+        const b = c.brand ? String(c.brand) : "";
+        const m = c.model ? String(c.model) : "";
+        const label = `${sn} — ${b} ${m}`.trim();
+        return `<option value="${escapeHtml(id)}">${escapeHtml(label)}</option>`;
+      }).join("");
+
     sel.disabled = !!locked || chargers.length === 0;
   }
 
-  // 2) Hint per charger: aantallen factuur + foto_laadpunt
+  // 2) Hint per charger: aantallen factuur/foto_laadpunt
   const needHint = $("docChargerHint");
   if (needHint) {
     if (!chargers.length) {
@@ -569,11 +572,7 @@ function renderDocs() {
     } else {
       const per = {};
       chargers.forEach((c) => {
-        per[String(c.id)] = {
-          factuur: 0,
-          foto_laadpunt: 0,
-          serial: c.serial_number || "",
-        };
+        per[String(c.id)] = { factuur: 0, foto_laadpunt: 0, serial: c.serial_number || "" };
       });
 
       docs.forEach((x) => {
@@ -590,14 +589,15 @@ function renderDocs() {
         const p = per[chId] || { factuur: 0, foto_laadpunt: 0 };
         const okF = p.factuur >= 1;
         const okP = p.foto_laadpunt >= 1;
-        return `• ${sn}: factuur ${p.factuur} ${okF ? "✅" : "⏳"} / foto ${p.foto_laadpunt} ${okP ? "✅" : "⏳"}`;
+        return `• ${sn}: facturen ${p.factuur} ${okF ? "✅" : "⏳"} / foto's ${p.foto_laadpunt} ${okP ? "✅" : "⏳"}`;
       });
 
+      // let op: we zetten tekst als HTML maar escapen per regel
       needHint.innerHTML = `<b>Status per laadpaal</b><br/>` + lines.map(escapeHtml).join("<br/>");
     }
   }
 
-  // 3) Render table (5 kolommen: Type, Paalnummer, Bestand, Wanneer, Acties)
+  // 3) Render table
   if (!docs.length) {
     tbody.innerHTML = `<tr><td colspan="5" class="muted">Nog geen documenten geüpload.</td></tr>`;
     return;
@@ -608,13 +608,13 @@ function renderDocs() {
     const when = x.created_at ? formatDateNL(x.created_at) : "-";
     const filename = x.filename || "-";
 
-    const dt = typeLabel.toLowerCase();
     const chId = x.charger_id ? String(x.charger_id) : "";
     const ch = chId ? chargerById[chId] : null;
 
+    const dt = typeLabel.toLowerCase();
     const chargerLabel = ch
       ? `${ch.serial_number || "—"}`
-      : ((dt === "factuur" || dt === "foto_laadpunt") ? "— (niet gekoppeld)" : "—");
+      : (dt === "factuur" || dt === "foto_laadpunt" ? "— (niet gekoppeld)" : "—");
 
     return `
       <tr>
@@ -633,34 +633,21 @@ function renderDocs() {
     `;
   }).join("");
 
-  // helper: open met fallback (primair: api-dossier-document-open)
-  async function openDocument(document_id) {
-    // 1) juiste function naam
-    try {
-      const r = await apiPost("api-dossier-document-open", { dossier_id, token, document_id });
-      if (!r?.signed_url) throw new Error("Geen signed_url ontvangen.");
-      return r.signed_url;
-    } catch (e1) {
-      // 2) fallback (mocht jouw project ooit andere naam hebben)
-      try {
-        const r2 = await apiPost("api-dossier-doc-open", { dossier_id, token, document_id });
-        if (!r2?.signed_url) throw new Error("Geen signed_url ontvangen.");
-        return r2.signed_url;
-      } catch (e2) {
-        // geef de echte eerste fout (meestal het nuttigst)
-        throw e1;
-      }
-    }
-  }
-
-  // Open
+  // Open (via bestaande function: api-dossier-doc-download-url)
   tbody.querySelectorAll("button[data-act='open']").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const id = btn.getAttribute("data-id");
       try {
         btn.disabled = true;
-        const signedUrl = await openDocument(id);
-        window.open(signedUrl, "_blank", "noopener");
+
+        const r = await apiPost("api-dossier-doc-download-url", {
+          dossier_id,
+          token,
+          document_id: id,
+        });
+
+        if (!r?.signed_url) throw new Error("Geen signed_url ontvangen.");
+        window.open(r.signed_url, "_blank", "noopener");
       } catch (e) {
         showToast(e.message, "error");
       } finally {
@@ -690,6 +677,7 @@ function renderDocs() {
     });
   });
 }
+
 
 
 
