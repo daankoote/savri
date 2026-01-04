@@ -1,5 +1,5 @@
 // /dossier.js  (NON-module, gebruikt window.ENVAL uit /config.js)
-console.log("DOSSIER.JS LOADED v2026-01-03-LOCKED-UX");
+console.log("DOSSIER.JS LOADED v2026-01-04-LOCKED-UX test 1700");
 
 // ---------------- helpers ----------------
 function $(id) { return document.getElementById(id); }
