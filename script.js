@@ -487,7 +487,7 @@ async function handleInstallerSignup(e) {
   }
 
   if (phone?.value && !isValidMobile(phone.value)) {
-    showFieldError(phone, "Ongeldig mobiel nummer.");
+    showFieldError(phone, "Vul een geldig mobiel nummer in (06 of +316).");
     hasError = true;
   }
 

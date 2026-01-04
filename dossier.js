@@ -82,22 +82,60 @@ function formatDateNL(isoLike) {
 function boolToJaNee(v) { return v === true ? "ja" : (v === false ? "nee" : ""); }
 
 // Centrale POST helper: ALTIJD Idempotency-Key meesturen
+// Centrale POST helper: ALTIJD Idempotency-Key meesturen + 1 retry bij network errors
 async function apiPost(fnName, body) {
-  const idem = newIdempotencyKey();
-  const res = await fetch(`${window.ENVAL.API_BASE}/${fnName}`, {
-    method: "POST",
-    headers: window.ENVAL.edgeHeaders({ "Idempotency-Key": idem }),
-    body: JSON.stringify(body),
-  });
+  const url = `${window.ENVAL.API_BASE}/${fnName}`;
 
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok || !json.ok) {
-    console.error("apiPost failed:", fnName, "status:", res.status, "json:", json);
-    const msg = json?.error || json?.message || `Request failed (${res.status})`;
-    throw new Error(msg);
+  // kleine helper
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  // We doen max 2 pogingen:
+  // - poging 1: normaal
+  // - poging 2: alleen als fetch zelf faalt (NetworkError) of 502/503/504
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const idem = newIdempotencyKey();
+
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: window.ENVAL.edgeHeaders({ "Idempotency-Key": idem }),
+        body: JSON.stringify(body),
+      });
+
+      // bij transient gateway errors: retry 1x
+      if (attempt === 1 && (res.status === 502 || res.status === 503 || res.status === 504)) {
+        await sleep(450);
+        continue;
+      }
+
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok || !json.ok) {
+        console.error("apiPost failed:", fnName, "status:", res.status, "json:", json);
+        const msg = json?.error || json?.message || `Request failed (${res.status})`;
+        throw new Error(msg);
+      }
+
+      return json;
+    } catch (e) {
+      const msg = String(e?.message || e);
+
+      // Alleen retry op echte fetch/network errors (Firefox: "NetworkError when attempting to fetch resource.")
+      const isNetwork =
+        /NetworkError/i.test(msg) ||
+        /Failed to fetch/i.test(msg) ||
+        /fetch/i.test(msg);
+
+      if (attempt === 1 && isNetwork) {
+        await sleep(450);
+        continue;
+      }
+
+      throw e;
+    }
   }
-  return json;
 }
+
 
 // ---------------- Brand/Model mapping ----------------
 const BRAND_MODELS = {
