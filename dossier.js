@@ -846,23 +846,61 @@ async function onReviewClicked() {
   if (!btn) return;
 
   const d = current?.dossier || {};
-  if (d.locked_at) {
+  if (d.locked_at || String(d.status || "") === "in_review" || String(d.status || "") === "ready_for_booking") {
     showToast("Dit dossier is al ingediend.", "success");
     return;
   }
 
-  const ok = confirm("Klopt alle informatie? Na doorgaan kunt u niets meer veranderen.\n\nDoorgaan?");
-  if (!ok) return;
+  const okConfirm = confirm("Klopt alle informatie? Na doorgaan kunt u niets meer veranderen.\n\nDoorgaan?");
+  if (!okConfirm) return;
 
   lockSubmit(btn, true, "Reviewen…");
 
   try {
     if ($("reviewState")) $("reviewState").textContent = "Server controleert dossier…";
 
-    // ✅ CANONICAL ENDPOINT
-    await apiPost("api-dossier-evaluate", { dossier_id, token, finalize: true });
+    // ✅ RAW call zodat we missingSteps kunnen renderen bij 400/409
+    const idem = newIdempotencyKey();
+    const res = await fetch(`${window.ENVAL.API_BASE}/api-dossier-evaluate`, {
+      method: "POST",
+      headers: window.ENVAL.edgeHeaders({ "Idempotency-Key": idem }),
+      body: JSON.stringify({ dossier_id, token, finalize: true }),
+    });
+
+    const js = await res.json().catch(() => ({}));
+
+    // FAIL: toon missing steps netjes
+    if (!res.ok || !js.ok) {
+      const missing = Array.isArray(js?.missingSteps) ? js.missingSteps : [];
+      const msg = js?.error || js?.message || `Review failed (${res.status})`;
+
+      if ($("reviewState")) {
+        if (missing.length) {
+          $("reviewState").innerHTML =
+            `<div class="danger"><b>Er ontbreken nog onderdelen.</b></div>` +
+            `<div class="small">Vul deze stappen in:</div>` +
+            `<ul class="missing-list">` +
+            missing.map((x) => `<li class="danger">${escapeHtml(x)}</li>`).join("") +
+            `</ul>`;
+        } else {
+          $("reviewState").textContent = msg;
+        }
+      }
+
+      showToast(missing.length ? "Dossier is nog niet compleet." : msg, "error");
+      return;
+    }
+
+    // SUCCESS: alleen succes als locked_at gezet is
+    if (!js.locked_at) {
+      if ($("reviewState")) $("reviewState").textContent =
+        "Review lijkt gelukt, maar dossier is niet vergrendeld. Probeer opnieuw.";
+      showToast("Review fout: dossier is niet vergrendeld.", "error");
+      return;
+    }
 
     showToast("Dossier ingediend. Staat nu in review.", "success");
+    if ($("reviewState")) $("reviewState").textContent = `In review sinds: ${formatDateNL(js.locked_at)}`;
     await reloadAll();
   } catch (e) {
     showToast(e.message, "error");
@@ -871,3 +909,4 @@ async function onReviewClicked() {
     lockSubmit(btn, false, "Review dossier");
   }
 }
+
