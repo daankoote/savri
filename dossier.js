@@ -550,13 +550,13 @@ function renderDocs() {
     `;
   }).join("");
 
-  // Open (moet jouw bestaande endpoint al hebben: api-dossier-document-open)
+  // OPEN => juiste endpoint: api-dossier-doc-download-url
   tbody.querySelectorAll("button[data-act='open']").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const id = btn.getAttribute("data-id");
       try {
         btn.disabled = true;
-        const r = await apiPost("api-dossier-document-open", { dossier_id, token, document_id: id });
+        const r = await apiPost("api-dossier-doc-download-url", { dossier_id, token, document_id: id });
         if (!r.signed_url) throw new Error("Geen signed_url ontvangen.");
         window.open(r.signed_url, "_blank", "noopener");
       } catch (e) {
@@ -569,7 +569,7 @@ function renderDocs() {
 
   if (locked) return;
 
-  // Delete (moet jouw bestaande endpoint al hebben: api-dossier-document-delete)
+  // DELETE => juiste endpoint: api-dossier-doc-delete
   tbody.querySelectorAll("button[data-act='del']").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const id = btn.getAttribute("data-id");
@@ -577,7 +577,7 @@ function renderDocs() {
 
       try {
         btn.disabled = true;
-        await apiPost("api-dossier-document-delete", { dossier_id, token, document_id: id });
+        await apiPost("api-dossier-doc-delete", { dossier_id, token, document_id: id });
         showToast("Document verwijderd.", "success");
         await reloadAll();
       } catch (e) {
@@ -588,6 +588,7 @@ function renderDocs() {
     });
   });
 }
+
 
 function renderConsents() {
   const cons = current?.consents || [];
