@@ -324,7 +324,6 @@ function renderAccess() {
   const email = d.customer_email || d.email || d.contact_email || "";
   if ($("emailState")) $("emailState").textContent = email ? email : "—";
 
-  // Pak naamvelden zo robuust mogelijk (verschillende mogelijke kolomnamen)
   const first =
     d.first_name ||
     d.customer_first_name ||
@@ -341,16 +340,17 @@ function renderAccess() {
     d.achternaam ||
     "";
 
-  // form values
+  // ✅ altijd netjes tonen
+  const firstNice = normalizePersonName(first);
+  const lastNice  = normalizePersonName(last);
+
   const f = $("accessForm");
   if (f) {
-    // ✅ Prefill naam (dit was je missing stuk)
     const inFirst = f.querySelector('[name="first_name"]');
     const inLast = f.querySelector('[name="last_name"]');
-    if (inFirst) inFirst.value = first || "";
-    if (inLast) inLast.value = last || "";
+    if (inFirst) inFirst.value = firstNice || "";
+    if (inLast) inLast.value = lastNice || "";
 
-    // rest (zoals je al deed)
     const inPhone = f.querySelector('[name="customer_phone"]');
     const inCount = f.querySelector('[name="charger_count"]');
     const inOwn = f.querySelector('[name="own_premises"]');
@@ -376,6 +376,7 @@ function renderAccess() {
     $("accessState").textContent = d.locked_at ? `Vergrendeld sinds: ${formatDateNL(d.locked_at)}` : "";
   }
 }
+
 
 
 function normalizePostcodeFront(pc) {

@@ -47,6 +47,28 @@ function isValidMobile(phone) {
   return /^0[1-9][0-9]{8}$|^\+31[1-9][0-9]{8}$/.test(trimmed);
 }
 
+function normalizePersonName(input) {
+  const s = String(input || "").trim();
+  if (!s) return "";
+
+  return s
+    .toLowerCase()
+    .split(/\s+/g)
+    .map((word) =>
+      word
+        .split("-")
+        .map((part) =>
+          part
+            .split("'")
+            .map((p) => (p ? p.charAt(0).toUpperCase() + p.slice(1) : ""))
+            .join("'")
+        )
+        .join("-")
+    )
+    .join(" ");
+}
+
+
 // ======================================================
 // UI helpers: inline errors
 // ======================================================
@@ -218,11 +240,14 @@ async function handleEvForm(e) {
 
   let hasError = false;
 
-  if (!first?.value?.trim()) {
+  const firstNorm = normalizePersonName(first?.value || "");
+  const lastNorm = normalizePersonName(last?.value || "");
+
+  if (!firstNorm) {
     showFieldError(first, "Vul uw voornaam in.");
     hasError = true;
   }
-  if (!last?.value?.trim()) {
+  if (!lastNorm) {
     showFieldError(last, "Vul uw achternaam in.");
     hasError = true;
   }
@@ -255,6 +280,10 @@ async function handleEvForm(e) {
 
   if (hasError) return;
 
+  // ✅ zet genormaliseerde waarden direct terug in het formulier
+  if (first) first.value = firstNorm;
+  if (last) last.value = lastNorm;
+
   lockSubmit(btn, true);
 
   try {
@@ -262,11 +291,11 @@ async function handleEvForm(e) {
 
     const res = await fetch(`${API_BASE}/api-lead-submit`, {
       method: "POST",
-      headers: edgeHeaders(idem), 
+      headers: edgeHeaders(idem),
       body: JSON.stringify({
         flow: "ev_direct",
-        first_name: first.value.trim(),
-        last_name: last.value.trim(),
+        first_name: firstNorm,
+        last_name: lastNorm,
         email: email.value.trim(),
         phone: phone.value.trim() || null,
         charger_count: parseInt(chargers.value, 10),
@@ -274,7 +303,6 @@ async function handleEvForm(e) {
       }),
     });
 
-    
     const json = await res.json().catch(() => ({}));
 
     if (!res.ok || !json.ok) {
@@ -292,6 +320,7 @@ async function handleEvForm(e) {
     lockSubmit(btn, false);
   }
 }
+
 
 // ======================================================
 // Installateur → klant
@@ -315,15 +344,18 @@ async function handleInstallateurKlantForm(e) {
 
   let hasError = false;
 
+  const firstNorm = normalizePersonName(first?.value || "");
+  const lastNorm = normalizePersonName(last?.value || "");
+
   if (!ref?.value?.trim()) {
     showFieldError(ref, "Installateurscode is verplicht.");
     hasError = true;
   }
-  if (!first?.value?.trim()) {
+  if (!firstNorm) {
     showFieldError(first, "Vul de voornaam in.");
     hasError = true;
   }
-  if (!last?.value?.trim()) {
+  if (!lastNorm) {
     showFieldError(last, "Vul de achternaam in.");
     hasError = true;
   }
@@ -356,6 +388,10 @@ async function handleInstallateurKlantForm(e) {
 
   if (hasError) return;
 
+  // ✅ zet genormaliseerde waarden direct terug in het formulier
+  if (first) first.value = firstNorm;
+  if (last) last.value = lastNorm;
+
   lockSubmit(btn, true);
 
   try {
@@ -363,12 +399,12 @@ async function handleInstallateurKlantForm(e) {
 
     const res = await fetch(`${API_BASE}/api-lead-submit`, {
       method: "POST",
-      headers: edgeHeaders(idem), 
+      headers: edgeHeaders(idem),
       body: JSON.stringify({
         flow: "installer_to_customer",
         installer_ref: ref.value.trim().toUpperCase(),
-        first_name: first.value.trim(),
-        last_name: last.value.trim(),
+        first_name: firstNorm,
+        last_name: lastNorm,
         email: email.value.trim(),
         phone: phone.value.trim() || null,
         charger_count: parseInt(chargers.value, 10),
@@ -379,7 +415,6 @@ async function handleInstallateurKlantForm(e) {
     const json = await res.json().catch(() => ({}));
 
     if (!res.ok || !json.ok) {
-      // Als de edge function netjes error teruggeeft: toon in field + toast
       const msg = json.error || "Installateurscode niet correct / bekend.";
       showFieldError(ref, msg);
       showToast(msg, "error");
@@ -395,6 +430,7 @@ async function handleInstallateurKlantForm(e) {
     lockSubmit(btn, false);
   }
 }
+
 
 // ======================================================
 // Installateur signup
@@ -417,15 +453,18 @@ async function handleInstallerSignup(e) {
 
   let hasError = false;
 
+  const firstNorm = normalizePersonName(first?.value || "");
+  const lastNorm = normalizePersonName(last?.value || "");
+
   if (!company?.value?.trim()) {
     showFieldError(company, "Bedrijfsnaam verplicht.");
     hasError = true;
   }
-  if (!first?.value?.trim()) {
+  if (!firstNorm) {
     showFieldError(first, "Voornaam verplicht.");
     hasError = true;
   }
-  if (!last?.value?.trim()) {
+  if (!lastNorm) {
     showFieldError(last, "Achternaam verplicht.");
     hasError = true;
   }
@@ -455,6 +494,10 @@ async function handleInstallerSignup(e) {
 
   if (hasError) return;
 
+  // ✅ zet genormaliseerde waarden direct terug in het formulier
+  if (first) first.value = firstNorm;
+  if (last) last.value = lastNorm;
+
   lockSubmit(btn, true);
 
   try {
@@ -462,12 +505,12 @@ async function handleInstallerSignup(e) {
 
     const res = await fetch(`${API_BASE}/api-lead-submit`, {
       method: "POST",
-      headers: edgeHeaders(idem), 
+      headers: edgeHeaders(idem),
       body: JSON.stringify({
         flow: "installer_signup",
         company_name: company.value.trim(),
-        contact_first_name: first.value.trim(),
-        contact_last_name: last.value.trim(),
+        contact_first_name: firstNorm,
+        contact_last_name: lastNorm,
         email: email.value.trim(),
         phone: phone.value.trim() || null,
         kvk: kvk.value.trim(),
@@ -492,6 +535,7 @@ async function handleInstallerSignup(e) {
   }
 }
 
+
 // ======================================================
 // Contact
 // ======================================================
@@ -511,7 +555,10 @@ async function handleContactForm(e) {
 
   let hasError = false;
 
-  if (!first?.value?.trim()) {
+  const firstNorm = normalizePersonName(first?.value || "");
+  const lastNorm = normalizePersonName(last?.value || ""); // optioneel
+
+  if (!firstNorm) {
     showFieldError(first, "Voornaam is verplicht.");
     hasError = true;
   }
@@ -535,6 +582,10 @@ async function handleContactForm(e) {
 
   if (hasError) return;
 
+  // ✅ zet genormaliseerde waarden direct terug in het formulier
+  if (first) first.value = firstNorm;
+  if (last) last.value = lastNorm;
+
   lockSubmit(btn, true);
 
   try {
@@ -542,11 +593,11 @@ async function handleContactForm(e) {
 
     const res = await fetch(`${API_BASE}/api-lead-submit`, {
       method: "POST",
-      headers: edgeHeaders(idem), 
+      headers: edgeHeaders(idem),
       body: JSON.stringify({
         flow: "contact",
-        first_name: first.value.trim(),
-        last_name: last?.value?.trim() || null,
+        first_name: firstNorm,
+        last_name: lastNorm || null,
         email: email.value.trim(),
         subject: subject.value.trim(),
         message: message.value.trim(),
