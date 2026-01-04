@@ -403,12 +403,16 @@ function renderAccess() {
   const cntTxt = d.charger_count ? String(d.charger_count) : "—";
 
   if ($("accessSummary")) {
-    $("accessSummary").innerHTML =
-      `<b>Overzicht</b><br/>` +
-      `Aantal laadpunten: <b>${escapeHtml(cntTxt)}</b><br/>` +
-      `Op eigen terrein: <b>${escapeHtml(ownTxt)}</b><br/>` +
-      `Mobiel: <b>${phoneTxt}</b>`;
-  }
+  const emailTxt = email ? escapeHtml(email) : "—";
+
+  $("accessSummary").innerHTML =
+    `<b>Overzicht</b><br/>` +
+    `E-mail: <b>${emailTxt}</b><br/>` +
+    `Aantal laadpunten: <b>${escapeHtml(cntTxt)}</b><br/>` +
+    `Op eigen terrein: <b>${escapeHtml(ownTxt)}</b><br/>` +
+    `Mobiel: <b>${phoneTxt}</b>`;
+}
+
 
   if ($("accessState")) {
     $("accessState").textContent = d.locked_at ? `Vergrendeld sinds: ${formatDateNL(d.locked_at)}` : "";
@@ -472,6 +476,27 @@ function renderAddressState() {
       $("addressState").textContent = d.address_verified_at ? `Gecontroleerd: ${when}` : "Nog niet gecontroleerd.";
     }
   }
+
+    // --- Overzicht blok (altijd tonen, '-' als leeg) ---
+    const streetTxt = street ? escapeHtml(street) : "—";
+    const cityTxt = city ? escapeHtml(city) : "—";
+    const pcTxt = pc ? escapeHtml(pc) : "—";
+
+    // Nummer + suffix (suffix zonder '-' tonen in overzicht)
+    const numTxt = hn ? escapeHtml(hn) : "—";
+    const sufTxt = d.address_suffix ? escapeHtml(d.address_suffix) : "";
+    const numFull = hn ? `${escapeHtml(hn)}${sufTxt ? ` ${sufTxt}` : ""}` : "—";
+
+    if ($("addressSummary")) {
+        $("addressSummary").innerHTML =
+        `<b>Overzicht</b><br/>` +
+        `Straat: <b>${streetTxt}</b><br/>` +
+        `Nummer: <b>${numFull}</b><br/>` +
+        `Postcode: <b>${pcTxt}</b><br/>` +
+        `Stad: <b>${cityTxt}</b>`;
+    }
+
+
 }
 
 function onAddressInputChanged() {

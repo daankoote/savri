@@ -74,9 +74,6 @@
             <div class="card">
               <h2 style="margin-top:0;">1) Toegang</h2>
 
-              <div class="muted small">E-mail (vast):</div>
-              <div id="emailState" class="mono" style="margin:6px 0 12px 0;">laden…</div>
-
               <form id="accessForm" class="form" novalidate>
                 <label><span>Voornaam</span><input type="text" name="first_name" placeholder="Voornaam" required /></label>
                 <label><span>Achternaam</span><input type="text" name="last_name" placeholder="Achternaam" required /></label>
@@ -125,6 +122,8 @@
 
                 <div id="addressState" class="small muted"></div>
               </form>
+              <div id="addressSummary" class="notice small" style="margin-top:12px;"></div>
+
             </div>
 
             <div class="card">
@@ -170,8 +169,7 @@
 
             <div class="card">
               <h2 style="margin-top:0;">4) Documenten uploaden</h2>
-              <div id="docsHint" class="notice small" style="margin-bottom:10px;">laden…</div>
-
+              <div id="docsHint" class="notice small" style="margin-bottom:10px;"> Voor elke laadpaal is minimaal <b>1 factuur installatie</b> en <b>1 foto van het laadpunt</b> nodig.</div>
               <form id="uploadForm" class="form" novalidate>
                 <label>
                   <span>Type document</span>
@@ -182,8 +180,13 @@
                   </select>
                 </label>
 
-                <label for="docChargerId">Voor welke laadpaal?</label>
-                <select name="charger_id" id="docChargerId" required><option value="">Kies laadpaal…</option></select>
+                <label>
+                  <span>Voor welke laadpaal?</span>
+                  <select name="charger_id" id="docChargerId" required>
+                    <option value="">Kies laadpaal…</option>
+                  </select>
+                </label>
+               
                 <div class="small muted" id="docChargerHint"></div>
 
                 <label><span>Bestand</span><input type="file" name="file" required accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,application/pdf,image/png,image/jpeg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" /></label>
@@ -233,7 +236,7 @@
             </div>
 
             <div class="card">
-              <h2 style="margin-top:0;">Review</h2>
+              <h2 style="margin-top:0;">6) Review</h2>
               <div id="statusExplain" class="muted small">laden…</div>
               <div class="row" style="margin-top:10px;">
                 <button id="btnEvaluate" class="btn outline" type="button">Review dossier</button>

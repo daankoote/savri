@@ -356,3 +356,26 @@ footer {
 /* Dossier: top card en grid exact dezelfde breedte (geen shrink/weirdness) */
 .section .container > .card { width: 100%; }
 .grid2 { width: 100%; }
+
+/* ======================================================
+   DOSSIER: layout mag niet verschuiven door lange content
+   Plak ONDERAAN style.css
+   ====================================================== */
+
+/* grid cards moeten niet kunnen krimpen door lange strings */
+.grid2 > .card { min-width: 0; }
+.card { min-width: 0; }
+
+/* tabel mag layout niet laten uitrekken */
+.table { width: 100%; table-layout: fixed; }
+.table th, .table td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* zorg dat acties kolom niet te breed wordt */
+.table th.right, .table td.right { width: 170px; }
+
+/* bestand kolom krijgt ruimte, maar knipt af */
+.table td:nth-child(3) { max-width: 100%; }
+
+/* Checkbox: voorkom rare afbreking */
+.checkbox-row { display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: start; }
+.checkbox-row label { margin: 0; line-height: 1.35; }
