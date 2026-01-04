@@ -20,6 +20,34 @@ function showToast(message, type = "success") {
   setTimeout(() => div.remove(), 4200);
 }
 
+function normalizePersonName(input) {
+  const s = String(input || "").trim();
+  if (!s) return "";
+
+  // Maak alles lowercase en title-case per "woord" met behoud van ' en -
+  // Voorbeelden:
+  // "pIeT rEtAiL" -> "Piet Retail"
+  // "van der meer" -> "Van Der Meer" (bewust simpel gehouden)
+  // "o'connor" -> "O'Connor"
+  // "jan-pieter" -> "Jan-Pieter"
+  return s
+    .toLowerCase()
+    .split(/\s+/g)
+    .map((word) =>
+      word
+        .split("-")
+        .map((part) =>
+          part
+            .split("'")
+            .map((p) => (p ? p.charAt(0).toUpperCase() + p.slice(1) : ""))
+            .join("'")
+        )
+        .join("-")
+    )
+    .join(" ");
+}
+
+
 function newIdempotencyKey() {
   if (window.crypto?.randomUUID) return window.crypto.randomUUID();
   const bytes = new Uint8Array(16);
@@ -267,11 +295,18 @@ function pillForStatus(status) {
 }
 
 function explainStatus(status) {
-  if (status === "ready_for_booking") return "Alles is compleet. Dit dossier kan door naar inboeken.";
-  if (status === "ready_for_review") return "Alles lijkt compleet, maar moet nog gecontroleerd worden (review).";
-  if (status === "in_review") return "Dit dossier staat op review. Je hoeft niets te doen.";
+  if (status === "ready_for_booking") {
+    return "Alles is compleet. Dit dossier kan door naar inboeken.";
+  }
+  if (status === "ready_for_review") {
+    return "Alles lijkt compleet, maar moet nog gecontroleerd worden (review).";
+  }
+  if (status === "in_review") {
+    return "Dit dossier staat op review. Je hoeft niets te doen. Je kunt dit scherm nu sluiten. Wij houden je op de hoogte van de voortgang via het door jou opgegeven e-mailadres.";
+  }
   return "Er ontbreken nog onderdelen. Vul de stappen hierboven in.";
 }
+
 
 function renderStatus() {
   const status = current?.dossier?.status || "incomplete";
@@ -449,7 +484,6 @@ function renderChargers() {
   const locked = isLocked();
   const btnSave = $("btnChargerSave");
   if (btnSave) {
-    // als required bekend is: blokkeren zodra have >= required
     if (!locked && required > 0 && have >= required) {
       btnSave.disabled = true;
       btnSave.title = "Je hebt al het maximale aantal laadpalen ingevoerd.";
@@ -471,8 +505,10 @@ function renderChargers() {
       <td>${escapeHtml(c.model || "-")}</td>
       <td>${escapeHtml(c.notes || "-")}</td>
       <td class="right">
-        <button class="btn outline small ${locked ? "hidden" : ""}" data-lock-hide="1"
-          type="button" data-act="del" data-id="${c.id}">Verwijder</button>
+        <div class="btnstack">
+          <button class="btn outline small ${locked ? "hidden" : ""}" data-lock-hide="1"
+            type="button" data-act="del" data-id="${c.id}">Verwijder</button>
+        </div>
       </td>
     </tr>
   `).join("");
@@ -497,6 +533,7 @@ function renderChargers() {
     });
   });
 }
+
 
 
 function renderDocs() {
@@ -524,14 +561,20 @@ function renderDocs() {
     sel.disabled = !!locked || chargers.length === 0;
   }
 
-  // 2) Hint per charger: factuur + foto_laadpunt
+  // 2) Hint per charger: aantallen factuur + foto_laadpunt
   const needHint = $("docChargerHint");
   if (needHint) {
     if (!chargers.length) {
       needHint.textContent = "Voeg eerst laadpalen toe in stap 3.";
     } else {
       const per = {};
-      chargers.forEach((c) => { per[String(c.id)] = { factuur: 0, foto_laadpunt: 0, serial: c.serial_number || "" }; });
+      chargers.forEach((c) => {
+        per[String(c.id)] = {
+          factuur: 0,
+          foto_laadpunt: 0,
+          serial: c.serial_number || "",
+        };
+      });
 
       docs.forEach((x) => {
         const dt = String(x.doc_type || "").toLowerCase();
@@ -547,14 +590,14 @@ function renderDocs() {
         const p = per[chId] || { factuur: 0, foto_laadpunt: 0 };
         const okF = p.factuur >= 1;
         const okP = p.foto_laadpunt >= 1;
-        return `• ${sn}: factuur ${okF ? "✅" : "⏳"} / foto ${okP ? "✅" : "⏳"}`;
+        return `• ${sn}: factuur ${p.factuur} ${okF ? "✅" : "⏳"} / foto ${p.foto_laadpunt} ${okP ? "✅" : "⏳"}`;
       });
 
       needHint.innerHTML = `<b>Status per laadpaal</b><br/>` + lines.map(escapeHtml).join("<br/>");
     }
   }
 
-  // 3) Render table
+  // 3) Render table (5 kolommen: Type, Paalnummer, Bestand, Wanneer, Acties)
   if (!docs.length) {
     tbody.innerHTML = `<tr><td colspan="5" class="muted">Nog geen documenten geüpload.</td></tr>`;
     return;
@@ -565,28 +608,50 @@ function renderDocs() {
     const when = x.created_at ? formatDateNL(x.created_at) : "-";
     const filename = x.filename || "-";
 
+    const dt = typeLabel.toLowerCase();
     const chId = x.charger_id ? String(x.charger_id) : "";
     const ch = chId ? chargerById[chId] : null;
+
     const chargerLabel = ch
       ? `${ch.serial_number || "—"}`
-      : (typeLabel.toLowerCase() === "factuur" || typeLabel.toLowerCase() === "foto_laadpunt"
-          ? "— (niet gekoppeld)"
-          : "—");
+      : ((dt === "factuur" || dt === "foto_laadpunt") ? "— (niet gekoppeld)" : "—");
 
     return `
       <tr>
         <td>${escapeHtml(typeLabel)}</td>
-        <td>${escapeHtml(chargerLabel)}</td>
+        <td class="mono">${escapeHtml(chargerLabel)}</td>
         <td>${escapeHtml(filename)}</td>
         <td class="small muted">${escapeHtml(when)}</td>
         <td class="right">
-          <button class="btn outline small" type="button" data-act="open" data-id="${x.id}">Open</button>
-          <button class="btn outline small ${locked ? "hidden" : ""}" data-lock-hide="1"
-            type="button" data-act="del" data-id="${x.id}">Verwijder</button>
+          <div class="btnstack">
+            <button class="btn outline small" type="button" data-act="open" data-id="${x.id}">Open</button>
+            <button class="btn outline small ${locked ? "hidden" : ""}" data-lock-hide="1"
+              type="button" data-act="del" data-id="${x.id}">Verwijder</button>
+          </div>
         </td>
       </tr>
     `;
   }).join("");
+
+  // helper: open met fallback (primair: api-dossier-document-open)
+  async function openDocument(document_id) {
+    // 1) juiste function naam
+    try {
+      const r = await apiPost("api-dossier-document-open", { dossier_id, token, document_id });
+      if (!r?.signed_url) throw new Error("Geen signed_url ontvangen.");
+      return r.signed_url;
+    } catch (e1) {
+      // 2) fallback (mocht jouw project ooit andere naam hebben)
+      try {
+        const r2 = await apiPost("api-dossier-doc-open", { dossier_id, token, document_id });
+        if (!r2?.signed_url) throw new Error("Geen signed_url ontvangen.");
+        return r2.signed_url;
+      } catch (e2) {
+        // geef de echte eerste fout (meestal het nuttigst)
+        throw e1;
+      }
+    }
+  }
 
   // Open
   tbody.querySelectorAll("button[data-act='open']").forEach((btn) => {
@@ -594,9 +659,8 @@ function renderDocs() {
       const id = btn.getAttribute("data-id");
       try {
         btn.disabled = true;
-        const r = await apiPost("api-dossier-document-open", { dossier_id, token, document_id: id });
-        if (!r.signed_url) throw new Error("Geen signed_url ontvangen.");
-        window.open(r.signed_url, "_blank", "noopener");
+        const signedUrl = await openDocument(id);
+        window.open(signedUrl, "_blank", "noopener");
       } catch (e) {
         showToast(e.message, "error");
       } finally {
@@ -628,6 +692,7 @@ function renderDocs() {
 }
 
 
+
 function renderConsents() {
   const cons = current?.consents || [];
   const latest = {};
@@ -646,35 +711,46 @@ async function onAccessSave(e) {
   e.preventDefault();
   if (isLocked()) return showToast("Dossier is vergrendeld.", "error");
 
-  const form = e.target;
+  const f = e.target;
   const btn = $("btnAccessSave");
   if (btn?.disabled) return;
 
-  lockSubmit(btn, true);
+  // verwacht inputs in je form met name="first_name" en name="last_name"
+  const rawFirst = (f.querySelector('[name="first_name"]')?.value || "").trim();
+  const rawLast = (f.querySelector('[name="last_name"]')?.value || "").trim();
+
+  const first_name = normalizePersonName(rawFirst);
+  const last_name = normalizePersonName(rawLast);
+
+  if (!first_name) return showToast("Voornaam is verplicht.", "error");
+  if (!last_name) return showToast("Achternaam is verplicht.", "error");
+
+  lockSubmit(btn, true, "Opslaan…");
 
   try {
-    const phone = (form.querySelector('[name="customer_phone"]').value || "").trim() || null;
-    const charger_count = Number(form.querySelector('[name="charger_count"]').value || 0) || null;
-    const own_premises = form.querySelector('[name="own_premises"]').value === "ja";
-
     await apiPost("api-dossier-access-update", {
       dossier_id,
       token,
-      customer_phone: phone,
-      charger_count,
-      own_premises,
+      first_name,
+      last_name,
     });
 
-    if ($("accessState")) $("accessState").textContent = "Opgeslagen.";
-    showToast("Gegevens opgeslagen.", "success");
+    showToast("Opgeslagen.", "success");
+
+    // Zorg dat UI meteen netjes wordt
+    const fn = $("firstName");
+    const ln = $("lastName");
+    if (fn) fn.value = first_name;
+    if (ln) ln.value = last_name;
+
     await reloadAll();
-  } catch (e2) {
-    showToast(e2.message, "error");
-    if ($("accessState")) $("accessState").textContent = e2.message;
+  } catch (err) {
+    showToast(err.message || "Opslaan mislukt.", "error");
   } finally {
-    lockSubmit(btn, false);
+    lockSubmit(btn, false, "Opslaan");
   }
 }
+
 
 async function onAddressSave(e) {
   e.preventDefault();
@@ -858,25 +934,27 @@ async function onConsentsSave(e) {
   const btn = $("btnConsentsSave");
   if (btn?.disabled) return;
 
+  const terms = $("cTerms")?.checked === true;
+  const privacy = $("cPrivacy")?.checked === true;
+  const mandaat = $("cMandaat")?.checked === true;
+
+  // FIX: ALLE DRIE verplicht (UI consistent met server/DB)
+  if (!terms || !privacy || !mandaat) {
+    const msg = "Vink alle drie de toestemmingen aan om door te gaan.";
+    showToast(msg, "error");
+    if ($("consentsState")) $("consentsState").textContent = msg;
+    return;
+  }
+
   lockSubmit(btn, true);
 
   try {
     if ($("consentsState")) $("consentsState").textContent = "Opslaan…";
 
-    const consents = {
-      terms: $("cTerms")?.checked === true,
-      privacy: $("cPrivacy")?.checked === true,
-      mandaat: $("cMandaat")?.checked === true,
-    };
-
-    // mandaat moet aangevinkt zijn
-    if (!consents.mandaat) {
-      showToast("Mandaat is verplicht om door te gaan.", "error");
-      if ($("consentsState")) $("consentsState").textContent = "Mandaat ontbreekt.";
-      return;
-    }
+    const consents = { terms, privacy, mandaat };
 
     await apiPost("api-dossier-consents-save", { dossier_id, token, consents });
+
     if ($("consentsState")) $("consentsState").textContent = "Opgeslagen.";
     showToast("Toestemmingen opgeslagen.", "success");
     await reloadAll();
@@ -887,6 +965,7 @@ async function onConsentsSave(e) {
     lockSubmit(btn, false);
   }
 }
+
 
 async function onReviewClicked() {
   const btn = $("btnEvaluate");

@@ -78,6 +78,8 @@
               <div id="emailState" class="mono" style="margin:6px 0 12px 0;">laden…</div>
 
               <form id="accessForm" class="form" novalidate>
+                <label><span>Voornaam</span><input type="text" id="firstName" name="first_name" required /></label>
+                <label><span>Achternaam</span><input type="text" id="lastName" name="last_name" required /></label>
                 <label><span>Mobiel (optioneel)</span><input type="text" name="customer_phone" placeholder="06xxxxxxxx of +316xxxxxxxx" /></label>
 
                 <label>
@@ -195,13 +197,14 @@
                   <thead>
                     <tr>
                       <th>Type</th>
+                      <th>Paalnummer</th>
                       <th>Bestand</th>
                       <th>Wanneer</th>
                       <th class="right">Acties</th>
                     </tr>
                   </thead>
                   <tbody id="docsTbody">
-                    <tr><td colspan="4" class="muted">laden…</td></tr>
+                    <tr><td colspan="5" class="muted">laden…</td></tr>
                   </tbody>
                 </table>
               </div>
