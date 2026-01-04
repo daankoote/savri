@@ -23,7 +23,7 @@
             "name": "Open dossier.html",
             "type": "chrome",
             "request": "launch",
-            "file": "${workspaceFolder}/dossier.html?d=35a34186-71f4-4658-80c7-88dd9aa36245&t=f51a0c38aeebde76e617962f65d81da76895.html"
+            "file": "${workspaceFolder}/dossier.html"
         }
     ]
 }
