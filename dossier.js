@@ -732,41 +732,79 @@ async function onAccessSave(e) {
   const btn = $("btnAccessSave");
   if (btn?.disabled) return;
 
-  // verwacht inputs in je form met name="first_name" en name="last_name"
+  // --- read + normalize ---
   const rawFirst = (f.querySelector('[name="first_name"]')?.value || "").trim();
-  const rawLast = (f.querySelector('[name="last_name"]')?.value || "").trim();
+  const rawLast  = (f.querySelector('[name="last_name"]')?.value || "").trim();
 
   const first_name = normalizePersonName(rawFirst);
-  const last_name = normalizePersonName(rawLast);
+  const last_name  = normalizePersonName(rawLast);
 
+  const customer_phone = (f.querySelector('[name="customer_phone"]')?.value || "").trim();
+
+  const charger_count_raw = (f.querySelector('[name="charger_count"]')?.value || "").trim();
+  const charger_count = charger_count_raw ? Number(charger_count_raw) : null;
+
+  const own_raw = (f.querySelector('[name="own_premises"]')?.value || "").trim().toLowerCase();
+  const own_premises =
+    own_raw === "ja" ? true :
+    own_raw === "nee" ? false :
+    null;
+
+  // --- validate ---
   if (!first_name) return showToast("Voornaam is verplicht.", "error");
   if (!last_name) return showToast("Achternaam is verplicht.", "error");
+  if (!charger_count || !Number.isFinite(charger_count) || charger_count < 1) {
+    return showToast("Kies het aantal laadpunten.", "error");
+  }
+  if (own_premises === null) {
+    return showToast("Kies of het op eigen terrein is.", "error");
+  }
 
   lockSubmit(btn, true, "Opslaan…");
 
   try {
-    await apiPost("api-dossier-access-update", {
-      dossier_id,
-      token,
-      first_name,
-      last_name,
-    });
+    // ✅ BELANGRIJK: we sturen ALLES mee
+    // Gebruik eerst de 'save' endpoint (logisch voor complete stap 1)
+    // en fallback naar 'update' als jouw backend dat zo heeft ingericht.
+    try {
+      await apiPost("api-dossier-access-save", {
+        dossier_id,
+        token,
+        first_name,
+        last_name,
+        customer_phone: customer_phone || null,
+        charger_count,
+        own_premises,
+      });
+    } catch (e1) {
+      // fallback als je save endpoint anders heet/anders werkt
+      await apiPost("api-dossier-access-update", {
+        dossier_id,
+        token,
+        first_name,
+        last_name,
+        customer_phone: customer_phone || null,
+        charger_count,
+        own_premises,
+      });
+    }
+
+    // Zet de genormaliseerde waarden terug in het formulier (direct zichtbaar)
+    const inFirst = f.querySelector('[name="first_name"]');
+    const inLast  = f.querySelector('[name="last_name"]');
+    if (inFirst) inFirst.value = first_name;
+    if (inLast)  inLast.value = last_name;
 
     showToast("Opgeslagen.", "success");
-
-    // Zorg dat UI meteen netjes wordt
-    const fn = $("firstName");
-    const ln = $("lastName");
-    if (fn) fn.value = first_name;
-    if (ln) ln.value = last_name;
-
     await reloadAll();
   } catch (err) {
+    console.error(err);
     showToast(err.message || "Opslaan mislukt.", "error");
   } finally {
     lockSubmit(btn, false, "Opslaan");
   }
 }
+
 
 
 async function onAddressSave(e) {
