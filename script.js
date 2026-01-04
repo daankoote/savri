@@ -1,5 +1,5 @@
 // Test script
-console.log("ENVAL SCRIPT.JS v2026-01-03-01 LOADED");
+console.log("ENVAL SCRIPT.JS v2026-01-04 1952 LOADED");
 
 // ======================================================
 // Config (komt uit /config.js)
@@ -43,8 +43,12 @@ function isValidEmail(email) {
 function isValidMobile(phone) {
   // optioneel veld: leeg = ok
   if (!phone) return true;
-  const trimmed = phone.trim();
-  return /^0[1-9][0-9]{8}$|^\+31[1-9][0-9]{8}$/.test(trimmed);
+
+  // strip spaties/strepen/haakjes etc.
+  const p = String(phone).trim().replace(/[\s\-().]/g, "");
+
+  // Alleen NL mobiel: 06xxxxxxxx óf +316xxxxxxxx (exact 10 / 12 chars)
+  return /^06\d{8}$/.test(p) || /^\+316\d{8}$/.test(p);
 }
 
 function normalizePersonName(input) {
