@@ -1,7 +1,7 @@
-// versie 260105_15 oclock
+// versie 260105_17 oclock
 // /dossier.js  (NON-module, gebruikt window.ENVAL uit /config.js)
 
-console.log("ENVAL DOSSIER.JS versie 260105_15 oclock");
+console.log("ENVAL DOSSIER.JS versie 260105_17 oclock");
 
 // ======================================================
 // 1) DOM helpers + formatting
@@ -22,6 +22,14 @@ function escapeHtml(s) {
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
+
+function trunc(s, max) {
+  const str = String(s ?? "");
+  if (!max || str.length <= max) return str;
+  if (max <= 3) return str.slice(0, max);
+  return str.slice(0, max - 3) + "...";
+}
+
 
 /**
  * showToast(message, type)
@@ -669,27 +677,40 @@ function renderChargers() {
     return;
   }
 
-  tbody.innerHTML = chargers.map((c) => `
-    <tr>
-      <td class="mono">${escapeHtml(c.serial_number)}</td>
-      <td>${escapeHtml(c.brand || "-")}</td>
-      <td class="td-ellipsis">${escapeHtml(c.model || "-")}</td>
-      <td class="td-ellipsis">${escapeHtml(c.notes || "-")}</td>
-      <td class="right">
-        <div class="btnstack">
-          <button
-            class="iconbtn iconbtn--danger ${locked ? "hidden" : ""}"
-            data-lock-hide="1"
-            type="button"
-            aria-label="Verwijder laadpaal"
-            title="Verwijder"
-            data-act="del"
-            data-id="${c.id}"
-          >×</button>
-        </div>
-      </td>
-    </tr>
-  `).join("");
+  tbody.innerHTML = chargers.map((c) => {
+    const snFull = c.serial_number || "-";
+    const brandFull = c.brand || "-";
+    const modelFull = c.model || "-";
+    const notesFull = c.notes || "-";
+
+    const sn = trunc(snFull, 10);
+    const brand = trunc(brandFull, 8);
+    const model = trunc(modelFull, 10);
+    // Toelichting: variabel. Als je 'm toch hard wil knippen: trunc(notesFull, 11)
+    const notes = notesFull;
+
+    return `
+      <tr>
+        <td class="mono" title="${escapeHtml(snFull)}">${escapeHtml(sn)}</td>
+        <td title="${escapeHtml(brandFull)}">${escapeHtml(brand)}</td>
+        <td title="${escapeHtml(modelFull)}">${escapeHtml(model)}</td>
+        <td title="${escapeHtml(notesFull)}">${escapeHtml(notes)}</td>
+        <td class="right">
+          <div class="btnstack">
+            <button
+              class="iconbtn iconbtn--danger ${locked ? "hidden" : ""}"
+              data-lock-hide="1"
+              type="button"
+              aria-label="Verwijder laadpaal"
+              title="Verwijder"
+              data-act="del"
+              data-id="${c.id}"
+            >×</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join("");
 
   if (locked) return;
 
@@ -713,6 +734,7 @@ function renderChargers() {
 }
 
 
+
 /**
  * renderDocs()
  * Doel:
@@ -731,15 +753,12 @@ function renderDocs() {
   const locked = isLocked();
 
   const hint = $("docsHint");
-  if (hint) {
-    hint.textContent = "Per laadpaal: minimaal 1 factuur installatie + 1 foto van het laadpunt.";
-  }
+  if (hint) hint.textContent = "Per laadpaal: minimaal 1 factuur installatie + 1 foto van het laadpunt.";
 
   const chargers = current?.chargers || [];
   const chargerById = {};
   chargers.forEach((c) => { chargerById[String(c.id)] = c; });
 
-  // 1) Populate charger dropdown for upload
   const sel = $("docChargerId");
   if (sel) {
     sel.innerHTML =
@@ -752,11 +771,9 @@ function renderDocs() {
         const label = `${sn} — ${b} ${m}`.trim();
         return `<option value="${escapeHtml(id)}">${escapeHtml(label)}</option>`;
       }).join("");
-
     sel.disabled = !!locked || chargers.length === 0;
   }
 
-  // 2) Hint per charger: aantallen factuur/foto_laadpunt
   const needHint = $("docChargerHint");
   if (needHint) {
     if (!chargers.length) {
@@ -775,7 +792,7 @@ function renderDocs() {
         if (dt === "foto_laadpunt") per[chId].foto_laadpunt += 1;
       });
 
-        const itemsHtml = chargers.map((c) => {
+      const itemsHtml = chargers.map((c) => {
         const chId = String(c.id);
         const sn = c.serial_number ? String(c.serial_number) : "—";
         const p = per[chId] || { factuur: 0, foto_laadpunt: 0 };
@@ -792,36 +809,37 @@ function renderDocs() {
         `;
       }).join("");
 
-      needHint.innerHTML =
-        `<b>Status per laadpaal</b>` +
-        `<ul class="statuslist">${itemsHtml}</ul>`;
-
+      needHint.innerHTML = `<b>Status per laadpaal</b><ul class="statuslist">${itemsHtml}</ul>`;
     }
   }
 
-  // 3) Render table (4 kolommen: Type, Paalnummer, Bestand(klikbaar), Acties)
   if (!docs.length) {
     tbody.innerHTML = `<tr><td colspan="4" class="muted">Nog geen documenten geüpload.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = docs.map((x) => {
-    const typeLabel = String(x.doc_type || "-");
-    const filename = x.filename || "-";
+    const typeFull = String(x.doc_type || "-");
+    const type = trunc(typeFull, 15); // past sowieso, maar dit houdt het consistent
+
+    const filenameFull = x.filename || "-";
+    const filename = filenameFull; // laat CSS ellipsis doen, maar title toont alles
 
     const chId = x.charger_id ? String(x.charger_id) : "";
     const ch = chId ? chargerById[chId] : null;
 
-    const dt = typeLabel.toLowerCase();
-    const chargerLabel = ch
+    const dt = typeFull.toLowerCase();
+    const chargerLabelFull = ch
       ? `${ch.serial_number || "—"}`
       : (dt === "factuur" || dt === "foto_laadpunt" ? "— (niet gekoppeld)" : "—");
 
+    const chargerLabel = trunc(chargerLabelFull, 10);
+
     return `
       <tr>
-        <td>${escapeHtml(typeLabel)}</td>
-        <td class="mono td-charger">${escapeHtml(chargerLabel)}</td>
-        <td class="td-filename">
+        <td title="${escapeHtml(typeFull)}">${escapeHtml(type)}</td>
+        <td class="mono" title="${escapeHtml(chargerLabelFull)}">${escapeHtml(chargerLabel)}</td>
+        <td title="${escapeHtml(filenameFull)}">
           <a href="#" data-act="open" data-id="${x.id}">${escapeHtml(filename)}</a>
         </td>
         <td class="right">
@@ -841,20 +859,13 @@ function renderDocs() {
     `;
   }).join("");
 
-  // Open via klik op bestandsnaam (signed url)
   tbody.querySelectorAll("a[data-act='open']").forEach((a) => {
     a.addEventListener("click", async (e) => {
       e.preventDefault();
       const id = a.getAttribute("data-id");
       try {
         a.classList.add("muted");
-
-        const r = await apiPost("api-dossier-doc-download-url", {
-          dossier_id,
-          token,
-          document_id: id,
-        });
-
+        const r = await apiPost("api-dossier-doc-download-url", { dossier_id, token, document_id: id });
         if (!r?.signed_url) throw new Error("Geen signed_url ontvangen.");
         window.open(r.signed_url, "_blank", "noopener");
       } catch (err) {
@@ -867,7 +878,6 @@ function renderDocs() {
 
   if (locked) return;
 
-  // Delete
   tbody.querySelectorAll("button[data-act='del']").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const id = btn.getAttribute("data-id");
@@ -886,6 +896,7 @@ function renderDocs() {
     });
   });
 }
+
 
 
 /**

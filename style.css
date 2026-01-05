@@ -1,4 +1,4 @@
-/* versie 260105_15 oclock */
+/* versie 260105_17 oclock */
 
 /* ======================================================
    ENVAL – style.css
@@ -479,81 +479,87 @@ footer {
 .card { min-width: 0; }
 
 /* Dossier tables */
-.table { width:100%; border-collapse:collapse; table-layout: fixed; }
-.table th, .table td {
+.table{
+  width:100%;
+  border-collapse:collapse;
+  table-layout: fixed;
+}
+
+.table th, .table td{
   border-bottom:1px solid #e2e8f0;
   padding:10px 6px;
   text-align:left;
   font-size:0.95rem;
   vertical-align:top;
 
-  /* default: GEEN ellipsis, wél netjes afkappen zonder puntjes */
-  overflow: hidden;
-  text-overflow: clip;
-  white-space: nowrap;
-}
-.table th { font-size:0.85rem; color:#64748b; font-weight:600; }
-.table th.right, .table td.right { text-align:right; width: 110px; }
-@media (max-width: 767px) {.table th.right, .table td.right { width: 70px; }}
-
-
-/* Ellipsis helper voor table cells */
-.td-ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-/* Icon-only delete button */
-.iconbtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 34px;
-  border-radius: 999px;
-  border: 1px solid #cbd5e1;
-  background: #fff;
-  cursor: pointer;
-  font-size: 18px;
-  line-height: 1;
-}
-.iconbtn:hover { box-shadow: 0 10px 22px rgba(15, 23, 42, 0.10); }
-.iconbtn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-.iconbtn--danger { border-color: #ef4444; color: #ef4444; }
-.iconbtn--danger:hover { border-color: #dc2626; color: #dc2626; }
-
-
-
-
-/* Alleen de bestandsnaam krijgt ellipsis */
-.td-filename {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* default: GEEN ellipsis; voorkomt “alles wordt ...” */
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:clip;
 }
 
-/* Wanneer + Paalnummer mogen zichtbaar blijven (geen ellipsis) */
-.td-when,
-.td-charger {
-  text-overflow: clip;
+.table th{
+  font-size:0.85rem;
+  color:#64748b;
+  font-weight:600;
 }
 
-/* Actie buttons stack */
-.btnstack {
-  display: inline-flex;
-  gap: 8px;
-  justify-content: flex-end;
-  align-items: center;
-  flex-wrap: nowrap;
-}
-.btnstack .btn { min-width: 0; }
+.table .right{ text-align:right; }
 
-/* Dossier hint compact */
-#docsHint {
-  padding: 8px 10px;
-  font-size: 0.82rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* Actie-kolom: precies ruimte voor 1 icon button */
+.table-chargers th.right, .table-chargers td.right,
+.table-docs th.right, .table-docs td.right{
+  width:64px;
 }
+
+/* ===== Step 3: Laadpalen ===== */
+.table-chargers th:nth-child(1),
+.table-chargers td:nth-child(1){ width:10ch; } /* serienummer */
+
+.table-chargers th:nth-child(2),
+.table-chargers td:nth-child(2){ width:8ch; }  /* merk */
+
+.table-chargers th:nth-child(3),
+.table-chargers td:nth-child(3){ width:10ch; } /* model */
+
+/* Toelichting = variabel + ellipsis */
+.table-chargers th:nth-child(4),
+.table-chargers td:nth-child(4){
+  width:auto;
+  text-overflow:ellipsis;
+}
+
+/* ===== Step 4: Documenten ===== */
+.table-docs th:nth-child(1),
+.table-docs td:nth-child(1){ width:15ch; } /* foto_laadpunt past */
+
+.table-docs th:nth-child(2),
+.table-docs td:nth-child(2){ width:10ch; } /* paalnummer */
+
+.table-docs th:nth-child(3),
+.table-docs td:nth-child(3){
+  width:auto;
+  text-overflow:ellipsis; /* alleen bestandnaam ellipsis */
+}
+
+/* Button stack in actie-cel: altijd zichtbaar, nooit wrappen */
+.btnstack{
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  gap:8px;
+  flex-wrap:nowrap;
+}
+
+/* Dossier hint compact (mag ellipsis) */
+#docsHint{
+  padding:8px 10px;
+  font-size:0.82rem;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
 
 /* Toestemmingen: op desktop 1 regel per checkbox (geen label wrap) */
 @media (min-width: 768px) {
