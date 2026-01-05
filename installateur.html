@@ -4,6 +4,9 @@
 <html lang="nl">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      document.documentElement.classList.add("js");
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Enval – Aanmelden als installateur</title>
     <link rel="stylesheet" href="style.css" />
@@ -14,7 +17,7 @@
       <div class="container header-inner">
         <div class="logo"><a href="/index.html">Enval</a></div>
 
-        <button id="navToggle" class="nav-toggle" type="button" aria-controls="siteNav" aria-expanded="false" >☰</button>
+        <button id="navToggle" class="nav-toggle" type="button" aria-controls="siteNav" aria-expanded="false">☰</button>
 
         <nav id="siteNav">
           <a href="/index.html#hero">Home</a>
@@ -28,13 +31,24 @@
     </header>
 
     <main>
+      <!-- MINI HERO -->
+      <section class="section page-hero">
+        <div class="container">
+          <div class="kicker">Installateurs</div>
+          <h1>Aanmelden als installateur</h1>
+          <p class="lead">
+            Meld je éénmalig aan. Daarna kun je klanten direct aanmelden met jouw installateurscode.
+          </p>
+        </div>
+      </section>
+
+      <!-- FORM -->
       <section class="section">
         <div class="container">
           <div class="card">
-            <h1>Aanmelden als installateur</h1>
-            <p>
-              Meld u eenmalig aan als installateur. U ontvangt een persoonlijke installateurscode waarmee u uw klanten snel
-              kunt aanmelden.
+            <h2 style="margin-top:0;">Gegevens</h2>
+            <p class="note" style="margin-top:0;">
+              Na aanmelding ontvang je per e-mail je installateurscode. Daarmee meld je klanten snel aan.
             </p>
 
             <form class="form" id="installer-signup-form" novalidate>
@@ -43,15 +57,17 @@
                 <input type="text" name="company_name" required />
               </label>
 
-              <label>
-                <span>Voornaam contactpersoon</span>
-                <input type="text" name="contact_first_name" required />
-              </label>
+              <div class="row2">
+                <label>
+                  <span>Voornaam contactpersoon</span>
+                  <input type="text" name="contact_first_name" required />
+                </label>
 
-              <label>
-                <span>Achternaam contactpersoon</span>
-                <input type="text" name="contact_last_name" required />
-              </label>
+                <label>
+                  <span>Achternaam contactpersoon</span>
+                  <input type="text" name="contact_last_name" required />
+                </label>
+              </div>
 
               <label>
                 <span>E-mailadres</span>
