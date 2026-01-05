@@ -253,6 +253,15 @@ p { margin-top: 0; margin-bottom: 1rem; }
   margin-top: 1rem;
 }
 
+/* Form actions: vaste spacing boven/onder primaire knop */
+.form-actions{
+  margin: 14px 0;         /* ≈ “2 enters” boven + onder */
+  display: grid;
+  gap: 8px;
+}
+.form-actions .btn{ margin: 0; }
+
+
 .form label {
   display: flex;
   flex-direction: column;
@@ -484,7 +493,9 @@ footer {
   white-space: nowrap;
 }
 .table th { font-size:0.85rem; color:#64748b; font-weight:600; }
-.table th.right, .table td.right { text-align:right; width: 170px; }
+.table th.right, .table td.right { text-align:right; width: 110px; }
+@media (max-width: 767px) {.table th.right, .table td.right { width: 70px; }}
+
 
 /* Ellipsis helper voor table cells */
 .td-ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -511,6 +522,7 @@ footer {
 
 
 
+
 /* Alleen de bestandsnaam krijgt ellipsis */
 .td-filename {
   white-space: nowrap;
@@ -532,7 +544,7 @@ footer {
   align-items: center;
   flex-wrap: nowrap;
 }
-.btnstack .btn { min-width: 96px; }
+.btnstack .btn { min-width: 0; }
 
 /* Dossier hint compact */
 #docsHint {

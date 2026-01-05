@@ -95,8 +95,11 @@
                   </select>
                 </label>
 
-                <button id="btnAccessSave" class="btn primary full-width" type="submit">Opslaan</button>
-                <div id="accessState" class="small muted"></div>
+                <div class="form-actions">
+                  <button id="btnAccessSave" class="btn primary full-width" type="submit">Opslaan</button>
+                  <div id="accessState" class="small muted"></div>
+                </div>
+
               </form>
 
               <div id="accessSummary" class="notice small" style="margin-top:12px;">laden…</div>
@@ -114,13 +117,14 @@
                 <label><span>Straat</span><input type="text" name="street_ro" readonly /></label>
                 <label><span>Plaats</span><input type="text" name="city_ro" readonly /></label>
 
-                <div class="row" style="margin-top:10px;">
+                <div class="form-actions">
                   <button id="btnAddressSave" type="submit" class="btn primary full-width" disabled>Opslaan</button>
+
+                  <!-- UI status bewust verborgen; audit info staat in Overzicht-box -->
+                  <div id="addressState" class="small muted hidden"></div>
                 </div>
 
 
-                <!-- UI status bewust verborgen; audit info staat in Overzicht-box -->
-                <div id="addressState" class="small muted hidden"></div>
               </form>
 
               <div id="addressSummary" class="notice small" style="margin-top:12px;">laden…</div>
