@@ -1,11 +1,12 @@
-/* versie 260105_17 oclock */
+/* versie 260105_18 oclock */
 
 /* ======================================================
    ENVAL – style.css
    Doel:
    - Eén plek voor alle UI-styling (ook dossier)
    - Geen conflicterende table/checkbox/button regels
-   - Dossier: ellipsis alleen op bestandsnaam
+   - Dossier blijft werken zoals nu
+   - Homepage: warmer, uitnodigender + calculator UI
    ====================================================== */
 
 /* ======================================================
@@ -27,6 +28,11 @@
   --dark-border: #223049;
 
   --shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+
+  /* nieuwe “warmer/softer” helpers */
+  --ring: rgba(16, 185, 129, 0.22);
+  --soft-border: rgba(15, 23, 42, 0.10);
+  --panel-2: #f3f6fb;
 }
 
 * { box-sizing: border-box; }
@@ -76,7 +82,7 @@ header {
 .logo a{
   color: #e5e7eb;
   text-decoration: none;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.03em;
 }
 .logo a:hover{ text-decoration: underline; }
@@ -86,45 +92,96 @@ nav a {
   text-decoration: none;
   color: #e5e7eb;
   font-size: 0.95rem;
+  opacity: 0.95;
 }
-nav a:hover { text-decoration: underline; }
+nav a:hover { text-decoration: underline; opacity: 1; }
 
 /* ======================================================
-   Hero
+   Hero (algemeen)
    ====================================================== */
 .hero {
   padding-top: 5rem;
   padding-bottom: 4rem;
   background: linear-gradient(180deg, var(--dark) 0%, var(--dark-2) 100%);
   color: #e5e7eb;
+  position: relative;
+  overflow: hidden;
 }
 
-.hero-inner { display: grid; gap: 2.5rem; }
+/* subtiele “glow” zodat het minder koud/plat voelt */
+.hero::before{
+  content:"";
+  position:absolute;
+  inset:-180px -120px auto -120px;
+  height: 380px;
+  background: radial-gradient(closest-side, rgba(16,185,129,0.28), rgba(16,185,129,0.0));
+  pointer-events:none;
+  filter: blur(2px);
+}
+.hero::after{
+  content:"";
+  position:absolute;
+  right:-220px;
+  top:-220px;
+  width: 520px;
+  height: 520px;
+  background: radial-gradient(closest-side, rgba(14,165,233,0.18), rgba(14,165,233,0.0));
+  pointer-events:none;
+}
+
+.hero-inner { display: grid; gap: 2.5rem; position: relative; z-index: 1; }
 
 .hero-text h1 {
-  font-size: 2.2rem;
-  line-height: 1.2;
+  font-size: 2.25rem;
+  line-height: 1.15;
   margin-bottom: 1rem;
+  letter-spacing: -0.01em;
 }
 
 .hero-text p {
-  max-width: 32rem;
-  margin-bottom: 1.75rem;
+  max-width: 38rem;
+  margin-bottom: 1.5rem;
+  color: rgba(229,231,235,0.92);
 }
 
 .hero-buttons {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
+  align-items: center;
 }
 
+/* “trust badges” onder hero */
+.badges{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top: 14px;
+}
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(255,255,255,0.06);
+  color: rgba(229,231,235,0.92);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+.badge .dot{
+  width: 8px; height: 8px; border-radius: 999px;
+  background: rgba(16,185,129,0.9);
+}
+
+/* Hero side visual card */
 .hero-side .card {
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.16);
   box-shadow: var(--shadow);
   backdrop-filter: blur(6px);
 }
-
 .hero-side .card h3 { margin-top: 0; }
 .hero-side .card ol { margin: 0; padding-left: 1.25rem; }
 
@@ -136,7 +193,7 @@ nav a:hover { text-decoration: underline; }
   padding: 0.75rem 1.4rem;
   border-radius: 999px;
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 650;
   text-decoration: none;
   cursor: pointer;
   text-align: center;
@@ -187,14 +244,8 @@ button.is-loading::after { content: " ⏳"; }
 .missing-list { margin: 8px 0 0 18px; }
 
 /* Status per laadpaal lijst (stap 4 hint) */
-.statuslist {
-  margin: 8px 0 0 18px;
-  padding: 0;
-}
-.statuslist li {
-  margin: 4px 0;
-}
-
+.statuslist { margin: 8px 0 0 18px; padding: 0; }
+.statuslist li { margin: 4px 0; }
 
 /* ======================================================
    Tabs
@@ -207,27 +258,17 @@ button.is-loading::after { content: " ⏳"; }
    ====================================================== */
 .card {
   background: #ffffff;
-  border-radius: 0.75rem;
+  border-radius: 0.9rem;
   padding: 1.5rem;
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
 }
 
 .card h3 { margin-top: 0; }
 
-h2 {
-  font-size: 1.6rem;
-  margin-bottom: 0.75rem;
-}
-h3 {
-  font-size: 1.15rem;
-  margin-top: 1.5rem;
-  margin-bottom: 0.5rem;
-}
-h4 {
-  font-size: 1rem;
-  margin-top: 1rem;
-  margin-bottom: 0.4rem;
-}
+h1{ font-size: 2rem; line-height: 1.2; }
+h2 { font-size: 1.6rem; margin-bottom: 0.75rem; letter-spacing: -0.01em; }
+h3 { font-size: 1.15rem; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+h4 { font-size: 1rem; margin-top: 1rem; margin-bottom: 0.4rem; }
 
 p { margin-top: 0; margin-bottom: 1rem; }
 
@@ -238,11 +279,151 @@ p { margin-top: 0; margin-bottom: 1rem; }
 .list li { margin-bottom: 0.25rem; }
 
 /* ======================================================
+   Homepage – nieuwe secties (warm, minder “tekstmuur”)
+   ====================================================== */
+.section-title{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.section-title p{
+  margin: 0;
+  max-width: 46rem;
+  color: var(--muted);
+}
+
+.cards-3{
+  display:grid;
+  gap: 14px;
+}
+@media (min-width: 768px){
+  .cards-3{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+.feature-card{
+  border: 1px solid var(--soft-border);
+  border-radius: 16px;
+  background: #fff;
+  padding: 16px;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+  min-width: 0;
+}
+.feature-card h3{ margin: 6px 0 8px 0; }
+.feature-card p{ color: var(--muted); margin-bottom: 12px; }
+
+.icon{
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border: 1px solid rgba(16,185,129,0.25);
+  background: rgba(16,185,129,0.10);
+  color: var(--brand);
+  font-weight: 800;
+}
+
+.kicker{
+  display:inline-block;
+  font-size: 0.85rem;
+  color: var(--brand);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-bottom: 10px;
+}
+
+.callout{
+  background: linear-gradient(180deg, rgba(16,185,129,0.10), rgba(16,185,129,0.04));
+  border: 1px solid rgba(16,185,129,0.20);
+  border-radius: 18px;
+  padding: 18px;
+}
+
+.callout strong{ color: var(--ink); }
+.callout p{ color: rgba(15,23,42,0.82); margin-bottom: 0; }
+
+.steps{
+  display:grid;
+  gap: 12px;
+}
+@media (min-width: 768px){
+  .steps{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+.step{
+  background: #fff;
+  border: 1px solid var(--soft-border);
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+}
+.step .n{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width: 32px; height: 32px;
+  border-radius: 12px;
+  background: rgba(15,118,110,0.10);
+  border: 1px solid rgba(15,118,110,0.22);
+  color: var(--brand);
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+.step p{ color: var(--muted); margin-bottom: 0; }
+
+/* Calculator */
+.calc-wrap{
+  display:grid;
+  gap: 14px;
+  align-items: start;
+}
+@media (min-width: 768px){
+  .calc-wrap{ grid-template-columns: 1.2fr 0.8fr; }
+}
+.calc{
+  background:#fff;
+  border: 1px solid var(--soft-border);
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+}
+.calc .row2{
+  display:grid;
+  gap: 12px;
+}
+@media (min-width: 768px){
+  .calc .row2{ grid-template-columns: 1fr 1fr; }
+}
+.calc .result{
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #0b1220;
+  color: #e5e7eb;
+  border: 1px solid rgba(255,255,255,0.10);
+}
+.calc .result small{ color: rgba(229,231,235,0.78); display:block; margin-top: 6px; }
+
+.note{
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+/* ======================================================
    FAQ
    ====================================================== */
-.faq-intro { max-width: 42rem; margin-bottom: 2rem; }
-.faq-grid { display: grid; gap: 1.5rem; }
-.faq-item h3 { margin-bottom: 0.25rem; }
+.faq-intro { max-width: 52rem; margin-bottom: 2rem; }
+.faq-grid { display: grid; gap: 1rem; }
+.faq-item{
+  background:#fff;
+  border: 1px solid var(--soft-border);
+  border-radius: 16px;
+  padding: 14px 14px;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
+}
+.faq-item h3 { margin: 0 0 6px 0; }
+.faq-item p{ margin: 0; color: var(--muted); }
 
 /* ======================================================
    Forms
@@ -261,7 +442,6 @@ p { margin-top: 0; margin-bottom: 1rem; }
 }
 .form-actions .btn{ margin: 0; }
 
-
 .form label {
   display: flex;
   flex-direction: column;
@@ -269,16 +449,17 @@ p { margin-top: 0; margin-bottom: 1rem; }
   gap: 0.25rem;
 }
 
-.form span { font-weight: 500; }
+.form span { font-weight: 600; }
 
 input[type="text"],
 input[type="email"],
 input[type="tel"],
+input[type="number"],
 select,
 textarea {
-  border-radius: 0.5rem;
+  border-radius: 0.65rem;
   border: 1px solid #cbd5e1;
-  padding: 0.6rem 0.75rem;
+  padding: 0.62rem 0.78rem;
   font-size: 0.95rem;
   font-family: inherit;
   background: #ffffff;
@@ -288,8 +469,8 @@ input:focus,
 select:focus,
 textarea:focus {
   outline: none;
-  border-color: #0ea5e9;
-  box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.5);
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 3px var(--ring);
 }
 
 textarea { resize: vertical; }
@@ -297,7 +478,7 @@ textarea { resize: vertical; }
 input[name="installer_ref"] { text-transform: uppercase; }
 
 .form-note {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   color: #64748b;
   margin-top: 0.25rem;
 }
@@ -305,10 +486,10 @@ input[name="installer_ref"] { text-transform: uppercase; }
 /* Checkbox row (default) */
 .checkbox-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.6rem;
 }
-.checkbox-row input[type="checkbox"] { margin: 0; }
+.checkbox-row input[type="checkbox"] { margin: 0; margin-top: 2px; }
 
 /* Checkbox labels mogen NIET de .form label flex-column erven */
 .form .checkbox-row { align-items: flex-start; }
@@ -319,14 +500,12 @@ input[name="installer_ref"] { text-transform: uppercase; }
   font-size: 0.95rem;
   line-height: 1.35;
 }
-.form .checkbox-row input[type="checkbox"] { margin-top: 2px; }
-
 
 /* Inline errors */
 .input-error { border-color: #ff4d4f !important; }
 .input-error:focus {
   border-color: #ff4d4f !important;
-  box-shadow: 0 0 0 1px rgba(255, 77, 79, 0.4);
+  box-shadow: 0 0 0 3px rgba(255, 77, 79, 0.20);
 }
 .field-error {
   color: #a8071a;
@@ -350,7 +529,7 @@ footer {
    ====================================================== */
 @media (min-width: 768px) {
   .hero-inner {
-    grid-template-columns: 2fr 1.3fr;
+    grid-template-columns: 2fr 1.2fr;
     align-items: center;
   }
   .two-column {
@@ -406,8 +585,6 @@ footer {
   /* Reset link spacing for dropdown */
   header nav a { margin: 0; font-size: 0.98rem; }
 }
-
-
 
 /* ======================================================
    Toast
@@ -559,7 +736,6 @@ footer {
   overflow:hidden;
   text-overflow:ellipsis;
 }
-
 
 /* Toestemmingen: op desktop 1 regel per checkbox (geen label wrap) */
 @media (min-width: 768px) {

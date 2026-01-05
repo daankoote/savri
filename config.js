@@ -1,6 +1,6 @@
-// versie 260105_13 oclock
+// versie 260105_18 oclock
 
-console.log("ENVAL config.JS versie 260105_13 oclock");
+console.log("ENVAL config.JS versie 260105_18 oclock");
 
 // /config.js
 // Enige bron van waarheid voor Supabase config (GEEN modules, GEEN exports)

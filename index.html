@@ -1,27 +1,23 @@
-<!-- versie 260105_15 oclock -->
+<!-- versie 260105_18 oclock -->
 
 <!DOCTYPE html>
 <html lang="nl">
   <head>
     <meta charset="UTF-8" />
     <script>
-      // Enable JS-only behavior (tabs)
       document.documentElement.classList.add("js");
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Enval – inboeker voor privé-laadpalen</title>
+    <title>Enval – registratie & dossier voor privé-laadpalen</title>
     <link rel="stylesheet" href="style.css" />
   </head>
 
   <body>
-    <!-- ======================================================
-         Header / Nav
-         ====================================================== -->
     <header>
       <div class="container header-inner">
         <div class="logo"><a href="/index.html">Enval</a></div>
 
-        <button id="navToggle" class="nav-toggle" type="button" aria-controls="siteNav" aria-expanded="false" >☰</button>
+        <button id="navToggle" class="nav-toggle" type="button" aria-controls="siteNav" aria-expanded="false">☰</button>
 
         <nav id="siteNav">
           <a href="/index.html#hero">Home</a>
@@ -34,139 +30,276 @@
       </div>
     </header>
 
-    <!-- ======================================================
-         Hero + Tabs
-         ====================================================== -->
+    <!-- HERO -->
     <section id="hero" class="section hero">
       <div class="container hero-inner">
         <div class="hero-text">
-          <h1>ERE-registratie en inboeken voor privé-laadpalen — zorgvuldig en controleerbaar.</h1>
+          <div class="kicker">Registratie • Validatie • Audit-trail</div>
+
+          <h1>Maak je privé-laadpaal “ERE-proof” — zonder gedoe met administratie.</h1>
 
           <p>
-            Enval is een onafhankelijk registratie- en inboekplatform voor privé-laadpalen.
-            Wij leggen installaties correct vast, bouwen een controleerbaar dossier op
-            en faciliteren inboeken en ERE-verkoop via een erkende route,
-            conform de kaders van de Nederlandse Emissieautoriteit (NEa).
+            Enval bouwt een controleerbaar dossier voor privé-laadpalen: identiteit, locatie, eigendom, hardware en documenten.
+            Jij levert aan, wij maken het compleet en consistent — klaar voor review en (later) inboeken via een erkende route.
           </p>
 
-        <div class="hero-buttons">
-          <a class="btn primary" href="/aanmelden.html">Meld je aan</a>
-        </div>
+          <div class="hero-buttons">
+            <a class="btn primary" href="/aanmelden.html">Start aanmelding</a>
+            <a class="btn outline" href="#calculator">Wat levert het op?</a>
+          </div>
 
+          <div class="badges" aria-label="Kernpunten">
+            <div class="badge"><span class="dot"></span> Controleerbaar dossier (audit-trail)</div>
+            <div class="badge"><span class="dot"></span> Ook “alleen administratie” mogelijk</div>
+            <div class="badge"><span class="dot"></span> Geen garantie, wél voorbereiding</div>
+          </div>
         </div>
 
         <div class="hero-side">
           <div class="card">
-            <h3>Zo werkt Enval</h3>
+            <h3>In 3 stappen</h3>
             <ol>
-              <li>Aanmelding en registratie van de installatie.</li>
-              <li>Validatie en opbouw van een controleerbaar dossier.</li>
-              <li>Inboeken en ERE-verkoop via een erkende route.</li>
+              <li>Aanmelden (installateur of eigenaar).</li>
+              <li>Documenten uploaden + gegevens controleren.</li>
+              <li>Dossier klaarzetten voor review / inboeken via erkende route.</li>
             </ol>
+            <p class="note" style="margin-top:12px; margin-bottom:0;">
+              Let op: regelgeving en uitbetaling hangen af van kaders, verificatie en aantoonbaarheid.
+            </p>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ======================================================
-         Value props
-         ====================================================== -->
+    <!-- ROUTES / AANBOD -->
     <section class="section">
-      <div class="container two-column">
-        <div class="column">
-          <h2>Wat Enval doet</h2>
-          <ul class="list">
-            <li>Registratie van privé-laadpalen en installaties</li>
-            <li>Vastleggen van installatie- en eigendomsgegevens</li>
-            <li>Opbouw van een controleerbaar dossier (audit-trail)</li>
-            <li>Faciliteren van inboeken en ERE-verkoop via een erkende route</li>
-          </ul>
+      <div class="container">
+        <div class="section-title">
+          <div>
+            <h2>Wat je met Enval kunt doen</h2>
+            <p>
+              Niet iedereen wil hetzelfde. Daarom is Enval praktisch: van volledige begeleiding tot alleen dossier-administratie.
+            </p>
+          </div>
         </div>
 
-        <div class="column">
-          <h2>Wat Enval niet doet</h2>
-          <ul class="list">
-            <li>Geen energiecontracten</li>
-            <li>Geen investerings- of beleggingsproduct</li>
-            <li>Geen garanties op ERE’s of vergoedingen</li>
-            <li>Geen shortcuts buiten de regelgeving</li>
-          </ul>
+        <div class="cards-3">
+          <div class="feature-card">
+            <div class="icon">1</div>
+            <h3>Volledige route</h3>
+            <p>
+              Registratie + validatie + compleet dossier. Jij vult het aan, Enval bewaakt kwaliteit en consistentie.
+            </p>
+            <a class="btn outline small" href="/aanmelden.html">Aanmelden</a>
+          </div>
+
+          <div class="feature-card">
+            <div class="icon">2</div>
+            <h3>Alleen administratie / audit</h3>
+            <p>
+              Jij regelt de inhoud, wij regelen de structuur: checklists, ontbrekende stukken, audit-trail en dossierhygiëne.
+            </p>
+            <a class="btn outline small" href="#contact">Vraag intake</a>
+          </div>
+
+          <div class="feature-card">
+            <div class="icon">3</div>
+            <h3>Installateurs</h3>
+            <p>
+              Meld klanten snel aan met een installateurscode. De klant ontvangt direct een dossierlink.
+            </p>
+            <a class="btn outline small" href="/installateur.html">Installateur aanmelden</a>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;" class="callout">
+          <strong>Waarom dit belangrijk is:</strong>
+          <p>
+            In de praktijk sneuvelt dit soort trajecten op “net niet compleet” of “niet aantoonbaar”. Enval is er om dat te voorkomen.
+          </p>
         </div>
       </div>
     </section>
 
-    <!-- ======================================================
-         FAQ
-         ====================================================== -->
-    <section id="faq" class="section">
+    <!-- CALCULATOR -->
+    <section id="calculator" class="section section-alt">
       <div class="container">
-        <h2>Over Enval & veelgestelde vragen</h2>
+        <div class="section-title">
+          <div>
+            <h2>Wat kan het opleveren? (snelle indicatie)</h2>
+            <p>
+              Dit is een grove rekentool om gevoel te krijgen bij potentie. Het is geen belofte en geen garantie.
+              Werkelijke opbrengst hangt af van kaders, verificatie en marktprijzen.
+            </p>
+          </div>
+        </div>
 
-        <div class="faq-intro">
-          <p>
-            Enval richt zich op drie dingen:<br />
-            1. Registreren en valideren van privé-laadpalen volgens de vereisten van de NEa.<br />
-            2. Faciliteren van inboeken en ERE-verkoop via een erkende route.<br />
-            3. Administratie en audit-trail volgens de vereisten van de NEa.<br /><br />
-            Geen energiecontracten, geen beleggingsproduct, geen langdurige contracten, geen onduidelijke voorwaarden en geen garanties.
-          </p>
+        <div class="calc-wrap">
+          <div class="calc">
+            <form id="calcForm" class="form" novalidate>
+              <div class="row2">
+                <label>
+                  <span>Jaarlijks laden (kWh)</span>
+                  <input id="kwhYear" type="number" inputmode="numeric" min="0" step="100" value="2500" />
+                </label>
+
+                <label>
+                  <span>Indicatie vergoeding (€/kWh)</span>
+                  <input id="eurPerKwh" type="number" inputmode="decimal" min="0" step="0.001" value="0.02" />
+                </label>
+              </div>
+
+              <label>
+                <span>Enval service (indicatie % van opbrengst)</span>
+                <input id="feePct" type="number" inputmode="numeric" min="0" max="100" step="1" value="20" />
+              </label>
+
+              <button class="btn primary full-width" type="submit">Bereken indicatie</button>
+
+              <div class="result" id="calcResult">
+                Verwachte bandbreedte: <b>—</b>
+                <small>Vul waarden in en klik op bereken.</small>
+              </div>
+
+              <div class="note" style="margin-top:10px;">
+                Tip: weet je je verbruik niet? Pak een schatting: 2.000–4.000 kWh/jaar is voor veel privé-rijders realistisch.
+              </div>
+            </form>
+          </div>
+
+          <div class="feature-card">
+            <div class="icon">i</div>
+            <h3>Waar gaat het mis?</h3>
+            <p>
+              Niet bij “aanmelden”, maar bij aantoonbaarheid: onduidelijke koppeling laadpunt-locatie, ontbrekende facturen,
+              onjuiste eigenaar/mandaat, of onvolledige audit-trail.
+            </p>
+            <p class="note" style="margin:0;">
+              Enval is gebouwd om dit te fixen vóór het een probleem wordt.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <script>
+        (function(){
+          function euro(n){ return "€ " + n.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
+          const form = document.getElementById("calcForm");
+          const out = document.getElementById("calcResult");
+
+          function calc(){
+            const kwh = Math.max(0, Number(document.getElementById("kwhYear").value || 0));
+            const eurPerKwh = Math.max(0, Number(document.getElementById("eurPerKwh").value || 0));
+            const feePct = Math.min(100, Math.max(0, Number(document.getElementById("feePct").value || 0)));
+
+            const gross = kwh * eurPerKwh;
+            const fee = gross * (feePct / 100);
+            const net = Math.max(0, gross - fee);
+
+            // simpele “bandbreedte” ±25% (want onzeker)
+            const lo = net * 0.75;
+            const hi = net * 1.25;
+
+            out.innerHTML =
+              'Verwachte bandbreedte (netto): <b>' + euro(lo) + " – " + euro(hi) + "</b>" +
+              '<small>Netto op basis van jouw invoer. Geen garantie; echte uitkomst hangt af van kaders/markt/verificatie.</small>';
+          }
+
+          if (form){
+            form.addEventListener("submit", function(e){
+              e.preventDefault();
+              calc();
+            });
+            // eerste render
+            calc();
+          }
+        })();
+      </script>
+    </section>
+
+    <!-- HOE HET WERKT -->
+    <section class="section">
+      <div class="container">
+        <div class="section-title">
+          <div>
+            <h2>Hoe het werkt</h2>
+            <p>Geen jargon-muur. Gewoon duidelijk: wat je invult, wat wij doen, en wanneer je klaar bent.</p>
+          </div>
+        </div>
+
+        <div class="steps">
+          <div class="step">
+            <div class="n">1</div>
+            <h3 style="margin:0 0 6px 0;">Aanmelden</h3>
+            <p>Installateur of eigenaar meldt aan. Je ontvangt direct een dossierlink per e-mail.</p>
+          </div>
+
+          <div class="step">
+            <div class="n">2</div>
+            <h3 style="margin:0 0 6px 0;">Dossier compleet maken</h3>
+            <p>Laadpunt(en) registreren, documenten uploaden, toestemmingen vastleggen. Alles traceerbaar.</p>
+          </div>
+
+          <div class="step">
+            <div class="n">3</div>
+            <h3 style="margin:0 0 6px 0;">Review-ready</h3>
+            <p>Enval helpt je richting “compleet”: klaar voor review en aansluiting op erkende inboekroute.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section id="faq" class="section section-alt">
+      <div class="container">
+        <div class="section-title">
+          <div>
+            <h2>FAQ</h2>
+            <p>De belangrijkste vragen, kort en helder.</p>
+          </div>
         </div>
 
         <div class="faq-grid">
           <div class="faq-item">
-            <h3>Wat zijn ERE’s?</h3>
-            <p>
-              Emissiereductie-eenheden (ERE’s) zijn certificaten die horen bij aantoonbare reductie van CO₂-uitstoot.
-              Voor bepaalde vormen van elektrisch laden kunnen ERE’s worden toegekend.
-            </p>
+            <h3>Is Enval een energiecontract of beleggingsproduct?</h3>
+            <p>Nee. Enval is een registratie- en dossierplatform (administratie/validatie/audit-trail).</p>
           </div>
 
           <div class="faq-item">
-            <h3>Is dit al definitief?</h3>
-            <p>
-              Nee. De NEa werkt aan de kaders. Enval bereidt het proces en platform voor, zodat we direct kunnen aansluiten
-              zodra het loket voor ERE-inboekers opent. Naar verwachting is dit begin 2026.
-            </p>
+            <h3>Krijg ik gegarandeerd geld?</h3>
+            <p>Nee. Er is geen garantie. Opbrengst (als die er is) hangt af van regels, verificatie en aantoonbaarheid.</p>
           </div>
 
           <div class="faq-item">
-            <h3>Krijg ik gegarandeerd geld als ik me aanmeld?</h3>
-            <p>
-              Nee. Er is geen garantie op toekenning van ERE’s of op een vergoeding. Aanmelding betekent alleen dat uw
-              situatie wordt voorbereid op mogelijke deelname. ERE’s en vergoeding zijn afhankelijk van correcte installatie-
-              voorwaarden en aantoonbaar verbruik.
-            </p>
+            <h3>Kan ik alleen de administratie uitbesteden?</h3>
+            <p>Ja. Als jij de inhoud hebt, kunnen wij de dossier-structuur, volledigheid en audit-trail bewaken.</p>
           </div>
 
           <div class="faq-item">
-            <h3>Werkt Enval samen met de NEa?</h3>
-            <p>
-              Enval is zelfstandig, maar ontwerpt het registratie-, validatie- en auditproces in lijn met de eisen van de NEa.
-            </p>
-          </div>
-
-          <div class="faq-item">
-            <h3>Ben ik ergens toe verplicht?</h3>
-            <p>Nee. Aanmelding is vrijblijvend en u kunt uw gegevens laten verwijderen als u niet meer mee wilt doen.</p>
+            <h3>Hoe zit het met regelgeving?</h3>
+            <p>Regelgeving is leidend en kan wijzigen. Enval bouwt “conform-denken” in: controleerbaar en netjes.</p>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ======================================================
-         Contact
-         ====================================================== -->
-    <section id="contact" class="section section-alt">
+    <!-- CONTACT -->
+    <section id="contact" class="section">
       <div class="container two-column">
         <div class="column">
           <h2>Contact</h2>
-          <p>Heeft u vragen over Enval, samenwerking als installateur of de voorbereidingen rondom ERE’s?</p>
-          <p>Laat uw gegevens achter en we nemen zo snel mogelijk contact met u op.</p>
+          <p>
+            Wil je als installateur samenwerken, of wil je alleen de administratie/audit uit handen geven?
+            Laat je gegevens achter en zet in je bericht wat je wilt: “volledige route” of “alleen administratie”.
+          </p>
+          <p class="note">
+            Geen verkooppraat. We kijken eerst of jouw situatie überhaupt logisch is om te registreren.
+          </p>
         </div>
 
         <div class="column">
           <div class="card">
-            <h3>Stel uw vraag</h3>
+            <h3>Stel je vraag</h3>
 
             <form class="form" name="contact" novalidate>
               <label>
@@ -189,7 +322,8 @@
                 <select name="onderwerp" required>
                   <option value="">Maak een keuze</option>
                   <option value="installateur">Ik ben installateur</option>
-                  <option value="ev-rijder">Ik ben EV-rijder</option>
+                  <option value="ev-rijder">Ik heb een privé-laadpaal</option>
+                  <option value="administratie">Ik wil alleen administratie/audit</option>
                   <option value="overig">Overig</option>
                 </select>
               </label>
@@ -200,6 +334,10 @@
               </label>
 
               <button type="submit" class="btn primary full-width">Verstuur</button>
+
+              <p class="form-note" style="margin-bottom:0;">
+                Door te verzenden ga je akkoord met de <a href="/privacyverklaring.html" target="_blank" rel="noopener">privacyverklaring</a>.
+              </p>
             </form>
           </div>
         </div>
@@ -212,9 +350,6 @@
       </div>
     </footer>
 
-    <!-- ======================================================
-         Scripts (config eerst!)
-         ====================================================== -->
     <script src="/config.js"></script>
     <script src="/script.js"></script>
   </body>
