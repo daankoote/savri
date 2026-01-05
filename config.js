@@ -1,11 +1,13 @@
+// versie 260105_12 oclock
 // /config.js
 // Enige bron van waarheid voor Supabase config (GEEN modules, GEEN exports)
+
+console.log("ENVAL config.JS versie 260105_12 oclock");
 
 window.ENVAL = window.ENVAL || {};
 
 window.ENVAL.SUPABASE_URL = "https://yzngrurkpfuqgexbhzgl.supabase.co";
 
-// ✅ Jouw echte anon key (die je net uit Supabase haalde)
 window.ENVAL.SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6bmdydXJrcGZ1cWdleGJoemdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNjYxMjYsImV4cCI6MjA4MDg0MjEyNn0.L7atEcmNvX2Wic0eSM9jWGdFUadIhH21EUFNtzP4YCk";
 

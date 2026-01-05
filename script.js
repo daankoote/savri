@@ -1,9 +1,9 @@
-// Test script
-console.log("ENVAL SCRIPT.JS v2026-01-04 1952 LOADED");
+// versie 260105_12 oclock
+console.log("ENVAL SCRIPT.JS versie 260105_12 oclock");
 
-// ======================================================
-// Config (komt uit /config.js)
-// ======================================================
+/* ======================================================
+   Config (komt uit /config.js)
+   ====================================================== */
 const SUPABASE_URL = window.ENVAL?.SUPABASE_URL;
 const SUPABASE_ANON_KEY = window.ENVAL?.SUPABASE_ANON_KEY;
 const API_BASE = window.ENVAL?.API_BASE;
@@ -12,42 +12,29 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !API_BASE) {
   console.error("ENVAL config ontbreekt. Laad eerst /config.js vóór script.js");
 }
 
-
 function edgeHeaders(idempotencyKey) {
   const extra = {};
   if (idempotencyKey) extra["Idempotency-Key"] = idempotencyKey;
   return window.ENVAL.edgeHeaders(extra);
 }
 
-
 function newIdempotencyKey() {
-  // modern browsers
   if (crypto?.randomUUID) return crypto.randomUUID();
-
-  // fallback
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
-  return Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+  return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-
-// ======================================================
-// Validatie helpers
-// ======================================================
+/* ======================================================
+   Validatie helpers
+   ====================================================== */
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((email || "").trim());
 }
 
 function isValidMobile(phone) {
-  // optioneel veld: leeg = ok
   if (!phone) return true;
-
-  // strip spaties/strepen/haakjes etc.
   const p = String(phone).trim().replace(/[\s\-().]/g, "");
-
-  // Alleen NL mobiel: 06xxxxxxxx óf +316xxxxxxxx (exact 10 / 12 chars)
   return /^06\d{8}$/.test(p) || /^\+316\d{8}$/.test(p);
 }
 
@@ -72,14 +59,12 @@ function normalizePersonName(input) {
     .join(" ");
 }
 
-
-// ======================================================
-// UI helpers: inline errors
-// ======================================================
+/* ======================================================
+   UI helpers: inline errors
+   ====================================================== */
 function showFieldError(field, message) {
   if (!field) return;
 
-  // checkbox heeft vaak andere DOM; toch proberen op parent te hangen
   field.classList.add("input-error");
 
   const parent = field.parentElement || field.closest("label") || field;
@@ -107,9 +92,9 @@ function clearAllFieldErrors(form) {
   form.querySelectorAll(".input-error").forEach(clearFieldError);
 }
 
-// ======================================================
-// Toast
-// ======================================================
+/* ======================================================
+   Toast
+   ====================================================== */
 function showToast(message, type = "success") {
   const existing = document.querySelector(".toast");
   if (existing) existing.remove();
@@ -145,13 +130,12 @@ function keepAndReset(form, keepSelectors = [], focusSelector = null) {
   }
 }
 
-// ======================================================
-// UI helpers: submit lock
-// ======================================================
+/* ======================================================
+   UI helpers: submit lock
+   ====================================================== */
 function lockSubmit(btn, locked, textWhenLocked = "Verwerken…") {
   if (!btn) return;
 
-  // zet originele tekst slechts 1x
   if (!btn.dataset.originalText) {
     btn.dataset.originalText = (btn.textContent || "").trim();
   }
@@ -167,16 +151,14 @@ function lockSubmit(btn, locked, textWhenLocked = "Verwerken…") {
   }
 }
 
-
-// ======================================================
-// DOM Ready
-// ======================================================
+/* ======================================================
+   DOM Ready
+   ====================================================== */
 document.addEventListener("DOMContentLoaded", () => {
-  // footer year
   const year = document.getElementById("year");
   if (year) year.textContent = new Date().getFullYear();
 
-  // tabs index.html
+  // Tabs (index.html)
   const panels = document.querySelectorAll(".tab-panel");
   const toggles = document.querySelectorAll(".tab-toggle");
   if (panels.length) {
@@ -188,7 +170,7 @@ document.addEventListener("DOMContentLoaded", () => {
     toggles.forEach((btn) => btn.addEventListener("click", () => activate(btn.dataset.target)));
   }
 
-  // ref in URL voor EV form (optioneel)
+  // installer ref uit URL -> EV form hidden field
   const params = new URLSearchParams(window.location.search);
   const ref = params.get("ref");
   const evForm = document.querySelector('form[name="evrijder"]');
@@ -198,34 +180,22 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Bind forms (fail-safe: 1 kapot form mag de rest niet breken)
-  try {
-    document.querySelector('form[name="evrijder"]')?.addEventListener("submit", handleEvForm);
-  } catch (e) {
-    console.error("bind evrijder failed", e);
-  }
+  try { document.querySelector('form[name="evrijder"]')?.addEventListener("submit", handleEvForm); }
+  catch (e) { console.error("bind evrijder failed", e); }
 
-  try {
-    document.querySelector('form[name="installateur"]')?.addEventListener("submit", handleInstallateurKlantForm);
-  } catch (e) {
-    console.error("bind installateur->klant failed", e);
-  }
+  try { document.querySelector('form[name="installateur"]')?.addEventListener("submit", handleInstallateurKlantForm); }
+  catch (e) { console.error("bind installateur->klant failed", e); }
 
-  try {
-    document.getElementById("installer-signup-form")?.addEventListener("submit", handleInstallerSignup);
-  } catch (e) {
-    console.error("bind installer signup failed", e);
-  }
+  try { document.getElementById("installer-signup-form")?.addEventListener("submit", handleInstallerSignup); }
+  catch (e) { console.error("bind installer signup failed", e); }
 
-  try {
-    document.querySelector('form[name="contact"]')?.addEventListener("submit", handleContactForm);
-  } catch (e) {
-    console.error("bind contact failed", e);
-  }
+  try { document.querySelector('form[name="contact"]')?.addEventListener("submit", handleContactForm); }
+  catch (e) { console.error("bind contact failed", e); }
 });
 
-// ======================================================
-// EV-rijder
-// ======================================================
+/* ======================================================
+   EV-rijder
+   ====================================================== */
 async function handleEvForm(e) {
   e.preventDefault();
   const form = e.target;
@@ -247,44 +217,23 @@ async function handleEvForm(e) {
   const firstNorm = normalizePersonName(first?.value || "");
   const lastNorm = normalizePersonName(last?.value || "");
 
-  if (!firstNorm) {
-    showFieldError(first, "Vul uw voornaam in.");
-    hasError = true;
-  }
-  if (!lastNorm) {
-    showFieldError(last, "Vul uw achternaam in.");
-    hasError = true;
-  }
+  if (!firstNorm) { showFieldError(first, "Vul uw voornaam in."); hasError = true; }
+  if (!lastNorm) { showFieldError(last, "Vul uw achternaam in."); hasError = true; }
 
-  if (!email?.value?.trim()) {
-    showFieldError(email, "Geldig e-mailadres verplicht.");
-    hasError = true;
-  } else if (!isValidEmail(email.value)) {
-    showFieldError(email, "Controleer uw e-mailadres.");
-    hasError = true;
-  }
+  if (!email?.value?.trim()) { showFieldError(email, "Geldig e-mailadres verplicht."); hasError = true; }
+  else if (!isValidEmail(email.value)) { showFieldError(email, "Controleer uw e-mailadres."); hasError = true; }
 
   if (phone?.value && !isValidMobile(phone.value)) {
     showFieldError(phone, "Vul een geldig mobiel nummer in (06 of +316).");
     hasError = true;
   }
 
-  if (!chargers?.value) {
-    showFieldError(chargers, "Selecteer het aantal laadpunten.");
-    hasError = true;
-  }
-  if (!terrein?.value) {
-    showFieldError(terrein, "Maak een keuze.");
-    hasError = true;
-  }
-  if (!akkoord?.checked) {
-    showFieldError(akkoord, "Akkoord is verplicht.");
-    hasError = true;
-  }
+  if (!chargers?.value) { showFieldError(chargers, "Selecteer het aantal laadpunten."); hasError = true; }
+  if (!terrein?.value) { showFieldError(terrein, "Maak een keuze."); hasError = true; }
+  if (!akkoord?.checked) { showFieldError(akkoord, "Akkoord is verplicht."); hasError = true; }
 
   if (hasError) return;
 
-  // ✅ zet genormaliseerde waarden direct terug in het formulier
   if (first) first.value = firstNorm;
   if (last) last.value = lastNorm;
 
@@ -325,10 +274,9 @@ async function handleEvForm(e) {
   }
 }
 
-
-// ======================================================
-// Installateur → klant
-// ======================================================
+/* ======================================================
+   Installateur → klant
+   ====================================================== */
 async function handleInstallateurKlantForm(e) {
   e.preventDefault();
   const form = e.target;
@@ -351,48 +299,24 @@ async function handleInstallateurKlantForm(e) {
   const firstNorm = normalizePersonName(first?.value || "");
   const lastNorm = normalizePersonName(last?.value || "");
 
-  if (!ref?.value?.trim()) {
-    showFieldError(ref, "Installateurscode is verplicht.");
-    hasError = true;
-  }
-  if (!firstNorm) {
-    showFieldError(first, "Vul de voornaam in.");
-    hasError = true;
-  }
-  if (!lastNorm) {
-    showFieldError(last, "Vul de achternaam in.");
-    hasError = true;
-  }
+  if (!ref?.value?.trim()) { showFieldError(ref, "Installateurscode is verplicht."); hasError = true; }
+  if (!firstNorm) { showFieldError(first, "Vul de voornaam in."); hasError = true; }
+  if (!lastNorm) { showFieldError(last, "Vul de achternaam in."); hasError = true; }
 
-  if (!email?.value?.trim()) {
-    showFieldError(email, "Geldig e-mailadres is verplicht.");
-    hasError = true;
-  } else if (!isValidEmail(email.value)) {
-    showFieldError(email, "Controleer het e-mailadres.");
-    hasError = true;
-  }
+  if (!email?.value?.trim()) { showFieldError(email, "Geldig e-mailadres is verplicht."); hasError = true; }
+  else if (!isValidEmail(email.value)) { showFieldError(email, "Controleer het e-mailadres."); hasError = true; }
 
   if (phone?.value && !isValidMobile(phone.value)) {
     showFieldError(phone, "Vul een geldig mobiel nummer in (06 of +316).");
     hasError = true;
   }
 
-  if (!chargers?.value) {
-    showFieldError(chargers, "Selecteer laadpunten.");
-    hasError = true;
-  }
-  if (!terrein?.value) {
-    showFieldError(terrein, "Maak een keuze.");
-    hasError = true;
-  }
-  if (!akkoord?.checked) {
-    showFieldError(akkoord, "Akkoord is verplicht.");
-    hasError = true;
-  }
+  if (!chargers?.value) { showFieldError(chargers, "Selecteer laadpunten."); hasError = true; }
+  if (!terrein?.value) { showFieldError(terrein, "Maak een keuze."); hasError = true; }
+  if (!akkoord?.checked) { showFieldError(akkoord, "Akkoord is verplicht."); hasError = true; }
 
   if (hasError) return;
 
-  // ✅ zet genormaliseerde waarden direct terug in het formulier
   if (first) first.value = firstNorm;
   if (last) last.value = lastNorm;
 
@@ -435,10 +359,9 @@ async function handleInstallateurKlantForm(e) {
   }
 }
 
-
-// ======================================================
-// Installateur signup
-// ======================================================
+/* ======================================================
+   Installateur signup
+   ====================================================== */
 async function handleInstallerSignup(e) {
   e.preventDefault();
   const form = e.target;
@@ -460,26 +383,12 @@ async function handleInstallerSignup(e) {
   const firstNorm = normalizePersonName(first?.value || "");
   const lastNorm = normalizePersonName(last?.value || "");
 
-  if (!company?.value?.trim()) {
-    showFieldError(company, "Bedrijfsnaam verplicht.");
-    hasError = true;
-  }
-  if (!firstNorm) {
-    showFieldError(first, "Voornaam verplicht.");
-    hasError = true;
-  }
-  if (!lastNorm) {
-    showFieldError(last, "Achternaam verplicht.");
-    hasError = true;
-  }
+  if (!company?.value?.trim()) { showFieldError(company, "Bedrijfsnaam verplicht."); hasError = true; }
+  if (!firstNorm) { showFieldError(first, "Voornaam verplicht."); hasError = true; }
+  if (!lastNorm) { showFieldError(last, "Achternaam verplicht."); hasError = true; }
 
-  if (!email?.value?.trim()) {
-    showFieldError(email, "E-mailadres is verplicht.");
-    hasError = true;
-  } else if (!isValidEmail(email.value)) {
-    showFieldError(email, "Geldig e-mailadres vereist.");
-    hasError = true;
-  }
+  if (!email?.value?.trim()) { showFieldError(email, "E-mailadres is verplicht."); hasError = true; }
+  else if (!isValidEmail(email.value)) { showFieldError(email, "Geldig e-mailadres vereist."); hasError = true; }
 
   if (!/^[0-9]{8}$/.test((kvk?.value || "").trim())) {
     showFieldError(kvk, "KVK-nummer moet 8 cijfers zijn.");
@@ -491,14 +400,10 @@ async function handleInstallerSignup(e) {
     hasError = true;
   }
 
-  if (!akkoord?.checked) {
-    showFieldError(akkoord, "Akkoord is verplicht.");
-    hasError = true;
-  }
+  if (!akkoord?.checked) { showFieldError(akkoord, "Akkoord is verplicht."); hasError = true; }
 
   if (hasError) return;
 
-  // ✅ zet genormaliseerde waarden direct terug in het formulier
   if (first) first.value = firstNorm;
   if (last) last.value = lastNorm;
 
@@ -539,10 +444,9 @@ async function handleInstallerSignup(e) {
   }
 }
 
-
-// ======================================================
-// Contact
-// ======================================================
+/* ======================================================
+   Contact
+   ====================================================== */
 async function handleContactForm(e) {
   e.preventDefault();
   const form = e.target;
@@ -560,33 +464,18 @@ async function handleContactForm(e) {
   let hasError = false;
 
   const firstNorm = normalizePersonName(first?.value || "");
-  const lastNorm = normalizePersonName(last?.value || ""); // optioneel
+  const lastNorm = normalizePersonName(last?.value || "");
 
-  if (!firstNorm) {
-    showFieldError(first, "Voornaam is verplicht.");
-    hasError = true;
-  }
+  if (!firstNorm) { showFieldError(first, "Voornaam is verplicht."); hasError = true; }
 
-  if (!email?.value?.trim()) {
-    showFieldError(email, "E-mailadres is verplicht.");
-    hasError = true;
-  } else if (!isValidEmail(email.value)) {
-    showFieldError(email, "Vul een geldig e-mailadres in.");
-    hasError = true;
-  }
+  if (!email?.value?.trim()) { showFieldError(email, "E-mailadres is verplicht."); hasError = true; }
+  else if (!isValidEmail(email.value)) { showFieldError(email, "Vul een geldig e-mailadres in."); hasError = true; }
 
-  if (!subject?.value) {
-    showFieldError(subject, "Kies een onderwerp.");
-    hasError = true;
-  }
-  if (!message?.value?.trim()) {
-    showFieldError(message, "Bericht ontbreekt.");
-    hasError = true;
-  }
+  if (!subject?.value) { showFieldError(subject, "Kies een onderwerp."); hasError = true; }
+  if (!message?.value?.trim()) { showFieldError(message, "Bericht ontbreekt."); hasError = true; }
 
   if (hasError) return;
 
-  // ✅ zet genormaliseerde waarden direct terug in het formulier
   if (first) first.value = firstNorm;
   if (last) last.value = lastNorm;
 

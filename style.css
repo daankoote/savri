@@ -1,3 +1,18 @@
+/* versie 260105_12 oclock
+
+   =========================================
+   ENVAL - Global styles + Dossier components
+   1) Design tokens
+   2) Base
+   3) Layout
+   4) Header/Hero
+   5) Buttons
+   6) Typography / Cards
+   7) Forms
+   8) Toast
+   9) Dossier (tables, grids, pills, notices)
+   ========================================= */
+
 :root{
   --brand: #0f766e;
   --brand-600: #0d6b63;
@@ -26,6 +41,9 @@ body {
   line-height: 1.5;
 }
 
+/* =========================================
+   Layout
+   ========================================= */
 .container {
   max-width: 1100px;
   margin: 0 auto;
@@ -38,7 +56,9 @@ body {
 .two-column { display: grid; gap: 2.5rem; }
 .split { display: grid; gap: 1.5rem; }
 
-/* Header */
+/* =========================================
+   Header
+   ========================================= */
 header {
   position: sticky;
   top: 0;
@@ -71,14 +91,15 @@ nav a {
 }
 nav a:hover { text-decoration: underline; }
 
-/* Hero */
+/* =========================================
+   Hero
+   ========================================= */
 .hero {
   padding-top: 5rem;
   padding-bottom: 4rem;
   background: linear-gradient(180deg, var(--dark) 0%, var(--dark-2) 100%);
   color: #e5e7eb;
 }
-
 .hero-inner { display: grid; gap: 2.5rem; }
 
 .hero-text h1 {
@@ -86,17 +107,9 @@ nav a:hover { text-decoration: underline; }
   line-height: 1.2;
   margin-bottom: 1rem;
 }
+.hero-text p { max-width: 32rem; margin-bottom: 1.75rem; }
 
-.hero-text p {
-  max-width: 32rem;
-  margin-bottom: 1.75rem;
-}
-
-.hero-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
+.hero-buttons { display: flex; flex-wrap: wrap; gap: 0.75rem; }
 
 .hero-side .card {
   background: rgba(255,255,255,0.06);
@@ -104,11 +117,12 @@ nav a:hover { text-decoration: underline; }
   box-shadow: var(--shadow);
   backdrop-filter: blur(6px);
 }
-
 .hero-side .card h3 { margin-top: 0; }
 .hero-side .card ol { margin: 0; padding-left: 1.25rem; }
 
-/* Buttons */
+/* =========================================
+   Buttons
+   ========================================= */
 .btn {
   display: inline-block;
   padding: 0.75rem 1.4rem;
@@ -121,7 +135,6 @@ nav a:hover { text-decoration: underline; }
   border: 1px solid transparent;
   transition: transform 120ms ease, background 120ms ease, border-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
 }
-
 .btn:hover { transform: translateY(-1px); }
 .btn:active { transform: translateY(0px); }
 
@@ -154,48 +167,42 @@ nav a:hover { text-decoration: underline; }
   border-color: var(--brand-500);
 }
 
-button.is-loading { opacity: 0.7; cursor: not-allowed;}
-button.is-loading::after { content: " ⏳"; }
-
 .full-width { width: 100%; }
 
-.missing-list { margin: 8px 0 0 18px; }
+button.is-loading { opacity: 0.7; cursor: not-allowed; }
+button.is-loading::after { content: " ⏳"; }
 
-/* Tabs */
+/* Dossier/table action buttons */
+.btn.small { padding: 0.55rem 1.05rem; font-size: 0.9rem; }
+.btnstack { display: inline-flex; gap: 10px; align-items: center; justify-content: flex-end; flex-wrap: nowrap; }
+.btnstack .btn { min-width: 120px; } /* Open / Verwijder even groot */
+
+/* =========================================
+   Tabs
+   ========================================= */
 .tab-panel { display: block; }
 .js .tab-panel { display: none; }
 
-/* Cards / Typography */
+/* =========================================
+   Typography / Cards
+   ========================================= */
 .card {
   background: #ffffff;
   border-radius: 0.75rem;
   padding: 1.5rem;
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  min-width: 0; /* voorkomt overflow issues in grids */
 }
 
 .card h3 { margin-top: 0; }
 
-h2 {
-  font-size: 1.6rem;
-  margin-bottom: 0.75rem;
-}
-h3 {
-  font-size: 1.15rem;
-  margin-top: 1.5rem;
-  margin-bottom: 0.5rem;
-}
-h4 {
-  font-size: 1rem;
-  margin-top: 1rem;
-  margin-bottom: 0.4rem;
-}
+h2 { font-size: 1.6rem; margin-bottom: 0.75rem; }
+h3 { font-size: 1.15rem; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+h4 { font-size: 1rem; margin-top: 1rem; margin-bottom: 0.4rem; }
 
 p { margin-top: 0; margin-bottom: 1rem; }
 
-.list {
-  padding-left: 1.25rem;
-  margin: 0.5rem 0 1rem 0;
-}
+.list { padding-left: 1.25rem; margin: 0.5rem 0 1rem 0; }
 .list li { margin-bottom: 0.25rem; }
 
 /* FAQ */
@@ -203,12 +210,10 @@ p { margin-top: 0; margin-bottom: 1rem; }
 .faq-grid { display: grid; gap: 1.5rem; }
 .faq-item h3 { margin-bottom: 0.25rem; }
 
-/* Forms */
-.form {
-  display: grid;
-  gap: 0.9rem;
-  margin-top: 1rem;
-}
+/* =========================================
+   Forms
+   ========================================= */
+.form { display: grid; gap: 0.9rem; margin-top: 1rem; }
 
 .form label {
   display: flex;
@@ -241,22 +246,19 @@ textarea:focus {
 }
 
 textarea { resize: vertical; }
-
 input[name="installer_ref"] { text-transform: uppercase; }
 
-.form-note {
-  font-size: 0.8rem;
-  color: #64748b;
-  margin-top: 0.25rem;
-}
+.form-note { font-size: 0.8rem; color: #64748b; margin-top: 0.25rem; }
 
-/* Checkbox row */
-.checkbox-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
+/* Checkbox row (consistent, no duplicates) */
+.checkbox-row{
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 10px;
+  align-items: start;
 }
-.checkbox-row input[type="checkbox"] { margin-top: 0.2rem; }
+.checkbox-row label{ margin:0; line-height: 1.35; }
+.checkbox-row input[type="checkbox"]{ margin-top: 0.2rem; }
 
 /* Inline errors */
 .input-error { border-color: #ff4d4f !important; }
@@ -264,11 +266,7 @@ input[name="installer_ref"] { text-transform: uppercase; }
   border-color: #ff4d4f !important;
   box-shadow: 0 0 0 1px rgba(255, 77, 79, 0.4);
 }
-.field-error {
-  color: #a8071a;
-  font-size: 0.8rem;
-  margin-top: 0.25rem;
-}
+.field-error { color: #a8071a; font-size: 0.8rem; margin-top: 0.25rem; }
 
 /* Footer */
 footer {
@@ -279,18 +277,17 @@ footer {
 }
 .footer-inner { text-align: center; font-size: 0.85rem; }
 
-/* Responsive */
+/* =========================================
+   Responsive
+   ========================================= */
 @media (min-width: 768px) {
-  .hero-inner {
-    grid-template-columns: 2fr 1.3fr;
-    align-items: center;
-  }
-  .two-column {
-    grid-template-columns: 1.3fr 1.1fr;
-    align-items: flex-start;
-  }
+  .hero-inner { grid-template-columns: 2fr 1.3fr; align-items: center; }
+  .two-column { grid-template-columns: 1.3fr 1.1fr; align-items: flex-start; }
   .split { grid-template-columns: 1fr 1fr; }
   .faq-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  /* Step 5: checkbox tekst liever 1 regel op desktop */
+  .checkbox-row label { white-space: nowrap; }
 }
 
 @media (max-width: 767px) {
@@ -299,7 +296,9 @@ footer {
   .hero { padding-top: 4rem; }
 }
 
-/* Toast */
+/* =========================================
+   Toast
+   ========================================= */
 .toast {
   position: fixed;
   left: 50%;
@@ -313,69 +312,80 @@ footer {
   max-width: calc(100% - 32px);
   width: 520px;
 }
+.toast--success { background: #e6f7e9; border: 1px solid #52c41a; color: #135200; }
+.toast--error { background: #fff2f0; border: 1px solid #ff4d4f; color: #a8071a; }
 
-.toast--success {
-  background: #e6f7e9;
-  border: 1px solid #52c41a;
-  color: #135200;
-}
+/* =========================================
+   DOSSIER (UI components)
+   - Alles dossier-specifiek hier, zodat dossier.html geen inline CSS nodig heeft.
+   ========================================= */
 
-.toast--error {
-  background: #fff2f0;
-  border: 1px solid #ff4d4f;
-  color: #a8071a;
-}
+/* Mini helpers */
+.muted { color:#64748b; }
+.small { font-size:0.85rem; }
+.hidden { display:none !important; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+.notice { background:#f8fafc; border:1px solid #e2e8f0; padding:10px; border-radius:10px; }
+.danger { color:#b91c1c; }
+.ok { color:#15803d; }
 
-/* --- ADDITIONS FOR DOSSIER TABLE BUTTONS --- */
-.btn.small { padding: 0.55rem 1.05rem; font-size: 0.9rem; }
-.btnstack { display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
-.btnstack .btn { min-width: 140px; }
+.missing-list { margin: 8px 0 0 18px; }
 
-
-/* --- Dossier docs/chargers actions alignment + equal buttons --- */
-.table th.right { text-align: right; }
-.table td.right { text-align: right; }
-
-.btn.small {
-  padding: 0.55rem 1.05rem;
-  font-size: 0.9rem;
-}
-
-.btnstack {
-  display: inline-flex;
-  gap: 8px;
-  justify-content: flex-end;
-  align-items: center;
-  flex-wrap: nowrap;
-}
-
-.btnstack .btn {
-  min-width: 96px; /* maakt Open/Verwijder even groot */
-}
-
-/* Dossier: top card en grid exact dezelfde breedte (geen shrink/weirdness) */
-.section .container > .card { width: 100%; }
-.grid2 { width: 100%; }
-
-/* ======================================================
-   DOSSIER: layout mag niet verschuiven door lange content
-   Plak ONDERAAN style.css
-   ====================================================== */
-
-/* grid cards moeten niet kunnen krimpen door lange strings */
+/* Layout: dossier grid */
+.grid2 { display:grid; gap:16px; width:100%; }
+@media (min-width:768px){ .grid2 { grid-template-columns: 1fr 1fr; } }
 .grid2 > .card { min-width: 0; }
-.card { min-width: 0; }
 
-/* tabel mag layout niet laten uitrekken */
-.table { width: 100%; table-layout: fixed; }
-.table th, .table td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Dossier top bar */
+.statusbar { display:flex; gap:12px; align-items:center; justify-content:space-between; }
+.row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
 
-/* zorg dat acties kolom niet te breed wordt */
-.table th.right, .table td.right { width: 170px; }
+/* Pills */
+.pill {
+  display:inline-block;
+  padding:6px 10px;
+  border-radius:999px;
+  font-weight:600;
+  font-size:0.85rem;
+  border:1px solid #cbd5e1;
+  background:#fff;
+}
+.pill.ok { border-color:#22c55e; }
+.pill.warn { border-color:#f59e0b; }
+.pill.err { border-color:#ef4444; }
 
-/* bestand kolom krijgt ruimte, maar knipt af */
-.table td:nth-child(3) { max-width: 100%; }
+/* Tables
+   - Default: leesbaar (geen ellipsis)
+   - Alleen filename ellipsis via .td-filename
+*/
+.table { width:100%; border-collapse:collapse; table-layout: fixed; }
+.table th, .table td {
+  border-bottom:1px solid #e2e8f0;
+  padding:10px 6px;
+  text-align:left;
+  font-size:0.95rem;
+  vertical-align:top;
 
-/* Checkbox: voorkom rare afbreking */
-.checkbox-row { display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: start; }
-.checkbox-row label { margin: 0; line-height: 1.35; }
+  /* Cruciaal: NIET overal ellipsis */
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+.table th { font-size:0.85rem; color:#64748b; font-weight:600; }
+
+/* Actions column consistent */
+.table th.right, .table td.right { text-align:right; width: 190px; }
+
+/* Bestandsnaam truncation only */
+.td-filename{
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Stap 4 hint compact 1 regel */
+#docsHint{
+  padding: 8px 10px;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}

@@ -1,3 +1,5 @@
+<!-- versie 260105_12 oclock -->
+
 <!DOCTYPE html>
 <html lang="nl">
   <head>
@@ -5,28 +7,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Enval – Dossier</title>
     <link rel="stylesheet" href="style.css" />
-    <style>
-      .statusbar { display:flex; gap:12px; align-items:center; justify-content:space-between; }
-      .pill { display:inline-block; padding:6px 10px; border-radius:999px; font-weight:600; font-size:0.85rem; border:1px solid #cbd5e1; background:#fff; }
-      .pill.ok { border-color:#22c55e; }
-      .pill.warn { border-color:#f59e0b; }
-      .pill.err { border-color:#ef4444; }
-      .muted { color:#64748b; }
-      .grid2 { display:grid; gap:16px; }
-      @media (min-width:768px){ .grid2 { grid-template-columns: 1fr 1fr; } }
-      .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-      .table { width:100%; border-collapse:collapse; }
-      .table th, .table td { border-bottom:1px solid #e2e8f0; padding:10px 6px; text-align:left; font-size:0.95rem; vertical-align:top; }
-      .table th { font-size:0.85rem; color:#64748b; font-weight:600; }
-      .right { text-align:right; }
-      .small { font-size:0.85rem; }
-      .hidden { display:none !important; }
-      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-      .is-loading { opacity: 0.75; }
-      .notice { background:#f8fafc; border:1px solid #e2e8f0; padding:10px; border-radius:10px; }
-      .danger { color:#b91c1c; }
-      .ok { color:#15803d; }
-    </style>
   </head>
 
   <body>
@@ -71,6 +51,7 @@
           </div>
 
           <div class="grid2" style="margin-top:18px;">
+            <!-- 1) Toegang -->
             <div class="card">
               <h2 style="margin-top:0;">1) Toegang</h2>
 
@@ -106,8 +87,10 @@
               <div id="accessSummary" class="notice small" style="margin-top:12px;">laden…</div>
             </div>
 
+            <!-- 2) Adres -->
             <div class="card">
               <h2 style="margin-top:0;">2) Adres</h2>
+
               <form id="addressForm" class="form" novalidate>
                 <label><span>Postcode</span><input type="text" name="postcode" placeholder="1234AB" required /></label>
                 <label><span>Huisnummer</span><input type="text" name="house_number" placeholder="28" required /></label>
@@ -116,16 +99,16 @@
                 <label><span>Straat</span><input type="text" name="street_ro" readonly /></label>
                 <label><span>Plaats</span><input type="text" name="city_ro" readonly /></label>
 
-                <div class="row">
-                  <button id="btnAddressSave" type="submit" class="btn primary full-width" disabled>Opslaan</button>
-                </div>
+                <button id="btnAddressSave" type="submit" class="btn primary full-width" disabled>Opslaan</button>
 
-                <div id="addressState" class="small muted"></div>
+                <!-- UI statusregels willen we hier niet (audit info wel in Overzicht) -->
+                <div id="addressState" class="small muted hidden"></div>
               </form>
-              <div id="addressSummary" class="notice small" style="margin-top:12px;"></div>
 
+              <div id="addressSummary" class="notice small" style="margin-top:12px;">laden…</div>
             </div>
 
+            <!-- 3) Laadpalen -->
             <div class="card">
               <h2 style="margin-top:0;">3) Laadpalen</h2>
               <div id="chargerHint" class="notice small" style="margin-bottom:10px;">laden…</div>
@@ -144,9 +127,7 @@
                   <input type="text" name="notes" placeholder="Vul merk en model in (bijv. MyBrand X200)" />
                 </label>
 
-                <div class="row">
-                  <button id="btnChargerSave" type="submit" class="btn primary full-width">Opslaan</button>
-                </div>
+                <button id="btnChargerSave" type="submit" class="btn primary full-width">Opslaan</button>
               </form>
 
               <div style="margin-top:14px;">
@@ -167,9 +148,14 @@
               </div>
             </div>
 
+            <!-- 4) Docs -->
             <div class="card">
               <h2 style="margin-top:0;">4) Documenten uploaden</h2>
-              <div id="docsHint" class="notice small" style="margin-bottom:10px;"> Per laadpaal is minimaal <b>1 factuur installatie</b> en <b>1 foto van het laadpunt</b> nodig.</div>
+
+              <div id="docsHint" class="notice small" style="margin-bottom:10px;">
+                Per laadpaal: minimaal 1 factuur installatie + 1 foto van het laadpunt.
+              </div>
+
               <form id="uploadForm" class="form" novalidate>
                 <label>
                   <span>Type document</span>
@@ -186,10 +172,18 @@
                     <option value="">Kies laadpaal…</option>
                   </select>
                 </label>
-               
+
                 <div class="small muted" id="docChargerHint"></div>
 
-                <label><span>Bestand</span><input type="file" name="file" required accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,application/pdf,image/png,image/jpeg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" /></label>
+                <label>
+                  <span>Bestand</span>
+                  <input
+                    type="file"
+                    name="file"
+                    required
+                    accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,application/pdf,image/png,image/jpeg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  />
+                </label>
 
                 <button id="btnUpload" class="btn primary full-width" type="submit">Upload</button>
                 <div id="uploadState" class="small muted"></div>
@@ -213,6 +207,7 @@
               </div>
             </div>
 
+            <!-- 5) Toestemmingen -->
             <div class="card">
               <h2 style="margin-top:0;">5) Toestemmingen</h2>
               <form id="consentsForm" class="form" novalidate>
@@ -235,6 +230,7 @@
               </form>
             </div>
 
+            <!-- 6) Review -->
             <div class="card">
               <h2 style="margin-top:0;">6) Review</h2>
               <div id="statusExplain" class="muted small">laden…</div>
@@ -257,7 +253,6 @@
     </footer>
 
     <script src="/config.js"></script>
-    <script src="/dossier.js?v=2026-01-04-2"></script>
-
+    <script src="/dossier.js"></script>
   </body>
 </html>

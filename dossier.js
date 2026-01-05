@@ -1,7 +1,17 @@
-// /dossier.js  (NON-module, gebruikt window.ENVAL uit /config.js)
-console.log("DOSSIER.JS LOADED v2026-01-04-LOCKED-UX test 1711");
+// versie 260105_12 oclock
 
-// ---------------- helpers ----------------
+// /dossier.js  (NON-module, gebruikt window.ENVAL uit /config.js)
+//
+// Doel:
+// - Client-side dossier UI voor klanten (invullen stappen 1-6)
+// - Communiceert met Supabase Edge Functions via window.ENVAL.API_BASE
+// - Houdt rekening met "locked" status: na review zijn wijzigingen vergrendeld
+
+console.log("DOSSIER.JS LOADED versie 260105_12 oclock");
+
+/* ======================================================
+   1) DOM + kleine helpers
+   ====================================================== */
 function $(id) { return document.getElementById(id); }
 
 function escapeHtml(s) {
@@ -20,16 +30,14 @@ function showToast(message, type = "success") {
   setTimeout(() => div.remove(), 4200);
 }
 
+/**
+ * Normaliseert persoonsnamen (simpel Title Case).
+ * Bewust simpel gehouden: geen "van/der/de" uitzonderingen om edge-cases te vermijden.
+ */
 function normalizePersonName(input) {
   const s = String(input || "").trim();
   if (!s) return "";
 
-  // Maak alles lowercase en title-case per "woord" met behoud van ' en -
-  // Voorbeelden:
-  // "pIeT rEtAiL" -> "Piet Retail"
-  // "van der meer" -> "Van Der Meer" (bewust simpel gehouden)
-  // "o'connor" -> "O'Connor"
-  // "jan-pieter" -> "Jan-Pieter"
   return s
     .toLowerCase()
     .split(/\s+/g)
@@ -47,7 +55,6 @@ function normalizePersonName(input) {
     .join(" ");
 }
 
-
 function newIdempotencyKey() {
   if (window.crypto?.randomUUID) return window.crypto.randomUUID();
   const bytes = new Uint8Array(16);
@@ -55,7 +62,9 @@ function newIdempotencyKey() {
   return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-// submit lock (zelfde gedrag als je index.js)
+/**
+ * Lock/unlock submit buttons (UX: voorkom double submit + toon 'Verwerken…')
+ */
 function lockSubmit(btn, locked, textWhenLocked = "Verwerken…") {
   if (!btn) return;
   if (!btn.dataset.originalText) btn.dataset.originalText = (btn.textContent || "").trim();
@@ -76,22 +85,24 @@ function formatDateNL(isoLike) {
   if (!s) return "";
   const d = new Date(s);
   if (isNaN(d.getTime())) return s;
-  return d.toLocaleString("nl-NL", { year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit" });
+  return d.toLocaleString("nl-NL", {
+    year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit"
+  });
 }
 
-function boolToJaNee(v) { return v === true ? "ja" : (v === false ? "nee" : ""); }
+function normalizePostcodeFront(pc) {
+  return String(pc || "").toUpperCase().replace(/\s+/g, "").trim();
+}
 
-// Centrale POST helper: ALTIJD Idempotency-Key meesturen
-// Centrale POST helper: ALTIJD Idempotency-Key meesturen + 1 retry bij network errors
+/* ======================================================
+   2) API helper
+   - ALTIJD Idempotency-Key mee
+   - 1 retry bij network errors / 502/503/504
+   ====================================================== */
 async function apiPost(fnName, body) {
   const url = `${window.ENVAL.API_BASE}/${fnName}`;
-
-  // kleine helper
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  // We doen max 2 pogingen:
-  // - poging 1: normaal
-  // - poging 2: alleen als fetch zelf faalt (NetworkError) of 502/503/504
   for (let attempt = 1; attempt <= 2; attempt++) {
     const idem = newIdempotencyKey();
 
@@ -102,7 +113,6 @@ async function apiPost(fnName, body) {
         body: JSON.stringify(body),
       });
 
-      // bij transient gateway errors: retry 1x
       if (attempt === 1 && (res.status === 502 || res.status === 503 || res.status === 504)) {
         await sleep(450);
         continue;
@@ -119,8 +129,6 @@ async function apiPost(fnName, body) {
       return json;
     } catch (e) {
       const msg = String(e?.message || e);
-
-      // Alleen retry op echte fetch/network errors (Firefox: "NetworkError when attempting to fetch resource.")
       const isNetwork =
         /NetworkError/i.test(msg) ||
         /Failed to fetch/i.test(msg) ||
@@ -136,8 +144,11 @@ async function apiPost(fnName, body) {
   }
 }
 
-
-// ---------------- Brand/Model mapping ----------------
+/* ======================================================
+   3) Brand/Model mapping (UI dropdowns)
+   - Houdt het simpel: vaste merken + modellen
+   - "Anders" vereist toelichting
+   ====================================================== */
 const BRAND_MODELS = {
   "Alfen": ["Eve Single Pro-line", "Eve Double Pro-line", "Eve Single S-line"],
   "Zaptec": ["Go", "Pro"],
@@ -158,7 +169,6 @@ function toggleChargerNotes() {
   notesRow.classList.toggle("hidden", !needsNotes);
   notesInput.required = !!needsNotes;
 
-  // géén default tekst meer (alleen placeholder in HTML)
   if (!needsNotes) notesInput.value = "";
 }
 
@@ -207,14 +217,16 @@ function populateBrandModel() {
   toggleChargerNotes();
 }
 
-// ---------------- STATE ----------------
+/* ======================================================
+   4) State (URL params + current dossier)
+   ====================================================== */
 const urlParams = new URLSearchParams(location.search);
 const dossier_id = urlParams.get("d");
 const token = urlParams.get("t");
 
 let current = null;
 
-// --- address verify UX state ---
+// Address verify UX state (debounce + preview)
 let addressVerifyTimer = null;
 let addressVerifiedPreview = null; // { street, city } zodra verify ok is
 
@@ -225,11 +237,16 @@ function isLocked() {
   return st === "in_review" || st === "ready_for_booking";
 }
 
+/**
+ * Zet UI in locked state:
+ * - disable forms/inputs
+ * - hide delete buttons (data-lock-hide="1")
+ * - review knop blijft zichtbaar (maar submit doet niets als locked)
+ */
 function setAllUiLocked(locked) {
   const banner = $("lockedBanner");
   if (banner) banner.classList.toggle("hidden", !locked);
 
-  // disable forms + buttons
   [
     "btnAccessSave",
     "btnAddressSave",
@@ -239,26 +256,24 @@ function setAllUiLocked(locked) {
     "btnRefresh",
   ].forEach((id) => { if ($(id)) $(id).disabled = !!locked; });
 
-  // review knop blijft aan (maar doet niets als locked)
   if ($("btnEvaluate")) $("btnEvaluate").disabled = false;
 
-  // disable inputs
   ["accessForm","addressForm","chargerForm","uploadForm","consentsForm"].forEach((fid) => {
     const f = $(fid);
     if (!f) return;
     f.querySelectorAll("input, select, textarea").forEach((el) => {
-      // review mode: alles uit behalve refresh/review
       el.disabled = !!locked;
     });
   });
 
-  // acties (delete/open) verdwijnen als locked
   document.querySelectorAll("[data-lock-hide='1']").forEach((el) => {
     el.classList.toggle("hidden", !!locked);
   });
 }
 
-// ---------------- boot ----------------
+/* ======================================================
+   5) Boot / Bindings
+   ====================================================== */
 document.addEventListener("DOMContentLoaded", async () => {
   if ($("year")) $("year").textContent = new Date().getFullYear();
 
@@ -284,7 +299,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("uploadForm")?.addEventListener("submit", onUpload);
   $("consentsForm")?.addEventListener("submit", onConsentsSave);
 
-  // auto-verify address (debounce)
+  // Auto-verify address (debounce) op postcode/nummer/suffix
   const af = $("addressForm");
   if (af) {
     ["postcode", "house_number", "suffix"].forEach((nm) => {
@@ -296,7 +311,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   await reloadAll();
 });
 
-// ---------------- loaders ----------------
+/* ======================================================
+   6) Loaders
+   ====================================================== */
 async function reloadAll() {
   try {
     if ($("statusPill")) $("statusPill").textContent = "laden…";
@@ -313,15 +330,16 @@ async function reloadAll() {
   }
 }
 
-// ---------------- render ----------------
+/* ======================================================
+   7) Render (1 entrypoint -> losse render functies)
+   ====================================================== */
 function renderAll() {
   renderStatus();
   renderAccess();
-  renderAddressState();
+  renderAddress();
   renderChargers();
   renderDocs();
   renderConsents();
-
   setAllUiLocked(isLocked());
 }
 
@@ -333,18 +351,13 @@ function pillForStatus(status) {
 }
 
 function explainStatus(status) {
-  if (status === "ready_for_booking") {
-    return "Alles is compleet. Dit dossier kan door naar inboeken.";
-  }
-  if (status === "ready_for_review") {
-    return "Alles lijkt compleet, maar moet nog gecontroleerd worden (review).";
-  }
+  if (status === "ready_for_booking") return "Alles is compleet. Dit dossier kan door naar inboeken.";
+  if (status === "ready_for_review") return "Alles lijkt compleet, maar moet nog gecontroleerd worden (review).";
   if (status === "in_review") {
-    return "Dit dossier staat op review. Je hoeft niets te doen. Je kunt dit scherm nu sluiten. Wij houden je op de hoogte van de voortgang via het door jou opgegeven e-mailadres.";
+    return "Dit dossier staat op review. Je hoeft niets te doen. Je kunt dit scherm nu sluiten. Wij houden je op de hoogte via het opgegeven e-mailadres.";
   }
   return "Er ontbreken nog onderdelen. Vul de stappen hierboven in.";
 }
-
 
 function renderStatus() {
   const status = current?.dossier?.status || "incomplete";
@@ -356,12 +369,15 @@ function renderStatus() {
   if ($("statusExplain")) $("statusExplain").textContent = explainStatus(status);
 }
 
+/**
+ * Stap 1: Toegang
+ * - Form prefill (voornaam/achternaam/telefoon/count/own)
+ * - Overzicht toont naam + email + etc (en lijnt met stap 2)
+ */
 function renderAccess() {
   const d = current?.dossier || {};
 
   const email = d.customer_email || d.email || d.contact_email || "";
-  if ($("emailState")) $("emailState").textContent = email ? email : "—";
-
   const first =
     d.first_name ||
     d.customer_first_name ||
@@ -378,58 +394,51 @@ function renderAccess() {
     d.achternaam ||
     "";
 
-  // ✅ altijd netjes tonen
   const firstNice = normalizePersonName(first);
   const lastNice  = normalizePersonName(last);
 
   const f = $("accessForm");
   if (f) {
-    const inFirst = f.querySelector('[name="first_name"]');
-    const inLast = f.querySelector('[name="last_name"]');
-    if (inFirst) inFirst.value = firstNice || "";
-    if (inLast) inLast.value = lastNice || "";
+    f.querySelector('[name="first_name"]').value = firstNice || "";
+    f.querySelector('[name="last_name"]').value  = lastNice || "";
 
     const inPhone = f.querySelector('[name="customer_phone"]');
     const inCount = f.querySelector('[name="charger_count"]');
-    const inOwn = f.querySelector('[name="own_premises"]');
+    const inOwn   = f.querySelector('[name="own_premises"]');
 
     if (inPhone) inPhone.value = d.customer_phone || "";
     if (inCount) inCount.value = d.charger_count ? String(d.charger_count) : "";
     if (inOwn) inOwn.value = d.own_premises === true ? "ja" : (d.own_premises === false ? "nee" : "");
   }
 
-  const ownTxt = d.own_premises === true ? "Ja" : (d.own_premises === false ? "Nee" : "—");
+  const ownTxt   = d.own_premises === true ? "Ja" : (d.own_premises === false ? "Nee" : "—");
   const phoneTxt = d.customer_phone ? escapeHtml(d.customer_phone) : "—";
-  const cntTxt = d.charger_count ? String(d.charger_count) : "—";
+  const cntTxt   = d.charger_count ? String(d.charger_count) : "—";
 
   if ($("accessSummary")) {
-  const emailTxt = email ? escapeHtml(email) : "—";
+    const emailTxt = email ? escapeHtml(email) : "—";
+    const naamTxt  = `${firstNice || ""} ${lastNice || ""}`.trim() || "—";
 
-  $("accessSummary").innerHTML =
-    `<b>Overzicht</b><br/>` +
-    `E-mail: <b>${emailTxt}</b><br/>` +
-    `Aantal laadpunten: <b>${escapeHtml(cntTxt)}</b><br/>` +
-    `Op eigen terrein: <b>${escapeHtml(ownTxt)}</b><br/>` +
-    `Mobiel: <b>${phoneTxt}</b>`;
-}
-
+    $("accessSummary").innerHTML =
+      `<b>Overzicht</b><br/>` +
+      `Naam: <b>${escapeHtml(naamTxt)}</b><br/>` +
+      `E-mail: <b>${emailTxt}</b><br/>` +
+      `Aantal laadpunten: <b>${escapeHtml(cntTxt)}</b><br/>` +
+      `Op eigen terrein: <b>${escapeHtml(ownTxt)}</b><br/>` +
+      `Mobiel: <b>${phoneTxt}</b>`;
+  }
 
   if ($("accessState")) {
     $("accessState").textContent = d.locked_at ? `Vergrendeld sinds: ${formatDateNL(d.locked_at)}` : "";
   }
 }
 
-
-
-function normalizePostcodeFront(pc) {
-  return String(pc || "").toUpperCase().replace(/\s+/g, "").trim();
-}
-
+/* ===== Stap 2: Adres helpers ===== */
 function setAddressPreview(street, city) {
   const f = $("addressForm");
   if (!f) return;
   f.querySelector('[name="street_ro"]').value = street || "";
-  f.querySelector('[name="city_ro"]').value = city || "";
+  f.querySelector('[name="city_ro"]').value   = city || "";
 }
 
 function setAddressSaveEnabled(enabled) {
@@ -443,62 +452,66 @@ function clearAddressPreview() {
   setAddressSaveEnabled(false);
 }
 
-function renderAddressState() {
+/**
+ * Stap 2: Adres
+ * - Form prefill postcode/nummer/suffix
+ * - Overzicht box onderaan (incl. verified_at)
+ * - Geen losse statusregel (jouw wens) -> audit info staat in overzicht
+ */
+function renderAddress() {
   const d = current?.dossier || {};
   const f = $("addressForm");
   if (!f) return;
 
-  f.querySelector('[name="postcode"]').value = d.address_postcode || "";
-  f.querySelector('[name="house_number"]').value = d.address_house_number || "";
-  f.querySelector('[name="suffix"]').value = d.address_suffix || "";
+  const pc   = d.address_postcode || "";
+  const hn   = d.address_house_number || "";
+  const suf  = d.address_suffix || "";
+  const street = d.address_street || "";
+  const city   = d.address_city || "";
 
-  setAddressPreview(d.address_street || "", d.address_city || "");
+  f.querySelector('[name="postcode"]').value      = pc;
+  f.querySelector('[name="house_number"]').value  = hn;
+  f.querySelector('[name="suffix"]').value        = suf;
 
+  setAddressPreview(street, city);
+
+  // Save enabled:
+  // - als verified_at al bestaat -> save mag (mits niet locked)
+  // - anders: alleen als we een preview hebben via verify
   if (d.address_verified_at) {
     setAddressSaveEnabled(!isLocked());
   } else {
     setAddressSaveEnabled(!!addressVerifiedPreview && !isLocked());
   }
 
-  const pc = d.address_postcode || "";
-  const hn = d.address_house_number || "";
-  const suf = d.address_suffix ? `-${d.address_suffix}` : "";
-  const street = d.address_street || "";
-  const city = d.address_city || "";
-  const when = d.address_verified_at ? formatDateNL(d.address_verified_at) : "";
+  // Overzicht box
+  const sum = $("addressSummary");
+  if (sum) {
+    const pcTxt     = pc ? escapeHtml(pc) : "—";
+    const streetTxt = street ? escapeHtml(street) : "—";
+    const cityTxt   = city ? escapeHtml(city) : "—";
+    const nrTxt     = hn ? `${hn}${suf ? " " + String(suf).trim() : ""}` : "—";
+    const checkedTxt = d.address_verified_at ? formatDateNL(d.address_verified_at) : "";
 
-  if ($("addressState")) {
-    if (street && city && pc && hn) {
-      $("addressState").textContent =
-        `Adres: ${street} ${hn}${suf}, ${pc}, ${city}, Nederland` +
-        (when ? ` (gecontroleerd: ${when})` : "");
-    } else {
-      $("addressState").textContent = d.address_verified_at ? `Gecontroleerd: ${when}` : "Nog niet gecontroleerd.";
-    }
+    sum.innerHTML =
+      `<b>Overzicht</b><br/>` +
+      `Straat: <b>${streetTxt}</b><br/>` +
+      `Nummer: <b>${escapeHtml(nrTxt)}</b><br/>` +
+      `Postcode: <b>${pcTxt}</b><br/>` +
+      `Stad: <b>${cityTxt}</b>` +
+      (checkedTxt ? `<br/><span class="muted small">Gecontroleerd op: ${escapeHtml(checkedTxt)}</span>` : "");
   }
 
-    // --- Overzicht blok (altijd tonen, '-' als leeg) ---
-    const streetTxt = street ? escapeHtml(street) : "—";
-    const cityTxt = city ? escapeHtml(city) : "—";
-    const pcTxt = pc ? escapeHtml(pc) : "—";
-
-    // Nummer + suffix (suffix zonder '-' tonen in overzicht)
-    const numTxt = hn ? escapeHtml(hn) : "—";
-    const sufTxt = d.address_suffix ? escapeHtml(d.address_suffix) : "";
-    const numFull = hn ? `${escapeHtml(hn)}${sufTxt ? ` ${sufTxt}` : ""}` : "—";
-
-    if ($("addressSummary")) {
-        $("addressSummary").innerHTML =
-        `<b>Overzicht</b><br/>` +
-        `Straat: <b>${streetTxt}</b><br/>` +
-        `Nummer: <b>${numFull}</b><br/>` +
-        `Postcode: <b>${pcTxt}</b><br/>` +
-        `Stad: <b>${cityTxt}</b>`;
-    }
-
-
+  // We gebruiken addressState niet meer (bewust hidden in HTML)
+  if ($("addressState")) $("addressState").textContent = "";
 }
 
+/**
+ * Address auto-verify (debounce)
+ * - Verifieert postcode + huisnummer (+ suffix) via edge function
+ * - Toont straat/plaats als readonly preview
+ * - Enable opslaan zodra verify ok is
+ */
 function onAddressInputChanged() {
   clearAddressPreview();
 
@@ -507,64 +520,59 @@ function onAddressInputChanged() {
     const f = $("addressForm");
     if (!f) return;
 
-    const postcode = normalizePostcodeFront(f.querySelector('[name="postcode"]').value);
+    const postcode     = normalizePostcodeFront(f.querySelector('[name="postcode"]').value);
     const house_number = (f.querySelector('[name="house_number"]').value || "").trim();
-    const suffix = (f.querySelector('[name="suffix"]').value || "").trim();
+    const suffix       = (f.querySelector('[name="suffix"]').value || "").trim();
 
-    if (!/^[0-9]{4}[A-Z]{2}$/.test(postcode)) {
-      if ($("addressState")) $("addressState").textContent = "Vul een geldige postcode in (1234AB).";
-      return;
-    }
-    if (!/^[1-9][0-9]{0,4}$/.test(house_number)) {
-      if ($("addressState")) $("addressState").textContent = "Vul een geldig huisnummer in.";
-      return;
-    }
+    if (!/^[0-9]{4}[A-Z]{2}$/.test(postcode)) return;
+    if (!/^[1-9][0-9]{0,4}$/.test(house_number)) return;
 
     try {
-      if ($("addressState")) $("addressState").textContent = "Adres controleren…";
-
       const r = await apiPost("api-dossier-address-verify", {
         dossier_id, token, postcode, house_number, suffix,
       });
 
       const street = r.street || "";
-      const city = r.city || "";
+      const city   = r.city || "";
       if (!street || !city) {
-        if ($("addressState")) $("addressState").textContent = "Adres niet gevonden. Controleer je invoer.";
+        showToast("Adres niet gevonden. Controleer je invoer.", "error");
         return;
       }
 
       addressVerifiedPreview = { street, city };
       setAddressPreview(street, city);
       setAddressSaveEnabled(!isLocked());
-      if ($("addressState")) $("addressState").textContent = `✅ Gevonden: ${street}, ${city}`;
     } catch (e) {
-      if ($("addressState")) $("addressState").textContent = `Adres niet gevonden: ${e.message}`;
+      showToast(`Adres niet gevonden: ${e.message}`, "error");
       clearAddressPreview();
     }
   }, 450);
 }
 
+/**
+ * Stap 3: Chargers
+ * - Hint toont compleet / te veel / nog te doen
+ * - Save button disabled zodra required count bereikt is
+ */
 function renderChargers() {
   const tbody = $("chargersTbody");
   if (!tbody) return;
 
   const d = current?.dossier || {};
   const required = Number(d.charger_count || 0) || 0;
+
   const chargers = current?.chargers || [];
   const have = chargers.length;
 
   const remaining = required > 0 ? Math.max(0, required - have) : 0;
   const over = required > 0 ? Math.max(0, have - required) : 0;
 
-  // hint text
   if ($("chargerHint")) {
     if (required > 0) {
       if (remaining === 0 && over === 0) {
         $("chargerHint").innerHTML = `<span class="ok"><b>Compleet:</b></span> ${have}/${required} laadpalen ingevoerd.`;
       } else if (remaining === 0 && over > 0) {
-        $("chargerHint").innerHTML =
-          `<span class="danger"><b>Te veel laadpalen:</b></span> ${have}/${required}. Verwijder ${over} laadpaal(en).`;
+        $("chargerHint").innerHTML = `<span class="danger"><b>Te veel laadpalen:</b></span> ${have}/${required}. Verwijder ${over} laadpaal(en).`;
       } else {
         $("chargerHint").innerHTML = `<b>Nog te doen:</b> ${remaining} laadpaal(en). (${have}/${required})`;
       }
@@ -573,7 +581,6 @@ function renderChargers() {
     }
   }
 
-  // disable save button if complete (exact count reached)
   const locked = isLocked();
   const btnSave = $("btnChargerSave");
   if (btnSave) {
@@ -627,8 +634,11 @@ function renderChargers() {
   });
 }
 
-
-
+/**
+ * Stap 4: Documenten
+ * - Vul hint + status per laadpaal (factuur/foto counts)
+ * - Table truncation alleen op filename (CSS .td-filename)
+ */
 function renderDocs() {
   const docs = current?.documents || [];
   const tbody = $("docsTbody");
@@ -636,11 +646,14 @@ function renderDocs() {
 
   const locked = isLocked();
 
+  const hint = $("docsHint");
+  if (hint) hint.textContent = "Per laadpaal: minimaal 1 factuur installatie + 1 foto van het laadpunt.";
+
   const chargers = current?.chargers || [];
   const chargerById = {};
   chargers.forEach((c) => { chargerById[String(c.id)] = c; });
 
-  // 1) Populate charger dropdown for upload
+  // Charger dropdown
   const sel = $("docChargerId");
   if (sel) {
     sel.innerHTML =
@@ -648,8 +661,8 @@ function renderDocs() {
       chargers.map((c) => {
         const id = String(c.id);
         const sn = c.serial_number ? String(c.serial_number) : "—";
-        const b = c.brand ? String(c.brand) : "";
-        const m = c.model ? String(c.model) : "";
+        const b  = c.brand ? String(c.brand) : "";
+        const m  = c.model ? String(c.model) : "";
         const label = `${sn} — ${b} ${m}`.trim();
         return `<option value="${escapeHtml(id)}">${escapeHtml(label)}</option>`;
       }).join("");
@@ -657,7 +670,7 @@ function renderDocs() {
     sel.disabled = !!locked || chargers.length === 0;
   }
 
-  // 2) Hint per charger: aantallen factuur/foto_laadpunt
+  // Status per laadpaal
   const needHint = $("docChargerHint");
   if (needHint) {
     if (!chargers.length) {
@@ -665,7 +678,7 @@ function renderDocs() {
     } else {
       const per = {};
       chargers.forEach((c) => {
-        per[String(c.id)] = { factuur: 0, foto_laadpunt: 0, serial: c.serial_number || "" };
+        per[String(c.id)] = { factuur: 0, foto_laadpunt: 0 };
       });
 
       docs.forEach((x) => {
@@ -685,12 +698,10 @@ function renderDocs() {
         return `• ${sn}: facturen ${p.factuur} ${okF ? "✅" : "⏳"} / foto's ${p.foto_laadpunt} ${okP ? "✅" : "⏳"}`;
       });
 
-      // let op: we zetten tekst als HTML maar escapen per regel
       needHint.innerHTML = `<b>Status per laadpaal</b><br/>` + lines.map(escapeHtml).join("<br/>");
     }
   }
 
-  // 3) Render table
   if (!docs.length) {
     tbody.innerHTML = `<tr><td colspan="5" class="muted">Nog geen documenten geüpload.</td></tr>`;
     return;
@@ -713,7 +724,7 @@ function renderDocs() {
       <tr>
         <td>${escapeHtml(typeLabel)}</td>
         <td class="mono">${escapeHtml(chargerLabel)}</td>
-        <td>${escapeHtml(filename)}</td>
+        <td class="td-filename">${escapeHtml(filename)}</td>
         <td class="small muted">${escapeHtml(when)}</td>
         <td class="right">
           <div class="btnstack">
@@ -726,19 +737,13 @@ function renderDocs() {
     `;
   }).join("");
 
-  // Open (via bestaande function: api-dossier-doc-download-url)
+  // Open
   tbody.querySelectorAll("button[data-act='open']").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const id = btn.getAttribute("data-id");
       try {
         btn.disabled = true;
-
-        const r = await apiPost("api-dossier-doc-download-url", {
-          dossier_id,
-          token,
-          document_id: id,
-        });
-
+        const r = await apiPost("api-dossier-doc-download-url", { dossier_id, token, document_id: id });
         if (!r?.signed_url) throw new Error("Geen signed_url ontvangen.");
         window.open(r.signed_url, "_blank", "noopener");
       } catch (e) {
@@ -771,9 +776,11 @@ function renderDocs() {
   });
 }
 
-
-
-
+/**
+ * Stap 5: Toestemmingen
+ * - Render laatste status
+ * - Opslaan vereist alle 3 vinkjes (UI consistent)
+ */
 function renderConsents() {
   const cons = current?.consents || [];
   const latest = {};
@@ -783,11 +790,24 @@ function renderConsents() {
   if ($("cPrivacy")) $("cPrivacy").checked = latest["privacy"]?.accepted === true;
   if ($("cMandaat")) $("cMandaat").checked = latest["mandaat"]?.accepted === true;
 
-  const ts = latest["terms"]?.accepted_at || latest["privacy"]?.accepted_at || latest["mandaat"]?.accepted_at || "";
+  const ts =
+    latest["terms"]?.accepted_at ||
+    latest["privacy"]?.accepted_at ||
+    latest["mandaat"]?.accepted_at ||
+    "";
+
   if ($("consentsStamp")) $("consentsStamp").textContent = ts ? `Laatst opgeslagen: ${formatDateNL(ts)}` : "";
 }
 
-// ---------------- actions ----------------
+/* ======================================================
+   8) Actions (submit handlers)
+   ====================================================== */
+
+/**
+ * Stap 1 opslaan
+ * - stuurt ALLES mee naar edge endpoint
+ * - fallback naar update endpoint (veiligheid)
+ */
 async function onAccessSave(e) {
   e.preventDefault();
   if (isLocked()) return showToast("Dossier is vergrendeld.", "error");
@@ -796,7 +816,6 @@ async function onAccessSave(e) {
   const btn = $("btnAccessSave");
   if (btn?.disabled) return;
 
-  // --- read + normalize ---
   const rawFirst = (f.querySelector('[name="first_name"]')?.value || "").trim();
   const rawLast  = (f.querySelector('[name="last_name"]')?.value || "").trim();
 
@@ -814,50 +833,37 @@ async function onAccessSave(e) {
     own_raw === "nee" ? false :
     null;
 
-  // --- validate ---
   if (!first_name) return showToast("Voornaam is verplicht.", "error");
   if (!last_name) return showToast("Achternaam is verplicht.", "error");
   if (!charger_count || !Number.isFinite(charger_count) || charger_count < 1) {
     return showToast("Kies het aantal laadpunten.", "error");
   }
-  if (own_premises === null) {
-    return showToast("Kies of het op eigen terrein is.", "error");
-  }
+  if (own_premises === null) return showToast("Kies of het op eigen terrein is.", "error");
 
   lockSubmit(btn, true, "Opslaan…");
 
   try {
-    // ✅ BELANGRIJK: we sturen ALLES mee
-    // Gebruik eerst de 'save' endpoint (logisch voor complete stap 1)
-    // en fallback naar 'update' als jouw backend dat zo heeft ingericht.
     try {
       await apiPost("api-dossier-access-save", {
-        dossier_id,
-        token,
-        first_name,
-        last_name,
+        dossier_id, token,
+        first_name, last_name,
         customer_phone: customer_phone || null,
         charger_count,
         own_premises,
       });
     } catch (e1) {
-      // fallback als je save endpoint anders heet/anders werkt
       await apiPost("api-dossier-access-update", {
-        dossier_id,
-        token,
-        first_name,
-        last_name,
+        dossier_id, token,
+        first_name, last_name,
         customer_phone: customer_phone || null,
         charger_count,
         own_premises,
       });
     }
 
-    // Zet de genormaliseerde waarden terug in het formulier (direct zichtbaar)
-    const inFirst = f.querySelector('[name="first_name"]');
-    const inLast  = f.querySelector('[name="last_name"]');
-    if (inFirst) inFirst.value = first_name;
-    if (inLast)  inLast.value = last_name;
+    // zet normalized terug in UI
+    f.querySelector('[name="first_name"]').value = first_name;
+    f.querySelector('[name="last_name"]').value = last_name;
 
     showToast("Opgeslagen.", "success");
     await reloadAll();
@@ -869,8 +875,10 @@ async function onAccessSave(e) {
   }
 }
 
-
-
+/**
+ * Stap 2 opslaan
+ * - vereist dat verify al is gelopen (addressVerifiedPreview) óf address_verified_at al gezet is
+ */
 async function onAddressSave(e) {
   e.preventDefault();
   if (isLocked()) return showToast("Dossier is vergrendeld.", "error");
@@ -879,9 +887,9 @@ async function onAddressSave(e) {
   const btn = $("btnAddressSave");
   if (btn?.disabled) return;
 
-  const postcode = f.querySelector('[name="postcode"]').value.trim();
-  const house_number = f.querySelector('[name="house_number"]').value.trim();
-  const suffix = f.querySelector('[name="suffix"]').value.trim();
+  const postcode = (f.querySelector('[name="postcode"]').value || "").trim();
+  const house_number = (f.querySelector('[name="house_number"]').value || "").trim();
+  const suffix = (f.querySelector('[name="suffix"]').value || "").trim();
 
   const d = current?.dossier || {};
   if (!d.address_verified_at && !addressVerifiedPreview) {
@@ -889,21 +897,23 @@ async function onAddressSave(e) {
     return;
   }
 
-  lockSubmit(btn, true);
+  lockSubmit(btn, true, "Opslaan…");
 
   try {
-    if ($("addressState")) $("addressState").textContent = "Opslaan…";
     await apiPost("api-dossier-address-save", { dossier_id, token, postcode, house_number, suffix });
     showToast("Adres opgeslagen.", "success");
     await reloadAll();
   } catch (e2) {
     showToast(e2.message, "error");
-    if ($("addressState")) $("addressState").textContent = e2.message;
   } finally {
-    lockSubmit(btn, false);
+    lockSubmit(btn, false, "Opslaan");
   }
 }
 
+/**
+ * Stap 3 opslaan
+ * - valideert "Anders" cases (notes verplicht)
+ */
 async function onChargerSave(e) {
   e.preventDefault();
   if (isLocked()) return showToast("Dossier is vergrendeld.", "error");
@@ -912,7 +922,7 @@ async function onChargerSave(e) {
   const btn = $("btnChargerSave");
   if (btn?.disabled) return;
 
-  lockSubmit(btn, true);
+  lockSubmit(btn, true, "Opslaan…");
 
   try {
     const charger_id = f.querySelector('[name="charger_id"]').value || null;
@@ -938,8 +948,7 @@ async function onChargerSave(e) {
     }
 
     await apiPost("api-dossier-charger-save", {
-      dossier_id,
-      token,
+      dossier_id, token,
       charger_id,
       serial_number,
       brand,
@@ -956,10 +965,15 @@ async function onChargerSave(e) {
   } catch (e2) {
     showToast(e2.message, "error");
   } finally {
-    lockSubmit(btn, false);
+    lockSubmit(btn, false, "Opslaan");
   }
 }
 
+/**
+ * Stap 4 upload
+ * - vraagt signed PUT URL + upload file + reload
+ * - laadt alleen allowlisted types
+ */
 async function onUpload(e) {
   e.preventDefault();
   if (isLocked()) return showToast("Dossier is vergrendeld.", "error");
@@ -976,7 +990,6 @@ async function onUpload(e) {
 
   if (!doc_type) return showToast("Kies documenttype.", "error");
 
-  // Voor factuur/foto_laadpunt is charger verplicht
   const dt = String(doc_type || "").toLowerCase();
   if ((dt === "factuur" || dt === "foto_laadpunt") && !charger_id) {
     return showToast("Kies eerst voor welke laadpaal dit document is.", "error");
@@ -984,7 +997,6 @@ async function onUpload(e) {
 
   if (!file) return showToast("Kies bestand.", "error");
 
-  // allowlist (ext + mime)
   const allowedExt = new Set(["pdf", "png", "jpg", "jpeg", "doc", "docx"]);
   const allowedMime = new Set([
     "application/pdf",
@@ -998,19 +1010,13 @@ async function onUpload(e) {
   const ext = name.toLowerCase().split(".").pop() || "";
   const mime = (file.type || "").trim();
 
-  if (!allowedExt.has(ext)) {
-    return showToast("Ongeldig bestandstype. Alleen: PDF, PNG, JPG/JPEG, DOC, DOCX.", "error");
-  }
-  if (mime && !allowedMime.has(mime)) {
-    return showToast("Ongeldig bestandstype. Alleen: PDF, PNG, JPG/JPEG, DOC, DOCX.", "error");
-  }
+  if (!allowedExt.has(ext)) return showToast("Ongeldig bestandstype. Alleen: PDF, PNG, JPG/JPEG, DOC, DOCX.", "error");
+  if (mime && !allowedMime.has(mime)) return showToast("Ongeldig bestandstype. Alleen: PDF, PNG, JPG/JPEG, DOC, DOCX.", "error");
 
   const maxBytes = 15 * 1024 * 1024;
-  if (file.size > maxBytes) {
-    return showToast("Bestand is te groot. Max 15MB.", "error");
-  }
+  if (file.size > maxBytes) return showToast("Bestand is te groot. Max 15MB.", "error");
 
-  lockSubmit(btn, true);
+  lockSubmit(btn, true, "Uploaden…");
 
   try {
     if ($("uploadState")) $("uploadState").textContent = "Upload voorbereiden…";
@@ -1026,6 +1032,7 @@ async function onUpload(e) {
     });
 
     if ($("uploadState")) $("uploadState").textContent = "Uploaden…";
+
     const putRes = await fetch(meta.signed_url, {
       method: "PUT",
       headers: { "Content-Type": file.type || "application/octet-stream" },
@@ -1041,11 +1048,14 @@ async function onUpload(e) {
     if ($("uploadState")) $("uploadState").textContent = e2.message;
     showToast(e2.message, "error");
   } finally {
-    lockSubmit(btn, false);
+    lockSubmit(btn, false, "Upload");
   }
 }
 
-
+/**
+ * Stap 5 save consents
+ * - alle 3 verplicht
+ */
 async function onConsentsSave(e) {
   e.preventDefault();
   if (isLocked()) return showToast("Dossier is vergrendeld.", "error");
@@ -1053,11 +1063,10 @@ async function onConsentsSave(e) {
   const btn = $("btnConsentsSave");
   if (btn?.disabled) return;
 
-  const terms = $("cTerms")?.checked === true;
+  const terms   = $("cTerms")?.checked === true;
   const privacy = $("cPrivacy")?.checked === true;
   const mandaat = $("cMandaat")?.checked === true;
 
-  // FIX: ALLE DRIE verplicht (UI consistent met server/DB)
   if (!terms || !privacy || !mandaat) {
     const msg = "Vink alle drie de toestemmingen aan om door te gaan.";
     showToast(msg, "error");
@@ -1065,15 +1074,11 @@ async function onConsentsSave(e) {
     return;
   }
 
-  lockSubmit(btn, true);
+  lockSubmit(btn, true, "Opslaan…");
 
   try {
     if ($("consentsState")) $("consentsState").textContent = "Opslaan…";
-
-    const consents = { terms, privacy, mandaat };
-
-    await apiPost("api-dossier-consents-save", { dossier_id, token, consents });
-
+    await apiPost("api-dossier-consents-save", { dossier_id, token, consents: { terms, privacy, mandaat } });
     if ($("consentsState")) $("consentsState").textContent = "Opgeslagen.";
     showToast("Toestemmingen opgeslagen.", "success");
     await reloadAll();
@@ -1081,11 +1086,15 @@ async function onConsentsSave(e) {
     if ($("consentsState")) $("consentsState").textContent = e2.message;
     showToast(e2.message, "error");
   } finally {
-    lockSubmit(btn, false);
+    lockSubmit(btn, false, "Opslaan");
   }
 }
 
-
+/**
+ * Stap 6 Review / Evaluate
+ * - gebruikt RAW fetch zodat we missingSteps kunnen tonen bij niet-ok
+ * - bij success moet locked_at terugkomen
+ */
 async function onReviewClicked() {
   const btn = $("btnEvaluate");
   if (!btn) return;
@@ -1104,7 +1113,6 @@ async function onReviewClicked() {
   try {
     if ($("reviewState")) $("reviewState").textContent = "Server controleert dossier…";
 
-    // ✅ RAW call zodat we missingSteps kunnen renderen bij 400/409
     const idem = newIdempotencyKey();
     const res = await fetch(`${window.ENVAL.API_BASE}/api-dossier-evaluate`, {
       method: "POST",
@@ -1114,7 +1122,6 @@ async function onReviewClicked() {
 
     const js = await res.json().catch(() => ({}));
 
-    // FAIL: toon missing steps netjes
     if (!res.ok || !js.ok) {
       const missing = Array.isArray(js?.missingSteps) ? js.missingSteps : [];
       const msg = js?.error || js?.message || `Review failed (${res.status})`;
@@ -1136,7 +1143,6 @@ async function onReviewClicked() {
       return;
     }
 
-    // SUCCESS: alleen succes als locked_at gezet is
     if (!js.locked_at) {
       if ($("reviewState")) $("reviewState").textContent =
         "Review lijkt gelukt, maar dossier is niet vergrendeld. Probeer opnieuw.";
@@ -1154,4 +1160,3 @@ async function onReviewClicked() {
     lockSubmit(btn, false, "Review dossier");
   }
 }
-
