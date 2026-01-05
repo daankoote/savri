@@ -1,7 +1,7 @@
 // versie 260105_12 oclock
 // /dossier.js  (NON-module, gebruikt window.ENVAL uit /config.js)
 
-console.log("ENVAL DOSSIER.JS versie 260105_12 oclock");
+console.log("ENVAL DOSSIER.JS versie 260105_13 oclock");
 
 // ======================================================
 // 1) DOM helpers + formatting
