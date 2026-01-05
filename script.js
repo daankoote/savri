@@ -1,9 +1,9 @@
 // versie 260105_12 oclock
 console.log("ENVAL SCRIPT.JS versie 260105_12 oclock");
 
-/* ======================================================
-   Config (komt uit /config.js)
-   ====================================================== */
+// ======================================================
+// 0) Config (komt uit /config.js)
+// ======================================================
 const SUPABASE_URL = window.ENVAL?.SUPABASE_URL;
 const SUPABASE_ANON_KEY = window.ENVAL?.SUPABASE_ANON_KEY;
 const API_BASE = window.ENVAL?.API_BASE;
@@ -12,32 +12,62 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !API_BASE) {
   console.error("ENVAL config ontbreekt. Laad eerst /config.js vóór script.js");
 }
 
+// ======================================================
+// 1) Network helpers
+// ======================================================
+
+/**
+ * edgeHeaders(idempotencyKey)
+ * Doel: headers voor edge calls + optionele idempotency key
+ */
 function edgeHeaders(idempotencyKey) {
   const extra = {};
   if (idempotencyKey) extra["Idempotency-Key"] = idempotencyKey;
   return window.ENVAL.edgeHeaders(extra);
 }
 
+/**
+ * newIdempotencyKey()
+ * Doel: unieke key om double submits veilig te maken
+ */
 function newIdempotencyKey() {
   if (crypto?.randomUUID) return crypto.randomUUID();
+
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
-  return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
-/* ======================================================
-   Validatie helpers
-   ====================================================== */
+// ======================================================
+// 2) Validatie helpers
+// ======================================================
+
+/**
+ * isValidEmail(email)
+ * Simpele, pragmatische email check voor frontend.
+ */
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((email || "").trim());
 }
 
+/**
+ * isValidMobile(phone)
+ * Doel: NL mobiel (06xxxxxxxx / +316xxxxxxxx). Leeg = ok (optioneel veld).
+ */
 function isValidMobile(phone) {
   if (!phone) return true;
+
   const p = String(phone).trim().replace(/[\s\-().]/g, "");
   return /^06\d{8}$/.test(p) || /^\+316\d{8}$/.test(p);
 }
 
+/**
+ * normalizePersonName(input)
+ * Doel: nette naam-weergave en consistente opslag.
+ * Bewust simpel gehouden: title-case per woord, behoud van ' en -.
+ */
 function normalizePersonName(input) {
   const s = String(input || "").trim();
   if (!s) return "";
@@ -59,9 +89,14 @@ function normalizePersonName(input) {
     .join(" ");
 }
 
-/* ======================================================
-   UI helpers: inline errors
-   ====================================================== */
+// ======================================================
+// 3) UI helpers: inline errors (per field)
+// ======================================================
+
+/**
+ * showFieldError(field, message)
+ * Doel: markeer veld rood + toon message onder het veld/label.
+ */
 function showFieldError(field, message) {
   if (!field) return;
 
@@ -78,6 +113,10 @@ function showFieldError(field, message) {
   if (parent.appendChild) parent.appendChild(el);
 }
 
+/**
+ * clearFieldError(field)
+ * Doel: remove styling + error message voor één veld.
+ */
 function clearFieldError(field) {
   if (!field) return;
   field.classList.remove("input-error");
@@ -87,14 +126,23 @@ function clearFieldError(field) {
   if (el) el.remove();
 }
 
+/**
+ * clearAllFieldErrors(form)
+ * Doel: reset errors voor hele form.
+ */
 function clearAllFieldErrors(form) {
   if (!form) return;
   form.querySelectorAll(".input-error").forEach(clearFieldError);
 }
 
-/* ======================================================
-   Toast
-   ====================================================== */
+// ======================================================
+// 4) UI helpers: Toast + form reset behavior
+// ======================================================
+
+/**
+ * showToast(message, type)
+ * Doel: tijdelijke feedback (success/error) onderin beeld.
+ */
 function showToast(message, type = "success") {
   const existing = document.querySelector(".toast");
   if (existing) existing.remove();
@@ -109,6 +157,10 @@ function showToast(message, type = "success") {
   }, 4200);
 }
 
+/**
+ * keepAndReset(form, keepSelectors, focusSelector)
+ * Doel: reset form, maar behoud bepaalde velden (bv installer_ref) en zet focus.
+ */
 function keepAndReset(form, keepSelectors = [], focusSelector = null) {
   const keep = {};
   keepSelectors.forEach((sel) => {
@@ -130,9 +182,15 @@ function keepAndReset(form, keepSelectors = [], focusSelector = null) {
   }
 }
 
-/* ======================================================
-   UI helpers: submit lock
-   ====================================================== */
+// ======================================================
+// 5) UI helpers: submit lock (anti double-click)
+// ======================================================
+
+/**
+ * lockSubmit(btn, locked, textWhenLocked)
+ * Doel: disable submit + visueel loading state.
+ * Werkt samen met CSS: button.is-loading::after.
+ */
 function lockSubmit(btn, locked, textWhenLocked = "Verwerken…") {
   if (!btn) return;
 
@@ -151,14 +209,15 @@ function lockSubmit(btn, locked, textWhenLocked = "Verwerken…") {
   }
 }
 
-/* ======================================================
-   DOM Ready
-   ====================================================== */
+// ======================================================
+// 6) DOM Ready: bind events
+// ======================================================
 document.addEventListener("DOMContentLoaded", () => {
+  // footer year
   const year = document.getElementById("year");
   if (year) year.textContent = new Date().getFullYear();
 
-  // Tabs (index.html)
+  // tabs index.html (progressive enhancement: zonder JS blijven panels zichtbaar)
   const panels = document.querySelectorAll(".tab-panel");
   const toggles = document.querySelectorAll(".tab-toggle");
   if (panels.length) {
@@ -170,7 +229,7 @@ document.addEventListener("DOMContentLoaded", () => {
     toggles.forEach((btn) => btn.addEventListener("click", () => activate(btn.dataset.target)));
   }
 
-  // installer ref uit URL -> EV form hidden field
+  // ref in URL voor EV form (optioneel)
   const params = new URLSearchParams(window.location.search);
   const ref = params.get("ref");
   const evForm = document.querySelector('form[name="evrijder"]');
@@ -193,9 +252,14 @@ document.addEventListener("DOMContentLoaded", () => {
   catch (e) { console.error("bind contact failed", e); }
 });
 
-/* ======================================================
-   EV-rijder
-   ====================================================== */
+// ======================================================
+// 7) Handlers
+// ======================================================
+
+/**
+ * handleEvForm(e)
+ * Flow: ev_direct → api-lead-submit
+ */
 async function handleEvForm(e) {
   e.preventDefault();
   const form = e.target;
@@ -234,6 +298,7 @@ async function handleEvForm(e) {
 
   if (hasError) return;
 
+  // normalize terugzetten (UX)
   if (first) first.value = firstNorm;
   if (last) last.value = lastNorm;
 
@@ -274,9 +339,10 @@ async function handleEvForm(e) {
   }
 }
 
-/* ======================================================
-   Installateur → klant
-   ====================================================== */
+/**
+ * handleInstallateurKlantForm(e)
+ * Flow: installer_to_customer → api-lead-submit
+ */
 async function handleInstallateurKlantForm(e) {
   e.preventDefault();
   const form = e.target;
@@ -359,9 +425,10 @@ async function handleInstallateurKlantForm(e) {
   }
 }
 
-/* ======================================================
-   Installateur signup
-   ====================================================== */
+/**
+ * handleInstallerSignup(e)
+ * Flow: installer_signup → api-lead-submit
+ */
 async function handleInstallerSignup(e) {
   e.preventDefault();
   const form = e.target;
@@ -444,9 +511,10 @@ async function handleInstallerSignup(e) {
   }
 }
 
-/* ======================================================
-   Contact
-   ====================================================== */
+/**
+ * handleContactForm(e)
+ * Flow: contact → api-lead-submit
+ */
 async function handleContactForm(e) {
   e.preventDefault();
   const form = e.target;

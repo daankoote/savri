@@ -10,6 +10,9 @@
   </head>
 
   <body>
+    <!-- ======================================================
+         Header / Nav
+         ====================================================== -->
     <header>
       <div class="container header-inner">
         <div class="logo"><a href="/index.html">Enval</a></div>
@@ -25,6 +28,9 @@
     <main>
       <section class="section">
         <div class="container">
+          <!-- ======================================================
+               Dossier header card (status + refresh)
+               ====================================================== -->
           <div class="card">
             <div class="statusbar">
               <div>
@@ -50,8 +56,11 @@
             </div>
           </div>
 
+          <!-- ======================================================
+               Grid: steps 1..6
+               ====================================================== -->
           <div class="grid2" style="margin-top:18px;">
-            <!-- 1) Toegang -->
+            <!-- Step 1 -->
             <div class="card">
               <h2 style="margin-top:0;">1) Toegang</h2>
 
@@ -87,7 +96,7 @@
               <div id="accessSummary" class="notice small" style="margin-top:12px;">laden…</div>
             </div>
 
-            <!-- 2) Adres -->
+            <!-- Step 2 -->
             <div class="card">
               <h2 style="margin-top:0;">2) Adres</h2>
 
@@ -99,16 +108,18 @@
                 <label><span>Straat</span><input type="text" name="street_ro" readonly /></label>
                 <label><span>Plaats</span><input type="text" name="city_ro" readonly /></label>
 
-                <button id="btnAddressSave" type="submit" class="btn primary full-width" disabled>Opslaan</button>
+                <div class="row">
+                  <button id="btnAddressSave" type="submit" class="btn primary full-width" disabled>Opslaan</button>
+                </div>
 
-                <!-- UI statusregels willen we hier niet (audit info wel in Overzicht) -->
+                <!-- UI status bewust verborgen; audit info staat in Overzicht-box -->
                 <div id="addressState" class="small muted hidden"></div>
               </form>
 
               <div id="addressSummary" class="notice small" style="margin-top:12px;">laden…</div>
             </div>
 
-            <!-- 3) Laadpalen -->
+            <!-- Step 3 -->
             <div class="card">
               <h2 style="margin-top:0;">3) Laadpalen</h2>
               <div id="chargerHint" class="notice small" style="margin-bottom:10px;">laden…</div>
@@ -127,7 +138,9 @@
                   <input type="text" name="notes" placeholder="Vul merk en model in (bijv. MyBrand X200)" />
                 </label>
 
-                <button id="btnChargerSave" type="submit" class="btn primary full-width">Opslaan</button>
+                <div class="row">
+                  <button id="btnChargerSave" type="submit" class="btn primary full-width">Opslaan</button>
+                </div>
               </form>
 
               <div style="margin-top:14px;">
@@ -148,13 +161,10 @@
               </div>
             </div>
 
-            <!-- 4) Docs -->
+            <!-- Step 4 -->
             <div class="card">
               <h2 style="margin-top:0;">4) Documenten uploaden</h2>
-
-              <div id="docsHint" class="notice small" style="margin-bottom:10px;">
-                Per laadpaal: minimaal 1 factuur installatie + 1 foto van het laadpunt.
-              </div>
+              <div id="docsHint" class="notice small" style="margin-bottom:10px;">laden…</div>
 
               <form id="uploadForm" class="form" novalidate>
                 <label>
@@ -207,9 +217,10 @@
               </div>
             </div>
 
-            <!-- 5) Toestemmingen -->
+            <!-- Step 5 -->
             <div class="card">
               <h2 style="margin-top:0;">5) Toestemmingen</h2>
+
               <form id="consentsForm" class="form" novalidate>
                 <div class="checkbox-row">
                   <input type="checkbox" id="cTerms" />
@@ -230,7 +241,7 @@
               </form>
             </div>
 
-            <!-- 6) Review -->
+            <!-- Step 6 -->
             <div class="card">
               <h2 style="margin-top:0;">6) Review</h2>
               <div id="statusExplain" class="muted small">laden…</div>
@@ -253,6 +264,6 @@
     </footer>
 
     <script src="/config.js"></script>
-    <script src="/dossier.js"></script>
+    <script src="/dossier.js?v=2026-01-04-2"></script>
   </body>
 </html>

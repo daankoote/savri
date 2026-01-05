@@ -5,6 +5,7 @@
   <head>
     <meta charset="UTF-8" />
     <script>
+      // Enable JS-only behavior (tabs)
       document.documentElement.classList.add("js");
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -13,10 +14,14 @@
   </head>
 
   <body>
+    <!-- ======================================================
+         Header / Nav
+         ====================================================== -->
     <header>
       <div class="container header-inner">
         <div class="logo">
           <a href="/index.html">Enval</a>
+          <!-- <a href="/"><img src="/logo.svg" alt="Enval" /></a> -->
         </div>
         <nav>
           <a href="/index.html#hero">Home</a>
@@ -29,6 +34,9 @@
       </div>
     </header>
 
+    <!-- ======================================================
+         Hero + Tabs
+         ====================================================== -->
     <section id="hero" class="section hero">
       <div class="container hero-inner">
         <div class="hero-text">
@@ -61,6 +69,9 @@
       </div>
     </section>
 
+    <!-- ======================================================
+         Value props
+         ====================================================== -->
     <section class="section">
       <div class="container two-column">
         <div class="column">
@@ -85,7 +96,9 @@
       </div>
     </section>
 
-    <!-- INSTALLATEUR -->
+    <!-- ======================================================
+         Tab: Installateur → klant aanmelding
+         ====================================================== -->
     <section id="installateurs" class="section tab-panel" data-panel="installateur">
       <div class="container two-column">
         <div class="column">
@@ -143,15 +156,15 @@
                 <select name="charger_count" required>
                   <option value="">Selecteer aantal laadpunten</option>
                   <option value="1">1 laadpunt</option>
-                  <option value="2">2 laadpunten</option>
-                  <option value="3">3 laadpunten</option>
-                  <option value="4">4 laadpunten</option>
-                  <option value="5">5 laadpunten</option>
-                  <option value="6">6 laadpunten</option>
-                  <option value="7">7 laadpunten</option>
-                  <option value="8">8 laadpunten</option>
-                  <option value="9">9 laadpunten</option>
-                  <option value="10">10 laadpunten</option>
+                  <option value="2">2 laadpunt</option>
+                  <option value="3">3 laadpunt</option>
+                  <option value="4">4 laadpunt</option>
+                  <option value="5">5 laadpunt</option>
+                  <option value="6">6 laadpunt</option>
+                  <option value="7">7 laadpunt</option>
+                  <option value="8">8 laadpunt</option>
+                  <option value="9">9 laadpunt</option>
+                  <option value="10">10 laadpunt</option>
                 </select>
               </label>
 
@@ -182,7 +195,9 @@
       </div>
     </section>
 
-    <!-- EV -->
+    <!-- ======================================================
+         Tab: EV-rijder
+         ====================================================== -->
     <section id="ev-rijders" class="section section-alt tab-panel" data-panel="ev">
       <div class="container two-column">
         <div class="column">
@@ -244,15 +259,15 @@
                 <select name="charger_count" required>
                   <option value="">Selecteer aantal laadpunten</option>
                   <option value="1">1 laadpunt</option>
-                  <option value="2">2 laadpunten</option>
-                  <option value="3">3 laadpunten</option>
-                  <option value="4">4 laadpunten</option>
-                  <option value="5">5 laadpunten</option>
-                  <option value="6">6 laadpunten</option>
-                  <option value="7">7 laadpunten</option>
-                  <option value="8">8 laadpunten</option>
-                  <option value="9">9 laadpunten</option>
-                  <option value="10">10 laadpunten</option>
+                  <option value="2">2 laadpunt</option>
+                  <option value="3">3 laadpunt</option>
+                  <option value="4">4 laadpunt</option>
+                  <option value="5">5 laadpunt</option>
+                  <option value="6">6 laadpunt</option>
+                  <option value="7">7 laadpunt</option>
+                  <option value="8">8 laadpunt</option>
+                  <option value="9">9 laadpunt</option>
+                  <option value="10">10 laadpunt</option>
                 </select>
               </label>
 
@@ -283,7 +298,9 @@
       </div>
     </section>
 
-    <!-- ANDERS -->
+    <!-- ======================================================
+         Tab: Anders / partner
+         ====================================================== -->
     <section id="anders" class="section section-alt tab-panel" data-panel="anders">
       <div class="container two-column">
         <div class="column">
@@ -321,7 +338,9 @@
       </div>
     </section>
 
-    <!-- FAQ -->
+    <!-- ======================================================
+         FAQ
+         ====================================================== -->
     <section id="faq" class="section">
       <div class="container">
         <h2>Over Enval & veelgestelde vragen</h2>
@@ -377,7 +396,9 @@
       </div>
     </section>
 
-    <!-- CONTACT -->
+    <!-- ======================================================
+         Contact
+         ====================================================== -->
     <section id="contact" class="section section-alt">
       <div class="container two-column">
         <div class="column">
@@ -434,6 +455,9 @@
       </div>
     </footer>
 
+    <!-- ======================================================
+         Scripts (config eerst!)
+         ====================================================== -->
     <script src="/config.js"></script>
     <script src="/script.js"></script>
   </body>
