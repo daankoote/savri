@@ -37,63 +37,117 @@
           <div class="kicker">Installateurs</div>
           <h1>Aanmelden als installateur</h1>
           <p class="lead">
-            Meld je éénmalig aan. Daarna kun je klanten direct aanmelden met jouw installateurscode.
+            Een simpele extra service voor je klant: je levert niet alleen de laadpaal, maar ook het “bewijs-dossier” dat later nodig kan zijn.
           </p>
         </div>
       </section>
 
-      <!-- FORM -->
+      <!-- CONTENT -->
       <section class="section">
-        <div class="container">
-          <div class="card">
-            <h2 style="margin-top:0;">Gegevens</h2>
-            <p class="note" style="margin-top:0;">
-              Na aanmelding ontvang je per e-mail je installateurscode. Daarmee meld je klanten snel aan.
-            </p>
+        <div class="container two-column">
+          <!-- LEFT: pitch -->
+          <div class="column">
+            <div class="card">
+              <h2 style="margin-top:0;">Waarom dit interessant is voor jou</h2>
+              <p class="note" style="margin-top:0;">
+                Klanten haken niet af op techniek, maar op administratie. Jij kunt dat oplossen zonder extra gedoe.
+              </p>
 
-            <form class="form" id="installer-signup-form" novalidate>
-              <label>
-                <span>Bedrijfsnaam</span>
-                <input type="text" name="company_name" required />
-              </label>
+              <div class="steps" style="margin-top:12px;">
+                <div class="step">
+                  <div class="n">1</div>
+                  <h3 style="margin:0 0 6px 0;">Extra waarde bij oplevering</h3>
+                  <p>
+                    Jij installeert. Enval helpt de klant met registratie, documenten en audit-trail. Dat maakt jouw oplevering “completer”.
+                  </p>
+                </div>
 
-              <div class="row2">
-                <label>
-                  <span>Voornaam contactpersoon</span>
-                  <input type="text" name="contact_first_name" required />
-                </label>
+                <div class="step">
+                  <div class="n">2</div>
+                  <h3 style="margin:0 0 6px 0;">Minder vragen achteraf</h3>
+                  <p>
+                    Factuur kwijt? Foto’s vergeten? Serienummer onduidelijk? Enval vangt dit op in het dossierproces.
+                  </p>
+                </div>
 
-                <label>
-                  <span>Achternaam contactpersoon</span>
-                  <input type="text" name="contact_last_name" required />
-                </label>
+                <div class="step">
+                  <div class="n">3</div>
+                  <h3 style="margin:0 0 6px 0;">Professioneler richting klant</h3>
+                  <p>
+                    Je biedt een duidelijke “route”: van installatie → dossier compleet → review-ready. Dat voelt betrouwbaar.
+                  </p>
+                </div>
               </div>
 
-              <label>
-                <span>E-mailadres</span>
-                <input type="email" name="email" required />
-              </label>
-
-              <label>
-                <span>Mobiel nummer (optioneel)</span>
-                <input type="tel" name="phone" placeholder="06xxxxxxxx of +316xxxxxxxx" />
-              </label>
-
-              <label>
-                <span>KVK-nummer</span>
-                <input type="text" name="kvk" required />
-              </label>
-
-              <div class="checkbox-row">
-                <input type="checkbox" id="akkoord_signup" name="akkoord" required />
-                <label for="akkoord_signup">
-                  Ik ga akkoord met de voorwaarden en begrijp dat Enval geen garanties kan bieden op ERE-vergoedingen.
-                </label>
+              <div class="callout" style="margin-top:14px;">
+                <strong>Wat jij aan je klant kunt zeggen</strong>
+                <p style="margin-top:8px; margin-bottom:0;">
+                  “Ik installeer de laadpaal. Enval helpt je met de administratie en bewijsstukken zodat je later niet vastloopt op aantoonbaarheid.
+                  Het is geen garantie op vergoeding, wél een nette voorbereiding.”
+                </p>
               </div>
 
-              <button type="submit" class="btn primary full-width">Aanmelden als installateur</button>
-              <p class="form-note">Na aanmelding ontvangt u per e-mail uw installateurscode.</p>
-            </form>
+              <p class="form-note" style="margin-top:14px; margin-bottom:0;">
+                Tip: dit werkt het best als je Enval standaard meeneemt in je opleverpakket (factuur + foto + serienummer).
+              </p>
+            </div>
+          </div>
+
+          <!-- RIGHT: form -->
+          <div class="column">
+            <div class="card">
+              <h2 style="margin-top:0;">Aanmelden</h2>
+              <p class="note" style="margin-top:0;">
+                Na aanmelding ontvang je per e-mail jouw installateurscode. Daarmee kun je klanten direct aanmelden.
+              </p>
+
+              <form class="form" id="installer-signup-form" novalidate>
+                <label>
+                  <span>Bedrijfsnaam</span>
+                  <input type="text" name="company_name" required />
+                </label>
+
+                <div class="row2">
+                  <label>
+                    <span>Voornaam contactpersoon</span>
+                    <input type="text" name="contact_first_name" required />
+                  </label>
+
+                  <label>
+                    <span>Achternaam contactpersoon</span>
+                    <input type="text" name="contact_last_name" required />
+                  </label>
+                </div>
+
+                <label>
+                  <span>E-mailadres</span>
+                  <input type="email" name="email" required />
+                </label>
+
+                <label>
+                  <span>Mobiel nummer (optioneel)</span>
+                  <input type="tel" name="phone" placeholder="06xxxxxxxx of +316xxxxxxxx" />
+                </label>
+
+                <label>
+                  <span>KVK-nummer</span>
+                  <input type="text" name="kvk" required />
+                </label>
+
+                <div class="checkbox-row">
+                  <input type="checkbox" id="akkoord_signup" name="akkoord" required />
+                  <label for="akkoord_signup">
+                    Ik ga akkoord met de voorwaarden en begrijp dat Enval geen garanties kan bieden op ERE-vergoedingen.
+                  </label>
+                </div>
+
+                <button type="submit" class="btn primary full-width">Aanmelden als installateur</button>
+
+                <p class="form-note" style="margin-bottom:0;">
+                  Na aanmelding ontvangt u per e-mail uw installateurscode.
+                </p>
+              </form>
+            </div>
           </div>
         </div>
       </section>

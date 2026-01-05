@@ -4,8 +4,11 @@
 <html lang="nl">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      document.documentElement.classList.add("js");
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Hoe Enval werkt – Registratie en inboeken van ERE’s</title>
+    <title>Enval – Hoe het werkt</title>
     <link rel="stylesheet" href="style.css" />
   </head>
 
@@ -14,7 +17,7 @@
       <div class="container header-inner">
         <div class="logo"><a href="/index.html">Enval</a></div>
 
-        <button id="navToggle" class="nav-toggle" type="button" aria-controls="siteNav" aria-expanded="false" >☰</button>
+        <button id="navToggle" class="nav-toggle" type="button" aria-controls="siteNav" aria-expanded="false">☰</button>
 
         <nav id="siteNav">
           <a href="/index.html#hero">Home</a>
@@ -28,53 +31,67 @@
     </header>
 
     <main>
+      <!-- MINI HERO -->
+      <section class="section page-hero">
+        <div class="container">
+          <div class="kicker">Proces</div>
+          <h1>Hoe Enval werkt</h1>
+          <p class="lead">
+            Duidelijk en praktisch: jij levert input, Enval structureert het dossier en maakt het review-ready.
+          </p>
+        </div>
+      </section>
+
+      <!-- CONTENT -->
       <section class="section">
         <div class="container">
-          <h1>Hoe Enval werkt</h1>
+          <div class="card">
+            <p style="margin-top:0;">
+              Enval ondersteunt eigenaren en installateurs van privé-laadpalen bij registratie, validatie en voorbereiding op het
+              inboeken van elektriciteit voor ERE’s onder RED3.
+            </p>
 
-          <p>
-            Enval ondersteunt eigenaren en installateurs van privé-laadpalen
-            bij registratie, validatie en voorbereiding op het inboeken
-            van elektriciteit voor ERE’s onder RED3.
-          </p>
+            <div class="steps" style="margin-top:12px;">
+              <div class="step">
+                <div class="n">1</div>
+                <h3 style="margin:0 0 6px 0;">Aanmelding</h3>
+                <p>
+                  De installatie wordt aangemeld door een installateur of laadpaaleigenaar. Basisgegevens worden vastgelegd,
+                  zoals locatie, type installatie en aantal laadpunten.
+                </p>
+              </div>
 
-          <h2>Stap 1 – Aanmelding</h2>
-          <p>
-            De installatie wordt aangemeld door een installateur of
-            laadpaaleigenaar. Basisgegevens worden vastgelegd, zoals locatie,
-            type installatie en aantal laadpunten.
-          </p>
+              <div class="step">
+                <div class="n">2</div>
+                <h3 style="margin:0 0 6px 0;">Registratie & dossieropbouw</h3>
+                <p>
+                  Enval bouwt per installatie een dossier op waarin relevante gegevens en documentatie worden verzameld,
+                  inclusief bewijsstukken.
+                </p>
+              </div>
 
-          <h2>Stap 2 – Registratie & dossieropbouw</h2>
-          <p>
-            Enval bouwt per installatie een dossier op waarin relevante
-            gegevens en documentatie worden verzameld, inclusief bewijsstukken.
-          </p>
+              <div class="step">
+                <div class="n">3</div>
+                <h3 style="margin:0 0 6px 0;">Validatie</h3>
+                <p>
+                  De aangeleverde informatie wordt gecontroleerd op volledigheid en consistentie, met als doel een controleerbaar
+                  dossier (audit-trail) op te bouwen.
+                </p>
+              </div>
+            </div>
 
-          <h2>Stap 3 – Validatie</h2>
-          <p>
-            De aangeleverde informatie wordt gecontroleerd op volledigheid
-            en consistentie, met als doel een controleerbaar dossier op te bouwen.
-          </p>
+            <div class="callout" style="margin-top:14px;">
+              <strong>Vervolg (afhankelijk van kaders)</strong>
+              <p style="margin-top:8px; margin-bottom:0;">
+                Privé-laadpalen onder de wettelijke drempel kunnen niet zelfstandig ERE’s verkopen.
+                Inboeken vindt daarom plaats via een erkende inboeker of inboekdienstverlener (alleen als jij daarvoor kiest).
+              </p>
+            </div>
 
-          <h2>Stap 4 – Inboeken via erkende route</h2>
-          <p>
-            Privé-laadpalen onder de wettelijke drempel kunnen niet zelfstandig
-            ERE’s verkopen. Inboeken vindt daarom plaats via een erkende inboeker
-            of inboekdienstverlener.
-          </p>
-
-          <h2>Stap 5 – ERE-verkoop & uitbetaling</h2>
-          <p>
-            Na succesvolle inboeking kunnen ERE’s worden verkocht.
-            Eventuele opbrengsten worden uitgekeerd volgens de geldende afspraken
-            en regelgeving.
-          </p>
-
-          <p class="form-note">
-            Let op: toekenning van ERE’s en vergoedingen is nooit gegarandeerd en afhankelijk van regelgeving,
-            verificatie en correcte gegevens.
-          </p>
+            <p class="form-note" style="margin-top:14px; margin-bottom:0;">
+              Let op: toekenning van ERE’s en vergoedingen is nooit gegarandeerd en afhankelijk van regelgeving, verificatie en correcte gegevens.
+            </p>
+          </div>
         </div>
       </section>
     </main>
@@ -85,8 +102,7 @@
       </div>
     </footer>
 
-    <script>
-      document.getElementById("year").textContent = new Date().getFullYear();
-    </script>
+    <script src="/config.js"></script>
+    <script src="/script.js"></script>
   </body>
 </html>
