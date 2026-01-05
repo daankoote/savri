@@ -1,5 +1,5 @@
-// versie 260105_13 oclock
-console.log("ENVAL SCRIPT.JS versie 260105_12 oclock");
+// versie 260105_15 oclock
+console.log("ENVAL SCRIPT.JS versie 260105_13 oclock");
 
 // ======================================================
 // 0) Config (komt uit /config.js)
@@ -135,6 +135,8 @@ function clearAllFieldErrors(form) {
   form.querySelectorAll(".input-error").forEach(clearFieldError);
 }
 
+
+
 // ======================================================
 // 4) UI helpers: Toast + form reset behavior
 // ======================================================
@@ -210,9 +212,50 @@ function lockSubmit(btn, locked, textWhenLocked = "Verwerken…") {
 }
 
 // ======================================================
+// 6) UI helpers: Mobile Hamburger menu
+// ======================================================
+
+function initMobileNav() {
+  const btn = document.getElementById("navToggle");
+  const nav = document.getElementById("siteNav");
+  if (!btn || !nav) return;
+
+  const setOpen = (open) => {
+    document.body.classList.toggle("nav-open", open);
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
+  };
+
+  btn.addEventListener("click", () => {
+    const open = document.body.classList.contains("nav-open");
+    setOpen(!open);
+  });
+
+  // klik op link => menu sluiten
+  nav.querySelectorAll("a").forEach((a) => {
+    a.addEventListener("click", () => setOpen(false));
+  });
+
+  // klik buiten menu => sluiten
+  document.addEventListener("click", (e) => {
+    if (!document.body.classList.contains("nav-open")) return;
+    const t = e.target;
+    if (t === btn || btn.contains(t) || nav.contains(t)) return;
+    setOpen(false);
+  });
+
+  // resize naar desktop => reset
+  window.addEventListener("resize", () => {
+    if (window.innerWidth >= 768) setOpen(false);
+  });
+}
+
+
+
+// ======================================================
 // 6) DOM Ready: bind events
 // ======================================================
 document.addEventListener("DOMContentLoaded", () => {
+  initMobileNav();
   // footer year
   const year = document.getElementById("year");
   if (year) year.textContent = new Date().getFullYear();

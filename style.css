@@ -1,4 +1,4 @@
-/* versie 260105_13 oclock */
+/* versie 260105_15 oclock */
 
 /* ======================================================
    ENVAL – style.css
@@ -186,6 +186,16 @@ button.is-loading::after { content: " ⏳"; }
 
 .missing-list { margin: 8px 0 0 18px; }
 
+/* Status per laadpaal lijst (stap 4 hint) */
+.statuslist {
+  margin: 8px 0 0 18px;
+  padding: 0;
+}
+.statuslist li {
+  margin: 4px 0;
+}
+
+
 /* ======================================================
    Tabs
    ====================================================== */
@@ -291,6 +301,18 @@ input[name="installer_ref"] { text-transform: uppercase; }
 }
 .checkbox-row input[type="checkbox"] { margin: 0; }
 
+/* Checkbox labels mogen NIET de .form label flex-column erven */
+.form .checkbox-row { align-items: flex-start; }
+.form .checkbox-row label {
+  display: block;
+  flex-direction: unset;
+  gap: 0;
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+.form .checkbox-row input[type="checkbox"] { margin-top: 2px; }
+
+
 /* Inline errors */
 .input-error { border-color: #ff4d4f !important; }
 .input-error:focus {
@@ -335,6 +357,48 @@ footer {
   .header-inner { padding-inline: 1rem; }
   .hero { padding-top: 4rem; }
 }
+
+/* Mobile nav toggle */
+.nav-toggle{
+  display: none;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.06);
+  color: #e5e7eb;
+  border-radius: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+}
+
+@media (max-width: 767px) {
+  .header-inner { position: relative; }
+
+  /* Hide nav by default on mobile */
+  header nav { display: none; }
+
+  /* Show toggle button */
+  .nav-toggle { display: inline-flex; align-items: center; justify-content: center; }
+
+  /* When open: show nav as dropdown */
+  body.nav-open header nav {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: absolute;
+    top: calc(100% + 1px);
+    left: 0;
+    right: 0;
+    padding: 12px 14px;
+    background: var(--dark);
+    border-bottom: 1px solid var(--dark-border);
+  }
+
+  /* Reset link spacing for dropdown */
+  header nav a { margin: 0; font-size: 0.98rem; }
+}
+
+
 
 /* ======================================================
    Toast
@@ -421,6 +485,31 @@ footer {
 }
 .table th { font-size:0.85rem; color:#64748b; font-weight:600; }
 .table th.right, .table td.right { text-align:right; width: 170px; }
+
+/* Ellipsis helper voor table cells */
+.td-ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Icon-only delete button */
+.iconbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+}
+.iconbtn:hover { box-shadow: 0 10px 22px rgba(15, 23, 42, 0.10); }
+.iconbtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.iconbtn--danger { border-color: #ef4444; color: #ef4444; }
+.iconbtn--danger:hover { border-color: #dc2626; color: #dc2626; }
+
+
 
 /* Alleen de bestandsnaam krijgt ellipsis */
 .td-filename {

@@ -1,4 +1,4 @@
-<!-- versie 260105_13 oclock -->
+<!-- versie 260105_15 oclock -->
 
 <!DOCTYPE html>
 <html lang="nl">
@@ -16,10 +16,16 @@
     <header>
       <div class="container header-inner">
         <div class="logo"><a href="/index.html">Enval</a></div>
+
+        <button id="navToggle" class="nav-toggle" type="button" aria-controls="siteNav" aria-expanded="false">☰</button>
+        <nav id="siteNav">
+
         <nav>
-          <a href="/index.html">Home</a>
+          <a href="/index.html#hero">Home</a>
+          <a href="/aanmelden.html">Aanmelden</a>
           <a href="/hoe-het-werkt.html">Hoe het werkt</a>
           <a href="/regelgeving.html">Regelgeving</a>
+          <a href="/index.html#faq">FAQ</a>
           <a href="/index.html#contact">Contact</a>
         </nav>
       </div>
@@ -108,9 +114,10 @@
                 <label><span>Straat</span><input type="text" name="street_ro" readonly /></label>
                 <label><span>Plaats</span><input type="text" name="city_ro" readonly /></label>
 
-                <div class="row">
+                <div class="row" style="margin-top:10px;">
                   <button id="btnAddressSave" type="submit" class="btn primary full-width" disabled>Opslaan</button>
                 </div>
+
 
                 <!-- UI status bewust verborgen; audit info staat in Overzicht-box -->
                 <div id="addressState" class="small muted hidden"></div>
@@ -206,12 +213,11 @@
                       <th>Type</th>
                       <th>Paalnummer</th>
                       <th>Bestand</th>
-                      <th>Wanneer</th>
                       <th class="right">Acties</th>
                     </tr>
                   </thead>
                   <tbody id="docsTbody">
-                    <tr><td colspan="5" class="muted">laden…</td></tr>
+                    <tr><td colspan="4" class="muted">laden…</td></tr>
                   </tbody>
                 </table>
               </div>

@@ -1,7 +1,7 @@
-// versie 260105_13 oclock
+// versie 260105_15 oclock
 // /dossier.js  (NON-module, gebruikt window.ENVAL uit /config.js)
 
-console.log("ENVAL DOSSIER.JS versie 260105_13 oclock");
+console.log("ENVAL DOSSIER.JS versie 260105_15 oclock");
 
 // ======================================================
 // 1) DOM helpers + formatting
@@ -483,10 +483,10 @@ function renderAccess() {
       `Mobiel: <b>${phoneTxt}</b>`;
   }
 
-  if ($("accessState")) {
-    $("accessState").textContent = d.locked_at ? `Vergrendeld sinds: ${formatDateNL(d.locked_at)}` : "";
-  }
+  // Bewust leeg: "Vergrendeld sinds..." mag niet tussen knop en overzicht verschijnen
+  if ($("accessState")) $("accessState").textContent = "";
 }
+
 
 /**
  * normalizePostcodeFront(pc)
@@ -652,7 +652,6 @@ function renderChargers() {
     }
   }
 
-  // disable save button if complete (exact count reached)
   const locked = isLocked();
   const btnSave = $("btnChargerSave");
   if (btnSave) {
@@ -674,12 +673,19 @@ function renderChargers() {
     <tr>
       <td class="mono">${escapeHtml(c.serial_number)}</td>
       <td>${escapeHtml(c.brand || "-")}</td>
-      <td>${escapeHtml(c.model || "-")}</td>
-      <td>${escapeHtml(c.notes || "-")}</td>
+      <td class="td-ellipsis">${escapeHtml(c.model || "-")}</td>
+      <td class="td-ellipsis">${escapeHtml(c.notes || "-")}</td>
       <td class="right">
         <div class="btnstack">
-          <button class="btn outline small ${locked ? "hidden" : ""}" data-lock-hide="1"
-            type="button" data-act="del" data-id="${c.id}">Verwijder</button>
+          <button
+            class="iconbtn iconbtn--danger ${locked ? "hidden" : ""}"
+            data-lock-hide="1"
+            type="button"
+            aria-label="Verwijder laadpaal"
+            title="Verwijder"
+            data-act="del"
+            data-id="${c.id}"
+          >×</button>
         </div>
       </td>
     </tr>
@@ -705,6 +711,7 @@ function renderChargers() {
     });
   });
 }
+
 
 /**
  * renderDocs()
@@ -768,28 +775,38 @@ function renderDocs() {
         if (dt === "foto_laadpunt") per[chId].foto_laadpunt += 1;
       });
 
-      const lines = chargers.map((c) => {
+        const itemsHtml = chargers.map((c) => {
         const chId = String(c.id);
         const sn = c.serial_number ? String(c.serial_number) : "—";
         const p = per[chId] || { factuur: 0, foto_laadpunt: 0 };
         const okF = p.factuur >= 1;
         const okP = p.foto_laadpunt >= 1;
-        return `• ${sn}: facturen ${p.factuur} ${okF ? "✅" : "⏳"} / foto's ${p.foto_laadpunt} ${okP ? "✅" : "⏳"}`;
-      });
 
-      needHint.innerHTML = `<b>Status per laadpaal</b><br/>` + lines.map(escapeHtml).join("<br/>");
+        return `
+          <li>
+            <span class="mono">${escapeHtml(sn)}</span>:
+            facturen <b>${escapeHtml(p.factuur)}</b> ${okF ? "✅" : "⏳"}
+            <span class="muted">/</span>
+            foto's <b>${escapeHtml(p.foto_laadpunt)}</b> ${okP ? "✅" : "⏳"}
+          </li>
+        `;
+      }).join("");
+
+      needHint.innerHTML =
+        `<b>Status per laadpaal</b>` +
+        `<ul class="statuslist">${itemsHtml}</ul>`;
+
     }
   }
 
-  // 3) Render table
+  // 3) Render table (4 kolommen: Type, Paalnummer, Bestand(klikbaar), Acties)
   if (!docs.length) {
-    tbody.innerHTML = `<tr><td colspan="5" class="muted">Nog geen documenten geüpload.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" class="muted">Nog geen documenten geüpload.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = docs.map((x) => {
     const typeLabel = String(x.doc_type || "-");
-    const when = x.created_at ? formatDateNL(x.created_at) : "-";
     const filename = x.filename || "-";
 
     const chId = x.charger_id ? String(x.charger_id) : "";
@@ -804,25 +821,33 @@ function renderDocs() {
       <tr>
         <td>${escapeHtml(typeLabel)}</td>
         <td class="mono td-charger">${escapeHtml(chargerLabel)}</td>
-        <td class="td-filename">${escapeHtml(filename)}</td>
-        <td class="small muted td-when">${escapeHtml(when)}</td>
+        <td class="td-filename">
+          <a href="#" data-act="open" data-id="${x.id}">${escapeHtml(filename)}</a>
+        </td>
         <td class="right">
           <div class="btnstack">
-            <button class="btn outline small" type="button" data-act="open" data-id="${x.id}">Open</button>
-            <button class="btn outline small ${locked ? "hidden" : ""}" data-lock-hide="1"
-              type="button" data-act="del" data-id="${x.id}">Verwijder</button>
+            <button
+              class="iconbtn iconbtn--danger ${locked ? "hidden" : ""}"
+              data-lock-hide="1"
+              type="button"
+              aria-label="Verwijder document"
+              title="Verwijder"
+              data-act="del"
+              data-id="${x.id}"
+            >×</button>
           </div>
         </td>
       </tr>
     `;
   }).join("");
 
-  // Open (signed url)
-  tbody.querySelectorAll("button[data-act='open']").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const id = btn.getAttribute("data-id");
+  // Open via klik op bestandsnaam (signed url)
+  tbody.querySelectorAll("a[data-act='open']").forEach((a) => {
+    a.addEventListener("click", async (e) => {
+      e.preventDefault();
+      const id = a.getAttribute("data-id");
       try {
-        btn.disabled = true;
+        a.classList.add("muted");
 
         const r = await apiPost("api-dossier-doc-download-url", {
           dossier_id,
@@ -832,10 +857,10 @@ function renderDocs() {
 
         if (!r?.signed_url) throw new Error("Geen signed_url ontvangen.");
         window.open(r.signed_url, "_blank", "noopener");
-      } catch (e) {
-        showToast(e.message, "error");
+      } catch (err) {
+        showToast(err.message, "error");
       } finally {
-        btn.disabled = false;
+        a.classList.remove("muted");
       }
     });
   });
@@ -861,6 +886,7 @@ function renderDocs() {
     });
   });
 }
+
 
 /**
  * renderConsents()
