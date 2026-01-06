@@ -513,23 +513,30 @@ input[name="installer_ref"] { text-transform: uppercase; }
   margin-top: 0.25rem;
 }
 
-/* Checkbox row (default) */
-.checkbox-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.6rem;
+/* Checkbox row */
+.checkbox-row{
+  display:flex;
+  align-items:flex-start;
+  gap:0.6rem;
 }
-.checkbox-row input[type="checkbox"] { margin: 0; margin-top: 2px; }
 
-/* Checkbox labels mogen NIET de .form label flex-column erven */
-.form .checkbox-row { align-items: flex-start; }
-.form .checkbox-row label {
-  display: block;
-  flex-direction: unset;
-  gap: 0;
-  font-size: 0.95rem;
-  line-height: 1.35;
+/* Checkbox */
+.checkbox-row input[type="checkbox"]{
+  margin:0;
+  margin-top:2px;
+  flex-shrink:0;
 }
+
+/* Label tekst */
+.checkbox-row label{
+  display:block;
+  font-size:0.95rem;
+  line-height:1.35;
+  white-space:normal;
+  overflow-wrap:break-word;
+  min-width:0;
+}
+
 
 /* Inline errors */
 .input-error { border-color: #ff4d4f !important; }
@@ -769,10 +776,8 @@ footer {
   text-overflow:ellipsis;
 }
 
-/* Toestemmingen: op desktop 1 regel per checkbox (geen label wrap) */
-@media (min-width: 768px) {
-  #consentsForm .checkbox-row label { white-space: nowrap; }
-}
+
+
 
 /* ======================================================
    Page hero + prose (juridische/tekstpagina’s)
