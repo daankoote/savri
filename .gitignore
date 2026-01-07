@@ -10,3 +10,7 @@ node_modules/
 
 # editor (optioneel)
 .vscode/settings.json
+
+# local scratch / notes
+documenten/
+*.save
