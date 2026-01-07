@@ -4,9 +4,10 @@ Thumbs.db
 # env secrets
 .env
 .env.*
-
 # dependencies (alleen relevant als je ooit node gebruikt)
 node_modules/
-
 # editor (optioneel)
 .vscode/settings.json
+# local scratch / notes
+documenten/
+*.save
