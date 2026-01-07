@@ -1,0 +1,401 @@
+<!-- versie 260105_18 oclock -->
+
+<!DOCTYPE html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      document.documentElement.classList.add("js");
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Enval – registratie & dossier voor privé-laadpalen</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <header>
+      <div class="container header-inner">
+        <div class="logo"><a href="/index.html">Enval</a></div>
+
+        <button id="navToggle" class="nav-toggle" type="button" aria-controls="siteNav" aria-expanded="false">☰</button>
+
+        <nav id="siteNav">
+          <a href="/index.html#hero">Home</a>
+          <a href="/aanmelden.html">Aanmelden</a>
+          <a href="/hoe-het-werkt.html">Hoe het werkt</a>
+          <a href="/regelgeving.html">Regelgeving</a>
+          <a href="/index.html#faq">FAQ</a>
+          <a href="/index.html#contact">Contact</a>
+        </nav>
+      </div>
+    </header>
+
+    <!-- HERO -->
+    <section id="hero" class="section hero">
+      <div class="container hero-inner">
+        <div class="hero-text">
+          <div class="kicker">Registratie • Validatie • Vergoeding • Audit-trail</div>
+
+          <h1>Maak uw laadpaal klaar voor vergoeding.</h1>
+
+          <p>Wij maken één compleet dossier van uw laadpaal, klaar voor het aanvragen van de vergoeding en volledig audit bestendig.</p>
+
+          <div class="hero-buttons">
+            <a class="btn primary" href="/aanmelden.html">Start aanvraag</a>
+            <a class="btn outline" href="#calculator">Wat levert het op?</a>
+          </div>
+
+          <div class="badges" aria-label="Kernpunten">
+           <!-- <div class="badge"><span class="dot"></span> Compleet dossier in 10 min </div>
+            <div class="badge"><span class="dot"></span> Geen gedoe met administratie </div>
+           <div class="badge"><span class="dot"></span> Geen garantie, wél voorbereiding</div> -->
+          </div>
+        </div>
+
+        <div class="hero-side">
+          <div class="card">
+            <h3>In 4 stappen</h3>
+            <ol>
+              <li>Meld uw laadpaal aan.</li>
+              <li>Upload uw documenten.</li>
+              <li>Aanvraag klaar vergoeding. </li>
+              <li>Dossier voorbereid voor een audit.</li>
+            </ol>
+            <p class="note" style="margin-top:12px; margin-bottom:0;">
+              Let op: regelgeving en uitbetaling hangen af van kaders, verificatie en aantoonbaarheid.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ROUTES / AANBOD -->
+    <section class="section">
+      <div class="container">
+        <div class="section-title">
+          <div>
+            <h2>Wat u met Enval kunt doen</h2>
+            <p>
+              Niet iedereen wil hetzelfde. Daarom is Enval praktisch: van volledige begeleiding naar een vergoeding tot alleen dossier-administratie.
+            </p>
+          </div>
+        </div>
+
+        <div class="cards-3">
+          <div class="feature-card">
+            <div class="icon">1</div>
+            <h3>Volledige route</h3>
+            <p>
+              Registratie + validatie + vergoeding + audit proof administratie. U levert enkel gegevens aan, wij doen de rest. 
+            </p>
+            <a class="btn outline small" href="/aanmelden.html">Aanmelden</a>
+          </div>
+
+          <div class="feature-card">
+            <div class="icon">2</div>
+            <h3>Validatie process</h3>
+            <p>
+              U zorgt voor de inhoud, wij regelen de structuur: checklists, ontbrekende stukken, audit-trail en dossierhygiëne.
+            </p>
+            <a class="btn outline small" href="#contact">Aanmelden</a>
+          </div>
+
+          <div class="feature-card">
+            <div class="icon">3</div>
+            <h3>Installateurs</h3>
+            <p>
+              Meldt uw klanten snel aan met een installateurscode. De klant ontvangt direct een dossierlink en wij pakken het verder op.
+            </p>
+            <a class="btn outline small" href="/installateur.html">Aanmelden</a>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;" class="callout">
+          <strong>Waarom dit belangrijk is:</strong>
+          <p>
+            In de praktijk sneuvelen dit soort trajecten op “net niet compleet” of “niet aantoonbaar”. Het kan zelfs leiden tot boetes indien er geen goede administratie op orde is. 
+            Enval is er om dat te voorkomen.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CALCULATOR -->
+    <section id="calculator" class="section section-alt">
+      <div class="container">
+        <div class="section-title">
+          <div>
+            <h2>Bereken hier uw indicatieve vergoeding.</h2>
+            <p>
+              Gebruik deze tool om gevoel te krijgen bij de eventuele vergoeding.
+              De gebruikte €/kWh is een actuele marktindicatie en kan wijzigen. Werkelijke opbrengst hangt af van regelgeving, verificatie en marktprijs.
+            </p>
+          </div>
+        </div>
+
+        <div class="calc-wrap">
+          <div class="calc">
+            <form id="calcForm" class="form" novalidate>
+            <div class="calc-grid2">
+              <!-- Links: kWh -->
+              <div class="calc-col">
+                <h3 class="calc-title">Op basis van kWh</h3>
+
+                <label>
+                  <span>Jaarlijks laden (kWh)</span>
+                  <input id="kwhYear" class="no-spin" type="number" inputmode="numeric" value="2200" />
+                </label>
+
+                <label>
+                  <span>Indicatie vergoeding (€/kWh)</span>
+                  <input id="eurPerKwh" class="no-spin" type="number" inputmode="decimal" value="0.10" />
+                </label>
+
+                <div class="result" id="calcResultKwh">
+                  Bruto bandbreedte: <b>—</b>
+                  <small>Vul waarden in en klik op bereken.</small>
+                </div>
+              </div>
+
+              <!-- Rechts: km -->
+              <div class="calc-col">
+                <h3 class="calc-title">Op basis van km</h3>
+
+                <label>
+                  <span>Jaarlijks rijden (km)</span>
+                  <input id="kmYear" class="no-spin" type="number" inputmode="numeric" value="12000" />
+                </label>
+
+                <label>
+                  <span>Indicatie vergoeding (€/km)</span>
+                  <input id="eurPerKm" class="no-spin" type="number" inputmode="decimal" value="0.018" />
+                </label>
+
+                <div class="result" id="calcResultKm">
+                  Bruto bandbreedte: <b>—</b>
+                  <small>Vul waarden in en klik op bereken.</small>
+                </div>
+              </div>
+            </div>
+
+            <button class="btn primary full-width" type="submit">Bereken indicatie</button>
+
+            <div class="note" style="margin-top:10px;">
+              Tip: weet u uw verbruik niet? Gebruik een schatting: 2.000–4.000 kWh/jaar is voor veel EV-rijders realistisch. 
+            </div>
+          </form>
+
+          </div>
+
+          <div class="feature-card">
+            <div class="icon">i</div>
+            <h3>Waar gaat het dit normaal mis?</h3>
+            <p>
+              Niet bij het “aanmelden”, maar bij de administratieve verplichtingen en onvolledige dossiers, zoals: 
+              <ol>
+                <li>Onduidelijke koppeling laadpunt-locatie</li>
+                <li>Ontbrekende facturen</li>
+                <li>Onjuiste eigenaar/mandaat </li>
+                <li>Onvolledige audit-trail</li>
+              </ol>
+              Enval neemt deze zorgen weg. 
+            </p>
+            <p class="note" style="margin:0;">
+              Enval is gebouwd om dit te fixen vóór het een probleem wordt.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <script>
+        (function () {
+          function euro(n) {
+            return "€ " + n.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+          }
+
+          const form = document.getElementById("calcForm");
+          const outKwh = document.getElementById("calcResultKwh");
+          const outKm = document.getElementById("calcResultKm");
+
+          function bandbreedteHTML(net) {
+            const lo = net * 0.75;
+            const mid = net;
+            const hi = net * 1.25;
+
+            return (
+              'Bruto bandbreedte (±25%): <b>' +
+              euro(lo) +
+              " – " +
+              euro(hi) +
+              "</b>" +
+              '<small>Bruto op basis van jouw invoer verwachten we rond de ' + euro(net) + ' per jaar. Geen garantie; echte uitkomst hangt af van kaders/markt/verificatie.</small>'
+            );
+          }
+
+          function calc() {
+            // kWh
+            const kwh = Math.max(0, Number(document.getElementById("kwhYear")?.value || 0));
+            const eurPerKwh = Math.max(0, Number(document.getElementById("eurPerKwh")?.value || 0));
+            const grossKwh = kwh * eurPerKwh;
+
+            // km
+            const km = Math.max(0, Number(document.getElementById("kmYear")?.value || 0));
+            const eurPerKm = Math.max(0, Number(document.getElementById("eurPerKm")?.value || 0));
+            const grossKm = km * eurPerKm;
+
+            if (outKwh) outKwh.innerHTML = bandbreedteHTML(grossKwh);
+            if (outKm) outKm.innerHTML = bandbreedteHTML(grossKm);
+          }
+
+          if (form) {
+            form.addEventListener("submit", function (e) {
+              e.preventDefault();
+              calc();
+            });
+
+            // eerste render
+            calc();
+          }
+        })();
+      </script>
+
+    </section>
+
+    <!-- HOE HET WERKT -->
+    <section class="section">
+      <div class="container">
+        <div class="section-title">
+          <div>
+            <h2>Hoe het werkt</h2>
+            <p>Geen jargon-muur. Gewoon duidelijk: wat u invult, wat wij doen, en wanneer u klaar bent.</p>
+          </div>
+        </div>
+
+        <div class="steps">
+          <div class="step">
+            <div class="n">1</div>
+            <h3 style="margin:0 0 6px 0;">Aanmelden</h3>
+            <p>Installateur of eigenaar meldt de laadpaal aan. De eigenaar ontvangt direct een dossierlink per e-mail.</p>
+          </div>
+
+          <div class="step">
+            <div class="n">2</div>
+            <h3 style="margin:0 0 6px 0;">Dossier compleet maken</h3>
+            <p>Laadpunt(en) registreren, documenten uploaden, toestemmingen vastleggen. Alles traceerbaar.</p>
+          </div>
+
+          <div class="step">
+            <div class="n">3</div>
+            <h3 style="margin:0 0 6px 0;">Review-ready</h3>
+            <p>Enval helpt u richting “compleet”: klaar voor review en aansluiting op erkende inboekroute.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section id="faq" class="section section-alt">
+      <div class="container">
+        <div class="section-title">
+          <div>
+            <h2>FAQ</h2>
+            <p>De belangrijkste vragen, kort en helder.</p>
+          </div>
+        </div>
+
+        <div class="faq-grid">
+          <div class="faq-item">
+            <h3>Is Enval een energiecontract of beleggingsproduct?</h3>
+            <p>Nee. Enval is een registratie- en dossierplatform (administratie/validatie/audit-trail).</p>
+          </div>
+
+          <div class="faq-item">
+            <h3>Krijg ik gegarandeerd een vergoeding?</h3>
+            <p>Nee. Er is geen garantie. Opbrengst (als die er is) hangt af van regels, verificatie en aantoonbaarheid.</p>
+          </div>
+
+          <div class="faq-item">
+            <h3>Kan ik alleen de administratie uitbesteden?</h3>
+            <p>Ja. Als u de inhoud hebt, kunnen wij de dossier-structuur, volledigheid en audit-trail bewaken tot het inboeken van de vebruikte KwH's.</p>
+          </div>
+
+          <div class="faq-item">
+            <h3>Hoe zit het met regelgeving?</h3>
+            <p>Regelgeving is leidend en kan wijzigen. De is te vinden op de webste van de Nederlandse Emissie Autoriteit. Enval bouwt “conform-denken” in: controleerbaar en netjes.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONTACT -->
+    <section id="contact" class="section">
+      <div class="container two-column">
+        <div class="column">
+          <h2>Contact</h2>
+          <p>
+            Wilt u als installateur samenwerken, of wilt u alleen de administratie/audit uit handen geven?
+            Laat uw gegevens achter en zet in uw bericht wat je wilt, zoals: “volledige route” of “alleen administratie”.
+            Wij streven ernaar binnen 48 uur te gepaste reactie te geven. 
+          </p>
+          <p class="note">
+            Geen verkooppraat. We kijken eerst of jouw situatie überhaupt logisch is om te registreren.
+          </p>
+        </div>
+
+        <div class="column">
+          <div class="card">
+            <h3>Stel je vraag</h3>
+
+            <form class="form" name="contact" novalidate>
+              <label>
+                <span>Voornaam</span>
+                <input type="text" name="first_name" required />
+              </label>
+
+              <label>
+                <span>Achternaam (optioneel)</span>
+                <input type="text" name="last_name" />
+              </label>
+
+              <label>
+                <span>E-mailadres</span>
+                <input type="email" name="email" required />
+              </label>
+
+              <label>
+                <span>Onderwerp</span>
+                <select name="onderwerp" required>
+                  <option value="">Maak een keuze</option>
+                  <option value="installateur">Ik ben installateur</option>
+                  <option value="ev-rijder">Ik heb een privé-laadpaal</option>
+                  <option value="administratie">Ik wil alleen administratie/audit</option>
+                  <option value="overig">Overig</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Bericht</span>
+                <textarea name="bericht" rows="4" required></textarea>
+              </label>
+
+              <button type="submit" class="btn primary full-width">Verstuur</button>
+
+              <p class="form-note" style="margin-bottom:0;">
+                Door te verzenden ga je akkoord met de <a href="/privacyverklaring.html" target="_blank" rel="noopener">privacyverklaring</a>.
+              </p>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="container footer-inner">
+        <p>&copy; <span id="year"></span> Enval. Alle rechten voorbehouden.</p>
+      </div>
+    </footer>
+
+    <script src="/config.js"></script>
+    <script src="/script.js"></script>
+  </body>
+</html>
