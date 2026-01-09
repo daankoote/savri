@@ -1,0 +1,15 @@
+#!/bin/sh
+branch="$(git branch --show-current)"
+
+# VS Code / GUI commits kunnen geen interactieve "read" beantwoorden.
+# Daarom: geen prompts. Alleen blokkeren op main.
+if [ "$branch" = "main" ]; then
+  echo ""
+  echo "⛔ Commit op main is geblokkeerd (productie)."
+  echo "Maak een branch en merge via PR/merge."
+  echo "Als je echt moet: gebruik 'git commit --no-verify'."
+  echo ""
+  exit 1
+fi
+
+exit 0
