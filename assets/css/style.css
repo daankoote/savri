@@ -313,17 +313,42 @@ p { margin-top: 0; margin-bottom: 1rem; }
 .feature-card h3{ margin: 6px 0 8px 0; }
 .feature-card p{ color: var(--muted); margin-bottom: 12px; }
 
+/* ======================================================
+   STANDARD BADGE (pricing is leidend)
+   Gebruik: .pricing-badge (A/B/C), .icon (1/2/3/€), .step .n, .tbadge
+   ====================================================== */
+
+/* Grote badge (40px) — pricing look */
+.pricing-badge,
 .icon{
-  width: 40px; height: 40px;
+  width: 40px;
+  height: 40px;
   border-radius: 12px;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  border: 1px solid rgba(16,185,129,0.25);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  border: 2px solid rgba(16,185,129,0.35);
   background: rgba(16,185,129,0.10);
   color: var(--brand);
-  font-weight: 800;
+  flex: 0 0 auto;
 }
+
+/* Kleine badge (32px) — zelfde look, kleinere maat */
+.step .n,
+.tbadge{
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  border: 2px solid rgba(16,185,129,0.35);
+  background: rgba(16,185,129,0.10);
+  color: var(--brand);
+}
+
 
 .kicker{
   display:inline-block;
@@ -351,26 +376,41 @@ p { margin-top: 0; margin-bottom: 1rem; }
 @media (min-width: 768px){
   .steps{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
 .step{
   background: #fff;
   border: 1px solid var(--soft-border);
   border-radius: 16px;
   padding: 14px;
   box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+
+  /* KEY: badge links, content rechts */
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  column-gap: 12px;
+  align-items: start;
 }
+
 .step .n{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  width: 32px; height: 32px;
-  border-radius: 12px;
-  background: rgba(15,118,110,0.10);
-  border: 1px solid rgba(15,118,110,0.22);
-  color: var(--brand);
-  font-weight: 800;
-  margin-bottom: 10px;
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  margin: 0;               /* weg met "boven titel" spacing */
 }
+
+.step h3{
+  grid-column: 2;
+  margin: 2px 0 6px 0 !important;
+}
+
+.step p,
+.step .note,
+.step ul,
+.step ol{
+  grid-column: 2;
+}
+
 .step p{ color: var(--muted); margin-bottom: 0; }
+
 
 /* Calculator */
 .calc-wrap{
@@ -560,8 +600,30 @@ footer {
   color: #9ca3af;
   padding: 1rem 0;
   margin-top: 2rem;
+  border-top: 1px solid rgba(255,255,255,0.08);
 }
+
 .footer-inner { text-align: center; font-size: 0.85rem; }
+
+.footer-links{
+  margin-top: 6px;
+  display:flex;
+  gap: 14px;
+  justify-content:center;
+  flex-wrap:wrap;
+  font-size: 0.85rem;
+}
+
+.footer-links a{
+  color: #9ca3af;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.footer-links a:hover{
+  color: #e5e7eb;
+}
+
 
 /* ======================================================
    Responsive
@@ -800,3 +862,318 @@ footer {
 .prose h3{ margin-top: 1.25rem; }
 .prose p, .prose li{ color: rgba(15,23,42,0.86); }
 .prose a{ color: var(--brand); text-decoration: underline; }
+
+
+
+/* ======================================================
+   PRICING
+   ====================================================== */
+
+.pricing-grid{
+  display:grid;
+  gap: 14px;
+  align-items: stretch;
+}
+@media (min-width: 768px){
+  .pricing-grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+.pricing-card{
+  border: 1px solid var(--soft-border);
+  border-radius: 18px;
+  background: #fff;
+  padding: 16px;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+  min-width: 0;
+  display:flex;
+  flex-direction: column;
+  position: relative; /* nodig voor featured label */
+}
+
+/* Header: badge links, tekst rechts */
+.pricing-top{
+  display:flex;
+  gap: 12px;
+  align-items:flex-start;
+}
+
+/* Badge links (A/B/C) */
+.pricing-badge{
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight: 900;
+  border: 2px solid rgba(16,185,129,0.35);
+  background: rgba(16,185,129,0.10);
+  color: var(--brand);
+  flex: 0 0 auto;
+}
+
+/* Typografie: voorkom conflict met globale h3-regels */
+.pricing-name{
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1.15;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+.pricing-sub{
+  margin: 6px 0 0 0;
+  color: var(--muted);
+  font-size: 0.98rem;
+  line-height: 1.35;
+}
+
+/* Featured card + label exact gecentreerd op de bovenrand */
+.pricing-card.featured{
+  border-color: rgba(16,185,129,0.35);
+  box-shadow: 0 14px 30px rgba(15, 118, 110, 0.16);
+  padding-top: 26px; /* ruimte zodat label nooit op content drukt */
+}
+
+.pricing-card.featured::before{
+  content:"Meest gekozen";
+  position:absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.82rem;
+  font-weight: 900;
+  color: var(--brand);
+  background: #fff;
+  border: 1px solid rgba(16,185,129,0.35);
+  padding: 6px 10px;
+  border-radius: 999px;
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.10);
+  z-index: 2;
+  white-space: nowrap;
+}
+
+.pricing-price{
+  margin: 14px 0 10px 0;
+  display:flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.pricing-amount{
+  font-size: 1.95rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+.pricing-period{
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.pricing-list{
+  margin: 8px 0 0 0;
+  padding-left: 1.1rem;
+  color: rgba(15,23,42,0.86);
+}
+.pricing-list li{ margin: 0 0 8px 0; }
+
+.pricing-cta{
+  margin-top: auto;
+  padding-top: 12px;
+}
+
+.pricing-compare{ margin-top: 18px; }
+.compare-grid{ display:grid; gap: 14px; }
+@media (min-width: 768px){
+  .compare-grid{ grid-template-columns: 1fr 1fr; }
+}
+
+
+/* ======================================================
+   PRICING TEASER (index)
+   ====================================================== */
+.pricing-teaser{ margin-top: 14px; }
+
+.pricing-teaser-card{
+  display: grid;
+  gap: 12px;
+}
+
+.pricing-teaser-left{
+  display:flex;
+  gap: 12px;
+  align-items:flex-start;
+}
+
+.pricing-teaser-actions{
+  display:flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items:center;
+}
+
+@media (min-width: 768px){
+  .pricing-teaser-card{
+    grid-template-columns: 1.4fr 0.6fr;
+    align-items: center;
+  }
+  .pricing-teaser-actions{
+    justify-content: flex-end;
+  }
+}
+
+/* ======================================================
+   TIMELINE (proces.html) – 4 stappen + audit eronder
+   ====================================================== */
+
+.timeline-wrap{
+  border: 1px solid var(--soft-border);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
+  padding: 12px;
+}
+
+.timeline-row{
+  display:flex;
+  align-items:stretch;
+  gap: 10px;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+}
+
+.tstep{
+  flex: 1 1 0;
+  min-width: 180px;
+  border: 1px solid var(--soft-border);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(16,185,129,0.06);
+
+  /* Badge links, titel/tekst rechts (zonder HTML wijziging) */
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  column-gap: 12px;
+  align-items: start;
+}
+
+.tstep.audit{
+  max-width: 520px;
+  width: 100%;
+  background: rgba(2,132,199,0.06);
+}
+
+.tbadge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
+  background: rgba(15,118,110,0.10);
+  border: 1px solid rgba(15,118,110,0.22);
+  color: var(--brand);
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.tstep .tbadge{
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  margin: 0; /* override: geen margin-bottom binnen grid */
+}
+
+.ttitle{
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.tstep .ttitle{
+  grid-column: 2;
+  margin-top: 2px;
+}
+
+.tsub{
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.tstep .tsub{
+  grid-column: 2;
+}
+
+.tarrow{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-width: 26px;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.timeline-connector{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap: 10px;
+  margin: 10px 0;
+  color: var(--muted);
+}
+
+.timeline-connector .tline{
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--soft-border);
+  max-width: 520px;
+}
+
+.timeline-connector .tbrace{
+  font-weight: 900;
+  opacity: 0.85;
+}
+
+.timeline-audit{
+  display:flex;
+  justify-content:center;
+}
+
+/* Responsive: stack */
+@media (max-width: 900px){
+  .timeline-row{
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .tarrow{ display:none; }
+  .tstep{ min-width: 220px; }
+}
+
+@media (max-width: 520px){
+  .tstep{ min-width: 0; width: 100%; }
+}
+
+/* Proces: centreer de laatste twee kaarten */
+.steps.steps-center{
+  display:flex;
+  gap: 14px;
+  justify-content:center;
+  flex-wrap: wrap;
+}
+.steps.steps-center .step{
+  max-width: 420px;
+  width: 100%;
+}
+
+
+/* ======================================================
+   PRICING TEASER
+   ====================================================== */
+.pricing-teaser-top{
+  display:flex;
+  gap: 12px;
+  align-items:flex-start;
+}
+.pricing-teaser .card{
+  border: 1px solid var(--soft-border);
+  border-radius: 18px;
+  background: #fff;
+  padding: 16px;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+}

@@ -1,0 +1,203 @@
+<!-- versie 260109_proces_v3 -->
+<!DOCTYPE html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      document.documentElement.classList.add("js");
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Enval – Proces (RED3 / ERE)</title>
+    <link rel="stylesheet" href="/assets/css/style.css" />
+  </head>
+
+  <body>
+    <header>
+      <div class="container header-inner">
+        <div class="logo"><a href="/index.html">Enval</a></div>
+
+        <button
+          id="navToggle"
+          class="nav-toggle"
+          type="button"
+          aria-controls="siteNav"
+          aria-expanded="false"
+        >
+          ☰
+        </button>
+
+        <nav id="siteNav">
+          <a href="/index.html#hero">Home</a>
+          <a href="/aanmelden.html">Aanmelden</a>
+          <a href="/hoe-het-werkt.html">Hoe het werkt</a>
+          <a href="/pricing.html">Tarieven</a>
+          <a href="/proces.html" aria-current="page">Proces</a>
+          <a href="/regelgeving.html">Regelgeving</a>
+          <a href="/index.html#faq">FAQ</a>
+          <a href="/index.html#contact">Contact</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <!-- MINI HERO -->
+      <section class="section page-hero">
+        <div class="container">
+          <div class="kicker">Proces</div>
+          <h1>Hoe het traject richting ERE-inboeken werkt</h1>
+          <p class="lead">
+            Kort: zonder correcte administratie geen externe pre-verificatie, en zonder pre-verificatie geen inboeking.
+            Enval verzorgt de dossierbasis en maakt deze overdraagbaar naar erkende inboekers.
+          </p>
+        </div>
+      </section>
+
+      <!-- CONTENT -->
+      <section class="section">
+        <div class="container">
+          <div class="card">
+            <p style="margin-top:0;">
+              Hieronder ziet u het traject in 5 stappen. Niet alle verantwoording ligt bij Enval — daarom staat per stap duidelijk wie verantwoordelijk is.
+            </p>
+
+            <!-- TIMELINE (4 stappen + audit eronder) -->
+            <div class="timeline-wrap" style="margin-top:12px;">
+              <div class="timeline-row">
+                <div class="tstep">
+                  <div class="tbadge">1</div>
+                  <div class="ttitle">Dossierbasis</div>
+                </div>
+
+                <div class="tarrow">→</div>
+
+                <div class="tstep">
+                  <div class="tbadge">2</div>
+                  <div class="ttitle">Verbruik (kWh)</div>
+                  <div class="tsub">In ontwikkeling</div>
+                </div>
+
+                <div class="tarrow">→</div>
+
+                <div class="tstep">
+                  <div class="tbadge">3</div>
+                  <div class="ttitle">Pre-verificatie</div>
+                </div>
+
+                <div class="tarrow">→</div>
+
+                <div class="tstep">
+                  <div class="tbadge">4</div>
+                  <div class="ttitle">Inboeken</div>
+                </div>
+              </div>
+
+              <div class="timeline-connector" aria-hidden="true">
+                <div class="tbrace">⤵︎</div>
+                <div class="tline"></div>
+                <div class="tbrace">⤴︎</div>
+              </div>
+
+              <div class="timeline-audit">
+                <div class="tstep audit">
+                  <div class="tbadge">5</div>
+                  <div class="ttitle">Audit / steekproef</div>
+                  <div class="tsub">Kan op keten én locatie plaatsvinden</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Steps row 1 -->
+            <div class="steps" style="margin-top:14px;">
+              <div class="step">
+                <div class="n">1</div>
+                <h3 style="margin:0 0 4px 0;">Dossierbasis</h3>
+                <p class="note" style="margin:0 0 10px 0;"><strong>Wie voert dit uit:</strong> Enval </p>
+                <p>
+                  We leggen de basis vast: identiteit, locatie, eigendom, hardware & meter-info, toestemmingen en
+                  bewijsstukken. Alles met een exporteerbare audit-trail.
+                </p>
+              </div>
+
+              <div class="step">
+                <div class="n">2</div>
+                <h3 style="margin:0 0 4px 0;">Verbruik (kWh)</h3>
+                <p class="note" style="margin:0 0 10px 0;"><strong>Wie voert dit uit:</strong> Inboeker / gebruiker </p>
+                <p>
+                  Verbruiksdata ontstaat door het jaar heen. Dit onderdeel is <strong>in ontwikkeling</strong> omdat de exacte eisen voor
+                  aanlevering/acceptatie (per inboeker en externe verificatie) nog niet uniform zijn voor privé-laadpalen.
+                  Enval kan de data <strong>structureren</strong> en klaarzetten voor export, maar is niet automatisch de bron en kan
+                  geen acceptatie garanderen zolang kaders en afspraken nog wijzigen.
+                </p>
+              </div>
+
+              <div class="step">
+                <div class="n">3</div>
+                <h3 style="margin:0 0 4px 0;">Pre-verificatie</h3>
+                <p class="note" style="margin:0 0 10px 0;"><strong>Wie voert dit uit:</strong> Externe verificateur </p>
+                <p>
+                  Een geaccrediteerde verificateur beoordeelt de inboekroute (processen + dossiers). De inboeker is en blijft
+                  eindverantwoordelijk, maar onderdelen (zoals Enval’s dossierproces) kunnen wél worden meegenomen in de
+                  beoordeling.
+                </p>
+              </div>
+            </div>
+
+            <!-- Steps row 2 (gecentreerd: 4 en 5) -->
+            <div class="steps steps-center" style="margin-top:12px;">
+              <div class="step">
+                <div class="n">4</div>
+                <h3 style="margin:0 0 4px 0;">Inboeken</h3>
+                <p class="note" style="margin:0 0 10px 0;"><strong>Wie voert dit uit:</strong> Inboeker </p>
+                <p>
+                  Alleen erkende inboekers mogen elektriciteit inboeken. Pas ná succesvolle pre-verificatie kan de inboeker
+                  inboeken en ontstaat (eventueel) een vergoeding.
+                </p>
+              </div>
+
+              <div class="step">
+                <div class="n">5</div>
+                <h3 style="margin:0 0 4px 0;">Audit / steekproef</h3>
+                <p class="note" style="margin:0 0 10px 0;"><strong>Wie voert dit uit:</strong> Extern (locatie / keten) </p>
+                <p>
+                  Steekproeven kunnen plaatsvinden op eindgebruiker-/locatieniveau (de laadpaal in het veld). Daarnaast kan ook
+                  de keten administratief worden gecontroleerd via de inboekroute. Daarom moet het dossier controleerbaar
+                  blijven.
+                </p>
+              </div>
+            </div>
+
+            <div class="callout" style="margin-top:14px;">
+              <strong>Wat Enval precies levert</strong>
+              <ul class="list" style="margin:10px 0 0 0;">
+                <li>Een dossierbasis die klopt (data, bewijsstukken, structuur).</li>
+                <li>Een exporteerbare audit-trail.</li>
+                <li>Overdraagbaar naar erkende inboekers.</li>
+                <li>Inboekbaar mits na externe pre-verificatie (geen belofte op vergoeding).</li>
+                <li>Voorkomt dat het traject afketst op “niet aantoonbaar” of “onvolledig”.</li>
+              </ul>
+            </div>
+
+            <p class="form-note" style="margin-top:14px; margin-bottom:0;">
+              Laatst bijgewerkt: januari 2026. Regelgeving en verificatie-eisen kunnen wijzigen en zijn leidend.
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="container footer-inner">
+        <p>&copy; <span id="year"></span> Enval. Alle rechten voorbehouden.</p>
+
+        <div class="footer-links">
+          <a href="/privacyverklaring.html">Privacyverklaring</a>
+          <a href="/voorwaarden.html">Voorwaarden</a>
+          <!-- <a href="/mandaat.html">Mandaat</a> -->
+        </div>
+      </div>
+    </footer>
+
+    <script src="/assets/js/config.js"></script>
+    <script src="/assets/js/script.js"></script>
+  </body>
+</html>
