@@ -139,10 +139,15 @@
           <div class="card">
             <h3>Updates / vraag stellen</h3>
 
-            <form class="form" name="lead" novalidate>
+            <form class="form" name="contact" novalidate>
               <label>
-                <span>Naam</span>
-                <input type="text" name="name" required />
+                <span>Voornaam</span>
+                <input type="text" name="first_name" required />
+              </label>
+
+              <label>
+                <span>Achternaam (optioneel)</span>
+                <input type="text" name="last_name" />
               </label>
 
               <label>
@@ -151,34 +156,29 @@
               </label>
 
               <label>
-                <span>Ik ben</span>
-                <select name="type" required>
+                <span>Onderwerp</span>
+                <select name="onderwerp" required>
                   <option value="">Maak een keuze</option>
-                  <option value="particulier">Particulier (privé-laadpaal)</option>
-                  <option value="bedrijf">Bedrijf / locatiebeheer</option>
-                  <option value="installateur">Installateur</option>
+                  <option value="installateur">Ik ben installateur</option>
+                  <option value="ev-rijder">Ik heb een privé-laadpaal</option>
+                  <option value="administratie">Ik wil alleen administratie/audit</option>
                   <option value="overig">Overig</option>
                 </select>
               </label>
 
               <label>
-                <span>Vraag of context (optioneel)</span>
-                <textarea name="message" rows="4" placeholder="Waar wil je duidelijkheid over?"></textarea>
+                <span>Bericht</span>
+                <textarea name="bericht" rows="4" required></textarea>
               </label>
-
-              <div class="checkbox-row">
-                <input type="checkbox" id="lead_privacy" required />
-                <label for="lead_privacy">
-                  Ik ga akkoord met de <a href="/privacyverklaring.html" target="_blank" rel="noopener">privacyverklaring</a>.
-                </label>
-              </div>
 
               <button type="submit" class="btn primary full-width">Verstuur</button>
 
               <p class="form-note" style="margin-bottom:0;">
-                Na versturen ontvang je (eventueel) een bevestiging per e-mail.
+                Door te verzenden ga je akkoord met de
+                <a href="/privacyverklaring.html" target="_blank" rel="noopener">privacyverklaring</a>.
               </p>
             </form>
+
           </div>
         </div>
       </div>
