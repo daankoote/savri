@@ -1,5 +1,5 @@
-// versie 260105_18 oclock
-console.log("ENVAL SCRIPT.JS versie 260105_18 oclock");
+// versie 260119_10 oclock
+console.log("ENVAL SCRIPT.JS versie 260119_10 oclock");
 
 // ======================================================
 // 0) Config (komt uit /config.js)

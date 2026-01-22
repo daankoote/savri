@@ -1,7 +1,7 @@
-// versie 260105_18 oclock
+//  versie 260120_21 oclock 
 // /dossier.js  (NON-module, gebruikt window.ENVAL uit /config.js)
 
-console.log("ENVAL DOSSIER.JS versie 260105_18 oclock");
+console.log("ENVAL DOSSIER.JS versie 260120_21 oclock");
 
 // ======================================================
 // 1) DOM helpers + formatting
@@ -70,6 +70,13 @@ function normalizePersonName(input) {
     .join(" ");
 }
 
+function isValidMobile(phone) {
+  if (!phone) return true; // optioneel veld
+  const p = String(phone).trim().replace(/[\s\-().]/g, "");
+  return /^06\d{8}$/.test(p) || /^\+316\d{8}$/.test(p);
+}
+
+
 /**
  * newIdempotencyKey()
  * Doel: unieke key voor POST requests.
@@ -128,9 +135,10 @@ function formatDateNL(isoLike) {
 async function apiPost(fnName, body) {
   const url = `${window.ENVAL.API_BASE}/${fnName}`;
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const idem = newIdempotencyKey();
 
   for (let attempt = 1; attempt <= 2; attempt++) {
-    const idem = newIdempotencyKey();
+    
 
     try {
       const res = await fetch(url, {
@@ -261,6 +269,47 @@ const token = urlParams.get("t");
 
 let current = null;
 
+
+
+// Precheck UX state (client-side)
+let precheckOk = false;
+let dirtySincePrecheck = true;
+
+function invalidatePrecheck(reason = "") {
+  precheckOk = false;
+  dirtySincePrecheck = true;
+  if ($("reviewState")) {
+    $("reviewState").textContent = reason
+      ? `Wijziging gedaan. Controleer volledigheid opnieuw. (${reason})`
+      : "Wijziging gedaan. Controleer volledigheid opnieuw.";
+  }
+  syncReviewButtons();
+}
+
+function syncReviewButtons() {
+  const locked = isLocked();
+
+  // Precheck knop: zichtbaar zolang niet locked
+  if ($("btnPrecheck")) {
+    $("btnPrecheck").disabled = !!locked;
+    $("btnPrecheck").classList.toggle("hidden", !!locked);
+  }
+
+  // Finalize knop:
+  // - VERBERGEN tot precheckOk=true én dirtySincePrecheck=false
+  const canFinalize = !locked && precheckOk === true && dirtySincePrecheck === false;
+
+  if ($("btnFinalize")) {
+    $("btnFinalize").disabled = !canFinalize;
+    $("btnFinalize").classList.toggle("hidden", !canFinalize);
+
+    // title alleen als hij wél bestaat maar disabled (bijv. locked wordt al hidden)
+    $("btnFinalize").title = canFinalize ? "" : "Eerst ‘Controleer volledigheid’ uitvoeren.";
+  }
+}
+
+
+
 // Address verify UX state (debounced verify)
 let addressVerifyTimer = null;
 let addressVerifiedPreview = null; // { street, city } na verify ok
@@ -293,9 +342,7 @@ function setAllUiLocked(locked) {
     "btnRefresh",
   ].forEach((id) => { if ($(id)) $(id).disabled = !!locked; });
 
-  // review knop blijft zichtbaar (maar handler checkt status)
-  if ($("btnEvaluate")) $("btnEvaluate").disabled = false;
-
+  
   ["accessForm","addressForm","chargerForm","uploadForm","consentsForm"].forEach((fid) => {
     const f = $(fid);
     if (!f) return;
@@ -307,6 +354,10 @@ function setAllUiLocked(locked) {
   document.querySelectorAll("[data-lock-hide='1']").forEach((el) => {
     el.classList.toggle("hidden", !!locked);
   });
+
+  // Step 6 knoppen ---> deze drie regels mogenweg als dit er nogstaat na 27-1-2026
+ // if ($("btnPrecheck")) $("btnPrecheck").disabled = !!locked;
+ // if ($("btnFinalize")) $("btnFinalize").disabled = !!locked;
 }
 
 // ======================================================
@@ -330,7 +381,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   populateBrandModel();
 
   $("btnRefresh")?.addEventListener("click", reloadAll);
-  $("btnEvaluate")?.addEventListener("click", onReviewClicked);
+  $("btnPrecheck")?.addEventListener("click", onPrecheckClicked);
+  $("btnFinalize")?.addEventListener("click", onFinalizeClicked);
+
 
   $("addressForm")?.addEventListener("submit", onAddressSave);
   $("accessForm")?.addEventListener("submit", onAccessSave);
@@ -387,8 +440,25 @@ function renderAll() {
   renderDocs();
   renderConsents();
 
+  // 1) dossier-lock (in_review / ready_for_booking) => alles locken
   setAllUiLocked(isLocked());
+
+  // 2) consents-lock is een ANDERE lock dan dossier-lock.
+  // setAllUiLocked(false) zou anders je checkboxes weer unlocken.
+  const cons = current?.consents || [];
+  const latest = {};
+  for (const c of cons) {
+    if (!latest[c.consent_type]) latest[c.consent_type] = c;
+  }
+
+  const consentsLocked =
+    latest["terms"]?.accepted === true &&
+    latest["privacy"]?.accepted === true &&
+    latest["mandaat"]?.accepted === true;
+
+  setConsentsLocked(consentsLocked);
 }
+
 
 /**
  * pillForStatus(status)
@@ -426,6 +496,30 @@ function renderStatus() {
     $("statusPill").textContent = p.text;
   }
   if ($("statusExplain")) $("statusExplain").textContent = explainStatus(status);
+
+  const locked = isLocked();
+  // Knoppen worden verderop door syncReviewButtons() correct verborgen/getoond.
+  // Hier doen we dus geen "always unhide" meer.
+  if (locked) {
+    if ($("btnPrecheck")) $("btnPrecheck").classList.add("hidden");
+    if ($("btnFinalize")) $("btnFinalize").classList.add("hidden");
+  }
+
+
+  // Precheck status afleiden uit server status
+  // ready_for_review betekent: laatste evaluate(precheck) was OK
+  // Maar als er daarna iets gewijzigd is, zetten we dirtySincePrecheck=true (client-side)
+  if (status === "ready_for_review") {
+    if (dirtySincePrecheck === false) precheckOk = true;
+    // Als dirtySincePrecheck true is, laten we finalize disabled.
+  } else {
+    // elke andere status => precheck niet geldig
+    precheckOk = false;
+  }
+
+  syncReviewButtons();
+
+
 }
 
 /**
@@ -723,7 +817,9 @@ function renderChargers() {
         btn.disabled = true;
         await apiPost("api-dossier-charger-delete", { dossier_id, token, charger_id: id });
         showToast("Laadpaal verwijderd.", "success");
+        invalidatePrecheck("laadpaal verwijderd");
         await reloadAll();
+
       } catch (e) {
         showToast(e.message, "error");
       } finally {
@@ -887,7 +983,9 @@ function renderDocs() {
         btn.disabled = true;
         await apiPost("api-dossier-doc-delete", { dossier_id, token, document_id: id });
         showToast("Document verwijderd.", "success");
+        invalidatePrecheck("document verwijderd");
         await reloadAll();
+
       } catch (e) {
         showToast(e.message, "error");
       } finally {
@@ -898,23 +996,105 @@ function renderDocs() {
 }
 
 
+/**
+ * setConsentsLocked(locked)
+ * Doel: stap 5 read-only maken na succesvolle save (geen revoke UX),
+ * maar wel visueel duidelijk: aangevinkt + grijs + unclickable.
+ */
+function setConsentsLocked(locked) {
+  const ids = ["cTerms", "cPrivacy", "cMandaat"];
+
+  ids.forEach((id) => {
+    const el = $(id);
+    if (!el) return;
+
+    // unclickable
+    el.disabled = !!locked;
+
+    // visueel grijs (zonder CSS wijzigingen)
+    if (locked) {
+      el.style.opacity = "0.6";
+      el.style.cursor = "not-allowed";
+    } else {
+      el.style.opacity = "";
+      el.style.cursor = "";
+    }
+
+    // label ook grijs maken
+    const label = document.querySelector(`label[for="${id}"]`);
+    if (label) {
+      if (locked) {
+        label.style.opacity = "0.75";
+        label.style.cursor = "not-allowed";
+      } else {
+        label.style.opacity = "";
+        label.style.cursor = "";
+      }
+    }
+  });
+
+  // knop weg na lock
+  const btn = $("btnConsentsSave");
+  if (btn) {
+    btn.disabled = !!locked;
+    btn.classList.toggle("hidden", !!locked);
+    if (locked) btn.style.display = "none";
+    else btn.style.display = "";
+  }
+
+  // statusregel
+  const state = $("consentsState");
+  if (state) {
+    state.textContent = locked
+      ? "Opgeslagen. Toestemmingen zijn vastgelegd en kunnen niet meer worden aangepast."
+      : "";
+  }
+}
+
 
 /**
  * renderConsents()
  * Doel: checkbox state + laatst opgeslagen timestamp.
  */
+/**
+ * renderConsents()
+ * Doel: checkbox state + laatst opgeslagen timestamp + lock UI na save.
+ */
 function renderConsents() {
   const cons = current?.consents || [];
+
+  // pak de laatste status per consent_type (aannemende dat current.consents newest-first is)
   const latest = {};
-  for (const c of cons) if (!latest[c.consent_type]) latest[c.consent_type] = c;
+  for (const c of cons) {
+    const t = String(c.consent_type || "");
+    if (!latest[t]) latest[t] = c;
+  }
 
-  if ($("cTerms")) $("cTerms").checked = latest["terms"]?.accepted === true;
-  if ($("cPrivacy")) $("cPrivacy").checked = latest["privacy"]?.accepted === true;
-  if ($("cMandaat")) $("cMandaat").checked = latest["mandaat"]?.accepted === true;
+  const termsOk = latest["terms"]?.accepted === true;
+  const privacyOk = latest["privacy"]?.accepted === true;
+  const mandaatOk = latest["mandaat"]?.accepted === true;
 
-  const ts = latest["terms"]?.accepted_at || latest["privacy"]?.accepted_at || latest["mandaat"]?.accepted_at || "";
-  if ($("consentsStamp")) $("consentsStamp").textContent = ts ? `Laatst opgeslagen: ${formatDateNL(ts)}` : "";
+  if ($("cTerms")) $("cTerms").checked = termsOk;
+  if ($("cPrivacy")) $("cPrivacy").checked = privacyOk;
+  if ($("cMandaat")) $("cMandaat").checked = mandaatOk;
+
+  const ts =
+    latest["mandaat"]?.accepted_at ||
+    latest["privacy"]?.accepted_at ||
+    latest["terms"]?.accepted_at ||
+    "";
+
+  if ($("consentsStamp")) {
+    $("consentsStamp").textContent = ts ? `Laatst opgeslagen: ${formatDateNL(ts)}` : "";
+  }
+
+  // lock logic:
+  // - als dossier locked is: sowieso lock
+  // - anders: lock zodra alle drie TRUE zijn (geen revoke UX)
+  const locked = isLocked() || (termsOk && privacyOk && mandaatOk);
+  setConsentsLocked(locked);
 }
+
 
 // ======================================================
 // 8) Actions (save/upload/review)
@@ -940,6 +1120,10 @@ async function onAccessSave(e) {
   const last_name  = normalizePersonName(rawLast);
 
   const customer_phone = (f.querySelector('[name="customer_phone"]')?.value || "").trim();
+  if (customer_phone && !isValidMobile(customer_phone)) {
+    return showToast("Vul een geldig mobiel nummer in (06xxxxxxxx of +316xxxxxxxx).", "error");
+  }
+
 
   const charger_count_raw = (f.querySelector('[name="charger_count"]')?.value || "").trim();
   const charger_count = charger_count_raw ? Number(charger_count_raw) : null;
@@ -991,7 +1175,9 @@ async function onAccessSave(e) {
     if (inLast)  inLast.value = last_name;
 
     showToast("Opgeslagen.", "success");
+    invalidatePrecheck("stap 1 gewijzigd");
     await reloadAll();
+
   } catch (err) {
     console.error(err);
     showToast(err.message || "Opslaan mislukt.", "error");
@@ -1027,7 +1213,9 @@ async function onAddressSave(e) {
   try {
     await apiPost("api-dossier-address-save", { dossier_id, token, postcode, house_number, suffix });
     showToast("Adres opgeslagen.", "success");
+    invalidatePrecheck("stap 2 gewijzigd");
     await reloadAll();
+
   } catch (e2) {
     showToast(e2.message, "error");
   } finally {
@@ -1083,11 +1271,13 @@ async function onChargerSave(e) {
       notes: (brand === "Anders" || model === "Anders") ? notes : null,
     });
 
-    showToast("Laadpaal opgeslagen.", "success");
+     showToast("Laadpaal opgeslagen.", "success");
     f.reset();
     f.querySelector('[name="charger_id"]').value = "";
     toggleChargerNotes();
+    invalidatePrecheck("stap 3 gewijzigd");
     await reloadAll();
+
   } catch (e2) {
     showToast(e2.message, "error");
   } finally {
@@ -1165,6 +1355,8 @@ async function onUpload(e) {
       size_bytes: file.size,
     });
 
+    if (!meta?.document_id) throw new Error("Upload voorbereiding faalde (geen document_id).");
+
     if ($("uploadState")) $("uploadState").textContent = "Uploaden…";
     const putRes = await fetch(meta.signed_url, {
       method: "PUT",
@@ -1173,9 +1365,19 @@ async function onUpload(e) {
     });
     if (!putRes.ok) throw new Error(`Upload failed: ${putRes.status}`);
 
-    if ($("uploadState")) $("uploadState").textContent = "Geüpload.";
+    // ✅ server-side confirm stap (audit-proof)
+    if ($("uploadState")) $("uploadState").textContent = "Bevestigen…";
+    await apiPost("api-dossier-upload-confirm", {
+      dossier_id,
+      token,
+      document_id: meta.document_id,
+    });
+
+    if ($("uploadState")) $("uploadState").textContent = "Geüpload en bevestigd.";
     showToast("Upload gelukt.", "success");
+
     f.reset();
+    invalidatePrecheck("document toegevoegd");
     await reloadAll();
   } catch (e2) {
     if ($("uploadState")) $("uploadState").textContent = e2.message;
@@ -1185,16 +1387,18 @@ async function onUpload(e) {
   }
 }
 
+
 /**
  * onConsentsSave(e)
  * Doel: stap 5 — alle 3 verplicht, opslaan via api-dossier-consents-save
+ * Na succes: UI locken (geen revoke).
  */
 async function onConsentsSave(e) {
   e.preventDefault();
   if (isLocked()) return showToast("Dossier is vergrendeld.", "error");
 
   const btn = $("btnConsentsSave");
-  if (btn?.disabled) return;
+  if (!btn || btn.disabled) return;
 
   const terms = $("cTerms")?.checked === true;
   const privacy = $("cPrivacy")?.checked === true;
@@ -1215,53 +1419,75 @@ async function onConsentsSave(e) {
     const consents = { terms, privacy, mandaat };
     await apiPost("api-dossier-consents-save", { dossier_id, token, consents });
 
-    if ($("consentsState")) $("consentsState").textContent = "Opgeslagen.";
     showToast("Toestemmingen opgeslagen.", "success");
+    invalidatePrecheck("toestemmingen gewijzigd");
+
+    // ✅ meteen locken in UI (ook voordat reloadAll klaar is)
+    setConsentsLocked(true);
+
+    // reload om timestamps/status uit DB te laten terugkomen
     await reloadAll();
   } catch (e2) {
     if ($("consentsState")) $("consentsState").textContent = e2.message;
     showToast(e2.message, "error");
   } finally {
+    // knop is nu toch verborgen/locked, maar dit houdt state consistent als er een error was
     lockSubmit(btn, false, "Opslaan");
   }
 }
 
+
 /**
- * onReviewClicked()
- * Doel: stap 6 — finalize review via api-dossier-evaluate
- * - toont missingSteps netjes
- * - locked_at check is hard requirement voor "success"
+ * runEvaluate(finalize)
+ * Doel:
+ * - finalize=false => precheck (ready_for_review, GEEN lock)
+ * - finalize=true  => indienen (in_review, WEL lock)
  */
-async function onReviewClicked() {
-  const btn = $("btnEvaluate");
+async function runEvaluate(finalize) {
+  const btn = finalize ? $("btnFinalize") : $("btnPrecheck");
   if (!btn) return;
 
   const d = current?.dossier || {};
+
+  // Als al locked / in review => geen actie meer nodig
   if (d.locked_at || String(d.status || "") === "in_review" || String(d.status || "") === "ready_for_booking") {
     showToast("Dit dossier is al ingediend.", "success");
+    if ($("reviewState")) {
+      const ts = d.locked_at ? formatDateNL(d.locked_at) : "";
+      $("reviewState").textContent = ts ? `Al ingediend. In review sinds: ${ts}` : "Al ingediend.";
+    }
     return;
   }
 
-  const okConfirm = confirm("Klopt alle informatie? Na doorgaan kunt u niets meer veranderen.\n\nDoorgaan?");
-  if (!okConfirm) return;
+  // Alleen bij indienen: harde confirm
+  if (finalize) {
+    const okConfirm = confirm(
+      "Klopt alle informatie? Na indienen kunt u niets meer veranderen.\n\nDossier indienen?"
+    );
+    if (!okConfirm) return;
+  }
 
-  lockSubmit(btn, true, "Reviewen…");
+  lockSubmit(btn, true, finalize ? "Indienen…" : "Controleren…");
 
   try {
-    if ($("reviewState")) $("reviewState").textContent = "Server controleert dossier…";
+    if ($("reviewState")) {
+      $("reviewState").textContent = finalize
+        ? "Server controleert en dient dossier in…"
+        : "Server controleert volledigheid…";
+    }
 
     const idem = newIdempotencyKey();
     const res = await fetch(`${window.ENVAL.API_BASE}/api-dossier-evaluate`, {
       method: "POST",
       headers: window.ENVAL.edgeHeaders({ "Idempotency-Key": idem }),
-      body: JSON.stringify({ dossier_id, token, finalize: true }),
+      body: JSON.stringify({ dossier_id, token, finalize: !!finalize }),
     });
 
     const js = await res.json().catch(() => ({}));
 
     if (!res.ok || !js.ok) {
       const missing = Array.isArray(js?.missingSteps) ? js.missingSteps : [];
-      const msg = js?.error || js?.message || `Review failed (${res.status})`;
+      const msg = js?.error || js?.message || `Evaluate failed (${res.status})`;
 
       if ($("reviewState")) {
         if (missing.length) {
@@ -1280,20 +1506,56 @@ async function onReviewClicked() {
       return;
     }
 
-    if (!js.locked_at) {
+
+
+    // Succes pad
+    if (finalize) {
+      // finalize moet lock opleveren
+      if (!js.locked_at) {
+        if ($("reviewState")) $("reviewState").textContent =
+          "Indienen lijkt gelukt, maar dossier is niet vergrendeld. Probeer opnieuw.";
+        showToast("Indienen fout: dossier is niet vergrendeld.", "error");
+        return;
+      }
+
+      showToast("Dossier ingediend. Staat nu in review.", "success");
+      if ($("reviewState")) $("reviewState").textContent = `In review sinds: ${formatDateNL(js.locked_at)}`;
+    } else {
+      // ✅ precheck OK => finalize mag (tot er weer iets wijzigt)
+      precheckOk = true;
+      dirtySincePrecheck = false;
+      syncReviewButtons();
+
+      showToast("Volledigheidscheck OK. Klaar om in te dienen.", "success");
       if ($("reviewState")) $("reviewState").textContent =
-        "Review lijkt gelukt, maar dossier is niet vergrendeld. Probeer opnieuw.";
-      showToast("Review fout: dossier is niet vergrendeld.", "error");
-      return;
+        "Alles staat op groen. Klik op ‘Dossier indienen’ om het dossier te vergrendelen en naar review te sturen.";
     }
 
-    showToast("Dossier ingediend. Staat nu in review.", "success");
-    if ($("reviewState")) $("reviewState").textContent = `In review sinds: ${formatDateNL(js.locked_at)}`;
     await reloadAll();
-  } catch (e) {
-    showToast(e.message, "error");
-    if ($("reviewState")) $("reviewState").textContent = e.message;
-  } finally {
-    lockSubmit(btn, false, "Review dossier");
+
+
+    
+    } catch (e) {
+      showToast(e.message, "error");
+      if ($("reviewState")) $("reviewState").textContent = e.message;
+    } finally {
+    lockSubmit(btn, false, finalize ? "Dossier indienen" : "Controleer volledigheid");
   }
 }
+
+async function onPrecheckClicked() {
+  if (isLocked()) return showToast("Dossier is vergrendeld.", "error");
+  return runEvaluate(false);
+}
+
+async function onFinalizeClicked() {
+  if (isLocked()) return showToast("Dossier is vergrendeld.", "error");
+
+  // extra safety: ook als iemand via DOM/console triggert
+  if (!(precheckOk === true && dirtySincePrecheck === false)) {
+    return showToast("Controleer eerst volledigheid opnieuw.", "error");
+  }
+
+  return runEvaluate(true);
+}
+
