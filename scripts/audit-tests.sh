@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ============================================================
+# ================================================================
 # ENVAL — audit-tests.sh
 #
 # Doel (real-world default):
@@ -22,7 +22,7 @@ set -euo pipefail
 # - RUN_HAPPY_UPLOAD=1       -> happy uploads altijd aan (default = 1)
 # - RUN_REPO_LINT=0          -> repo_lint overslaan totdat we in productie --> edge functions in VS code gaan (default = 0))
 # - LINT_STRICT=1            -> repo-lint WARN wordt FAIL
-# ============================================================
+# ================================================================
 
 echo ""
 echo "================================================"
