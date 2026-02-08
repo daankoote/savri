@@ -1291,7 +1291,17 @@ async function onChargerSave(e) {
  * - validate type/charger/file
  * - request signed url via api-dossier-upload-url
  * - PUT upload
- */
+*/
+
+async function sha256FileHex(file) {
+  const buf = await file.arrayBuffer();
+  const hash = await crypto.subtle.digest("SHA-256", buf);
+  return Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+
 async function onUpload(e) {
   e.preventDefault();
   if (isLocked()) return showToast("Dossier is vergrendeld.", "error");
@@ -1343,6 +1353,11 @@ async function onUpload(e) {
   lockSubmit(btn, true, "Upload…");
 
   try {
+    if ($("uploadState")) $("uploadState").textContent = "Hash berekenen…";
+
+    // ✅ dit is nodig voor audit-proof confirm
+    const file_sha256 = await sha256FileHex(file);
+
     if ($("uploadState")) $("uploadState").textContent = "Upload voorbereiden…";
 
     const meta = await apiPost("api-dossier-upload-url", {
@@ -1356,8 +1371,10 @@ async function onUpload(e) {
     });
 
     if (!meta?.document_id) throw new Error("Upload voorbereiding faalde (geen document_id).");
+    if (!meta?.signed_url) throw new Error("Upload voorbereiding faalde (geen signed_url).");
 
     if ($("uploadState")) $("uploadState").textContent = "Uploaden…";
+
     const putRes = await fetch(meta.signed_url, {
       method: "PUT",
       headers: { "Content-Type": file.type || "application/octet-stream" },
@@ -1365,12 +1382,14 @@ async function onUpload(e) {
     });
     if (!putRes.ok) throw new Error(`Upload failed: ${putRes.status}`);
 
-    // ✅ server-side confirm stap (audit-proof)
     if ($("uploadState")) $("uploadState").textContent = "Bevestigen…";
+
+    // ✅ stuur sha mee
     await apiPost("api-dossier-upload-confirm", {
       dossier_id,
       token,
       document_id: meta.document_id,
+      file_sha256,
     });
 
     if ($("uploadState")) $("uploadState").textContent = "Geüpload en bevestigd.";
@@ -1386,6 +1405,7 @@ async function onUpload(e) {
     lockSubmit(btn, false, "Upload");
   }
 }
+
 
 
 /**

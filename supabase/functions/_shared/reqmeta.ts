@@ -1,6 +1,7 @@
 // supabase/functions/_shared/reqmeta.ts
 export type ReqMeta = {
-  request_id: string | null;
+  request_id: string; // ALWAYS present
+  idempotency_key: string | null; // header if provided
   ip: string | null;
   ua: string | null;
 };
@@ -13,13 +14,21 @@ function firstNonEmpty(...vals: Array<string | null | undefined>): string | null
   return null;
 }
 
-export function getRequestId(req: Request): string | null {
+export function getIdempotencyKey(req: Request): string | null {
   return firstNonEmpty(
     req.headers.get("Idempotency-Key"),
     req.headers.get("idempotency-key"),
+  );
+}
+
+export function getRequestId(req: Request): string {
+  // Prefer explicit request id header, then Idempotency-Key, else generate
+  const rid = firstNonEmpty(
     req.headers.get("x-request-id"),
     req.headers.get("X-Request-Id"),
+    getIdempotencyKey(req),
   );
+  return rid || crypto.randomUUID();
 }
 
 export function getIp(req: Request): string | null {
@@ -47,6 +56,7 @@ export function getUa(req: Request): string | null {
 export function getReqMeta(req: Request): ReqMeta {
   return {
     request_id: getRequestId(req),
+    idempotency_key: getIdempotencyKey(req),
     ip: getIp(req),
     ua: getUa(req),
   };

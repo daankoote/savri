@@ -1,5 +1,3 @@
-DOC 1 — Enval — System Map (One Pager) (APPEND-ONLY UPDATE)
-
 Enval — System Map (One Pager)
 
 Versie: v1
@@ -251,7 +249,7 @@ Implication: upsert onConflict "dossier_id,check_code" is correct.
 CHECK: doc_type in (factuur,foto_laadpunt) ⇒ charger_id IS NOT NULL
 (dossier_documents_doc_type_requires_charger_chk)
 
-FK charger_id → dossier_chargers(id) ON DELETE SET NULL ✅ (charger delete leaves docs, decoupled)
+FK charger_id → dossier_chargers(id) ON DELETE CASCADE
 FK dossier_id → dossiers(id) ON DELETE CASCADE
 
 5.3 dossier_chargers
@@ -375,14 +373,6 @@ finalize=true → in_review met locked_at
 
 Frontend gating blijft: finalize knop pas zichtbaar na precheck OK en zolang er geen “dirty change” is.
 
-ADD 9.2 — Nieuwe aandachtspunten die hierdoor expliciet zijn geworden
-
-Consents zijn nu “immutable in UI”: productregel moet expliciet worden (tekst: “na vastleggen niet aanpasbaar; revoke later via support”).
-
-Upload status semantiek blijft P0: upload-url issued is nog geen bewijs van uploaded (audit gap).
-
-Audit correlation blijft P1: request_id/Idempotency-Key nog niet standaard gelogd in audit events.
-
 ADD v1.2 — 2026-01-21 (audit reject coverage + juiste audit tabel)
 ADD 3.3 — Audit logging (source of truth)
 
@@ -426,5 +416,42 @@ ADD 8.1 — Security red flag (P0): Service role key exposure
 
 Service role key is extreem gevoelig (full DB toegang).
 Fixrichting: rotate key in Supabase + update lokale scripts/env.
+
+
+ADD v1.3 — 2026-01-22 12:00 (standardisatie-sprint: “1 format” overal)
+ADD 0.1 — Situatie en risico
+
+We hebben nu 3 functies (charger-save, doc-delete, upload-url/confirm) die aantoonbaar audit events loggen incl. reject flows.
+Risico: overige dossier write functies wijken nog af qua audit correlation (request_id/ip/ua/actor_ref), idempotency en CORS-allowlist.
+
+Doel van komende sprint: 1 consistent contract voor ALLE dossier write endpoints, zodat we later geen massale refactor hoeven te doen.
+
+ADD 3.4 — Minimum Logging Standard (MLS) voor alle write functions
+
+Elke write/reject audit event_data moet minimaal bevatten:
+- request_id (bij voorkeur X-Request-Id of anders random UUID)
+- ip (x-forwarded-for / cf-connecting-ip fallback)
+- ua (user-agent)
+- actor_ref (dossier:<id>|token:<hashprefix> of installer ref)
+- environment (top-level in event_data)
+- stage + status + message bij rejects
+
+En: hard lock enforcement moet altijd vóór mutaties, met 409 + audit reject (stage=dossier_locked).
+
+ADD 3.5 — Idempotency Standard (IS) voor alle write functions
+
+Waar Idempotency-Key relevant is (create/update acties):
+- header verplicht (400 als ontbreekt) OF expliciet “no-audit-before-auth” zoals nu bij upload-url (bewuste keuze).
+- server reserve/replay/finalize via idempotency_keys, met response_status/response_body.
+
+Frontend moet per user actie dezelfde Idempotency-Key re-gebruiken bij retry (anders is replay zinloos).
+
+ADD 9.4 — Backlog herijkt (wat nu eerst moet, wat later)
+
+P0: “1 format” door alle dossier write functions (MLS + IS + lock enforcement)
+P0: Service role key roteren (security hygiene)
+P1: Export/rapportage van audit trail (read model + endpoint of SQL view)
+P1: UX anti-double submit op alle forms (loading state, disable)
+P2: Externe verificaties (MID/merk/model/energiemaatschappij) pas na eisenpakket inboeker/verificateur
 
 EINDE DOC 1
