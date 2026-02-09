@@ -7,12 +7,19 @@ Prioriteit: audit-first.
 Regel: alleen open items; afgerond → naar changelog.
 
 ## P0 (must)
-1) **Rotate Supabase Service Role Key**
-- DoD: key rotated + alle env/scripts bijgewerkt + oude key revoked.
-- Plan: uitvoeren vóór eerste externe pilot toegang (go/no-go gate).
+1) **JWT rotation doorvoeren op alle runtime plekken (frontend + edge + local)**
+- Context: Supabase JWT secret rotation wijzigt zowel ANON als SERVICE_ROLE keys.
+- DoD:
+  - Frontend (`assets/js/config.js`) gebruikt de nieuwe `SUPABASE_ANON_KEY` + is gedeployed.
+  - Supabase Edge Function secrets bevatten de nieuwe `SUPABASE_SERVICE_ROLE_KEY` en overige secrets.
+  - Local `.env.local` is bijgewerkt en blijft gitignored.
+  - UI dossier openen werkt (geen “verkeerde JWT key”).
+  - `scripts/audit-tests.sh` kan dossiers.charger_count lezen en draait groen.
 
 2) **Secrets uit docs / snippets verwijderen**
 - DoD: geen keys/tokens in repo docs, chat dumps, of gedeelde bestanden.
+
+
 
 ## P1 (must/should)
 1) outbound_emails: next_attempt_at + index  — DONE (2026-02-09)

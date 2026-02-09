@@ -113,3 +113,34 @@ NB: Deze entry is de “bewijs/groen” consolidatie van de eerdere 2026-02-09 �
   - `failed` bij max attempts.
 - Dossier-scoped audit (fail-open): `mail_requeued`/`mail_failed` met reason `stuck_processing_timeout`.
 - Doel: voorkomt silent backlog door crashes tussen lock en update.
+
+---
+
+## 2026-02-09 — P0: Supabase JWT secret rotation (anon + service_role) + repo hygiene + audit-tests hardening
+
+Wat er is gebeurd
+- Supabase JWT secret is geroteerd → hierdoor veranderen automatisch zowel:
+  - `SUPABASE_ANON_KEY` (frontend/public)
+  - `SUPABASE_SERVICE_ROLE_KEY` (server/admin)
+- Gevolg: alle clients die nog de oude anon key gebruiken krijgen “verkeerde JWT key” / auth failures.
+
+Fixes / changes
+- Frontend: `assets/js/config.js` bijgewerkt met de nieuwe `SUPABASE_ANON_KEY`.
+  - Noot: dit vereist een frontend deploy (Netlify) om live te gaan.
+- Local dev: `.env.local` moet de nieuwe keys bevatten (bestand blijft gitignored; geen secrets in repo).
+- Tooling (audit-tests.sh):
+  - Safety guard toegevoegd: fail als `SUPABASE_ANON_KEY == SUPABASE_SERVICE_ROLE_KEY` (misconfig).
+  - REST calls blijven service-role autoriseren via `Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY`,
+    maar gebruiken als `apikey` header de anon key (veilig, consistent met Supabase REST verwachtingen).
+- Hygiene / leak-reductie:
+  - Oude/archiefmappen met potentieel gevoelige historie zijn uit de repo gehaald en lokaal weggeplaatst.
+  - Repo scan proces aangescherpt: tracked-only grep als primaire check.
+
+Bewijs / symptoom dat hiermee opgelost wordt
+- UI dossier openen faalde met “verkeerde JWT key” zolang frontend nog oude anon key gebruikte.
+- audit-tests konden dossiers.charger_count niet lezen via REST zolang keys niet consistent waren.
+
+Open aandacht
+- Na JWT rotation: verifieer dat alle Supabase Edge Function secrets nog correct staan
+  (met name `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `MAIL_WORKER_SECRET`).
+  CLI kan env-namen met `SUPABASE_` prefix soms skippen; dashboard is dan de bron van waarheid.
