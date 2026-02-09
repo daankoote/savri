@@ -9,6 +9,7 @@ Regel: alleen open items; afgerond → naar changelog.
 ## P0 (must)
 1) **Rotate Supabase Service Role Key**
 - DoD: key rotated + alle env/scripts bijgewerkt + oude key revoked.
+- Plan: uitvoeren vóór eerste externe pilot toegang (go/no-go gate).
 
 2) **Secrets uit docs / snippets verwijderen**
 - DoD: geen keys/tokens in repo docs, chat dumps, of gedeelde bestanden.
