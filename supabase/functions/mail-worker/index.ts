@@ -26,10 +26,6 @@ function isoNow() {
   return new Date().toISOString();
 }
 
-function nowDate() {
-  return new Date();
-}
-
 function parseIp(req: Request) {
   const xff = req.headers.get("x-forwarded-for");
   if (xff) return xff.split(",")[0]?.trim() || null;
@@ -53,6 +49,9 @@ const MAX_ATTEMPTS = 5;
 
 // resends throttle
 const PER_MAIL_DELAY_MS = 600;
+
+// processing-stuck recovery window
+const STUCK_PROCESSING_MS = 10 * 60_000; // 10 minuten
 
 // fail-open audit insert (alleen dossier-scoped)
 async function insertAuditFailOpen(
@@ -92,7 +91,73 @@ serve(async (req: Request) => {
     const ua = req.headers.get("user-agent");
     const environment = Deno.env.get("ENVIRONMENT") || Deno.env.get("DENO_ENV") || "unknown";
 
-    const now = nowDate().toISOString();
+    // -----------------------------
+    // (P1) Recovery: stuck processing
+    // -----------------------------
+    const stuckCutoff = new Date(Date.now() - STUCK_PROCESSING_MS).toISOString();
+
+    // We select first so we can log dossier-scoped audit per row (fail-open).
+    const { data: stuckRows, error: stuckSelErr } = await supabase
+      .from("outbound_emails")
+      .select("id,dossier_id,to_email,message_type,attempts,last_attempt_at")
+      .eq("status", "processing")
+      .lt("last_attempt_at", stuckCutoff)
+      .limit(50);
+
+    if (stuckSelErr) {
+      console.error("stuck select error (fail-open):", stuckSelErr);
+    } else if (stuckRows && stuckRows.length > 0) {
+      for (const r of stuckRows as any[]) {
+        const attempts = Number(r.attempts ?? 0);
+        const dossierId = (r.dossier_id as string | null) ?? null;
+
+        const finalStatus = attempts >= MAX_ATTEMPTS ? "failed" : "queued";
+        const nextAttemptAt =
+          finalStatus === "queued" ? new Date(Date.now() + backoffMs(Math.max(1, attempts))).toISOString() : null;
+
+        // optimistic update: only if still processing and still older than cutoff
+        const { data: upd, error: updErr } = await supabase
+          .from("outbound_emails")
+          .update({
+            status: finalStatus,
+            // keep sent_at/provider_id untouched; we are recovering a processing lock
+            next_attempt_at: nextAttemptAt,
+            error_message: `Recovered stuck processing (timeout ${STUCK_PROCESSING_MS}ms)`,
+          })
+          .eq("id", r.id)
+          .eq("status", "processing")
+          .lt("last_attempt_at", stuckCutoff)
+          .select("id")
+          .maybeSingle();
+
+        if (updErr || !upd) continue;
+
+        if (dossierId) {
+          await insertAuditFailOpen(supabase, {
+            dossier_id: dossierId,
+            actor_type: "system",
+            event_type: finalStatus === "queued" ? "mail_requeued" : "mail_failed",
+            event_data: {
+              request_id,
+              actor_ref: "system:mail-worker",
+              ip,
+              ua,
+              environment,
+              outbound_email_id: r.id,
+              message_type: r.message_type ?? "generic",
+              to_email: r.to_email ?? null,
+              attempts,
+              status: finalStatus,
+              reason: "stuck_processing_timeout",
+              last_attempt_at: r.last_attempt_at ?? null,
+              next_attempt_at: nextAttemptAt,
+            },
+          });
+        }
+      }
+    }
+
+    const now = new Date().toISOString();
 
     // Select queued mails die eligible zijn:
     // - status=queued
@@ -148,7 +213,6 @@ serve(async (req: Request) => {
       if (lockError || !locked || locked.length === 0) continue;
 
       const attempts = (mail.attempts ?? 0) + 1;
-
       const dossierId = (mail as any).dossier_id as string | null;
 
       try {
@@ -197,7 +261,6 @@ serve(async (req: Request) => {
         if (sentErr) {
           console.error("mark sent failed", sentErr);
 
-          // Zet terug naar queued of failed (zodat we niet in processing blijven hangen)
           const finalStatus = attempts >= MAX_ATTEMPTS ? "failed" : "queued";
           const nextAttemptAt =
             finalStatus === "queued" ? new Date(Date.now() + backoffMs(attempts)).toISOString() : null;
