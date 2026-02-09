@@ -95,9 +95,19 @@ Evidence access (download)
 ## 8) Customer — Read/Auth
 - dossier_get_rejected — reject — api-dossier-get (401)
 
-## 9) System — Mail (off-chain voorlopig)
-- mail_* events: **blocked** zolang outbound_emails geen dossier_id heeft.
-(Doel Phase-2: outbound_emails.dossier_id + mail_queued/sent/failed audit events)
+## 9) System — Mail (dossier-scoped on-chain vanaf 2026-02-09)
+Regel: mail audit events worden alleen gelogd wanneer `outbound_emails.dossier_id != null`.
+
+Queue
+- mail_queued — success — api-lead-submit (dossier flows) en eventuele andere dossier queue-writers
+
+Delivery (mail-worker)
+- mail_sent — success — mail-worker
+- mail_requeued — success — mail-worker (retry gepland; next_attempt_at gezet)
+- mail_failed — fail — mail-worker (max attempts bereikt)
+
+NB: mails zonder dossier_id blijven off-chain (geen dossier_audit_event).
+
 
 ## 10) System — Mail (dossier-scoped on-chain vanaf 2026-02-09)
 Regel: mail audit events alleen wanneer outbound_emails.dossier_id != null.

@@ -79,7 +79,8 @@ Evaluate-flow:
 - `installers`
 - `contact_messages`
 - `idempotency_keys`
-- `outbound_emails`
+- `outbound_emails`: dossier_id (nullable FK), next_attempt_at (retry scheduling)
+
 
 ## 5) State machine (dossier)
 - incomplete
@@ -96,7 +97,15 @@ Lock rule (source of truth):
   - writes: leads/installers/dossiers/contact_messages/outbound_emails/idempotency_keys
   - audit: alleen dossier_created bij dossier create (audit-light)
 - mail-worker
-  - verwerkt outbound_emails queued → sent/failed (guard: x-mail-worker-secret)
+  - verwerkt outbound_emails queued → sent/failed/requeued
+  - guards:
+    - gateway auth headers vereist: apikey + Authorization (anon)
+    - extra secret guard: x-mail-worker-secret == MAIL_WORKER_SECRET
+  - scheduling:
+    - selectie op next_attempt_at (<= now) + attempts < MAX_ATTEMPTS
+  - audit (dossier-scoped, fail-open):
+    - mail_sent / mail_requeued / mail_failed wanneer outbound_emails.dossier_id != null
+
 
 ### Dossier read/write (wizard steps)
 Stap 1 — Access

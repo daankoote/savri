@@ -90,3 +90,15 @@ Bekende Phase-2 risico’s vastgelegd:
 
 P0 (deferred risk):
 - Service Role key rotatie bewust uitgesteld; risico geaccepteerd zolang secrets nooit in git/docs komen. Plan blijft P0.
+
+---
+
+## 2026-02-09 — P1 bewezen groen: outbound_emails on-chain + mail-worker auth+secret guard + mail audit events
+- DB: outbound_emails uitgebreid met `dossier_id` (nullable FK) en `next_attempt_at`, plus index `outbound_emails_pick_idx (status, next_attempt_at, priority, created_at)`.
+- api-lead-submit: dossier-scoped mails (dossier_link) schrijven nu `outbound_emails.dossier_id` + `next_attempt_at` en loggen `mail_queued` (fail-open) in `public.dossier_audit_events`.
+- mail-worker: verwerkt queued mails op basis van `next_attempt_at`, gebruikt gateway auth (apikey+Authorization) + `x-mail-worker-secret` guard, en logt dossier-scoped `mail_sent` / `mail_requeued` / `mail_failed` (fail-open).
+- Tooling: projectbreed Deno std import gemigreerd van `https://deno.land/std@0.224.0/...` naar `jsr:@std/http@0.224.0/server` om deploy/bundling afhankelijkheid van deno.land te elimineren.
+
+Bewijs:
+- Worker call met correcte headers + secret → HTTP 200 `Processed batch`.
+- Worker call met fout secret → HTTP 401 `Unauthorized`.

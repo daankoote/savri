@@ -14,12 +14,13 @@ Regel: alleen open items; afgerond → naar changelog.
 - DoD: geen keys/tokens in repo docs, chat dumps, of gedeelde bestanden.
 
 ## P1 (must/should)
-1) outbound_emails: next_attempt_at toevoegen + index  — IN PROGRESS
-2) outbound_emails: dossier_id nullable toevoegen      — IN PROGRESS
-3) Mail audit events (fail-open, dossier-scoped)       — IN PROGRESS
+1) outbound_emails: next_attempt_at + index  — DONE (2026-02-09)
+2) outbound_emails: dossier_id nullable      — DONE (2026-02-09)
+3) Mail audit events (fail-open, dossier-scoped) — DONE (2026-02-09)
 - mail_queued in dossier queue-writers
 - mail_sent/mail_failed/mail_requeued in mail-worker
-- DoD: matrix entries + changelog entry + test (minimaal one case)
+- Matrix + changelog bijgewerkt; evidence via curl tests
+
 
 
 ## P1.5 / Phase-2 (risico’s die je niet mag vergeten)
@@ -37,6 +38,11 @@ Regel: alleen open items; afgerond → naar changelog.
 
 5) Email verification assumption
 - DoD: expliciet blijven labelen; Phase-2 echte mailbox-control flow.
+
+6) Deno std imports stabiliseren (jsr:@std i.p.v. deno.land)
+- DoD: alle functions gebruiken jsr:@std/http... zodat deploy niet afhankelijk is van deno.land availability.
+- Status: DONE (2026-02-09)
+
 
 ## Phase-2 Abuse controls
 - rate limit / abuse detection op api-lead-submit/contact
