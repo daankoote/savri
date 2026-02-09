@@ -4,6 +4,10 @@ Thumbs.db
 # env secrets
 .env
 .env.*
+.env.local
+.env.production
+.env.development
+
 # dependencies (alleen relevant als je ooit node gebruikt)
 node_modules/
 # editor (optioneel)

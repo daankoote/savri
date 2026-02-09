@@ -167,6 +167,7 @@ assets/js/assets/dossier.js
 css:
 style.css
 
+
 edge functions:
 api-dossier-access-save --> If you read this that step 1 is checking what this is and create description for updating this file (ask me for the file in full) 
 api-dossier-access-update --> If you read this that step 1 is checking what this is and create description for updating this file (ask me for the file in full) 
@@ -181,7 +182,7 @@ api-dossier-doc-download-url — download url (dossier)
 api-dossier-email-verify-complete - this might be an outdated function, need to check --> we use the email link that people receive after application already as a verification (--> If you read this that step 1 is checking what this is and create description for updating this file (ask me for the file in full) )
 api-dossier-email-verify-start - this might be an outdated function, need to check --> we use the email link that people receive after application already as a verification (--> If you read this that step 1 is checking what this is and create description for updating this file (ask me for the file in full) )
 api-dossier-evaluate — stap 6 (in UI - dossier.html/js) checks + lock
-api-dossier-evaluate-export --> If you read this that step 1 is checking what this is and create description for updating this file (ask me for the file in full) 
+api-dossier-export --> If you read this that step 1 is checking what this is and create description for updating this file (ask me for the file in full) 
 api-dossier-get — read model + token auth
 api-dossier-submit-review --> If you read this that step 1 is checking what this is and create description for updating this file (ask me for the file in full) 
 api-dossier-upload-confirm - stap 4 (in UI - dossier.html/js) upload issuance + confirm
@@ -479,6 +480,330 @@ Concreet:
 
 Niet in scope:
 - Externe validaties / APIs (MID/merk/model/energieleverancier) → pas na eisenpakket.
+
+
+ADD 7.0 — 2026-02-08 — Werkwijze update: stop met Supabase Dashboard als source-of-truth
+
+Probleem
+- Handmatig copy/paste in Supabase Dashboard is foutgevoelig, niet reproduceerbaar en breekt auditwaardige discipline.
+
+Nieuwe norm (verplicht)
+- Edge functions worden gedeployed vanuit repo via Supabase CLI.
+- Wij leveren daarom standaard: volledige file 1-op-1 (of volledige function), zodat repo de waarheid is.
+
+Tooling
+- scripts/deploy-edge.sh toegevoegd: deploy per function via terminal:
+  bijvoorbeeld: ./scripts/deploy-edge.sh api-dossier-access-update
+
+Doel
+- Geen “zoekanker”-gedoe meer in dashboard.
+- Elke wijziging is reproduceerbaar (git diff), testbaar (audit-tests.sh), en deploybaar (CLI).
+
+ADD 8.0 — 2026-02-08 — Status update: repo-first edge functions + extra endpoints groen + Phase-2 backlog aangescherpt
+
+8.1 Waar we nu staan (fase)
+We zitten nog steeds in Fase 1: “Auditwaardig MVP-contract + reproduceerbare deploys”.
+Nieuwe subfase (actief): “Supabase Dashboard is NIET langer source-of-truth; repo + CLI deploy wel”.
+
+8.2 Wat we nu concreet hebben gedaan (geen theorie, harde deliverables)
+A) Repo-first workflow ingevoerd
+- Edge function code staat in VS Code (repo).
+- Deploy gebeurt via: ./scripts/deploy-edge.sh <function_name>.
+- Doel: geen dashboard-knipplak, geen zoekanker-ellende, consistentie via git diff en reproduceerbaarheid.
+
+B) Extra edge endpoints getest en/of gemigreerd (groen)
+1) api-dossier-export
+- Curl bewezen: 200 + export payload incl. confirmed docs, checks, consents_latest.
+
+2) api-dossier-doc-download-url
+- Curl bewezen: 200 + signed download_url voor specifiek document_id.
+
+3) api-dossier-submit-review (legacy)
+- Bestaat als compat endpoint; werkt maar is conceptueel deprecated t.o.v. api-dossier-evaluate.
+- Incomplete dossier → 400 met missingSteps + checks.
+- Locked dossier → 200 “already locked”.
+
+4) api-lead-submit
+- Contact flow is 1-op-1 aangepast aan SQL table public.contact_messages.
+- Tests bewezen:
+  - ev_direct → lead + dossier create
+  - contact → db write + outbound mail queued
+  - installer_to_customer → lead + dossier create
+- Idempotency (idempotency_keys) actief in api-lead-submit.
+
+5) mail-worker
+- Werkt end-to-end; queued mails komen binnen.
+- Guard: x-mail-worker-secret.
+
+6) api-dossier-address-save
+- Wordt nu gezien als “save + verify” (niet alleen preview).
+- Tests bewezen dat missing suffix tot andere address variant leidt (risico).
+
+8.3 Belangrijke correctie op “invalidatie” discussie
+- “in_review” = locked → dossier kan niet worden aangepast (frontend + backend block).
+- “ready_for_review” = NIET locked → daar kan nog een wijziging gebeuren.
+- Regel voor later (consistent): elke succesvolle write in ready_for_review → status terug naar incomplete + audit: invalidated_ready_for_review=true.
+- Dit is niet urgent zolang UI geen “edit na ready_for_review” toestaat, maar backend moet dit uiteindelijk hard afvangen.
+
+8.4 Nieuw aangescherpte backlog / Phase 2 (expliciet vastleggen)
+P2 / Phase-2 fixes (veiligheid & audit-semantiek)
+1) Email verification is nu een aanname:
+   - “Possession of link = email verified” is risicovol (forward/log/screenshot).
+   - MVP: log dit als: verified_by_link_assumption (expliciet in audit).
+   - Phase-2: echte email verify flow (start/complete) met bewijs dat mailbox control bestaat.
+
+2) PDOK ambiguity / suffix
+   - Zonder suffix kan PDOK een andere unit matchen (bewijs: bag_id verandert).
+   - Phase-1.5/2 oplossing:
+     * óf suffix verplicht zodra meerdere candidates bestaan,
+     * óf “ambiguous” → verified=false + audit event + geen save.
+
+3) deno.json + import map waarschuwingen
+   - Doelbeeld: supabase/functions/deno.json is source-of-truth.
+   - import_map.json alleen als we expliciet import maps willen blijven gebruiken.
+   - Warning verdwijnt pas echt bij consistent bare imports + deno.json resolvers.
+   - Niet nu refactoren; pas na “alle functies groen”.
+
+4) api-dossier-upload-confirm performance
+   - Server-side download+sha256 is duur en kan timeouts geven bij grotere bestanden/drukte.
+   - We houden dit nu (audit correctness > performance).
+   - Phase-2 herontwerp opties:
+     a) client sends sha/size/ctype + server HEAD/metadata check (zwakker)
+     b) storage metadata + db constraints + optionele background verify (sterker, meer werk)
+
+5) Mail worker hardening
+   - retries/backoff
+   - provider errors beter classificeren
+   - observability (provider_id/logging)
+
+6) Abuse controls (P0 later maar vastleggen)
+   - api-lead-submit/contact zonder rate limit → risico.
+
+8.5 Wat nog te doen (functioneel, in volgorde)
+Nog openstaande / te checken edge functies:
+- api-dossier-email-verify-start (waarschijnlijk outdated / herontwerp)
+- api-dossier-email-verify-complete (waarschijnlijk outdated / herontwerp)
+- (eventueel) api-dossier-address-verify (preview endpoint) → alleen houden als UI die echt gebruikt.
+- verdere uniformering MLS/Idempotency waar nog niet consequent.
+
+8.6 Praktisch: DB queryen (psql issue)
+- psql probeerde lokale socket → DATABASE_URL is niet de remote Supabase Postgres URL.
+- Oplossing later: juiste Supabase connection string met host+sslmode=require óf Supabase SQL editor gebruiken.
+
+ADD 9.0 — 2026-02-08 — Stap 1 (Access) is nu auditwaardig: Idempotency verplicht + MLS audit + hard lock + business rule charger_count
+
+Wat is nu bewezen/gestabiliseerd (contract)
+- api-dossier-access-save:
+  - vereist Idempotency-Key
+  - valideert input + NL mobiel
+  - voorkomt inconsistentie: charger_count kan niet lager dan bestaande chargers (409)
+  - invalidates ready_for_review -> incomplete
+  - schrijft audit (success + rejects) via MLS
+
+- api-dossier-access-update:
+  - idem, maar PATCH-style (alleen velden die gestuurd zijn)
+  - success event is bewust gelijkgetrokken op access_updated
+
+Praktische implicatie voor frontend (dossier.js)
+- Frontend kan save/update aanroepen zonder audit-gaten: retries zijn veilig (idempotency replay).
+- Als dossier al ready_for_review was en user wijzigt stap 1: backend dwingt terug naar incomplete (consistent met “dirty since precheck”).
+
+Toekomst / Phase-2 cleanup
+- Consolidatie: één access endpoint (nu dubbel: save + update).
+- Event naming policy: access_updated is canonical success event; rejects blijven endpoint-specifiek.
+
+ADD 10.0 — 2026-02-08 — Stap 2 Address preview/verify onderscheid is nu expliciet (comfort vs audit)
+
+Wat is nu de waarheid
+- address-preview = UX helper (geen audit, geen token auth).
+- address-verify = dossier-scoped precheck (auth + audit).
+
+Waarom dit belangrijk is
+- In audit context mag je nooit claimen dat “preview” bewijs is.
+- Alleen dossier-scoped endpoints met audit trail tellen mee voor auditwaardigheid.
+
+Phase-2 / 1.5 TODO (vastleggen, niet nu fixen)
+- PDOK ambiguïteit: zonder suffix kan PDOK een “best guess” teruggeven (jij zag dit zelf: suffix=null → resolvet naar 28-H).
+  Strakke regel voor later:
+  - als meerdere adressen/candidates bestaan voor pc+hn → suffix verplicht maken,
+    of return verified=false/ambiguous en NIET opslaan.
+- address-preview hoort eigenlijk óf:
+  - expliciet “preview only” te heten in response (bijv. preview:true),
+  - óf (beter) vervangen door address-verify in de UI zodat je niet twee paden onderhoudt.
+
+ADD 11.0 — 2026-02-08 — Stap 3 Chargers is nu volledig “auditwaardig” (create/update/delete + cascade + review invalidation)
+
+Wat is nu bewezen / gedrag
+- charger-save:
+  - enforce max chargers op basis van dossiers.charger_count
+  - serial_number is globaal uniek (en ook dubbel gecheckt)
+  - bij wijzigingen wordt ready_for_review teruggezet naar incomplete
+  - idempotency replay/finalize voorkomt dubbele writes bij retries
+
+- charger-delete:
+  - kan alleen als dossier niet locked/in_review is
+  - verwijdert eerst dossier_documents rows (DB policy beslist)
+  - storage delete is fail-open maar audit-logt failures
+  - verwijdert daarna de charger row
+  - invalidate ready_for_review naar incomplete
+
+Belangrijk (Phase-1.5 / Phase-2 TODO’s — niet nu refactoren)
+1) Idempotency fallback (charger-save) is inconsistent
+- charger-save gebruikt: idemKey = meta.idempotency_key || meta.request_id
+- Andere endpoints vereisen Idempotency-Key strikt.
+Risico: request_id replayen is niet hetzelfde als echte idem key discipline (client retries).
+Actie: in Phase-2 idemKey STRICT maken (alle write endpoints: missing => 400).
+
+2) Delete-order trade-off (charger-delete)
+- DB delete docs eerst => als storage delete faalt, heb je orphaned storage objects (maar wél audit trail).
+Dat is acceptabel voor MVP (“fail-open”), maar Phase-2 zou een opschoningsjob kunnen krijgen:
+- background reconciler: storage paths die in audit events ‘failed’ staan later opnieuw proberen.
+
+3) Confirmed docs blokkeren delete (verwacht)
+- charger-delete detecteert policy/immutability errors en geeft 409.
+Dit is correct, maar UX moet dit later duidelijk maken in UI (“confirmed docs zijn immutable; verwijder charger kan niet”).
+
+ADD 12.0 — 2026-02-08 — Stap 4 Documenten: delete is strict + issue is correct (issued≠confirmed)
+
+Wat is nu correct/sterk
+- api-dossier-doc-delete:
+  - STRICT Idempotency (geen request_id fallback) => retry-safe en audit-proof
+  - Not-found delete is idempotent: 200 deleted=false + audit event (bewijst “attempt”)
+  - Confirmed docs blokkeren delete via DB policy => 409 (correct immutability model)
+  - Storage delete is fail-open maar audit-logt failures
+
+- api-dossier-upload-url:
+  - STRICT Idempotency via header-only
+  - allowlists op doc_type/ext/mime, max 15MB (als size bekend)
+  - charger_id is verplicht voor factuur/foto_laadpunt en wordt gecontroleerd
+  - per-charger doc limit enforced (status != rejected)
+  - status invalidation: ready_for_review -> incomplete bij document issuance
+
+Phase-1.5 / Phase-2 TODO’s (niet nu refactoren)
+1) Storage orphan risk (accepteer, maar benoem)
+- doc-delete: DB delete eerst, storage later fail-open.
+- Bij storage failure blijft object bestaan zonder DB row.
+Actie: Phase-2 “reconciler/cleanup job” op basis van audit events document_delete_storage_failed.
+
+2) Upload-url ordering (klein maar echt)
+- We genereren signed upload URL vóór metadata insert.
+- Als metadata insert faalt, kan er een “geldige upload token” bestaan zonder DB row.
+Actie (Phase-2): eerst metadata row (status='issued') insert, daarna signed url genereren,
+OF bij insert failure expliciet signed token ongeldig maken (als dat kan) of markeer row rejected.
+
+3) size_bytes vertrouwen
+- size_bytes komt van client. We gebruiken het alleen voor gating (15MB) en opslaan.
+Actie (Phase-2): in confirm stap ook server-side verificatie (HEAD/metadata) of hardere check.
+
+4) Consistentie: doc-delete gebruikt shared idempotency helper, upload-url nog “inline”
+- Niet functioneel fout, maar inconsistent.
+Actie (Phase-2): standaardiseer op één shared helper voor alle write endpoints.
+
+ADD 12.1 — 2026-02-08 — Upload confirm is nu audit-correct; evaluate telt alleen confirmed; get heeft bewuste MVP-side-effect
+
+Wat is nu aantoonbaar correct
+1) issued ≠ confirmed is écht afgedwongen
+- api-dossier-upload-url maakt status='issued'
+- api-dossier-upload-confirm zet pas op 'confirmed' na server-side sha256 verify
+- api-dossier-evaluate telt alleen confirmed docs mee
+
+2) Review gating is deterministisch en retry-safe
+- api-dossier-evaluate is Idempotency-Key strict (header-only)
+- finalize=false => ready_for_review
+- finalize=true  => in_review + locked_at
+- Locked dossier => stable 200 responses (geen mutatie)
+
+3) Audit trail is compleet op document lifecycle
+- rejects (confirm) worden gelogd (document_upload_confirm_rejected)
+- success (confirm) wordt gelogd (document_upload_confirmed)
+
+Phase-1.5 / Phase-2 TODO’s (dit zijn echte risico’s, dus expliciet loggen)
+A) Performance / cost: server-side download+sha256 in upload-confirm
+- storage.download + arrayBuffer + sha256 is expensive en kan timeouts geven bij drukte of grote files.
+- We houden dit nu voor audit correctness.
+- Phase-2 ontwerp: alternatief verify model (metadata/HEAD + constraints + background verifier) na volledige migratie.
+
+B) “Possession of link = email verified” is een audit-leugen als je het “verified” noemt
+- api-dossier-get zet email_verified_at bij eerste access.
+- Dit moet in audit expliciet “assumption” blijven (nu gedaan).
+- Phase-2: echte verify flow/token (email-verify-start/complete of nieuw).
+
+C) PDOK ambiguïteit (als suffix ontbreekt)
+- address-preview/verify pakken “best match” zonder suffix.
+- Phase-1.5/2: als meerdere candidates => suffix verplicht of verified=false + audit “ambiguous”.
+
+ADD 12.2 — 2026-02-09 — Export is nu evidence-grade; submit-review overlapt evaluate; consents-save is strict
+
+1) Export evidence is nu goed afgedwongen
+- Export alleen na lock/in_review.
+- Export bevat alleen confirmed docs.
+- Export blokkeert als confirmed doc zonder sha256 (integrity gate).
+
+2) Overlap submit-review vs evaluate(finalize=true)
+- Beide doen checks + lock.
+- Risico: divergentie in de toekomst.
+- Keuze: of submit-review wrapper om evaluate te worden (Phase-2), of 1 endpoint deprecaten.
+
+3) Idempotency policy inconsistency (nu fix nodig)
+- api-dossier-submit-review gebruikt fallback meta.request_id als idemKey.
+- Dit is in strijd met “header-only idempotency” policy en met de audit testverwachting.
+- Fix: idemKey = meta.idempotency_key ONLY (400 als ontbreekt).
+
+4) Consents versioning is hardcoded
+- VERSION="v1.0" => goed voor MVP, maar Phase-2: server-driven consent doc versions (ToS/Privacy/Mandate) met hash/URL.
+
+ADD 12.3 — 2026-02-09 — Lead submit / Download evidence / Address PDOK verify
+
+1) api-lead-submit is audit-light (gaten)
+- Alleen dossier_created wordt ge-audit in dossier_audit_events.
+- Installer signup, lead insert, contact messages en mail queue actions hebben geen audit trail.
+- MVP ok, maar Phase-2: minimaal audit events voor lead_submit_received / lead_submit_rejected / mail_queued.
+
+2) api-dossier-doc-download-url heeft idempotency policy violation + ontbrekende reject audits
+- Idempotency: gebruikt meta.request_id fallback. Dit moet header-only worden, anders test/audit inconsistent.
+- Geen audit events bij rejects (401/404/409/500). Voor evidence-access endpoints wil je reject audit (wie probeerde te downloaden wat en waarom geweigerd).
+
+TODO:
+- Fix idemKey = meta.idempotency_key ONLY; 400 zonder header.
+- Voeg reject audit events toe: document_download_url_rejected (stages: validate_input, auth, export_gate, doc_lookup, integrity_gate, signed_url)
+
+3) api-dossier-address-save is evidence-grade genoeg, maar PDOK is extern risico
+- 502 bij PDOK storingen is correct; logt stage external_lookup.
+- Let op: suffix heuristics kunnen false negatives geven; UX moet duidelijke foutmelding tonen.
+
+==============================
+UPDATE 2026-02-09 — P1
+==============================
+
+Goal: eliminate audit-test failures and close reject-audit gaps.
+
+1) Replace files 1-op-1
+- supabase/functions/api-dossier-doc-download-url/index.ts
+  -> replace entire file with the provided version (includes document_download_url_rejected audits)
+- supabase/functions/mail-worker/index.ts
+  -> replace entire file with the provided version (retry + cooldown + provider_id guard)
+
+2) Deploy
+- Deploy both Edge Functions.
+- Verify env vars exist:
+  - SUPABASE_URL
+  - SUPABASE_SERVICE_ROLE_KEY
+  - RESEND_API_KEY
+  - FROM_EMAIL
+  - MAIL_WORKER_SECRET
+
+3) Quick verification checklist
+- doc-download-url:
+  - Missing fields => 400 + audit event document_download_url_rejected(stage=validate_input)
+  - Unauthorized token => 401 + audit event document_download_url_rejected(stage=auth)
+  - Not locked => 409 + audit event document_download_url_rejected(stage=export_gate)
+  - Not found doc => 404 + audit event document_download_url_rejected(stage=doc_lookup)
+  - Success => 200 + document_download_url_issued
+
+- mail-worker:
+  - queued email processed => status sent + provider_id set
+  - failing email => status queued (until attempts=5) then failed
+  - repeated failures do not hammer every run (cooldown uses last_attempt_at)
 
 
 ============
