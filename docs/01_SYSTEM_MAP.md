@@ -95,7 +95,10 @@ Lock rule (source of truth):
 ### Lead + mail
 - api-lead-submit
   - writes: leads/installers/dossiers/contact_messages/outbound_emails/idempotency_keys
-  - audit: alleen dossier_created bij dossier create (audit-light)
+  - audit:
+    - dossier_created bij dossier create
+    - mail_queued (dossier-scoped) wanneer outbound_emails.dossier_id wordt gezet
+
 - mail-worker
   - verwerkt outbound_emails queued → sent/failed/requeued
   - guards:

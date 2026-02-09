@@ -102,3 +102,5 @@ P0 (deferred risk):
 Bewijs:
 - Worker call met correcte headers + secret → HTTP 200 `Processed batch`.
 - Worker call met fout secret → HTTP 401 `Unauthorized`.
+
+NB: Deze entry is de “bewijs/groen” consolidatie van de eerdere 2026-02-09 “P1 start” entry.
