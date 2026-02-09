@@ -105,6 +105,7 @@ Delivery (mail-worker)
 - mail_sent — success — mail-worker
 - mail_requeued — success — mail-worker (retry gepland; next_attempt_at gezet)
 - mail_failed — fail — mail-worker (max attempts bereikt)
+- mail_requeued reason kan ook stuck_processing_timeout zijn.
 
 NB: mails zonder dossier_id blijven off-chain (geen dossier_audit_event).
 

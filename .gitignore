@@ -15,3 +15,15 @@ node_modules/
 # local scratch / notes
 documenten/
 *.save
+
+
+# local backups / archives (never commit)
+documenten/
+documenten/**
+supabase-functions-archive/
+supabase-functions-archive/**
+**/backup*/
+**/bakup*/
+**/*.bak
+**/*.old
+**/*.archive

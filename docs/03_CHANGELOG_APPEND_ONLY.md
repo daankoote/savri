@@ -104,3 +104,12 @@ Bewijs:
 - Worker call met fout secret → HTTP 401 `Unauthorized`.
 
 NB: Deze entry is de “bewijs/groen” consolidatie van de eerdere 2026-02-09 “P1 start” entry.
+
+---
+
+## 2026-02-09 — P1: mail-worker stuck processing recovery (audit-first)
+- mail-worker: detecteert `outbound_emails.status='processing'` die ouder is dan 10 minuten (last_attempt_at) en herstelt deze naar:
+  - `queued` met `next_attempt_at` (backoff) óf
+  - `failed` bij max attempts.
+- Dossier-scoped audit (fail-open): `mail_requeued`/`mail_failed` met reason `stuck_processing_timeout`.
+- Doel: voorkomt silent backlog door crashes tussen lock en update.

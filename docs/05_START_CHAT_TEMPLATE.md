@@ -43,9 +43,9 @@ Bestanden/endpoints:
      - exact zoekanker
      - exact insertion/replacement block
 3) Exact terminal commando’s om te testen + expected resultaten
-4) Doc updates (pas nadat het werkt óf als er blockers zijn die niet direct oplosbaar zijn):
-   - Altijd: append block voor 03_CHANGELOG_APPEND_ONLY.md
-   - Alleen als spec wijzigt: patch voor 02_AUDIT_MATRIX.md
+4) “Docs updates alleen na bewezen groen (curl/SQL evidence), tenzij het om een blocker/incident verslag gaat.” (pas nadat het werkt óf als er blockers zijn die niet direct oplosbaar zijn):
+   - Alleen als spec wijzigt: patch voor 02_AUDIT_MATRIX.md 
+   - Altijd: append block voor 03_CHANGELOG_APPEND_ONLY.md 
    - Alleen als werkqueue wijzigt: patch voor 04_TODO.md
 
 ## 7) Docs 

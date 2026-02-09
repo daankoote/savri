@@ -21,6 +21,7 @@ Regel: alleen open items; afgerond → naar changelog.
 - mail_queued in dossier queue-writers
 - mail_sent/mail_failed/mail_requeued in mail-worker
 - Matrix + changelog bijgewerkt; evidence via curl tests
+4) “Mail-worker: stuck processing recovery” → DONE zodra jij dit hebt bewezen met één geforceerde stuck case (kan later).
 
 
 

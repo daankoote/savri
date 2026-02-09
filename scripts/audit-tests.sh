@@ -45,6 +45,13 @@ need SUPABASE_SERVICE_ROLE_KEY
 need DOSSIER_ID
 need DOSSIER_TOKEN
 
+# SAFETY: service role key must NEVER be used for edge function calls as client headers
+if [[ "${SUPABASE_ANON_KEY:-}" == "${SUPABASE_SERVICE_ROLE_KEY:-}" ]]; then
+  echo "FATAL: SUPABASE_ANON_KEY equals SUPABASE_SERVICE_ROLE_KEY (misconfigured env)."
+  exit 1
+fi
+
+
 LINT_STRICT="${LINT_STRICT:-0}"
 RUN_HAPPY_UPLOAD="${RUN_HAPPY_UPLOAD:-1}"   # jouw wens: happy standaard AAN
 RUN_REPO_LINT="${RUN_REPO_LINT:-0}"  # default UIT (repo heeft nog geen lokale edge functions)
@@ -131,7 +138,7 @@ audit_fetch_since() {
   local limit="${1:-200}"
   curl -s \
     "$SUPABASE_URL/rest/v1/dossier_audit_events?select=created_at,event_type,event_data&dossier_id=eq.$DOSSIER_ID&created_at=gte.$START_ISO&order=created_at.desc&limit=$limit" \
-    -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+    -H "apikey: $SUPABASE_ANON_KEY" \
     -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY"
 }
 
@@ -320,7 +327,7 @@ run_case_raw() {
 get_allowed_max_from_db() {
   curl -s \
     "$SUPABASE_URL/rest/v1/dossiers?select=charger_count&id=eq.$DOSSIER_ID&limit=1" \
-    -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+    -H "apikey: $SUPABASE_ANON_KEY" \
     -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
   | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0].get('charger_count','')) if d else print('')"
 }
@@ -359,7 +366,7 @@ fi
 get_all_charger_ids() {
   curl -s \
     "$SUPABASE_URL/rest/v1/dossier_chargers?select=id,created_at&dossier_id=eq.$DOSSIER_ID&order=created_at.asc" \
-    -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+    -H "apikey: $SUPABASE_ANON_KEY" \
     -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
   | python3 -c "import sys,json; d=json.load(sys.stdin); print('\n'.join([r['id'] for r in d]))"
 }
@@ -591,7 +598,7 @@ echo "5) AUDIT LOG — laatste 15 events (informational)"
 echo "------------------------------------------------"
 AUDIT_LAST15="$(curl -s \
   "$SUPABASE_URL/rest/v1/dossier_audit_events?select=created_at,event_type,event_data&dossier_id=eq.$DOSSIER_ID&order=created_at.desc&limit=15" \
-  -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+  -H "apikey: $SUPABASE_ANON_KEY" \
   -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY")"
 echo "$AUDIT_LAST15"
 echo ""
