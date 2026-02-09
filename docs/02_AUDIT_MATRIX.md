@@ -108,13 +108,3 @@ Delivery (mail-worker)
 
 NB: mails zonder dossier_id blijven off-chain (geen dossier_audit_event).
 
-
-## 10) System — Mail (dossier-scoped on-chain vanaf 2026-02-09)
-Regel: mail audit events alleen wanneer outbound_emails.dossier_id != null.
-
-- mail_queued — success — api-lead-submit (dossier flows) en eventuele andere dossier queue-writers
-- mail_sent — success — mail-worker
-- mail_requeued — success — mail-worker (retry gepland, next_attempt_at gezet)
-- mail_failed — fail — mail-worker (max attempts / non-retryable)
-
-NB: mails zonder dossier_id blijven off-chain (geen dossier_audit_event).
