@@ -1,0 +1,34 @@
+[build]
+  publish = "."
+  command = """
+    mkdir -p ./assets/js
+
+    cat > ./assets/js/config.runtime.js <<EOF
+// GENERATED — DO NOT COMMIT
+window.ENVAL = window.ENVAL || {};
+window.ENVAL.SUPABASE_URL = "${SUPABASE_URL}";
+window.ENVAL.SUPABASE_ANON_KEY = "${SUPABASE_ANON_KEY}";
+EOF
+  """
+
+
+# --- Legacy hard kill: installer routes (frontend + SEO hygiene) ---
+[[redirects]]
+from = "/installateur"
+to = "/legacy/installateur.html"
+status = 302
+
+[[redirects]]
+from = "/installateur.html"
+to = "/legacy/installateur.html"
+status = 302
+
+# Als je liever direct hard killt i.p.v. legacy pagina:
+# [[redirects]]
+# from = "/installateur"
+# to = "/410.html"
+# status = 410
+# [[redirects]]
+# from = "/installateur.html"
+# to = "/410.html"
+# status = 410

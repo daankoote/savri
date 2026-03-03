@@ -1,4 +1,5 @@
-<!-- versie 260105_18 oclock -->
+<!-- aanmelden.html -->
+<!-- 03-03-2026 HOLDING (hero uses index.css) -->
 
 <!DOCTYPE html>
 <html lang="nl">
@@ -8,199 +9,153 @@
       document.documentElement.classList.add("js");
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Enval – Aanmelden</title>
+    <title>Enval – Start dossier (binnenkort)</title>
     <link rel="stylesheet" href="/assets/css/style.css" />
   </head>
 
-  <body>
-   <header>
+  <body class="holding-page">
+    <header>
       <div class="container header-inner">
         <div class="logo"><a href="/index.html">Enval</a></div>
 
-        <button id="navToggle" class="nav-toggle" type="button" aria-controls="siteNav" aria-expanded="false" >☰</button>
+        <button
+          id="navToggle"
+          class="nav-toggle"
+          type="button"
+          aria-controls="siteNav"
+          aria-expanded="false"
+        >
+          ☰
+        </button>
 
         <nav id="siteNav">
-          <a href="/index.html#hero">Home</a>
-          <a href="/aanmelden.html">Aanmelden</a>
-          <a href="/hoe-het-werkt.html">Hoe het werkt</a>
-          <a href="/regelgeving.html">Regelgeving</a>
-          <a href="/index.html#faq">FAQ</a>
+          <a href="/index.html">Home</a>
+          <a href="/aanmelden.html">Start Dossier</a>
+          <a href="/pricing.html">Tarieven</a>
+
+          <div class="nav-dd" role="none">
+            <button class="nav-dd-btn" type="button" aria-haspopup="true" aria-expanded="false">
+              Informatie <span class="nav-caret">▾</span>
+            </button>
+            <div class="nav-dd-menu" role="menu">
+              <a role="menuitem" href="/hoe-het-werkt.html">Hoe het werkt</a>
+              <a role="menuitem" href="/regelgeving.html">Regelgeving</a>
+            </div>
+          </div>
+
           <a href="/index.html#contact">Contact</a>
         </nav>
       </div>
     </header>
 
-
-    <section class="section hero">
+    <!-- HERO (zelfde classes/structuur als index.html) -->
+    <section class="hero" id="hero">
       <div class="container hero-inner">
-        <div class="hero-text">
-          <h1>Aanmelden bij Enval</h1>
-          <p>Kies hieronder de juiste route. Je gegevens worden gebruikt om een controleerbaar dossier op te bouwen.</p>
+        <div class="hero-left">
+          <h1>ERE-vergoeding komt eraan — maar u kunt nog niet starten.</h1>
 
-          <div class="hero-buttons">
-            <button class="btn outline tab-toggle" data-target="installateur" type="button">Ik ben installateur</button>
-            <button class="btn outline tab-toggle" data-target="ev" type="button">Ik heb een privé-laadpaal</button>
-            <button class="btn outline tab-toggle" data-target="anders" type="button">Grotere locatie / partner</button>
+          <p class="hero-sub">
+            De overheid heeft het consumentenproces nog niet definitief gemaakt.
+            Daardoor kunnen verificateurs en inboekers u nu nog niet vertellen welke administratie straks écht nodig is.
+          </p>
+
+          <p class="hero-sub" style="margin-top: 10px;">
+            U hoeft vandaag nog niets te ondernemen: De eerste vergoeding die consumenten kunnen ontvangen is pas vanaf <b>2027</b>
+            (over het jaar <b>2026</b>).
+          </p>
+
+          <div class="hero-cta">
+            <a href="#op-de-hoogte" class="btn cta">Blijf op de hoogte</a>
+            <a href="/index.html#check" class="btn outline">Eerst checken</a>
           </div>
 
-          <!-- <p class="form-note" style="margin-top:10px;">
-            Installateur zonder code? <a href="/installateur.html">Meld je hier aan als installateur</a>.
-          </p> -->
+          <div class="hero-mini">
+            Let op: partijen die nu “garantie” of “direct inboeken” beloven lopen vooruit op regels die nog niet vaststaan.
+          </div>
         </div>
 
-        <div class="hero-side">
-          <div class="card">
-            <h3>Wat je nodig hebt</h3>
-            <ol>
-              <li>Basisgegevens (naam/e-mail).</li>
-              <li>Aantal laadpunten + eigen terrein.</li>
-              <li>Daarna ontvang je een dossierlink per e-mail.</li>
-            </ol>
+        <div class="hero-right">
+          <div class="hero-trust-card">
+            <h3>Wat u nu wél kunt doen</h3>
+            <ul class="hero-trust-list">
+              <li>Geen lange termijn contracten tekenen</li>
+              <li>Wachten op definitieve eisen (overheid/verificateurs)</li>
+              <li>Uw situatie bij ons achterlaten — dan mailen we zodra u kunt starten</li>
+            </ul>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Tab: Installateur → klant aanmelding -->
-    <section class="section tab-panel" data-panel="installateur">
+    <!-- HOLDING CONTENT (2 kolommen) -->
+    <section class="section section-alt" id="op-de-hoogte">
       <div class="container two-column">
         <div class="column">
-          <h2>Klant aanmelden (met installateurscode)</h2>
-          <p>Heb je al een installateurscode? Meld hier je klant aan. Wij sturen de klant direct een dossierlink.</p>
-          <p class="form-note">Geen code? <a href="/installateur.html">Aanmelden als installateur</a>.</p>
+          <h2>Waarom u nu nog niet kunt starten</h2>
+          <p>
+            Omdat de spelregels nog niet definitief zijn. Zonder definitief akkoord kan niemand u betrouwbaar vertellen
+            welke bewijsstukken straks verplicht zijn — en dus kan “nu al regelen” u juist vastzetten.
+          </p>
+
+          <div class="card mt-14">
+            <h3>Belangrijk om te weten</h3>
+            <ul class="hero-trust-list">
+              <li>De overheid heeft nog geen definitief akkoord voor het consumentenproces.</li>
+              <li>Verificateurs kunnen daardoor nog geen harde administratie-eisen afstemmen met consumenten.</li>
+              <li>De eerste vergoeding kan pas vanaf 2027 (over 2026) — u hoeft nu niets te forceren.</li>
+              <li>Wees voorzichtig met inboekers die doen alsof dit al “klaar” is.</li>
+            </ul>
+          </div>
         </div>
 
         <div class="column">
           <div class="card">
-            <h3>Gegevens invoeren</h3>
+            <h3>Blijf op de hoogte</h3>
+            <p class="mb-0">
+              Zet kort uw situatie in het bericht (aantal laadpunten, NL, MID). Dan kunnen we u gericht informeren.
+            </p>
 
-            <form class="form" name="installateur" novalidate>
-              <h4>Installateur</h4>
+            <!-- zelfde contact form contract als index -->
+            <form class="form mt-14" name="contact" method="post" novalidate>
               <label>
-                <span>Installateurscode</span>
-                <input type="text" name="installer_ref" required placeholder="Bijv. ABC123" />
-              </label>
-
-              <h4>Klantgegevens</h4>
-              <label><span>Voornaam klant</span><input type="text" name="klant_voornaam" required /></label>
-              <label><span>Achternaam klant</span><input type="text" name="klant_achternaam" required /></label>
-              <label><span>E-mailadres klant</span><input type="email" name="klant_email" required /></label>
-              <label><span>Mobiel nummer klant (optioneel)</span><input type="tel" name="klant_telefoon" placeholder="06xxxxxxxx of +316xxxxxxxx" /></label>
-
-              <label>
-                <span>Aantal laadpunten op locatie</span>
-                <select name="charger_count" required>
-                  <option value="">Selecteer aantal laadpunten</option>
-                  <option value="1">1 laadpunt</option>
-                  <option value="2">2 laadpunt</option>
-                  <option value="3">3 laadpunt</option>
-                  <option value="4">4 laadpunt</option>
-                  <option value="5">5 laadpunt</option>
-                  <option value="6">6 laadpunt</option>
-                  <option value="7">7 laadpunt</option>
-                  <option value="8">8 laadpunt</option>
-                  <option value="9">9 laadpunt</option>
-                  <option value="10">10 laadpunt</option>
-                </select>
+                <span>Voornaam</span>
+                <input type="text" name="first_name" required />
               </label>
 
               <label>
-                <span>Is / wordt de laadpaal op eigen terrein geplaatst?</span>
-                <select name="eigen_terrein" required>
+                <span>Achternaam (optioneel)</span>
+                <input type="text" name="last_name" />
+              </label>
+
+              <label>
+                <span>E-mailadres</span>
+                <input type="email" name="email" required />
+              </label>
+
+              <label>
+                <span>Onderwerp</span>
+                <select name="onderwerp" required>
                   <option value="">Maak een keuze</option>
-                  <option value="ja">Ja</option>
-                  <option value="nee">Nee</option>
-                  <option value="onzeker">Onzeker</option>
-                </select>
-              </label>
-
-              <div class="checkbox-row">
-                <input type="checkbox" id="akkoord_installateur" name="akkoord" required />
-                <label for="akkoord_installateur">
-                  Ik bevestig dat ik deze klant mag aanmelden bij Enval voor voorbereiding op mogelijke ERE’s (zonder garantie).
-                </label>
-              </div>
-
-              <button type="submit" class="btn primary full-width">Klant aanmelden</button>
-              <p class="form-note">Na aanmelding nemen wij rechtstreeks contact op met de klant.</p>
-            </form>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Tab: EV-rijder -->
-    <section class="section section-alt tab-panel" data-panel="ev">
-      <div class="container two-column">
-        <div class="column">
-          <h2>Registreer je privé-laadpaal</h2>
-          <p>Je ontvangt na aanmelding een e-mail met dossierlink waarmee je de stappen kunt doorlopen.</p>
-        </div>
-
-        <div class="column">
-          <div class="card">
-            <h3>Voorinschrijving EV-rijder</h3>
-
-            <form class="form" name="evrijder" novalidate>
-              <input type="hidden" name="installer_ref" />
-
-              <label><span>Voornaam</span><input type="text" name="voornaam" required /></label>
-              <label><span>Achternaam</span><input type="text" name="achternaam" required /></label>
-              <label><span>E-mailadres</span><input type="email" name="email" required /></label>
-              <label><span>Mobiel nummer (optioneel)</span><input type="tel" name="telefoon" placeholder="06xxxxxxxx of +316xxxxxxxx" /></label>
-
-              <label>
-                <span>Aantal laadpunten op locatie</span>
-                <select name="charger_count" required>
-                  <option value="">Selecteer aantal laadpunten</option>
-                  <option value="1">1 laadpunt</option>
-                  <option value="2">2 laadpunt</option>
-                  <option value="3">3 laadpunt</option>
-                  <option value="4">4 laadpunt</option>
-                  <option value="5">5 laadpunt</option>
-                  <option value="6">6 laadpunt</option>
-                  <option value="7">7 laadpunt</option>
-                  <option value="8">8 laadpunt</option>
-                  <option value="9">9 laadpunt</option>
-                  <option value="10">10 laadpunt</option>
+                  <option value="ev-rijder">Ik heb een privé-laadpaal</option>
+                  <option value="inboeker">Ik ben inboeker</option>
+                  <option value="grotere-locatie">Ik heb meer dan 4 laadpalen</option>
+                  <option value="op-de-hoogte" selected>Houd mij op de hoogte</option>
+                  <option value="overig">Overig</option>
                 </select>
               </label>
 
               <label>
-                <span>Is de (toekomstige) laadpaal op eigen terrein?</span>
-                <select name="eigen_terrein" required>
-                  <option value="">Maak een keuze</option>
-                  <option value="ja">Ja</option>
-                  <option value="nee">Nee</option>
-                  <option value="onzeker">Onzeker</option>
-                </select>
+                <span>Bericht</span>
+                <textarea name="bericht" rows="5" required> </textarea>
               </label>
 
-              <div class="checkbox-row">
-                <input type="checkbox" id="akkoord_ev" name="akkoord" required />
-                <label for="akkoord_ev">Ik begrijp dat dit geen garantie is op ERE’s of vergoedingen.</label>
-              </div>
+              <button type="submit" class="btn primary">Verstuur</button>
 
-              <button type="submit" class="btn primary full-width">Voorinschrijven</button>
-              <p class="form-note">Je ontvangt e-mail met dossierlink.</p>
+              <p class="form-note mb-0">
+                Door te verzenden ga je akkoord met de
+                <a href="/privacyverklaring.html" target="_blank" rel="noopener">privacyverklaring</a>.
+              </p>
             </form>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Tab: Anders / partner -->
-    <section class="section section-alt tab-panel" data-panel="anders">
-      <div class="container two-column">
-        <div class="column">
-          <h2>Voor grotere locaties en partners</h2>
-          <p>Gebruik het contactformulier op de homepagina en vermeld dat het om een grotere locatie gaat.</p>
-          <p><a class="btn outline small" href="/index.html#contact">Naar contactformulier</a></p>
-        </div>
-        <div class="column">
-          <div class="card">
-            <h3>Tip</h3>
-            <p>Vermeld aantal laadpunten en de verwachte jaarlijkse kWh (als je dat weet).</p>
           </div>
         </div>
       </div>
@@ -209,9 +164,15 @@
     <footer>
       <div class="container footer-inner">
         <p>&copy; <span id="year"></span> Enval. Alle rechten voorbehouden.</p>
+
+        <div class="footer-links">
+          <a href="/privacyverklaring.html">Privacyverklaring</a>
+          <a href="/voorwaarden.html">Voorwaarden</a>
+        </div>
       </div>
     </footer>
 
+    <script src="/assets/js/config.runtime.js"></script>
     <script src="/assets/js/config.js"></script>
     <script src="/assets/js/script.js"></script>
   </body>

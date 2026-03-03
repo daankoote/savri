@@ -1,4 +1,5 @@
-<!-- versie 260105_18 oclock -->
+<!-- dossier.html -->
+<!-- 24-02-2026 -->
 
 <!DOCTYPE html>
 <html lang="nl">
@@ -13,18 +14,35 @@
     <!-- ======================================================
          Header / Nav
          ====================================================== -->
-    <header>
+     <header>
       <div class="container header-inner">
         <div class="logo"><a href="/index.html">Enval</a></div>
 
-        <button id="navToggle" class="nav-toggle" type="button" aria-controls="siteNav" aria-expanded="false" >☰</button>
+        <button
+          id="navToggle"
+          class="nav-toggle"
+          type="button"
+          aria-controls="siteNav"
+          aria-expanded="false"
+        >
+          ☰
+        </button>
 
         <nav id="siteNav">
-          <a href="/index.html#hero">Home</a>
-          <a href="/aanmelden.html">Aanmelden</a>
-          <a href="/hoe-het-werkt.html">Hoe het werkt</a>
-          <a href="/regelgeving.html">Regelgeving</a>
-          <a href="/index.html#faq">FAQ</a>
+          <a href="/index.html">Home</a>
+          <a href="/aanmelden.html">Start Dossier</a>
+          <a href="/pricing.html">Tarieven</a>
+
+          <div class="nav-dd" role="none">
+            <button class="nav-dd-btn" type="button" aria-haspopup="true" aria-expanded="false">
+              Informatie <span class="nav-caret">▾</span>
+            </button>
+            <div class="nav-dd-menu" role="menu">
+              <a role="menuitem" href="/hoe-het-werkt.html">Hoe het werkt</a>
+              <a role="menuitem" href="/regelgeving.html">Regelgeving</a>
+            </div>
+          </div>
+
           <a href="/index.html#contact">Contact</a>
         </nav>
       </div>
@@ -80,10 +98,15 @@
                   <span>Aantal laadpunten</span>
                   <select name="charger_count" required>
                     <option value="">Kies…</option>
-                    <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
-                    <option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option>
-                    <option value="9">9</option><option value="10">10</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
                   </select>
+                  <div class="small muted" style="margin-top:6px;">
+                    Meer dan 4 laadpalen? Neem contact op.
+                  </div>
+
                 </label>
 
                 <label>
@@ -137,10 +160,20 @@
 
               <form id="chargerForm" class="form" novalidate>
                 <input type="hidden" name="charger_id" />
-                <label><span>Serienummer (verplicht)</span><input type="text" name="serial_number" placeholder="SN123456" required /></label>
 
+                <!-- gewenste volgorde -->
                 <label><span>Merk</span><select id="chargerBrand" required></select></label>
                 <label><span>Model</span><select id="chargerModel" required></select></label>
+
+                <label>
+                  <span>Serienummer (verplicht)</span>
+                  <input type="text" name="serial_number" placeholder="SN123456" required />
+                </label>
+
+                <label>
+                  <span>MID-nummer (verplicht)</span>
+                  <input type="text" name="mid_number" placeholder="MID…" required />
+                </label>
 
                 <label><span>Vermogen kW (optioneel)</span><input type="text" name="power_kw" placeholder="11" /></label>
 
@@ -158,19 +191,21 @@
                 <table class="table table-chargers">
                   <thead>
                     <tr>
-                      <th>Serienummer</th>
                       <th>Merk</th>
                       <th>Model</th>
+                      <th>Serienummer</th>
+                      <th>MID</th>
                       <th>Toelichting</th>
                       <th class="right">Acties</th>
                     </tr>
                   </thead>
                   <tbody id="chargersTbody">
-                    <tr><td colspan="5" class="muted">laden…</td></tr>
+                    <tr><td colspan="6" class="muted">laden…</td></tr>
                   </tbody>
                 </table>
               </div>
             </div>
+
 
             <!-- Step 4 -->
             <div class="card">
@@ -243,7 +278,12 @@
                 <div class="checkbox-row">
                   <input type="checkbox" id="cMandaat" />
                  <!-- <label for="cMandaat">Ik geef middels dit <a href="/mandaat.html" target="_blank" rel="noopener">mandaat</a> toestemming.</label> -->
-                  <label for="cMandaat">Deze aanmelding is volledig vrijblijvend, tot de regelgeving omtrent de vergoedingen voor prive-laadpalen nog ontwikkeling is bij de Nederlandse Emissieautoriteit.</label>
+                  <label for="cMandaat">
+                    Ik geef Enval toestemming om mijn dossier te beheren (opslaan/structureren/controleren op volledigheid) en mij te benaderen over ontbrekende stukken.
+                    Dit is geen garantie op inboeken of vergoeding.
+                    Zie <a href="/mandaat.html" target="_blank" rel="noopener">toestemming & werkwijze</a>.
+                  </label>
+
                 </div>
 
                 <button id="btnConsentsSave" class="btn primary full-width" type="submit">Opslaan</button>
@@ -255,12 +295,17 @@
             <!-- Step 6 -->
             <div class="card">
               <h2 style="margin-top:0;">6) Review</h2>
+
               <div id="statusExplain" class="muted small">laden…</div>
-              <div class="row" style="margin-top:10px;">
-                <button id="btnEvaluate" class="btn outline" type="button">Review dossier</button>
+
+              <div class="row" style="margin-top:10px; gap:10px; flex-wrap:wrap;">
+                <button id="btnPrecheck" class="btn outline" type="button">Controleer volledigheid</button>
+                <button id="btnFinalize" class="btn primary" type="button">Dossier indienen</button>
               </div>
+
               <div id="reviewState" class="small muted" style="margin-top:8px;"></div>
             </div>
+
           </div>
 
           <div style="height:24px;"></div>
@@ -271,10 +316,19 @@
     <footer>
       <div class="container footer-inner">
         <p>&copy; <span id="year"></span> Enval. Alle rechten voorbehouden.</p>
+
+        <div class="footer-links">
+          <a href="/privacyverklaring.html">Privacyverklaring</a>
+          <a href="/voorwaarden.html">Voorwaarden</a>
+          <!-- <a href="/mandaat.html">Mandaat</a> -->
+        </div>
       </div>
     </footer>
 
+
+    <script src="/assets/js/config.runtime.js"></script>
     <script src="/assets/js/config.js"></script>
+
     <script src="/assets/js/pages/dossier.js"></script>
   </body>
 </html>

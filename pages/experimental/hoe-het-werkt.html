@@ -1,4 +1,5 @@
-<!-- versie 260105_18 oclock -->
+<!-- hoe-het-werkt.html -->
+<!-- 25-02-2026 -->
 
 <!DOCTYPE html>
 <html lang="nl">
@@ -9,88 +10,140 @@
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Enval – Hoe het werkt</title>
+    <meta
+      name="description"
+      content="Hoe Enval werkt: aanmelden, dossier opbouwen, controles en export. Enval is dossier- en registratieplatform, geen inboeker."
+    />
+    <link rel="canonical" href="/hoe-het-werkt.html" />
     <link rel="stylesheet" href="/assets/css/style.css" />
   </head>
 
-  <body>
+  <body class="page-how">
     <header>
       <div class="container header-inner">
         <div class="logo"><a href="/index.html">Enval</a></div>
 
-        <button id="navToggle" class="nav-toggle" type="button" aria-controls="siteNav" aria-expanded="false">☰</button>
+        <button
+          id="navToggle"
+          class="nav-toggle"
+          type="button"
+          aria-controls="siteNav"
+          aria-expanded="false"
+        >
+          ☰
+        </button>
 
         <nav id="siteNav">
-          <a href="/index.html#hero">Home</a>
-          <a href="/aanmelden.html">Aanmelden</a>
-          <a href="/hoe-het-werkt.html">Hoe het werkt</a>
-          <a href="/regelgeving.html">Regelgeving</a>
-          <a href="/index.html#faq">FAQ</a>
+          <a href="/index.html">Home</a>
+          <a href="/aanmelden.html">Start Dossier</a>
+          <a href="/pricing.html">Tarieven</a>
+
+          <div class="nav-dd" role="none">
+            <button class="nav-dd-btn" type="button" aria-haspopup="true" aria-expanded="false">
+              Informatie <span class="nav-caret">▾</span>
+            </button>
+            <div class="nav-dd-menu" role="menu">
+              <a role="menuitem" href="/hoe-het-werkt.html">Hoe het werkt</a>
+              <a role="menuitem" href="/regelgeving.html">Regelgeving</a>
+            </div>
+          </div>
+
           <a href="/index.html#contact">Contact</a>
         </nav>
       </div>
     </header>
 
-    <main>
-      <!-- MINI HERO -->
-      <section class="section page-hero">
-        <div class="container">
-          <div class="kicker">Proces</div>
-          <h1>Hoe Enval werkt</h1>
-          <p class="lead">
-            Duidelijk en praktisch: jij levert input, Enval structureert het dossier en maakt het review-ready.
+    <!-- HERO -->
+    <section class="hero">
+      <div class="container hero-inner">
+        <div class="hero-left">
+          <div class="kicker">Hoe het werkt</div>
+          <h1>Van aanmelding naar overdraagbaar dossier</h1>
+          <p class="hero-sub">
+            U levert de basis aan. Enval structureert uw dossier, bewaakt volledigheid en maakt export mogelijk richting een erkende inboeker.
           </p>
-        </div>
-      </section>
 
-      <!-- CONTENT -->
+          <!-- 1 CTA only -->
+          <div class="hero-cta">
+            <a class="btn primary" href="/aanmelden.html">Start dossier</a>
+          </div>
+
+          <div class="hero-mini">Enval is dossier- en registratieplatform — geen inboeker/verificateur.</div>
+        </div>
+
+        <div class="hero-trust-card">
+          <h3>Wat Enval doet</h3>
+          <ul class="hero-trust-list">
+            <li>Structuur + dossierbasis</li>
+            <li>Audit-trail & consistentie</li>
+            <li>Export voor overdracht</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <main>
       <section class="section">
         <div class="container">
           <div class="card">
-            <p style="margin-top:0;">
-              Enval ondersteunt eigenaren en installateurs van privé-laadpalen bij registratie, validatie en voorbereiding op het
-              inboeken van elektriciteit voor ERE’s onder RED3.
+            <h2 class="mt-0">Rollen en verantwoordelijkheden</h2>
+
+            <div class="callout mt-14">
+              <ul class="list mb-0">
+                <li><strong>U (eigenaar):</strong> levert juiste gegevens en bewijsstukken aan.</li>
+                <li><strong>Enval:</strong> structureert het dossier, bewaakt volledigheid/consistentie en legt audit-trail vast.</li>
+                <li><strong>Inboeker/verificateur:</strong> beoordeelt, accepteert en boekt eventueel in. Eindverantwoordelijk voor acceptatie blijft bij de inboeker.</li>
+                <li><strong>Verificateur:</strong> Doet de pre-vericiatie en eventuele audit (van processen en op locatie).</li>
+              </ul>
+            </div>
+
+            <p class="form-note mt-14 mb-0">
+              Enval geeft geen garantie op acceptatie of vergoeding. Externe eisen en acceptatiecriteria zijn leidend.
+              Zie ook: <a href="/pricing.html">Tarieven</a>.
             </p>
 
-            <div class="steps" style="margin-top:12px;">
+            <h2 class="mt-18">Het proces</h2>
+
+            <div class="steps mt-12">
               <div class="step">
                 <div class="n">1</div>
-                <h3 style="margin:0 0 6px 0;">Aanmelding</h3>
+                <h3>Aanmelden</h3>
                 <p>
-                  De installatie wordt aangemeld door een installateur of laadpaaleigenaar. Basisgegevens worden vastgelegd,
-                  zoals locatie, type installatie en aantal laadpunten.
+                  U start een dossier en legt basisinformatie vast (locatie, aantal laadpunten, NL/MID). U ontvangt een dossierlink per e-mail.
                 </p>
               </div>
 
               <div class="step">
                 <div class="n">2</div>
-                <h3 style="margin:0 0 6px 0;">Registratie & dossieropbouw</h3>
+                <h3>Dossier opbouwen</h3>
                 <p>
-                  Enval bouwt per installatie een dossier op waarin relevante gegevens en documentatie worden verzameld,
-                  inclusief bewijsstukken.
+                  U uploadt bewijsstukken en vult ontbrekende gegevens aan. Enval houdt bij wat er ontbreekt en wat inconsistent is.
                 </p>
               </div>
 
               <div class="step">
                 <div class="n">3</div>
-                <h3 style="margin:0 0 6px 0;">Validatie</h3>
+                <h3>Controles & consistentie</h3>
                 <p>
-                  De aangeleverde informatie wordt gecontroleerd op volledigheid en consistentie, met als doel een controleerbaar
-                  dossier (audit-trail) op te bouwen.
+                  Enval controleert op volledigheid en logische samenhang (zodat het dossier niet strandt op administratie).
                 </p>
               </div>
             </div>
 
-            <div class="callout" style="margin-top:14px;">
-              <strong>Vervolg (afhankelijk van kaders)</strong>
-              <p style="margin-top:8px; margin-bottom:0;">
-                Privé-laadpalen onder de wettelijke drempel kunnen niet zelfstandig ERE’s verkopen.
-                Inboeken vindt daarom plaats via een erkende inboeker of inboekdienstverlener (alleen als jij daarvoor kiest).
+            <h2 class="mt-18">Export en overdracht</h2>
+
+            <div class="callout mt-14">
+              <p class="mb-0">
+                Als u wilt inboeken, draagt u uw dossier over via export. Inboeken gebeurt via een erkende inboeker of inboekdienstverlener.
               </p>
             </div>
 
-            <p class="form-note" style="margin-top:14px; margin-bottom:0;">
-              Let op: toekenning van ERE’s en vergoedingen is nooit gegarandeerd en afhankelijk van regelgeving, verificatie en correcte gegevens.
-            </p>
+            <div class="callout mt-14">
+              <strong>Wanneer jaarlijks bevestigen?</strong>
+              <p class="mt-8 mb-0">
+                Als er iets wijzigt (meter, hardware, locatie, installatie), moet dat aantoonbaar worden vastgelegd. Jaarlijks bevestigen is de minimale praktische vorm.
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -99,9 +152,15 @@
     <footer>
       <div class="container footer-inner">
         <p>&copy; <span id="year"></span> Enval. Alle rechten voorbehouden.</p>
+
+        <div class="footer-links">
+          <a href="/privacyverklaring.html">Privacyverklaring</a>
+          <a href="/voorwaarden.html">Voorwaarden</a>
+        </div>
       </div>
     </footer>
 
+    <script src="/assets/js/config.runtime.js"></script>
     <script src="/assets/js/config.js"></script>
     <script src="/assets/js/script.js"></script>
   </body>

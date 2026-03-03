@@ -1,15 +1,16 @@
-// versie 260105_18 oclock
-console.log("ENVAL SCRIPT.JS versie 260105_18 oclock");
+console.log("ENVAL script.js versie 260219_10");
 
 // ======================================================
-// 0) Config (komt uit /config.js)
+// 0) Config (komt uit /assets/js/config.js)
 // ======================================================
 const SUPABASE_URL = window.ENVAL?.SUPABASE_URL;
 const SUPABASE_ANON_KEY = window.ENVAL?.SUPABASE_ANON_KEY;
 const API_BASE = window.ENVAL?.API_BASE;
 
+const UI_MAX_CHARGERS = Number(window.ENVAL?.UI_MAX_CHARGERS || 4);
+
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !API_BASE) {
-  console.error("ENVAL config ontbreekt. Laad eerst /config.js vóór script.js");
+  console.error("ENVAL config ontbreekt. Laad eerst /assets/js/config.runtime.js + /assets/js/config.js vóór script.js");
 }
 
 // ======================================================
@@ -135,8 +136,6 @@ function clearAllFieldErrors(form) {
   form.querySelectorAll(".input-error").forEach(clearFieldError);
 }
 
-
-
 // ======================================================
 // 4) UI helpers: Toast + form reset behavior
 // ======================================================
@@ -249,13 +248,52 @@ function initMobileNav() {
   });
 }
 
-
-
 // ======================================================
 // 6) DOM Ready: bind events
 // ======================================================
 document.addEventListener("DOMContentLoaded", () => {
   initMobileNav();
+
+  // prefill aanmelden via query params
+  const qs = new URLSearchParams(window.location.search);
+  const evForm = document.querySelector('form[name="evrijder"]');
+
+  if (evForm) {
+    const charger = qs.get("charger_count");
+    const terrein = qs.get("own_premises");
+    const inNl = qs.get("in_nl");
+    const hasMid = qs.get("has_mid");
+
+
+    if (charger) {
+      const sel = evForm.querySelector('[name="charger_count"]');
+      if (sel && [...sel.options].some(o => o.value === charger)) {
+        sel.value = charger;
+      }
+    }
+
+    if (terrein) {
+      const sel = evForm.querySelector('[name="own_premises"]');
+      if (sel && [...sel.options].some(o => o.value === terrein)) {
+        sel.value = terrein;
+      }
+    }
+
+    if (inNl) {
+      const sel = evForm.querySelector('[name="in_nl"]');
+      if (sel && [...sel.options].some(o => o.value === inNl)) {
+        sel.value = inNl;
+      }
+    }
+
+    if (hasMid) {
+      const sel = evForm.querySelector('[name="has_mid"]');
+      if (sel && [...sel.options].some(o => o.value === hasMid)) {
+        sel.value = hasMid;
+      }
+    }
+  }
+
   // footer year
   const year = document.getElementById("year");
   if (year) year.textContent = new Date().getFullYear();
@@ -268,28 +306,13 @@ document.addEventListener("DOMContentLoaded", () => {
       panels.forEach((p) => (p.style.display = p.dataset.panel === target ? "block" : "none"));
       toggles.forEach((b) => b.classList.toggle("active", b.dataset.target === target));
     };
-    activate("installateur");
+    activate("ev");
     toggles.forEach((btn) => btn.addEventListener("click", () => activate(btn.dataset.target)));
-  }
-
-  // ref in URL voor EV form (optioneel)
-  const params = new URLSearchParams(window.location.search);
-  const ref = params.get("ref");
-  const evForm = document.querySelector('form[name="evrijder"]');
-  if (evForm && ref) {
-    const input = evForm.querySelector('input[name="installer_ref"]');
-    if (input) input.value = ref.toUpperCase();
   }
 
   // Bind forms (fail-safe: 1 kapot form mag de rest niet breken)
   try { document.querySelector('form[name="evrijder"]')?.addEventListener("submit", handleEvForm); }
   catch (e) { console.error("bind evrijder failed", e); }
-
-  try { document.querySelector('form[name="installateur"]')?.addEventListener("submit", handleInstallateurKlantForm); }
-  catch (e) { console.error("bind installateur->klant failed", e); }
-
-  try { document.getElementById("installer-signup-form")?.addEventListener("submit", handleInstallerSignup); }
-  catch (e) { console.error("bind installer signup failed", e); }
 
   try { document.querySelector('form[name="contact"]')?.addEventListener("submit", handleContactForm); }
   catch (e) { console.error("bind contact failed", e); }
@@ -311,12 +334,14 @@ async function handleEvForm(e) {
   const btn = form.querySelector('button[type="submit"]');
   if (btn?.disabled) return;
 
-  const first = form.querySelector('[name="voornaam"]');
-  const last = form.querySelector('[name="achternaam"]');
+  const first = form.querySelector('[name="first_name"]');
+  const last = form.querySelector('[name="last_name"]');
   const email = form.querySelector('[name="email"]');
   const phone = form.querySelector('[name="telefoon"]');
   const chargers = form.querySelector('[name="charger_count"]');
-  const terrein = form.querySelector('[name="eigen_terrein"]');
+  const terrein = form.querySelector('[name="own_premises"]');
+  const inNl = form.querySelector('[name="in_nl"]');
+  const hasMid = form.querySelector('[name="has_mid"]');
   const akkoord = form.querySelector('[name="akkoord"]');
 
   let hasError = false;
@@ -336,7 +361,25 @@ async function handleEvForm(e) {
   }
 
   if (!chargers?.value) { showFieldError(chargers, "Selecteer het aantal laadpunten."); hasError = true; }
-  if (!terrein?.value) { showFieldError(terrein, "Maak een keuze."); hasError = true; }
+  else {
+    const n = parseInt(chargers.value, 10);
+    if (!Number.isInteger(n) || n < 1) { showFieldError(chargers, "Ongeldig aantal laadpunten."); hasError = true; }
+    else if (n > UI_MAX_CHARGERS) { showFieldError(chargers, `Maximaal ${UI_MAX_CHARGERS} laadpunten (self-serve).`); hasError = true; }
+  }
+
+  
+
+
+  // Hard gates: NL + MID + eigen grond must be "ja"
+  if (!terrein?.value) { showFieldError(terrein, "Maak een keuze."); hasError = true;
+  } else if (terrein.value !== "ja") { showFieldError(terrein, "Aanmelding is alleen beschikbaar als de laadpaal op eigen terrein staat."); hasError = true;}
+
+  if (!inNl?.value) { showFieldError(inNl, "Maak een keuze."); hasError = true; }
+  else if (inNl.value !== "ja") { showFieldError(inNl, "Aanmelding is alleen beschikbaar voor laadpalen in Nederland."); hasError = true; }
+
+  if (!hasMid?.value) { showFieldError(hasMid, "Maak een keuze."); hasError = true; }
+  else if (hasMid.value !== "ja") { showFieldError(hasMid, "Aanmelding vereist een laadpaal met MID-meter."); hasError = true; }
+
   if (!akkoord?.checked) { showFieldError(akkoord, "Akkoord is verplicht."); hasError = true; }
 
   if (hasError) return;
@@ -360,7 +403,9 @@ async function handleEvForm(e) {
         email: email.value.trim(),
         phone: phone.value.trim() || null,
         charger_count: parseInt(chargers.value, 10),
-        own_premises: terrein.value === "ja",
+        own_premises: true,     // hard gate: enforced by UI + backend
+        in_nl: true,            // hard gate: enforced by UI + backend
+        has_mid: true,          // hard gate: enforced by UI + backend
       }),
     });
 
@@ -372,8 +417,8 @@ async function handleEvForm(e) {
       return;
     }
 
-    keepAndReset(form, [], 'input[name="voornaam"]');
-    showToast("Aanmelding ontvangen. Je ontvangt e-mail met dossierlink.", "success");
+    keepAndReset(form, [], 'input[name="first_name"]');
+    showToast("Aanmelding ontvangen. U ontvangt e-mail met dossierlink.", "success");
   } catch (err) {
     console.error("ev_direct exception:", err);
     showToast("Er ging iets mis (netwerk). Probeer later opnieuw.", "error");
@@ -382,177 +427,6 @@ async function handleEvForm(e) {
   }
 }
 
-/**
- * handleInstallateurKlantForm(e)
- * Flow: installer_to_customer → api-lead-submit
- */
-async function handleInstallateurKlantForm(e) {
-  e.preventDefault();
-  const form = e.target;
-  clearAllFieldErrors(form);
-
-  const btn = form.querySelector('button[type="submit"]');
-  if (btn?.disabled) return;
-
-  const ref = form.querySelector('[name="installer_ref"]');
-  const first = form.querySelector('[name="klant_voornaam"]');
-  const last = form.querySelector('[name="klant_achternaam"]');
-  const email = form.querySelector('[name="klant_email"]');
-  const phone = form.querySelector('[name="klant_telefoon"]');
-  const chargers = form.querySelector('[name="charger_count"]');
-  const terrein = form.querySelector('[name="eigen_terrein"]');
-  const akkoord = form.querySelector('[name="akkoord"]');
-
-  let hasError = false;
-
-  const firstNorm = normalizePersonName(first?.value || "");
-  const lastNorm = normalizePersonName(last?.value || "");
-
-  if (!ref?.value?.trim()) { showFieldError(ref, "Installateurscode is verplicht."); hasError = true; }
-  if (!firstNorm) { showFieldError(first, "Vul de voornaam in."); hasError = true; }
-  if (!lastNorm) { showFieldError(last, "Vul de achternaam in."); hasError = true; }
-
-  if (!email?.value?.trim()) { showFieldError(email, "Geldig e-mailadres is verplicht."); hasError = true; }
-  else if (!isValidEmail(email.value)) { showFieldError(email, "Controleer het e-mailadres."); hasError = true; }
-
-  if (phone?.value && !isValidMobile(phone.value)) {
-    showFieldError(phone, "Vul een geldig mobiel nummer in (06 of +316).");
-    hasError = true;
-  }
-
-  if (!chargers?.value) { showFieldError(chargers, "Selecteer laadpunten."); hasError = true; }
-  if (!terrein?.value) { showFieldError(terrein, "Maak een keuze."); hasError = true; }
-  if (!akkoord?.checked) { showFieldError(akkoord, "Akkoord is verplicht."); hasError = true; }
-
-  if (hasError) return;
-
-  if (first) first.value = firstNorm;
-  if (last) last.value = lastNorm;
-
-  lockSubmit(btn, true);
-
-  try {
-    const idem = newIdempotencyKey();
-
-    const res = await fetch(`${API_BASE}/api-lead-submit`, {
-      method: "POST",
-      headers: edgeHeaders(idem),
-      body: JSON.stringify({
-        flow: "installer_to_customer",
-        installer_ref: ref.value.trim().toUpperCase(),
-        first_name: firstNorm,
-        last_name: lastNorm,
-        email: email.value.trim(),
-        phone: phone.value.trim() || null,
-        charger_count: parseInt(chargers.value, 10),
-        own_premises: terrein.value === "ja",
-      }),
-    });
-
-    const json = await res.json().catch(() => ({}));
-
-    if (!res.ok || !json.ok) {
-      const msg = json.error || "Installateurscode niet correct / bekend.";
-      showFieldError(ref, msg);
-      showToast(msg, "error");
-      return;
-    }
-
-    keepAndReset(form, ['input[name="installer_ref"]'], 'input[name="klant_voornaam"]');
-    showToast("Klant aangemeld. Dossierlink wordt per e-mail verstuurd.", "success");
-  } catch (err) {
-    console.error("installer_to_customer exception:", err);
-    showToast("Er ging iets mis (netwerk). Probeer later opnieuw.", "error");
-  } finally {
-    lockSubmit(btn, false);
-  }
-}
-
-/**
- * handleInstallerSignup(e)
- * Flow: installer_signup → api-lead-submit
- */
-async function handleInstallerSignup(e) {
-  e.preventDefault();
-  const form = e.target;
-  clearAllFieldErrors(form);
-
-  const btn = form.querySelector('button[type="submit"]');
-  if (btn?.disabled) return;
-
-  const company = form.querySelector('[name="company_name"]');
-  const first = form.querySelector('[name="contact_first_name"]');
-  const last = form.querySelector('[name="contact_last_name"]');
-  const email = form.querySelector('[name="email"]');
-  const phone = form.querySelector('[name="phone"]');
-  const kvk = form.querySelector('[name="kvk"]');
-  const akkoord = form.querySelector('[name="akkoord"]');
-
-  let hasError = false;
-
-  const firstNorm = normalizePersonName(first?.value || "");
-  const lastNorm = normalizePersonName(last?.value || "");
-
-  if (!company?.value?.trim()) { showFieldError(company, "Bedrijfsnaam verplicht."); hasError = true; }
-  if (!firstNorm) { showFieldError(first, "Voornaam verplicht."); hasError = true; }
-  if (!lastNorm) { showFieldError(last, "Achternaam verplicht."); hasError = true; }
-
-  if (!email?.value?.trim()) { showFieldError(email, "E-mailadres is verplicht."); hasError = true; }
-  else if (!isValidEmail(email.value)) { showFieldError(email, "Geldig e-mailadres vereist."); hasError = true; }
-
-  if (!/^[0-9]{8}$/.test((kvk?.value || "").trim())) {
-    showFieldError(kvk, "KVK-nummer moet 8 cijfers zijn.");
-    hasError = true;
-  }
-
-  if (phone?.value && !isValidMobile(phone.value)) {
-    showFieldError(phone, "Vul een geldig mobiel nummer in (06 of +316).");
-    hasError = true;
-  }
-
-  if (!akkoord?.checked) { showFieldError(akkoord, "Akkoord is verplicht."); hasError = true; }
-
-  if (hasError) return;
-
-  if (first) first.value = firstNorm;
-  if (last) last.value = lastNorm;
-
-  lockSubmit(btn, true);
-
-  try {
-    const idem = newIdempotencyKey();
-
-    const res = await fetch(`${API_BASE}/api-lead-submit`, {
-      method: "POST",
-      headers: edgeHeaders(idem),
-      body: JSON.stringify({
-        flow: "installer_signup",
-        company_name: company.value.trim(),
-        contact_first_name: firstNorm,
-        contact_last_name: lastNorm,
-        email: email.value.trim(),
-        phone: phone.value.trim() || null,
-        kvk: kvk.value.trim(),
-      }),
-    });
-
-    const json = await res.json().catch(() => ({}));
-
-    if (!res.ok || !json.ok) {
-      console.error("installer_signup failed:", json);
-      showToast(json.error || "Aanmelding mislukt. Probeer later opnieuw.", "error");
-      return;
-    }
-
-    keepAndReset(form, [], 'input[name="contact_first_name"]');
-    showToast("Aanmelding ontvangen. Je ontvangt e-mail + account activatie (magic link).", "success");
-  } catch (err) {
-    console.error("installer_signup exception:", err);
-    showToast("Er ging iets mis (netwerk). Probeer later opnieuw.", "error");
-  } finally {
-    lockSubmit(btn, false);
-  }
-}
 
 /**
  * handleContactForm(e)
@@ -617,7 +491,7 @@ async function handleContactForm(e) {
     }
 
     keepAndReset(form, [], 'input[name="first_name"]');
-    showToast("Dank je wel. Je bericht is ontvangen.", "success");
+    showToast("Dank je wel. Uw bericht is ontvangen.", "success");
   } catch (err) {
     console.error("contact exception:", err);
     showToast("Er ging iets mis (netwerk). Probeer later opnieuw.", "error");
