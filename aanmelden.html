@@ -1,0 +1,179 @@
+<!-- aanmelden.html -->
+<!-- 03-03-2026 HOLDING (hero uses index.css) -->
+
+<!DOCTYPE html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      document.documentElement.classList.add("js");
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Enval – Start dossier (binnenkort)</title>
+    <link rel="stylesheet" href="/assets/css/style.css" />
+  </head>
+
+  <body class="holding-page">
+    <header>
+      <div class="container header-inner">
+        <div class="logo"><a href="/index.html">Enval</a></div>
+
+        <button
+          id="navToggle"
+          class="nav-toggle"
+          type="button"
+          aria-controls="siteNav"
+          aria-expanded="false"
+        >
+          ☰
+        </button>
+
+        <nav id="siteNav">
+          <a href="/index.html">Home</a>
+          <a href="/aanmelden.html">Start Dossier</a>
+          <a href="/pricing.html">Tarieven</a>
+
+          <div class="nav-dd" role="none">
+            <button class="nav-dd-btn" type="button" aria-haspopup="true" aria-expanded="false">
+              Informatie <span class="nav-caret">▾</span>
+            </button>
+            <div class="nav-dd-menu" role="menu">
+              <a role="menuitem" href="/hoe-het-werkt.html">Hoe het werkt</a>
+              <a role="menuitem" href="/regelgeving.html">Regelgeving</a>
+            </div>
+          </div>
+
+          <a href="/index.html#contact">Contact</a>
+        </nav>
+      </div>
+    </header>
+
+    <!-- HERO (zelfde classes/structuur als index.html) -->
+    <section class="hero" id="hero">
+      <div class="container hero-inner">
+        <div class="hero-left">
+          <h1>ERE-vergoeding komt eraan — maar u kunt nog niet starten.</h1>
+
+          <p class="hero-sub">
+            De overheid heeft het consumentenproces nog niet definitief gemaakt.
+            Daardoor kunnen verificateurs en inboekers u nu nog niet vertellen welke administratie straks écht nodig is.
+          </p>
+
+          <p class="hero-sub" style="margin-top: 10px;">
+            U hoeft vandaag nog niets te ondernemen: De eerste vergoeding die consumenten kunnen ontvangen is pas vanaf <b>2027</b>
+            (over het jaar <b>2026</b>).
+          </p>
+
+          <div class="hero-cta">
+            <a href="#op-de-hoogte" class="btn cta">Blijf op de hoogte</a>
+            <a href="/index.html#check" class="btn outline">Eerst checken</a>
+          </div>
+
+          <div class="hero-mini">
+            Let op: partijen die nu “garantie” of “direct inboeken” beloven lopen vooruit op regels die nog niet vaststaan.
+          </div>
+        </div>
+
+        <div class="hero-right">
+          <div class="hero-trust-card">
+            <h3>Wat u nu wél kunt doen</h3>
+            <ul class="hero-trust-list">
+              <li>Geen lange termijn contracten tekenen</li>
+              <li>Wachten op definitieve eisen (overheid/verificateurs)</li>
+              <li>Uw situatie bij ons achterlaten — dan mailen we zodra u kunt starten</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOLDING CONTENT (2 kolommen) -->
+    <section class="section section-alt" id="op-de-hoogte">
+      <div class="container two-column">
+        <div class="column">
+          <h2>Waarom u nu nog niet kunt starten</h2>
+          <p>
+            Omdat de spelregels nog niet definitief zijn. Zonder definitief akkoord kan niemand u betrouwbaar vertellen
+            welke bewijsstukken straks verplicht zijn — en dus kan “nu al regelen” u juist vastzetten.
+          </p>
+
+          <div class="card mt-14">
+            <h3>Belangrijk om te weten</h3>
+            <ul class="hero-trust-list">
+              <li>De overheid heeft nog geen definitief akkoord voor het consumentenproces.</li>
+              <li>Verificateurs kunnen daardoor nog geen harde administratie-eisen afstemmen met consumenten.</li>
+              <li>De eerste vergoeding kan pas vanaf 2027 (over 2026) — u hoeft nu niets te forceren.</li>
+              <li>Wees voorzichtig met inboekers die doen alsof dit al “klaar” is.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="column">
+          <div class="card">
+            <h3>Blijf op de hoogte</h3>
+            <p class="mb-0">
+              Zet kort uw situatie in het bericht (aantal laadpunten, NL, MID). Dan kunnen we u gericht informeren.
+            </p>
+
+            <!-- zelfde contact form contract als index -->
+            <form class="form mt-14" name="contact" method="post" novalidate>
+              <label>
+                <span>Voornaam</span>
+                <input type="text" name="first_name" required />
+              </label>
+
+              <label>
+                <span>Achternaam (optioneel)</span>
+                <input type="text" name="last_name" />
+              </label>
+
+              <label>
+                <span>E-mailadres</span>
+                <input type="email" name="email" required />
+              </label>
+
+              <label>
+                <span>Onderwerp</span>
+                <select name="onderwerp" required>
+                  <option value="">Maak een keuze</option>
+                  <option value="ev-rijder">Ik heb een privé-laadpaal</option>
+                  <option value="inboeker">Ik ben inboeker</option>
+                  <option value="grotere-locatie">Ik heb meer dan 4 laadpalen</option>
+                  <option value="op-de-hoogte" selected>Houd mij op de hoogte</option>
+                  <option value="overig">Overig</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Bericht</span>
+                <textarea name="bericht" rows="5" required> </textarea>
+              </label>
+
+              <button type="submit" class="btn primary">Verstuur</button>
+
+              <p class="form-note mb-0">
+                Door te verzenden ga je akkoord met de
+                <a href="/privacyverklaring.html" target="_blank" rel="noopener">privacyverklaring</a>.
+              </p>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="container footer-inner">
+        <p>&copy; <span id="year"></span> Enval. Alle rechten voorbehouden.</p>
+
+        <div class="footer-links">
+          <a href="/privacyverklaring.html">Privacyverklaring</a>
+          <a href="/voorwaarden.html">Voorwaarden</a>
+        </div>
+      </div>
+    </footer>
+
+    <script src="/assets/js/config.runtime.js"></script>
+    <script src="/assets/js/config.js"></script>
+    <script src="/assets/js/script.js"></script>
+  </body>
+</html>

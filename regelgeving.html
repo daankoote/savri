@@ -1,0 +1,172 @@
+<!-- regelgeving.html -->
+<!-- 03-03-2026 (short professional rewrite) -->
+
+<!DOCTYPE html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      document.documentElement.classList.add("js");
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Enval – Regelgeving</title>
+    <meta
+      name="description"
+      content="Regelgeving rond RED3/ERE’s en (thuis)laden. Auditwaardige administratie is randvoorwaarde. Inboekers bepalen acceptatie."
+    />
+    <link rel="canonical" href="/regelgeving.html" />
+    <link rel="stylesheet" href="/assets/css/style.css" />
+  </head>
+
+  <body class="page-regelgeving">
+    <header>
+      <div class="container header-inner">
+        <div class="logo"><a href="/index.html">Enval</a></div>
+
+        <button
+          id="navToggle"
+          class="nav-toggle"
+          type="button"
+          aria-controls="siteNav"
+          aria-expanded="false"
+        >
+          ☰
+        </button>
+
+        <nav id="siteNav">
+          <a href="/index.html">Home</a>
+          <a href="/aanmelden.html">Start Dossier</a>
+          <a href="/pricing.html">Tarieven</a>
+
+          <div class="nav-dd" role="none">
+            <button class="nav-dd-btn" type="button" aria-haspopup="true" aria-expanded="false">
+              Informatie <span class="nav-caret">▾</span>
+            </button>
+            <div class="nav-dd-menu" role="menu">
+              <a role="menuitem" href="/hoe-het-werkt.html">Hoe het werkt</a>
+              <a role="menuitem" href="/regelgeving.html">Regelgeving</a>
+            </div>
+          </div>
+
+          <a href="/index.html#contact">Contact</a>
+        </nav>
+      </div>
+    </header>
+
+    <!-- HERO -->
+    <section class="hero">
+      <div class="container hero-inner">
+        <div class="hero-left">
+          <div class="kicker">RED3 • ERE • Inboeken</div>
+          <h1>Regelgeving</h1>
+          <p class="hero-sub">
+            Vergoeding bestaat uitsluitend bij ketenacceptatie.  
+            Zonder auditwaardige administratie is er niets in te boeken.  
+            Officiële publicaties en eisen van inboekers/verificateurs zijn leidend.
+          </p>
+        </div>
+
+        <div class="hero-trust-card">
+          <h3>Enval</h3>
+          <ul class="hero-trust-list">
+            <li>Dossieropbouw & audit-trail</li>
+            <li>Overdraagbare export</li>
+            <li>Geen inboeker • Geen verificateur • Geen garantie</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <main>
+
+      <!-- KERN -->
+      <section class="section section-alt">
+        <div class="container">
+          <div class="section-title">
+            <div>
+              <h2>Kern</h2>
+              <p>Waar acceptatie op wordt beoordeeld.</p>
+            </div>
+            <div>
+              <a
+                class="btn outline"
+                href="https://www.emissieautoriteit.nl/"
+                target="_blank"
+                rel="noopener"
+              >
+                NEa website
+              </a>
+            </div>
+          </div>
+
+          <div class="cards-2">
+            <div class="feature-card">
+              <h3>Meting & herleidbaarheid</h3>
+              <p>Meting, koppeling aan asset/locatie en reproduceerbare datastroom.</p>
+            </div>
+
+            <div class="feature-card">
+              <h3>Ketenacceptatie</h3>
+              <p>Inboekers bepalen format, interpretatie en acceptatie-eisen.</p>
+            </div>
+          </div>
+
+          <div class="cards-2 mt-14">
+            <div class="feature-card">
+              <h3>MID-context</h3>
+              <p>Vaak vereist bij aantoonbaar meten. Nooit voldoende op zichzelf.</p>
+            </div>
+
+            <div class="feature-card">
+              <h3>Waarde</h3>
+              <p>Variabel. Afhankelijk van regels, markt en acceptatie.</p>
+            </div>
+          </div>
+
+          <div class="callout mt-14">
+            <strong>Informatief.</strong>
+            <p class="mt-8 mb-0">
+              Geen juridisch of financieel advies. Officiële bronnen zijn leidend.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ARTIKELEN -->
+      <section class="section">
+        <div class="container">
+          <div class="section-title">
+            <div>
+              <h2>Bronnen & updates</h2>
+            </div>
+          </div>
+
+          <div id="regGrid" class="reg-grid" aria-live="polite"></div>
+
+          <div id="regModal" class="modal" hidden aria-hidden="true" role="dialog" aria-modal="true">
+            <div class="modal-panel" role="document">
+              <button id="regModalClose" class="modal-close" type="button" aria-label="Sluiten">×</button>
+              <div id="regModalBody" class="modal-body"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <footer>
+      <div class="container footer-inner">
+        <p>&copy; <span id="year"></span> Enval. Alle rechten voorbehouden.</p>
+        <div class="footer-links">
+          <a href="/privacyverklaring.html">Privacyverklaring</a>
+          <a href="/voorwaarden.html">Voorwaarden</a>
+        </div>
+      </div>
+    </footer>
+
+    <script src="/assets/js/config.runtime.js"></script>
+    <script src="/assets/js/config.js"></script>
+    <script src="/assets/js/script.js"></script>
+    <script src="/assets/js/pages/regelgeving.js"></script>
+  </body>
+</html>

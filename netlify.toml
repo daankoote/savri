@@ -1,39 +1,30 @@
+[build]
+  publish = "."
+
 [build.environment]
+  REVIEW_ID = ""
+  SUPABASE_URL = ""
+  SUPABASE_ANON_KEY = ""
   SECRETS_SCAN_OMIT_KEYS = "SUPABASE_ANON_KEY"
   SECRETS_SCAN_OMIT_PATHS = "assets/js/config.runtime.js"
 
-
-[build]
-  publish = "."
-  command = """
-    mkdir -p ./assets/js
-
-    cat > ./assets/js/config.runtime.js <<EOF
-// GENERATED — DO NOT COMMIT
-window.ENVAL = window.ENVAL || {};
-window.ENVAL.SUPABASE_URL = "${SUPABASE_URL}";
-window.ENVAL.SUPABASE_ANON_KEY = "${SUPABASE_ANON_KEY}";
-EOF
-  """
-
-
-# --- Legacy hard kill: installer routes (frontend + SEO hygiene) ---
+# LEGACY ONLY
 [[redirects]]
-from = "/installateur"
-to = "/legacy/installateur.html"
-status = 302
+  from = "/installateur"
+  to = "/legacy/installateur.html"
+  status = 302
 
 [[redirects]]
-from = "/installateur.html"
-to = "/legacy/installateur.html"
-status = 302
+  from = "/installateur.html"
+  to = "/legacy/installateur.html"
+  status = 302
 
-# Als je liever direct hard killt i.p.v. legacy pagina:
-# [[redirects]]
-# from = "/installateur"
-# to = "/410.html"
-# status = 410
-# [[redirects]]
-# from = "/installateur.html"
-# to = "/410.html"
-# status = 410
+[[redirects]]
+  from = "/mandaat"
+  to = "/legacy/mandaat.html"
+  status = 302
+
+[[redirects]]
+  from = "/mandaat.html"
+  to = "/legacy/mandaat.html"
+  status = 302
