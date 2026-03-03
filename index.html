@@ -1,4 +1,5 @@
-<!-- versie 260109_pilot_v1 -->
+<!-- index.html -->
+<!-- 24-02-2026 -->
 
 <!DOCTYPE html>
 <html lang="nl">
@@ -8,11 +9,7 @@
       document.documentElement.classList.add("js");
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Enval – Pilot (RED3 / ERE voor privé-laadpalen)</title>
-    <meta
-      name="description"
-      content="Enval is in pilot. We verzamelen interesse en vragen over RED3/ERE en de rol van administratie, dossieropbouw en overdraagbaarheid naar erkende inboekers."
-    />
+    <title>Enval – registratie & dossier voor laadpalen</title>
     <link rel="stylesheet" href="/assets/css/style.css" />
   </head>
 
@@ -21,125 +18,338 @@
       <div class="container header-inner">
         <div class="logo"><a href="/pilot.html">Enval</a></div>
 
-        <button id="navToggle" class="nav-toggle" type="button" aria-controls="siteNav" aria-expanded="false">☰</button>
+        <button
+          id="navToggle"
+          class="nav-toggle"
+          type="button"
+          aria-controls="siteNav"
+          aria-expanded="false"
+        >
+          ☰
+        </button>
 
         <nav id="siteNav">
-          <a href="index.html" aria-current="page">Home</a>
-          <a href="#uitleg">Uitleg</a>
-          <a href="#interesse">Interesse</a>
-          <a href="/privacyverklaring.html">Privacy</a>
-          <a href="/voorwaarden.html">Voorwaarden</a>
+          <a href="/index.html">Home</a>
+          <a href="/aanmelden.html">Start Dossier</a>
+          <a href="/pricing.html">Tarieven</a>
+
+          <div class="nav-dd" role="none">
+            <button class="nav-dd-btn" type="button" aria-haspopup="true" aria-expanded="false">
+              Informatie <span class="nav-caret">▾</span>
+            </button>
+            <div class="nav-dd-menu" role="menu">
+              <a role="menuitem" href="/hoe-het-werkt.html">Hoe het werkt</a>
+              <a role="menuitem" href="/regelgeving.html">Regelgeving</a>
+            </div>
+          </div>
+
+          <a href="/index.html#contact">Contact</a>
         </nav>
       </div>
     </header>
 
     <!-- HERO -->
-    <section class="section hero">
+    <section class="hero" id="hero">
       <div class="container hero-inner">
-        <div class="hero-text">
-          <div class="kicker">Pilot • RED3 / ERE • Privé-laadpalen</div>
-          <h1>Enval is in pilot.</h1>
-          <p>
-            De regelgeving en acceptatie-eisen voor privé-laadpalen zijn nog in ontwikkeling. Enval verzamelt interesse en vragen,
-            en bouwt ondertussen aan een dossier- en audit-trail structuur die later overdraagbaar kan zijn naar erkende inboekers.
+        <div class="hero-left">
+          <h1>Laadpaal vergoeding is mogelijk — als uw dossier klopt.</h1>
+
+          <p class="hero-sub">
+            Enval helpt laadpaaleigenaren in Nederland met een MID-meter een compleet, overdraagbaar dossier op te bouwen — inclusief audit-trail en export.
           </p>
 
-          <div class="hero-buttons">
-            <a class="btn primary" href="#interesse">Ik wil updates</a>
-            <a class="btn outline" href="#uitleg">Wat betekent dit?</a>
+          <div class="hero-cta">
+            <a href="/index.html#check" class="btn cta">Check of u in aanmerking komt</a>
+            <a href="/aanmelden.html" class="btn outline">Start dossier</a>
           </div>
 
-          <div class="badges" aria-label="Status">
-            <div class="badge"><span class="dot"></span> Geen dienstverlening / geen betaling</div>
-            <div class="badge"><span class="dot"></span> Geen garantie op ERE of vergoeding</div>
-            <div class="badge"><span class="dot"></span> Informatie & interessepeiling</div>
+          <div class="hero-mini">Start gratis. U betaalt pas bij export.</div>
+        </div>
+
+        <div class="hero-right">
+          
+          <div class="hero-trust-card">
+            <h3>Wat u krijgt</h3>
+            <ul class="hero-trust-list">
+              <li>Overdraagbaar dossier (export)</li>
+              <li>Audit-trail ingebouwd</li>
+              <li>Alleen wat nodig is (particulier) — geen complex zakelijk gedoe.</li>
+            </ul>
+          </div>  
+            
+          <div class="hero-b2b">
+            <div class="hero-b2b-text">Bent u inboeker en wilt u administratie voor uw klanten?</div>
+            <a class="btn outline small" href="/index.html#contact">Neem contact op</a>
+          </div>
+         
+        </div>
+      </div>
+    </section>
+
+    <!-- ELIGIBILITY GATE (2 kolommen: links check, rechts ruimte voor visuals) -->
+    <section id="check" class="section">
+      <div class="container two-column">
+        <div class="column">
+          <div class="section-title">
+            <div>
+              <h2>Komt u in aanmerking?</h2>
+             <p>Beantwoord onderstaande vragen en check of u in aanmerking komt.</p>
+            </div>
+          </div>
+
+          <div class="calc">
+            <form id="eligibilityForm" class="form" novalidate>
+              <label>
+                <span>Aantal laadpunten op locatie</span>
+                <select id="eligChargerCount" required>
+                  <option value="">Maak een keuze</option>
+                  <option value="1">1 laadpunt</option>
+                  <option value="2">2 laadpunten</option>
+                  <option value="3">3 laadpunten</option>
+                  <option value="4">4 laadpunten</option>
+                  <option value="5plus">Meer dan 4</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Staat de laadpaal op eigen terrein?</span>
+                <select id="eligOwnPremises" required>
+                  <option value="">Maak een keuze</option>
+                  <option value="ja">Ja</option>
+                  <option value="nee">Nee</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Staat uw laadpaal in Nederland?</span>
+                <select id="eligInNl" required>
+                  <option value="">Maak een keuze</option>
+                  <option value="ja">Ja</option>
+                  <option value="nee">Nee</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Heeft uw laadpaal een MID-meter?</span>
+                <select id="eligHasMid" required>
+                  <option value="">Maak een keuze</option>
+                  <option value="ja">Ja</option>
+                  <option value="nee">Nee</option>
+                </select>
+              </label>
+
+              <div class="btn-row">
+                <button class="btn primary" type="submit">Check</button>
+              </div>
+
+              <div id="eligibilityResult" class="result result--neutral mt-12"></div>
+            </form>
           </div>
         </div>
 
-        <div class="hero-side">
-          <div class="card">
-            <h3>Pilot-disclaimer</h3>
-            <p class="note" style="margin:0;">
-              Enval levert momenteel geen operationele diensten en sluit via deze website geen overeenkomsten.
-              Aanmeldingen op deze pagina zijn uitsluitend bedoeld om updates te ontvangen of vragen te stellen.
-            </p>
+        <div class="column">
+          <div class="media-slot">
+            <img
+              src="/assets/img/home/eligibility.jpeg"
+              alt=""
+              loading="lazy"
+              decoding="async"
+            />
           </div>
         </div>
       </div>
     </section>
 
-    <!-- UITLEG -->
-    <section id="uitleg" class="section">
+    <!-- CALCULATOR -->
+    <section id="calculator" class="section section-alt">
       <div class="container">
         <div class="section-title">
           <div>
-            <h2>Wat speelt er nu?</h2>
-            <p>
-              RED3/ERE raakt ook elektriciteit. Inboeken en eventuele vergoedingen lopen via erkende partijen en zijn afhankelijk van regelgeving,
-              keten-eisen en externe verificatie. Voor privé-laadpalen is dit nog niet stabiel uitgekristalliseerd.
-            </p>
+            <h2>Indicatie vergoeding</h2>
+            <p>Dit is een bandbreedte, geen garantie en geen financieel advies.</p>
+            <p>Alleen relevant als u in aanmerking komt (NL + MID).</p>
           </div>
         </div>
 
-        <div class="cards-3">
-          <div class="feature-card">
-            <div class="icon">1</div>
-            <h3>Regelgeving beweegt</h3>
-            <p>
-              Interpretaties, drempels, acceptatiecriteria en verificatie-eisen kunnen wijzigen. Officiële bronnen zijn leidend.
-            </p>
-          </div>
+        <div class="calc calc--wide">
+          <form id="calcForm" class="form" novalidate>
+            <div class="calc-grid2">
+              <div class="calc-col">
+                <h3 class="calc-title">Op basis van kWh</h3>
 
-          <div class="feature-card">
-            <div class="icon">2</div>
-            <h3>Inboeken kan niet “zomaar”</h3>
-            <p>
-              Elektriciteit wordt ingeboekt via erkende inboekers. Zij zijn eindverantwoordelijk voor keten, controles en acceptatie.
-            </p>
-          </div>
+                <label>
+                  <span>Jaarlijks laden (kWh) <small class="hint">Gemiddeld: 2.000–4.000 kWh/jaar.</small></span>
+                  <input id="kwhYear" class="no-spin" type="number" inputmode="numeric" value="3000" />
+                  
+                </label>
 
-          <div class="feature-card">
-            <div class="icon">3</div>
-            <h3>Administratie is de bottleneck</h3>
-            <p>
-              In de praktijk strandt dit soort trajecten vaak op aantoonbaarheid: ontbrekende documenten, onduidelijke koppelingen en geen audit-trail.
-            </p>
-          </div>
+                <label>
+                  <span>Indicatie vergoeding (€/kWh)</span> 
+                  <input id="eurPerKwh" class="no-spin" type="number" inputmode="decimal" value="0.10" />
+                </label>
+
+                <div class="result" id="calcResultKwh">
+                  Bruto bandbreedte: <b>—</b>
+                  <small>Pas de waarden aan om uw indicatie te zien.</small>
+                </div>
+              </div>
+
+              <div class="calc-col">
+                <h3 class="calc-title">Op basis van km</h3>
+
+                <label>
+                  <span>Jaarlijks rijden (km) <small class="hint">Gemiddeld: 12.000–15.000 km/jaar.</small></span>
+                  <input id="kmYear" class="no-spin" type="number" inputmode="numeric" value="13500" />
+                </label>
+
+                <label>
+                  <span>Indicatie vergoeding (€/km)</span>
+                  <input id="eurPerKm" class="no-spin" type="number" inputmode="decimal" value="0.018" />
+                </label>
+
+                <div class="result" id="calcResultKm">
+                  Bruto bandbreedte: <b>—</b>
+                  <small>Pas de waarden aan om uw indicatie te zien.</small>
+                </div>
+              </div>
+            </div>
+
+            <div class="calc-note-bottom-right">
+              <span>** Werkelijke uitkomst hangt af van regelgeving, verificatie en acceptatie.</span>
+            </div>
+
+            <div class="calc-cta-row">
+              <a href="/aanmelden.html" class="btn primary">Start dossier</a>
+            </div>
+          </form>
         </div>
-
-        <div class="callout" style="margin-top:16px;">
-          <strong>Waar Enval straks op focust (als kaders stabiel zijn)</strong>
-          <p style="margin-top:8px; margin-bottom:0;">
-            Een overdraagbare dossierbasis (data + bewijsstukken + audit-trail) die aansluit op keten-eisen van erkende inboekers,
-            zodat trajecten niet afketsen op “onvolledig” of “niet aantoonbaar”.
-          </p>
-        </div>
-
-        <p class="form-note" style="margin-top:14px; margin-bottom:0;">
-          Let op: dit is informatief en geen advies. Er worden geen garanties gegeven en aan deze pagina kunnen geen rechten worden ontleend.
-        </p>
       </div>
     </section>
 
-    <!-- INTERESSE -->
-    <section id="interesse" class="section section-alt">
+    <!-- HOE HET WERKT -->
+    <section id="hoe-het-werkt" class="section">
+      <div class="container">
+        <div class="section-title">
+          <div>
+            <h2>Hoe het werkt</h2>
+            <p>Kort, controleerbaar en overdraagbaar. Enval keurt niet goed — Enval maakt audit-ready.</p>
+          </div>
+          <div>
+            <a href="/hoe-het-werkt.html" class="btn outline">Meer informatie</a>
+          </div>
+        </div>
+
+        <div class="flow flow--compact">
+          <div class="flow-step">
+            <div class="flow-top">
+              <div class="flow-badge">1</div>
+              <div class="flow-title">Start dossier</div>
+            </div>
+          </div>
+
+          <div class="flow-arrow" aria-hidden="true">→</div>
+
+          <div class="flow-step">
+            <div class="flow-top">
+              <div class="flow-badge">2</div>
+              <div class="flow-title">Upload bewijs</div>
+            </div>
+          </div>
+
+          <div class="flow-arrow" aria-hidden="true">→</div>
+
+          <div class="flow-step">
+            <div class="flow-top">
+              <div class="flow-badge">3</div>
+              <div class="flow-title">Automatische controles</div>
+            </div>
+          </div>
+
+          <div class="flow-arrow" aria-hidden="true">→</div>
+
+          <div class="flow-step flow-step--emph">
+            <div class="flow-top">
+              <div class="flow-badge">4</div>
+              <div class="flow-title">Indienen</div>
+            </div>
+          </div>
+
+          <div class="flow-arrow" aria-hidden="true">→</div>
+
+          <div class="flow-step flow-step--pay">
+            <div class="flow-top">
+              <div class="flow-badge">5</div>
+              <div class="flow-title">Export (betaald)</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flow-cta">
+          <a href="/aanmelden.html" class="btn primary">Start dossier</a>
+          <a href="/index.html#check" class="btn outline">Eerst checken</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ (later inhoud) -->
+    <section id="faq" class="section section-alt">
+      <div class="container">
+        <div class="section-title">
+          <div>
+            <h2>FAQ</h2>
+            <p>De belangrijkste vragen, kort en helder.</p>
+          </div>
+        </div>
+
+        <div class="faq-grid">
+          <div class="faq-item">
+            <h3>Is Enval een energiecontract of beleggingsproduct?</h3>
+            <p>Nee. Enval is een dossier- en registratieplatform (administratie/validatie/audit-trail).</p>
+          </div>
+
+          <div class="faq-item">
+            <h3>Krijg ik gegarandeerd een vergoeding?</h3>
+            <p>Nee. Er is geen garantie. Opbrengst hangt af van regels, verificatie en aantoonbaarheid.</p>
+          </div>
+
+          <div class="faq-item">
+            <h3>Kan ik alleen de administratie uitbesteden?</h3>
+            <p>Ja. Wij bewaken structuur, volledigheid en audit-trail zodat een inboeker kan inboeken.</p>
+          </div>
+
+          <div class="faq-item">
+            <h3>Hoe zit het met regelgeving?</h3>
+            <p>Regelgeving is leidend en kan wijzigen. Enval bouwt aantoonbaarheid in: controleerbaar en overdraagbaar.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONTACT (2 kolommen: links ruimte voor visuals, rechts contact card) -->
+    <section id="contact" class="section">
       <div class="container two-column">
         <div class="column">
-          <h2>Wil je updates zodra er duidelijkheid is?</h2>
-          <p>
-            Laat je gegevens achter. We gebruiken dit alleen om je op de hoogte te houden of om je vraag te beantwoorden.
-            Geen spam, geen verkoop.
-          </p>
-          <p class="note">
-            Dit is géén aanvraag, géén dossierstart en géén contract.
-          </p>
+          <div class="media-slot">
+            <img
+              src="/assets/img/home/contact.jpeg"
+              alt=""
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
         </div>
 
         <div class="column">
-          <div class="card">
-            <h3>Updates / vraag stellen</h3>
+          <h2>Contact</h2>
+          <p>
+            Valt u buiten de voorwaarden (bijv. meer dan 4 laadpunten), of wilt u alleen de administratie uitbesteden?
+            Laat uw gegevens achter en zet in uw bericht wat u wilt.
+          </p>
 
-            <form class="form" name="contact" novalidate>
+          <div class="card mt-14">
+            <h3>Stel uw vraag</h3>
+
+            <form class="form" name="contact" method="post" novalidate>
               <label>
                 <span>Voornaam</span>
                 <input type="text" name="first_name" required />
@@ -159,9 +369,10 @@
                 <span>Onderwerp</span>
                 <select name="onderwerp" required>
                   <option value="">Maak een keuze</option>
-                  <option value="installateur">Ik ben installateur</option>
                   <option value="ev-rijder">Ik heb een privé-laadpaal</option>
-                  <option value="administratie">Ik wil alleen administratie/audit</option>
+                  <option value="inboeker">Ik ben inboeker</option>
+                  <option value="grotere-locatie">Ik heb meer dan 4 laadpalen</option>
+                  <option value="op-de-hoogte">Houd mij op de hoogte</option>
                   <option value="overig">Overig</option>
                 </select>
               </label>
@@ -171,9 +382,9 @@
                 <textarea name="bericht" rows="4" required></textarea>
               </label>
 
-              <button type="submit" class="btn primary full-width">Verstuur</button>
+              <button type="submit" class="btn primary">Verstuur</button>
 
-              <p class="form-note" style="margin-bottom:0;">
+              <p class="form-note mb-0">
                 Door te verzenden ga je akkoord met de
                 <a href="/privacyverklaring.html" target="_blank" rel="noopener">privacyverklaring</a>.
               </p>
@@ -195,7 +406,10 @@
       </div>
     </footer>
 
+    <script src="/assets/js/config.runtime.js"></script>
     <script src="/assets/js/config.js"></script>
+    <script src="/assets/js/calculator.js"></script>
+    <script src="/assets/js/eligibility.js"></script>
     <script src="/assets/js/script.js"></script>
   </body>
 </html>

@@ -1,0 +1,230 @@
+[
+  {
+    "slug": "nea-inboeken-elektriciteit-red3",
+    "title": "Inboeken elektriciteit (RED3)",
+    "badge": "Uitleg",
+    "abstract": "Officiële uitleg van de NEa over inboeken van elektriciteit richting RED3. Basis voor termen en proces.",
+    "source_name": "Nederlandse Emissieautoriteit",
+    "sources": [
+      {
+        "label": "NEa – Inboeken elektriciteit RED3",
+        "url": "https://www.emissieautoriteit.nl/regelgeving/hernieuwbare-energie-voor-vervoer-hbe/ontwikkelingen-red3-in-nederland/inboeken-elektriciteit-red3"
+      }
+    ],
+    "doc": "/artikelen/nea-inboeken-elektriciteit-red3/artikel.md",
+    "cover": "/artikelen/nea-inboeken-elektriciteit-red3/cover.jpeg",
+    "cover_alt": "Minimalistische 3D documentmap met subtiel reliëf van een route- of proceslijn, donkerblauw accent op lichte achtergrond.",
+    "date": "2026-02-01"
+  },
+  {
+    "slug": "nea-inboeken-elektriciteit-particulieren",
+    "title": "Particulieren & thuisladen",
+    "badge": "Uitleg",
+    "abstract": "Wat moet je als particulier aantonen rond inboeken van elektriciteit? NEa benoemt randvoorwaarden en aandachtspunten.",
+    "source_name": "Nederlandse Emissieautoriteit",
+    "sources": [
+      {
+        "label": "NEa – Inboeken elektriciteit (HBE-context)",
+        "url": "https://www.emissieautoriteit.nl/regelgeving/hernieuwbare-energie-voor-vervoer-hbe/inboeken-leveringen-hernieuwbare-energie/inboeken-elektriciteit"
+      }
+    ],
+    "doc": "/artikelen/nea-inboeken-elektriciteit-particulieren/artikel.md",
+    "cover": "/artikelen/nea-inboeken-elektriciteit-particulieren/cover.jpeg",
+    "cover_alt": "Minimalistische matte 3D huisvorm met een kleine kWh-meter zonder cijfers, zachtblauw accent op lichte achtergrond.",
+    "date": "2026-02-02"
+  },
+  {
+    "slug": "eu-red-iii-90-seconden",
+    "title": "RED III uitgelegd",
+    "badge": "Uitleg",
+    "abstract": "RED III (EU 2023/2413) scherpt doelen voor hernieuwbare energie aan. Nationale uitwerking bepaalt de details in Nederland.",
+    "source_name": "EUR-Lex",
+    "sources": [
+      {
+        "label": "EUR-Lex – Richtlijn (EU) 2023/2413 (RED III)",
+        "url": "https://eur-lex.europa.eu/legal-content/nl/AUTO/?uri=CELEX:32023L2413"
+      }
+    ],
+    "doc": "/artikelen/eu-red-iii-90-seconden/artikel.md",
+    "cover": "/artikelen/eu-red-iii-90-seconden/cover.jpeg",
+    "cover_alt": "Minimalistische matte 3D ring van sterren rond een enkel document-icoon in reliëf, subtiele blauwe accenten op off-white.",
+    "date": "2023-10-18"
+  },
+  {
+    "slug": "vattenfall-thuisladen-cashback",
+    "title": "Vattenfall: cashback & thuisladen",
+    "badge": "Praktijk",
+    "abstract": "Voorbeeld van ‘cashback’-achtige communicatie rond thuisladen en certificaten. Dit is marketing rond de keten, geen garantie.",
+    "source_name": "Praktijk (context)",
+    "sources": [
+      {
+        "label": "ANWB – Uitleg ERE-certificaten",
+        "url": "https://www.anwb.nl/auto/elektrisch-rijden/ere-certificaten"
+      }
+    ],
+    "doc": "/artikelen/vattenfall-thuisladen-cashback/artikel.md",
+    "cover": "/artikelen/vattenfall-thuisladen-cashback/cover.jpeg",
+    "cover_alt": "Minimalistische matte 3D laadstekker met een eenvoudige terugpijl als reliëf, neutrale tinten met zachtblauw accent op lichte achtergrond.",
+    "date": "2026-02-26"
+  },
+  {
+    "slug": "tibber-ere-campagnes",
+    "title": "Tibber: ERE-campagnes",
+    "badge": "Praktijk",
+    "abstract": "Campagnes rond certificaten/‘cashback’ bij thuisladen. De onderliggende realiteit blijft: meting, bewijs en ketenrollen bepalen wat kan.",
+    "source_name": "Praktijk (context)",
+    "sources": [
+      {
+        "label": "ANWB – Uitleg ERE-certificaten",
+        "url": "https://www.anwb.nl/auto/elektrisch-rijden/ere-certificaten"
+      }
+    ],
+    "doc": "/artikelen/tibber-ere-campagnes/artikel.md",
+    "cover": "/artikelen/tibber-ere-campagnes/cover.jpeg",
+    "cover_alt": "Minimalistische matte 3D bliksemsymbool gecombineerd met een documentlaag in reliëf, donkerblauw accent op lichte achtergrond.",
+    "date": "2026-02-25"
+  },
+  {
+    "slug": "eneco-ere-campagnes",
+    "title": "Eneco: ERE-communicatie",
+    "badge": "Praktijk",
+    "abstract": "Ook andere leveranciers communiceren over certificaten rond laden. Zonder aantoonbaarheid (metering + ketenregels) is er niets te claimen.",
+    "source_name": "Praktijk (context)",
+    "sources": [
+      {
+        "label": "ANWB – Uitleg ERE-certificaten",
+        "url": "https://www.anwb.nl/auto/elektrisch-rijden/ere-certificaten"
+      }
+    ],
+    "doc": "/artikelen/eneco-ere-campagnes/artikel.md",
+    "cover": "/artikelen/eneco-ere-campagnes/cover.jpeg",
+    "cover_alt": "Minimalistische matte 3D documentmap met een subtiele chat- of megafonelijn als reliëf, blauwgrijze accenten op lichte achtergrond.",
+    "date": "2026-02-24"
+  },
+  {
+    "slug": "mid-meter-bij-thuisladen",
+    "title": "MID-meter bij thuisladen",
+    "badge": "Techniek",
+    "abstract": "Waarom MID zo vaak terugkomt bij ‘aantoonbaar meten’ en waar het wel/niet voor staat.",
+    "source_name": "NEa (context)",
+    "sources": [
+      {
+        "label": "NEa – Inboeken elektriciteit (context)",
+        "url": "https://www.emissieautoriteit.nl/regelgeving/hernieuwbare-energie-voor-vervoer-hbe/inboeken-leveringen-hernieuwbare-energie/inboeken-elektriciteit"
+      },
+      {
+        "label": "NEa – Inboeken elektriciteit RED3",
+        "url": "https://www.emissieautoriteit.nl/regelgeving/hernieuwbare-energie-voor-vervoer-hbe/ontwikkelingen-red3-in-nederland/inboeken-elektriciteit-red3"
+      }
+    ],
+    "doc": "/artikelen/mid-meter-bij-thuisladen/artikel.md",
+    "cover": "/artikelen/mid-meter-bij-thuisladen/cover.jpeg",
+    "cover_alt": "Minimalistische matte 3D meterplaat met verzegeling-achtige ring als reliëf, donkerblauw accent op lichte achtergrond.",
+    "date": "2026-02-20"
+  },
+  {
+    "slug": "techniek-en-metingen-voor-eres",
+    "title": "Welke data is nodig?",
+    "badge": "Techniek",
+    "abstract": "Bewijsbaar laden draait om meetdata, herleidbaarheid (waar/wie/wanneer) en exporteerbare onderbouwing.",
+    "source_name": "NEa (context)",
+    "sources": [
+      {
+        "label": "NEa – Inboeken elektriciteit",
+        "url": "https://www.emissieautoriteit.nl/regelgeving/hernieuwbare-energie-voor-vervoer-hbe/inboeken-leveringen-hernieuwbare-energie/inboeken-elektriciteit"
+      },
+      {
+        "label": "NEa – Inboeken elektriciteit RED3",
+        "url": "https://www.emissieautoriteit.nl/regelgeving/hernieuwbare-energie-voor-vervoer-hbe/ontwikkelingen-red3-in-nederland/inboeken-elektriciteit-red3"
+      }
+    ],
+    "doc": "/artikelen/techniek-en-metingen-voor-eres/artikel.md",
+    "cover": "/artikelen/techniek-en-metingen-voor-eres/cover.jpeg",
+    "cover_alt": "Minimalistische matte 3D datastrengen als zachte lijnen naast een meetblok, subtiele blauwe accenten op lichte achtergrond.",
+    "date": "2026-02-18"
+  },
+  {
+    "slug": "overstap-hbe-naar-ere",
+    "title": "Van HBE naar ERE",
+    "badge": "Context",
+    "abstract": "Wat verandert er richting RED3 en waarom je steeds vaker ERE’s ziet in plaats van HBE-taal.",
+    "source_name": "NEa / EU",
+    "sources": [
+      {
+        "label": "NEa – Ontwikkelingen RED3 in Nederland",
+        "url": "https://www.emissieautoriteit.nl/regelgeving/hernieuwbare-energie-voor-vervoer-hbe/ontwikkelingen-red3-in-nederland"
+      },
+      {
+        "label": "NEa – Inboeken elektriciteit RED3",
+        "url": "https://www.emissieautoriteit.nl/regelgeving/hernieuwbare-energie-voor-vervoer-hbe/ontwikkelingen-red3-in-nederland/inboeken-elektriciteit-red3"
+      }
+    ],
+    "doc": "/artikelen/overstap-hbe-naar-ere/artikel.md",
+    "cover": "/artikelen/overstap-hbe-naar-ere/cover.jpeg",
+    "cover_alt": "Minimalistische matte 3D overgang van twee labels als abstracte blokken met een pijl ertussen, donkerblauw accent op lichte achtergrond.",
+    "date": "2026-02-15"
+  },
+  {
+    "slug": "eres-a-tot-z",
+    "title": "ERE’s in simpele taal",
+    "badge": "Uitleg",
+    "abstract": "De belangrijkste termen, rollen en misverstanden rond ERE’s—zonder marketinglaag.",
+    "source_name": "NEa",
+    "sources": [
+      {
+        "label": "NEa – Hernieuwbare energie voor vervoer (ERE’s)",
+        "url": "https://www.emissieautoriteit.nl/regelgeving/hernieuwbare-energie-voor-vervoer-eres/inboeken-hernieuwbare-energie-vervoer"
+      },
+      {
+        "label": "NEa – HBE (oude systematiek) overzicht",
+        "url": "https://www.emissieautoriteit.nl/regelgeving/hernieuwbare-energie-voor-vervoer-hbe/inboeken-leveringen-hernieuwbare-energie"
+      }
+    ],
+    "doc": "/artikelen/eres-a-tot-z/artikel.md",
+    "cover": "/artikelen/eres-a-tot-z/cover.jpeg",
+    "cover_alt": "Minimalistische matte 3D stapel documenten met een eenvoudig index-tabje als reliëf, neutrale tinten met donkerblauw accent.",
+    "date": "2026-02-12"
+  },
+  {
+    "slug": "waarde-en-verhandelbaarheid-eres",
+    "title": "Waarde & realiteit",
+    "badge": "Economie",
+    "abstract": "Waarom je geen vaste opbrengst per kWh kunt beloven: waarde hangt af van markt, regels, acceptatie en kosten.",
+    "source_name": "NEa / marktcontext",
+    "sources": [
+      {
+        "label": "NEa – ERE-kader en inboeken",
+        "url": "https://www.emissieautoriteit.nl/regelgeving/hernieuwbare-energie-voor-vervoer-eres/inboeken-hernieuwbare-energie-vervoer"
+      },
+      {
+        "label": "ANWB – ERE-certificaten (consumentenuitleg)",
+        "url": "https://www.anwb.nl/auto/elektrisch-rijden/ere-certificaten"
+      }
+    ],
+    "doc": "/artikelen/waarde-en-verhandelbaarheid-eres/artikel.md",
+    "cover": "/artikelen/waarde-en-verhandelbaarheid-eres/cover.jpeg",
+    "cover_alt": "Minimalistische matte 3D balans- of weegschaalvorm boven een documentlaag in reliëf, blauwgrijze accenten op lichte achtergrond.",
+    "date": "2026-02-10"
+  },
+  {
+    "slug": "ev-rijders-laten-waarde-liggen",
+    "title": "Ligt er echt geld?",
+    "badge": "Praktijk",
+    "abstract": "Wanneer is er waarde—en wanneer is het vooral marketing? De echte bottleneck is bewijs + acceptatie + kosten.",
+    "source_name": "NEa / ANWB",
+    "sources": [
+      {
+        "label": "ANWB – ERE-certificaten (randvoorwaarden)",
+        "url": "https://www.anwb.nl/auto/elektrisch-rijden/ere-certificaten"
+      },
+      {
+        "label": "NEa – Inboeken elektriciteit (context)",
+        "url": "https://www.emissieautoriteit.nl/regelgeving/hernieuwbare-energie-voor-vervoer-hbe/inboeken-leveringen-hernieuwbare-energie/inboeken-elektriciteit"
+      }
+    ],
+    "doc": "/artikelen/ev-rijders-laten-waarde-liggen/artikel.md",
+    "cover": "/artikelen/ev-rijders-laten-waarde-liggen/cover.jpeg",
+    "cover_alt": "Minimalistische matte 3D open hand met een klein certificaat-icoon in reliëf, subtiel blauw accent op lichte achtergrond.",
+    "date": "2026-02-08"
+  }
+]

@@ -1,19 +1,29 @@
-// versie 260105_18 oclock
-
-console.log("ENVAL config.JS versie 260105_18 oclock");
-
-// /config.js
-// Enige bron van waarheid voor Supabase config (GEEN modules, GEEN exports)
+// versie 260219_10 (NO-SECRETS)
+//
+// /assets/js/config.js
+// Enige bron van waarheid voor frontend config helpers (GEEN modules, GEEN exports)
 // Wordt gebruikt door: script.js en dossier.js (window.ENVAL.*)
+//
+// BELANGRIJK:
+// - Deze file bevat GEEN secrets.
+// - Runtime secrets komen uit: /assets/js/config.runtime.js (generated, gitignored)
+
+console.log("ENVAL config.js versie 260219_10 (no-secrets)");
 
 window.ENVAL = window.ENVAL || {};
 
-// Supabase project
-window.ENVAL.SUPABASE_URL = "https://yzngrurkpfuqgexbhzgl.supabase.co";
+// ======================================================
+// 0) UI caps (must match backend)
+// ======================================================
+window.ENVAL.UI_MAX_CHARGERS = 4;
 
-// Anon key (frontend public key)
-window.ENVAL.SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6bmdydXJrcGZ1cWdleGJoemdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNjYxMjYsImV4cCI6MjA4MDg0MjEyNn0.L7atEcmNvX2Wic0eSM9jWGdFUadIhH21EUFNtzP4YCk";
+// ======================================================
+// 1) Supabase config (runtime injected)
+// ======================================================
+// Verwacht dat /assets/js/config.runtime.js deze 2 velden vult.
+// Deze placeholders zijn bewust "kapot" zodat je het meteen ziet als runtime injectie mist.
+window.ENVAL.SUPABASE_URL = window.ENVAL.SUPABASE_URL || "SUPABASE_URL__MISSING_RUNTIME_INJECT";
+window.ENVAL.SUPABASE_ANON_KEY = window.ENVAL.SUPABASE_ANON_KEY || "SUPABASE_ANON_KEY__MISSING_RUNTIME_INJECT";
 
 // Edge functions base
 window.ENVAL.API_BASE = `${window.ENVAL.SUPABASE_URL}/functions/v1`;

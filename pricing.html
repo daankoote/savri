@@ -1,0 +1,216 @@
+<!-- pricing.html -->
+<!-- 24-02-2026 -->
+
+<!DOCTYPE html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      document.documentElement.classList.add("js");
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Enval – Tarieven</title>
+    <meta
+      name="description"
+      content="Transparante tarieven voor dossierbasis en jaarlijkse bevestiging voor privé-laadpunten. Vast tarief per laadpunt per dossierjaar. Geen percentage op vergoeding."
+    />
+    <link rel="canonical" href="/pricing.html" />
+    <link rel="stylesheet" href="/assets/css/style.css" />
+  </head>
+
+  <body class="page-pricing">
+    <header>
+      <div class="container header-inner">
+        <div class="logo"><a href="/index.html">Enval</a></div>
+
+        <button
+          id="navToggle"
+          class="nav-toggle"
+          type="button"
+          aria-controls="siteNav"
+          aria-expanded="false"
+        >
+          ☰
+        </button>
+
+        <nav id="siteNav">
+          <a href="/index.html">Home</a>
+          <a href="/aanmelden.html">Start Dossier</a>
+          <a href="/pricing.html">Tarieven</a>
+
+          <div class="nav-dd" role="none">
+            <button class="nav-dd-btn" type="button" aria-haspopup="true" aria-expanded="false">
+              Informatie <span class="nav-caret">▾</span>
+            </button>
+            <div class="nav-dd-menu" role="menu">
+              <a role="menuitem" href="/hoe-het-werkt.html">Hoe het werkt</a>
+              <a role="menuitem" href="/regelgeving.html">Regelgeving</a>
+            </div>
+          </div>
+
+          <a href="/index.html#contact">Contact</a>
+        </nav>
+      </div>
+    </header>
+
+    <!-- HERO (zelfde contract als index: dark bg, white text) -->
+    <section class="hero">
+      <div class="container hero-inner">
+        <div class="hero-left">
+          <div class="kicker">Tarieven • Simpel • Geen verborgen lagen</div>
+          <h1>Tarieven</h1>
+          <p class="hero-sub">
+            Vast tarief per dossierjaar. U bouwt een overdraagbaar dossier op met audit-trail en jaarlijkse bevestiging — klaar voor overdracht naar een erkende inboeker.
+          </p>
+        </div>
+
+        <div class="hero-trust-card">
+          <h3>Wat u krijgt</h3>
+          <ul class="hero-trust-list">
+            <li>Overdraagbaar dossier (export)</li>
+            <li>Audit-trail ingebouwd</li>
+            <li>Jaarlijkse bevestiging (“is er iets gewijzigd?”)</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- PRICING CARDS (gebruik bestaande cards-3 + card) -->
+    <section class="section">
+      <div class="container">
+
+        <div class="section-title">
+          <div>
+            <h2>Eenvoudige, vaste tarieven</h2>
+            <p>Geen percentage. Geen verborgen kosten. Gewoon duidelijk.</p>
+          </div>
+        </div>
+
+        <div class="cards-2">
+
+          <!-- Particulier -->
+          <div class="card card--pricing">
+            <h3 class="mt-0">Particulier</h3>
+            <p class="note">Voor 1–4 laadpunten op eigen terrein.</p>
+
+            <h2 class="mt-14 mb-10">€ 9 <span class="note">per laadpunt / dossierjaar</span></h2>
+
+            <ul class="list">
+              <li>Dossierbasis + audit-trail</li>
+              <li>Overdraagbaar naar erkende inboekers</li>
+              <li>Jaarlijkse bevestiging</li>
+            </ul>
+
+            <a class="btn primary full-width pricing-cta" href="/aanmelden.html">Start dossier</a>
+          </div>
+
+          <!-- Zakelijk / meerdere -->
+          <div class="card card--pricing">
+            <h3 class="mt-0">Meerdere laadpunten / zakelijk</h3>
+            <p class="note">Bulk of afwijkende aanlevering.</p>
+
+            <h2 class="mt-14 mb-10">Maatwerk <span class="note">op aanvraag</span></h2>
+
+            <ul class="list">
+              <li>Bulk import (CSV)</li>
+              <li>Afwijkende intake mogelijk</li>
+              <li>Zelfde audit-structuur</li>
+            </ul>
+
+            <a class="btn outline full-width pricing-cta" href="/index.html#contact">Vraag voorstel aan</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="section section-alt">
+      <div class="container">
+        <div class="section-title">
+          <div>
+            <h2>Veelgestelde vragen</h2>
+          </div>
+        </div>
+
+        <div class="faq-grid">
+          <div class="faq-item">
+            <h3>Nemen jullie een percentage van de vergoeding?</h3>
+            <p><strong>Nee.</strong> Enval rekent een vast tarief. Geen percentage, geen verborgen kosten.</p>
+          </div>
+
+          <div class="faq-item">
+            <h3>Waar betaal ik precies voor?</h3>
+            <p>Voor een overdraagbaar dossier: structuur, bewijsstukken, audit-trail en export richting erkende inboekers.</p>
+          </div>
+
+          <div class="faq-item">
+            <h3>Is er garantie op inboeken of vergoeding?</h3>
+            <p>Nee. Acceptatie en vergoeding hangen af van regels, verificatie en de inboeker. Enval zorgt dat uw dossier niet strandt op administratie.</p>
+          </div>
+
+          <div class="faq-item">
+            <h3>Ik heb meer dan 4 laadpunten of een zakelijke situatie — en nu?</h3>
+            <p>Dan is het maatwerk. Neem contact op voor bulk/import of een afwijkende aanlevering.</p>
+          </div>
+        </div>
+
+        <script type="application/ld+json">
+          {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "Nemen jullie een percentage van de vergoeding?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Nee. Enval rekent een vast tarief. Geen percentage, geen verborgen kosten."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Waar betaal ik precies voor?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Voor een overdraagbaar dossier: structuur, bewijsstukken, audit-trail en export richting erkende inboekers."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Is er garantie op inboeken of vergoeding?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Nee. Acceptatie en vergoeding hangen af van regels, verificatie en de inboeker. Enval zorgt dat uw dossier niet strandt op administratie."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Ik heb meer dan 4 laadpunten of een zakelijke situatie — en nu?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Dan is het maatwerk. Neem contact op voor bulk/import of een afwijkende aanlevering."
+                }
+              }
+            ]
+          }
+        </script>
+      </div>
+    </section>
+
+    <footer>
+      <div class="container footer-inner">
+        <p>&copy; <span id="year"></span> Enval. Alle rechten voorbehouden.</p>
+
+        <div class="footer-links">
+          <a href="/privacyverklaring.html">Privacyverklaring</a>
+          <a href="/voorwaarden.html">Voorwaarden</a>
+        </div>
+      </div>
+    </footer>
+
+    <script src="/assets/js/config.runtime.js"></script>
+    <script src="/assets/js/config.js"></script>
+    <script src="/assets/js/script.js"></script>
+  </body>
+</html>

@@ -1,4 +1,5 @@
-<!-- versie 260109_privacy_pilot_v1 -->
+<!-- privacyverklaring.html -->
+<!-- 03-03-2026 (rewrite: short, professional, Enval-core aligned) -->
 
 <!DOCTYPE html>
 <html lang="nl">
@@ -8,117 +9,139 @@
       document.documentElement.classList.add("js");
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Enval – Privacyverklaring (Pilot)</title>
+    <title>Enval – Privacyverklaring</title>
     <meta
       name="description"
-      content="Privacyverklaring van Enval (pilot): welke gegevens we verwerken bij interesse/vragen, waarom, hoe lang en wat jouw rechten zijn."
+      content="Privacyverklaring van Enval: welke gegevens we verwerken voor dossieropbouw, waarom, met wie we delen en welke rechten u hebt."
     />
+    <link rel="canonical" href="/privacyverklaring.html" />
     <link rel="stylesheet" href="/assets/css/style.css" />
   </head>
 
-  <body>
+  <body class="page-privacy">
     <header>
       <div class="container header-inner">
         <div class="logo"><a href="/pilot.html">Enval</a></div>
 
-        <button id="navToggle" class="nav-toggle" type="button" aria-controls="siteNav" aria-expanded="false">☰</button>
+        <button
+          id="navToggle"
+          class="nav-toggle"
+          type="button"
+          aria-controls="siteNav"
+          aria-expanded="false"
+        >
+          ☰
+        </button>
 
-       <nav id="siteNav">
-          <a href="index.html" aria-current="page">Home</a>
-          <a href="/index.html#uitleg">Uitleg</a>
-          <a href="/index.html#interesse">Interesse</a>
-          <a href="/privacyverklaring.html">Privacy</a>
-          <a href="/voorwaarden.html">Voorwaarden</a>
+        <nav id="siteNav">
+          <a href="/index.html">Home</a>
+          <a href="/aanmelden.html">Start Dossier</a>
+          <a href="/pricing.html">Tarieven</a>
+
+          <div class="nav-dd" role="none">
+            <button class="nav-dd-btn" type="button" aria-haspopup="true" aria-expanded="false">
+              Informatie <span class="nav-caret">▾</span>
+            </button>
+            <div class="nav-dd-menu" role="menu">
+              <a role="menuitem" href="/hoe-het-werkt.html">Hoe het werkt</a>
+              <a role="menuitem" href="/regelgeving.html">Regelgeving</a>
+            </div>
+          </div>
+
+          <a href="/index.html#contact">Contact</a>
         </nav>
       </div>
     </header>
 
     <main>
+      <!-- HERO -->
       <section class="section page-hero">
         <div class="container">
           <div class="kicker">Juridisch</div>
           <h1>Privacyverklaring (pilot)</h1>
           <p class="lead">
-            Welke gegevens we verwerken in de pilotfase, waarom we dat doen, en welke rechten je hebt.
+            Enval verwerkt persoonsgegevens om een overdraagbaar dossier op te bouwen (bewijs + audit-trail).
           </p>
+          <p class="note">Laatste update: 03-03-2026</p>
         </div>
       </section>
 
       <section class="section">
         <div class="container">
           <div class="card prose">
+
             <h3>1. Wie is verantwoordelijk?</h3>
             <p>
-              Enval is een initiatief in pilotfase. In deze fase verwerken we alleen gegevens die je invult via het interesse-/contactformulier.
+              Verwerkingsverantwoordelijke: <strong>[VUL IN: juridische entiteit/naam]</strong><br />
+              KvK: <strong>[VUL IN]</strong> • Adres: <strong>[VUL IN]</strong><br />
+              Contact: <strong>[VUL IN: e-mail]</strong> of het <a href="/index.html#contact">contactformulier</a>.
             </p>
 
-            <h3>2. Welke gegevens verwerken we?</h3>
+            <h3>2. Waarvoor verwerken we gegevens?</h3>
             <ul class="list">
-              <li>Naam</li>
-              <li>E-mailadres</li>
-              <li>Type gebruiker (bijv. particulier/bedrijf/installateur)</li>
-              <li>De inhoud van je bericht (als je die invult)</li>
-              <li>Technische loggegevens die nodig zijn voor beveiliging en werking (beperkt)</li>
+              <li>Dossieropbouw: gegevens en bewijsstukken structureren en opslaan</li>
+              <li>Controle op volledigheid/consistentie (administratief)</li>
+              <li>Contact over u dossier of u vraag</li>
+              <li>Audit-trail: loggen van acties binnen het dossier (veiligheid en traceerbaarheid)</li>
             </ul>
 
-            <h3>3. Waarvoor gebruiken we deze gegevens?</h3>
+            <h3>3. Welke gegevens verwerken we?</h3>
             <ul class="list">
-              <li>Om je vraag te beantwoorden</li>
-              <li>Om je op de hoogte te houden van ontwikkelingen (alleen als je daarom vraagt)</li>
-              <li>Om de pilot te verbeteren (bijv. welke vragen leven er)</li>
-              <li>Beveiliging en misbruikpreventie</li>
+              <li>Contactgegevens: naam, e-mail (en eventueel telefoon)</li>
+              <li>Installatie-/locatiegegevens: adres (waar relevant voor dossier)</li>
+              <li>Laadpuntgegevens: merk/model/serienummer (waar relevant)</li>
+              <li>Documenten/uploads: factuur, foto’s, bewijsstukken die u aanlevert</li>
+              <li>Technische gegevens: IP-adres, user agent, logs (voor beveiliging/audit)</li>
             </ul>
 
-            <h3>4. Grondslag (AVG)</h3>
-            <p>
-              We verwerken gegevens op basis van <strong>toestemming</strong> (als je updates wilt) en/of <strong>gerechtvaardigd belang</strong>
-              (contactafhandeling, beveiliging, en het verbeteren van de pilot).
-            </p>
-
-            <h3>5. Delen met derden</h3>
-            <p>
-              We delen je gegevens niet met derden voor marketing. Wel kunnen we gebruikmaken van verwerkers die nodig zijn voor hosting en e-mail:
-            </p>
+            <h3>4. Grondslagen</h3>
             <ul class="list">
-              <li>Hosting van de website (bijv. Netlify of vergelijkbaar)</li>
-              <li>Database/infra voor formulierverwerking (bijv. Supabase)</li>
-              <li>E-mailafhandeling (bijv. Resend of vergelijkbaar)</li>
+              <li>Uitvoering overeenkomst (dienstverlening: dossieropbouw)</li>
+              <li>Gerechtvaardigd belang (beveiliging, audit-trail, fraudepreventie)</li>
+              <li>Toestemming (waar u expliciet toestemming geeft, bijv. contact)</li>
+              <li>Wettelijke verplichting (als die van toepassing wordt)</li>
             </ul>
-            <p class="note" style="margin-bottom:0;">
-              Deze partijen verwerken gegevens uitsluitend in onze opdracht en voor dit doel.
+
+            <h3>5. Delen we gegevens met derden?</h3>
+            <p>Alleen als dit nodig is voor uitvoering of wettelijk verplicht. Geen verkoop van data.</p>
+            <ul class="list">
+              <li><strong>Hosting/infra</strong>: opslag en database (verwerker)</li>
+              <li><strong>E-mail</strong>: verzenden/ontvangen van berichten (verwerker)</li>
+              <li><strong>Support</strong>: alleen wanneer u contact opneemt en het nodig is</li>
+            </ul>
+            <p class="note">
+              Let op: Enval is <strong>geen inboeker</strong> en <strong>geen verificateur</strong>. Export/overdracht deel u alleen als u daarvoor kiest.
             </p>
 
             <h3>6. Bewaartermijnen</h3>
             <ul class="list">
-              <li>Interesse/updates: maximaal <strong>24 maanden</strong> of tot je je afmeldt</li>
-              <li>Contactvragen: maximaal <strong>24 maanden</strong> (tenzij langer nodig is om een verzoek af te handelen)</li>
-              <li>Technische logs: zo kort mogelijk en alleen voor beveiliging/diagnose</li>
+              <li>Account/dossier: zolang nodig voor dienstverlening en/of zolang u het dossier aanhoudt</li>
+              <li>Audit- en securitylogs: zolang nodig voor beveiliging en traceerbaarheid</li>
+              <li>Contactaanvragen: zolang nodig om de vraag af te handelen</li>
             </ul>
-
-            <h3>7. Jouw rechten</h3>
-            <p>
-              Je hebt recht op inzage, correctie, verwijdering, beperking en dataportabiliteit (voor zover van toepassing).
-              Je kunt ook bezwaar maken tegen verwerking op basis van gerechtvaardigd belang.
+            <p class="note">
+              Wil u verwijderen? Dat kan, tenzij er een wettelijke plicht is om (delen) te bewaren of wanneer het nodig is voor beveiliging/geschil.
             </p>
 
             <h3>8. Beveiliging</h3>
             <p>
-              We nemen passende technische en organisatorische maatregelen om je gegevens te beveiligen (bijv. toegangscontrole, logging, encryptie waar passend).
+              We nemen passende technische en organisatorische maatregelen. Dit omvat o.a. toegangscontrole, logging/audit-trail en scheiding van rollen.
+              We publiceren geen “security details” die misbruikt kunnen worden.
             </p>
 
-            <h3>9. Klachten</h3>
+            <h3>8. Jouw rechten</h3>
+            <ul class="list">
+              <li>Inzage, correctie, verwijdering, beperking</li>
+              <li>Bezwaar (waar grondslag gerechtvaardigd belang is)</li>
+              <li>Dataportabiliteit (waar technisch/contractueel passend)</li>
+            </ul>
+            <p>Verzoeken via <a href="/index.html#contact">contact</a>. We kunnen u identiteit verifiëren.</p>
+
+            <h3>9. Wijzigingen</h3>
             <p>
-              Je kunt een klacht indienen bij de Autoriteit Persoonsgegevens als je vindt dat we je gegevens onjuist verwerken.
+              Als deze verklaring wijzigt, publiceren we de nieuwe versie op deze pagina. De meest recente versie is leidend.
             </p>
 
-            <h3>10. Contact</h3>
-            <p style="margin-bottom:0;">
-              Wil je een verzoek doen (inzage/verwijdering) of heb je vragen? Gebruik het formulier op de pilotpagina.
-            </p>
-
-            <p class="form-note" style="margin-top:14px;">
-              Laatst bijgewerkt: januari 2026.
-            </p>
           </div>
         </div>
       </section>
@@ -135,6 +158,7 @@
       </div>
     </footer>
 
+    <script src="/assets/js/config.runtime.js"></script>
     <script src="/assets/js/config.js"></script>
     <script src="/assets/js/script.js"></script>
   </body>

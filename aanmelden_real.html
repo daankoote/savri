@@ -1,0 +1,155 @@
+<!-- aanmelden.html -->
+<!-- 24-02-2026 -->
+
+<!DOCTYPE html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      document.documentElement.classList.add("js");
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Enval – Aanmelden</title>
+    <link rel="stylesheet" href="/assets/css/style.css" />
+  </head>
+
+  <body>
+     <header>
+      <div class="container header-inner">
+        <div class="logo"><a href="/index.html">Enval</a></div>
+
+        <button
+          id="navToggle"
+          class="nav-toggle"
+          type="button"
+          aria-controls="siteNav"
+          aria-expanded="false"
+        >
+          ☰
+        </button>
+
+        <nav id="siteNav">
+          <a href="/index.html">Home</a>
+          <a href="/aanmelden.html">Start Dossier</a>
+          <a href="/pricing.html">Tarieven</a>
+
+          <div class="nav-dd" role="none">
+            <button class="nav-dd-btn" type="button" aria-haspopup="true" aria-expanded="false">
+              Informatie <span class="nav-caret">▾</span>
+            </button>
+            <div class="nav-dd-menu" role="menu">
+              <a role="menuitem" href="/hoe-het-werkt.html">Hoe het werkt</a>
+              <a role="menuitem" href="/regelgeving.html">Regelgeving</a>
+            </div>
+          </div>
+
+          <a href="/index.html#contact">Contact</a>
+        </nav>
+      </div>
+    </header>
+
+    <!-- PAGE HERO -->
+    <section class="page-hero">
+      <div class="container">
+        <h1>Aanmelden</h1>
+        <p class="lead">
+          Vul uw gegevens in. U ontvangt daarna direct een e-mail met uw persoonlijke dossierlink.
+        </p>
+      </div>
+    </section>
+
+    <section class="section section-alt">
+      <div class="container">
+        <div class="card card--wide">
+          <form class="form form--ev" name="evrijder" method="post" novalidate>
+            <div class="ev-form-grid">
+              <!-- PANEL LINKS -->
+              <div class="form-panel">
+                <h4 class="ev-form-title">Persoon</h4>
+
+                <label><span>Voornaam</span><input type="text" name="first_name" required /></label>
+                <label><span>Achternaam</span><input type="text" name="last_name" required /></label>
+                <label><span>E-mailadres</span><input type="email" name="email" required /></label>
+                <label><span>Mobiel nummer (optioneel)</span><input type="tel" name="telefoon" placeholder="06xxxxxxxx of +316xxxxxxxx" /></label>
+              </div>
+
+              <!-- PANEL RECHTS -->
+              <div class="form-panel">
+                <h4 class="ev-form-title">Laadpunt</h4>
+
+                <label>
+                  <span>Aantal laadpunten op locatie</span>
+                  <select name="charger_count" required>
+                    <option value="">Selecteer aantal laadpunten</option>
+                    <option value="1">1 laadpunt</option>
+                    <option value="2">2 laadpunten</option>
+                    <option value="3">3 laadpunten</option>
+                    <option value="4">4 laadpunten</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>Is de (toekomstige) laadpaal op eigen terrein?</span>
+                  <select name="own_premises" required>
+                    <option value="">Maak een keuze</option>
+                    <option value="ja">Ja</option>
+                    <option value="nee">Nee</option>
+                    <option value="onzeker">Onzeker</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>Staat uw laadpaal in Nederland?</span>
+                  <select name="in_nl" required>
+                    <option value="">Maak een keuze</option>
+                    <option value="ja">Ja</option>
+                    <option value="nee">Nee</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>Heeft uw laadpaal een MID-meter?</span>
+                  <select name="has_mid" required>
+                    <option value="">Maak een keuze</option>
+                    <option value="ja">Ja</option>
+                    <option value="nee">Nee</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            <div class="callout mt-14">
+              <div class="checkbox-row checkbox-row--roomy">
+                <input type="checkbox" id="akkoord_ev" name="akkoord" required />
+                <label for="akkoord_ev">
+                  Ik begrijp dat Enval een dossier- en registratieplatform is (geen inboeker/verificateur)
+                  en dat dit geen garantie is op inboeken of vergoeding.
+                </label>
+              </div>
+            </div>
+
+            <div class="form-actions-inline">
+              <button type="submit" class="btn primary">Indienen</button>
+              <p class="form-note my-0">U ontvangt direct een e-mail met uw dossierlink.</p>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="container footer-inner">
+        <p>&copy; <span id="year"></span> Enval. Alle rechten voorbehouden.</p>
+
+        <div class="footer-links">
+          <a href="/privacyverklaring.html">Privacyverklaring</a>
+          <a href="/voorwaarden.html">Voorwaarden</a>
+        </div>
+      </div>
+    </footer>
+
+    <script src="/assets/js/config.runtime.js"></script>
+    <script src="/assets/js/config.js"></script>
+    <script src="/assets/js/script.js"></script>
+  </body>
+</html>

@@ -1,4 +1,4 @@
-<!-- versie 260105_18 oclock -->
+<!-- versie 260119_10 oclock -->
 
 <!DOCTYPE html>
 <html lang="nl">
@@ -12,19 +12,36 @@
     <link rel="stylesheet" href="/assets/css/style.css" />
   </head>
 
-  <body>
-    <header>
+ <body class="page-installateur">
+     <header>
       <div class="container header-inner">
         <div class="logo"><a href="/index.html">Enval</a></div>
 
-        <button id="navToggle" class="nav-toggle" type="button" aria-controls="siteNav" aria-expanded="false">☰</button>
+        <button
+          id="navToggle"
+          class="nav-toggle"
+          type="button"
+          aria-controls="siteNav"
+          aria-expanded="false"
+        >
+          ☰
+        </button>
 
         <nav id="siteNav">
-          <a href="/index.html#hero">Home</a>
-          <a href="/aanmelden.html">Aanmelden</a>
-          <a href="/hoe-het-werkt.html">Hoe het werkt</a>
-          <a href="/regelgeving.html">Regelgeving</a>
-          <a href="/index.html#faq">FAQ</a>
+          <a href="/index.html">Home</a>
+          <a href="/aanmelden.html">Start Dossier</a>
+          <a href="/pricing.html">Tarieven</a>
+
+          <div class="nav-dd" role="none">
+            <button class="nav-dd-btn" type="button" aria-haspopup="true" aria-expanded="false">
+              Informatie <span class="nav-caret">▾</span>
+            </button>
+            <div class="nav-dd-menu" role="menu">
+              <a role="menuitem" href="/hoe-het-werkt.html">Hoe het werkt</a>
+              <a role="menuitem" href="/regelgeving.html">Regelgeving</a>
+            </div>
+          </div>
+
           <a href="/index.html#contact">Contact</a>
         </nav>
       </div>
@@ -137,7 +154,7 @@
                 <div class="checkbox-row">
                   <input type="checkbox" id="akkoord_signup" name="akkoord" required />
                   <label for="akkoord_signup">
-                    Ik ga akkoord met de voorwaarden en begrijp dat Enval geen garanties kan bieden op ERE-vergoedingen.
+                    Ik ga akkoord met de <a href="/voorwaarden.html" target="_blank" rel="noopener">voorwaarden</a> en begrijp dat Enval geen inboeker/verificateur is en geen garantie biedt op inboeken of vergoeding.
                   </label>
                 </div>
 
@@ -156,10 +173,18 @@
     <footer>
       <div class="container footer-inner">
         <p>&copy; <span id="year"></span> Enval. Alle rechten voorbehouden.</p>
+
+        <div class="footer-links">
+          <a href="/privacyverklaring.html">Privacyverklaring</a>
+          <a href="/voorwaarden.html">Voorwaarden</a>
+          <!-- <a href="/mandaat.html">Mandaat</a> -->
+        </div>
       </div>
     </footer>
 
+    <script src="/assets/js/config.runtime.js"></script>
     <script src="/assets/js/config.js"></script>
+
     <script src="/assets/js/script.js"></script>
   </body>
 </html>
