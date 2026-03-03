@@ -1,3 +1,8 @@
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "SUPABASE_ANON_KEY"
+  SECRETS_SCAN_OMIT_PATHS = "assets/js/config.runtime.js"
+
+
 [build]
   publish = "."
   command = """
