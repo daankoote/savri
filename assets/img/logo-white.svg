@@ -1,0 +1,21 @@
+<!-- logo-white -->
+
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="420" viewBox="0 0 1400 420">
+  <defs>
+    <style>
+      .word { font: 700 220px ui-sans-serif, system-ui, -apple-system, Segoe UI, Inter, Arial; fill: #ffffff; letter-spacing: -2px; }
+    </style>
+  </defs>
+
+  <!-- MARK (zonder achter-map) -->
+  <g transform="translate(220,62)">
+    <path d="M88 88h124c18 0 32 14 32 32v140c0 18-14 32-32 32H88c-18 0-32-14-32-32V120c0-18 14-32 32-32z"
+          fill="none" stroke="rgba(255,255,255,.86)" stroke-width="16" stroke-linejoin="round"/>
+    <path d="M118 158h108M118 206h108M118 254h78"
+          stroke="rgba(255,255,255,.68)" stroke-width="14" stroke-linecap="round"/>
+    <circle cx="238" cy="92" r="22" fill="#0f766e"/>
+  </g>
+
+  <!-- WORDMARK (mee gecentreerd als blok) -->
+  <text x="560" y="245" class="word">Enval</text>
+</svg>
