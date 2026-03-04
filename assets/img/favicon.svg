@@ -1,8 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <rect x="0" y="0" width="256" height="256" rx="56" fill="#ffffff"/>
-  <path d="M76 74h104c16 0 28 12 28 28v112c0 16-12 28-28 28H76c-16 0-28-12-28-28V102c0-16 12-28 28-28z"
-        fill="none" stroke="rgba(11,18,32,.82)" stroke-width="14" stroke-linejoin="round"/>
-  <path d="M92 118h72M92 154h72M92 190h52"
-        stroke="rgba(11,18,32,.62)" stroke-width="12" stroke-linecap="round"/>
-  <circle cx="196" cy="72" r="18" fill="#0f766e"/>
+
+  <!-- alles exact hetzelfde, alleen 12px omhoog -->
+  <g transform="translate(0,-25)">
+    <path d="M76 74h104c16 0 28 12 28 28v112c0 16-12 28-28 28H76c-16 0-28-12-28-28V102c0-16 12-28 28-28z"
+          fill="none" stroke="rgba(11,18,32,.82)" stroke-width="14" stroke-linejoin="round"/>
+    <path d="M92 118h72M92 154h72M92 190h52"
+          stroke="rgba(11,18,32,.62)" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="196" cy="72" r="18" fill="#0f766e"/>
+  </g>
 </svg>
