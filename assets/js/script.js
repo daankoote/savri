@@ -222,12 +222,38 @@ function initMobileNav() {
   const setOpen = (open) => {
     document.body.classList.toggle("nav-open", open);
     btn.setAttribute("aria-expanded", open ? "true" : "false");
+
+    // reset dropdown state when closing
+    if (!open) {
+      const dd = nav.querySelector(".nav-dd");
+      const ddBtn = nav.querySelector(".nav-dd-btn");
+      dd?.classList.remove("is-open");
+      ddBtn?.setAttribute("aria-expanded", "false");
+    }
   };
 
   btn.addEventListener("click", () => {
     const open = document.body.classList.contains("nav-open");
     setOpen(!open);
   });
+
+  // Mobile: toggle "Informatie" dropdown within open nav
+  const ddBtn = nav.querySelector(".nav-dd-btn");
+  if (ddBtn) {
+    ddBtn.addEventListener("click", (e) => {
+      // only behave like dropdown in mobile mode when nav is open
+      if (window.innerWidth >= 768) return;
+      if (!document.body.classList.contains("nav-open")) return;
+
+      e.preventDefault();
+      const dd = ddBtn.closest(".nav-dd");
+      if (!dd) return;
+
+      const isOpen = dd.classList.contains("is-open");
+      dd.classList.toggle("is-open", !isOpen);
+      ddBtn.setAttribute("aria-expanded", !isOpen ? "true" : "false");
+    });
+  }
 
   // klik op link => menu sluiten
   nav.querySelectorAll("a").forEach((a) => {
