@@ -8,6 +8,20 @@
   SECRETS_SCAN_OMIT_KEYS = "SUPABASE_ANON_KEY"
   SECRETS_SCAN_OMIT_PATHS = "assets/js/config.runtime.js"
 
+
+# FORCE WWW (canonical host)
+  [[redirects]]
+  from = "https://enval.nl/*"
+  to = "https://www.enval.nl/:splat"
+  status = 301
+  force = true
+
+  [[redirects]]
+  from = "http://enval.nl/*"
+  to = "https://www.enval.nl/:splat"
+  status = 301
+  force = true
+
 # LEGACY ONLY
 [[redirects]]
   from = "/installateur"
