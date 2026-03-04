@@ -17,18 +17,20 @@
    - Page-specifieke layout hardening mag alleen:
      - in @layer pages
      - onder een page body class (bijv. body.page-pricing ...)
-   ====================================================== */
+====================================================== */
 
 /* ======================================================
    CSS Layers — ENVAL (hard)
    Volgorde: base < components < pages < utilities
-   ====================================================== */
+====================================================== */
+   
 @layer base, components, pages, utilities;
 
 /* ======================================================
    BASE
    - Tokens, resets, layout helpers, typografie basis
-   ====================================================== */
+====================================================== */
+
 @layer base {
   :root{
     --brand: #0f766e;
@@ -59,6 +61,15 @@
   }
 
   * { box-sizing: border-box; }
+
+  /* Global overflow safety */
+  img, video, svg { max-width: 100%; height: auto; }
+
+  h1, h2, h3, h4, p, li, a {
+    overflow-wrap: anywhere;
+    word-break: normal;
+    hyphens: auto;
+  }
 
   body {
     margin: 0;
@@ -98,6 +109,12 @@
 
   p { margin-top: 0; margin-bottom: 1rem; }
 
+  /* Prevent overflow on narrow screens (titles + long words) */
+  h1, h2, h3, h4, p, li {
+    overflow-wrap: anywhere;
+    hyphens: auto;
+  }
+
   .list {
     padding-left: 1.25rem;
     margin: 0.5rem 0 1rem 0;
@@ -108,7 +125,8 @@
 /* ======================================================
    COMPONENTS
    - Header/Nav, buttons, cards, sections, calc, faq, forms, toast
-   ====================================================== */
+====================================================== */
+
 @layer components {
   /* Header / Nav */
   header {
@@ -219,23 +237,38 @@
   }
 
   @media (max-width: 767px){
-    .nav-dd{ margin-left: 0; width: 100%; }
+    .nav-dd{
+      margin-left: 0;
+      width: 100%;
+      display: block;             /* <-- belangrijk */
+    }
+
     .nav-dd-btn{
       width: 100%;
       justify-content: space-between;
       font-size: 0.98rem;
-      padding: 6px 0;
+      padding: 10px 0;            /* iets meer tap-area */
     }
+
+    /* Zodra nav open is: dropdown menu altijd “in-flow” en full width */
     body.nav-open .nav-dd-menu{
       position: static;
-      display: block;
+      display: none;
       min-width: 0;
       width: 100%;
       margin-top: 6px;
       box-shadow: none;
       padding: 8px;
     }
-    body.nav-open .nav-dd-menu a{ padding: 10px 10px; }
+
+    body.nav-open .nav-dd.is-open .nav-dd-menu{
+      display: block;
+    }
+
+    body.nav-open .nav-dd-menu a{
+      padding: 12px 10px;
+      width: 100%;
+    }
   }
 
   .nav-toggle{
@@ -270,7 +303,10 @@
       border-bottom: 1px solid var(--dark-border);
     }
 
-    header nav a { margin: 0; font-size: 0.98rem; }
+    header nav a{
+      width: 100%;
+      padding: 10px 0;
+    }
   }
   
   /* Buttons */
@@ -360,17 +396,42 @@
 
   /* Homepage sections */
   .section-title{
-    display:flex;
-    align-items:flex-start;
-    justify-content:space-between;
-    gap: 16px;
-    margin-bottom: 18px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  align-items: start;
+  margin-bottom: 18px;
   }
+
+  .section-title > div{
+    min-width: 0; /* voorkomt overflow door lange woorden */
+  }
+
   .section-title p{
     margin: 0;
-    max-width: 60rem;
+    max-width: 60ch;
     color: var(--muted);
   }
+
+  @media (min-width: 900px){
+    .section-title{
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      column-gap: 16px;
+    }
+
+    .section-title p{
+      max-width: 60rem; /* mag breder op desktop */
+    }
+  }
+
+  /* Mobile: CTA onder elkaar en netjes breed */
+  @media (max-width: 520px){
+    .section-title .btn{
+      width: 100%;
+    }
+  }
+
   .cards-2{
     display: grid;
     gap: 14px;
@@ -435,6 +496,16 @@
     border-radius: 18px;
     padding: 18px;
   }
+
+  @media (max-width: 520px){
+    .callout{
+      padding: 16px;
+    }
+    .callout .list{
+      padding-left: 1.1rem;
+    }
+  }
+
   .callout strong{ color: var(--ink); }
   .callout p{ color: rgba(15,23,42,0.82); margin-bottom: 0; }
 
@@ -842,9 +913,18 @@
     position: fixed;
     inset: 0;
     z-index: 9999;
+
+    /* iOS/Safari: gebruik dynamische viewport hoogte */
+    height: 100dvh;
+
     display: grid;
-    place-items: center;
-    padding: 18px;
+    place-items: start center; /* <-- niet perfect center, maar altijd volledig zichtbaar */
+    padding:
+      max(14px, env(safe-area-inset-top))
+      14px
+      max(14px, env(safe-area-inset-bottom))
+      14px;
+
     background: rgba(2, 6, 23, 0.55);
   }
 
@@ -911,13 +991,20 @@
 
   .modal-panel{
     width: min(980px, calc(100% - 12px));
-    max-height: min(86vh, 860px);
+    scroll-padding-top: 14px;
+
+    /* Zorg dat panel nooit buiten viewport valt */
+    max-height: calc(100dvh - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
     overflow: auto;
+
     background: #ffffff;
     border-radius: 18px;
     border: 1px solid rgba(15,23,42,0.10);
     box-shadow: 0 28px 70px rgba(0,0,0,0.35);
     position: relative;
+
+    /* voorkomt iOS “rubber band” rare scroll chaining */
+    -webkit-overflow-scrolling: touch;
   }
 
   .modal-close{
@@ -935,7 +1022,7 @@
   }
 
   .modal-body{
-    padding: 18px 18px 22px 18px;
+    padding: 22px 22px 22px 18px;
   }
 
   body.modal-open{ overflow: hidden; }
@@ -977,7 +1064,14 @@
     font-size: 0.95rem;
     font-family: inherit;
     background: #ffffff;
+
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
+
+  .form label { min-width: 0; }
+  .card { min-width: 0; }
 
   .form input:focus,
   .form select:focus,
@@ -1082,7 +1176,8 @@
 /* ======================================================
    PAGES
    - Hero, page hero, dossier, pricing, timeline, aanmelden layout
-   ====================================================== */
+====================================================== */
+
 @layer pages {
   /* HERO */
   .hero {
@@ -1140,7 +1235,24 @@
     color: rgba(229,231,235,0.9);
   }
 
-  .hero-cta{ margin-top: 16px; }
+  .hero-cta{
+    margin-top: 16px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  /* Mobile: knoppen onder elkaar, full width */
+  @media (max-width: 520px){
+    .hero-cta .btn{
+      width: 100%;
+    }
+    .btn.cta{
+      font-size: 1rem;
+      padding: 0.95rem 1.25rem;
+    }
+  }
 
   .hero-trust-card{
     background: rgba(255,255,255,0.06);
@@ -1415,7 +1527,8 @@
   /* ======================================================
     UTILITIES
     - Kleine helpers die overal mogen gelden
-    ====================================================== */
+  ====================================================== */
+
   @layer utilities {
     .hidden { display: none !important; }
     .muted { color: #64748b; }
