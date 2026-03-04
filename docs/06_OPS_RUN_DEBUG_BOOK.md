@@ -86,6 +86,38 @@ Overige kolommen zijn report-only.
 cd /Users/daankoote/dev/enval
 ./scripts/edge-uniformity.sh
 ```
+
+## 1.2.3 SEO / Robots Smoke Check (NA DEPLOY)
+
+Doel:
+- Verifiëren dat Google alleen canonieke routes indexeert.
+- Dev/duplicate routes zijn noindex.
+
+Checks (copy-paste):
+- Robots.txt live
+- curl -s https://www.enval.nl/robots.txt | sed -n '1,200p'
+
+Expected:
+- Bevat Sitemap: https://www.enval.nl/sitemap.xml
+- Disallow voor tijdelijke routes (minimaal aanmelden_real.html zolang die bestaat)
+- Sitemap live
+- curl -s https://www.enval.nl/sitemap.xml | sed -n '1,200p'
+
+Expected:
+- Alleen canonieke pagina’s
+- Geen aanmelden_real.html
+- Noindex op dev/overgangspagina
+- curl -s https://www.enval.nl/aanmelden_real.html | grep -i "meta name=\"robots\"" -n
+
+Expected:
+- noindex, nofollow
+- Canonical check per core page (spot check)
+- curl -s https://www.enval.nl/index.html | grep -i "rel=\"canonical\"" -n
+- curl -s https://www.enval.nl/aanmelden.html | grep -i "rel=\"canonical\"" -n
+
+Expected:
+- Canonical klopt exact met pagina-url.
+
 ---
 
 ## 2) EDGE FUNCTION DEBUG — BASIS CHECKLIST

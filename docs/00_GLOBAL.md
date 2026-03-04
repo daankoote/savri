@@ -306,7 +306,7 @@ Mag niet bevatten:
 
 Behalve wanneer een class generiek herbruikbaar is (component-niveau).
 
-2) assets/css/legacy.css — INFORMATIEVE PAGINA’S <-- update 25-02-2026 bestaat niet meer alles gebruikt nu style.css>
+2) assets/css/legacy.css (LEGACY PAGES) — OUTDATED (bestaat niet meer; alles gebruikt nu style.css)
 
 Wordt uitsluitend geladen door:
 - pricing.html
@@ -431,8 +431,47 @@ Stopregel:
 - Eerst normaliseren wat er al is.
 - Daarna pas uitbreiden.
 
+# 11.1) SEO & Indexing Hygiene (CURRENT)
 
-AMENDMENT — 00_GLOBAL.md
+Doel:
+- Statische site zonder SEO-regressies bij duplicaatpagina’s.
+- Geen indexatie van ontwikkel-/tussenroutes.
+- Canonical/OG/Twitter consistent per page.
+
+Harde regels (site-wide):
+
+- Elke page heeft:
+  - <title>
+  - <meta name="description">
+  - <link rel="canonical" href="https://www.enval.nl/<pagina>.html">
+  - OG (og:title, og:description, og:url, og:image) en Twitter kaart.
+  - Favicons:
+    - /favicon.ico
+    - /assets/img/favicon-32.png
+    - /assets/img/favicon-16.png
+
+Duplicaten / dev-pages:
+- Dev/overgangspagina’s die niet in Google mogen komen krijgen in <head>:
+  - <meta name="robots" content="noindex, nofollow">
+- Canonical blijft altijd wijzen naar de beoogde eindpagina (niet naar een dev-alias).
+
+Route-waarheid (CURRENT):
+- aanmelden.html is productie-route.
+- aanmelden_real.html is tijdelijk in ontwikkeling en wordt later hernoemd naar aanmelden.html.
+  - Tot die tijd: aanmelden_real.html moet noindex krijgen.
+
+Robots/sitemap (CURRENT policy):
+
+- robots.txt moet expliciet:
+  - indexatie toestaan voor productiepagina’s
+  - dev/duplicate pagina’s uitsluiten (minimaal aanmelden_real.html zolang die bestaat)
+  - verwijzen naar sitemap.xml
+- sitemap.xml moet alleen canonieke, publieke pagina’s bevatten.
+
+Stopregel
+- Als een pagina duplicaatcontent heeft of slechts een tijdelijke route is → noindex.
+
+### AMENDMENT — 00_GLOBAL.md
 
 Datum: 2026-02-24 Type: CSS contract + Payment gate switchability (Optie C) Status: APPEND-ONLY
 
@@ -656,6 +695,22 @@ Impact:
 - Debugging: bij deze 401 eerst headers fixen, pas daarna code/secrets onderzoeken.
 - Dit voorkomt uurverlies door “fout in code” te debuggen terwijl request nooit bij de function komt.
 
+## APPEND-ONLY UPDATE — 2026-03-04 — CSS: single stylesheet is nu écht CURRENT
 
+Context:
+- De eerdere beschrijving met `assets/css/legacy.css` is **niet meer waar**.
+- CURRENT repo/website gebruikt **één** stylesheet: `assets/css/style.css`.
+
+Harde regel (CURRENT):
+- `assets/css/style.css` is de **enige** canonical stylesheet.
+- `assets/css/legacy.css` bestaat niet (meer) en mag nergens meer worden genoemd.
+
+Implicatie:
+- Informatiepagina’s (pricing/regelgeving/voorwaarden/privacy/etc.) moeten conform het component-systeem in `style.css` worden gestyled.
+- Isolatie gebeurt door **component contract** en **HTML normalisatie**, niet door een tweede stylesheet.
+
+Doc-hygiëne regel:
+- Eventuele historische secties die nog naar `legacy.css` verwijzen blijven staan als historie,
+  maar worden vanaf nu als **OUTDATED** beschouwd.
 
 # EINDE 00_GLOBAL.md (current state, rewrite-ok)

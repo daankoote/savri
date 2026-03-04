@@ -36,9 +36,36 @@ De System Map moet technisch neutraal blijven zodat meerdere inboekers hierop ku
 - ./mandaat.html
 - ./pricing.html
 - ./privacyverklaring.html
-- ./proces.html <-- deze bestaat niet meer = hoe-werkt-eht.html
+- ./proces.html (OUTDATED; bestaat niet meer — gebruik ./hoe-het-werkt.html)
 - ./regelgeving.html
 - ./voorwaarden.html
+
+## Frontend SEO artifacts (CURRENT)
+
+Publiek / canoniek (sitemap-waardig):
+- index.html
+- aanmelden.html
+- dossier.html (alleen als het publiek is; als token-required → niet in sitemap)
+- hoe-het-werkt.html
+- pricing.html
+- regelgeving.html
+- voorwaarden.html
+- privacyverklaring.html
+
+Niet-canoniek / tijdelijk (noindex, niet in sitemap):
+- aanmelden_real.html (dev/overgang — later hernoemen naar aanmelden.html, daarna verwijderen)
+
+Bestanden (root):
+- /robots.txt (verwijst naar sitemap, disallow tijdelijke routes)
+- /sitemap.xml (alleen canonieke pagina’s)
+
+Assets (SEO):
+- /assets/img/og-enval.jpg (OG/Twitter image)
+- /favicon.ico + /assets/img/favicon-32.png + /assets/img/favicon-16.png
+
+Canonical policy:
+- Canonical URL’s wijzen altijd naar https://www.enval.nl/<paginanaam>.html.
+- Nooit canonical naar een dev-alias.
 
 ### Assets / scripts
 - ./assets/css/style.css
@@ -48,7 +75,11 @@ De System Map moet technisch neutraal blijven zodat meerdere inboekers hierop ku
 - ./assets/js/pages/dossier.js
 - ./assets/js/api.js (shared helpers: url params, session token storage, apiPost wrapper)
 
+
 ---
+
+
+
 
 ## 2) Frontend runtime-config model (2026-02-19)
 
@@ -569,5 +600,24 @@ Impact:
 - Indienen (lock/in_review) is audit-gate, onafhankelijk van betaling.
 - Export is product-gate, later betaalbaar te maken zonder schema drift.
 - Export/download blijven: locked only + confirmed docs only.
+
+
+---
+
+## APPEND-ONLY UPDATE — 2026-03-04 — Pages list + CSS waarheid (single stylesheet)
+
+1) Pages list hygiene (CURRENT)
+- `proces.html` bestaat niet (meer). De content zit in `hoe-het-werkt.html`.
+- Als er nog ergens naar `proces.html` wordt gelinkt: fix de link, niet de CSS.
+
+2) CSS waarheid (CURRENT)
+- `assets/css/legacy.css` bestaat niet (meer).
+- Alle pagina’s (core + info) laden `assets/css/style.css`.
+
+3) Implicatie
+- “Legacy isolation via file separation” is OUTDATED.
+- Isolatie gebeurt via component-contract + HTML normalisatie binnen dezelfde stylesheet.
+
+---
 
 # EINDE 01_SYSTEM_MAP.md (current state, rewrite-ok)

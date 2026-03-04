@@ -116,7 +116,7 @@ Regel: alleen open items; afgerond → naar changelog.
   - Eén “stop rule”: bij `Missing authorization header` nooit code debuggen, eerst headers fixen.
 - Status: OPEN (totdat alle docs/snippets audited zijn + 1× herhalingstest door Daan bevestigd)
 
-14) Frontend legacy CSS isolation: legacy.css alleen op legacy pages <-- legacy.css bestaat niet meer sinds 25-02-2026, alles gebruikt nu style.css>
+14) Frontend legacy CSS isolation — OUTDATED (legacy.css bestaat niet; single stylesheet is CURRENT)
 
 - DoD:
   - legacy pages includen legacy.css <-- legacy.css bestaat niet meer sinds 25-02-2026, alles gebruikt nu style.css>
@@ -149,26 +149,48 @@ Regel: alleen open items; afgerond → naar changelog.
 
 ## PATCH 2026-02-24
 
-15) Frontend contract: MID veldnaam consistent met spec
+17) Frontend contract: MID veldnaam consistent met spec
 - DoD:
   - dossier.html input name = `mid_number`
   - dossier.js gebruikt `mid_number` in payload en render
   - geen `meter_id` references meer in core flow
 - Status: OPEN totdat grep bewezen schoon is (meter_id in core)
 
-16) Export/payment decoupling voorbereiden (Optie 1 nu, Optie 2 later)
+18) Export/payment decoupling voorbereiden (Optie 1 nu, Optie 2 later)
 - DoD:
   - Docs: 00_GLOBAL + 01_SYSTEM_MAP + 02_AUDIT_MATRIX bevatten contract.
   - Implementatie later: payment gate kan worden toegevoegd op export (en optioneel op indienen) zonder schema drift.
 - Status: OPEN (docs done zodra gecommit; implementatie later)
 
-17) Positionering consistent houden in product & copy
+18) Positionering consistent houden in product & copy
 - DoD:
   - Geen compliance-claims in UI
   - Geen verificatieclaims
   - Geen certificeringsclaims
   - Inboeker ≠ Enval expliciet zichtbaar
 - Status: OPEN (doorlopend)
+
+19) SEO artifacts live zetten (robots + sitemap + dev noindex) --> eerst met test checken wat er al gebeurd is.. ik denk namelijk al af, 
+
+Waarom:
+- Duplicate content voorkomen.
+- Google index alleen canoniek houden.
+
+Taken:
+- Root robots.txt toevoegen:
+- Sitemap: https://www.enval.nl/sitemap.xml
+- Disallow tijdelijke routes (minimaal aanmelden_real.html zolang die bestaat)
+
+Root sitemap.xml toevoegen:
+- Alleen canonieke publieke pages (index/aanmelden/hoe-het-werkt/pricing/regelgeving/voorwaarden/privacy)
+- aanmelden_real.html → <meta name="robots" content="noindex, nofollow"> in <head>.
+
+Definition of Done:
+- https://www.enval.nl/robots.txt bereikbaar (200) en bevat sitemap-verwijzing.
+- https://www.enval.nl/sitemap.xml bereikbaar (200) en valide XML.
+- aanmelden_real.html noindex bevestigd (view source).
+
+
 
 ## P1.5 / Phase-2 (risico’s die je niet mag vergeten)
 1) PDOK ambiguity zonder suffix
@@ -261,6 +283,16 @@ Installer flows deprecatie
   - Beslis: behouden, beperken, of deprecaten.
   - Documenteer gewenste eindstate + migratiepad (incl. UI routes).
 - Status: OPEN (bewust later)
+
+
+---
+
+## APPEND-ONLY UPDATE — 2026-03-04 — TODO hygiene: CSS items opgeschoond (zonder delete)
+
+- Alle verwijzingen naar `legacy.css` zijn OUTDATED omdat het project nu single-stylesheet is.
+- Nieuwe regel: als styling-issues ontstaan → fix in `assets/css/style.css` met component/variant, geen tweede stylesheet.
+- Actiepunt (doorlopend): grep op `legacy.css` moet 0 zijn in core pages + docs.
+
 
 ---
 

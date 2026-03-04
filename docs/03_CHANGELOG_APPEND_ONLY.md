@@ -597,4 +597,30 @@ Open aandacht
 - Audit matrix moet session events expliciet maken (session_created/session_invalid/etc.).
 - Ops runbook moet session-debug queries toevoegen (active/expired/revoked sessions).
 
+
+## 2026-03-04 — Docs hygiene: CSS single-source bevestigd; legacy.css references gelabeld als OUTDATED
+- Docs gecorrigeerd zodat CURRENT waarheid eenduidig is:
+  - Eén stylesheet: `assets/css/style.css`.
+  - `assets/css/legacy.css` bestaat niet (meer).
+- Bestaande historische passages zijn niet verwijderd, maar gelabeld als OUTDATED waar nodig.
+Doel:
+- Geen interne contradicties in core docs (audit-first → ook doc-first).
+
+## 2026-03-04 — SEO/robots baseline
+
+Wijziging:
+- SEO baseline gehardend: canonical/OG/Twitter/favicons per core page (consistent).
+- Route-truth vastgelegd: aanmelden.html productie; aanmelden_real.html tijdelijk (noindex, later hernoemen en verwijderen).
+- Robots/sitemap beleid toegevoegd aan docs (robots.txt + sitemap.xml; sitemap alleen canoniek).
+
+Risico’s (bewust):
+- Als aanmelden_real.html zonder noindex live gaat → duplicate content in index.
+
+DoD:
+- aanmelden_real.html bevat <meta name="robots" content="noindex, nofollow"> zolang hij bestaat.
+- robots.txt verwijst naar sitemap en disallowt tijdelijke routes.
+- sitemap.xml bevat alleen canonieke publieke pagina’s.
+
+---
+
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)
