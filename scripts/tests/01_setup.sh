@@ -72,7 +72,7 @@ create_charger_and_get_id() {
   local resp http body id
   resp="$(http_call_with_idem \
     "$SUPABASE_URL/functions/v1/api-dossier-charger-save" \
-    "{\"dossier_id\":\"$DOSSIER_ID\",\"token\":\"$DOSSIER_TOKEN\",\"serial_number\":\"TEST-$rid-$serial\",\"brand\":\"TEST\",\"model\":\"TEST\",\"power_kw\":11,\"notes\":\"audit-test setup\"}" \
+    "{\"dossier_id\":\"$DOSSIER_ID\",\"token\":\"$DOSSIER_TOKEN\",\"serial_number\":\"TEST-$rid-$serial\",\"mid_number\":\"$TEST_MID_NUMBER\",\"brand\":\"TEST\",\"model\":\"TEST\",\"power_kw\":11,\"notes\":\"audit-test setup\"}" \
     "$rid")"
 
   http="$(extract_http_status "$resp")"
@@ -126,7 +126,13 @@ fi
 CREATED_CHARGER_IDS=()
 
 # Normal fill-to-target
-NEED_CREATE=$((TARGET_CHARGERS - EXISTING_COUNT))
+if [[ "$EXISTING_COUNT" -ge "$TARGET_CHARGERS" ]]; then
+  echo "No chargers to create (existing_count=$EXISTING_COUNT target=$TARGET_CHARGERS)."
+  NEED_CREATE=0
+else
+  NEED_CREATE=$((TARGET_CHARGERS - EXISTING_COUNT))
+fi
+
 if [[ "$NEED_CREATE" -gt 0 ]]; then
   echo "Creating missing chargers to reach target: $NEED_CREATE"
   for i in $(seq 1 "$NEED_CREATE"); do
