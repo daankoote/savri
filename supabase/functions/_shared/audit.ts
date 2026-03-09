@@ -85,13 +85,16 @@ export async function tryGetIdempotentResponse(
 
 export async function storeIdempotentResponseFailOpen(
   SB: any,
-  key: clampKey(key),
+  key: string,
   status: number,
   body: any,
 ) {
   try {
+    const k = clampKey(key);
+    if (!k) return;
+
     await SB.from("idempotency_keys").upsert([{
-      key,
+      key: k,
       response_status: status,
       response_body: body,
     }], { onConflict: "key" });
