@@ -3,6 +3,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# ----------------------------
+# Auto-load env when running scripts directly
+# ----------------------------
+DIR_HELPERS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$DIR_HELPERS/../.." && pwd)"
+
+ENV_FILE="${ENV_FILE:-$REPO_ROOT/.env.local}"
+if [[ -f "$ENV_FILE" ]]; then
+  # shellcheck disable=SC1090
+  source "$ENV_FILE"
+fi
+
 # ================================================================
 # ENVAL — test helpers (shared)
 # - state file: /tmp/enval_test_state
