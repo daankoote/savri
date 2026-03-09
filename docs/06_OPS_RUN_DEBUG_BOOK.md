@@ -86,6 +86,38 @@ Overige kolommen zijn report-only.
 cd /Users/daankoote/dev/enval
 ./scripts/edge-uniformity.sh
 ```
+
+## 1.2.3 SEO / Robots Smoke Check (NA DEPLOY)
+
+Doel:
+- Verifiëren dat Google alleen canonieke routes indexeert.
+- Dev/duplicate routes zijn noindex.
+
+Checks (copy-paste):
+- Robots.txt live
+- curl -s https://www.enval.nl/robots.txt | sed -n '1,200p'
+
+Expected:
+- Bevat Sitemap: https://www.enval.nl/sitemap.xml
+- Disallow voor tijdelijke routes (minimaal aanmelden_real.html zolang die bestaat)
+- Sitemap live
+- curl -s https://www.enval.nl/sitemap.xml | sed -n '1,200p'
+
+Expected:
+- Alleen canonieke pagina’s
+- Geen aanmelden_real.html
+- Noindex op dev/overgangspagina
+- curl -s https://www.enval.nl/aanmelden_real.html | grep -i "meta name=\"robots\"" -n
+
+Expected:
+- noindex, nofollow
+- Canonical check per core page (spot check)
+- curl -s https://www.enval.nl/index.html | grep -i "rel=\"canonical\"" -n
+- curl -s https://www.enval.nl/aanmelden.html | grep -i "rel=\"canonical\"" -n
+
+Expected:
+- Canonical klopt exact met pagina-url.
+
 ---
 
 ## 2) EDGE FUNCTION DEBUG — BASIS CHECKLIST
@@ -277,6 +309,31 @@ Als gateway OK is (geen `Missing authorization header`) en je ziet in `dossier_s
 → dit is expected behavior van TTL/revoke policy.
 → oplossing is product/auth-flow (refresh/login), niet debuggen in UI.
 
+## 3.2 LOGIN RECOVERY DEBUG (nieuw 2026-03-05)
+
+Endpoint:
+- api-dossier-login-request
+
+Invariants:
+- Response is altijd `{ ok: true }` (anti-enumeration).
+- Waarheid zit in audit events.
+
+Throttle reasons (event_data.reason enum):
+- ip_rate_limit
+- dossier_rate_limit
+- mail_rate_limit
+
+Snelle diagnose (SQL Editor):
+- Zoek laatste events op dossier:
+  - login_request_received → moet er altijd zijn
+  - daarna exact één van:
+    - login_link_issued (match)
+    - login_request_rejected (mismatch/notfound/invalid)
+    - login_request_throttled (rate limit)
+
+STOP RULE:
+Als je wél `{ ok: true }` ziet maar geen `login_request_received` audit event:
+→ request kwam niet bij jouw function (gateway/route fout), of audit insert is stuk.
 
 ---
 

@@ -348,7 +348,7 @@ serve(async (req) => {
         "serial_number",
         "install_year",
         "connector_type",
-        "meter_id",
+        "mid_number",
         "notes",
         "power_kw",
         "created_at",

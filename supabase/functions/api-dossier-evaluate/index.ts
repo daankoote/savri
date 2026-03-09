@@ -226,7 +226,7 @@ serve(async (req) => {
       .eq("dossier_id", dossier_id)
       .order("accepted_at", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false, nullsFirst: false }),
-    SB.from("dossier_chargers").select("id, serial_number, meter_id, brand, model").eq("dossier_id", dossier_id),
+    SB.from("dossier_chargers").select("id, serial_number, mid_number, brand, model").eq("dossier_id", dossier_id),
     SB.from("dossier_documents").select("doc_type, charger_id, status").eq("dossier_id", dossier_id),
   ]);
 
@@ -270,8 +270,8 @@ serve(async (req) => {
   for (const ch of chargerRows) {
     const chId = String(ch.id);
     const missing: string[] = [];
-    const mid = String((ch as any).meter_id || "").trim();
-    if (!mid) missing.push("meter_id");
+    const mid = String((ch as any).mid_number || "").trim();
+    if (!mid) missing.push("mid_number");
     if (missing.length) {
       missingMidPerCharger.push({
         charger_id: chId,

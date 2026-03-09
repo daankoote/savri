@@ -87,6 +87,11 @@ function actorRefForCustomer(dossierId: string, tokenHash: string) {
   return `dossier:${dossierId}|token:${tokenHash.slice(0, 16)}`;
 }
 
+function scopedIdemKey(dossierId: string, actorScope: string, rawKey: string) {
+  // actorScope: bijv. tokenHash prefix, of "missing"/"invalid"
+  return `dossier:${dossierId}|actor:${actorScope}|idem:${rawKey}`;
+}
+
 serve(async (req) => {
   const meta = getReqMeta(req);
   const ENVIRONMENT = getEnvironment();
@@ -110,21 +115,41 @@ serve(async (req) => {
   const idemKey = String(meta.idempotency_key || meta.request_id || "").trim();
   if (!idemKey) return bad(req, "Missing Idempotency-Key", 400);
 
-  if (dossier_id) {
-    const cached = await tryGetIdempotentResponse(SB, idemKey);
-    if (cached) return json(req, cached.status, cached.body);
-  }
-
-  async function finalize(status: number, body: any) {
-    await storeIdempotentResponseFailOpen(SB, idemKey, status, body);
+  async function finalize(keyToUse: string, status: number, body: any) {
+    await storeIdempotentResponseFailOpen(SB, keyToUse, status, body);
     return json(req, status, body);
   }
 
   if (!dossier_id || !token) {
-    return finalize(400, { ok: false, error: "Missing dossier_id/token" });
+    // Als dossier_id aanwezig is: audit verplicht (non-negotiable)
+    if (dossier_id) {
+      await insertAuditFailOpen(
+        SB,
+        {
+          dossier_id,
+          actor_type: "customer",
+          event_type: "charger_save_rejected",
+          event_data: {
+            stage: "auth",
+            status: 400,
+            message: "Missing dossier_id/token",
+            reason: !token ? "missing_token" : "missing_dossier_id",
+          },
+        },
+        meta,
+        { actor_ref: `dossier:${dossier_id}|token:missing`, environment: ENVIRONMENT },
+      );
+      const keyScoped = scopedIdemKey(dossier_id, "missing", idemKey);
+      return finalize(keyScoped, 400, { ok: false, error: "Missing dossier_id/token" });
+    }
+
+    // Geen dossier scope → geen audit mogelijk
+    return finalize(`global|actor:missing|idem:${idemKey}`, 400, { ok: false, error: "Missing dossier_id/token" });
   }
 
   const tokenHash = await sha256Hex(String(token));
+  const actorScope = tokenHash.slice(0, 16);
+  const idemScopedKey = scopedIdemKey(dossier_id, actorScope, idemKey);
   const actor_ref = actorRefForCustomer(dossier_id, tokenHash);
 
   async function reject(stage: string, status: number, message: string, extra?: Record<string, unknown>) {
@@ -139,7 +164,7 @@ serve(async (req) => {
       meta,
       { actor_ref, environment: ENVIRONMENT },
     );
-    return finalize(status, { ok: false, error: message });
+    return finalize(idemScopedKey, status, { ok: false, error: message });
   }
 
   async function fail(stage: string, status: number, message: string, extra?: Record<string, unknown>) {
@@ -154,13 +179,13 @@ serve(async (req) => {
       meta,
       { actor_ref, environment: ENVIRONMENT },
     );
-    return finalize(status, { ok: false, error: message });
+    return finalize(idemScopedKey, status, { ok: false, error: message });
   }
 
   const charger_id = parsed?.charger_id ? String(parsed.charger_id) : null;
 
   const serial = normStr(parsed?.serial_number, 80);
-  const mid = normStr(parsed?.meter_id, 80); // MID (hard required)
+  const mid = normStr(parsed?.mid_number ?? parsed?.meter_id, 80); // canonical: mid_number, legacy: meter_id
   const b = normStr(parsed?.brand, 80);
   const m = normStr(parsed?.model, 120);
   const n = normStr(parsed?.notes, 240) || null;
@@ -202,8 +227,13 @@ serve(async (req) => {
       meta,
       { actor_ref: `dossier:${dossier_id}|token:invalid`, environment: ENVIRONMENT },
     );
-    return finalize(401, { ok: false, error: "Unauthorized" });
+    const keyUnauthorized = scopedIdemKey(dossier_id, "invalid", idemKey);
+    return finalize(keyUnauthorized, 401, { ok: false, error: "Unauthorized" });
   }
+
+  // Idempotency cache retrieval MUST be after auth, scoped to dossier+actor
+  const cached = await tryGetIdempotentResponse(SB, idemScopedKey);
+  if (cached) return json(req, cached.status, cached.body);
 
   const st = String(dossier.status || "");
   if (dossier.locked_at || st === "in_review" || st === "ready_for_booking") {
@@ -285,7 +315,7 @@ serve(async (req) => {
       .from("dossier_chargers")
       .update({
         serial_number: serial,
-        meter_id: mid,
+        mid_number: mid,
         brand: b,
         model: m,
         power_kw: kw,
@@ -330,7 +360,7 @@ serve(async (req) => {
       { actor_ref, environment: ENVIRONMENT },
     );
 
-    return finalize(200, { ok: true, saved: true, charger_id, invalidated });
+   return finalize(idemScopedKey, 200, { ok: true, saved: true, charger_id, invalidated });
   }
 
   const { data: ins, error: insErr } = await SB
@@ -338,7 +368,7 @@ serve(async (req) => {
     .insert([{
       dossier_id,
       serial_number: serial,
-      meter_id: mid,
+      mid_number: mid,
       brand: b,
       model: m,
       power_kw: kw,
@@ -385,5 +415,5 @@ serve(async (req) => {
     { actor_ref, environment: ENVIRONMENT },
   );
 
-  return finalize(200, { ok: true, saved: true, charger_id: ins?.id || null, invalidated });
+  return finalize(idemScopedKey, 200, { ok: true, saved: true, charger_id: ins?.id || null, invalidated });
 });

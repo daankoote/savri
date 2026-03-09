@@ -1,22 +1,19 @@
 [build]
   publish = "."
+  command = "node scripts/gen-runtime-config.js"
 
 [build.environment]
-  REVIEW_ID = ""
-  SUPABASE_URL = ""
-  SUPABASE_ANON_KEY = ""
   SECRETS_SCAN_OMIT_KEYS = "SUPABASE_ANON_KEY"
   SECRETS_SCAN_OMIT_PATHS = "assets/js/config.runtime.js"
 
-
 # FORCE WWW (canonical host)
-  [[redirects]]
+[[redirects]]
   from = "https://enval.nl/*"
   to = "https://www.enval.nl/:splat"
   status = 301
   force = true
 
-  [[redirects]]
+[[redirects]]
   from = "http://enval.nl/*"
   to = "https://www.enval.nl/:splat"
   status = 301

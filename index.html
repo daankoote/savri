@@ -11,11 +11,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <title>Enval – dossier & registratie voor privé-laadpalen (NL + MID)</title>
+    <meta name="robots" content="index,follow,max-image-preview:large">
     <meta
       name="description"
       content="Bouw een auditwaardig, overdraagbaar dossier voor uw privé-laadpaal (NL + MID). Start gratis. U betaalt pas bij export."
     />
-    <link rel="canonical" href="https://www.enval.nl/index.html" />
+    <link rel="canonical" href="https://www.enval.nl/" />
 
     <!-- Flavicon -->
     <link rel="icon" href="/favicon.ico" sizes="any" />
@@ -27,7 +28,7 @@
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Enval – dossier & registratie voor privé-laadpalen (NL + MID)" />
     <meta property="og:description" content="Bouw een auditwaardig, overdraagbaar dossier voor uw privé-laadpaal (NL + MID). Start gratis. U betaalt pas bij export." />
-    <meta property="og:url" content="https://www.enval.nl/index.html" />
+    <meta property="og:url" content="https://www.enval.nl/" />
     <meta property="og:image" content="https://www.enval.nl/assets/img/og-enval.jpg" />
 
     <!-- Twitter -->
@@ -36,23 +37,30 @@
     <meta name="twitter:description" content="Bouw een auditwaardig, overdraagbaar dossier voor uw privé-laadpaal (NL + MID). Start gratis. U betaalt pas bij export." />
     <meta name="twitter:image" content="https://www.enval.nl/assets/img/og-enval.jpg" />
 
-    <!-- Structured data -->
     <script type="application/ld+json">
     {
-      "@context": "https://schema.org",
-      "@type": "Organization",
-      "name": "Enval",
-      "url": "https://www.enval.nl/",
-      "logo": "https://www.enval.nl/assets/img/logo.png"
-    }
-    </script>
-
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "Enval",
-      "url": "https://www.enval.nl/"
+      "@context":"https://schema.org",
+      "@graph":[
+        {
+          "@type":"Organization",
+          "@id":"https://www.enval.nl/#org",
+          "name":"Enval",
+          "url":"https://www.enval.nl/",
+          "logo":{"@type":"ImageObject","url":"https://www.enval.nl/assets/img/logo.png"}
+        },
+        {
+          "@type":"WebSite",
+          "@id":"https://www.enval.nl/#website",
+          "name":"Enval",
+          "url":"https://www.enval.nl/",
+          "publisher":{"@id":"https://www.enval.nl/#org"},
+          "potentialAction":{
+            "@type":"SearchAction",
+            "target":"https://www.enval.nl/regelgeving.html?q={search_term_string}",
+            "query-input":"required name=search_term_string"
+          }
+        }
+      ]
     }
     </script>
 
@@ -63,10 +71,10 @@
     <header>
       <div class="container header-inner">
         <div class="logo">
-  <a href="/index.html" aria-label="Enval home">
-    <img class="logo-img" src="/assets/img/logo-white.svg" alt="Enval" decoding="async" />
-  </a>
-</div>
+          <a href="/index.html" aria-label="Enval home">
+            <img class="logo-img" src="/assets/img/logo-white.svg" alt="Enval" decoding="async" />
+          </a>
+        </div>
 
         <button
           id="navToggle"

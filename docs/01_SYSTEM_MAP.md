@@ -36,9 +36,36 @@ De System Map moet technisch neutraal blijven zodat meerdere inboekers hierop ku
 - ./mandaat.html
 - ./pricing.html
 - ./privacyverklaring.html
-- ./proces.html <-- deze bestaat niet meer = hoe-werkt-eht.html
+- ./proces.html (OUTDATED; bestaat niet meer — gebruik ./hoe-het-werkt.html)
 - ./regelgeving.html
 - ./voorwaarden.html
+
+## Frontend SEO artifacts (CURRENT)
+
+Publiek / canoniek (sitemap-waardig):
+- index.html
+- aanmelden.html
+- dossier.html (alleen als het publiek is; als token-required → niet in sitemap)
+- hoe-het-werkt.html
+- pricing.html
+- regelgeving.html
+- voorwaarden.html
+- privacyverklaring.html
+
+Niet-canoniek / tijdelijk (noindex, niet in sitemap):
+- aanmelden_real.html (dev/overgang — later hernoemen naar aanmelden.html, daarna verwijderen)
+
+Bestanden (root):
+- /robots.txt (verwijst naar sitemap, disallow tijdelijke routes)
+- /sitemap.xml (alleen canonieke pagina’s)
+
+Assets (SEO):
+- /assets/img/og-enval.jpg (OG/Twitter image)
+- /favicon.ico + /assets/img/favicon-32.png + /assets/img/favicon-16.png
+
+Canonical policy:
+- Canonical URL’s wijzen altijd naar https://www.enval.nl/<paginanaam>.html.
+- Nooit canonical naar een dev-alias.
 
 ### Assets / scripts
 - ./assets/css/style.css
@@ -48,7 +75,11 @@ De System Map moet technisch neutraal blijven zodat meerdere inboekers hierop ku
 - ./assets/js/pages/dossier.js
 - ./assets/js/api.js (shared helpers: url params, session token storage, apiPost wrapper)
 
+
 ---
+
+
+
 
 ## 2) Frontend runtime-config model (2026-02-19)
 
@@ -271,6 +302,8 @@ Lock rule (source of truth):
     - mail_queued (dossier-scoped) wanneer outbound_emails.dossier_id wordt gezet
     - mail_worker_triggered (dossier-scoped, fail-open) bij fast-path invoke
 
+
+
 **Intake eligibility gates (CURRENT):**
 - `ev_direct` reject (pre-dossier) indien:
   - `in_nl != true` of
@@ -278,6 +311,20 @@ Lock rule (source of truth):
 - Error message: “Dossieropbouw is alleen mogelijk voor laadpalen in Nederland met een MID-meter.”
 - Audit: `public.intake_audit_events` (stage=eligibility); gateway rejects blijven off-chain.
 
+
+### Auth recovery
+- api-dossier-login-request
+  - doel: nieuwe dossier-link uitgeven bij verlopen/geconsumeerde link-token
+  - anti-enumeration: response altijd `{ ok: true }`
+  - rate limiting: ip/dossier/mail (fail-closed)
+  - audit:
+    - login_request_received
+    - login_link_issued
+    - login_request_rejected
+    - login_request_throttled (reason enum: ip_rate_limit | dossier_rate_limit | mail_rate_limit)
+
+
+#### Mail-worker — Gateway auth is óók verplicht (ops critical)
 
 - mail-worker
   - verwerkt outbound_emails queued → sent/failed/requeued
@@ -289,8 +336,6 @@ Lock rule (source of truth):
     - selectie op next_attempt_at (<= now) + attempts < MAX_ATTEMPTS
   - audit (dossier-scoped, fail-open):
     - mail_sent / mail_requeued / mail_failed wanneer outbound_emails.dossier_id != null
-
-#### Mail-worker — Gateway auth is óók verplicht (ops critical)
 
 Mail-worker heeft 2 lagen:
 1) Supabase gateway auth (voor `/functions/v1/*`)
@@ -569,5 +614,24 @@ Impact:
 - Indienen (lock/in_review) is audit-gate, onafhankelijk van betaling.
 - Export is product-gate, later betaalbaar te maken zonder schema drift.
 - Export/download blijven: locked only + confirmed docs only.
+
+
+---
+
+## APPEND-ONLY UPDATE — 2026-03-04 — Pages list + CSS waarheid (single stylesheet)
+
+1) Pages list hygiene (CURRENT)
+- `proces.html` bestaat niet (meer). De content zit in `hoe-het-werkt.html`.
+- Als er nog ergens naar `proces.html` wordt gelinkt: fix de link, niet de CSS.
+
+2) CSS waarheid (CURRENT)
+- `assets/css/legacy.css` bestaat niet (meer).
+- Alle pagina’s (core + info) laden `assets/css/style.css`.
+
+3) Implicatie
+- “Legacy isolation via file separation” is OUTDATED.
+- Isolatie gebeurt via component-contract + HTML normalisatie binnen dezelfde stylesheet.
+
+---
 
 # EINDE 01_SYSTEM_MAP.md (current state, rewrite-ok)

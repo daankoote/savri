@@ -273,6 +273,50 @@ NB:
 - Er is geen aparte `session_revoked` audit event in CURRENT code.
 - Als revoke/refresh wordt toegevoegd, moet audit matrix uitgebreid worden met expliciete events.
 
+## 8.2 Login Recovery (CURRENT)
+
+Endpoint:
+api-dossier-login-request
+
+Doel:
+Herstellen van dossier toegang wanneer oorspronkelijke dossier-link token
+verlopen of geconsumeerd is.
+
+Security model:
+- anti enumeration
+- email + dossier_id match vereist
+- response altijd { ok: true }
+
+### Success events
+
+login_request_received — success — api-dossier-login-request
+
+login_link_issued — success — api-dossier-login-request
+  event_data bevat:
+  - dossier_id
+  - email_hash (no raw email)
+  - token_rotated = true
+  - expires_at
+
+### Reject events
+
+login_request_rejected — reject — api-dossier-login-request
+  reason:
+  - email_mismatch
+  - dossier_not_found
+  - invalid_payload
+
+login_request_throttled — reject — api-dossier-login-request
+  reason (enum):
+  - ip_rate_limit
+  - dossier_rate_limit
+  - mail_rate_limit
+
+
+NB:
+Response blijft altijd `{ ok: true }` voor anti-enumeration.
+Audit events zijn de enige bron van waarheid.
+
 ## 9) System — Mail (dossier-scoped on-chain vanaf 2026-02-09)
 Regel: mail audit events worden alleen gelogd wanneer `outbound_emails.dossier_id != null`.
 
