@@ -28,5 +28,4 @@ supabase-functions-archive/**
 **/*.old
 **/*.archive
 
-# ENVAL runtime config (generated, contains runtime values)
-assets/js/config.runtime.js
+
