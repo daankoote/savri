@@ -1,3 +1,5 @@
+// supabase/functions/api-dossier-login-request/index.ts
+
 import { serve } from "jsr:@std/http@0.224.0/server";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
@@ -46,8 +48,8 @@ function json(req: Request, status: number, payload: unknown) {
   });
 }
 
-function ok(req: Request, data: Record<string, unknown> = {}) {
-  return json(req, 200, { ok: true, ...data });
+function ok(req: Request) {
+  return json(req, 200, { ok: true });
 }
 
 // -------------------- ENV + Client --------------------
@@ -76,8 +78,7 @@ function isoNow() {
 }
 
 function actorRefForEmail(dossierId: string, email: string) {
-  // Geen raw email in actor_ref; wel stable hash prefix
-  // (sha256Hex is async, dus hier simpel: lower + slice)
+  // Geen raw email in actor_ref (privacy). Kleine mask is genoeg.
   const e = email.trim().toLowerCase();
   return `dossier:${dossierId}|email:${e.slice(0, 2)}***`;
 }
@@ -103,15 +104,14 @@ async function triggerMailWorkerFailOpen(opts: {
   }
 }
 
-// -------------------- Throttle helper (no schema change) --------------------
-async function isThrottled(opts: {
+// -------------------- Throttle helper (FAIL-CLOSED) --------------------
+async function isThrottledFailClosed(opts: {
   SB: ReturnType<typeof createClient>;
   dossier_id: string;
   windowSeconds: number;
-}): Promise<boolean> {
+}): Promise<{ throttled: boolean; reason: string }> {
   const cutoff = new Date(Date.now() - opts.windowSeconds * 1000).toISOString();
 
-  // Throttle op recente dossier_link mails (queued/processing/sent)
   const { data, error } = await opts.SB
     .from("outbound_emails")
     .select("id,created_at,status")
@@ -122,8 +122,13 @@ async function isThrottled(opts: {
     .order("created_at", { ascending: false })
     .limit(1);
 
-  if (error) return false; // fail-open throttle check
-  return Array.isArray(data) && data.length > 0;
+  if (error) {
+    // FAIL-CLOSED: bij throttle-check error → treat as throttled
+    return { throttled: true, reason: `throttle_check_failed:${error.message}` };
+  }
+
+  const hit = Array.isArray(data) && data.length > 0;
+  return { throttled: hit, reason: hit ? "recent_mail_exists" : "ok" };
 }
 
 // -------------------- Handler --------------------
@@ -134,20 +139,20 @@ serve(async (req) => {
   const meta = getReqMeta(req);
   const idemKey = meta.idempotency_key || meta.request_id;
 
-  // Idempotency (fail-open): als response al bestaat → teruggeven
-  try {
-    const cached = await tryGetIdempotentResponse(sb(), idemKey);
-    if (cached) return json(req, cached.status, cached.body);
-  } catch {
-    // ignore
-  }
-
+  // Init Supabase once
   let SB: ReturnType<typeof createClient>;
   try {
     SB = sb();
-  } catch (_e) {
-    const body = { ok: false, error: "Server misconfigured" };
-    return json(req, 500, body);
+  } catch {
+    return json(req, 500, { ok: false, error: "Server misconfigured" });
+  }
+
+  // Idempotency (fail-open): als response al bestaat → teruggeven
+  try {
+    const cached = await tryGetIdempotentResponse(SB, idemKey);
+    if (cached) return json(req, cached.status, cached.body);
+  } catch {
+    // ignore
   }
 
   let payload: any = {};
@@ -162,8 +167,7 @@ serve(async (req) => {
   const dossier_id = payload?.dossier_id ? String(payload.dossier_id) : null;
   const email = payload?.email ? String(payload.email).trim().toLowerCase() : null;
 
-  // Response policy: nooit onthullen of dossier/email klopt (no enumeration)
-  // → altijd ok:true, maar audit logt intern zodra dossier bestaat.
+  // No enumeration: altijd ok:true
   if (!dossier_id || !email || !isEmail(email)) {
     const body = { ok: true };
     await storeIdempotentResponseFailOpen(SB, idemKey, 200, body);
@@ -219,16 +223,16 @@ serve(async (req) => {
     return ok(req);
   }
 
-  // Throttle (60s window)
-  const throttled = await isThrottled({ SB, dossier_id, windowSeconds: 60 });
-  if (throttled) {
+  // Throttle (60s window) — FAIL-CLOSED
+  const thr = await isThrottledFailClosed({ SB, dossier_id, windowSeconds: 60 });
+  if (thr.throttled) {
     await insertAuditFailOpen(
       SB,
       {
         dossier_id,
         actor_type: "system",
         event_type: "login_request_throttled",
-        event_data: { stage: "auth", status: 429, reason: "recent_mail_exists", message: "throttled" },
+        event_data: { stage: "auth", status: 429, reason: thr.reason, message: "throttled" },
       },
       meta,
       { actor_ref },
@@ -255,14 +259,6 @@ serve(async (req) => {
       access_token_consumed_ip: null,
       access_token_consumed_ua: null,
       access_token_consumed_request_id: null,
-      access_token_consumed_request_id: null,
-      access_token_consumed_ip: null,
-      access_token_consumed_ua: null,
-      access_token_consumed_at: null,
-      access_token_consumed_request_id: null,
-      access_token_consumed_ip: null,
-      access_token_consumed_ua: null,
-      // updated_at trigger bestaat, maar we zijn expliciet
       updated_at: now,
     })
     .eq("id", dossier_id)
@@ -276,7 +272,12 @@ serve(async (req) => {
         dossier_id,
         actor_type: "system",
         event_type: "login_link_issue_failed",
-        event_data: { stage: "auth", status: 500, reason: "token_rotate_failed", message: uErr?.message || "failed" },
+        event_data: {
+          stage: "auth",
+          status: 500,
+          reason: "token_rotate_failed",
+          message: uErr?.message || "failed",
+        },
       },
       meta,
       { actor_ref },

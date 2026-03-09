@@ -621,6 +621,19 @@ DoD:
 - robots.txt verwijst naar sitemap en disallowt tijdelijke routes.
 - sitemap.xml bevat alleen canonieke publieke pagina’s.
 
+## 2026-03-05 — Login recovery live + throttle reason enums gestandaardiseerd
+
+Wijziging
+- `api-dossier-login-request` geïntroduceerd/afgerond als recovery-flow zonder dashboard.
+- Anti-enumeration: response altijd `{ ok: true }`; audit events zijn source-of-truth.
+- Throttling reasons gestandaardiseerd (event_data.reason enum):
+  - `ip_rate_limit`
+  - `dossier_rate_limit`
+  - `mail_rate_limit`
+
+Bewijs
+- Audit trail toont: `login_request_received`, `login_request_rejected` (email_mismatch), `login_link_issued`, `login_request_throttled` met bovenstaande reasons.
+
 ---
 
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)

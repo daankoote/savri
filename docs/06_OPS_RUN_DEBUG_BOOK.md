@@ -309,6 +309,31 @@ Als gateway OK is (geen `Missing authorization header`) en je ziet in `dossier_s
 → dit is expected behavior van TTL/revoke policy.
 → oplossing is product/auth-flow (refresh/login), niet debuggen in UI.
 
+## 3.2 LOGIN RECOVERY DEBUG (nieuw 2026-03-05)
+
+Endpoint:
+- api-dossier-login-request
+
+Invariants:
+- Response is altijd `{ ok: true }` (anti-enumeration).
+- Waarheid zit in audit events.
+
+Throttle reasons (event_data.reason enum):
+- ip_rate_limit
+- dossier_rate_limit
+- mail_rate_limit
+
+Snelle diagnose (SQL Editor):
+- Zoek laatste events op dossier:
+  - login_request_received → moet er altijd zijn
+  - daarna exact één van:
+    - login_link_issued (match)
+    - login_request_rejected (mismatch/notfound/invalid)
+    - login_request_throttled (rate limit)
+
+STOP RULE:
+Als je wél `{ ok: true }` ziet maar geen `login_request_received` audit event:
+→ request kwam niet bij jouw function (gateway/route fout), of audit insert is stuk.
 
 ---
 

@@ -134,8 +134,10 @@ Auth-grenzen zijn expliciet. Impliciete aannames zijn niet toegestaan.
 * api-dossier-upload-confirm
 * api-dossier-submit-review
 * api-dossier-get
+* api-dossier-login-request
 * api-dossier-export
 * api-dossier-evaluate
+
 
 Deze lijst is source-of-truth.
 

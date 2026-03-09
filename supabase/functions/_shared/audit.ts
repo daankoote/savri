@@ -12,6 +12,11 @@ function getEnvironment(): string {
   return (Deno.env.get("ENVIRONMENT") || Deno.env.get("ENV") || "unknown").trim().toLowerCase();
 }
 
+function clampKey(key: string, max = 300) {
+  const k = String(key || "").trim();
+  return k.length <= max ? k : k.slice(0, max);
+}
+
 /**
  * insertAuditFailOpen
  * - fail-open (audit mag nooit blokkeren)
@@ -62,7 +67,7 @@ export async function tryGetIdempotentResponse(
     const { data, error } = await SB
       .from("idempotency_keys")
       .select("response_status, response_body")
-      .eq("key", key)
+      .eq("key", clampKey(key))
       .maybeSingle();
 
     if (error) return null;
@@ -80,7 +85,7 @@ export async function tryGetIdempotentResponse(
 
 export async function storeIdempotentResponseFailOpen(
   SB: any,
-  key: string,
+  key: clampKey(key),
   status: number,
   body: any,
 ) {

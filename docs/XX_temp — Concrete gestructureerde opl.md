@@ -65,7 +65,117 @@ NIET nu doen tenzij Phase 0/1/2 groen is.
 
 ---
 
+
+
 ## Scope discipline
 - Geen password login nu.
 - Geen social login nu.
 - Eerst recovery + audit + regressietests groen. Daarna pas identity-layer.
+
+
+
+##### EXTRA #####
+
+
+## token consume flow
+                 ┌────────────────────┐
+                 │   User opens link  │
+                 │ dossier.html?token │
+                 └─────────┬──────────┘
+                           │
+                           ▼
+                 ┌────────────────────┐
+                 │ api-dossier-get    │
+                 │ (token mode)       │
+                 └─────────┬──────────┘
+                           │
+                           │ validate token
+                           │
+                           ▼
+                 ┌────────────────────┐
+                 │ link_token_consumed│
+                 │ audit event        │
+                 └─────────┬──────────┘
+                           │
+                           │ create session
+                           ▼
+                 ┌────────────────────┐
+                 │ dossier_sessions   │
+                 │ insert             │
+                 └─────────┬──────────┘
+                           │
+                           ▼
+                 ┌────────────────────┐
+                 │ session_created    │
+                 │ audit event        │
+                 └─────────┬──────────┘
+                           │
+                           ▼
+                 ┌────────────────────┐
+                 │ dossier.html loads │
+                 │ with session_token │
+                 └─────────┬──────────┘
+                           │
+                           ▼
+                 ┌────────────────────┐
+                 │ subsequent calls   │
+                 │ (session mode)     │
+                 └────────────────────┘
+
+## session creation flow
+
+User lost link
+      │
+      ▼
+api-dossier-login-request
+      │
+      ├─ email mismatch
+      │    └─ login_request_rejected
+      │
+      ├─ throttle
+      │    └─ login_request_throttled
+      │
+      └─ match
+           │
+           ├─ rotate access_token
+           ├─ enqueue email
+           └─ login_link_issued
+
+## login flow
+
+User
+ │
+ │ POST login request
+ ▼
+api-dossier-login-request
+ │
+ ├─ audit: login_request_received
+ │
+ ├─ email mismatch
+ │     └─ login_request_rejected
+ │
+ ├─ throttle hit
+ │     └─ login_request_throttled
+ │
+ └─ email match
+       │
+       ├─ rotate token
+       ├─ enqueue mail
+       │
+       └─ login_link_issued
+
+en daarna
+
+User opens mail link
+        │
+        ▼
+api-dossier-get
+        │
+        ├─ link_token_consumed
+        │
+        ├─ session_created
+        │
+        ▼
+dossier session
+
+## EINDE XX_temp — Concrete gestructureerde oplossing (MVP → future-proof)

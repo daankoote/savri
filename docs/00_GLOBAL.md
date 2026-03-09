@@ -173,6 +173,34 @@ Sessies worden geregistreerd in `public.dossier_sessions`:
 - Session expiry/revoke wordt server-side enforced.
 - Audit-first blijft leidend: rejects worden gelogd zodra dossier-scope bekend is.
 
+## 5.2 Login Recovery (nieuw 2026-03-05)
+
+Doel:
+- “Later verder gaan” zonder dashboard/account.
+- Link-token is one-time en expirable → recovery moet bestaan.
+
+Endpoint:
+- `api-dossier-login-request`
+
+Security posture (hard):
+- Anti-enumeration: response is altijd `{ ok: true }`.
+- Audit events zijn de bron van waarheid.
+- Rate limiting is fail-closed (throttle → géén mail).
+
+Throttle reasons (event_data.reason enum):
+- `ip_rate_limit`
+- `dossier_rate_limit`
+- `mail_rate_limit`
+
+Behavior (match):
+- dossier_id bestaat + email match → rotate link-token (nieuw token + nieuwe expires_at, consumed reset)
+- enqueue outbound_email + trigger mail-worker
+- audit: `login_request_received` + `login_link_issued`
+
+Behavior (mismatch / invalid / notfound):
+- géén mail
+- audit: `login_request_received` + `login_request_rejected` (reason: `email_mismatch` | `dossier_not_found` | `invalid_payload`)
+
 ## 6) Phase model (gates)
 
 ### Phase 0 — Foundations (DONE/ACTIVE)

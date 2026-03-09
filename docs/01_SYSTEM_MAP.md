@@ -302,6 +302,8 @@ Lock rule (source of truth):
     - mail_queued (dossier-scoped) wanneer outbound_emails.dossier_id wordt gezet
     - mail_worker_triggered (dossier-scoped, fail-open) bij fast-path invoke
 
+
+
 **Intake eligibility gates (CURRENT):**
 - `ev_direct` reject (pre-dossier) indien:
   - `in_nl != true` of
@@ -309,6 +311,20 @@ Lock rule (source of truth):
 - Error message: “Dossieropbouw is alleen mogelijk voor laadpalen in Nederland met een MID-meter.”
 - Audit: `public.intake_audit_events` (stage=eligibility); gateway rejects blijven off-chain.
 
+
+### Auth recovery
+- api-dossier-login-request
+  - doel: nieuwe dossier-link uitgeven bij verlopen/geconsumeerde link-token
+  - anti-enumeration: response altijd `{ ok: true }`
+  - rate limiting: ip/dossier/mail (fail-closed)
+  - audit:
+    - login_request_received
+    - login_link_issued
+    - login_request_rejected
+    - login_request_throttled (reason enum: ip_rate_limit | dossier_rate_limit | mail_rate_limit)
+
+
+#### Mail-worker — Gateway auth is óók verplicht (ops critical)
 
 - mail-worker
   - verwerkt outbound_emails queued → sent/failed/requeued
@@ -320,8 +336,6 @@ Lock rule (source of truth):
     - selectie op next_attempt_at (<= now) + attempts < MAX_ATTEMPTS
   - audit (dossier-scoped, fail-open):
     - mail_sent / mail_requeued / mail_failed wanneer outbound_emails.dossier_id != null
-
-#### Mail-worker — Gateway auth is óók verplicht (ops critical)
 
 Mail-worker heeft 2 lagen:
 1) Supabase gateway auth (voor `/functions/v1/*`)

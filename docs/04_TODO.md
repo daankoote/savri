@@ -9,7 +9,7 @@ Regel: alleen open items; afgerond → naar changelog.
 ## P0 (must)
 1) JWT rotation doorvoeren op alle runtime plekken
 → DONE (2026-02-09, bewijs via curl + audit-tests)
-2) P0 — Session continuity (kritiek: users moeten later verder kunnen)
+2) P0 — Session continuity (kritiek: users moeten later verder kunnen) Status: DONE (2026-03-05 bewijs via curl  + sql)
 - Probleem:
   - session TTL (2h) + one-time link-token → “later verder gaan” breekt.
   - Users moeten info opzoeken/aanvragen; dossier invullen is niet in 1 sessie.
@@ -28,6 +28,8 @@ Regel: alleen open items; afgerond → naar changelog.
   - user kan na 24h+ opnieuw toegang krijgen zonder support
   - audit events: login_request, link_issued, link_consumed, session_created, session_rejected
   - abuse-controls: rate limit per email/ip + backoff
+  - Implementatie: `api-dossier-login-request`
+  - Audit: login_request_received/login_link_issued/login_request_rejected/login_request_throttled (rate limit enums)
 
 ## P1 (must/should)
 1) outbound_emails: next_attempt_at + index  — DONE (2026-02-09)

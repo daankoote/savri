@@ -455,25 +455,25 @@ create_charger_and_get_id() {
   local resp http body id
   resp="$(http_call_with_idem \
     "$SUPABASE_URL/functions/v1/api-dossier-charger-save" \
-    "{\"dossier_id\":\"$DOSSIER_ID\",\"token\":\"$DOSSIER_TOKEN\",\"serial_number\":\"TEST-$rid-$serial\",\"brand\":\"TEST\",\"model\":\"TEST\",\"power_kw\":11,\"notes\":\"audit-test setup\"}" \
+    "{\"dossier_id\":\"$DOSSIER_ID\",\"token\":\"$DOSSIER_TOKEN\",\"serial_number\":\"TEST-$rid-$serial\",\"meter_id\":\"MID-$rid-$serial\",\"brand\":\"TEST\",\"model\":\"TEST\",\"power_kw\":11,\"notes\":\"audit-test setup\"}"\
     "$rid")"
 
   http="$(extract_http_status "$resp")"
   body="$(extract_body_json "$resp")"
 
   if [[ "$http" != "200" ]]; then
-    echo "FATAL: charger-create failed (HTTP $http) rid=$rid"
-    echo "BODY:"
-    echo "$body"
+    echo "FATAL: charger-create failed (HTTP $http) rid=$rid" >&2
+    echo "BODY:" >&2
+    echo "$body" >&2
     echo ""
     return 1
   fi
 
   id="$(echo "$body" | sed -n 's/.*"charger_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
   if [[ -z "$id" ]]; then
-    echo "FATAL: charger-create returned 200 but no charger_id in response rid=$rid"
-    echo "BODY:"
-    echo "$body"
+    echo "FATAL: charger-create returned 200 but no charger_id in response rid=$rid" >&2
+    echo "BODY:" >&2
+    echo "$body" >&2
     echo ""
     return 1
   fi
@@ -483,7 +483,7 @@ create_charger_and_get_id() {
 }
 
 # Read existing chargers
-EXISTING_CHARGER_IDS=()
+declare -a EXISTING_CHARGER_IDS=()
 CREATED_CHARGER_IDS=()   # <-- altijd initialiseren, vóór elke mogelijke read
 while IFS= read -r line; do
   [[ -n "${line:-}" ]] && EXISTING_CHARGER_IDS+=("$line")
@@ -545,8 +545,14 @@ echo "SETUP OK — created chargers this run: ${#CREATED_CHARGER_IDS[@]}"
 echo ""
 
 echo "SETUP EVIDENCE — existing charger IDs (first 5):"
+if ! declare -p EXISTING_CHARGER_IDS >/dev/null 2>&1; then
+  EXISTING_CHARGER_IDS=()
+fi
+
 for i in 0 1 2 3 4; do
-  [[ $i -lt ${#EXISTING_CHARGER_IDS[@]} ]] && echo " - existing[$i]=${EXISTING_CHARGER_IDS[$i]}"
+  if [[ $i -lt ${#EXISTING_CHARGER_IDS[@]} ]]; then
+    echo " - existing[$i]=${EXISTING_CHARGER_IDS[$i]}"
+  fi
 done
 
 echo "SETUP EVIDENCE — created charger IDs (all):"
