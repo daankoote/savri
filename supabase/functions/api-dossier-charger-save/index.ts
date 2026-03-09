@@ -148,9 +148,9 @@ serve(async (req) => {
   }
 
   const tokenHash = await sha256Hex(String(token));
-  const actor_ref = actorRefForCustomer(dossier_id, tokenHash);
   const actorScope = tokenHash.slice(0, 16);
   const idemScopedKey = scopedIdemKey(dossier_id, actorScope, idemKey);
+  const actor_ref = actorRefForCustomer(dossier_id, tokenHash);
 
   async function reject(stage: string, status: number, message: string, extra?: Record<string, unknown>) {
     await insertAuditFailOpen(
