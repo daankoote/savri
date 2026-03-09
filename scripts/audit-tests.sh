@@ -455,7 +455,7 @@ create_charger_and_get_id() {
   local resp http body id
   resp="$(http_call_with_idem \
     "$SUPABASE_URL/functions/v1/api-dossier-charger-save" \
-    "{\"dossier_id\":\"$DOSSIER_ID\",\"token\":\"$DOSSIER_TOKEN\",\"serial_number\":\"TEST-$rid-$serial\",\"meter_id\":\"MID-$rid-$serial\",\"brand\":\"TEST\",\"model\":\"TEST\",\"power_kw\":11,\"notes\":\"audit-test setup\"}"\
+    "{\"dossier_id\":\"$DOSSIER_ID\",\"token\":\"$DOSSIER_TOKEN\",\"serial_number\":\"TEST-$rid-$serial\",\"mid_number\": \"MID-$rid-$serial\",\"brand\":\"TEST\",\"model\":\"TEST\",\"power_kw\":11,\"notes\":\"audit-test setup\"}"\
     "$rid")"
 
   http="$(extract_http_status "$resp")"
