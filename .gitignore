@@ -26,6 +26,8 @@ supabase-functions-archive/
 **/*.old
 **/*.archive
 
+
+
 # test artifacts
 scripts/tests/.tmp/
 scripts/tests/output/
