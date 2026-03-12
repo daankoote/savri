@@ -304,7 +304,7 @@ Diagnosevraag:
   - Ja → cleanup is inhoudelijk geslaagd
   - Nee → echte cleanup-bug
 
-## 3.1 SESSION AUTH (nieuw 2026-03-03)
+## 6.2 SESSION AUTH (nieuw 2026-03-03)
 
 ### Symptomen
 - 401/403 uit jouw function (JSON) terwijl gateway headers correct zijn.
@@ -342,7 +342,7 @@ Als gateway OK is (geen `Missing authorization header`) en je ziet in `dossier_s
 → dit is expected behavior van TTL/revoke policy.
 → oplossing is product/auth-flow (refresh/login), niet debuggen in UI.
 
-## 3.2 LOGIN RECOVERY DEBUG (nieuw 2026-03-05)
+## 6.3 LOGIN RECOVERY DEBUG (nieuw 2026-03-05)
 
 Endpoint:
 - api-dossier-login-request

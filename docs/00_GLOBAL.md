@@ -206,7 +206,7 @@ Behavior (mismatch / invalid / notfound):
 ### Phase 0 — Foundations (DONE/ACTIVE)
 - Basis system map + core tables + wizard routes
 - Edge endpoints aanwezig
-- Reproduceerbare tests (`scripts/audit-tests.sh`)
+- Reproduceerbare tests (`scripts/tests/run_all.sh`))
 
 ### Phase 1 — Evidence-grade dossier (ACTIVE)
 Gate = “audit-contract stabiel en consistent over alle dossier write endpoints”
