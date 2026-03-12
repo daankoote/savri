@@ -271,6 +271,39 @@ Als export niet werkt:
 * Check document confirmed flags
 * Check audit events
 
+## 6.1 CLEANUP / RETAINED DOSSIER SHELL (nieuw 2026-03-12)
+
+CURRENT waarheid:
+- Fresh tests verwijderen mutable child artefacten
+- Dossier/outbound/audit shell blijft bewust bestaan
+
+Waarom:
+- `dossier_audit_events` is immutabel
+- Hard delete van dossier kan falen met:
+  - `IMMUTABLE_TABLE: dossier_audit_events cannot be DELETE`
+
+Betekenis:
+- Dit is géén cleanup bug
+- Dit is expected behavior van audit-first lifecycle
+
+Canonical verify na cleanup:
+- `dossier_chargers` → 0 rows
+- `dossier_documents` → 0 rows
+- `dossiers` → 1 row toegestaan
+- `outbound_emails` → retained toegestaan
+- `dossier_audit_events` → retained toegestaan
+
+STOP RULE:
+Als cleanup faalt omdat dossier-shell nog bestaat:
+- Niet proberen audit rows weg te verwijderen
+- Niet “cascade delete” als quick fix toevoegen
+- Eerst lifecycle-semantiek controleren (tombstone/archive i.p.v. hard delete)
+
+Diagnosevraag:
+- Zijn mutable child rows weg?
+  - Ja → cleanup is inhoudelijk geslaagd
+  - Nee → echte cleanup-bug
+
 ## 3.1 SESSION AUTH (nieuw 2026-03-03)
 
 ### Symptomen

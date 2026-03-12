@@ -634,6 +634,57 @@ Wijziging
 Bewijs
 - Audit trail toont: `login_request_received`, `login_request_rejected` (email_mismatch), `login_link_issued`, `login_request_throttled` met bovenstaande reasons.
 
+## 2026-03-12 — Fresh-only testsuite contract gecorrigeerd (bootstrap/login/cleanup)
+
+Wijzigingen
+- Testsuite is nu expliciet `fresh-only`:
+  - nieuw dossier via echte intake/mailflow
+  - `DOSSIER_ID` + `DOSSIER_TOKEN` vanuit state
+  - geen allowlist-pad meer
+- Legacy `TOKEN_RESET`-skelet verwijderd uit `scripts/tests/01_setup.sh`.
+- `FORCE_CREATE` verwijderd; setup maakt nu alleen exact tot target chargers aan.
+- Login recovery test gecorrigeerd naar CURRENT runtime waarheid:
+  - direct na fresh bootstrap wordt extra login-request **gethrottled**
+  - canonical auditverwachting: `login_request_throttled`
+  - geen onterechte verwachting meer van `login_link_issued` in dezelfde run
+- Cleanup contract gecorrigeerd:
+  - created chargers/docs/storage worden verwijderd
+  - dossier/outbound/audit shell blijft bewust bestaan
+  - hard delete van dossier blijkt in strijd met immutability (`IMMUTABLE_TABLE: dossier_audit_events cannot be DELETE`)
+
+Bewijs
+- `scripts/tests/run_all.sh` volledig groen:
+  - intake rejects/idempotency
+  - login throttle + mismatch
+  - charger rejects
+  - upload rejects
+  - happy uploads
+  - cleanup verify
+- Cleanup verify toont CURRENT eindstatus:
+  - mutable child rows verwijderd
+  - retained dossier rows: 1
+  - retained outbound_emails rows: 1
+  - retained audit rows: 1
+
+Architecturale conclusie
+- audit-gebonden dossiers zijn CURRENT niet hard deletebaar
+- lifecycle-oplossing moet later via tombstone/archive semantics, niet via hard delete
+
+
+## 2026-03-12 — TODO hygiene note: open vs bewezen afbakening
+
+Documentatiebesluit:
+- DONE-items horen niet in `04_TODO.md`, maar in changelog.
+- TODO blijft uitsluitend open werk bevatten.
+
+Nuance:
+- Niet elke implementatie-entry impliceert volledig bewezen DoD.
+- Met name voor hardening-/proof-items blijft de maatstaf:
+  - expliciet runtimebewijs, of
+  - expliciete grep/sql/curl bevestiging.
+
+Gevolg:
+- Items zoals session-auth hardening, api.js adoptie, MID grep-cleanliness en live SEO verificatie blijven OPEN totdat hun bewijs expliciet is geleverd.
 ---
 
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)

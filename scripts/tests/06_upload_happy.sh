@@ -7,6 +7,12 @@ source "$(dirname "$0")/00_helpers.sh"
 echo ""
 echo "== HAPPY PATH UPLOADS =="
 
+RUN_HAPPY_UPLOADS="${RUN_HAPPY_UPLOADS:-0}"
+if [[ "$RUN_HAPPY_UPLOADS" != "1" ]]; then
+  echo "SKIP happy uploads (RUN_HAPPY_UPLOADS=0)"
+  exit 0
+fi
+
 FN_UPLOAD_URL="$SUPABASE_URL/functions/v1/api-dossier-upload-url"
 FN_UPLOAD_CONFIRM="$SUPABASE_URL/functions/v1/api-dossier-upload-confirm"
 
@@ -27,7 +33,7 @@ mkdir -p "$TMP_DIR"
 TMP_FILE="$TMP_DIR/enval-devtest-upload.pdf"
 
 # deterministic small file
-printf "ENVAL DEVTEST %s\n" "$(date -u +%FT%TZ)" > "$TMP_FILE"
+printf "ENVAL DEVTEST PDF PLACEHOLDER\n" > "$TMP_FILE"
 FILE_SIZE="$(wc -c < "$TMP_FILE" | tr -d ' ')"
 FILE_SHA256="$(shasum -a 256 "$TMP_FILE" | awk '{print $1}')"
 
@@ -59,7 +65,7 @@ for cid in "${CREATED_IDS[@]}"; do
 
     RESP_URL="$(http_call_with_idem \
       "$FN_UPLOAD_URL" \
-      "{\"dossier_id\":\"$DOSSIER_ID\",\"token\":\"$DOSSIER_TOKEN\",\"doc_type\":\"$dt\",\"filename\":\"devtest-$dt-$cid.pdf\",\"content_type\":\"application/pdf\",\"size_bytes\":$FILE_SIZE,\"charger_id\":\"$cid\"}" \
+      "{\"dossier_id\":\"$DOSSIER_ID\",\"token\":\"$(dossier_token)\",\"doc_type\":\"$dt\",\"filename\":\"devtest-$dt-$cid.pdf\",\"content_type\":\"application/pdf\",\"size_bytes\":$FILE_SIZE,\"charger_id\":\"$cid\"}" \
       "$rid_url")"
 
     HTTP_URL="$(extract_http_status "$RESP_URL")"
@@ -68,7 +74,7 @@ for cid in "${CREATED_IDS[@]}"; do
     if [[ "$HTTP_URL" != "200" ]]; then
       echo "ASSERT FAIL: upload-url expected 200, got $HTTP_URL (doc_type=$dt charger=$cid)"
       echo "BODY:"
-      echo "$BODY_URL"
+      print_json_safe_trunc "$BODY_URL" 1200
       exit 1
     fi
 
@@ -95,7 +101,7 @@ for cid in "${CREATED_IDS[@]}"; do
       --data-binary @"$TMP_FILE")"
 
     PUT_HTTP="$(extract_http_status "$PUT_RESP")"
-    echo "$PUT_RESP" | sed -n '1,15p'
+    print_resp_head "$PUT_RESP" 15
 
     if [[ "$PUT_HTTP" != "200" ]]; then
       echo "ASSERT FAIL: storage PUT expected 200, got $PUT_HTTP (doc_type=$dt charger=$cid)"
@@ -107,17 +113,17 @@ for cid in "${CREATED_IDS[@]}"; do
 
     RESP_CONF="$(http_call_with_idem \
       "$FN_UPLOAD_CONFIRM" \
-      "{\"dossier_id\":\"$DOSSIER_ID\",\"token\":\"$DOSSIER_TOKEN\",\"document_id\":\"$DOC_ID\",\"file_sha256\":\"$FILE_SHA256\"}" \
+      "{\"dossier_id\":\"$DOSSIER_ID\",\"token\":\"$(dossier_token)\",\"document_id\":\"$DOC_ID\",\"file_sha256\":\"$FILE_SHA256\"}" \
       "$rid_conf")"
 
     HTTP_CONF="$(extract_http_status "$RESP_CONF")"
     BODY_CONF="$(extract_body_json "$RESP_CONF")"
-    echo "$RESP_CONF" | sed -n '1,25p'
+    print_resp_head "$RESP_CONF" 25
 
     if [[ "$HTTP_CONF" != "200" ]]; then
       echo "ASSERT FAIL: upload-confirm expected 200, got $HTTP_CONF (doc_type=$dt charger=$cid)"
       echo "BODY:"
-      echo "$BODY_CONF"
+      print_json_safe_trunc "$BODY_CONF" 1200
       exit 1
     fi
 

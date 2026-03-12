@@ -326,7 +326,7 @@ run_case() {
 
   local resp http body
   resp="$(http_call_with_idem "$url" "$data" "$rid")"
-  echo "$resp" | sed -n '1,30p'
+  print_resp_head "$resp" 30
   echo ""
 
   http="$(extract_http_status "$resp")"
@@ -463,8 +463,8 @@ create_charger_and_get_id() {
 
   if [[ "$http" != "200" ]]; then
     echo "FATAL: charger-create failed (HTTP $http) rid=$rid" >&2
-    echo "BODY:" >&2
-    echo "$body" >&2
+    echo "BODY (redacted, trunc):" >&2
+    print_json_safe_trunc "$body" 1200 >&2
     echo ""
     return 1
   fi
@@ -472,8 +472,8 @@ create_charger_and_get_id() {
   id="$(echo "$body" | sed -n 's/.*"charger_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
   if [[ -z "$id" ]]; then
     echo "FATAL: charger-create returned 200 but no charger_id in response rid=$rid" >&2
-    echo "BODY:" >&2
-    echo "$body" >&2
+    echo "BODY (redacted, trunc):" >&2
+    print_json_safe_trunc "$body" 1200 >&2
     echo ""
     return 1
   fi
@@ -765,7 +765,7 @@ AUDIT_LAST15="$(curl -s \
   "$SUPABASE_URL/rest/v1/dossier_audit_events?select=created_at,event_type,event_data&dossier_id=eq.$DOSSIER_ID&order=created_at.desc&limit=15" \
   -H "apikey: $SUPABASE_ANON_KEY" \
   -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY")"
-echo "$AUDIT_LAST15"
+echo "(audit json suppressed — use scripts/tests/xx_audit_dump.sh if you really need it)"
 echo ""
 
 FN_UPLOAD_URL="$SUPABASE_URL/functions/v1/api-dossier-upload-url"

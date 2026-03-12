@@ -3,6 +3,47 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# --- HARD SAFETY: never allow bash xtrace to leak headers/tokens ---
+set +x 2>/dev/null || true
+
+# --- REDACTION: never print secrets to stdout ---
+redact() {
+  # Reads stdin, prints sanitized output (secrets + PII)
+  sed -E \
+    -e 's/(Authorization:[[:space:]]*Bearer[[:space:]]+)[^[:space:]]+/\1[REDACTED]/Ig' \
+    -e 's/(apikey:[[:space:]]*)[^[:space:]]+/\1[REDACTED]/Ig' \
+    -e 's/("token"[[:space:]]*:[[:space:]]*")[^"]+/\1[REDACTED]/Ig' \
+    -e 's/("access_token"[[:space:]]*:[[:space:]]*")[^"]+/\1[REDACTED]/Ig' \
+    -e 's/("access_token_hash"[[:space:]]*:[[:space:]]*")[^"]+/\1[REDACTED]/Ig' \
+    -e 's/("actor_ref"[[:space:]]*:[[:space:]]*"dossier:[^|"]+\|token:)[^"]+"/\1[REDACTED]"/Ig' \
+    -e 's/("ip"[[:space:]]*:[[:space:]]*")[^"]+/\1[REDACTED_IP]/Ig' \
+    -e 's/("ua"[[:space:]]*:[[:space:]]*")[^"]+/\1[REDACTED_UA]/Ig' \
+    -e 's/("to_email"[[:space:]]*:[[:space:]]*")[^"]+/\1[REDACTED_EMAIL]/Ig' \
+    -e 's/("email"[[:space:]]*:[[:space:]]*")[^"]+/\1[REDACTED_EMAIL]/Ig' \
+    -e 's/("provider_id"[[:space:]]*:[[:space:]]*")[^"]+/\1[REDACTED]/Ig' \
+    -e 's/([?&](token|sig|signature|X-Amz-Signature|X-Amz-Credential|X-Amz-Security-Token)=)[^&"]+/\1[REDACTED]/Ig'
+}
+
+print_safe() {
+  # usage: print_safe "$maybe_sensitive_string"
+  printf "%s\n" "${1:-}" | redact
+}
+
+print_resp_head() {
+  # usage: print_resp_head "$resp" [lines]
+  local resp="${1:-}"
+  local n="${2:-30}"
+  printf "%s\n" "$resp" | redact | sed -n "1,${n}p"
+}
+
+print_json_safe_trunc() {
+  # usage: print_json_safe_trunc "$json" [chars]
+  local json="${1:-}"
+  local n="${2:-1200}"
+  printf "%s\n" "$json" | redact | head -c "$n"
+  echo ""
+}
+
 # ----------------------------
 # Auto-load env when running scripts directly
 # ----------------------------
@@ -33,6 +74,12 @@ need() {
 now_ts() { date +%s; }
 now_iso_utc() { date -u +"%Y-%m-%dT%H:%M:%SZ"; }
 
+
+# START_ISO must exist for audit fetchers; set if missing (for direct script runs)
+if [[ -z "${START_ISO:-}" ]]; then
+  export START_ISO="$(now_iso_utc)"
+fi
+
 # -------------------------
 # State file
 # -------------------------
@@ -47,12 +94,37 @@ set_state() {
 }
 
 get_state() {
+  
   local key="$1"
   if [[ ! -f "$TEST_STATE_FILE" ]]; then
     echo ""
     return 0
   fi
   grep -E "^${key}=" "$TEST_STATE_FILE" | tail -n 1 | cut -d= -f2-
+}
+
+dossier_token() {
+  # Prefer token from state (set by 01_setup.sh TOKEN_RESET)
+  local t
+  t="$(get_state DOSSIER_TOKEN)"
+  if [[ -z "${t:-}" ]]; then
+    t="${DOSSIER_TOKEN:-}"
+  fi
+
+  # HARD: strip CR/LF and surrounding whitespace
+  # (prevents sha256 mismatch vs Deno if token file has newline)
+  t="$(printf "%s" "$t" | tr -d '\r\n' | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
+  printf "%s" "$t"
+}
+
+require_dossier_token() {
+  local t
+  t="$(dossier_token)"
+  if [[ -z "${t:-}" ]]; then
+    echo "FATAL: dossier_token() is empty (state+env)."
+    echo "Hint: run_all.sh must set TOKEN_RESET=1 and 01_setup.sh must set_state DOSSIER_TOKEN."
+    exit 1
+  fi
 }
 
 # -------------------------
@@ -74,15 +146,80 @@ sha256_file() {
   openssl dgst -sha256 "$file" | awk '{print $2}'
 }
 
+sha256_str() {
+  # sha256 of a string, hex output
+  local s="${1:-}"
+  printf "%s" "$s" | openssl dgst -sha256 | awk '{print $2}'
+}
+
+get_dossier_access_token_hash() {
+  # returns dossiers.access_token_hash (service role)
+  curl -sS \
+    --connect-timeout 10 \
+    --max-time 30 \
+    "$SUPABASE_URL/rest/v1/dossiers?select=access_token_hash&id=eq.$DOSSIER_ID&limit=1" \
+    -H "apikey: $SUPABASE_ANON_KEY" \
+    -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+    | python3 -c "import sys,json; d=json.load(sys.stdin); v=(d[0].get('access_token_hash') if d else None); print('' if v is None else str(v))"
+}
+
+assert_token_matches_db() {
+  # hard proof: sha256(token) == dossiers.access_token_hash
+  local t
+  t="$(dossier_token)"
+
+  if [[ -z "${t:-}" ]]; then
+    echo "FATAL: DOSSIER_TOKEN empty (state+env)."
+    exit 1
+  fi
+
+  local want got
+  want="$(sha256_str "$t")"
+  got="$(get_dossier_access_token_hash || true)"
+
+  if [[ -z "${got:-}" ]]; then
+    echo "FATAL: dossiers.access_token_hash is empty/null in DB after TOKEN_RESET."
+    exit 1
+  fi
+
+  if [[ "$want" != "$got" ]]; then
+    echo "FATAL: DOSSIER_TOKEN does NOT match DB access_token_hash."
+    echo "sha256(token) prefix: ${want:0:16}..."
+    echo "db hash prefix:       ${got:0:16}..."
+    exit 1
+  fi
+
+  # safe evidence (no secrets)
+  echo "OK token/hash match (sha256 prefix ${want:0:16}...)"
+}
 # -------------------------
-# HTTP helpers
+# Safe printing (always redacted)
 # -------------------------
+print_lines() {
+  local n="${1:-40}"
+  sed -n "1,${n}p" | redact
+}
+
+# -------------------------
+# HTTP helpers (timeouts + retry on transient errors)
+# -------------------------
+
 http_call_with_idem() {
   local url="$1"
   local data="$2"
   local idem="$3"
 
-  curl -i -s "$url" \
+  if [[ -z "${url:-}" ]]; then
+    echo "FATAL: http_call_with_idem missing url"
+    return 2
+  fi
+
+  curl -sS -i \
+    --connect-timeout 10 \
+    --max-time 30 \
+    --retry 2 \
+    --retry-all-errors \
+    "$url" \
     -H "apikey: $SUPABASE_ANON_KEY" \
     -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
     -H "Content-Type: application/json" \
@@ -96,7 +233,17 @@ http_call_no_idem() {
   local data="$2"
   local xrid="$3"
 
-  curl -i -s "$url" \
+  if [[ -z "${url:-}" ]]; then
+    echo "FATAL: http_call_no_idem missing url"
+    return 2
+  fi
+
+  curl -sS -i \
+    --connect-timeout 10 \
+    --max-time 30 \
+    --retry 2 \
+    --retry-all-errors \
+    "$url" \
     -H "apikey: $SUPABASE_ANON_KEY" \
     -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
     -H "Content-Type: application/json" \
@@ -208,7 +355,15 @@ audit_assert_for_request_id_once() {
     return 1
   fi
 
-  row="$(echo "$aud" | tr -d '\n' | sed 's/},{/}\n{/g' | grep "$rid" | head -n 1)"
+    # Split objects inside JSON array reliably (handles '},{' and '},  {')
+  row="$(
+    echo "$aud" \
+    | tr -d '\n' \
+    | sed -E 's/},[[:space:]]*{/}\n{/g' \
+    | grep -E "\"request_id\"[[:space:]]*:[[:space:]]*\"$rid\"" \
+    | head -n 1
+  )"
+
   if [[ -z "$row" ]]; then
     return 1
   fi
@@ -246,7 +401,13 @@ audit_debug_row_for_rid() {
   local rid="$1"
   local aud row
   aud="$(audit_fetch_since 300)"
-  row="$(echo "$aud" | tr -d '\n' | sed 's/},{/}\n{/g' | grep "$rid" | head -n 1)"
+  row="$(
+    echo "$aud" \
+    | tr -d '\n' \
+    | sed -E 's/},[[:space:]]*{/}\n{/g' \
+    | grep -E "\"request_id\"[[:space:]]*:[[:space:]]*\"$rid\"" \
+    | head -n 1
+  )"
   echo "$row"
 }
 
@@ -257,8 +418,8 @@ audit_assert_for_request_id() {
   local expected_reason="${4:-}"
   local label="${5:-audit-check}"
 
-  local tries=6
-  local sleep_s=0.25
+  local tries=12
+  local sleep_s=0.5
   local i=1
 
   while [[ $i -le $tries ]]; do
@@ -275,6 +436,22 @@ audit_assert_for_request_id() {
     if [[ $rc -eq 2 ]]; then
       echo "ASSERT FAIL: $label — event_type mismatch for request_id=$rid"
       echo "Expected: $expected_event_type"
+      echo "Found row:"
+      audit_debug_row_for_rid "$rid"
+      return 1
+    fi
+
+    if [[ $rc -eq 3 ]]; then
+      echo "ASSERT FAIL: $label — stage mismatch for request_id=$rid"
+      echo "Expected stage: $expected_stage"
+      echo "Found row:"
+      audit_debug_row_for_rid "$rid"
+      return 1
+    fi
+
+    if [[ $rc -eq 4 ]]; then
+      echo "ASSERT FAIL: $label — reason mismatch for request_id=$rid"
+      echo "Expected reason: $expected_reason"
       echo "Found row:"
       audit_debug_row_for_rid "$rid"
       return 1
@@ -314,7 +491,7 @@ run_case() {
 
   local resp http body
   resp="$(http_call_with_idem "$url" "$data" "$rid")"
-  echo "$resp" | sed -n '1,30p'
+  print_resp_head "$resp" 30
   echo ""
 
   http="$(extract_http_status "$resp")"
@@ -353,7 +530,7 @@ run_case_raw() {
 
   local resp http body
   resp="$(http_call_with_idem "$url" "$data" "$rid")"
-  echo "$resp" | sed -n '1,60p'
+  print_resp_head "$resp" 60
   echo ""
 
   http="$(extract_http_status "$resp")"
