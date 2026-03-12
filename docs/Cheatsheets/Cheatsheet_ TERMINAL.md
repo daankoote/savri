@@ -12,8 +12,6 @@
 bijvoorbeeld: 
 - supabase functions deploy mail-worker --project-ref yzngrurkpfuqgexbhzgl
 
-of --> ./scripts/deploy-edge.sh mail-worker
-
 supabase functions deploy mail-worker
 supabase functions deploy api-lead-submit
 

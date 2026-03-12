@@ -196,7 +196,7 @@ Audit blijft binnen baseline.
 
 ## 4.2 CORE → UTILITY
 
-Alleen toegestaan indien expliciet allowlisted in audit-tests.sh.
+Alleen toegestaan indien expliciet allowlisted in scripts/tests/run_all.sh.
 
 Momenteel toegestaan:
 
@@ -260,7 +260,7 @@ Bij toevoegen of wijzigen van een Edge Function:
 1. Classificeren (CORE of UTILITY)
 2. Baseline controleren
 3. edge-uniformity.sh draaien
-4. audit-tests.sh draaien
+4. tests/run_all.sh draaien
 5. Contract document bijwerken
 
 Geen uitzondering.

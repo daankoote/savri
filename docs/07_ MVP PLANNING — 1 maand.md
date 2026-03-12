@@ -61,7 +61,7 @@ Rejects moeten auditwaardig zijn.
 
 ### 4. Testcontract uitbreiden
 
-scripts/audit-tests.sh moet aantonen:
+scripts/tests/run_all.sh moet aantonen:
 - lock enforcement werkt
 - reject audits worden geschreven
 - idempotency replay correct werkt

@@ -8,20 +8,18 @@ Thumbs.db
 .env.production
 .env.development
 
-# dependencies (alleen relevant als je ooit node gebruikt)
+# dependencies
 node_modules/
-# editor (optioneel)
+
+# editor
 .vscode/settings.json
+
 # local scratch / notes
 documenten/
 *.save
 
-
 # local backups / archives (never commit)
-documenten/
-documenten/**
 supabase-functions-archive/
-supabase-functions-archive/**
 **/backup*/
 **/bakup*/
 **/*.bak
@@ -32,4 +30,5 @@ supabase-functions-archive/**
 
 # test artifacts
 scripts/tests/.tmp/
+scripts/tests/output/
 /tmp/

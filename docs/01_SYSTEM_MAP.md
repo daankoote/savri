@@ -472,7 +472,7 @@ Belangrijk:
 
 ## 9) Tooling & reproducibility
 
-### 9.1 scripts/audit-tests.sh (contract test)
+### 9.1 scripts/tests/run_all.sh (contract test)
 Doel (real-world default):
 - Leest `dossiers.charger_count` (allowed max) uit DB
 - Vult aan tot target (zonder bestaande chargers/docs te muteren)

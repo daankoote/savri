@@ -1,11 +1,24 @@
+# scripts/dev-reset.sh
+
 #!/usr/bin/env bash
 set -euo pipefail
 
-# scripts/dev-reset.sh
-# Veiligheidsrails:
-# - Alleen draaien als ENVIRONMENT=dev
-# - Alleen draaien als I_UNDERSTAND=YES
-# - Vereist DATABASE_URL of SUPABASE_DB_URL (Postgres connection string)
+# ENVAL — DEV RESET TOOL
+#
+# Doel:
+# - Reset de DEV database op een gecontroleerde manier
+# - Alleen bedoeld voor lokale/dev omgevingen zonder productiegebruik
+#
+# Safety rails:
+# - Draait alleen als ENVIRONMENT=dev
+# - Vereist expliciete bevestiging via I_UNDERSTAND=YES
+# - Vereist DATABASE_URL of SUPABASE_DB_URL
+#
+# Belangrijk:
+# - Dit script reset database-state, maar verwijdert geen storage bucket files
+# - Niet gebruiken voor productie
+# - Niet gebruiken als je niet exact weet op welke database je zit
+
 
 ENVIRONMENT="${ENVIRONMENT:-}"
 I_UNDERSTAND="${I_UNDERSTAND:-}"
