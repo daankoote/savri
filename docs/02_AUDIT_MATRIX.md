@@ -41,6 +41,32 @@ NB:
 - Ze worden **niet als kolommen** gemodelleerd, maar altijd opgenomen in `event_data` (jsonb).
 - Queries en exports moeten daarom `event_data->>'field'` gebruiken.
 
+### Test-suite cleanup positie (CURRENT, bewezen 2026-03-12)
+
+Fresh test runs gebruiken een nieuw dossier, maar ruimen na afloop **alleen mutable child artefacten** op.
+
+Wat cleanup wél verwijdert:
+- `dossier_chargers` (via canonical edge delete)
+- `dossier_documents` / storage-objecten die aan created chargers hangen
+- andere mutable child state voor zover via bestaande delete-contracten opruimbaar
+
+Wat cleanup bewust níet hard verwijdert:
+- `dossiers` row
+- `outbound_emails` rows
+- `dossier_audit_events` rows
+
+Rationale:
+- `dossier_audit_events` is immutabel
+- hard delete van dossier-shell zou audit trail breken of FK/trigger-conflicten veroorzaken
+- test cleanup moet audit-first blijven, niet “database volledig leeg maken”
+
+Operational meaning:
+- een fresh testdossier eindigt als **retained dossier shell** met audit history
+- dit is CURRENT gewenst gedrag, geen cleanup failure
+
+Toekomst:
+- als lifecycle verder wordt uitgewerkt, gebeurt dat via tombstone/archive semantics, niet via hard delete van audit-gebonden dossiers
+
 ### Gateway rejects (belangrijk)
 Sommige rejects gebeuren **vóór** de edge function code draait (Supabase gateway).
 - Voorbeeld: 401 `Missing authorization header`.

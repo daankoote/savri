@@ -7,10 +7,19 @@ source "$(dirname "$0")/00_helpers.sh"
 echo ""
 echo "== CHARGER CONTRACT TESTS =="
 
+# HARD: token must match DB right now, otherwise auth tests are meaningless
+assert_token_matches_db
+
+require_dossier_token
+echo "TOKEN (sha256 prefix): $(sha256_str "$(dossier_token)" | cut -c1-16)..."
+
 FN_SAVE="$SUPABASE_URL/functions/v1/api-dossier-charger-save"
 FN_DELETE="$SUPABASE_URL/functions/v1/api-dossier-charger-delete"
 
-BAD_TOKEN="BAD-${DOSSIER_TOKEN}"
+# Deterministic valid MID for tests (NOT secret)
+MID_OK="${MID_OK:-1234567890123456}"
+
+BAD_TOKEN="BAD-$(dossier_token)"
 
 CHARGER_ID="$(get_state CHARGER_ID)"
 if [[ -z "${CHARGER_ID:-}" ]]; then
@@ -37,17 +46,38 @@ echo "PASS charger-save unauthorized"
 
 # 2) max chargers reject (only if at allowed max)
 if [[ -n "${ALLOWED_MAX:-}" && -n "${EXISTING_AFTER_SETUP:-}" && "$EXISTING_AFTER_SETUP" == "$ALLOWED_MAX" ]]; then
-  run_case \
-    "2) REJECT — charger-save (max chargers)" \
-    "$FN_SAVE" \
-    "{\"dossier_id\":\"$DOSSIER_ID\",\"token\":\"$DOSSIER_TOKEN\",\"serial_number\":\"TEST-$(now_ts)\",\"brand\":\"TEST\",\"model\":\"TEST\",\"power_kw\":11,\"notes\":\"reject max\"}" \
-    "reject-charger-max" \
-    "409" \
-    "yes" \
-    "charger_save_rejected" \
-    "validate_max_chargers" \
-    "max_chargers_reached" || exit 1
-  echo "PASS charger-save max chargers"
+  echo ""
+  echo "2) REJECT — charger-save (max chargers)"
+  echo "------------------------------------------------"
+  rid="reject-charger-max-$(now_ts)"
+  echo "request_id: $rid"
+  echo ""
+
+  # IMPORTANT: always include mid_number so validate_input cannot override expected result
+  payload="{\"dossier_id\":\"$DOSSIER_ID\",\"token\":\"$(dossier_token)\",\"serial_number\":\"TEST-$(now_ts)\",\"mid_number\":\"$MID_OK\",\"brand\":\"TEST\",\"model\":\"TEST\",\"power_kw\":11,\"notes\":\"reject max\"}"
+
+  RESP="$(http_call_with_idem "$FN_SAVE" "$payload" "$rid")"
+  HTTP="$(extract_http_status "$RESP")"
+  BODY="$(extract_body_json "$RESP")"
+  print_resp_head "$RESP" 30
+  echo ""
+
+  if [[ "$HTTP" == "409" ]]; then
+    audit_assert_for_request_id "$rid" "charger_save_rejected" "validate_max_chargers" "max_chargers_reached" "2) max chargers" || exit 1
+    echo "PASS charger-save max chargers"
+  elif [[ "$HTTP" == "401" ]]; then
+    # TEMP: auth is broken; prove audit says unauthorized
+    audit_assert_for_request_id "$rid" "charger_save_rejected" "auth" "unauthorized" "2) max chargers (auth broken)" || exit 1
+    echo "WARN: charger-save max returned 401 (auth broken, see audit token_hash_prefix in backend after deploy)"
+    exit 1
+  else
+    echo "ASSERT FAIL: expected HTTP 409 (or 401 while auth broken), got $HTTP"
+    echo "BODY (trunc):"
+    print_json_safe_trunc "$BODY" 800
+    exit 1
+  fi
+
+
 else
   echo "WARN: skip max-chargers test (not at allowed max). existing_after_setup=$EXISTING_AFTER_SETUP allowed_max=$ALLOWED_MAX"
 fi

@@ -11,11 +11,27 @@ echo "== SETUP =="
 need SUPABASE_URL
 need SUPABASE_ANON_KEY
 need SUPABASE_SERVICE_ROLE_KEY
-need DOSSIER_ID
-need DOSSIER_TOKEN
 
-# Optional: force creation of at least 1 charger (only if room exists)
-FORCE_CREATE="${FORCE_CREATE:-0}"
+# DOSSIER_ID must come from fresh bootstrap state
+DOSSIER_ID_STATE="$(get_state DOSSIER_ID)"
+if [[ -n "${DOSSIER_ID_STATE:-}" ]]; then
+  export DOSSIER_ID="$DOSSIER_ID_STATE"
+fi
+
+need DOSSIER_ID
+
+# CURRENT contract: fresh-only
+TEST_MODE="${TEST_MODE:-fresh}"
+if [[ "$TEST_MODE" != "fresh" ]]; then
+  echo "FATAL: unsupported TEST_MODE='$TEST_MODE'. CURRENT contract is fresh-only."
+  exit 1
+fi
+
+# In fresh mode token comes from intake/mail bootstrap, never reset here by default
+TOKEN_RESET=0
+
+# Test-only data (NOT secret)
+TEST_MID_NUMBER="${TEST_MID_NUMBER:-MID-TEST-0001}"
 
 # SAFETY: service role key must NEVER equal anon
 if [[ "${SUPABASE_ANON_KEY:-}" == "${SUPABASE_SERVICE_ROLE_KEY:-}" ]]; then
@@ -25,7 +41,9 @@ fi
 
 # Read allowed chargers from DB (source of truth)
 get_allowed_max_from_db() {
-  curl -s \
+    curl -sS \
+    --connect-timeout 10 \
+    --max-time 30 \
     "$SUPABASE_URL/rest/v1/dossiers?select=charger_count&id=eq.$DOSSIER_ID&limit=1" \
     -H "apikey: $SUPABASE_ANON_KEY" \
     -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
@@ -58,7 +76,9 @@ if [[ "$TARGET_CHARGERS" -gt "$ALLOWED_MAX" ]]; then
 fi
 
 get_all_charger_ids() {
-  curl -s \
+    curl -sS \
+    --connect-timeout 10 \
+    --max-time 30 \
     "$SUPABASE_URL/rest/v1/dossier_chargers?select=id,created_at&dossier_id=eq.$DOSSIER_ID&order=created_at.asc" \
     -H "apikey: $SUPABASE_ANON_KEY" \
     -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
@@ -72,7 +92,7 @@ create_charger_and_get_id() {
   local resp http body id
   resp="$(http_call_with_idem \
     "$SUPABASE_URL/functions/v1/api-dossier-charger-save" \
-    "{\"dossier_id\":\"$DOSSIER_ID\",\"token\":\"$DOSSIER_TOKEN\",\"serial_number\":\"TEST-$rid-$serial\",\"brand\":\"TEST\",\"model\":\"TEST\",\"power_kw\":11,\"notes\":\"audit-test setup\"}" \
+    "{\"dossier_id\":\"$DOSSIER_ID\",\"token\":\"$(dossier_token)\",\"serial_number\":\"TEST-$rid-$serial\",\"mid_number\":\"$TEST_MID_NUMBER\",\"brand\":\"TEST\",\"model\":\"TEST\",\"power_kw\":11,\"notes\":\"audit-test setup\"}" \
     "$rid")"
 
   http="$(extract_http_status "$resp")"
@@ -81,10 +101,10 @@ create_charger_and_get_id() {
   if [[ "$http" != "200" ]]; then
     echo "FATAL: charger-create failed (HTTP $http) rid=$rid"
     echo "BODY:"
-    echo "$body"
+    print_json_safe_trunc "$body" 1200
     echo ""
     echo "RAW (first 60 lines):"
-    echo "$resp" | sed -n '1,60p'
+    print_resp_head "$resp" 60
     return 1
   fi
 
@@ -116,7 +136,6 @@ EXISTING_COUNT="${#EXISTING_CHARGER_IDS[@]}"
 echo "Allowed max chargers (DB): $ALLOWED_MAX"
 echo "Target chargers: $TARGET_CHARGERS"
 echo "Existing chargers: $EXISTING_COUNT"
-echo "FORCE_CREATE: $FORCE_CREATE"
 
 if [[ "$EXISTING_COUNT" -gt "$TARGET_CHARGERS" ]]; then
   echo "FATAL: dossier has more chargers than TARGET_CHARGERS. Refuse to run."
@@ -126,7 +145,13 @@ fi
 CREATED_CHARGER_IDS=()
 
 # Normal fill-to-target
-NEED_CREATE=$((TARGET_CHARGERS - EXISTING_COUNT))
+if [[ "$EXISTING_COUNT" -ge "$TARGET_CHARGERS" ]]; then
+  echo "No chargers to create (existing_count=$EXISTING_COUNT target=$TARGET_CHARGERS)."
+  NEED_CREATE=0
+else
+  NEED_CREATE=$((TARGET_CHARGERS - EXISTING_COUNT))
+fi
+
 if [[ "$NEED_CREATE" -gt 0 ]]; then
   echo "Creating missing chargers to reach target: $NEED_CREATE"
   for i in $(seq 1 "$NEED_CREATE"); do
@@ -150,22 +175,6 @@ if [[ "$NEED_CREATE" -gt 0 ]]; then
   done
 else
   echo "No chargers to create."
-fi
-
-# Optional: force-create 1 extra charger for happy-path,
-# BUT only if we still have room under TARGET_CHARGERS (or under ALLOWED_MAX if TARGET==ALLOWED)
-# In practice: this only helps if you keep dossier below target between runs.
-if [[ "$FORCE_CREATE" == "1" ]]; then
-  CURRENT_AFTER=$((EXISTING_COUNT + ${#CREATED_CHARGER_IDS[@]}))
-  if [[ "$CURRENT_AFTER" -lt "$TARGET_CHARGERS" ]]; then
-    rid="setup-force-$(now_ts)"
-    cid="$(create_charger_and_get_id "$rid" "force")"
-    [[ -z "${cid:-}" ]] && exit 1
-    CREATED_CHARGER_IDS+=("$cid")
-    echo " - force created charger_id: $cid"
-  else
-    echo "FORCE_CREATE requested but no room (current_after=$CURRENT_AFTER target=$TARGET_CHARGERS)."
-  fi
 fi
 
 # Choose CHARGER_ID for reject tests (prefer existing, else first created)
@@ -198,3 +207,9 @@ set_state CREATED_CHARGER_IDS "$CREATED_CSV"
 
 echo "SETUP OK — CHARGER_ID (rejects): $CHARGER_ID"
 echo "SETUP OK — created chargers this run: ${#CREATED_CHARGER_IDS[@]}"
+
+if [[ "${#CREATED_CHARGER_IDS[@]}" -eq 0 ]]; then
+  echo "FATAL: fresh setup requires created chargers this run, got 0."
+  echo "This means setup did not create chargers for a fresh dossier."
+  exit 1
+fi

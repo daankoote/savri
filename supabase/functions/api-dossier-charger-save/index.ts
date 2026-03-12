@@ -109,7 +109,7 @@ serve(async (req) => {
 
   const parsed = await req.json().catch(() => ({} as any));
   const dossier_id = parsed?.dossier_id ? String(parsed.dossier_id) : null;
-  const token = parsed?.token ? String(parsed.token) : null;
+  const token = parsed?.token ? String(parsed.token).trim() : null;
 
   // Idempotency required
   const idemKey = String(meta.idempotency_key || meta.request_id || "").trim();
@@ -182,8 +182,54 @@ serve(async (req) => {
     return finalize(idemScopedKey, status, { ok: false, error: message });
   }
 
-  const charger_id = parsed?.charger_id ? String(parsed.charger_id) : null;
 
+
+  const { data: dossier, error: dErr } = await SB
+    .from("dossiers")
+    .select("id, locked_at, status, charger_count")
+    .eq("id", dossier_id)
+    .eq("access_token_hash", tokenHash)
+    .maybeSingle();
+
+  if (dErr) return fail("dossier_lookup", 500, dErr.message, { reason: "dossier_lookup_failed", error: dErr.message });
+  if (!dossier) {
+    // forensic: read current DB hash for this dossier_id (no secrets, prefix only)
+    let dbHashPrefix: string | null = null;
+    try {
+      const { data: row } = await SB
+        .from("dossiers")
+        .select("access_token_hash")
+        .eq("id", dossier_id)
+        .maybeSingle();
+      const h = (row as any)?.access_token_hash ? String((row as any).access_token_hash) : "";
+      dbHashPrefix = h ? h.slice(0, 16) : null;
+    } catch {
+      dbHashPrefix = null;
+    }
+
+    await insertAuditFailOpen(
+      SB,
+      {
+        dossier_id,
+        actor_type: "customer",
+        event_type: "charger_save_rejected",
+        event_data: {
+          stage: "auth",
+          status: 401,
+          message: "Unauthorized",
+          reason: "unauthorized",
+          token_hash_prefix: tokenHash.slice(0, 16),
+          db_hash_prefix: dbHashPrefix,
+        },
+      },
+      meta,
+      { actor_ref: `dossier:${dossier_id}|token:invalid`, environment: ENVIRONMENT },
+    );
+    const keyUnauthorized = scopedIdemKey(dossier_id, "invalid", idemKey);
+    return finalize(keyUnauthorized, 401, { ok: false, error: "Unauthorized" });
+  }
+
+  const charger_id = parsed?.charger_id ? String(parsed.charger_id) : null;
   const serial = normStr(parsed?.serial_number, 80);
   const mid = normStr(parsed?.mid_number ?? parsed?.meter_id, 80); // canonical: mid_number, legacy: meter_id
   const b = normStr(parsed?.brand, 80);
@@ -207,30 +253,7 @@ serve(async (req) => {
     });
   }
 
-  const { data: dossier, error: dErr } = await SB
-    .from("dossiers")
-    .select("id, locked_at, status, charger_count")
-    .eq("id", dossier_id)
-    .eq("access_token_hash", tokenHash)
-    .maybeSingle();
-
-  if (dErr) return fail("dossier_lookup", 500, dErr.message, { reason: "dossier_lookup_failed", error: dErr.message });
-  if (!dossier) {
-    await insertAuditFailOpen(
-      SB,
-      {
-        dossier_id,
-        actor_type: "customer",
-        event_type: "charger_save_rejected",
-        event_data: { stage: "auth", status: 401, message: "Unauthorized", reason: "unauthorized" },
-      },
-      meta,
-      { actor_ref: `dossier:${dossier_id}|token:invalid`, environment: ENVIRONMENT },
-    );
-    const keyUnauthorized = scopedIdemKey(dossier_id, "invalid", idemKey);
-    return finalize(keyUnauthorized, 401, { ok: false, error: "Unauthorized" });
-  }
-
+  
   // Idempotency cache retrieval MUST be after auth, scoped to dossier+actor
   const cached = await tryGetIdempotentResponse(SB, idemScopedKey);
   if (cached) return json(req, cached.status, cached.body);

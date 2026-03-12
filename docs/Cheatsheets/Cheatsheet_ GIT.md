@@ -150,7 +150,7 @@ Je kunt dit bestand **wel committen**:
 git add .git-cheatsheet.md
 git commit -m "docs: add git cheatsheet"
 git push
-
+```
 
 Dit verandert niets aan je site, maar helpt Future-You enorm.
 

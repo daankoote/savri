@@ -1,6 +1,14 @@
-# scripts/tests/run_all.sh
-
 #!/usr/bin/env bash
+
+# scripts/tests/run_all.sh
+# Fresh-only test runner:
+# - bootstrap een nieuw testdossier via echte intake/mailflow
+# - hydrateer DOSSIER_ID + DOSSIER_TOKEN vanuit state
+# - run contract/reject/happy-path tests
+# - ruim mutable child artefacten op
+# - behoud dossier/outbound/audit shell vanwege audit immutability
+
+
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -19,33 +27,67 @@ else
   exit 1
 fi
 
+
 # ----------------------------
-# HARD GUARD: allowlist DOSSIER_ID
+# Test mode (CURRENT: fresh-first)
 # ----------------------------
-ALLOWLIST_FILE="${ALLOWLIST_FILE:-$DIR/.allowlist_dossiers}"
+TEST_MODE="${TEST_MODE:-fresh}"
 
-if [[ -z "${DOSSIER_ID:-}" ]]; then
-  echo "FATAL: DOSSIER_ID missing (env)."
+if [[ "$TEST_MODE" != "fresh" ]]; then
+  echo "FATAL: unsupported TEST_MODE='$TEST_MODE'. CURRENT contract is fresh-only."
   exit 1
 fi
 
-if [[ ! -f "$ALLOWLIST_FILE" ]]; then
-  echo "FATAL: allowlist file missing: $ALLOWLIST_FILE"
-  echo "Create it and add the allowed DOSSIER_ID(s), one per line."
+# ----------------------------
+# Load helpers AFTER env
+# ----------------------------
+source "$DIR/00_helpers.sh"
+
+# Make redact() available inside process substitution subshell (macOS bash needs this)
+export -f redact
+
+# ----------------------------
+# Output: always redacted + saved to file (overwrite each run)
+# ----------------------------
+OUTDIR="$DIR/output"
+OUTFILE="$OUTDIR/latest.log"
+mkdir -p "$OUTDIR"
+: > "$OUTFILE"
+
+# Force ALL stdout+stderr through redact + tee
+exec > >(redact | tee "$OUTFILE") 2>&1
+
+export START_ISO="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+echo "LOG FILE: $OUTFILE"
+echo "START_ISO: $START_ISO"
+
+echo ""
+echo "=================================="
+echo "ENVAL AUDIT TEST SUITE"
+echo "=================================="
+
+reset_state
+
+"$DIR/00_fresh_dossier.sh"
+
+DOSSIER_ID_STATE="$(get_state DOSSIER_ID)"
+DOSSIER_TOKEN_STATE="$(get_state DOSSIER_TOKEN)"
+
+if [[ -z "${DOSSIER_ID_STATE:-}" || -z "${DOSSIER_TOKEN_STATE:-}" ]]; then
+  echo "FATAL: fresh bootstrap did not populate state DOSSIER_ID/DOSSIER_TOKEN"
   exit 1
 fi
 
-# match exact line, ignoring comments/blank lines
-if ! grep -v '^[[:space:]]*#' "$ALLOWLIST_FILE" | grep -v '^[[:space:]]*$' | grep -Fxq "$DOSSIER_ID"; then
-  echo "FATAL: DOSSIER_ID is NOT in allowlist. Refuse to run."
-  echo "DOSSIER_ID: $DOSSIER_ID"
-  echo "Allowlist:  $ALLOWLIST_FILE"
-  exit 1
-fi
+export DOSSIER_ID="$DOSSIER_ID_STATE"
+export DOSSIER_TOKEN="$DOSSIER_TOKEN_STATE"
+
+echo "RUN) using fresh DOSSIER_ID from state: $DOSSIER_ID"
 
 # ----------------------------
 # OPTIONAL GUARD: customer_email must look like a test dossier
 # Requires SUPABASE_SERVICE_ROLE_KEY
+# Runs ONLY after fresh bootstrap, because DOSSIER_ID now exists
 # ----------------------------
 if [[ -n "${TEST_EMAIL_REGEX:-}" ]]; then
   if [[ -z "${SUPABASE_URL:-}" || -z "${SUPABASE_SERVICE_ROLE_KEY:-}" || -z "${SUPABASE_ANON_KEY:-}" ]]; then
@@ -73,24 +115,20 @@ if [[ -n "${TEST_EMAIL_REGEX:-}" ]]; then
   fi
 fi
 
-
-# ----------------------------
-# Load helpers AFTER env + guard
-# ----------------------------
-source "$DIR/00_helpers.sh"
-
-export START_ISO="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-
-echo ""
-echo "=================================="
-echo "ENVAL AUDIT TEST SUITE"
-echo "=================================="
-
-reset_state
+echo "DOSSIER_ID: $DOSSIER_ID"
 
 "$DIR/01_setup.sh"
+echo ""
+echo "POST-SETUP PROOF:"
+echo " - DOSSIER_ID (state): $(get_state DOSSIER_ID)"
+echo " - DOSSIER_ID (env):   ${DOSSIER_ID:-<empty>}"
+echo " - token sha256 prefix: $(sha256_str "$(dossier_token)" | cut -c1-16)..."
 "$DIR/02_intake_contract.sh"
 "$DIR/03_login_tests.sh"
+echo ""
+echo "POST-LOGIN PROOF:"
+echo " - DOSSIER_TOKEN sha256 prefix: $(sha256_str "$(dossier_token)" | cut -c1-16)..."
+"$DIR/04_charger_contract.sh"
 "$DIR/05_upload_rejects.sh"
 "$DIR/06_upload_happy.sh"
 "$DIR/07_cleanup.sh"

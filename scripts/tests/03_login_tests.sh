@@ -41,26 +41,24 @@ else:
 
 echo "Using dossier email (masked): $MASKED"
 
-# VALID LOGIN REQUEST
-RID="login-valid-$(now_ts)"
+# FRESH FLOW: bootstrap already triggered dossier_link mail.
+# Immediate login request should therefore be throttled.
+RID="login-throttled-$(now_ts)"
 
 RESP="$(http_call_with_idem "$FN" \
 "{\"dossier_id\":\"$DOSSIER_ID\",\"email\":\"$DOSSIER_EMAIL\"}" \
 "$RID")"
 
 HTTP="$(extract_http_status "$RESP")"
-if [[ "$HTTP" != "200" ]]; then
-  echo "ASSERT FAIL: login valid expected 200 got $HTTP"
-  echo "$(extract_body_json "$RESP")"
+if [[ "$HTTP" != "200" && "$HTTP" != "429" ]]; then
+  echo "ASSERT FAIL: login throttled expected 200 or 429 got $HTTP"
+  print_json_safe_trunc "$(extract_body_json "$RESP")" 1200
   exit 1
 fi
 
-# IMPORTANT:
-# We assert event_type = login_link_issued (your intended canonical)
-# If your backend uses a different event_type, the helper prints the row so you can lock canon in 1 edit.
-audit_assert_for_request_id "$RID" "login_link_issued" "" "" "LOGIN valid" || exit 1
+audit_assert_for_request_id "$RID" "login_request_throttled" "" "recent_mail_exists" "LOGIN throttled after fresh bootstrap" || exit 1
 
-echo "PASS login valid (audit ok)"
+echo "PASS login throttled after fresh bootstrap (audit ok)"
 
 # EMAIL MISMATCH (should still be 200 but audit reject)
 RID="login-mismatch-$(now_ts)"
