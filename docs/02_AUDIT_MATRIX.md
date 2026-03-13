@@ -84,7 +84,7 @@ Sommige rejects gebeuren **vóór** de edge function code draait (Supabase gatew
 - session_created — success — api-dossier-get (token mode; dossier_sessions insert)
 - dossier_review_rejected_incomplete — reject — api-dossier-evaluate
 - dossier_ready_for_review — success — api-dossier-evaluate
-- dossier_locked_for_review — success — api-dossier-evaluate (en/of submit-review legacy)
+- dossier_locked_for_review — success — api-dossier-evaluate
 - dossier_export_generated — success — api-dossier-export (locked only)
 - dossier_export_rejected — reject/fail — api-dossier-export
 
@@ -319,8 +319,9 @@ Bron: `supabase/functions/api-dossier-get/index.ts` + runtime endpoints die `aut
 - dossier_export_rejected — reject — api-dossier-export (session mode)
 
 NB:
-- Er is geen aparte `session_revoked` audit event in CURRENT code.
-- Als revoke/refresh wordt toegevoegd, moet audit matrix uitgebreid worden met expliciete events.
+- Er is geen aparte `session_revoked` of `session_expired` audit event in CURRENT code.
+- Session failures landen momenteel als reject event van het aangeroepen endpoint, met session-auth reason in `event_data`.
+- Als expliciete revoke/refresh lifecycle wordt toegevoegd, moet audit matrix uitgebreid worden met aparte session events.
 
 ## 8.2 Login Recovery (CURRENT)
 
@@ -341,11 +342,13 @@ Security model:
 login_request_received — success — api-dossier-login-request
 
 login_link_issued — success — api-dossier-login-request
-  event_data bevat:
-  - dossier_id
-  - email_hash (no raw email)
-  - token_rotated = true
+  event_data bevat minimaal:
+  - outbound_email_id
   - expires_at
+
+NB:
+- raw email wordt niet in `actor_ref` gezet.
+- `actor_ref` gebruikt masked email scope (`dossier:<id>|email:xx***`).
 
 ### Reject events
 

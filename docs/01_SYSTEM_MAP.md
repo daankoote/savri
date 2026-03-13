@@ -32,7 +32,6 @@ De System Map moet technisch neutraal blijven zodat meerdere inboekers hierop ku
 - ./dossier.html
 - ./hoe-het-werkt.html
 - ./index.html
-- ./installateur.html (legacy)
 - ./mandaat.html
 - ./pricing.html
 - ./privacyverklaring.html
@@ -74,7 +73,7 @@ Canonical policy:
 - ./assets/js/script.js
 - ./assets/js/api.js (frontend shared helpers: url params, session token storage, idempotent apiPost wrapper)
 - ./assets/js/pages/dossier.js
-- ./supabase/functions/_shared/customer_auth.ts (server-side shared helper voor dossier session auth + scoped idempotency actor context)
+
 
 
 ---
@@ -231,6 +230,19 @@ Evaluate-flow:
 - Resend voor transactional mails
 - Google Workspace voor inkomend/human mail
 - Netlify voor hosting/domains
+
+### Backend shared helpers (CURRENT)
+- `supabase/functions/_shared/customer_auth.ts`
+  - gedeelde helper voor dossier session-auth
+  - levert:
+    - `requireCustomerSession(...)`
+    - `actorRefForSession(...)`
+    - `scopedSessionIdemKey(...)`
+
+Doel:
+- uniforme session-auth over dossier runtime endpoints
+- uniforme actor_ref op basis van session token hash
+- uniforme idempotency scoping per dossier + session
 
 ## 4) Core DB tables (samenvatting)
 
@@ -446,10 +458,12 @@ Evidence / export
 Legacy/compat
 - api-dossier-submit-review is verwijderd; canonical review/finalize endpoint is `api-dossier-evaluate`
 - api-dossier-address-preview is verwijderd; address preview loopt via `api-dossier-address-verify`
-- api-dossier-email-verify-start/complete (waarschijnlijk outdated; MVP gebruikt “link possession”)
+
 
 ## 7) Security model (kern)
-- Customer auth: possession token → sha256(token) == `dossiers.access_token_hash`
+- Customer auth:
+  - start-auth: possession of link-token → sha256(token) == `dossiers.access_token_hash`
+  - runtime-auth: geldige server-side session in `public.dossier_sessions`
 - Hard lock enforcement op alle write endpoints
 - CORS allowlist (ALLOWED_ORIGINS + Vary: Origin)
 - Mail-worker JWT verify: **UIT** (legacy JWT) — security komt uit shared-secret header + private env secrets.
@@ -487,7 +501,8 @@ Legacy/compat
   - last_seen_at kan worden bijgewerkt voor monitoring/ops
 
 Belangrijk:
-- Link-token is niet voldoende voor dossier reads/writes.
+- Link-token is alleen voor initiële exchange in `api-dossier-get`.
+- Session-token is canoniek voor dossier runtime reads/writes.
 
 Shared helper (CURRENT):
 - `supabase/functions/_shared/customer_auth.ts`

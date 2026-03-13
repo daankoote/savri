@@ -744,7 +744,27 @@ Bewijs
   - geen actieve references meer naar verwijderde endpoints in runtime code
   - frontend laadt `assets/js/api.js` canoniek
 
+## 2026-03-13 — Docs truth aligned op session-auth canonical model + legacy endpoint removal
 
+Wijzigingen in documentatie
+- `01_SYSTEM_MAP.md` aangepast zodat CURRENT waarheid nu expliciet is:
+  - runtime dossier-auth = session-token
+  - link-token alleen voor initiële exchange via `api-dossier-get`
+  - `assets/js/api.js` is frontend source-of-truth
+  - `supabase/functions/_shared/customer_auth.ts` verplaatst naar backend shared helpers i.p.v. frontend assets
+- `02_AUDIT_MATRIX.md` opgeschoond:
+  - `api-dossier-submit-review` verwijderd als actuele reviewbron
+  - `api-dossier-address-preview` verwijderd als actuele previewbron
+  - session rejects explicieter beschreven als endpoint-scoped reject events
+  - login recovery eventbeschrijving aangepast naar CURRENT codegedrag
+- `10_EDGE_FUNCTIONS_CONTRACT.md` bevestigd:
+  - CORE lijst zonder legacy endpoints
+  - UTILITY lijst bevat alleen `mail-worker`
+  - session-token in request body is CURRENT canonical runtime auth model
+
+Doel
+- CURRENT docs weer één bron van waarheid maken
+- voorkomen dat historische tekst als actuele architectuur wordt gelezen
 
 ---
 

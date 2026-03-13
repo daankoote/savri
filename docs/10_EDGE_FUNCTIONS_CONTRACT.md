@@ -88,10 +88,11 @@ Binnen Enval geldt het volgende auth-model:
 * Mag niet worden gebruikt voor read/write business endpoints.
 * Link-token mag slechts voor **exchange** gebruikt worden.
 * Elk dossier endpoint dat read/write doet accepteert géén link-token.
+* Enige uitzondering: `api-dossier-get` in token-mode voor initiële token→session exchange.
 
 ### 2.3.2a Session Token
 
-* Wordt uitgegeven via exchange endpoint.
+* Wordt uitgegeven via `api-dossier-get` in token-mode.
 * Is short-lived (TTL via `dossier_sessions`).
 * Wordt gebruikt als request body veld `session_token` voor dossier runtime endpoints.
 * Is vereist voor alle dossier read- en write-endpoints.
@@ -112,7 +113,7 @@ Doel:
 - uniforme actor_ref op session-basis
 - uniforme idempotency-scope per dossier+session
 
-Nieuwe of aangepaste dossier-endpoints horen deze helper te gebruiken, tenzij er een expliciete en gedocumenteerde reden is om daarvan af te wijken.
+Nieuwe of aangepaste dossier runtime endpoints horen deze helper te gebruiken, tenzij er een expliciete, code-accuraat gedocumenteerde reden is om daarvan af te wijken.
 
 ### 2.3.3 Read Endpoints
 
@@ -150,6 +151,11 @@ Auth-grenzen zijn expliciet. Impliciete aannames zijn niet toegestaan.
 * api-dossier-export
 * api-dossier-evaluate
 
+### Verwijderde legacy endpoints (niet meer classificeren)
+- `api-dossier-submit-review`
+- `api-dossier-address-preview`
+
+Deze endpoints maken geen deel meer uit van de actuele function inventory en horen niet meer in CORE/UTILITY lijsten terug te komen.
 
 Deze lijst is source-of-truth.
 
