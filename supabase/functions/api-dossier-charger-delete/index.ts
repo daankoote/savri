@@ -9,6 +9,10 @@ import {
   tryGetIdempotentResponse,
   storeIdempotentResponseFailOpen,
 } from "../_shared/audit.ts";
+import {
+  requireCustomerSession,
+  scopedSessionIdemKey,
+} from "../_shared/customer_auth.ts";
 
 // -------------------- CORS --------------------
 function parseAllowedOrigins(): string[] {
@@ -69,18 +73,6 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-async function sha256Hex(input: string) {
-  const data = new TextEncoder().encode(input);
-  const hash = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-function actorRefForCustomer(dossierId: string, tokenHash: string) {
-  return `dossier:${dossierId}|token:${tokenHash.slice(0, 16)}`;
-}
-
 function isDbPolicyImmutableError(msg: string) {
   const m = (msg || "").toLowerCase();
   return m.includes("immutable_row") ||
@@ -105,59 +97,44 @@ serve(async (req) => {
     return bad(req, "Server misconfigured (missing secrets)", 500);
   }
 
-  // -------------------- Idempotency (required, header only) --------------------
   const idemKey = String(meta.idempotency_key || "").trim();
   if (!idemKey) return bad(req, "Missing Idempotency-Key", 400);
 
-  // -------------------- parse body --------------------
   const parsed = await req.json().catch(() => ({} as any));
   const dossier_id = parsed?.dossier_id ? String(parsed.dossier_id) : null;
-  const token = parsed?.token ? String(parsed.token) : null;
+  const session_token = parsed?.session_token ? String(parsed.session_token) : null;
   const charger_id = parsed?.charger_id ? String(parsed.charger_id) : null;
 
-  if (dossier_id) {
-    const cached = await tryGetIdempotentResponse(SB, idemKey);
-    if (cached) return json(req, cached.status, cached.body);
+  if (!dossier_id || !session_token || !charger_id) {
+    return json(req, 400, { ok: false, error: "Missing dossier_id/session_token/charger_id" });
   }
+
+  const auth = await requireCustomerSession(
+    SB,
+    dossier_id,
+    session_token,
+    meta,
+    "charger_delete_rejected",
+  );
+
+  if (!auth.ok) {
+    return json(req, auth.status, { ok: false, error: auth.error });
+  }
+
+  const idemScopedKey = scopedSessionIdemKey(dossier_id, auth.session_token_hash, idemKey);
+  const cached = await tryGetIdempotentResponse(SB, idemScopedKey);
+  if (cached) return json(req, cached.status, cached.body);
 
   async function finalize(status: number, body: any) {
-    await storeIdempotentResponseFailOpen(SB, idemKey, status, body);
+    await storeIdempotentResponseFailOpen(SB, idemScopedKey, status, body);
     return json(req, status, body);
   }
-
-  if (!dossier_id || !token || !charger_id) {
-    // IMPORTANT: als dossier_id ontbreekt => geen audit (scope ontbreekt)
-    if (dossier_id) {
-      await insertAuditFailOpen(
-        SB,
-        {
-          dossier_id,
-          actor_type: "customer",
-          event_type: "charger_delete_rejected",
-          event_data: {
-            stage: "validate_input",
-            status: 400,
-            message: "Missing dossier_id/token/charger_id",
-            reason: "missing_fields",
-            charger_id: charger_id ?? null,
-          },
-        },
-        meta,
-        { environment: ENVIRONMENT },
-      );
-    }
-    return finalize(400, { ok: false, error: "Missing dossier_id/token/charger_id" });
-  }
-
-  const tokenHash = await sha256Hex(String(token));
-  const actor_ref = actorRefForCustomer(dossier_id, tokenHash);
 
   async function reject(
     stage: string,
     status: number,
     message: string,
     extra?: Record<string, unknown>,
-    actorRefOverride?: string,
   ) {
     await insertAuditFailOpen(
       SB,
@@ -168,7 +145,7 @@ serve(async (req) => {
         event_data: { stage, status, message, ...(extra || {}) },
       },
       meta,
-      { actor_ref: actorRefOverride ?? actor_ref, environment: ENVIRONMENT },
+      { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
     );
     return finalize(status, { ok: false, error: message, ...(extra || {}) });
   }
@@ -183,31 +160,19 @@ serve(async (req) => {
         event_data: { stage, status, message, ...(extra || {}) },
       },
       meta,
-      { actor_ref, environment: ENVIRONMENT },
+      { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
     );
     return finalize(status, { ok: false, error: message, ...(extra || {}) });
   }
 
-  // -------------------- dossier auth + lock --------------------
   const { data: dossier, error: dErr } = await SB
     .from("dossiers")
     .select("id, locked_at, status")
     .eq("id", dossier_id)
-    .eq("access_token_hash", tokenHash)
     .maybeSingle();
 
   if (dErr) return fail("dossier_lookup", 500, dErr.message, { reason: "db_error", charger_id });
-
-  if (!dossier) {
-    // Unauthorized: actor_ref moet token:invalid zijn
-    return reject(
-      "auth",
-      401,
-      "Unauthorized",
-      { reason: "unauthorized", charger_id },
-      `dossier:${dossier_id}|token:invalid`,
-    );
-  }
+  if (!dossier) return reject("dossier_lookup", 404, "Dossier niet gevonden.", { reason: "not_found", charger_id });
 
   const st = String(dossier.status || "");
   if (dossier.locked_at || st === "in_review" || st === "ready_for_booking") {
@@ -218,7 +183,6 @@ serve(async (req) => {
     });
   }
 
-  // -------------------- charger exists? --------------------
   const { data: ch, error: chErr } = await SB
     .from("dossier_chargers")
     .select("id")
@@ -245,7 +209,6 @@ serve(async (req) => {
     return true;
   }
 
-  // -------------------- read docs list (for reporting + storage delete) --------------------
   const { data: docs, error: docErr } = await SB
     .from("dossier_documents")
     .select("id, storage_bucket, storage_path, filename")
@@ -254,7 +217,6 @@ serve(async (req) => {
 
   if (docErr) return fail("docs_read", 500, `Docs read failed: ${docErr.message}`, { reason: "db_error", charger_id });
 
-  // -------------------- 1) DB delete docs FIRST --------------------
   const { error: dbDocDelErr } = await SB
     .from("dossier_documents")
     .delete()
@@ -275,7 +237,6 @@ serve(async (req) => {
     return fail("db_delete_docs", 500, `Document delete failed: ${msg}`, { reason: "db_error", charger_id });
   }
 
-  // -------------------- 2) Storage delete AFTER db delete (fail-open) --------------------
   let storageDeleted = 0;
   let storageFailed = 0;
 
@@ -314,14 +275,13 @@ serve(async (req) => {
           },
         },
         meta,
-        { actor_ref, environment: ENVIRONMENT },
+        { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
       );
     } else {
       storageDeleted += paths.length;
     }
   }
 
-  // -------------------- 3) Delete charger AFTER docs removed --------------------
   const { error: delErr } = await SB
     .from("dossier_chargers")
     .delete()
@@ -352,7 +312,7 @@ serve(async (req) => {
       },
     },
     meta,
-    { actor_ref, environment: ENVIRONMENT },
+    { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
   );
 
   return finalize(200, {

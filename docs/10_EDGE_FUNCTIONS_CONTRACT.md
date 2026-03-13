@@ -37,7 +37,7 @@ Geen impliciete aannames.
 Geen stilzwijgende uitzonderingen.
 
 Nieuwe functie toegevoegd?
-→ Moet worden opgenomen in `scripts/edge-uniformity.sh` onder `CORE_FUNCS` of `UTILITY_FUNCS`.
+→ Moet worden opgenomen in `scripts/tools/edge-uniformity.sh` onder `CORE_FUNCS` of `UTILITY_FUNCS`.
 → Anders: FAIL.
 
 ---
@@ -89,17 +89,30 @@ Binnen Enval geldt het volgende auth-model:
 * Link-token mag slechts voor **exchange** gebruikt worden.
 * Elk dossier endpoint dat read/write doet accepteert géén link-token.
 
-### 2.3.2 Session Token
+### 2.3.2a Session Token
 
 * Wordt uitgegeven via exchange endpoint.
 * Is short-lived (TTL via `dossier_sessions`).
-* Wordt gebruikt via `Authorization: Bearer <session_token>`.
+* Wordt gebruikt als request body veld `session_token` voor dossier runtime endpoints.
 * Is vereist voor alle dossier read- en write-endpoints.
 * Geldigheid is server-side: `dossier_sessions` (expires/revoked).
 * Client storage is een convenience, geen truth.
 NB:
 - Enval heeft geen aparte exchange function.
 - Session minting gebeurt in `api-dossier-get` (token mode).
+
+### 2.3.2b Shared auth helper (CURRENT)
+
+Voor dossier runtime endpoints is de gedeelde helper:
+
+- `supabase/functions/_shared/customer_auth.ts`
+
+Doel:
+- uniforme session-auth
+- uniforme actor_ref op session-basis
+- uniforme idempotency-scope per dossier+session
+
+Nieuwe of aangepaste dossier-endpoints horen deze helper te gebruiken, tenzij er een expliciete en gedocumenteerde reden is om daarvan af te wijken.
 
 ### 2.3.3 Read Endpoints
 
@@ -132,7 +145,6 @@ Auth-grenzen zijn expliciet. Impliciete aannames zijn niet toegestaan.
 * api-dossier-doc-download-url
 * api-dossier-upload-url
 * api-dossier-upload-confirm
-* api-dossier-submit-review
 * api-dossier-get
 * api-dossier-login-request
 * api-dossier-export
@@ -177,7 +189,6 @@ Waarom META verplicht is:
 
 ## 3.3 Canonical UTILITY lijst
 
-* api-dossier-address-preview
 * mail-worker
 
 Nieuwe utility?
@@ -228,7 +239,7 @@ Command:
 
 ```bash
 cd /Users/daankoote/dev/enval
-./scripts/edge-uniformity.sh
+./scripts/tools/edge-uniformity.sh
 ```
 
 Resultaat:

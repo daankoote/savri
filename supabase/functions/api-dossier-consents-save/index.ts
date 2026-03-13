@@ -5,7 +5,14 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 import { getReqMeta } from "../_shared/reqmeta.ts";
 import { insertAuditFailOpen } from "../_shared/audit.ts";
-import { withIdempotencyStrict } from "../_shared/idempotency.ts";
+import {
+  requireCustomerSession,
+  scopedSessionIdemKey,
+} from "../_shared/customer_auth.ts";
+import {
+  tryGetIdempotentResponse,
+  storeIdempotentResponseFailOpen,
+} from "../_shared/audit.ts";
 
 // -------------------- CORS --------------------
 function parseAllowedOrigins(): string[] {
@@ -53,22 +60,12 @@ function getEnvironment(): string {
   ).toLowerCase();
 }
 
-async function sha256Hex(input: string) {
-  const data = new TextEncoder().encode(input);
-  const hash = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
 function nowIso() {
   return new Date().toISOString();
 }
 
 function asBool(v: unknown) {
   return v === true;
-}
-
-function actorRefForCustomer(dossierId: string, tokenHash: string): string {
-  return `dossier:${dossierId}|token:${tokenHash.slice(0, 16)}`;
 }
 
 serve(async (req) => {
@@ -83,158 +80,112 @@ serve(async (req) => {
       auth: { persistSession: false },
     });
 
-    // STRICT: Idempotency-Key verplicht (write endpoint)
     const idemKey = String(meta.idempotency_key || "").trim();
     if (!idemKey) {
       return json(req, 400, { ok: false, error: "Missing Idempotency-Key" });
     }
 
-    const result = await withIdempotencyStrict(SB, idemKey, async () => {
-      const parsed = await req.json().catch(() => ({} as any));
-      const dossierId = parsed?.dossier_id ? String(parsed.dossier_id) : null;
-      const tokenStr = parsed?.token ? String(parsed.token) : null;
-      const consents = parsed?.consents;
+    const parsed = await req.json().catch(() => ({} as any));
+    const dossierId = parsed?.dossier_id ? String(parsed.dossier_id) : null;
+    const session_token = parsed?.session_token ? String(parsed.session_token) : null;
+    const consents = parsed?.consents;
 
-      if (!dossierId || !tokenStr) {
-        return { status: 400, body: { ok: false, error: "Missing dossier_id/token" } };
-      }
+    if (!dossierId || !session_token) {
+      return json(req, 400, { ok: false, error: "Missing dossier_id/session_token" });
+    }
 
-      const tokenHash = await sha256Hex(tokenStr);
-      const actor_ref = actorRefForCustomer(dossierId, tokenHash);
+    const auth = await requireCustomerSession(
+      SB,
+      dossierId,
+      session_token,
+      meta,
+      "consents_save_rejected",
+    );
 
-      async function reject(stage: string, status: number, message: string, extra?: Record<string, unknown>) {
-        await insertAuditFailOpen(
-          SB,
-          {
-            dossier_id: dossierId,
-            actor_type: "customer",
-            event_type: "consents_save_rejected",
-            event_data: { stage, status, message, ...(extra || {}) },
-          },
-          meta,
-          { actor_ref, environment: ENVIRONMENT },
-        );
-        return { status, body: { ok: false, error: message } };
-      }
+    if (!auth.ok) {
+      return json(req, auth.status, { ok: false, error: auth.error });
+    }
 
-      // dossier auth + lock
-      const { data: dossier, error: dErr } = await SB
-        .from("dossiers")
-        .select("id, locked_at, status, customer_email")
-        .eq("id", dossierId)
-        .eq("access_token_hash", tokenHash)
-        .maybeSingle();
+    const idemScopedKey = scopedSessionIdemKey(dossierId, auth.session_token_hash, idemKey);
+    const cached = await tryGetIdempotentResponse(SB, idemScopedKey);
+    if (cached) return json(req, cached.status, cached.body);
 
-      if (dErr) return reject("db_read", 500, dErr.message);
+    async function finalize(status: number, body: any) {
+      await storeIdempotentResponseFailOpen(SB, idemScopedKey, status, body);
+      return json(req, status, body);
+    }
 
-      if (!dossier) {
-        await insertAuditFailOpen(
-          SB,
-          {
-            dossier_id: dossierId,
-            actor_type: "customer",
-            event_type: "consents_save_rejected",
-            event_data: { stage: "auth", status: 401, message: "Unauthorized", reason: "unauthorized" },
-          },
-          meta,
-          { actor_ref: `dossier:${dossierId}|token:invalid`, environment: ENVIRONMENT },
-        );
-        return { status: 401, body: { ok: false, error: "Unauthorized" } };
-      }
+    async function reject(stage: string, status: number, message: string, extra?: Record<string, unknown>) {
+      await insertAuditFailOpen(
+        SB,
+        {
+          dossier_id: dossierId,
+          actor_type: "customer",
+          event_type: "consents_save_rejected",
+          event_data: { stage, status, message, ...(extra || {}) },
+        },
+        meta,
+        { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
+      );
+      return finalize(status, { ok: false, error: message });
+    }
 
-      const st = String(dossier.status || "");
-      if (dossier.locked_at || st === "in_review" || st === "ready_for_booking") {
-        return reject("dossier_locked", 409, "Dossier is vergrendeld en kan niet meer gewijzigd worden.");
-      }
+    const { data: dossier, error: dErr } = await SB
+      .from("dossiers")
+      .select("id, locked_at, status, customer_email")
+      .eq("id", dossierId)
+      .maybeSingle();
 
-      if (!consents || typeof consents !== "object") {
-        return reject("validate", 400, "Missing consents object");
-      }
+    if (dErr) return reject("db_read", 500, dErr.message);
+    if (!dossier) return reject("dossier_lookup", 404, "Dossier not found", { reason: "not_found" });
 
-      const terms = asBool(consents?.terms);
-      const privacy = asBool(consents?.privacy);
-      const mandaat = asBool(consents?.mandaat);
+    const st = String(dossier.status || "");
+    if (dossier.locked_at || st === "in_review" || st === "ready_for_booking") {
+      return reject("dossier_locked", 409, "Dossier is vergrendeld en kan niet meer gewijzigd worden.");
+    }
 
-      if (!terms || !privacy || !mandaat) {
-        return reject("validate", 400, "Vink alle drie de toestemmingen aan om door te gaan.", {
-          consents: { terms, privacy, mandaat },
-          reason: "not_all_checked",
-        });
-      }
+    if (!consents || typeof consents !== "object") {
+      return reject("validate", 400, "Missing consents object");
+    }
 
-      const VERSION = "v1.0";
-      const actor_email = String(dossier.customer_email || "").trim() || null;
+    const terms = asBool(consents?.terms);
+    const privacy = asBool(consents?.privacy);
+    const mandaat = asBool(consents?.mandaat);
 
-      // ---------- idempotent on data level: if already accepted, return OK ----------
-      const { data: existing, error: exErr } = await SB
-        .from("dossier_consents")
-        .select("consent_type, accepted, version")
-        .eq("dossier_id", dossierId)
-        .eq("version", VERSION)
-        .in("consent_type", ["terms", "privacy", "mandaat"]);
+    if (!terms || !privacy || !mandaat) {
+      return reject("validate", 400, "Vink alle drie de toestemmingen aan om door te gaan.", {
+        consents: { terms, privacy, mandaat },
+        reason: "not_all_checked",
+      });
+    }
 
-      if (exErr) return reject("db_read", 500, `Consents read failed: ${exErr.message}`);
+    const VERSION = "v1.0";
+    const actor_email = String(dossier.customer_email || "").trim() || null;
 
-      const byType: Record<string, boolean> = {};
-      for (const r of (existing || [])) {
-        const t = String((r as any).consent_type || "");
-        const a = (r as any).accepted === true;
-        if (t) byType[t] = byType[t] || a; // any true counts
-      }
+    const { data: existing, error: exErr } = await SB
+      .from("dossier_consents")
+      .select("consent_type, accepted, version")
+      .eq("dossier_id", dossierId)
+      .eq("version", VERSION)
+      .in("consent_type", ["terms", "privacy", "mandaat"]);
 
-      const alreadyAll =
-        byType["terms"] === true && byType["privacy"] === true && byType["mandaat"] === true;
+    if (exErr) return reject("db_read", 500, `Consents read failed: ${exErr.message}`);
 
-      const ts = nowIso();
+    const byType: Record<string, boolean> = {};
+    for (const r of (existing || [])) {
+      const t = String((r as any).consent_type || "");
+      const a = (r as any).accepted === true;
+      if (t) byType[t] = byType[t] || a;
+    }
 
-      if (alreadyAll) {
-        await insertAuditFailOpen(
-          SB,
-          {
-            dossier_id: dossierId,
-            actor_type: "customer",
-            event_type: "consents_saved",
-            event_data: {
-              consents: { terms: true, privacy: true, mandaat: true },
-              version: VERSION,
-              accepted_at: ts,
-              already_saved: true,
-            },
-          },
-          meta,
-          { actor_ref, environment: ENVIRONMENT },
-        );
+    const alreadyAll =
+      byType["terms"] === true &&
+      byType["privacy"] === true &&
+      byType["mandaat"] === true;
 
-        return {
-          status: 200,
-          body: { ok: true, saved: true, already_saved: true, consents: { terms: true, privacy: true, mandaat: true }, accepted_at: ts },
-        };
-      }
+    const ts = nowIso();
 
-      // ---------- write ----------
-      const rows = [
-        { dossier_id: dossierId, consent_type: "terms", version: VERSION, accepted: true, accepted_at: ts, actor_email },
-        { dossier_id: dossierId, consent_type: "privacy", version: VERSION, accepted: true, accepted_at: ts, actor_email },
-        { dossier_id: dossierId, consent_type: "mandaat", version: VERSION, accepted: true, accepted_at: ts, actor_email },
-      ];
-
-      const { error: insErr } = await SB.from("dossier_consents").insert(rows);
-      if (insErr) return reject("db_write", 500, `Consents insert failed: ${insErr.message}`);
-
-      // invalidate if needed (fail-open)
-      let invalidated = false;
-      if (st === "ready_for_review") {
-        try {
-          const { error: sErr } = await SB
-            .from("dossiers")
-            .update({ status: "incomplete", updated_at: ts })
-            .eq("id", dossierId)
-            .eq("status", "ready_for_review")
-            .is("locked_at", null);
-          if (!sErr) invalidated = true;
-        } catch (_e) {}
-      }
-
+    if (alreadyAll) {
       await insertAuditFailOpen(
         SB,
         {
@@ -242,21 +193,72 @@ serve(async (req) => {
           actor_type: "customer",
           event_type: "consents_saved",
           event_data: {
-            consents: { terms, privacy, mandaat },
+            consents: { terms: true, privacy: true, mandaat: true },
             version: VERSION,
             accepted_at: ts,
-            invalidated_ready_for_review: invalidated,
-            already_saved: false,
+            already_saved: true,
           },
         },
         meta,
-        { actor_ref, environment: ENVIRONMENT },
+        { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
       );
 
-      return { status: 200, body: { ok: true, saved: true, consents: { terms, privacy, mandaat }, accepted_at: ts, invalidated } };
-    });
+      return finalize(200, {
+        ok: true,
+        saved: true,
+        already_saved: true,
+        consents: { terms: true, privacy: true, mandaat: true },
+        accepted_at: ts,
+      });
+    }
 
-    return json(req, result.status, result.body);
+    const rows = [
+      { dossier_id: dossierId, consent_type: "terms", version: VERSION, accepted: true, accepted_at: ts, actor_email },
+      { dossier_id: dossierId, consent_type: "privacy", version: VERSION, accepted: true, accepted_at: ts, actor_email },
+      { dossier_id: dossierId, consent_type: "mandaat", version: VERSION, accepted: true, accepted_at: ts, actor_email },
+    ];
+
+    const { error: insErr } = await SB.from("dossier_consents").insert(rows);
+    if (insErr) return reject("db_write", 500, `Consents insert failed: ${insErr.message}`);
+
+    let invalidated = false;
+    if (st === "ready_for_review") {
+      try {
+        const { error: sErr } = await SB
+          .from("dossiers")
+          .update({ status: "incomplete", updated_at: ts })
+          .eq("id", dossierId)
+          .eq("status", "ready_for_review")
+          .is("locked_at", null);
+        if (!sErr) invalidated = true;
+      } catch (_e) {}
+    }
+
+    await insertAuditFailOpen(
+      SB,
+      {
+        dossier_id: dossierId,
+        actor_type: "customer",
+        event_type: "consents_saved",
+        event_data: {
+          consents: { terms, privacy, mandaat },
+          version: VERSION,
+          accepted_at: ts,
+          invalidated_ready_for_review: invalidated,
+          already_saved: false,
+        },
+      },
+      meta,
+      { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
+    );
+
+    return finalize(200, {
+      ok: true,
+      saved: true,
+      consents: { terms, privacy, mandaat },
+      accepted_at: ts,
+      invalidated,
+    });
   } catch (e) {
     console.error("api-dossier-consents-save fatal:", e);
     return json(req, 500, { ok: false, error: "Internal error" });

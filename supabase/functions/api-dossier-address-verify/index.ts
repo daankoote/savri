@@ -1,10 +1,11 @@
-//supabase/functions/api-dossier-address-verify/index.ts
+// supabase/functions/api-dossier-address-verify/index.ts
 
 import { serve } from "jsr:@std/http@0.224.0/server";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 import { getReqMeta } from "../_shared/reqmeta.ts";
 import { insertAuditFailOpen } from "../_shared/audit.ts";
+import { requireCustomerSession } from "../_shared/customer_auth.ts";
 
 // -------------------- CORS --------------------
 function parseAllowedOrigins(): string[] {
@@ -49,16 +50,6 @@ function getEnv(name: string) {
   const v = Deno.env.get(name);
   if (!v) throw new Error(`Missing env: ${name}`);
   return v;
-}
-async function sha256Hex(input: string) {
-  const data = new TextEncoder().encode(input);
-  const hash = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-function actorRefForCustomer(dossierId: string, tokenHash: string) {
-  return `dossier:${dossierId}|token:${tokenHash.slice(0, 16)}`;
 }
 
 function normalizePostcode(pc: string) {
@@ -145,15 +136,14 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({} as any));
 
     const dossier_id = body?.dossier_id ? String(body.dossier_id) : null;
-    const token = body?.token ? String(body.token) : null;
+    const session_token = body?.session_token ? String(body.session_token) : null;
 
-    // accepteer meerdere key-varianten (UI mismatch killers)
     const postcode = body?.postcode;
     const house_number =
       body?.house_number ?? body?.houseNumber ?? body?.housenumber ?? body?.number;
     const suffix = body?.suffix ?? body?.addition ?? body?.house_suffix ?? null;
 
-    if (!dossier_id || !token) return bad(req, "Missing dossier_id/token", 400);
+    if (!dossier_id || !session_token) return bad(req, "Missing dossier_id/session_token", 400);
 
     const pc = normalizePostcode(String(postcode || ""));
     const hn = String(house_number || "").trim();
@@ -166,30 +156,16 @@ serve(async (req) => {
       auth: { persistSession: false },
     });
 
-    const tokenHash = await sha256Hex(token);
-    const actor_ref = actorRefForCustomer(dossier_id, tokenHash);
+    const auth = await requireCustomerSession(
+      SB,
+      dossier_id,
+      session_token,
+      meta,
+      "address_verify_rejected",
+    );
 
-    const { data: dossier, error: dErr } = await SB
-      .from("dossiers")
-      .select("id")
-      .eq("id", dossier_id)
-      .eq("access_token_hash", tokenHash)
-      .maybeSingle();
-
-    if (dErr) return bad(req, dErr.message, 500);
-    if (!dossier) {
-      await insertAuditFailOpen(
-        SB,
-        {
-          dossier_id,
-          actor_type: "customer",
-          event_type: "address_verify_rejected",
-          event_data: { stage: "auth", status: 401, message: "Unauthorized" },
-        },
-        meta,
-        { actor_ref: `dossier:${dossier_id}|token:invalid` },
-      );
-      return bad(req, "Unauthorized", 401);
+    if (!auth.ok) {
+      return bad(req, auth.error, auth.status);
     }
 
     let found: any;
@@ -206,7 +182,7 @@ serve(async (req) => {
           event_data: { stage: "pdok_lookup", status: 502, message: "PDOK failed" },
         },
         meta,
-        { actor_ref },
+        { actor_ref: auth.actor_ref },
       );
       return bad(req, "Adresvalidatie service faalt (PDOK). Probeer later opnieuw.", 502);
     }
@@ -224,7 +200,7 @@ serve(async (req) => {
           },
         },
         meta,
-        { actor_ref },
+        { actor_ref: auth.actor_ref },
       );
       return bad(req, "Adres niet gevonden. Controleer postcode/huisnummer/toevoeging.", 404);
     }
@@ -242,7 +218,7 @@ serve(async (req) => {
         },
       },
       meta,
-      { actor_ref },
+      { actor_ref: auth.actor_ref },
     );
 
     return ok(req, {

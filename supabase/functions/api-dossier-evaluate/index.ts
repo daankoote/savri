@@ -9,6 +9,10 @@ import {
   tryGetIdempotentResponse,
   storeIdempotentResponseFailOpen,
 } from "../_shared/audit.ts";
+import {
+  requireCustomerSession,
+  scopedSessionIdemKey,
+} from "../_shared/customer_auth.ts";
 
 // -------------------- CORS --------------------
 function parseAllowedOrigins(): string[] {
@@ -41,7 +45,13 @@ function json(req: Request, status: number, payload: unknown) {
     headers: { "Content-Type": "application/json", ...corsHeadersFor(req) },
   });
 }
-function bad(req: Request, msg: string, code = 400, extra: Record<string, unknown> = {}) {
+
+function bad(
+  req: Request,
+  msg: string,
+  code = 400,
+  extra: Record<string, unknown> = {},
+) {
   return json(req, code, { ok: false, error: msg, ...extra });
 }
 
@@ -60,25 +70,16 @@ function getEnvironment(): string {
   ).toLowerCase();
 }
 
-async function sha256Hex(input: string) {
-  const data = new TextEncoder().encode(input);
-  const hash = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
 function nowIso() {
   return new Date().toISOString();
 }
 
 type CheckStatus = "pass" | "fail";
-type DossierStatus = "incomplete" | "ready_for_review" | "in_review" | "ready_for_booking";
-
-function asNum(v: any) {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
-}
+type DossierStatus =
+  | "incomplete"
+  | "ready_for_review"
+  | "in_review"
+  | "ready_for_booking";
 
 type ConsentRow = {
   consent_type: string;
@@ -87,25 +88,28 @@ type ConsentRow = {
   created_at?: string | null;
 };
 
-function actorRefForCustomer(dossierId: string, tokenHash: string) {
-  return `dossier:${dossierId}|token:${tokenHash.slice(0, 16)}`;
+function asNum(v: unknown) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
 }
 
 serve(async (req) => {
   const meta = getReqMeta(req);
   const ENVIRONMENT = getEnvironment();
 
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeadersFor(req) });
-  if (req.method !== "POST") return bad(req, "Method not allowed", 405);
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeadersFor(req) });
+  }
+  if (req.method !== "POST") {
+    return bad(req, "Method not allowed", 405);
+  }
 
-  // Idempotency REQUIRED (this endpoint writes: dossier_checks + dossiers.status/lock + audit)
-  // IMPORTANT: request_id is NOT an idempotency key.
   const idemKey = String(meta.idempotency_key || "").trim();
   if (!idemKey) return bad(req, "Missing Idempotency-Key", 400);
 
-  const parsed = await req.json().catch(() => ({} as any));
+  const parsed = await req.json().catch(() => ({} as Record<string, unknown>));
   const dossier_id = parsed?.dossier_id ? String(parsed.dossier_id) : null;
-  const token = parsed?.token ? String(parsed.token) : null;
+  const session_token = parsed?.session_token ? String(parsed.session_token) : null;
   const doFinalize = parsed?.finalize === true;
 
   let SB: ReturnType<typeof createClient>;
@@ -118,25 +122,37 @@ serve(async (req) => {
     return bad(req, "Server misconfigured (missing secrets)", 500);
   }
 
-  // Replay zodra we dossier scope hebben
-  if (dossier_id) {
-    const cached = await tryGetIdempotentResponse(SB, idemKey);
-    if (cached) return json(req, cached.status, cached.body);
+  if (!dossier_id || !session_token) {
+    return json(req, 400, { ok: false, error: "Missing dossier_id/session_token" });
   }
 
-  async function finalize(status: number, body: any) {
-    await storeIdempotentResponseFailOpen(SB, idemKey, status, body);
+  const auth = await requireCustomerSession(
+    SB,
+    dossier_id,
+    session_token,
+    meta,
+    "dossier_evaluate_rejected",
+  );
+
+  if (!auth.ok) {
+    return json(req, auth.status, { ok: false, error: auth.error });
+  }
+
+  const idemScopedKey = scopedSessionIdemKey(dossier_id, auth.session_token_hash, idemKey);
+  const cached = await tryGetIdempotentResponse(SB, idemScopedKey);
+  if (cached) return json(req, cached.status, cached.body);
+
+  async function finalize(status: number, body: Record<string, unknown>) {
+    await storeIdempotentResponseFailOpen(SB, idemScopedKey, status, body);
     return json(req, status, body);
   }
 
-  if (!dossier_id || !token) {
-    return finalize(400, { ok: false, error: "Missing dossier_id/token" });
-  }
-
-  const tokenHash = await sha256Hex(String(token));
-  const actor_ref = actorRefForCustomer(dossier_id, tokenHash);
-
-  async function auditReject(stage: string, status: number, message: string, extra?: Record<string, unknown>) {
+  async function auditReject(
+    stage: string,
+    status: number,
+    message: string,
+    extra?: Record<string, unknown>,
+  ) {
     await insertAuditFailOpen(
       SB,
       {
@@ -146,20 +162,24 @@ serve(async (req) => {
         event_data: { stage, status, message, ...(extra || {}) },
       },
       meta,
-      { actor_ref, environment: ENVIRONMENT },
+      { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
     );
   }
 
-  async function reject(stage: string, status: number, message: string, extra?: Record<string, unknown>) {
+  async function reject(
+    stage: string,
+    status: number,
+    message: string,
+    extra?: Record<string, unknown>,
+  ) {
     await auditReject(stage, status, message, extra);
     return finalize(status, { ok: false, error: message, ...(extra || {}) });
   }
 
   const { data: dossier, error: dErr } = await SB
     .from("dossiers")
-    .select("id,status,locked_at,email_verified_at,address_verified_at,charger_count,in_nl,has_mid")
+    .select("id,status,locked_at,email_verified_at,address_verified_at,charger_count")
     .eq("id", dossier_id)
-    .eq("access_token_hash", tokenHash)
     .maybeSingle();
 
   if (dErr) {
@@ -172,7 +192,7 @@ serve(async (req) => {
         event_data: { stage: "dossier_lookup", status: 500, message: dErr.message },
       },
       meta,
-      { actor_ref, environment: ENVIRONMENT },
+      { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
     );
     return finalize(500, { ok: false, error: dErr.message });
   }
@@ -184,15 +204,14 @@ serve(async (req) => {
         dossier_id,
         actor_type: "customer",
         event_type: "dossier_evaluate_rejected",
-        event_data: { stage: "auth", status: 401, message: "Unauthorized", reason: "unauthorized" },
+        event_data: { stage: "dossier_lookup", status: 404, message: "Dossier not found", reason: "not_found" },
       },
       meta,
-      { actor_ref: `dossier:${dossier_id}|token:invalid`, environment: ENVIRONMENT },
+      { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
     );
-    return finalize(401, { ok: false, error: "Unauthorized" });
+    return finalize(404, { ok: false, error: "Dossier not found" });
   }
 
-  // Already locked -> stable OK response
   if (dossier.locked_at) {
     return finalize(200, {
       ok: true,
@@ -226,15 +245,20 @@ serve(async (req) => {
       .eq("dossier_id", dossier_id)
       .order("accepted_at", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false, nullsFirst: false }),
-    SB.from("dossier_chargers").select("id, serial_number, mid_number, brand, model").eq("dossier_id", dossier_id),
-    SB.from("dossier_documents").select("doc_type, charger_id, status").eq("dossier_id", dossier_id),
+
+    SB.from("dossier_chargers")
+      .select("id, serial_number, mid_number, brand, model")
+      .eq("dossier_id", dossier_id),
+
+    SB.from("dossier_documents")
+      .select("doc_type, charger_id, status")
+      .eq("dossier_id", dossier_id),
   ]);
 
   if (cErr) return reject("consents_read", 500, `Consents read failed: ${cErr.message}`);
   if (chErr) return reject("chargers_read", 500, `Chargers read failed: ${chErr.message}`);
   if (docErr) return reject("documents_read", 500, `Documents read failed: ${docErr.message}`);
 
-  // Latest-consent reducer (deterministisch): eerste per type is de nieuwste door ordering hierboven
   const consentMap: Record<string, boolean> = {};
   const seenType = new Set<string>();
   for (const row of (consentsRaw || []) as ConsentRow[]) {
@@ -251,62 +275,72 @@ serve(async (req) => {
 
   const emailOk = !!dossier.email_verified_at;
   const addressOk = !!dossier.address_verified_at;
-  
-  // Self-serve scope gates (hard)
-  const inNlOk = dossier.in_nl === true;
-  const hasMidGateOk = dossier.has_mid === true;
-
 
   const requiredChargers = Math.max(0, asNum(dossier.charger_count || 0));
-  const chargerRows: Array<any> = chargers || [];
+  const chargerRows: Array<Record<string, unknown>> = chargers || [];
   const chargerCount = chargerRows.length;
 
   const chargerExactOk = requiredChargers > 0
     ? (chargerCount === requiredChargers)
     : (chargerCount > 0);
 
-  // MID per charger required (hard)
-  const missingMidPerCharger: Array<{ charger_id: string; serial_number?: string | null; missing: string[] }> = [];
+  const missingMidPerCharger: Array<{
+    charger_id: string;
+    serial_number?: string | null;
+    missing: string[];
+  }> = [];
+
   for (const ch of chargerRows) {
     const chId = String(ch.id);
     const missing: string[] = [];
-    const mid = String((ch as any).mid_number || "").trim();
+    const mid = String(ch.mid_number || "").trim();
     if (!mid) missing.push("mid_number");
+
     if (missing.length) {
       missingMidPerCharger.push({
         charger_id: chId,
-        serial_number: ch.serial_number || null,
+        serial_number: (ch.serial_number as string) || null,
         missing,
       });
     }
   }
+
   const midPerChargerOk = chargerRows.length > 0 && missingMidPerCharger.length === 0;
 
+  const confirmedDocs = (documents || []).filter((d: Record<string, unknown>) =>
+    String(d.status || "") === "confirmed"
+  );
 
-  // docs_per_charger telt alleen confirmed
-  const confirmedDocs = (documents || []).filter((d: any) => String(d.status || "") === "confirmed");
   const byCharger: Record<string, { factuur: number; foto_laadpunt: number }> = {};
 
   for (const d of confirmedDocs) {
-    const dt = String((d as any).doc_type || "").toLowerCase();
-    const chId = String((d as any).charger_id || "").trim();
+    const dt = String(d.doc_type || "").toLowerCase();
+    const chId = String(d.charger_id || "").trim();
     if (!chId) continue;
+
     if (!byCharger[chId]) byCharger[chId] = { factuur: 0, foto_laadpunt: 0 };
     if (dt === "factuur") byCharger[chId].factuur += 1;
     if (dt === "foto_laadpunt") byCharger[chId].foto_laadpunt += 1;
   }
 
-  const missingDocsPerCharger: Array<{ charger_id: string; serial_number?: string | null; missing: string[] }> = [];
+  const missingDocsPerCharger: Array<{
+    charger_id: string;
+    serial_number?: string | null;
+    missing: string[];
+  }> = [];
+
   for (const ch of chargerRows) {
     const chId = String(ch.id);
     const cnt = byCharger[chId] || { factuur: 0, foto_laadpunt: 0 };
     const missing: string[] = [];
+
     if (cnt.factuur < 1) missing.push("factuur");
     if (cnt.foto_laadpunt < 1) missing.push("foto_laadpunt");
+
     if (missing.length) {
       missingDocsPerCharger.push({
         charger_id: chId,
-        serial_number: ch.serial_number || null,
+        serial_number: (ch.serial_number as string) || null,
         missing,
       });
     }
@@ -314,16 +348,13 @@ serve(async (req) => {
 
   const docsPerChargerOk = chargerRows.length > 0 && missingDocsPerCharger.length === 0;
 
-
-  const checks: Array<{ check_code: string; status: CheckStatus; details: any }> = [
+  const checks: Array<{ check_code: string; status: CheckStatus; details: Record<string, unknown> }> = [
     { check_code: "email_verified", status: emailOk ? "pass" : "fail", details: {} },
     { check_code: "address_verified", status: addressOk ? "pass" : "fail", details: {} },
-    { check_code: "in_nl_required", status: inNlOk ? "pass" : "fail", details: { in_nl: dossier.in_nl ?? null } },
-    { check_code: "has_mid_required", status: hasMidGateOk ? "pass" : "fail", details: { has_mid: dossier.has_mid ?? null } },
-    { check_code: "mid_per_charger", status: midPerChargerOk ? "pass" : "fail", details: { missing_per_charger: missingMidPerCharger },},
-    { check_code: "charger_exact_count", status: chargerExactOk ? "pass" : "fail", details: { required: requiredChargers, current: chargerCount },},
-    { check_code: "docs_per_charger", status: docsPerChargerOk ? "pass" : "fail", details: { rule: "only_confirmed_docs_count", missing_per_charger: missingDocsPerCharger },},
-    { check_code: "consents_required", status: (hasTerms && hasPrivacy && hasMandaat) ? "pass" : "fail", details: { terms: hasTerms, privacy: hasPrivacy, mandaat: hasMandaat },},
+    { check_code: "mid_per_charger", status: midPerChargerOk ? "pass" : "fail", details: { missing_per_charger: missingMidPerCharger } },
+    { check_code: "charger_exact_count", status: chargerExactOk ? "pass" : "fail", details: { required: requiredChargers, current: chargerCount } },
+    { check_code: "docs_per_charger", status: docsPerChargerOk ? "pass" : "fail", details: { rule: "only_confirmed_docs_count", missing_per_charger: missingDocsPerCharger } },
+    { check_code: "consents_required", status: (hasTerms && hasPrivacy && hasMandaat) ? "pass" : "fail", details: { terms: hasTerms, privacy: hasPrivacy, mandaat: hasMandaat } },
   ];
 
   const allRequiredPass = checks.every((c) => c.status === "pass");
@@ -331,8 +362,6 @@ serve(async (req) => {
   const missingSteps: string[] = [];
   if (!emailOk) missingSteps.push("1) E-mail geverifieerd");
   if (!addressOk) missingSteps.push("2) Adres");
-  if (!inNlOk) missingSteps.push("0) Scope: laadpaal moet in Nederland staan");
-  if (!hasMidGateOk) missingSteps.push("0) Scope: laadpaal moet een MID-meter hebben");
   if (!chargerExactOk) missingSteps.push("3) Laadpalen (exact aantal)");
   if (!midPerChargerOk) missingSteps.push("3) Laadpalen: MID-nummer per laadpaal verplicht");
   if (!docsPerChargerOk) missingSteps.push("4) Documenten (factuur + foto per laadpunt) — upload moet bevestigd zijn");
@@ -357,7 +386,6 @@ serve(async (req) => {
   if (!allRequiredPass) {
     const newStatus: DossierStatus = "incomplete";
 
-    // status only (no lock)
     await SB
       .from("dossiers")
       .update({ status: newStatus, updated_at: ts })
@@ -375,7 +403,7 @@ serve(async (req) => {
         event_data: { missingSteps, checks },
       },
       meta,
-      { actor_ref, environment: ENVIRONMENT },
+      { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
     );
 
     return finalize(400, {
@@ -389,7 +417,6 @@ serve(async (req) => {
     });
   }
 
-  // All pass: either mark ready_for_review or lock for review
   if (!doFinalize) {
     const newStatus: DossierStatus = "ready_for_review";
 
@@ -410,7 +437,7 @@ serve(async (req) => {
         event_data: { new_status: newStatus, checks },
       },
       meta,
-      { actor_ref, environment: ENVIRONMENT },
+      { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
     );
 
     return finalize(200, {
@@ -425,7 +452,6 @@ serve(async (req) => {
     });
   }
 
-  // Finalize: lock
   const newStatus: DossierStatus = "in_review";
 
   const { data: lockedRow, error: upErr } = await SB
@@ -456,7 +482,11 @@ serve(async (req) => {
       finalLockedAt = fresh.locked_at;
       finalStatus = String(fresh.status || "in_review");
     } else {
-      return reject("dossier_lock_verify", 500, "Indienen lijkt gelukt, maar dossier is niet vergrendeld. Probeer opnieuw.");
+      return reject(
+        "dossier_lock_verify",
+        500,
+        "Indienen lijkt gelukt, maar dossier is niet vergrendeld. Probeer opnieuw.",
+      );
     }
   }
 
@@ -469,7 +499,7 @@ serve(async (req) => {
       event_data: { new_status: "in_review" },
     },
     meta,
-    { actor_ref, environment: ENVIRONMENT },
+    { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
   );
 
   return finalize(200, {

@@ -50,12 +50,14 @@ Regel: alleen open items; afgerond → naar changelog.
 - Status: OPEN
 
 ### 5) Session-auth hardening (`dossier_sessions`)
-- DoD:
-  - dossier read/write endpoints vereisen session-token (Bearer)
-  - session TTL enforced via `dossier_sessions.expires_at`
-  - revoked sessions blokkeren reads/writes
-  - `last_seen_at` wordt minimaal bij dossier-get bijgewerkt (rate-limited / best-effort)
-  - audit events aanwezig voor session created + session invalid
+- Context:
+  - session-auth is nu canonical voor dossier read/write endpoints
+  - shared helper `supabase/functions/_shared/customer_auth.ts` bestaat
+- Open DoD:
+  - bevestigen dat alle dossier runtime endpoints shared auth helper gebruiken waar dat logisch is
+  - bevestigen dat session reject-audits overal reason-consistent zijn
+  - beslissen of `last_seen_at` actief moet worden bijgewerkt of bewust deferred blijft
+  - expliciet bewijs leveren voor expired + revoked session reject gedrag op meerdere endpoints
 - Status: OPEN
 
 ### 6) Tombstone / archive lifecycle voor audit-gebonden testdossiers
@@ -70,15 +72,14 @@ Regel: alleen open items; afgerond → naar changelog.
   - bevestig dat exports/reads zich correct gedragen voor tombstoned dossiers
 - Status: OPEN
 
-### 7) Frontend shared API layer (`assets/js/api.js`) — align + adopt
-- DoD:
-  - `dossier.js` gebruikt uitsluitend helpers uit `api.js` voor:
-    - url parsing (`d`, `t`)
-    - session token get/set/clear
-    - `apiPost()` wrapper
-  - legacy localStorage key (`enval_session_token`) is opgeschoond
-  - geen dubbele fetch wrappers meer verspreid over pages
-- Status: OPEN
+### 7) Frontend shared API layer (`assets/js/api.js`) — proof sluiten
+- Context:
+  - `assets/js/api.js` is nu canonical frontend shared helper
+  - foutieve duplicate onder `supabase/functions/_shared/api.js` is verwijderd
+- Open DoD:
+  - expliciet grep-bewijs bewaren dat er geen runtime references meer bestaan naar `supabase/functions/_shared/api.js`
+  - bevestigen dat dossierflow uitsluitend `window.ENVAL.api.*` helpers gebruikt voor shared auth/session/api gedrag
+- Status: OPEN (alleen nog bewijs/admin hygiene)
 
 ### 8) Frontend contract: MID veldnaam volledig consistent met spec
 - DoD:
@@ -140,10 +141,20 @@ Regel: alleen open items; afgerond → naar changelog.
   - job/edge function die storage failures opnieuw probeert op basis van audit events
 - Status: OPEN
 
-### 15) submit-review vs evaluate overlap
-- DoD:
-  - kies: submit-review wrapper naar evaluate, of deprecated 410
-  - voorkom drift
+### 15a) Reviewflow doc cleanup na verwijderen legacy endpoint
+- Context:
+  - `api-dossier-submit-review` is verwijderd
+  - canonical endpoint is `api-dossier-evaluate`
+- Open DoD:
+  - alle docs/repo-lists/contracts/changelogs volledig opschonen zodat geen CURRENT referenties meer suggereren dat submit-review nog bestaat
+- Status: OPEN
+
+### 15b) Address preview doc cleanup na verwijderen legacy endpoint
+- Context:
+  - `api-dossier-address-preview` is verwijderd
+  - canonical preview loopt via `api-dossier-address-verify`
+- Open DoD:
+  - alle docs/contracts/auditbeschrijvingen volledig opschonen zodat address-preview nergens meer als actuele endpoint staat
 - Status: OPEN
 
 ### 16) Email verification assumption (audit risk)

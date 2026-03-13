@@ -1,6 +1,5 @@
 // supabase/functions/api-dossier-export/index.ts
 
-
 import { serve } from "jsr:@std/http@0.224.0/server";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
@@ -10,6 +9,10 @@ import {
   tryGetIdempotentResponse,
   storeIdempotentResponseFailOpen,
 } from "../_shared/audit.ts";
+import {
+  requireCustomerSession,
+  scopedSessionIdemKey,
+} from "../_shared/customer_auth.ts";
 
 // -------------------- CORS --------------------
 function parseAllowedOrigins(): string[] {
@@ -26,6 +29,7 @@ function corsHeadersFor(req: Request): Record<string, string> {
   const allowOrigin = ALLOWED_ORIGINS.includes(origin)
     ? origin
     : (ALLOWED_ORIGINS[0] || "https://www.enval.nl");
+
   return {
     "Access-Control-Allow-Origin": allowOrigin,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -41,7 +45,13 @@ function json(req: Request, status: number, payload: unknown) {
     headers: { "Content-Type": "application/json", ...corsHeadersFor(req) },
   });
 }
-function bad(req: Request, msg: string, code = 400, extra: Record<string, unknown> = {}) {
+
+function bad(
+  req: Request,
+  msg: string,
+  code = 400,
+  extra: Record<string, unknown> = {},
+) {
   return json(req, code, { ok: false, error: msg, ...extra });
 }
 
@@ -60,18 +70,6 @@ function getEnvironment(): string {
   ).toLowerCase();
 }
 
-async function sha256Hex(input: string) {
-  const data = new TextEncoder().encode(input);
-  const hash = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-function actorRefForCustomer(dossierId: string, tokenHash: string) {
-  return `dossier:${dossierId}|token:${tokenHash.slice(0, 16)}`;
-}
-
 type ConsentRow = {
   consent_type: string;
   accepted: boolean;
@@ -83,10 +81,13 @@ serve(async (req) => {
   const meta = getReqMeta(req);
   const ENVIRONMENT = getEnvironment();
 
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeadersFor(req) });
-  if (req.method !== "POST") return bad(req, "Method not allowed", 405);
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeadersFor(req) });
+  }
+  if (req.method !== "POST") {
+    return bad(req, "Method not allowed", 405);
+  }
 
-  // Idempotency REQUIRED (export is evidence artifact)
   const idemKey = String(meta.idempotency_key || "").trim();
   if (!idemKey) return bad(req, "Missing Idempotency-Key", 400);
 
@@ -100,28 +101,41 @@ serve(async (req) => {
     return bad(req, "Server misconfigured (missing secrets)", 500);
   }
 
-  const parsed = await req.json().catch(() => ({} as any));
+  const parsed = await req.json().catch(() => ({} as Record<string, unknown>));
   const dossier_id = parsed?.dossier_id ? String(parsed.dossier_id) : null;
-  const token = parsed?.token ? String(parsed.token) : null;
+  const session_token = parsed?.session_token ? String(parsed.session_token) : null;
 
-  if (dossier_id) {
-    const cached = await tryGetIdempotentResponse(SB, idemKey);
-    if (cached) return json(req, cached.status, cached.body);
+  if (!dossier_id || !session_token) {
+    return json(req, 400, { ok: false, error: "Missing dossier_id/session_token" });
   }
 
-  async function finalize(status: number, body: any) {
-    await storeIdempotentResponseFailOpen(SB, idemKey, status, body);
+  const auth = await requireCustomerSession(
+    SB,
+    dossier_id,
+    session_token,
+    meta,
+    "dossier_export_rejected",
+  );
+
+  if (!auth.ok) {
+    return json(req, auth.status, { ok: false, error: auth.error });
+  }
+
+  const idemScopedKey = scopedSessionIdemKey(dossier_id, auth.session_token_hash, idemKey);
+  const cached = await tryGetIdempotentResponse(SB, idemScopedKey);
+  if (cached) return json(req, cached.status, cached.body);
+
+  async function finalize(status: number, body: Record<string, unknown>) {
+    await storeIdempotentResponseFailOpen(SB, idemScopedKey, status, body);
     return json(req, status, body);
   }
 
-  if (!dossier_id || !token) {
-    return finalize(400, { ok: false, error: "Missing dossier_id/token" });
-  }
-
-  const tokenHash = await sha256Hex(token);
-  const actor_ref = actorRefForCustomer(dossier_id, tokenHash);
-
-  async function auditReject(stage: string, status: number, message: string, extra?: Record<string, unknown>) {
+  async function auditReject(
+    stage: string,
+    status: number,
+    message: string,
+    extra?: Record<string, unknown>,
+  ) {
     await insertAuditFailOpen(
       SB,
       {
@@ -131,11 +145,10 @@ serve(async (req) => {
         event_data: { stage, status, message, ...(extra || {}) },
       },
       meta,
-      { actor_ref, environment: ENVIRONMENT },
+      { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
     );
   }
 
-  // ---- auth + whitelist dossier fields ----
   const { data: dossier, error: dErr } = await SB
     .from("dossiers")
     .select([
@@ -164,9 +177,7 @@ serve(async (req) => {
       "address_bag_id",
       "address_verified_at",
     ].join(","))
-
     .eq("id", dossier_id)
-    .eq("access_token_hash", tokenHash)
     .maybeSingle();
 
   if (dErr) {
@@ -175,11 +186,10 @@ serve(async (req) => {
   }
 
   if (!dossier) {
-    await auditReject("auth", 401, "Unauthorized", { reason: "unauthorized" });
-    return finalize(401, { ok: false, error: "Unauthorized" });
+    await auditReject("dossier_lookup", 404, "Dossier not found", { reason: "not_found" });
+    return finalize(404, { ok: false, error: "Dossier not found" });
   }
 
-  // ---- enforce audit-export rule: must be locked / in_review / ready_for_booking ----
   const st = String(dossier.status || "");
   const locked = !!dossier.locked_at;
   const exportAllowed = locked || st === "in_review" || st === "ready_for_booking";
@@ -191,6 +201,7 @@ serve(async (req) => {
       "Export is alleen toegestaan voor dossiers die zijn ingediend (locked/in_review).",
       { status: st, locked_at: dossier.locked_at || null, reason: "not_locked" },
     );
+
     return finalize(409, {
       ok: false,
       error: "Export is alleen toegestaan voor dossiers die zijn ingediend (locked/in_review).",
@@ -199,7 +210,6 @@ serve(async (req) => {
     });
   }
 
-  // ---- read related data (deterministic ordering) ----
   const [
     { data: chargers, error: chErr },
     { data: docsRaw, error: docErr },
@@ -207,17 +217,20 @@ serve(async (req) => {
     { data: consentsRaw, error: cErr },
   ] = await Promise.all([
     SB.from("dossier_chargers")
-      .select("id, serial_number, brand, model, created_at, updated_at")
+      .select("id, serial_number, mid_number, brand, model, power_kw, notes, created_at, updated_at")
       .eq("dossier_id", dossier_id)
       .order("created_at", { ascending: true }),
+
     SB.from("dossier_documents")
       .select("id, doc_type, charger_id, status, filename, content_type, size_bytes, storage_bucket, storage_path, file_sha256, confirmed_at, confirmed_request_id, created_at, updated_at")
       .eq("dossier_id", dossier_id)
       .order("created_at", { ascending: true }),
+
     SB.from("dossier_checks")
       .select("check_code, status, details, updated_at")
       .eq("dossier_id", dossier_id)
       .order("check_code", { ascending: true }),
+
     SB.from("dossier_consents")
       .select("consent_type, accepted, accepted_at, created_at")
       .eq("dossier_id", dossier_id)
@@ -242,7 +255,6 @@ serve(async (req) => {
     return finalize(500, { ok: false, error: `Consents read failed: ${cErr.message}` });
   }
 
-  // Latest-consent snapshot (deterministisch)
   const consent_snapshot: Record<string, boolean> = {};
   const seen = new Set<string>();
   for (const row of (consentsRaw || []) as ConsentRow[]) {
@@ -253,43 +265,46 @@ serve(async (req) => {
     consent_snapshot[t] = row.accepted === true;
   }
 
-  // Only confirmed documents in audit export
   const documents_confirmed = (docsRaw || [])
-    .filter((d: any) => String(d.status || "") === "confirmed")
-    .map((d: any) => ({
+    .filter((d: Record<string, unknown>) => String(d.status || "") === "confirmed")
+    .map((d: Record<string, unknown>) => ({
       document_id: String(d.id),
       doc_type: d.doc_type || null,
       charger_id: d.charger_id || null,
       status: d.status || null,
-
       filename: d.filename || null,
       content_type: d.content_type || null,
       size_bytes: d.size_bytes || null,
-
       storage_bucket: d.storage_bucket || null,
       storage_path: d.storage_path || null,
-
       file_sha256: d.file_sha256 || null,
       confirmed_at: d.confirmed_at || null,
       confirmed_request_id: d.confirmed_request_id || null,
-
       created_at: d.created_at || null,
       updated_at: d.updated_at || null,
     }));
 
-  // sanity: confirmed docs must have sha256
-  const missingSha = documents_confirmed.filter((d: any) => !d.file_sha256);
+  const missingSha = documents_confirmed.filter((d) => !d.file_sha256);
   if (missingSha.length) {
-    await auditReject("export_integrity", 409, "Confirmed documents without file_sha256 found.", {
-      reason: "confirmed_without_sha",
-      missing_sha_document_ids: missingSha.map((x: any) => x.document_id),
+    await auditReject(
+      "export_integrity",
+      409,
+      "Confirmed documents without file_sha256 found.",
+      {
+        reason: "confirmed_without_sha",
+        missing_sha_document_ids: missingSha.map((x) => x.document_id),
+      },
+    );
+
+    return finalize(409, {
+      ok: false,
+      error: "Confirmed documents zonder file_sha256 — export geblokkeerd.",
     });
-    return finalize(409, { ok: false, error: "Confirmed documents zonder file_sha256 — export geblokkeerd." });
   }
 
   const body = {
     ok: true,
-    schema_version: "enval-dossier-export.v3",
+    schema_version: "enval-dossier-export.v4",
     generated_at: new Date().toISOString(),
     environment: ENVIRONMENT,
 
@@ -297,7 +312,6 @@ serve(async (req) => {
     chargers: chargers || [],
     checks: checks || [],
     consents_latest: consent_snapshot,
-
     documents_confirmed,
   };
 
@@ -314,7 +328,7 @@ serve(async (req) => {
       },
     },
     meta,
-    { actor_ref, environment: ENVIRONMENT },
+    { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
   );
 
   return finalize(200, body);

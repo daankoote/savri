@@ -187,7 +187,9 @@ Write
 - address_saved_verified — success — api-dossier-address-save
 - address_save_rejected — reject/fail — api-dossier-address-save — stages: validate|auth|dossier_locked|db_read|external_lookup|db_write
 
-NB: api-dossier-address-preview = bewust géén audit events.
+NB:
+- `api-dossier-address-preview` is verwijderd.
+- Address preview loopt nu uitsluitend via `api-dossier-address-verify`, dus preview is dossier-scoped en auditwaardig.
 
 ## 4) Customer — Step 3 Chargers
 Success
@@ -260,11 +262,21 @@ Reject/Fail
   stages: validate|auth|dossier_locked|db_read|db_write
 
 ## 7) Customer — Step 6 Review
-- dossier_ready_for_review — success — api-dossier-evaluate
-- dossier_locked_for_review — success — api-dossier-evaluate
+Canonical endpoint:
+- `api-dossier-evaluate`
+
+Success
+- dossier_ready_for_review — success — api-dossier-evaluate (`finalize=false`)
+- dossier_locked_for_review — success — api-dossier-evaluate (`finalize=true`)
+
+Reject/Fail
 - dossier_review_rejected_incomplete — reject — api-dossier-evaluate
 - dossier_evaluate_rejected — reject — api-dossier-evaluate
 - dossier_evaluate_failed — fail — api-dossier-evaluate
+
+NB:
+- `api-dossier-submit-review` is verwijderd.
+- Er is dus geen parallel review-endpoint meer.
 
 ## 8) Customer — Read/Auth
 - dossier_get_rejected — reject — api-dossier-get (401)
@@ -294,6 +306,17 @@ Bron: `supabase/functions/api-dossier-get/index.ts` + runtime endpoints die `aut
 - dossier_get_rejected — reject — api-dossier-get (session mode) wanneer `authSession(...)` faalt
 - access_save_rejected — reject — api-dossier-access-save wanneer `authSession(...)` faalt
 - access_update_rejected — reject — api-dossier-access-update wanneer `authSession(...)` faalt
+- address_verify_rejected — reject — api-dossier-address-verify (session mode)
+- address_save_rejected — reject — api-dossier-address-save (session mode)
+- charger_save_rejected — reject — api-dossier-charger-save (session mode)
+- charger_delete_rejected — reject — api-dossier-charger-delete (session mode)
+- document_upload_url_rejected — reject — api-dossier-upload-url (session mode)
+- document_upload_confirm_rejected — reject — api-dossier-upload-confirm (session mode)
+- document_delete_rejected — reject — api-dossier-doc-delete (session mode)
+- document_download_url_rejected — reject — api-dossier-doc-download-url (session mode)
+- consents_save_rejected — reject — api-dossier-consents-save (session mode)
+- dossier_evaluate_rejected — reject — api-dossier-evaluate (session mode)
+- dossier_export_rejected — reject — api-dossier-export (session mode)
 
 NB:
 - Er is geen aparte `session_revoked` audit event in CURRENT code.

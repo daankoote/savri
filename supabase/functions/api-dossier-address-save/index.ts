@@ -1,4 +1,4 @@
-//supabase/functions/api-dossier-address-save/index.ts
+// supabase/functions/api-dossier-address-save/index.ts
 
 import { serve } from "jsr:@std/http@0.224.0/server";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
@@ -9,6 +9,10 @@ import {
   tryGetIdempotentResponse,
   storeIdempotentResponseFailOpen,
 } from "../_shared/audit.ts";
+import {
+  requireCustomerSession,
+  scopedSessionIdemKey,
+} from "../_shared/customer_auth.ts";
 
 // -------------------- CORS (strict allowlist) --------------------
 function parseAllowedOrigins(): string[] {
@@ -62,20 +66,8 @@ function getEnvironment(): string {
   ).toLowerCase();
 }
 
-async function sha256Hex(input: string) {
-  const data = new TextEncoder().encode(input);
-  const hash = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
 function nowIso() {
   return new Date().toISOString();
-}
-
-function actorRefForCustomer(dossierId: string, tokenHash: string): string {
-  return `dossier:${dossierId}|token:${tokenHash.slice(0, 16)}`;
 }
 
 // -------------------- Address helpers --------------------
@@ -244,10 +236,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeadersFor(req) });
   if (req.method !== "POST") return json(req, 405, { ok: false, error: "Method not allowed" });
 
-  // Idempotency verplicht voor write endpoint
   const idemKey = String(meta.idempotency_key || "").trim();
   if (!idemKey) {
-    // Geen audit: request is niet veilig te replayen/duiden als write
     return bad(req, "Missing Idempotency-Key", 400);
   }
 
@@ -257,56 +247,59 @@ serve(async (req) => {
 
   const body = await req.json().catch(() => ({} as any));
   const dossierId = body?.dossier_id ? String(body.dossier_id) : null;
-  const tokenStr = body?.token ? String(body.token) : null;
+  const session_token = body?.session_token ? String(body.session_token) : null;
 
-  // Replay zodra we dossier scope hebben
-  if (dossierId) {
-    const cached = await tryGetIdempotentResponse(SB, idemKey);
-    if (cached) return json(req, cached.status, cached.body);
+  if (!dossierId || !session_token) {
+    return json(req, 400, { ok: false, error: "Missing dossier_id/session_token" });
   }
 
+  const auth = await requireCustomerSession(
+    SB,
+    dossierId,
+    session_token,
+    meta,
+    "address_save_rejected",
+  );
+
+  if (!auth.ok) {
+    return json(req, auth.status, { ok: false, error: auth.error });
+  }
+
+  const idemScopedKey = scopedSessionIdemKey(dossierId, auth.session_token_hash, idemKey);
+
+  const cached = await tryGetIdempotentResponse(SB, idemScopedKey);
+  if (cached) return json(req, cached.status, cached.body);
+
   async function finalize(status: number, payload: any) {
-    await storeIdempotentResponseFailOpen(SB, idemKey, status, payload);
+    await storeIdempotentResponseFailOpen(SB, idemScopedKey, status, payload);
     return json(req, status, payload);
   }
 
-  if (!dossierId || !tokenStr) {
-    return finalize(400, { ok: false, error: "Missing dossier_id/token" });
+  async function reject(stage: string, status: number, message: string, extra?: Record<string, unknown>) {
+    await insertAuditFailOpen(
+      SB,
+      {
+        dossier_id: dossierId,
+        actor_type: "customer",
+        event_type: "address_save_rejected",
+        event_data: { stage, status, message, ...(extra || {}) },
+      },
+      meta,
+      { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
+    );
+    return finalize(status, { ok: false, error: message });
   }
 
-  const tokenHash = await sha256Hex(tokenStr);
-  const actor_ref = actorRefForCustomer(dossierId, tokenHash);
+  const postcodeRaw = body?.postcode;
+  const houseNumberRaw = body?.house_number ?? body?.houseNumber ?? body?.housenumber ?? body?.number;
+  const suffixRaw = body?.suffix ?? body?.addition ?? body?.house_suffix ?? body?.houseSuffix ?? null;
 
-  async function reject(stage: string, status: number, message: string, extra?: Record<string, unknown>) {
-        await insertAuditFailOpen(
-        SB,
-        {
-            dossier_id: dossierId,
-            actor_type: "customer",
-            event_type: "address_save_rejected",
-            event_data: { stage, status, message, ...(extra || {}) },
-        },
-        meta,
-        { actor_ref, environment: ENVIRONMENT },
-        );
-        return finalize(status, { ok: false, error: message });
-    }
-
-    // accepteer meerdere key-varianten (UI mismatch killers)
-    const postcodeRaw = body?.postcode;
-    const houseNumberRaw = body?.house_number ?? body?.houseNumber ?? body?.housenumber ?? body?.number;
-    const suffixRaw = body?.suffix ?? body?.addition ?? body?.house_suffix ?? body?.houseSuffix ?? null;
-
-    const pc = normalizePostcode(String(postcodeRaw || ""));
-    const hn = String(houseNumberRaw || "").trim();
-
-    // voorkom "null" / "undefined" als string
-    const suf = normalizeSuffix(suffixRaw == null ? "" : String(suffixRaw),);
-
+  const pc = normalizePostcode(String(postcodeRaw || ""));
+  const hn = String(houseNumberRaw || "").trim();
+  const suf = normalizeSuffix(suffixRaw == null ? "" : String(suffixRaw));
 
   if (!pc || !isValidPostcode(pc)) {
     return reject("validate", 400, "Postcode is ongeldig (format: 1234AB).", { input: { postcode: pc } });
-
   }
   if (!hn || !isValidHouseNumber(hn)) {
     return reject("validate", 400, "Huisnummer is ongeldig.", { input: { house_number: hn } });
@@ -316,25 +309,10 @@ serve(async (req) => {
     .from("dossiers")
     .select("id, locked_at, status")
     .eq("id", dossierId)
-    .eq("access_token_hash", tokenHash)
     .maybeSingle();
 
   if (dErr) return reject("db_read", 500, dErr.message);
-
-  if (!dossier) {
-    await insertAuditFailOpen(
-      SB,
-      {
-        dossier_id: dossierId,
-        actor_type: "customer",
-        event_type: "address_save_rejected",
-        event_data: { stage: "auth", status: 401, message: "Unauthorized", reason: "unauthorized" },
-      },
-      meta,
-      { actor_ref: `dossier:${dossierId}|token:invalid`, environment: ENVIRONMENT },
-    );
-    return finalize(401, { ok: false, error: "Unauthorized" });
-  }
+  if (!dossier) return reject("dossier_missing", 404, "Dossier niet gevonden.");
 
   const st = String(dossier.status || "");
   if (dossier.locked_at || st === "in_review" || st === "ready_for_booking") {
@@ -346,7 +324,9 @@ serve(async (req) => {
     resolved = await pdokLookupAddress(pc, hn, suf);
   } catch (e) {
     console.error("PDOK lookup error:", e);
-    return reject("external_lookup", 502, "Adres kon niet gecontroleerd worden (lookup error).", { reason: "pdok_error" });
+    return reject("external_lookup", 502, "Adres kon niet gecontroleerd worden (lookup error).", {
+      reason: "pdok_error",
+    });
   }
 
   if (!resolved) {
@@ -407,7 +387,7 @@ serve(async (req) => {
       },
     },
     meta,
-    { actor_ref, environment: ENVIRONMENT },
+    { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
   );
 
   return finalize(200, {

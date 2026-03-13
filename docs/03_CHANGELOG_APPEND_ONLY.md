@@ -685,6 +685,69 @@ Nuance:
 
 Gevolg:
 - Items zoals session-auth hardening, api.js adoptie, MID grep-cleanliness en live SEO verificatie blijven OPEN totdat hun bewijs expliciet is geleverd.
+
+## 2026-03-13 — Session-auth refactor afgerond + legacy endpoints verwijderd + frontend api.js opgeschoond
+
+Wijzigingen
+- Dossier runtime-auth verder geharmoniseerd rond `session_token`:
+  - write/read dossier-endpoints gebruiken nu session-auth als canonical model
+  - link-token blijft uitsluitend voor initial exchange via `api-dossier-get`
+- Nieuwe shared helper toegevoegd:
+  - `supabase/functions/_shared/customer_auth.ts`
+  - levert uniforme session-auth + actor_ref + scoped idempotency helpers
+- Frontend shared API helper staat nu canoniek op:
+  - `assets/js/api.js`
+- Verkeerd geplaatste legacy copy verwijderd:
+  - `supabase/functions/_shared/api.js` verwijderd
+- Legacy endpoints verwijderd:
+  - `api-dossier-submit-review`
+  - `api-dossier-address-preview`
+
+Behavior / contract
+- Canonical reviewflow:
+  - `api-dossier-evaluate(finalize=false)` = precheck
+  - `api-dossier-evaluate(finalize=true)` = lock + in_review
+- Canonical address preview:
+  - via `api-dossier-address-verify`
+  - preview is nu dossier-scoped + auditwaardig
+- Export blijft:
+  - session-auth
+  - alleen voor locked / in_review dossiers
+  - alleen confirmed docs
+
+Frontend
+- `assets/js/api.js` is source-of-truth voor:
+  - dossier id uit URL
+  - link-token uit URL
+  - session-token storage per dossier
+  - legacy localStorage cleanup
+  - idempotent `apiPost()` wrapper
+- `assets/js/pages/dossier.js` gebruikt deze helpers als shared layer i.p.v. verspreide fetch/session logica.
+
+Tooling
+- `scripts/tools/edge-uniformity.sh` opgeschoond naar V4:
+  - `api-dossier-submit-review` verwijderd uit CORE lijst
+  - `api-dossier-address-preview` verwijderd uit UTILITY lijst
+  - alleen `mail-worker` resteert als utility
+- Uniformity report bevestigt:
+  - core baseline groen
+  - utility baseline groen
+  - geen unclassified functions
+
+Bewijs
+- Dossierflow werkt end-to-end:
+  - chargers zichtbaar in UI
+  - uploads confirmed
+  - evaluate finalize zet dossier op `in_review`
+  - exportflow session-auth aligned
+- grep/uniformity bevestigt:
+  - geen actieve references meer naar verwijderde endpoints in runtime code
+  - frontend laadt `assets/js/api.js` canoniek
+
+
+
 ---
+
+
 
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)
