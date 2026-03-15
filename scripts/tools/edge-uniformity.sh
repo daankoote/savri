@@ -1,3 +1,4 @@
+#  /Users/daankoote/dev/enval/scripts/tools/edge-uniformity.sh
 #!/usr/bin/env bash
 set -euo pipefail
 

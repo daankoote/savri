@@ -73,7 +73,7 @@ Canonical policy:
 - ./assets/js/script.js
 - ./assets/js/api.js (frontend shared helpers: url params, session token storage, idempotent apiPost wrapper)
 - ./assets/js/pages/dossier.js
-
+- ./assets/js/api.js (shared helpers: url params, session token storage, apiPost wrapper)
 
 
 ---
