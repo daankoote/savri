@@ -91,6 +91,7 @@ Sommige rejects gebeuren **vóór** de edge function code draait (Supabase gatew
 - Voorbeeld: 401 `Missing authorization header`.
 - Gevolg: er wordt **geen** `dossier_audit_event` geschreven (function draait niet).
 - Bewijs/diagnose: CORS headers zijn niet die van de function (vaak `allow-origin: *`).
+
 ### Mail-worker gateway rejects (ops nuance)
 - 401 `Missing authorization header` is een gateway reject vóór function runtime.
 - Gevolg: er wordt géén `dossier_audit_event` geschreven door mail-worker (code draait niet).
@@ -354,7 +355,7 @@ NB:
 ## 8.2 Login Recovery (CURRENT)
 
 Endpoint:
-api-dossier-login-request
+`api-dossier-login-request`
 
 Doel:
 Herstellen van dossier toegang wanneer oorspronkelijke dossier-link token

@@ -289,7 +289,7 @@ Audit/export interpretatie:
 
 **Phase-2 uploadstrategie (actueel):**
 - `api-dossier-upload-url`:
-  - Issuet signed upload URL
+  - Issues signed upload URL
   - Legt document metadata vast (issued)
   - Doet **geen** bestandsverwerking
 - `api-dossier-upload-confirm`:

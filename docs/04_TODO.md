@@ -77,6 +77,15 @@ Regel: alleen open items; afgerond → naar changelog.
 - Status: OPEN
 
 
+### 7) Docs hygiene: CURRENT docs consistent en renderbaar houden
+- Context:
+  - docs zijn inhoudelijk sterk, maar markdown-formatting en CURRENT-vs-historie kunnen weer gaan divergeren
+- DoD:
+  - codevoorbeelden staan in fenced code blocks
+  - CURRENT secties spreken append-only historie niet tegen
+  - geen dubbele of dode secties
+  - bij architectuurwijziging: current doc + changelog blijven synchroon
+- Status: OPEN
 
 ### 8) Frontend contract: MID veldnaam volledig consistent met spec
 - DoD:

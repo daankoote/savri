@@ -827,6 +827,25 @@ Conclusie
 - CURRENT docs reflecteren nu de 2026-03-15 testsuite-hardening correct.
 ---
 
+## 2026-03-15 — Docs hygiene cleanup: markdown formatting + CURRENT truth verduidelijkt
 
+Wijzigingen
+- `00_GLOBAL.md` opgeschoond op leesbaarheid en markdown-formatting:
+  - HTML voorbeelden omgezet naar fenced code blocks
+  - session-auth wording beter aligned met CURRENT runtime-contract
+  - CSS architectuur-sectie rechtgezet naar single-stylesheet waarheid
+  - amendment metadata leesbaar gemaakt
+  - kleine typo fixes
+- `01_SYSTEM_MAP.md` opgeschoond:
+  - mail-worker curl voorbeeld omgezet naar fenced bash block
+  - kleine typo fix in upload-url beschrijving
+- `02_AUDIT_MATRIX.md` licht opgeschoond:
+  - gateway/mail-worker nuance leesbaarder gemaakt
+  - login recovery endpoint formatting verbeterd
+
+Doel
+- Docs beter controleerbaar maken
+- CURRENT waarheid explicieter maken
+- Markdown rendering voorspelbaar houden
 
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)
