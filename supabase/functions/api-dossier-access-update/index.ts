@@ -48,12 +48,8 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-async function sha256Hex(input: string) {
-  const data = new TextEncoder().encode(input);
-  const hash = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+function actorRefForCustomer(dossierId: string, tokenHash: string): string {
+  return `dossier:${dossierId}|token:${tokenHash.slice(0, 16)}`;
 }
 
 function validateNlMobile(phone: string) {
@@ -65,6 +61,10 @@ function asStringOrNull(v: unknown): string | null {
   if (v === undefined || v === null) return null;
   const s = String(v).trim();
   return s ? s : null;
+}
+
+function scopedIdemKey(dossierId: string, actorScope: string, rawKey: string) {
+  return `dossier:${dossierId}|actor:${actorScope}|idem:${rawKey}`;
 }
 
 function actorRefForCustomer(dossierId: string, tokenHash: string): string {
@@ -93,28 +93,64 @@ serve(async (req) => {
   const dossier_id = body?.dossier_id ? String(body.dossier_id) : null;
   const session_token = body?.session_token ? String(body.session_token) : null;
 
-  // Replay zodra we dossier scope hebben
-  if (dossier_id) {
-    const cached = await tryGetIdempotentResponse(SB, idemKey);
-    if (cached) return json(req, cached.status, cached.body);
-  }
-
-  async function finalize(status: number, payload: any) {
-    await storeIdempotentResponseFailOpen(SB, idemKey, status, payload);
+  async function finalize(keyToUse: string, status: number, payload: any) {
+    await storeIdempotentResponseFailOpen(SB, keyToUse, status, payload);
     return json(req, status, payload);
   }
 
   if (!dossier_id || !session_token) {
-    return finalize(400, { ok: false, error: "Missing dossier_id/session_token" });
+    const missingKey = dossier_id
+      ? scopedIdemKey(dossier_id, "missing", idemKey)
+      : `global|actor:missing|idem:${idemKey}`;
+
+    return finalize(missingKey, 400, { ok: false, error: "Missing dossier_id/session_token" });
   }
 
   const r = await authSession(SB, dossier_id, session_token, meta);
+
   if (!r.ok) {
-    await auditSessionRejectFailOpen(SB, dossier_id, meta, "access_update_rejected", r.reason, r.error);
-    return finalize(401, { ok: false, error: "Unauthorized" });
+    if (r.reason === "db_read") {
+      await insertAuditFailOpen(
+        SB,
+        {
+          dossier_id,
+          actor_type: "customer",
+          event_type: "access_update_failed",
+          event_data: {
+            stage: "auth_session",
+            status: 500,
+            reason: r.reason,
+            message: r.error,
+          },
+        },
+        meta,
+        { actor_ref: `dossier:${dossier_id}|session:db_read` },
+      );
+
+      const dbReadKey = scopedIdemKey(dossier_id, "db_read", idemKey);
+      return finalize(dbReadKey, 500, { ok: false, error: r.error });
+    }
+
+    await auditSessionRejectFailOpen(
+      SB,
+      dossier_id,
+      meta,
+      "access_update_rejected",
+      r.reason,
+      r.error,
+      { stage: "auth_session" },
+    );
+
+    const rejectKey = scopedIdemKey(dossier_id, "invalid", idemKey);
+    return finalize(rejectKey, r.status, { ok: false, error: r.error });
   }
 
-  const actor_ref = `dossier:${dossier_id}|session:${r.session_token_hash.slice(0, 16)}`;
+  const actorScope = r.session_token_hash.slice(0, 16);
+  const idemScopedKey = scopedIdemKey(dossier_id, actorScope, idemKey);
+  const actor_ref = `dossier:${dossier_id}|session:${actorScope}`;
+
+  const cached = await tryGetIdempotentResponse(SB, idemScopedKey);
+  if (cached) return json(req, cached.status, cached.body);
 
   async function reject(
     stage: string,
@@ -139,7 +175,7 @@ serve(async (req) => {
       meta,
       { actor_ref: actorRefOverride ?? actor_ref },
     );
-    return finalize(status, { ok: false, error: message });
+    return finalize(idemScopedKey, status, { ok: false, error: message });
   }
 
   const { data: dossier, error: dErr } = await SB
@@ -246,5 +282,5 @@ serve(async (req) => {
     { actor_ref },
   );
 
-  return finalize(200, { ok: true, saved: true, invalidated: st === "ready_for_review" });
+  return finalize(idemScopedKey, 200, { ok: true, saved: true, invalidated: st === "ready_for_review" });
 });

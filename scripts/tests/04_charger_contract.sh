@@ -7,11 +7,13 @@ source "$(dirname "$0")/00_helpers.sh"
 echo ""
 echo "== CHARGER CONTRACT TESTS =="
 
-# HARD: token must match DB right now, otherwise auth tests are meaningless
+# Link-token blijft alleen bootstrap/debug-bewijs.
+# Runtime-auth voor charger endpoints moet via session_token lopen.
 assert_token_matches_db
 
-require_dossier_token
-echo "TOKEN (sha256 prefix): $(sha256_str "$(dossier_token)" | cut -c1-16)..."
+require_dossier_session_token
+echo "TOKEN (sha256 prefix):   $(sha256_str "$(dossier_token)" | cut -c1-16)..."
+echo "SESSION present:         yes"
 
 FN_SAVE="$SUPABASE_URL/functions/v1/api-dossier-charger-save"
 FN_DELETE="$SUPABASE_URL/functions/v1/api-dossier-charger-delete"
@@ -19,7 +21,7 @@ FN_DELETE="$SUPABASE_URL/functions/v1/api-dossier-charger-delete"
 # Deterministic valid MID for tests (NOT secret)
 MID_OK="${MID_OK:-1234567890123456}"
 
-BAD_TOKEN="BAD-$(dossier_token)"
+BAD_SESSION_TOKEN="BAD-$(dossier_session_token)"
 
 CHARGER_ID="$(get_state CHARGER_ID)"
 if [[ -z "${CHARGER_ID:-}" ]]; then
@@ -30,17 +32,16 @@ fi
 ALLOWED_MAX="$(get_state ALLOWED_MAX)"
 EXISTING_AFTER_SETUP="$(get_state EXISTING_AFTER_SETUP)"
 
-# 1) unauthorized save
 run_case \
   "1) REJECT — charger-save (unauthorized)" \
   "$FN_SAVE" \
-  "{\"dossier_id\":\"$DOSSIER_ID\",\"token\":\"$BAD_TOKEN\",\"serial_number\":\"TEST-$(now_ts)\",\"brand\":\"TEST\",\"model\":\"TEST\",\"power_kw\":11,\"notes\":\"reject unauth\"}" \
+  "{\"dossier_id\":\"$DOSSIER_ID\",\"session_token\":\"$BAD_SESSION_TOKEN\",\"serial_number\":\"TEST-$(now_ts)\",\"brand\":\"TEST\",\"model\":\"TEST\",\"power_kw\":11,\"notes\":\"reject unauth\"}" \
   "reject-charger-unauth" \
   "401" \
   "yes" \
   "charger_save_rejected" \
   "auth" \
-  "unauthorized" || exit 1
+  "session_not_found" || exit 1
 
 echo "PASS charger-save unauthorized"
 
@@ -54,7 +55,7 @@ if [[ -n "${ALLOWED_MAX:-}" && -n "${EXISTING_AFTER_SETUP:-}" && "$EXISTING_AFTE
   echo ""
 
   # IMPORTANT: always include mid_number so validate_input cannot override expected result
-  payload="{\"dossier_id\":\"$DOSSIER_ID\",\"token\":\"$(dossier_token)\",\"serial_number\":\"TEST-$(now_ts)\",\"mid_number\":\"$MID_OK\",\"brand\":\"TEST\",\"model\":\"TEST\",\"power_kw\":11,\"notes\":\"reject max\"}"
+  payload="{\"dossier_id\":\"$DOSSIER_ID\",\"session_token\":\"$(dossier_session_token)\",\"serial_number\":\"TEST-$(now_ts)\",\"mid_number\":\"$MID_OK\",\"brand\":\"TEST\",\"model\":\"TEST\",\"power_kw\":11,\"notes\":\"reject max\"}"
 
   RESP="$(http_call_with_idem "$FN_SAVE" "$payload" "$rid")"
   HTTP="$(extract_http_status "$RESP")"
@@ -67,7 +68,7 @@ if [[ -n "${ALLOWED_MAX:-}" && -n "${EXISTING_AFTER_SETUP:-}" && "$EXISTING_AFTE
     echo "PASS charger-save max chargers"
   elif [[ "$HTTP" == "401" ]]; then
     # TEMP: auth is broken; prove audit says unauthorized
-    audit_assert_for_request_id "$rid" "charger_save_rejected" "auth" "unauthorized" "2) max chargers (auth broken)" || exit 1
+    audit_assert_for_request_id "$rid" "charger_save_rejected" "auth" "session_not_found" "2) max chargers (auth broken)" || exit 1
     echo "WARN: charger-save max returned 401 (auth broken, see audit token_hash_prefix in backend after deploy)"
     exit 1
   else
@@ -86,12 +87,12 @@ fi
 run_case \
   "3) REJECT — charger-delete (unauthorized)" \
   "$FN_DELETE" \
-  "{\"dossier_id\":\"$DOSSIER_ID\",\"token\":\"$BAD_TOKEN\",\"charger_id\":\"$CHARGER_ID\"}" \
+  "{\"dossier_id\":\"$DOSSIER_ID\",\"session_token\":\"$BAD_SESSION_TOKEN\",\"charger_id\":\"$CHARGER_ID\"}" \
   "reject-chargerdelete-unauth" \
   "401" \
   "yes" \
   "charger_delete_rejected" \
   "auth" \
-  "unauthorized" || exit 1
+  "session_not_found" || exit 1
 
 echo "PASS charger-delete unauthorized"

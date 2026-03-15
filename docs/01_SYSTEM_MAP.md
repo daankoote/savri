@@ -32,7 +32,6 @@ De System Map moet technisch neutraal blijven zodat meerdere inboekers hierop ku
 - ./dossier.html
 - ./hoe-het-werkt.html
 - ./index.html
-- ./installateur.html (legacy)
 - ./mandaat.html
 - ./pricing.html
 - ./privacyverklaring.html
@@ -72,8 +71,9 @@ Canonical policy:
 - ./assets/js/config.runtime.js (GENERATED – DO NOT COMMIT)
 - ./assets/js/config.js (no-secrets)
 - ./assets/js/script.js
+- ./assets/js/api.js (frontend shared helpers: url params, session token storage, idempotent apiPost wrapper)
 - ./assets/js/pages/dossier.js
-- ./assets/js/api.js (shared helpers: url params, session token storage, apiPost wrapper)
+
 
 
 ---
@@ -162,36 +162,61 @@ Entry: `./dossier.html?d=<uuid>&t=<token>`
 - “write → reloadAll()” patroon
 
 #### Auth boundary (CURRENT, bevestigd via code)
-- Entry URL blijft: `./dossier.html?d=<uuid>&t=<token>`
+
+Entry URL blijft:
+- `./dossier.html?d=<uuid>&t=<token>`
 
 **Start-auth (link-token `t`)**
 - `t` is een one-time, expirable link-token.
-- Wordt uitsluitend gebruikt om een server-side session te minten.
+- `t` wordt uitsluitend gebruikt in `api-dossier-get` voor token→session exchange.
+- Na succesvolle exchange wordt `t` uit de URL verwijderd.
 
 **Runtime-auth (session-token)**
-- Na exchange gebruikt de wizard uitsluitend een session-token:
-  - `Authorization: Bearer <session_token>`
-- Session-token wordt per dossier opgeslagen in localStorage.
+- Na exchange gebruikt de wizard uitsluitend:
+  - body: `{ dossier_id, session_token, ... }`
+- Session-token wordt per dossier opgeslagen in localStorage onder:
+  - `enval_session_token:<dossier_id>`
+
+**Frontend source of truth**
+- `assets/js/api.js` levert:
+  - `getDossierIdFromUrl()`
+  - `getLinkTokenFromUrl()`
+  - `getSessionToken(dossierId)`
+  - `setSessionToken(dossierId, tok)`
+  - `clearSessionToken(dossierId)`
+  - `cleanupLegacySessionKey()`
+  - `newIdempotencyKey()`
+  - `apiPost()`
+
+**Legacy cleanup**
+- Oude single-key localStorage entry:
+  - `enval_session_token`
+  wordt actief opgeschoond via `cleanupLegacySessionKey()`.
 
 **Server-side source of truth**
-- Sessions staan in `public.dossier_sessions` (expired/revoked → reject).
+- Sessions staan in `public.dossier_sessions`.
+- Runtime auth enforcement gebeurt via:
+  - `authSession(...)`
+  - en gedeelde helper `supabase/functions/_shared/customer_auth.ts`
 
-**Exchange gebeurt in `api-dossier-get` (geen aparte exchange function)**
-- Mode A: client stuurt `{ dossier_id, session_token }` → `authSession(...)`
-- Mode B: client stuurt `{ dossier_id, token }` → consume link-token + mint session + return `session_token`
-
-Frontend helper:
-- `assets/js/api.js` levert:
-  - `getDossierIdFromUrl()` / `getLinkTokenFromUrl()`
-  - `getSessionToken(dossierId)` / `setSessionToken(dossierId, tok)`
+**Canonical dossier-flow**
+- `reloadAll()`:
+  1. probeert eerst `{ dossier_id, session_token }`
+  2. valt alleen bij ontbrekende/mislukte sessie terug op `{ dossier_id, token }`
+  3. verwacht daarna een nieuwe `session_token` van `api-dossier-get`
+  4. slaat die op en verwijdert pas daarna `t` uit de URL
 
 Locked UX wanneer:
-- `dossier.locked_at != null` OR `status IN ('in_review','ready_for_booking')`
+- `dossier.locked_at != null`
+- of `status IN ('in_review','ready_for_booking')`
 
 Evaluate-flow:
-- finalize=false → precheck (geen lock)
-- finalize=true  → lock + in_review
-- “dirtySincePrecheck” gating is leidend in UI
+- `finalize=false` → precheck (`ready_for_review`, geen lock)
+- `finalize=true` → indienen (`in_review`, lock)
+- client-side gating:
+  - `precheckOk === true`
+  - `dirtySincePrecheck === false`
+- “Dossier indienen” blijft verborgen tot succesvolle precheck zonder latere mutaties.
 
 ### Uploadgedrag (Phase-2, actueel)
 - Foto’s (`foto_laadpunt`) worden **client-side geoptimaliseerd** vóór upload.
@@ -205,6 +230,19 @@ Evaluate-flow:
 - Resend voor transactional mails
 - Google Workspace voor inkomend/human mail
 - Netlify voor hosting/domains
+
+### Backend shared helpers (CURRENT)
+- `supabase/functions/_shared/customer_auth.ts`
+  - gedeelde helper voor dossier session-auth
+  - levert:
+    - `requireCustomerSession(...)`
+    - `actorRefForSession(...)`
+    - `scopedSessionIdemKey(...)`
+
+Doel:
+- uniforme session-auth over dossier runtime endpoints
+- uniforme actor_ref op basis van session token hash
+- uniforme idempotency scoping per dossier + session
 
 ## 4) Core DB tables (samenvatting)
 
@@ -362,9 +400,8 @@ Stap 1 — Access
 - api-dossier-access-update (patch-style, idem)
 
 Stap 2 — Address
-- api-dossier-address-preview (UI comfort, géén audit)
-- api-dossier-address-verify (dossier-scoped preview + audit)
-- api-dossier-address-save (write + PDOK verify + audit)
+- api-dossier-address-verify (session-auth preview + audit)
+- api-dossier-address-save (session-auth write + PDOK verify + audit)
 
 Stap 3 — Laadpalen (Chargers)
 - api-dossier-charger-save (create/update, idempotency, MLS, locks, max chargers)
@@ -413,17 +450,20 @@ Stap 5 — Consents
 - api-dossier-consents-save (immutable; strict idempotency; audit)
 
 Stap 6 — Review
-- api-dossier-evaluate (checks + transitions + optional lock; strict idempotency)
+- api-dossier-evaluate (session-auth canonical review endpoint; precheck + finalize; strict idempotency)
 
 Evidence / export
-- api-dossier-export / api-dossier-dossier-export (naam checken in repo; export artifact; only locked; only confirmed docs)
+- api-dossier-export (session-auth; export artifact; only locked/in_review; only confirmed docs)
 
 Legacy/compat
-- api-dossier-submit-review (overlap met evaluate(finalize=true); bij voorkeur deprecate of wrapper maken)
-- api-dossier-email-verify-start/complete (waarschijnlijk outdated; MVP gebruikt “link possession”)
+- api-dossier-submit-review is verwijderd; canonical review/finalize endpoint is `api-dossier-evaluate`
+- api-dossier-address-preview is verwijderd; address preview loopt via `api-dossier-address-verify`
+
 
 ## 7) Security model (kern)
-- Customer auth: possession token → sha256(token) == `dossiers.access_token_hash`
+- Customer auth:
+  - start-auth: possession of link-token → sha256(token) == `dossiers.access_token_hash`
+  - runtime-auth: geldige server-side session in `public.dossier_sessions`
 - Hard lock enforcement op alle write endpoints
 - CORS allowlist (ALLOWED_ORIGINS + Vary: Origin)
 - Mail-worker JWT verify: **UIT** (legacy JWT) — security komt uit shared-secret header + private env secrets.
@@ -461,8 +501,18 @@ Legacy/compat
   - last_seen_at kan worden bijgewerkt voor monitoring/ops
 
 Belangrijk:
-- Link-token is niet voldoende voor dossier reads/writes.
-- Session-token is vereist.
+- Link-token is alleen voor initiële exchange in `api-dossier-get`.
+- Session-token is canoniek voor dossier runtime reads/writes.
+
+Shared helper (CURRENT):
+- `supabase/functions/_shared/customer_auth.ts`
+  - `requireCustomerSession(...)`
+  - `actorRefForSession(...)`
+  - `scopedSessionIdemKey(...)`
+
+Doel:
+- auth- en idempotency-scoping uniform maken over dossier-endpoints
+- drift tussen session-auth endpoints reduceren
 
 ## 8) Evidence-grade rules (contract)
 - **issued ≠ confirmed**

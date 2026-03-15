@@ -9,6 +9,10 @@ import {
   tryGetIdempotentResponse,
   storeIdempotentResponseFailOpen,
 } from "../_shared/audit.ts";
+import {
+  requireCustomerSession,
+  scopedSessionIdemKey,
+} from "../_shared/customer_auth.ts";
 
 // -------------------- CORS --------------------
 function parseAllowedOrigins(): string[] {
@@ -45,7 +49,6 @@ function bad(req: Request, msg: string, code = 400) {
   return json(req, code, { ok: false, error: msg });
 }
 
-// -------------------- ENV + client --------------------
 function getEnv(name: string) {
   const v = Deno.env.get(name);
   if (!v) throw new Error(`Missing env: ${name}`);
@@ -66,15 +69,6 @@ function getEnvironment(): string {
   ).toLowerCase();
 }
 
-// -------------------- helpers --------------------
-async function sha256Hex(input: string) {
-  const data = new TextEncoder().encode(input);
-  const hash = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
 function safeFilename(name: string) {
   return String(name || "")
     .replace(/[^\w.\-]+/g, "_")
@@ -91,15 +85,10 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function actorRefForCustomer(dossierId: string, tokenHash: string) {
-  return `dossier:${dossierId}|token:${tokenHash.slice(0, 16)}`;
-}
-
 function sanitizeClientTransform(input: any): Record<string, unknown> | null {
   if (!input || typeof input !== "object") return null;
   if (Array.isArray(input)) return null;
 
-  // Allowlist keys (we loggen alleen dit, om audit_data klein + voorspelbaar te houden)
   const ALLOWED_KEYS = new Set([
     "applied",
     "kind",
@@ -113,8 +102,6 @@ function sanitizeClientTransform(input: any): Record<string, unknown> | null {
     "quality",
     "out_w",
     "out_h",
-
-    // backward/alt keys (voor jouw eerdere variant)
     "client_transformed",
     "input_type",
     "output_type",
@@ -133,7 +120,6 @@ function sanitizeClientTransform(input: any): Record<string, unknown> | null {
     if (!ALLOWED_KEYS.has(k)) continue;
     if (v === undefined) continue;
 
-    // primitief houden (audit-proof, geen nested blobs)
     if (typeof v === "string") out[k] = v.slice(0, 240);
     else if (typeof v === "number") out[k] = Number.isFinite(v) ? v : null;
     else if (typeof v === "boolean") out[k] = v;
@@ -143,8 +129,6 @@ function sanitizeClientTransform(input: any): Record<string, unknown> | null {
   return Object.keys(out).length ? out : null;
 }
 
-
-// -------------------- allowlists --------------------
 const VALID_DOC_TYPES = new Set(["factuur", "foto_laadpunt", "mandaat", "id", "kvk", "overig"]);
 const DOC_TYPES_REQUIRE_CHARGER = new Set(["factuur", "foto_laadpunt"]);
 
@@ -158,7 +142,7 @@ const ALLOWED_MIME = new Set([
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ]);
 
-const MAX_BYTES = 15 * 1024 * 1024; // 15MB
+const MAX_BYTES = 15 * 1024 * 1024;
 const MAX_PER_CHARGER_DOC_TYPE = 1;
 
 serve(async (req) => {
@@ -176,10 +160,12 @@ serve(async (req) => {
     return bad(req, "Server misconfigured (missing secrets)", 500);
   }
 
-  // -------------------- parse body early --------------------
+  const idemKey = String(meta.idempotency_key || "").trim();
+  if (!idemKey) return bad(req, "Missing Idempotency-Key", 400);
+
   const parsed = await req.json().catch(() => ({} as any));
   const dossier_id = parsed?.dossier_id ? String(parsed.dossier_id) : null;
-  const token = parsed?.token ? String(parsed.token) : "";
+  const session_token = parsed?.session_token ? String(parsed.session_token) : null;
   const doc_type = parsed?.doc_type;
   const filename = parsed?.filename;
   const content_type = parsed?.content_type;
@@ -187,66 +173,59 @@ serve(async (req) => {
   const charger_id = parsed?.charger_id;
   const client_transform = sanitizeClientTransform(parsed?.client_transform);
 
-
-  // -------------------- Idempotency (required) --------------------
-  // LET OP: request_id is GEEN idempotency-key.
-  // Alleen de Idempotency-Key header telt. (Test A verwacht 400 zonder die header.)
-  const idemKey = String(meta.idempotency_key || "").trim();
-  if (!idemKey) return bad(req, "Missing Idempotency-Key", 400);
-
-  if (dossier_id) {
-    const cached = await tryGetIdempotentResponse(SB, idemKey);
-    if (cached) return json(req, cached.status, cached.body);
+  if (!dossier_id || !session_token) {
+    return json(req, 400, { ok: false, error: "Missing dossier_id/session_token" });
   }
 
+  const auth = await requireCustomerSession(
+    SB,
+    dossier_id,
+    session_token,
+    meta,
+    "document_upload_url_rejected",
+  );
+
+  if (!auth.ok) {
+    return json(req, auth.status, { ok: false, error: auth.error });
+  }
+
+  const idemScopedKey = scopedSessionIdemKey(dossier_id, auth.session_token_hash, idemKey);
+  const cached = await tryGetIdempotentResponse(SB, idemScopedKey);
+  if (cached) return json(req, cached.status, cached.body);
+
   async function finalize(status: number, body: any) {
-    await storeIdempotentResponseFailOpen(SB, idemKey, status, body);
+    await storeIdempotentResponseFailOpen(SB, idemScopedKey, status, body);
     return json(req, status, body);
   }
 
-  // tokenHash/actor_ref pas nadat we zeker weten dat dossier_id + token er zijn
-  let tokenHash = "";
-  let actor_ref = "";
-
-
   async function reject(stage: string, status: number, message: string, extra?: Record<string, unknown>) {
-    if (dossier_id) {
-      await insertAuditFailOpen(
-        SB,
-        {
-          dossier_id,
-          actor_type: "customer",
-          event_type: "document_upload_url_rejected",
-          event_data: {
-            stage,
-            status,
-            message,
-            client_transform,
-            ...(extra || {}),
-          },
-
+    await insertAuditFailOpen(
+      SB,
+      {
+        dossier_id,
+        actor_type: "customer",
+        event_type: "document_upload_url_rejected",
+        event_data: {
+          stage,
+          status,
+          message,
+          client_transform,
+          ...(extra || {}),
         },
-        meta,
-        { actor_ref, environment: ENVIRONMENT },
-      );
-    }
+      },
+      meta,
+      { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
+    );
     return finalize(status, { ok: false, error: message });
   }
 
-  // -------------------- validate input --------------------
-  if (!dossier_id || !token || !doc_type || !filename) {
-    return reject("validate_input", 400, "Missing dossier_id/token/doc_type/filename", {
+  if (!doc_type || !filename) {
+    return reject("validate_input", 400, "Missing doc_type/filename", {
       reason: "missing_fields",
-      dossier_id_present: !!dossier_id,
-      token_present: !!token,
       doc_type_present: !!doc_type,
       filename_present: !!filename,
     });
   }
-
-  tokenHash = await sha256Hex(token);
-  actor_ref = actorRefForCustomer(dossier_id, tokenHash);
-
 
   const dt = String(doc_type).trim().toLowerCase();
   if (!VALID_DOC_TYPES.has(dt)) {
@@ -302,32 +281,14 @@ serve(async (req) => {
     }
   }
 
-  // -------------------- auth + lock --------------------
   const { data: dossier, error: dErr } = await SB
     .from("dossiers")
     .select("id, locked_at, status")
     .eq("id", dossier_id)
-    .eq("access_token_hash", tokenHash)
     .maybeSingle();
 
   if (dErr) return reject("dossier_lookup", 500, dErr.message, { reason: "db_error" });
-
-  if (!dossier) {
-    // actor_ref bij unauthorized: expliciet invalid token
-    await insertAuditFailOpen(
-      SB,
-      {
-        dossier_id,
-        actor_type: "customer",
-        event_type: "document_upload_url_rejected",
-        event_data: { stage: "auth", status: 401, message: "Unauthorized", reason: "unauthorized", client_transform },
-      },
-      meta,
-      { actor_ref: `dossier:${dossier_id}|token:invalid`, environment: ENVIRONMENT },
-    );
-    return finalize(401, { ok: false, error: "Unauthorized" });
-  }
-
+  if (!dossier) return reject("dossier_lookup", 404, "Dossier niet gevonden.", { reason: "not_found" });
 
   const st = String(dossier.status || "");
   if (dossier.locked_at || st === "in_review" || st === "ready_for_booking") {
@@ -353,7 +314,6 @@ serve(async (req) => {
     return true;
   }
 
-  // -------------------- optional charger validation --------------------
   let chargerIdToStore: string | null = null;
   if (chId) {
     const { data: ch, error: chErr } = await SB
@@ -371,7 +331,6 @@ serve(async (req) => {
     chargerIdToStore = chId;
   }
 
-  // -------------------- per-charger doc limit (confirmed + issued should block; current rule blocks non-rejected) --------------------
   if (chargerIdToStore && (dt === "factuur" || dt === "foto_laadpunt")) {
     const { count, error: cntErr } = await SB
       .from("dossier_documents")
@@ -379,7 +338,7 @@ serve(async (req) => {
       .eq("dossier_id", dossier_id)
       .eq("charger_id", chargerIdToStore)
       .eq("doc_type", dt)
-      .neq("status", "rejected"); // defensive
+      .neq("status", "rejected");
 
     if (cntErr) return reject("doc_count", 500, `Doc count failed: ${cntErr.message}`, { reason: "db_error" });
 
@@ -394,7 +353,6 @@ serve(async (req) => {
     }
   }
 
-  // -------------------- issue signed upload + insert metadata --------------------
   const docId = crypto.randomUUID();
   const path = `dossiers/${dossier_id}/${docId}_${clean}`;
   const bucket = "enval-dossiers";
@@ -459,10 +417,9 @@ serve(async (req) => {
         invalidated_ready_for_review: invalidated,
         client_transform,
       },
-
     },
     meta,
-    { actor_ref, environment: ENVIRONMENT },
+    { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
   );
 
   return finalize(200, {

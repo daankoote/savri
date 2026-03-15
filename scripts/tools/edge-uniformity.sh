@@ -1,17 +1,11 @@
+#  /Users/daankoote/dev/enval/scripts/tools/edge-uniformity.sh
 #!/usr/bin/env bash
 set -euo pipefail
 
 # ================================================================
-# ENVAL — Edge Uniformity Report (V2)
-#
-# Goals:
-# - No surprises: every function must be classified as CORE or UTILITY
-# - CORE baseline is strict: CORS + META + IDEM + AUD + AUTH + SRV
-# - UTILITY baseline is minimal: META (traceability). Other columns report-only.
-#
-# Bash 3.2 compatible (macOS default): no mapfile, no associative arrays.
+# ENVAL — Edge Uniformity Report (V4)
+# Bash 3.2 safe
 # ================================================================
-
 
 # ENVAL — EDGE UNIFORMITY TOOL
 #
@@ -32,9 +26,7 @@ set -euo pipefail
 # - Dit is een repo-kwaliteitscheck, geen runtime test
 # - Gebruik dit vóór grotere refactors of contractwijzigingen
 
-
-
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")"/../.. && pwd)"
 FN_DIR="$REPO_ROOT/supabase/functions"
 
 if [[ ! -d "$FN_DIR" ]]; then
@@ -42,10 +34,6 @@ if [[ ! -d "$FN_DIR" ]]; then
   exit 1
 fi
 
-# -------------------------
-# Classification (NO SURPRISES)
-# -------------------------
-# Any new function MUST be added to one of these lists or the script FAILS.
 CORE_FUNCS=(
   "api-dossier-access-save"
   "api-dossier-access-update"
@@ -59,21 +47,24 @@ CORE_FUNCS=(
   "api-dossier-evaluate"
   "api-dossier-export"
   "api-dossier-get"
-  "api-dossier-submit-review"
+  "api-dossier-login-request"
   "api-dossier-upload-confirm"
   "api-dossier-upload-url"
   "api-lead-submit"
 )
 
 UTILITY_FUNCS=(
-  "api-dossier-address-preview"
   "mail-worker"
 )
 
 in_list() {
-  local needle="$1"; shift
+  local needle="$1"
+  shift
+  local x
   for x in "$@"; do
-    if [[ "$x" == "$needle" ]]; then return 0; fi
+    if [[ "$x" == "$needle" ]]; then
+      return 0
+    fi
   done
   return 1
 }
@@ -81,22 +72,20 @@ in_list() {
 class_of() {
   local name="$1"
   if in_list "$name" "${CORE_FUNCS[@]}"; then
-    echo "core"; return 0
+    echo "core"
+    return 0
   fi
   if in_list "$name" "${UTILITY_FUNCS[@]}"; then
-    echo "utility"; return 0
+    echo "utility"
+    return 0
   fi
-  echo "UNCLASSIFIED"; return 0
+  echo "UNCLASSIFIED"
+  return 0
 }
-
-# -------------------------
-# Grep helpers (heuristics, but stable)
-# -------------------------
-has() { grep -q "$1" "$2" && echo "yes" || echo "NO"; }
 
 detect_cors() {
   local f="$1"
-  if grep -q "Access-Control-Allow-Origin" "$f" && grep -q "Vary\"*[: ]*\"Origin" "$f"; then
+  if grep -q "Access-Control-Allow-Origin" "$f" && grep -q "Vary" "$f"; then
     echo "yes"
   else
     echo "NO"
@@ -105,8 +94,7 @@ detect_cors() {
 
 detect_meta() {
   local f="$1"
-  # Accept shared helper(s) or direct request_id functions
-  if grep -q "getReqMeta" "$f" || grep -q "getReqId" "$f" || grep -q "x-request-id" "$f"; then
+  if grep -q "getReqMeta" "$f" || grep -q "request_id" "$f" || grep -q "x-request-id" "$f"; then
     echo "yes"
   else
     echo "NO"
@@ -115,7 +103,6 @@ detect_meta() {
 
 detect_idem() {
   local f="$1"
-  # Explicit header check or idempotency table usage
   if grep -q "Idempotency-Key" "$f" || grep -qi "idempotency" "$f" || grep -q "idempotency_keys" "$f"; then
     echo "yes"
   else
@@ -125,8 +112,7 @@ detect_idem() {
 
 detect_aud() {
   local f="$1"
-  # Accept variations; your code uses insertAudit* patterns
-  if grep -q "insertAudit" "$f" || grep -q "insertAuditFailOpen" "$f" || grep -q "dossier_audit_events" "$f" || grep -q "intake_audit_events" "$f"; then
+  if grep -q "insertAudit" "$f" || grep -q "insertAuditFailOpen" "$f" || grep -q "auditSessionRejectFailOpen" "$f"; then
     echo "yes"
   else
     echo "NO"
@@ -135,8 +121,7 @@ detect_aud() {
 
 detect_auth() {
   local f="$1"
-  # Heuristic: token checks / unauthorized responses / auth wording
-  if grep -q "\"token\"" "$f" || grep -qi "unauthorized" "$f" || grep -qi "auth" "$f"; then
+  if grep -q "authSession" "$f" || grep -q "customer_auth" "$f" || grep -qi "session_token" "$f" || grep -qi "unauthorized" "$f" || grep -qi "access_token_hash" "$f"; then
     echo "yes"
   else
     echo "NO"
@@ -145,7 +130,6 @@ detect_auth() {
 
 detect_srv() {
   local f="$1"
-  # Service role usage (either env key name or actual createClient with service role)
   if grep -q "SUPABASE_SERVICE_ROLE_KEY" "$f"; then
     echo "yes"
   else
@@ -155,17 +139,19 @@ detect_srv() {
 
 detect_lock() {
   local f="$1"
-  if grep -qi "locked" "$f" || grep -qi "lock_check" "$f" || grep -qi "is_locked" "$f"; then
+  if grep -qi "locked_at" "$f" || grep -qi "in_review" "$f" || grep -qi "ready_for_booking" "$f" || grep -qi "ready_for_review" "$f"; then
     echo "yes"
   else
     echo "NO"
   fi
 }
 
-# -------------------------
-# Report header
-# -------------------------
-echo "ENVAL — Edge Uniformity Report (V2)"
+TMP_LIST="$(mktemp)"
+trap 'rm -f "$TMP_LIST"' EXIT
+
+find "$FN_DIR" -maxdepth 1 -type d ! -name "_*" ! -path "$FN_DIR" | sort > "$TMP_LIST"
+
+echo "ENVAL — Edge Uniformity Report (V4)"
 echo "Repo: $REPO_ROOT"
 echo "Dir:  $FN_DIR"
 echo ""
@@ -181,17 +167,18 @@ util_total=0
 util_fail=0
 unclassified=0
 
-# macOS bash 3.2 safe loop
 while IFS= read -r d; do
   name="$(basename "$d")"
   f="$d/index.ts"
+
   if [[ ! -f "$f" ]]; then
     continue
   fi
 
   cls="$(class_of "$name")"
+
   if [[ "$cls" == "UNCLASSIFIED" ]]; then
-    unclassified=$((unclassified+1))
+    unclassified=$((unclassified + 1))
   fi
 
   CORS="$(detect_cors "$f")"
@@ -205,29 +192,22 @@ while IFS= read -r d; do
   printf "%-30s | %-8s | %4s | %4s | %5s | %4s | %4s | %4s | %4s\n" \
     "$name" "$cls" "$CORS" "$META" "$IDEM" "$AUD" "$AUTH" "$SRV" "$LOCK"
 
-  # -------- Enforcements --------
   if [[ "$cls" == "core" ]]; then
-    core_total=$((core_total+1))
-
-    # CORE baseline: strict
+    core_total=$((core_total + 1))
     if [[ "$CORS" == "NO" || "$META" == "NO" || "$IDEM" == "NO" || "$AUD" == "NO" || "$AUTH" == "NO" || "$SRV" == "NO" ]]; then
-      core_fail=$((core_fail+1))
-      failcount=$((failcount+1))
+      core_fail=$((core_fail + 1))
+      failcount=$((failcount + 1))
     fi
   elif [[ "$cls" == "utility" ]]; then
-    util_total=$((util_total+1))
-
-    # UTILITY baseline: minimal traceability
+    util_total=$((util_total + 1))
     if [[ "$META" == "NO" ]]; then
-      util_fail=$((util_fail+1))
-      failcount=$((failcount+1))
+      util_fail=$((util_fail + 1))
+      failcount=$((failcount + 1))
     fi
   else
-    # Unclassified is always a hard fail (no surprises)
-    failcount=$((failcount+1))
+    failcount=$((failcount + 1))
   fi
-
-done < <(find "$FN_DIR" -maxdepth 1 -type d -not -name "_*" -not -path "$FN_DIR" | sort)
+done < "$TMP_LIST"
 
 echo "--------------------------------------------------------------------------------------------------------------"
 echo "SUMMARY:"

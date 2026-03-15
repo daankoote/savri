@@ -20,6 +20,34 @@ fi
 
 need DOSSIER_ID
 
+# CURRENT runtime auth:
+# - DOSSIER_TOKEN komt uit fresh bootstrap / mail en is alleen voor initial exchange
+# - DOSSIER_SESSION_TOKEN is canonical voor alle dossier runtime endpoints
+# Als session nog niet in state/env staat, bootstrap hem hier via api-dossier-get.
+
+DOSSIER_TOKEN_STATE="$(get_state DOSSIER_TOKEN)"
+if [[ -n "${DOSSIER_TOKEN_STATE:-}" ]]; then
+  export DOSSIER_TOKEN="$DOSSIER_TOKEN_STATE"
+fi
+
+need DOSSIER_TOKEN
+
+DOSSIER_SESSION_TOKEN_STATE="$(get_state DOSSIER_SESSION_TOKEN)"
+if [[ -n "${DOSSIER_SESSION_TOKEN_STATE:-}" ]]; then
+  export DOSSIER_SESSION_TOKEN="$DOSSIER_SESSION_TOKEN_STATE"
+fi
+
+if [[ -z "${DOSSIER_SESSION_TOKEN:-}" ]]; then
+  bootstrap_session_from_link_token
+  DOSSIER_SESSION_TOKEN_STATE="$(get_state DOSSIER_SESSION_TOKEN)"
+  if [[ -n "${DOSSIER_SESSION_TOKEN_STATE:-}" ]]; then
+    export DOSSIER_SESSION_TOKEN="$DOSSIER_SESSION_TOKEN_STATE"
+  fi
+fi
+
+need DOSSIER_SESSION_TOKEN
+require_dossier_session_token
+
 # CURRENT contract: fresh-only
 TEST_MODE="${TEST_MODE:-fresh}"
 if [[ "$TEST_MODE" != "fresh" ]]; then
@@ -90,9 +118,13 @@ create_charger_and_get_id() {
   local serial="$2"
 
   local resp http body id
+
+  # Canonical runtime auth = session_token
+  # Nooit meer link-token gebruiken op dossier runtime write endpoints.
+
   resp="$(http_call_with_idem \
     "$SUPABASE_URL/functions/v1/api-dossier-charger-save" \
-    "{\"dossier_id\":\"$DOSSIER_ID\",\"token\":\"$(dossier_token)\",\"serial_number\":\"TEST-$rid-$serial\",\"mid_number\":\"$TEST_MID_NUMBER\",\"brand\":\"TEST\",\"model\":\"TEST\",\"power_kw\":11,\"notes\":\"audit-test setup\"}" \
+    "{\"dossier_id\":\"$DOSSIER_ID\",\"session_token\":\"$(dossier_session_token)\",\"serial_number\":\"TEST-$rid-$serial\",\"mid_number\":\"$TEST_MID_NUMBER\",\"brand\":\"TEST\",\"model\":\"TEST\",\"power_kw\":11,\"notes\":\"audit-test setup\"}" \
     "$rid")"
 
   http="$(extract_http_status "$resp")"

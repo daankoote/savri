@@ -9,6 +9,10 @@ import {
   tryGetIdempotentResponse,
   storeIdempotentResponseFailOpen,
 } from "../_shared/audit.ts";
+import {
+  requireCustomerSession,
+  scopedSessionIdemKey,
+} from "../_shared/customer_auth.ts";
 
 // -------------------- ENV --------------------
 function getEnvironment(): string {
@@ -67,12 +71,6 @@ function sb() {
   });
 }
 
-async function sha256Hex(input: string) {
-  const data = new TextEncoder().encode(input);
-  const hash = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
 function nowIso() {
   return new Date().toISOString();
 }
@@ -81,15 +79,6 @@ function normStr(v: unknown, max = 200) {
   const s = String(v ?? "").trim();
   if (!s) return "";
   return s.slice(0, max);
-}
-
-function actorRefForCustomer(dossierId: string, tokenHash: string) {
-  return `dossier:${dossierId}|token:${tokenHash.slice(0, 16)}`;
-}
-
-function scopedIdemKey(dossierId: string, actorScope: string, rawKey: string) {
-  // actorScope: bijv. tokenHash prefix, of "missing"/"invalid"
-  return `dossier:${dossierId}|actor:${actorScope}|idem:${rawKey}`;
 }
 
 serve(async (req) => {
@@ -109,48 +98,33 @@ serve(async (req) => {
 
   const parsed = await req.json().catch(() => ({} as any));
   const dossier_id = parsed?.dossier_id ? String(parsed.dossier_id) : null;
-  const token = parsed?.token ? String(parsed.token).trim() : null;
+  const session_token = parsed?.session_token ? String(parsed.session_token).trim() : null;
 
-  // Idempotency required
-  const idemKey = String(meta.idempotency_key || meta.request_id || "").trim();
+  const idemKey = String(meta.idempotency_key || "").trim();
   if (!idemKey) return bad(req, "Missing Idempotency-Key", 400);
 
-  async function finalize(keyToUse: string, status: number, body: any) {
-    await storeIdempotentResponseFailOpen(SB, keyToUse, status, body);
+  if (!dossier_id || !session_token) {
+    return json(req, 400, { ok: false, error: "Missing dossier_id/session_token" });
+  }
+
+  const auth = await requireCustomerSession(
+    SB,
+    dossier_id,
+    session_token,
+    meta,
+    "charger_save_rejected",
+  );
+
+  if (!auth.ok) {
+    return json(req, auth.status, { ok: false, error: auth.error });
+  }
+
+  const idemScopedKey = scopedSessionIdemKey(dossier_id, auth.session_token_hash, idemKey);
+
+  async function finalize(status: number, body: any) {
+    await storeIdempotentResponseFailOpen(SB, idemScopedKey, status, body);
     return json(req, status, body);
   }
-
-  if (!dossier_id || !token) {
-    // Als dossier_id aanwezig is: audit verplicht (non-negotiable)
-    if (dossier_id) {
-      await insertAuditFailOpen(
-        SB,
-        {
-          dossier_id,
-          actor_type: "customer",
-          event_type: "charger_save_rejected",
-          event_data: {
-            stage: "auth",
-            status: 400,
-            message: "Missing dossier_id/token",
-            reason: !token ? "missing_token" : "missing_dossier_id",
-          },
-        },
-        meta,
-        { actor_ref: `dossier:${dossier_id}|token:missing`, environment: ENVIRONMENT },
-      );
-      const keyScoped = scopedIdemKey(dossier_id, "missing", idemKey);
-      return finalize(keyScoped, 400, { ok: false, error: "Missing dossier_id/token" });
-    }
-
-    // Geen dossier scope → geen audit mogelijk
-    return finalize(`global|actor:missing|idem:${idemKey}`, 400, { ok: false, error: "Missing dossier_id/token" });
-  }
-
-  const tokenHash = await sha256Hex(String(token));
-  const actorScope = tokenHash.slice(0, 16);
-  const idemScopedKey = scopedIdemKey(dossier_id, actorScope, idemKey);
-  const actor_ref = actorRefForCustomer(dossier_id, tokenHash);
 
   async function reject(stage: string, status: number, message: string, extra?: Record<string, unknown>) {
     await insertAuditFailOpen(
@@ -162,9 +136,9 @@ serve(async (req) => {
         event_data: { stage, status, message, ...(extra || {}) },
       },
       meta,
-      { actor_ref, environment: ENVIRONMENT },
+      { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
     );
-    return finalize(idemScopedKey, status, { ok: false, error: message });
+    return finalize(status, { ok: false, error: message });
   }
 
   async function fail(stage: string, status: number, message: string, extra?: Record<string, unknown>) {
@@ -177,69 +151,61 @@ serve(async (req) => {
         event_data: { stage, status, message, ...(extra || {}) },
       },
       meta,
-      { actor_ref, environment: ENVIRONMENT },
+      { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
     );
-    return finalize(idemScopedKey, status, { ok: false, error: message });
+    return finalize(status, { ok: false, error: message });
   }
 
-
+  const cached = await tryGetIdempotentResponse(SB, idemScopedKey);
+  if (cached) return json(req, cached.status, cached.body);
 
   const { data: dossier, error: dErr } = await SB
     .from("dossiers")
     .select("id, locked_at, status, charger_count")
     .eq("id", dossier_id)
-    .eq("access_token_hash", tokenHash)
     .maybeSingle();
 
-  if (dErr) return fail("dossier_lookup", 500, dErr.message, { reason: "dossier_lookup_failed", error: dErr.message });
+  if (dErr) {
+    return fail("dossier_lookup", 500, dErr.message, {
+      reason: "dossier_lookup_failed",
+      error: dErr.message,
+    });
+  }
   if (!dossier) {
-    // forensic: read current DB hash for this dossier_id (no secrets, prefix only)
-    let dbHashPrefix: string | null = null;
-    try {
-      const { data: row } = await SB
-        .from("dossiers")
-        .select("access_token_hash")
-        .eq("id", dossier_id)
-        .maybeSingle();
-      const h = (row as any)?.access_token_hash ? String((row as any).access_token_hash) : "";
-      dbHashPrefix = h ? h.slice(0, 16) : null;
-    } catch {
-      dbHashPrefix = null;
-    }
-
-    await insertAuditFailOpen(
-      SB,
-      {
-        dossier_id,
-        actor_type: "customer",
-        event_type: "charger_save_rejected",
-        event_data: {
-          stage: "auth",
-          status: 401,
-          message: "Unauthorized",
-          reason: "unauthorized",
-          token_hash_prefix: tokenHash.slice(0, 16),
-          db_hash_prefix: dbHashPrefix,
-        },
-      },
-      meta,
-      { actor_ref: `dossier:${dossier_id}|token:invalid`, environment: ENVIRONMENT },
-    );
-    const keyUnauthorized = scopedIdemKey(dossier_id, "invalid", idemKey);
-    return finalize(keyUnauthorized, 401, { ok: false, error: "Unauthorized" });
+    return reject("dossier_missing", 404, "Dossier niet gevonden.");
   }
 
   const charger_id = parsed?.charger_id ? String(parsed.charger_id) : null;
   const serial = normStr(parsed?.serial_number, 80);
-  const mid = normStr(parsed?.mid_number ?? parsed?.meter_id, 80); // canonical: mid_number, legacy: meter_id
+  const mid = normStr(parsed?.mid_number ?? parsed?.meter_id, 80);
   const b = normStr(parsed?.brand, 80);
   const m = normStr(parsed?.model, 120);
   const n = normStr(parsed?.notes, 240) || null;
 
-  if (!serial) return reject("validate_input", 400, "Serienummer verplicht.", { reason: "serial_required", charger_id });
-  if (!mid || mid.length < 4) {return reject("validate_input", 400, "MID-nummer ongeldig.", { reason: "mid_invalid",mid_number: mid });}
-  if (!b) return reject("validate_input", 400, "Merk verplicht.", { reason: "brand_required", charger_id });
-  if (!m) return reject("validate_input", 400, "Model verplicht.", { reason: "model_required", charger_id });
+  if (!serial) {
+    return reject("validate_input", 400, "Serienummer verplicht.", {
+      reason: "serial_required",
+      charger_id,
+    });
+  }
+  if (!mid || mid.length < 4) {
+    return reject("validate_input", 400, "MID-nummer ongeldig.", {
+      reason: "mid_invalid",
+      mid_number: mid,
+    });
+  }
+  if (!b) {
+    return reject("validate_input", 400, "Merk verplicht.", {
+      reason: "brand_required",
+      charger_id,
+    });
+  }
+  if (!m) {
+    return reject("validate_input", 400, "Model verplicht.", {
+      reason: "model_required",
+      charger_id,
+    });
+  }
 
   const kw =
     parsed?.power_kw === null || parsed?.power_kw === undefined || String(parsed?.power_kw).trim() === ""
@@ -252,11 +218,6 @@ serve(async (req) => {
       power_kw: String(parsed?.power_kw ?? ""),
     });
   }
-
-  
-  // Idempotency cache retrieval MUST be after auth, scoped to dossier+actor
-  const cached = await tryGetIdempotentResponse(SB, idemScopedKey);
-  if (cached) return json(req, cached.status, cached.body);
 
   const st = String(dossier.status || "");
   if (dossier.locked_at || st === "in_review" || st === "ready_for_booking") {
@@ -278,17 +239,27 @@ serve(async (req) => {
     .select("id, serial_number")
     .eq("dossier_id", dossier_id);
 
-  if (cErr) return fail("chargers_read", 500, `Chargers read failed: ${cErr.message}`, { reason: "chargers_read_failed", error: cErr.message });
+  if (cErr) {
+    return fail("chargers_read", 500, `Chargers read failed: ${cErr.message}`, {
+      reason: "chargers_read_failed",
+      error: cErr.message,
+    });
+  }
 
   const have = (existingChargers || []).length;
   const isUpdate = !!charger_id;
 
   if (!isUpdate && have >= required) {
-    return reject("validate_max_chargers", 409, `Maximaal aantal laadpalen bereikt (${required}). Verwijder (of voeg) eerst een laadpaal (toe).`, {
-      reason: "max_chargers_reached",
-      required,
-      have,
-    });
+    return reject(
+      "validate_max_chargers",
+      409,
+      `Maximaal aantal laadpalen bereikt (${required}). Verwijder (of voeg) eerst een laadpaal (toe).`,
+      {
+        reason: "max_chargers_reached",
+        required,
+        have,
+      },
+    );
   }
 
   if (!isUpdate) {
@@ -307,7 +278,12 @@ serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    if (sErr) return fail("validate_duplicate", 500, `Serial check failed: ${sErr.message}`, { reason: "serial_check_failed", error: sErr.message });
+    if (sErr) {
+      return fail("validate_duplicate", 500, `Serial check failed: ${sErr.message}`, {
+        reason: "serial_check_failed",
+        error: sErr.message,
+      });
+    }
 
     if (anyCharger && String(anyCharger.dossier_id) !== String(dossier_id)) {
       return reject("validate_duplicate", 409, "Dit serienummer is al gebruikt in een ander dossier. Controleer het serienummer.", {
@@ -357,7 +333,11 @@ serve(async (req) => {
           charger_id,
         });
       }
-      return fail("db_update", 500, `Update failed: ${upErr.message}`, { reason: "update_failed", error: upErr.message, charger_id });
+      return fail("db_update", 500, `Update failed: ${upErr.message}`, {
+        reason: "update_failed",
+        error: upErr.message,
+        charger_id,
+      });
     }
 
     const invalidated = await invalidateIfNeeded().catch(() => false);
@@ -380,10 +360,10 @@ serve(async (req) => {
         },
       },
       meta,
-      { actor_ref, environment: ENVIRONMENT },
+      { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
     );
 
-   return finalize(idemScopedKey, 200, { ok: true, saved: true, charger_id, invalidated });
+    return finalize(200, { ok: true, saved: true, charger_id, invalidated });
   }
 
   const { data: ins, error: insErr } = await SB
@@ -411,7 +391,10 @@ serve(async (req) => {
         serial_number: serial,
       });
     }
-    return fail("db_insert", 500, `Insert failed: ${insErr.message}`, { reason: "insert_failed", error: insErr.message });
+    return fail("db_insert", 500, `Insert failed: ${insErr.message}`, {
+      reason: "insert_failed",
+      error: insErr.message,
+    });
   }
 
   const invalidated = await invalidateIfNeeded().catch(() => false);
@@ -432,11 +415,15 @@ serve(async (req) => {
         notes: n,
         invalidated_ready_for_review: invalidated,
       },
-
     },
     meta,
-    { actor_ref, environment: ENVIRONMENT },
+    { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
   );
 
-  return finalize(idemScopedKey, 200, { ok: true, saved: true, charger_id: ins?.id || null, invalidated });
+  return finalize(200, {
+    ok: true,
+    saved: true,
+    charger_id: ins?.id || null,
+    invalidated,
+  });
 });

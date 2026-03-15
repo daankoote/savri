@@ -1,8 +1,18 @@
+// supabase/functions/api-dossier-doc-download-url/index.ts
+
 import { serve } from "jsr:@std/http@0.224.0/server";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 import { getReqMeta } from "../_shared/reqmeta.ts";
 import { insertAuditFailOpen } from "../_shared/audit.ts";
+import {
+  requireCustomerSession,
+  scopedSessionIdemKey,
+} from "../_shared/customer_auth.ts";
+import {
+  tryGetIdempotentResponse,
+  storeIdempotentResponseFailOpen,
+} from "../_shared/audit.ts";
 
 // -------------------- CORS --------------------
 function parseAllowedOrigins(): string[] {
@@ -58,42 +68,6 @@ function getEnvironment(): string {
   ).toLowerCase();
 }
 
-async function sha256Hex(input: string) {
-  const data = new TextEncoder().encode(input);
-  const hash = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-function actorRefForCustomer(dossierId: string, tokenHash: string) {
-  return `dossier:${dossierId}|token:${tokenHash.slice(0, 16)}`;
-}
-
-async function auditReject(
-  SB: ReturnType<typeof createClient>,
-  dossier_id: string,
-  actor_ref: string | null,
-  meta: any,
-  stage: string,
-  status: number,
-  message: string,
-  extra?: Record<string, unknown>,
-) {
-  await insertAuditFailOpen(
-    SB,
-    {
-      dossier_id,
-      actor_type: "customer",
-      event_type: "document_download_url_rejected",
-      event_data: { stage, status, message, ...(extra || {}) },
-    },
-    meta,
-    { actor_ref, environment: getEnvironment() },
-  );
-}
-
-// -------------------- handler --------------------
 serve(async (req) => {
   const meta = getReqMeta(req);
   const ENVIRONMENT = getEnvironment();
@@ -106,52 +80,16 @@ serve(async (req) => {
       return bad(req, "Method not allowed", 405);
     }
 
-    // Idempotency header verplicht (read-ish maar security sensitive + evidence)
     const idemKey = String(meta.idempotency_key || "").trim();
     if (!idemKey) return bad(req, "Missing Idempotency-Key", 400);
 
-    // Parse body vroeg
     const parsed = await req.json().catch(() => ({} as any));
     const dossier_id = parsed?.dossier_id ? String(parsed.dossier_id) : null;
-    const token = parsed?.token ? String(parsed.token) : null;
+    const session_token = parsed?.session_token ? String(parsed.session_token) : null;
     const document_id = parsed?.document_id ? String(parsed.document_id) : null;
 
-    // Als dossier_id ontbreekt: geen scope voor audit => direct bad
-    if (!dossier_id || !token || !document_id) {
-      // Als we wél dossier_id hebben kunnen we reject auditen
-      if (dossier_id) {
-        const SBtmp = createClient(
-          getEnv("SUPABASE_URL"),
-          getEnv("SUPABASE_SERVICE_ROLE_KEY"),
-          { auth: { persistSession: false } },
-        );
-
-        let actor_ref: string | null = null;
-        if (token) {
-          const tokenHash = await sha256Hex(token);
-          actor_ref = actorRefForCustomer(dossier_id, tokenHash);
-        }
-
-        await auditReject(
-          SBtmp,
-          dossier_id,
-          actor_ref,
-          meta,
-          "validate_input",
-          400,
-          "Missing dossier_id/token/document_id",
-          {
-            reason: "missing_fields",
-            missing: {
-              dossier_id: !dossier_id,
-              token: !token,
-              document_id: !document_id,
-            },
-          },
-        );
-      }
-
-      return bad(req, "Missing dossier_id/token/document_id", 400);
+    if (!dossier_id || !session_token || !document_id) {
+      return bad(req, "Missing dossier_id/session_token/document_id", 400);
     }
 
     const SB = createClient(
@@ -160,34 +98,59 @@ serve(async (req) => {
       { auth: { persistSession: false } },
     );
 
-    const tokenHash = await sha256Hex(token);
-    const actor_ref = actorRefForCustomer(dossier_id, tokenHash);
+    const auth = await requireCustomerSession(
+      SB,
+      dossier_id,
+      session_token,
+      meta,
+      "document_download_url_rejected",
+    );
 
-    // -------------------- dossier auth + locked check --------------------
+    if (!auth.ok) {
+      return bad(req, auth.error, auth.status);
+    }
+
+    const idemScopedKey = scopedSessionIdemKey(dossier_id, auth.session_token_hash, idemKey);
+    const cached = await tryGetIdempotentResponse(SB, idemScopedKey);
+    if (cached) return json(req, cached.status, cached.body);
+
+    async function finalize(status: number, body: any) {
+      await storeIdempotentResponseFailOpen(SB, idemScopedKey, status, body);
+      return json(req, status, body);
+    }
+
+    async function auditReject(
+      stage: string,
+      status: number,
+      message: string,
+      extra?: Record<string, unknown>,
+    ) {
+      await insertAuditFailOpen(
+        SB,
+        {
+          dossier_id,
+          actor_type: "customer",
+          event_type: "document_download_url_rejected",
+          event_data: { stage, status, message, ...(extra || {}) },
+        },
+        meta,
+        { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
+      );
+    }
+
     const { data: dossier, error: dErr } = await SB
       .from("dossiers")
       .select("id, status, locked_at")
       .eq("id", dossier_id)
-      .eq("access_token_hash", tokenHash)
       .maybeSingle();
 
     if (dErr) {
-      await auditReject(SB, dossier_id, actor_ref, meta, "dossier_lookup", 500, dErr.message, { reason: "db_error" });
-      return bad(req, dErr.message, 500);
+      await auditReject("dossier_lookup", 500, dErr.message, { reason: "db_error" });
+      return finalize(500, { ok: false, error: dErr.message });
     }
-
     if (!dossier) {
-      await auditReject(
-        SB,
-        dossier_id,
-        `dossier:${dossier_id}|token:invalid`,
-        meta,
-        "auth",
-        401,
-        "Unauthorized",
-        { reason: "unauthorized", document_id },
-      );
-      return bad(req, "Unauthorized", 401);
+      await auditReject("dossier_lookup", 404, "Dossier not found", { reason: "not_found" });
+      return finalize(404, { ok: false, error: "Dossier not found" });
     }
 
     if (
@@ -195,19 +158,19 @@ serve(async (req) => {
       !["in_review", "ready_for_booking"].includes(String(dossier.status))
     ) {
       await auditReject(
-        SB,
-        dossier_id,
-        actor_ref,
-        meta,
         "export_gate",
         409,
         "Dossier not locked for review",
-        { reason: "not_locked", status: String(dossier.status || ""), locked_at: dossier.locked_at || null, document_id },
+        {
+          reason: "not_locked",
+          status: String(dossier.status || ""),
+          locked_at: dossier.locked_at || null,
+          document_id,
+        },
       );
-      return bad(req, "Dossier not locked for review", 409);
+      return finalize(409, { ok: false, error: "Dossier not locked for review" });
     }
 
-    // -------------------- document: confirmed only --------------------
     const { data: doc, error: docErr } = await SB
       .from("dossier_documents")
       .select([
@@ -226,42 +189,31 @@ serve(async (req) => {
       .maybeSingle();
 
     if (docErr) {
-      await auditReject(SB, dossier_id, actor_ref, meta, "doc_lookup", 500, docErr.message, {
+      await auditReject("doc_lookup", 500, docErr.message, {
         reason: "db_error",
         document_id,
       });
-      return bad(req, docErr.message, 500);
+      return finalize(500, { ok: false, error: docErr.message });
     }
     if (!doc) {
-      await auditReject(
-        SB,
-        dossier_id,
-        actor_ref,
-        meta,
-        "doc_lookup",
-        404,
-        "Confirmed document not found",
-        { reason: "not_found", document_id },
-      );
-      return bad(req, "Confirmed document not found", 404);
+      await auditReject("doc_lookup", 404, "Confirmed document not found", {
+        reason: "not_found",
+        document_id,
+      });
+      return finalize(404, { ok: false, error: "Confirmed document not found" });
     }
 
     if (!doc.file_sha256 || !doc.confirmed_at) {
       await auditReject(
-        SB,
-        dossier_id,
-        actor_ref,
-        meta,
         "integrity_gate",
         409,
         "Document is not evidence-grade",
         { reason: "not_evidence_grade", document_id },
       );
-      return bad(req, "Document is not evidence-grade", 409);
+      return finalize(409, { ok: false, error: "Document is not evidence-grade" });
     }
 
-    // -------------------- signed url --------------------
-    const expiresIn = 120; // seconds (short-lived)
+    const expiresIn = 120;
     const { data: signed, error: sErr } = await SB
       .storage
       .from(String(doc.storage_bucket))
@@ -269,10 +221,6 @@ serve(async (req) => {
 
     if (sErr || !signed?.signedUrl) {
       await auditReject(
-        SB,
-        dossier_id,
-        actor_ref,
-        meta,
         "signed_url",
         500,
         "Signed URL generation failed",
@@ -284,10 +232,9 @@ serve(async (req) => {
           storage_error: String((sErr as any)?.message || sErr || ""),
         },
       );
-      return bad(req, "Signed URL generation failed", 500);
+      return finalize(500, { ok: false, error: "Signed URL generation failed" });
     }
 
-    // -------------------- audit success --------------------
     await insertAuditFailOpen(
       SB,
       {
@@ -301,14 +248,15 @@ serve(async (req) => {
         },
       },
       meta,
-      { actor_ref, environment: ENVIRONMENT },
+      { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
     );
 
-    return ok(req, {
+    return finalize(200, {
+      ok: true,
       document_id,
       filename: doc.filename,
       expires_in: expiresIn,
-      download_url: signed.signedUrl,
+      signed_url: signed.signedUrl,
     });
   } catch (e) {
     console.error("api-dossier-doc-download-url fatal:", e);

@@ -1,6 +1,6 @@
 // /dossier.js  (NON-module, gebruikt window.ENVAL uit /config.js)
 
-console.log("ENVAL DOSSIER.JS versie 260210_12 oclock");
+console.log("ENVAL DOSSIER.JS versie 260312_export_session_align");
 
 // ======================================================
 // Phase-2 Step 1: UI caps + client-side foto optimalisatie
@@ -12,7 +12,6 @@ const UI_MAX_CHARGERS = Number(window.ENVAL?.UI_MAX_CHARGERS || 4);
 // Doel: lagere upload bytes + lagere server stress, zonder audit-contract te breken.
 const PHOTO_MAX_DIM_PX = 1600;       // max breedte/hoogte
 const PHOTO_JPEG_QUALITY = 0.78;     // pragmatisch: kwaliteit vs size
-const PHOTO_MAX_BYTES_SOFT = 1 * 1024 * 1024; // 1MB soft cap (UI/UX)
 
 
 // ======================================================
@@ -88,18 +87,6 @@ function isValidMobile(phone) {
   return /^06\d{8}$/.test(p) || /^\+316\d{8}$/.test(p);
 }
 
-
-/**
- * newIdempotencyKey()
- * Doel: unieke key voor POST requests.
- */
-function newIdempotencyKey() {
-  if (window.crypto?.randomUUID) return window.crypto.randomUUID();
-  const bytes = new Uint8Array(16);
-  window.crypto.getRandomValues(bytes);
-  return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
 /**
  * lockSubmit(btn, locked, textWhenLocked)
  * Doel: anti double submit + loading state.
@@ -135,59 +122,8 @@ function formatDateNL(isoLike) {
 }
 
 // ======================================================
-// 2) API helper (Edge Functions)
+// 2) Frontend shared API lives in /assets/js/api.js
 // ======================================================
-
-/**
- * apiPost(fnName, body)
- * Doel:
- * - Centrale POST helper met Idempotency-Key
- * - 1 retry bij network errors / transient 502/503/504
- */
-async function apiPost(fnName, body) {
-  const url = `${window.ENVAL.API_BASE}/${fnName}`;
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  const idem = newIdempotencyKey();
-
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    
-
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: window.ENVAL.edgeHeaders({ "Idempotency-Key": idem }),
-        body: JSON.stringify(body),
-      });
-
-      if (attempt === 1 && (res.status === 502 || res.status === 503 || res.status === 504)) {
-        await sleep(450);
-        continue;
-      }
-
-      const json = await res.json().catch(() => ({}));
-
-      if (!res.ok || !json.ok) {
-        console.error("apiPost failed:", fnName, "status:", res.status, "json:", json);
-        const msg = json?.error || json?.message || `Request failed (${res.status})`;
-        throw new Error(msg);
-      }
-
-      return json;
-    } catch (e) {
-      const msg = String(e?.message || e);
-      const isNetwork =
-        /NetworkError/i.test(msg) ||
-        /Failed to fetch/i.test(msg) ||
-        /fetch/i.test(msg);
-
-      if (attempt === 1 && isNetwork) {
-        await sleep(450);
-        continue;
-      }
-      throw e;
-    }
-  }
-}
 
 // ======================================================
 // 3) Charger brand/model mapping (UI)
@@ -275,51 +211,45 @@ function populateBrandModel() {
 // 4) Global state (dossier context)
 // ======================================================
 
-const urlParams = new URLSearchParams(location.search);
-const dossier_id = urlParams.get("d");
-const token = urlParams.get("t");
-
-// =====================
-// Session token (Phase-2 auth) — DOSSIER-SCOPED
-// =====================
-// Rationale: 1 browser kan meerdere dossiers openen; token mag niet overschrijven.
-const SESSION_TOKEN_PREFIX = "enval_session_token:";
-
-function sessionStorageKey() {
-  // dossier_id is global bovenin gezet uit URL param "d"
-  if (!dossier_id) return null;
-  return `${SESSION_TOKEN_PREFIX}${String(dossier_id)}`;
-}
+const dossier_id = window.ENVAL.api.getDossierIdFromUrl();
+const token = window.ENVAL.api.getLinkTokenFromUrl();
 
 function getSessionToken() {
-  const k = sessionStorageKey();
-  if (!k) return null;
-  return localStorage.getItem(k);
+  return window.ENVAL.api.getSessionToken(dossier_id);
 }
 
 function setSessionToken(v) {
-  if (!v) return;
-  const k = sessionStorageKey();
-  if (!k) return;
-  localStorage.setItem(k, String(v));
+  return window.ENVAL.api.setSessionToken(dossier_id, v);
 }
 
 function clearSessionToken() {
-  const k = sessionStorageKey();
-  if (!k) return;
-  localStorage.removeItem(k);
+  return window.ENVAL.api.clearSessionToken(dossier_id);
 }
 
-// Backwards compat cleanup: verwijder legacy unscoped key indien aanwezig
 function cleanupLegacySessionKey() {
-  try {
-    if (localStorage.getItem("enval_session_token")) {
-      localStorage.removeItem("enval_session_token");
-    }
-  } catch (_) {}
+  return window.ENVAL.api.cleanupLegacySessionKey();
 }
 
 let current = null;
+
+function downloadJsonFile(filename, data) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function exportFilename() {
+  const safeId = String(dossier_id || "unknown").replace(/[^a-zA-Z0-9_-]/g, "");
+  return `enval-dossier-export-${safeId}.json`;
+}
 
 function authedBody(extra) {
   const session_token = getSessionToken();
@@ -327,8 +257,12 @@ function authedBody(extra) {
   return Object.assign({ dossier_id, session_token }, extra || {});
 }
 
-async function apiAuthed(fnName, extra) {
-  return apiPost(fnName, authedBody(extra));
+async function apiPost(fnName, body, options) {
+  return window.ENVAL.api.apiPost(fnName, body, options || {});
+}
+
+async function apiAuthed(fnName, extra, options) {
+  return apiPost(fnName, authedBody(extra), options || {});
 }
 
 
@@ -454,6 +388,7 @@ function setAllUiLocked(locked) {
   $("btnRefresh")?.addEventListener("click", reloadAll);
   $("btnPrecheck")?.addEventListener("click", onPrecheckClicked);
   $("btnFinalize")?.addEventListener("click", onFinalizeClicked);
+  $("btnExportDossier")?.addEventListener("click", onExportClicked);
 
 
   $("addressForm")?.addEventListener("submit", onAddressSave);
@@ -629,7 +564,11 @@ function renderStatus() {
 
   syncReviewButtons();
 
+  const exportBox = $("exportBox");
+  const btnExport = $("btnExportDossier");
 
+  if (exportBox) exportBox.classList.toggle("hidden", !locked);
+  if (btnExport) btnExport.disabled = !locked;
 }
 
 /**
@@ -1817,16 +1756,9 @@ async function runEvaluate(finalize) {
         : "Server controleert volledigheid…";
     }
 
-    const idem = newIdempotencyKey();
-    const res = await fetch(`${window.ENVAL.API_BASE}/api-dossier-evaluate`, {
-      method: "POST",
-      headers: window.ENVAL.edgeHeaders({ "Idempotency-Key": idem }),
-      body: JSON.stringify(authedBody({ finalize: !!finalize })),
-    });
+    const js = await apiAuthed("api-dossier-evaluate", { finalize: !!finalize });
 
-    const js = await res.json().catch(() => ({}));
-
-    if (!res.ok || !js.ok) {
+    if (!js?.ok) {
       const missing = Array.isArray(js?.missingSteps) ? js.missingSteps : [];
       const msg = js?.error || js?.message || `Evaluate failed (${res.status})`;
 
@@ -1900,3 +1832,29 @@ async function onFinalizeClicked() {
   return runEvaluate(true);
 }
 
+async function onExportClicked() {
+  if (!isLocked()) {
+    return showToast("Export is pas beschikbaar nadat het dossier is ingediend.", "error");
+  }
+
+  const btn = $("btnExportDossier");
+  const state = $("exportState");
+  if (!btn) return;
+
+  lockSubmit(btn, true, "Exporteren…");
+
+  try {
+    if (state) state.textContent = "Dossier-export wordt opgebouwd…";
+
+    const data = await apiAuthed("api-dossier-export", {});
+    downloadJsonFile(exportFilename(), data);
+
+    if (state) state.textContent = "Export gedownload.";
+    showToast("Dossier-export gedownload.", "success");
+  } catch (e) {
+    if (state) state.textContent = e.message || "Export mislukt.";
+    showToast(e.message || "Export mislukt.", "error");
+  } finally {
+    lockSubmit(btn, false, "Exporteer dossier");
+  }
+}

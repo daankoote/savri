@@ -9,6 +9,10 @@ import {
   tryGetIdempotentResponse,
   storeIdempotentResponseFailOpen,
 } from "../_shared/audit.ts";
+import {
+  requireCustomerSession,
+  scopedSessionIdemKey,
+} from "../_shared/customer_auth.ts";
 
 // -------------------- CORS --------------------
 function parseAllowedOrigins(): string[] {
@@ -66,14 +70,6 @@ function sb() {
   });
 }
 
-async function sha256HexFromString(input: string) {
-  const data = new TextEncoder().encode(input);
-  const hash = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
 async function sha256HexFromBytes(buf: ArrayBuffer) {
   const hash = await crypto.subtle.digest("SHA-256", buf);
   return Array.from(new Uint8Array(hash))
@@ -83,10 +79,6 @@ async function sha256HexFromBytes(buf: ArrayBuffer) {
 
 function nowIso() {
   return new Date().toISOString();
-}
-
-function actorRefForCustomer(dossierId: string, tokenHash: string) {
-  return `dossier:${dossierId}|token:${tokenHash.slice(0, 16)}`;
 }
 
 function isSha256Hex(v: string) {
@@ -110,7 +102,6 @@ function sanitizeClientTransform(input: any): Record<string, unknown> | null {
     "quality",
     "out_w",
     "out_h",
-
     "client_transformed",
     "input_type",
     "output_type",
@@ -138,8 +129,6 @@ function sanitizeClientTransform(input: any): Record<string, unknown> | null {
   return Object.keys(out).length ? out : null;
 }
 
-
-
 serve(async (req) => {
   const meta = getReqMeta(req);
   const ENVIRONMENT = getEnvironment();
@@ -155,35 +144,44 @@ serve(async (req) => {
     return bad(req, "Server misconfigured (missing secrets)", 500);
   }
 
-  // Parse body
+  const idemKey = String(meta.idempotency_key || "").trim();
+  if (!idemKey) return bad(req, "Missing Idempotency-Key", 400);
+
   const parsed = await req.json().catch(() => ({} as any));
 
   const dossier_id = parsed?.dossier_id ? String(parsed.dossier_id) : null;
-  const token = parsed?.token ? String(parsed.token) : "";
+  const session_token = parsed?.session_token ? String(parsed.session_token) : null;
   const document_id = parsed?.document_id ? String(parsed.document_id) : "";
-
   const file_sha256_client_raw = parsed?.file_sha256 ? String(parsed.file_sha256) : "";
   const file_sha256_client = file_sha256_client_raw.trim().toLowerCase();
   const client_transform = sanitizeClientTransform(parsed?.client_transform);
 
-
-  // Idempotency required (HEADER ONLY)
-  const idemKey = String(meta.idempotency_key || "").trim();
-  if (!idemKey) return bad(req, "Missing Idempotency-Key", 400);
-
-  if (dossier_id) {
-    const cached = await tryGetIdempotentResponse(SB, idemKey);
-    if (cached) return json(req, cached.status, cached.body);
+  if (!dossier_id || !session_token) {
+    return json(req, 400, { ok: false, error: "Missing dossier_id/session_token" });
   }
 
+  const auth = await requireCustomerSession(
+    SB,
+    dossier_id,
+    session_token,
+    meta,
+    "document_upload_confirm_rejected",
+  );
+
+  if (!auth.ok) {
+    return json(req, auth.status, { ok: false, error: auth.error });
+  }
+
+  const idemScopedKey = scopedSessionIdemKey(dossier_id, auth.session_token_hash, idemKey);
+  const cached = await tryGetIdempotentResponse(SB, idemScopedKey);
+  if (cached) return json(req, cached.status, cached.body);
+
   async function finalize(status: number, body: any) {
-    await storeIdempotentResponseFailOpen(SB, idemKey, status, body);
+    await storeIdempotentResponseFailOpen(SB, idemScopedKey, status, body);
     return json(req, status, body);
   }
 
   async function auditReject(
-    dossierId: string,
-    actor_ref: string | null,
     stage: string,
     status: number,
     message: string,
@@ -192,97 +190,51 @@ serve(async (req) => {
     await insertAuditFailOpen(
       SB,
       {
-        dossier_id: dossierId,
+        dossier_id,
         actor_type: "customer",
         event_type: "document_upload_confirm_rejected",
         event_data: { stage, status, message, client_transform, ...(extra || {}) },
       },
       meta,
-      { actor_ref, environment: ENVIRONMENT },
+      { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
     );
   }
 
-  // validate input
-  if (!dossier_id || !token || !document_id) {
-    if (dossier_id && token) {
-      const tokenHash = await sha256HexFromString(token);
-      const actor_ref = actorRefForCustomer(String(dossier_id), tokenHash);
-      await auditReject(
-        String(dossier_id),
-        actor_ref,
-        "validate_input",
-        400,
-        "Missing dossier_id/token/document_id",
-        {
-          reason: "missing_fields",
-          missing: {
-            dossier_id: !dossier_id,
-            token: !token,
-            document_id: !document_id,
-          },
-        },
-      );
-    }
-
-    return finalize(400, { ok: false, error: "Missing dossier_id/token/document_id" });
+  if (!document_id) {
+    await auditReject("validate_input", 400, "Missing document_id", { reason: "missing_document_id" });
+    return finalize(400, { ok: false, error: "Missing document_id" });
   }
 
   if (!file_sha256_client) {
-    const tokenHash = await sha256HexFromString(token);
-    const actor_ref = actorRefForCustomer(String(dossier_id), tokenHash);
-    await auditReject(String(dossier_id), actor_ref, "validate_sha256", 400, "Missing file_sha256", {
-      reason: "missing_sha",
-    });
+    await auditReject("validate_sha256", 400, "Missing file_sha256", { reason: "missing_sha" });
     return finalize(400, { ok: false, error: "Missing file_sha256" });
   }
 
   if (!isSha256Hex(file_sha256_client)) {
-    const tokenHash = await sha256HexFromString(token);
-    const actor_ref = actorRefForCustomer(String(dossier_id), tokenHash);
-    await auditReject(
-      String(dossier_id),
-      actor_ref,
-      "validate_sha256",
-      400,
-      "Invalid file_sha256 (must be 64 hex chars)",
-      { reason: "bad_sha_format" },
-    );
+    await auditReject("validate_sha256", 400, "Invalid file_sha256 (must be 64 hex chars)", {
+      reason: "bad_sha_format",
+    });
     return finalize(400, { ok: false, error: "Invalid file_sha256 (must be 64 hex chars)" });
   }
 
-  const tokenHash = await sha256HexFromString(token);
-  const actor_ref = actorRefForCustomer(String(dossier_id), tokenHash);
-
-  // dossier auth + lock
   const { data: dossier, error: dErr } = await SB
     .from("dossiers")
     .select("id, locked_at, status")
     .eq("id", dossier_id)
-    .eq("access_token_hash", tokenHash)
     .maybeSingle();
 
   if (dErr) {
-    await auditReject(String(dossier_id), actor_ref, "dossier_lookup", 500, dErr.message, { reason: "db_error" });
+    await auditReject("dossier_lookup", 500, dErr.message, { reason: "db_error" });
     return finalize(500, { ok: false, error: dErr.message });
   }
-
   if (!dossier) {
-    await auditReject(
-      String(dossier_id),
-      `dossier:${dossier_id}|token:invalid`,
-      "auth",
-      401,
-      "Unauthorized",
-      { reason: "unauthorized" },
-    );
-    return finalize(401, { ok: false, error: "Unauthorized" });
+    await auditReject("dossier_lookup", 404, "Dossier not found", { reason: "not_found" });
+    return finalize(404, { ok: false, error: "Dossier not found" });
   }
 
   const st = String(dossier.status || "");
   if (dossier.locked_at || st === "in_review" || st === "ready_for_booking") {
     await auditReject(
-      String(dossier_id),
-      actor_ref,
       "dossier_locked",
       409,
       "Dossier is vergrendeld en kan niet meer gewijzigd worden.",
@@ -291,7 +243,6 @@ serve(async (req) => {
     return finalize(409, { ok: false, error: "Dossier is vergrendeld en kan niet meer gewijzigd worden." });
   }
 
-  // doc lookup
   const { data: doc, error: docErr } = await SB
     .from("dossier_documents")
     .select(
@@ -302,12 +253,12 @@ serve(async (req) => {
     .maybeSingle();
 
   if (docErr) {
-    await auditReject(String(dossier_id), actor_ref, "doc_lookup", 500, docErr.message, { reason: "db_error" });
+    await auditReject("doc_lookup", 500, docErr.message, { reason: "db_error" });
     return finalize(500, { ok: false, error: docErr.message });
   }
 
   if (!doc) {
-    await auditReject(String(dossier_id), actor_ref, "doc_lookup", 404, "Document not found", {
+    await auditReject("doc_lookup", 404, "Document not found", {
       document_id,
       reason: "not_found",
     });
@@ -330,8 +281,6 @@ serve(async (req) => {
 
   if (currentStatus !== "issued") {
     await auditReject(
-      String(dossier_id),
-      actor_ref,
       "doc_state",
       409,
       "Document status is not 'issued' (cannot confirm).",
@@ -343,20 +292,17 @@ serve(async (req) => {
   const bucket = String(doc.storage_bucket || "");
   const path = String(doc.storage_path || "");
   if (!bucket || !path) {
-    await auditReject(String(dossier_id), actor_ref, "doc_metadata", 500, "Document storage metadata missing (bucket/path).", {
+    await auditReject("doc_metadata", 500, "Document storage metadata missing (bucket/path).", {
       reason: "missing_storage_meta",
     });
     return finalize(500, { ok: false, error: "Document storage metadata missing (bucket/path)." });
   }
 
-  // server-side download + sha256
   const { data: blob, error: dlErr } = await SB.storage.from(bucket).download(path);
 
   if (dlErr) {
     const msg = String((dlErr as any)?.message || dlErr);
     await auditReject(
-      String(dossier_id),
-      actor_ref,
       "storage_download",
       409,
       "Upload not found in storage (download failed).",
@@ -371,8 +317,6 @@ serve(async (req) => {
     serverSha = await sha256HexFromBytes(ab);
   } catch (e: any) {
     await auditReject(
-      String(dossier_id),
-      actor_ref,
       "hash_compute",
       500,
       "Failed to compute server-side sha256.",
@@ -383,8 +327,6 @@ serve(async (req) => {
 
   if (serverSha !== file_sha256_client) {
     await auditReject(
-      String(dossier_id),
-      actor_ref,
       "hash_mismatch",
       409,
       "file_sha256 mismatch (client != server).",
@@ -418,14 +360,14 @@ serve(async (req) => {
     .eq("status", "issued");
 
   if (upErr) {
-    await auditReject(String(dossier_id), actor_ref, "doc_update", 500, upErr.message, { reason: "db_error" });
+    await auditReject("doc_update", 500, upErr.message, { reason: "db_error" });
     return finalize(500, { ok: false, error: upErr.message });
   }
 
   await insertAuditFailOpen(
     SB,
     {
-      dossier_id: String(dossier_id),
+      dossier_id,
       actor_type: "customer",
       event_type: "document_upload_confirmed",
       event_data: {
@@ -443,10 +385,9 @@ serve(async (req) => {
         verified_server_side: true,
         client_transform,
       },
-
     },
     meta,
-    { actor_ref, environment: ENVIRONMENT },
+    { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
   );
 
   return finalize(200, { ok: true, document_id, status: "confirmed" });

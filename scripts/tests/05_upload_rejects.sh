@@ -23,7 +23,7 @@ ridA="uploadurl-missing-idem-$(now_ts)"
 echo ""
 echo "A) Missing Idempotency-Key (expect 400)"
 RESP_A="$(http_call_no_idem "$FN_UPLOAD_URL" \
-  "{\"dossier_id\":\"$DOSSIER_ID\",\"token\":\"$(dossier_token)\",\"doc_type\":\"factuur\",\"filename\":\"test.pdf\",\"content_type\":\"application/pdf\",\"size_bytes\":123,\"charger_id\":\"$CHARGER_ID\"}" \
+  "{\"dossier_id\":\"$DOSSIER_ID\",\"session_token\":\"$(dossier_session_token)\",\"doc_type\":\"factuur\",\"filename\":\"test.pdf\",\"content_type\":\"application/pdf\",\"size_bytes\":123,\"charger_id\":\"$CHARGER_ID\"}" \
   "$ridA")"
 HTTP_A="$(extract_http_status "$RESP_A")"
 if [[ "$HTTP_A" != "400" ]]; then
@@ -36,7 +36,7 @@ echo "PASS upload-url missing idem"
 run_case \
   "B) Invalid doc_type (expect 400 + audit reject)" \
   "$FN_UPLOAD_URL" \
-  "{\"dossier_id\":\"$DOSSIER_ID\",\"token\":\"$(dossier_token)\",\"doc_type\":\"hacker\",\"filename\":\"test.pdf\",\"content_type\":\"application/pdf\",\"size_bytes\":123,\"charger_id\":\"$CHARGER_ID\"}" \
+  "{\"dossier_id\":\"$DOSSIER_ID\",\"session_token\":\"$(dossier_session_token)\",\"doc_type\":\"hacker\",\"filename\":\"test.pdf\",\"content_type\":\"application/pdf\",\"size_bytes\":123,\"charger_id\":\"$CHARGER_ID\"}" \
   "uploadurl-invalid-doctype" \
   "400" \
   "yes" \
@@ -49,7 +49,7 @@ echo "PASS upload-url invalid doc_type"
 run_case \
   "C) Missing charger_id (expect 400 + audit reject)" \
   "$FN_UPLOAD_URL" \
-  "{\"dossier_id\":\"$DOSSIER_ID\",\"token\":\"$(dossier_token)\",\"doc_type\":\"factuur\",\"filename\":\"test.pdf\",\"content_type\":\"application/pdf\",\"size_bytes\":123}" \
+  "{\"dossier_id\":\"$DOSSIER_ID\",\"session_token\":\"$(dossier_session_token)\",\"doc_type\":\"factuur\",\"filename\":\"test.pdf\",\"content_type\":\"application/pdf\",\"size_bytes\":123}" \
   "uploadurl-missing-charger" \
   "400" \
   "yes" \
@@ -65,7 +65,7 @@ echo "== Upload Confirm rejects =="
 run_case \
   "D) Missing fields (expect 400 + audit reject)" \
   "$FN_UPLOAD_CONFIRM" \
-  "{\"dossier_id\":\"$DOSSIER_ID\",\"token\":\"$(dossier_token)\"}" \
+  "{\"dossier_id\":\"$DOSSIER_ID\",\"session_token\":\"$(dossier_session_token)\"}" \
   "uploadconfirm-missing-fields" \
   "400" \
   "yes" \
@@ -78,20 +78,20 @@ echo "PASS upload-confirm missing fields"
 run_case \
   "E) Unauthorized (expect 401 + audit reject)" \
   "$FN_UPLOAD_CONFIRM" \
-  "{\"dossier_id\":\"$DOSSIER_ID\",\"token\":\"badtoken\",\"document_id\":\"00000000-0000-0000-0000-000000000000\",\"file_sha256\":\"$(printf '0%.0s' {1..64})\"}" \
+  "{\"dossier_id\":\"$DOSSIER_ID\",\"session_token\":\"badtoken\",\"document_id\":\"00000000-0000-0000-0000-000000000000\",\"file_sha256\":\"$(printf '0%.0s' {1..64})\"}" \
   "uploadconfirm-unauth" \
   "401" \
   "yes" \
   "document_upload_confirm_rejected" \
   "auth" \
-  "" || exit 1
+  "session_not_found" || exit 1
 
 echo "PASS upload-confirm unauthorized"
 
 run_case \
   "F) Upload-confirm (EXPECTED 404 Document not found for fake document_id)" \
   "$FN_UPLOAD_CONFIRM" \
-  "{\"dossier_id\":\"$DOSSIER_ID\",\"token\":\"$(dossier_token)\",\"document_id\":\"00000000-0000-0000-0000-000000000000\",\"file_sha256\":\"$(printf '0%.0s' {1..64})\"}" \
+  "{\"dossier_id\":\"$DOSSIER_ID\",\"session_token\":\"$(dossier_session_token)\",\"document_id\":\"00000000-0000-0000-0000-000000000000\",\"file_sha256\":\"$(printf '0%.0s' {1..64})\"}" \
   "uploadconfirm-doc-notfound" \
   "404" \
   "yes" \

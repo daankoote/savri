@@ -685,6 +685,89 @@ Nuance:
 
 Gevolg:
 - Items zoals session-auth hardening, api.js adoptie, MID grep-cleanliness en live SEO verificatie blijven OPEN totdat hun bewijs expliciet is geleverd.
+
+## 2026-03-13 — Session-auth refactor afgerond + legacy endpoints verwijderd + frontend api.js opgeschoond
+
+Wijzigingen
+- Dossier runtime-auth verder geharmoniseerd rond `session_token`:
+  - write/read dossier-endpoints gebruiken nu session-auth als canonical model
+  - link-token blijft uitsluitend voor initial exchange via `api-dossier-get`
+- Nieuwe shared helper toegevoegd:
+  - `supabase/functions/_shared/customer_auth.ts`
+  - levert uniforme session-auth + actor_ref + scoped idempotency helpers
+- Frontend shared API helper staat nu canoniek op:
+  - `assets/js/api.js`
+- Verkeerd geplaatste legacy copy verwijderd:
+  - `supabase/functions/_shared/api.js` verwijderd
+- Legacy endpoints verwijderd:
+  - `api-dossier-submit-review`
+  - `api-dossier-address-preview`
+
+Behavior / contract
+- Canonical reviewflow:
+  - `api-dossier-evaluate(finalize=false)` = precheck
+  - `api-dossier-evaluate(finalize=true)` = lock + in_review
+- Canonical address preview:
+  - via `api-dossier-address-verify`
+  - preview is nu dossier-scoped + auditwaardig
+- Export blijft:
+  - session-auth
+  - alleen voor locked / in_review dossiers
+  - alleen confirmed docs
+
+Frontend
+- `assets/js/api.js` is source-of-truth voor:
+  - dossier id uit URL
+  - link-token uit URL
+  - session-token storage per dossier
+  - legacy localStorage cleanup
+  - idempotent `apiPost()` wrapper
+- `assets/js/pages/dossier.js` gebruikt deze helpers als shared layer i.p.v. verspreide fetch/session logica.
+
+Tooling
+- `scripts/tools/edge-uniformity.sh` opgeschoond naar V4:
+  - `api-dossier-submit-review` verwijderd uit CORE lijst
+  - `api-dossier-address-preview` verwijderd uit UTILITY lijst
+  - alleen `mail-worker` resteert als utility
+- Uniformity report bevestigt:
+  - core baseline groen
+  - utility baseline groen
+  - geen unclassified functions
+
+Bewijs
+- Dossierflow werkt end-to-end:
+  - chargers zichtbaar in UI
+  - uploads confirmed
+  - evaluate finalize zet dossier op `in_review`
+  - exportflow session-auth aligned
+- grep/uniformity bevestigt:
+  - geen actieve references meer naar verwijderde endpoints in runtime code
+  - frontend laadt `assets/js/api.js` canoniek
+
+## 2026-03-13 — Docs truth aligned op session-auth canonical model + legacy endpoint removal
+
+Wijzigingen in documentatie
+- `01_SYSTEM_MAP.md` aangepast zodat CURRENT waarheid nu expliciet is:
+  - runtime dossier-auth = session-token
+  - link-token alleen voor initiële exchange via `api-dossier-get`
+  - `assets/js/api.js` is frontend source-of-truth
+  - `supabase/functions/_shared/customer_auth.ts` verplaatst naar backend shared helpers i.p.v. frontend assets
+- `02_AUDIT_MATRIX.md` opgeschoond:
+  - `api-dossier-submit-review` verwijderd als actuele reviewbron
+  - `api-dossier-address-preview` verwijderd als actuele previewbron
+  - session rejects explicieter beschreven als endpoint-scoped reject events
+  - login recovery eventbeschrijving aangepast naar CURRENT codegedrag
+- `10_EDGE_FUNCTIONS_CONTRACT.md` bevestigd:
+  - CORE lijst zonder legacy endpoints
+  - UTILITY lijst bevat alleen `mail-worker`
+  - session-token in request body is CURRENT canonical runtime auth model
+
+Doel
+- CURRENT docs weer één bron van waarheid maken
+- voorkomen dat historische tekst als actuele architectuur wordt gelezen
+
 ---
+
+
 
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)
