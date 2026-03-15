@@ -849,7 +849,7 @@ Doel
 - Markdown rendering voorspelbaar houden
 
 
-## 2026-03-15 — Analysis v1 skeleton live + export v5 uitgebreid met analysis blocks
+## 2026-03-15 — Analysis v1 skeleton gedeployed en runtime-bewezen (DEV) + export v5 uitgebreid
 
 Wijzigingen
 - Nieuwe derived analysis-laag toegevoegd, zonder mutatie van bestaande dossier core tabellen:
@@ -871,6 +871,14 @@ Wijzigingen
   - `analysis_chargers`
   - `analysis_summary`
 
+Harde architectuurbetekenis
+- Analysis is volledig derived.
+- Analysis muteert geen:
+  - `dossiers`
+  - `dossier_chargers`
+  - `dossier_documents`
+  - `dossier_checks`
+
 Analysis-semantiek (bewust)
 - Analysis is een derived consistency layer
 - Geen authenticity-claim
@@ -878,7 +886,7 @@ Analysis-semantiek (bewust)
 - Geen certificeringsclaim
 - Geen lifecycle-mutatie van dossier/review/lock
 
-Bewezen runtime-gedrag
+Bewezen runtime-gedrag (DEV)
 - verlopen session → `dossier_verify_rejected` met reason `session_expired`
 - login recovery → nieuwe link + nieuwe session
 - `api-dossier-verify` → HTTP 200 op locked dossier met 4 confirmed docs / 2 chargers

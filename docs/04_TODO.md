@@ -1,6 +1,6 @@
 # 04_TODO.md (CURRENT)
 
-Statusdatum: 2026-03-12  
+Statusdatum: 2026-03-15  
 Prioriteit: audit-first.  
 Regel: alleen open items; afgerond → naar changelog.
 
@@ -88,20 +88,17 @@ Regel: alleen open items; afgerond → naar changelog.
 - Status: OPEN
 
 ### 8) Frontend contract: MID veldnaam volledig consistent met spec
+- Context:
+  - CURRENT docs en backend-contract gebruiken `mid_number` als canonical veld.
+  - Dit item blijft alleen OPEN totdat grep-bewijs expliciet is vastgelegd na merge/sync check.
 - DoD:
   - `dossier.html` input name = `mid_number`
   - `dossier.js` gebruikt `mid_number` in payload en render
   - geen `meter_id` references meer in core flow
-  - grep-bewijs geleverd
-- Status: OPEN totdat grep bewezen schoon is
+  - grep-bewijs expliciet vastgelegd
+- Status: OPEN totdat grep formeel bevestigd en vastgelegd is
 
-### 9) Export/payment decoupling voorbereiden
-- DoD:
-  - docs (`00_GLOBAL`, `01_SYSTEM_MAP`, `02_AUDIT_MATRIX`) bevatten het contract correct
-  - implementatie later: payment gate kan worden toegevoegd op export (en optioneel op indienen) zonder schema drift
-- Status: OPEN
-
-### 10) Positionering consistent houden in product & copy
+### 9) Positionering consistent houden in product & copy
 - DoD:
   - geen compliance-claims in UI
   - geen verificatieclaims
@@ -109,7 +106,7 @@ Regel: alleen open items; afgerond → naar changelog.
   - Inboeker ≠ Enval expliciet zichtbaar
 - Status: OPEN (doorlopend)
 
-### 11) SEO artifacts live zetten / verifiëren
+### 10) SEO artifacts live zetten / verifiëren
 - Waarom:
   - duplicate content voorkomen
   - Google index alleen canoniek houden
@@ -125,7 +122,7 @@ Regel: alleen open items; afgerond → naar changelog.
 
 ## P1.5 / Phase-2 (open risico’s)
 
-### 12) Factuur analysis v1 (eerste echte inhoudelijke scope)
+### 11) Factuur analysis v1 (eerste echte inhoudelijke scope)
 - Context:
   - Analysis v1 skeleton + export v5 zijn live en bewezen
   - huidige document/charger analysis rows zijn nog skeleton / `not_checked`
@@ -143,7 +140,7 @@ Regel: alleen open items; afgerond → naar changelog.
   - export toont echte observed/evaluated waarden i.p.v. skeleton placeholders
 - Status: OPEN
 
-### 13) Foto analysis v1 (pas na factuur-scope)
+### 12) Foto analysis v1 (pas na factuur-scope)
 - Context:
   - foto-analyse is zwakker en sneller inconclusive; daarom expliciet na factuur-scope
   - skeleton-export en analysis-tabellen bestaan al
@@ -159,7 +156,7 @@ Regel: alleen open items; afgerond → naar changelog.
   - standaard liever `inconclusive` dan geforceerde zekerheid
 - Status: OPEN
 
-### 14) Analysis extensibility guardrail documenteren
+### 13) Analysis extensibility guardrail documenteren
 - Context:
   - toekomstige bronnen zoals backend portal / HEMS / remote observed data mogen Analysis v1 niet blokkeren
 - DoD:
@@ -172,13 +169,13 @@ Regel: alleen open items; afgerond → naar changelog.
   - geen implementatie in v1
 - Status: OPEN
 
-### 15) PDOK ambiguity zonder suffix
+### 14) PDOK ambiguity zonder suffix
 - DoD:
   - als meerdere candidates → suffix verplicht of `verified=false` + audit ambiguous
   - geen save bij onopgeloste ambiguity
 - Status: OPEN
 
-### 16) Upload-confirm performance redesign / deferred verificatie
+### 15) Upload-confirm performance redesign / deferred verificatie
 - DoD:
   - alternatief verify-ontwerp + besluit + implementatieplan
   - expliciet auditcontract voor waar sha256-verificatie gebeurt:
@@ -189,12 +186,12 @@ Regel: alleen open items; afgerond → naar changelog.
     - gate-verificatie schrijft audit event (success + reject)
 - Status: OPEN
 
-### 17a) Orphaned storage reconciler
+### 16a) Orphaned storage reconciler
 - DoD:
   - job/edge function die storage failures opnieuw probeert op basis van audit events
 - Status: OPEN
 
-### 17b) Storage object cleanup proof sluiten
+### 16b) Storage object cleanup proof sluiten
 - Context:
   - DB cleanup proof is nu geleverd:
     - `dossier_documents` rows verdwijnen
@@ -206,7 +203,7 @@ Regel: alleen open items; afgerond → naar changelog.
   - bewijs vastleggen zonder secrets/signatures te lekken
 - Status: OPEN
 
-### 18) Export gate contract tests
+### 17) Export gate contract tests
 - Context:
   - upload/runtime suite is nu sterk genoeg
   - export is productkritische eindgate en nog onvoldoende contractueel bewezen in fresh flow
@@ -219,7 +216,7 @@ Regel: alleen open items; afgerond → naar changelog.
   - output-contract van export artifact vastgelegd
 - Status: OPEN
 
-### 19) Email verification assumption (audit risk)
+### 18) Email verification assumption (audit risk)
 - Context:
   - huidig gedrag: `email_verified_at` gezet op link-click
   - dit bewijst geen mailbox-control, alleen possession of link
@@ -230,10 +227,7 @@ Regel: alleen open items; afgerond → naar changelog.
     - óf verificatie upgraden (OTP / single-use / TTL)
 - Status: OPEN
 
-
-
-
-### 20) Installer flows definitief deprecaten
+### 19) Installer flows definitief deprecaten
 - Context:
   - `installer_signup` en `installer_to_customer` zijn nog restmatig aanwezig
   - backend retourneert 410
@@ -243,7 +237,7 @@ Regel: alleen open items; afgerond → naar changelog.
   - verwijder legacy bindings zodat self-serve journey single-path blijft (`ev_direct` + contact)
 - Status: OPEN
 
-### 21) Abuse controls
+### 20) Abuse controls
 - DoD:
   - rate limit / abuse detection op `api-lead-submit` en contactflow
   - basic throttling + logging + minimale blokkade
