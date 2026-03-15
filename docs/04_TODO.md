@@ -232,6 +232,7 @@ Regel: alleen open items; afgerond → naar changelog.
 
 
 
+
 ### 20) Installer flows definitief deprecaten
 - Context:
   - `installer_signup` en `installer_to_customer` zijn nog restmatig aanwezig
