@@ -514,6 +514,31 @@ Doel:
 - auth- en idempotency-scoping uniform maken over dossier-endpoints
 - drift tussen session-auth endpoints reduceren
 
+### Test-contract implicatie van session-auth (bewezen 2026-03-15)
+
+Voor de testsuite geldt nu expliciet:
+
+- `DOSSIER_TOKEN`
+  - alleen voor initiële bootstrap / token→session exchange / DB hash proof
+- `DOSSIER_SESSION_TOKEN`
+  - canonical runtime auth voor:
+    - charger save/delete
+    - upload-url
+    - upload-confirm
+    - cleanup deletes
+    - overige dossier runtime endpoints
+
+Test helper waarheid:
+- `scripts/tests/00_helpers.sh` bevat:
+  - `dossier_token()`
+  - `dossier_session_token()`
+  - `bootstrap_session_from_link_token()`
+
+Operational meaning:
+- een groene testsuite bewijst nu niet alleen “link werkt”,
+  maar ook dat runtime endpoints correct reageren op session-auth.
+
+
 ## 8) Evidence-grade rules (contract)
 - **issued ≠ confirmed**
 - Alleen confirmed docs tellen mee voor review/export/download
@@ -522,19 +547,49 @@ Doel:
 
 ## 9) Tooling & reproducibility
 
-### 9.1 scripts/tests/run_all.sh (contract test)
-Doel (real-world default):
-- Leest `dossiers.charger_count` (allowed max) uit DB
-- Vult aan tot target (zonder bestaande chargers/docs te muteren)
-- Draait reject tests (auth/max/notfound/idem)
-- Draait happy uploads (2 docs per *nieuw* aangemaakte charger)
-- Cleanup: delete alleen created chargers; backend delete cascade opruimen
+### 9.1 scripts/tests/run_all.sh (contract test — CURRENT, bewezen 2026-03-15)
+Doel (CURRENT):
+- bootstrap van een volledig nieuw testdossier via echte intake/mailflow
+- extractie van `DOSSIER_ID` + link-token uit state/mail
+- token→session bootstrap via `api-dossier-get`
+- setup vult dossier exact aan tot `dossiers.charger_count`
+- reject tests draaien tegen CURRENT session-auth endpoints
+- happy uploads draaien uitsluitend op chargers die in deze run zijn aangemaakt
+- cleanup verwijdert alleen mutable child artefacten van die run
+
+CURRENT contract:
+- fresh-only suite
+- runtime auth voor dossier endpoints = `session_token`
+- link-token blijft alleen bootstrap/debug input
+- testlog wordt volledig geredigeerd weggeschreven naar:
+  - `scripts/tests/output/latest.log`
+
+Bewezen coverage:
+- intake rejects + idempotency replay
+- login throttle + mismatch
+- charger unauthorized / max-chargers
+- upload-url rejects
+- upload-confirm rejects
+- happy upload flow:
+  - signed upload URL
+  - storage PUT
+  - upload-confirm
+  - DB proof op confirmed `dossier_documents` row
+- cleanup proof:
+  - docs per created charger aanwezig vóór delete
+  - docs per charger = 0 na delete
+  - dossier-level mutable child rows = 0 na cleanup
+  - dossier/outbound/audit shell blijft bewust bestaan
 
 Belangrijk:
-- Non-destructive design: als existing == target → geen create/upload/cleanup, wél rejects + audit bewijs.
+- suite is niet “fake groen” bewezen:
+  - sabotage op verkeerde audit reason → suite faalt
+  - sabotage op verkeerde audit stage → suite faalt
+  - sabotage op verkeerde file sha256 → suite faalt
 
 Wanneer gebruiken:
-- na elke wijziging aan dossier endpoints/audit/idempotency
+- na elke wijziging aan dossier auth/runtime endpoints
+- na wijzigingen aan upload/audit/idempotency/cleanup gedrag
 
 Wanneer niet:
 - productie/live data

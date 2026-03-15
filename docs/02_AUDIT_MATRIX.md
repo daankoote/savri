@@ -67,6 +67,25 @@ Operational meaning:
 Toekomst:
 - als lifecycle verder wordt uitgewerkt, gebeurt dat via tombstone/archive semantics, niet via hard delete van audit-gebonden dossiers
 
+### Test-suite sabotage-proof bewijs (CURRENT, bewezen 2026-03-15)
+
+De testsuite is expliciet gecontroleerd op “false green” gedrag.
+
+Bewezen faalscenario’s:
+- verkeerde audit `reason` verwachting → suite faalt
+- verkeerde audit `stage` verwachting → suite faalt
+- verkeerde `file_sha256` bij upload-confirm → suite faalt met 409 mismatch
+- ontbrekende/onjuiste DB-confirmation lookup → happy upload proof faalt
+
+Conclusie:
+- de suite controleert niet alleen HTTP-status,
+- maar ook audit-inhoud en database-eindstaat waar dat load-bearing is.
+
+Dit is belangrijk omdat:
+- 200/400/401 alleen onvoldoende bewijs zijn
+- audit-first contract ook inhoudelijk bewezen moet worden
+- cleanup pas “echt groen” is wanneer cascade-effect in DB zichtbaar is
+
 ### Gateway rejects (belangrijk)
 Sommige rejects gebeuren **vóór** de edge function code draait (Supabase gateway).
 - Voorbeeld: 401 `Missing authorization header`.
@@ -240,6 +259,11 @@ Reject/Fail
     - verified_server_side (bool)
     - client_transform (object|null)
 
+Testbewijs (CURRENT, 2026-03-15):
+- happy path is pas geslaagd wanneer niet alleen HTTP 200 is ontvangen,
+  maar ook de corresponderende `dossier_documents` row in DB bewezen `confirmed` is
+  voor exact `document_id`.
+
 - document_upload_confirm_rejected — reject/fail — api-dossier-upload-confirm
   - event_data bevat minimaal: stage/status/message/reason
   - event_data kan bevatten:
@@ -321,6 +345,10 @@ Bron: `supabase/functions/api-dossier-get/index.ts` + runtime endpoints die `aut
 NB:
 - Er is geen aparte `session_revoked` of `session_expired` audit event in CURRENT code.
 - Session failures landen momenteel als reject event van het aangeroepen endpoint, met session-auth reason in `event_data`.
+- CURRENT reason-values kunnen endpoint-specifiek zijn, maar bewezen reden is o.a.:
+  - `session_not_found`
+- Test-implicatie:
+  - tests mogen niet blind `unauthorized` als audit reason verwachten wanneer backend specifieker reason enums logt.
 - Als expliciete revoke/refresh lifecycle wordt toegevoegd, moet audit matrix uitgebreid worden met aparte session events.
 
 ## 8.2 Login Recovery (CURRENT)

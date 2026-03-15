@@ -7,8 +7,6 @@ set -euo pipefail
 # Bash 3.2 safe
 # ================================================================
 
-# ENVAL — EDGE UNIFORMITY TOOL
-#
 # Doel:
 # - Controleert of edge functions voldoen aan de afgesproken baseline
 # - Voorkomt legacy drift en "snowflake" functies
