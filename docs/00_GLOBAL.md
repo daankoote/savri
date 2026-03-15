@@ -153,9 +153,11 @@ Doel:
 - Wordt gebruikt om een sessie te starten (exchange).
 - Wordt **niet** gebruikt als langdurige autorisatie voor dossier reads/writes.
 
-2) Session token (Bearer)
+2) Session token
 - Wordt uitgegeven na succesvolle exchange.
-- Wordt gebruikt als `Authorization: Bearer <session_token>`.
+- Wordt gebruikt als canonieke runtime-auth voor dossier reads/writes.
+- CURRENT contract in de dossier-flow:
+  - frontend stuurt `session_token` mee in request body samen met `dossier_id`
 - Is short-lived (TTL) en revokeable.
 
 ### Server registry
@@ -206,7 +208,7 @@ Behavior (mismatch / invalid / notfound):
 ### Phase 0 — Foundations (DONE/ACTIVE)
 - Basis system map + core tables + wizard routes
 - Edge endpoints aanwezig
-- Reproduceerbare tests (`scripts/tests/run_all.sh`))
+- Reproduceerbare tests (`scripts/tests/run_all.sh`)
 
 ### Phase 1 — Evidence-grade dossier (ACTIVE)
 Gate = “audit-contract stabiel en consistent over alle dossier write endpoints”
@@ -310,52 +312,27 @@ Het is één consistent systeem met duidelijke scheiding tussen:
 
 ## 10.1 CSS Architectuur (CURRENT)
 
-We hanteren twee expliciete styling-lagen op bestandsniveau:
+CURRENT waarheid:
 
-1) assets/css/style.css — CORE
+- `assets/css/style.css` is de **enige** canonical stylesheet.
+- `assets/css/legacy.css` is **OUTDATED / bestaat niet meer**.
+- Alle pagina’s (core + informatief) laden `assets/css/style.css`.
 
-Leidend voor:
-- index.html
-- aanmelden.html
-- dossier.html
-
-Bevat:
-- CSS Layers (@layer base, components, pages, utilities;)
+`assets/css/style.css` bevat:
+- CSS Layers (`@layer base, components, pages, utilities;`)
 - Form Contract
 - Result system
-- Core componenten (.btn, .form, .calc, .card, .table, etc.)
-- Dossier-specifieke styling (onder aparte sectie)
-
-Mag niet bevatten:
-- .page-hero
-- .prose
-- pricing-* structuren
-- timeline-* structuren
-
-Behalve wanneer een class generiek herbruikbaar is (component-niveau).
-
-2) assets/css/legacy.css (LEGACY PAGES) — OUTDATED (bestaat niet meer; alles gebruikt nu style.css)
-
-Wordt uitsluitend geladen door:
-- pricing.html
-- proces.html
-- hoe-het-werkt.html
-- mandaat.html
-- regelgeving.html
-- voorwaarden.html
-- privacyverklaring.html
-
-Bevat uitsluitend:
-- page-hero structuren
-- prose typografie
-- pricing grids/cards
-- timeline layouts
-- pagina-specifieke presentatielogica
+- Core componenten (`.btn`, `.form`, `.calc`, `.card`, `.table`, etc.)
+- Dossier-specifieke styling onder een duidelijke eigen sectie
+- Herbruikbare componenten voor informatieve pagina’s
 
 Belangrijk:
-- Isolatie gebeurt via file separation.
-- body.page-legacy is geen architectuurprincipe meer.
-- Core pages laden geen legacy.css.
+- Isolatie gebeurt **niet** meer via een tweede stylesheet.
+- Isolatie gebeurt via:
+  - component-contract
+  - class discipline
+  - HTML normalisatie
+- `body.page-legacy` is geen architectuurprincipe.
 
 ## 10.2 Reuse-regel (HARD)
 
@@ -501,7 +478,9 @@ Stopregel
 
 ### AMENDMENT — 00_GLOBAL.md
 
-Datum: 2026-02-24 Type: CSS contract + Payment gate switchability (Optie C) Status: APPEND-ONLY
+Datum: 2026-02-24  
+Type: CSS contract + Payment gate switchability (Optie C)  
+Status: APPEND-ONLY
 
 ## 12) CSS Single-Source-of-Truth (HARD CONTRACT)
 
@@ -693,7 +672,7 @@ Auditpositie:
 - Charger audit events zijn completeness-gedekt:
   - `charger_added` / `charger_updated` bevatten: `mid_number`, serial/brand/model/power_kw/notes + MLS meta.
 - Intake rejects blijven pre-dossier:
-  - log naar `public.intake_audit_events`a
+  - log naar `public.intake_audit_events`
   - géén lead/dossier/mail bij reject
   - idempotency replay geldt óók voor rejects
 

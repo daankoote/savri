@@ -766,8 +766,86 @@ Doel
 - CURRENT docs weer één bron van waarheid maken
 - voorkomen dat historische tekst als actuele architectuur wordt gelezen
 
+
+## 2026-03-15 — Fresh-only testsuite gehardend naar CURRENT session-auth + sabotage-proof bewijs
+
+Wijzigingen
+- `scripts/tests/run_all.sh` blijft fresh-only, maar runtime contract is nu expliciet session-auth gebaseerd.
+- `scripts/tests/00_helpers.sh` uitgebreid met:
+  - `dossier_session_token()`
+  - `require_dossier_session_token()`
+  - `bootstrap_session_from_link_token()`
+  - DB proof helpers voor confirmed documents / document counts / charger counts
+- `scripts/tests/01_setup.sh` bootstrap nu automatisch session-token wanneer nog niet aanwezig.
+- Runtime endpoint tests aangepast van link-token auth naar `session_token` waar CURRENT contract dat vereist:
+  - charger save/delete
+  - upload-url
+  - upload-confirm
+  - cleanup deletes
+- `scripts/tests/06_upload_happy.sh` gehardend:
+  - DB proof vóór uploads (`dossier_documents` count)
+  - DB proof per confirmed document row
+  - DB proof na uploads (expected total count)
+- `scripts/tests/07_cleanup.sh` gehardend:
+  - pre-check: docs per created charger aanwezig
+  - post-delete proof: docs per charger = 0
+  - dossier-level child rows = 0 na cleanup
+
+Belangrijk bewijs
+- suite is expliciet getest op sabotage / false-green risico:
+  - verkeerde audit reason → suite faalt
+  - verkeerde audit stage → suite faalt
+  - verkeerde file sha256 → suite faalt met 409 mismatch
+  - foutieve DB row confirmation lookup → happy proof faalt
+
+Conclusie
+- testsuite bewijst nu niet alleen HTTP-uitkomsten,
+  maar ook audit-inhoud en database-eindstaat voor load-bearing flows.
+
+Open gebleven
+- expired session bewijs op meerdere endpoints
+- revoked session bewijs op meerdere endpoints
+- storage object cleanup proof buiten DB-cascade
+- export gate contract tests
+
+
+## 2026-03-15 — Docs sync afgerond op CURRENT testsuite waarheid
+
+Wijzigingen
+- `01_SYSTEM_MAP.md` bijgewerkt naar CURRENT testsuite contract:
+  - fresh-only bootstrap
+  - session-auth als canonical runtime test-auth
+  - sabotage-proof testbewijs expliciet gemaakt
+- `02_AUDIT_MATRIX.md` bijgewerkt:
+  - sabotage-proof bewijs toegevoegd
+  - DB proof bij happy upload confirm expliciet gemaakt
+  - session reject nuance (`session_not_found`) verduidelijkt
+- `04_TODO.md` opgeschoond:
+  - docs-sync item verwijderd nadat de doc updates daadwerkelijk waren doorgevoerd
+
+Conclusie
+- CURRENT docs reflecteren nu de 2026-03-15 testsuite-hardening correct.
 ---
 
+## 2026-03-15 — Docs hygiene cleanup: markdown formatting + CURRENT truth verduidelijkt
 
+Wijzigingen
+- `00_GLOBAL.md` opgeschoond op leesbaarheid en markdown-formatting:
+  - HTML voorbeelden omgezet naar fenced code blocks
+  - session-auth wording beter aligned met CURRENT runtime-contract
+  - CSS architectuur-sectie rechtgezet naar single-stylesheet waarheid
+  - amendment metadata leesbaar gemaakt
+  - kleine typo fixes
+- `01_SYSTEM_MAP.md` opgeschoond:
+  - mail-worker curl voorbeeld omgezet naar fenced bash block
+  - kleine typo fix in upload-url beschrijving
+- `02_AUDIT_MATRIX.md` licht opgeschoond:
+  - gateway/mail-worker nuance leesbaarder gemaakt
+  - login recovery endpoint formatting verbeterd
+
+Doel
+- Docs beter controleerbaar maken
+- CURRENT waarheid explicieter maken
+- Markdown rendering voorspelbaar houden
 
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)

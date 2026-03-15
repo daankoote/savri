@@ -51,13 +51,17 @@ Regel: alleen open items; afgerond → naar changelog.
 
 ### 5) Session-auth hardening bewijs sluiten (`dossier_sessions`)
 - Context:
-  - session-auth is nu canonical voor dossier read/write endpoints
+  - runtime testsuite is nu bewezen aligned op `session_token`
   - shared helper `supabase/functions/_shared/customer_auth.ts` bestaat
+  - CURRENT bewezen reason-waarde is o.a. `session_not_found`
 - Open DoD:
   - bevestigen dat alle dossier runtime endpoints shared auth helper gebruiken waar dat logisch is
-  - bevestigen dat session reject-audits overal reason-consistent zijn
-  - beslissen of `last_seen_at` actief moet worden bijgewerkt of bewust deferred blijft
-  - expliciet bewijs leveren voor expired + revoked session reject gedrag op meerdere endpoints
+  - reason-enums documenteren waar ze bewust specifieker zijn dan generiek `unauthorized`
+  - beslissen of `last_seen_at` actief wordt bijgewerkt of bewust deferred blijft
+  - expliciet bewijs leveren voor:
+    - expired session reject
+    - revoked session reject
+    - op meerdere endpoints (minimaal read + write)
 - Status: OPEN
 
 ### 6) Tombstone / archive lifecycle voor audit-gebonden testdossiers
@@ -72,7 +76,16 @@ Regel: alleen open items; afgerond → naar changelog.
   - bevestig dat exports/reads zich correct gedragen voor tombstoned dossiers
 - Status: OPEN
 
-### 7) 
+
+### 7) Docs hygiene: CURRENT docs consistent en renderbaar houden
+- Context:
+  - docs zijn inhoudelijk sterk, maar markdown-formatting en CURRENT-vs-historie kunnen weer gaan divergeren
+- DoD:
+  - codevoorbeelden staan in fenced code blocks
+  - CURRENT secties spreken append-only historie niet tegen
+  - geen dubbele of dode secties
+  - bij architectuurwijziging: current doc + changelog blijven synchroon
+- Status: OPEN
 
 ### 8) Frontend contract: MID veldnaam volledig consistent met spec
 - DoD:
@@ -129,14 +142,37 @@ Regel: alleen open items; afgerond → naar changelog.
     - gate-verificatie schrijft audit event (success + reject)
 - Status: OPEN
 
-### 14) Orphaned storage reconciler
+### 14a) Orphaned storage reconciler
 - DoD:
   - job/edge function die storage failures opnieuw probeert op basis van audit events
 - Status: OPEN
 
-### 15)
+### 14b) Storage object cleanup proof sluiten
+- Context:
+  - DB cleanup proof is nu geleverd:
+    - `dossier_documents` rows verdwijnen
+    - docs per charger gaan naar 0
+  - storage object deletion is nog niet afzonderlijk runtime-bewezen als hard bewijsstap
+- DoD:
+  - voor happy upload run minimaal 1 storage object key/pad vooraf vastleggen
+  - na cleanup bevestigen dat object niet meer opvraagbaar is / niet meer bestaat
+  - bewijs vastleggen zonder secrets/signatures te lekken
+- Status: OPEN
 
-### 16) Email verification assumption (audit risk)
+### 15) Export gate contract tests
+- Context:
+  - upload/runtime suite is nu sterk genoeg
+  - export is productkritische eindgate en nog onvoldoende contractueel bewezen in fresh flow
+- DoD:
+  - test bewijst:
+    - export reject wanneer dossier niet locked is
+    - export reject wanneer niet alle vereiste docs confirmed zijn
+    - export success wanneer dossier locked is en confirmed-doc set klopt
+  - audit events voor export success + reject bevestigd
+  - output-contract van export artifact vastgelegd
+- Status: OPEN
+
+### 16a) Email verification assumption (audit risk)
 - Context:
   - huidig gedrag: `email_verified_at` gezet op link-click
   - dit bewijst geen mailbox-control, alleen possession of link
@@ -146,6 +182,7 @@ Regel: alleen open items; afgerond → naar changelog.
     - óf semantiek aanpassen (bijv. `email_link_clicked_at`)
     - óf verificatie upgraden (OTP / single-use / TTL)
 - Status: OPEN
+
 
 ### 17) Installer flows definitief deprecaten
 - Context:
