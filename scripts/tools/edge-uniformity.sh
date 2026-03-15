@@ -7,7 +7,26 @@ set -euo pipefail
 # Bash 3.2 safe
 # ================================================================
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# ENVAL — EDGE UNIFORMITY TOOL
+#
+# Doel:
+# - Controleert of edge functions voldoen aan de afgesproken baseline
+# - Voorkomt legacy drift en "snowflake" functies
+#
+# Controleert o.a.:
+# - classificatie CORE vs UTILITY
+# - CORS
+# - request metadata / traceability
+# - idempotency enforcement
+# - audit logging
+# - auth gates
+# - service-role usage
+#
+# Belangrijk:
+# - Dit is een repo-kwaliteitscheck, geen runtime test
+# - Gebruik dit vóór grotere refactors of contractwijzigingen
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")"/../.. && pwd)"
 FN_DIR="$REPO_ROOT/supabase/functions"
 
 if [[ ! -d "$FN_DIR" ]]; then
