@@ -398,6 +398,67 @@ NB:
 Response blijft altijd `{ ok: true }` voor anti-enumeration.
 Audit events zijn de enige bron van waarheid.
 
+## 8.3 Analysis (CURRENT)
+
+Canonical endpoint:
+- `api-dossier-verify`
+
+### Document analysis
+- document_analysis_started — success — api-dossier-verify
+- document_analysis_completed — success — api-dossier-verify
+- document_analysis_failed — fail — api-dossier-verify
+
+Event_data minimaal:
+- `document_id`
+- `charger_id` (indien relevant)
+- `doc_type`
+- `analysis_kind`
+- `method_code`
+- `method_version`
+- `status`
+
+### Charger analysis
+- charger_analysis_result_written — success — api-dossier-verify
+
+Event_data minimaal:
+- `charger_id`
+- `document_id` (indien relevant; source document)
+- `analysis_code`
+- `method_code`
+- `method_version`
+- `status`
+
+### Dossier summary
+- dossier_analysis_summary_generated — success — api-dossier-verify
+
+Event_data minimaal:
+- `method_code`
+- `method_version`
+- `overall_status`
+- `document_analysis_count`
+- `charger_analysis_count`
+
+### Reject/Fail
+- dossier_verify_rejected — reject — api-dossier-verify
+
+Stages:
+- `auth`
+- `dossier_lookup`
+- `analysis_gate`
+- `chargers_read`
+- `documents_read`
+- `analysis_refresh_delete_document`
+- `analysis_refresh_delete_charger`
+- `analysis_refresh_delete_summary`
+- `analysis_document_insert`
+- `analysis_charger_insert`
+- `analysis_summary_insert`
+
+Belangrijk:
+- Analysis-events zijn aanvullend
+- Ze vervangen geen bestaande dossier lifecycle events
+- Analysis beïnvloedt CURRENT geen lock/review gate
+
 ## 9) System — Mail (dossier-scoped on-chain vanaf 2026-02-09)
 Regel: mail audit events worden alleen gelogd wanneer `outbound_emails.dossier_id != null`.
 

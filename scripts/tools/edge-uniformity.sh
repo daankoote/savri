@@ -51,6 +51,7 @@ CORE_FUNCS=(
   "api-dossier-upload-confirm"
   "api-dossier-upload-url"
   "api-lead-submit"
+  "api-dossier-verify"
 )
 
 UTILITY_FUNCS=(

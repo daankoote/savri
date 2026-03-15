@@ -238,11 +238,19 @@ Evaluate-flow:
     - `requireCustomerSession(...)`
     - `actorRefForSession(...)`
     - `scopedSessionIdemKey(...)`
+- `supabase/functions/_shared/analysis.ts`
+  - gedeelde helper voor Analysis v1
+  - levert:
+    - document-level skeleton analysis rows
+    - charger-level skeleton analysis rows
+    - dossier-level analysis summary row
+    - status/shape helpers voor supported analysis-documents
 
 Doel:
 - uniforme session-auth over dossier runtime endpoints
 - uniforme actor_ref op basis van session token hash
 - uniforme idempotency scoping per dossier + session
+- modulaire analysis-pipeline zonder mutatie van bestaande dossierdata
 
 ## 4) Core DB tables (samenvatting)
 
@@ -254,6 +262,36 @@ Doel:
 - `dossier_consents` (append-only, immutable)
 - `dossier_checks` (UNIQUE dossier_id+check_code)
 - `dossier_audit_events` (append-only audit trail)
+
+### Analysis layer (CURRENT, derived only)
+- `dossier_analysis_document`
+  - document-level observed / extraction layer
+  - unique per `(document_id, analysis_kind, method_version)`
+- `dossier_analysis_charger`
+  - charger-level evaluated consistency layer
+  - bevat analysis-codes zoals:
+    - `invoice_address_match`
+    - `invoice_brand_match`
+    - `invoice_model_match`
+    - `invoice_serial_match`
+    - `invoice_mid_match`
+    - `photo_charger_visible`
+    - `photo_brand_match`
+    - `photo_model_match`
+    - `photo_serial_match`
+    - `photo_mid_match`
+- `dossier_analysis_summary`
+  - dossier-level derived summary
+  - overall status:
+    - `not_run`
+    - `partial_pass`
+    - `pass`
+    - `review_required`
+
+Belangrijk:
+- Analysis is volledig derived
+- Analysis doet géén writes naar bestaande dossier core tabellen
+- Analysis verandert géén lifecycle / lock / review semantics
  
 ### MID model (CURRENT — Optie A, harde systeemeis)
 
@@ -453,7 +491,22 @@ Stap 6 — Review
 - api-dossier-evaluate (session-auth canonical review endpoint; precheck + finalize; strict idempotency)
 
 Evidence / export
-- api-dossier-export (session-auth; export artifact; only locked/in_review; only confirmed docs)
+- api-dossier-verify
+  - session-auth
+  - draait analysis op confirmed documenten
+  - schrijft uitsluitend naar analysis-tabellen
+  - muteert geen bestaande dossierdata
+- api-dossier-export
+  - session-auth
+  - export artifact
+  - only locked/in_review
+  - only confirmed docs
+  - CURRENT export v5 bevat naast dossier/checks/docs ook:
+    - `analysis`
+    - `analysis_methods`
+    - `analysis_documents`
+    - `analysis_chargers`
+    - `analysis_summary`
 
 Legacy/compat
 - api-dossier-submit-review is verwijderd; canonical review/finalize endpoint is `api-dossier-evaluate`
