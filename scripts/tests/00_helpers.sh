@@ -94,13 +94,16 @@ set_state() {
 }
 
 get_state() {
-  
   local key="$1"
+  local value=""
+
   if [[ ! -f "$TEST_STATE_FILE" ]]; then
     echo ""
     return 0
   fi
-  grep -E "^${key}=" "$TEST_STATE_FILE" | tail -n 1 | cut -d= -f2-
+
+  value="$(grep -E "^${key}=" "$TEST_STATE_FILE" 2>/dev/null | tail -n 1 | cut -d= -f2- || true)"
+  printf "%s" "$value"
 }
 
 dossier_token() {
@@ -125,6 +128,76 @@ require_dossier_token() {
     echo "Hint: run_all.sh must set TOKEN_RESET=1 and 01_setup.sh must set_state DOSSIER_TOKEN."
     exit 1
   fi
+}
+
+# -------------------------
+# Session-token helpers (CURRENT runtime auth)
+# -------------------------
+# DOSSIER_TOKEN blijft alleen voor initial link-token exchange/debug.
+# DOSSIER_SESSION_TOKEN is canonical voor dossier runtime endpoints.
+
+dossier_session_token() {
+  local t
+  t="$(get_state DOSSIER_SESSION_TOKEN)"
+  if [[ -z "${t:-}" ]]; then
+    t="${DOSSIER_SESSION_TOKEN:-}"
+  fi
+  t="$(printf "%s" "$t" | tr -d '\r\n' | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
+  printf "%s" "$t"
+}
+
+require_dossier_session_token() {
+  local t
+  t="$(dossier_session_token)"
+  if [[ -z "${t:-}" ]]; then
+    echo "FATAL: dossier_session_token() is empty (state+env)."
+    exit 1
+  fi
+}
+
+bootstrap_session_from_link_token() {
+  local fn_get="$SUPABASE_URL/functions/v1/api-dossier-get"
+  local token
+  token="$(dossier_token)"
+
+  if [[ -z "${DOSSIER_ID:-}" ]]; then
+    echo "FATAL: DOSSIER_ID missing for session bootstrap"
+    exit 1
+  fi
+
+  if [[ -z "${token:-}" ]]; then
+    echo "FATAL: DOSSIER_TOKEN missing for session bootstrap"
+    exit 1
+  fi
+
+  local rid resp http body session_token
+  rid="bootstrap-session-$(now_ts)"
+
+  resp="$(http_call_with_idem \
+    "$fn_get" \
+    "{\"dossier_id\":\"$DOSSIER_ID\",\"token\":\"$token\"}" \
+    "$rid")"
+
+  http="$(extract_http_status "$resp")"
+  body="$(extract_body_json "$resp")"
+
+  if [[ "$http" != "200" ]]; then
+    echo "FATAL: session bootstrap expected 200 got $http"
+    echo "BODY:"
+    print_json_safe_trunc "$body" 1200
+    exit 1
+  fi
+
+  session_token="$(printf "%s" "$body" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('session_token',''))")"
+
+  if [[ -z "${session_token:-}" ]]; then
+    echo "FATAL: api-dossier-get returned 200 but no session_token"
+    print_json_safe_trunc "$body" 1200
+    exit 1
+  fi
+
+  set_state DOSSIER_SESSION_TOKEN "$session_token"
+  echo "OK session bootstrap complete"
 }
 
 # -------------------------
@@ -331,6 +404,137 @@ assert_no_dossier_for_lead_email_since_start() {
   fi
 
   return 0
+}
+
+
+# -------------------------
+# DB proof helpers — dossier_documents / cleanup verification
+# -------------------------
+
+get_document_row_by_id() {
+  local document_id="$1"
+
+  curl -sS \
+    --connect-timeout 10 \
+    --max-time 30 \
+    "$SUPABASE_URL/rest/v1/dossier_documents?select=id,dossier_id,charger_id,doc_type,status,file_sha256,storage_path,created_at&id=eq.$document_id&limit=1" \
+    -H "apikey: $SUPABASE_ANON_KEY" \
+    -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY"
+}
+
+assert_document_row_confirmed() {
+  local document_id="$1"
+  local expected_charger_id="$2"
+  local expected_doc_type="$3"
+  local expected_sha256="$4"
+  local label="${5:-document-row-confirmed}"
+
+  local row_json
+  row_json="$(get_document_row_by_id "$document_id")"
+
+  if [[ -z "${row_json:-}" || "$row_json" == "[]" ]]; then
+    echo "ASSERT FAIL: $label — dossier_documents row not found for document_id=$document_id"
+    return 1
+  fi
+
+  local parsed
+  parsed="$(printf "%s" "$row_json" | python3 -c '
+import sys, json
+d = json.load(sys.stdin)
+r = d[0] if d else {}
+print("\t".join([
+    str(r.get("id","")),
+    str(r.get("dossier_id","")),
+    str(r.get("charger_id","")),
+    str(r.get("doc_type","")),
+    str(r.get("status","")),
+    str(r.get("file_sha256","")),
+    str(r.get("storage_path","")),
+]))
+')"
+
+  local got_id got_dossier got_charger got_doc_type got_status got_sha got_path
+  IFS=$'\t' read -r got_id got_dossier got_charger got_doc_type got_status got_sha got_path <<< "$parsed"
+
+  if [[ "$got_id" != "$document_id" ]]; then
+    echo "ASSERT FAIL: $label — wrong id in dossier_documents row"
+    echo "expected: $document_id"
+    echo "got:      $got_id"
+    return 1
+  fi
+
+  if [[ "$got_dossier" != "$DOSSIER_ID" ]]; then
+    echo "ASSERT FAIL: $label — wrong dossier_id in dossier_documents row"
+    echo "expected: $DOSSIER_ID"
+    echo "got:      $got_dossier"
+    return 1
+  fi
+
+  if [[ "$got_charger" != "$expected_charger_id" ]]; then
+    echo "ASSERT FAIL: $label — wrong charger_id in dossier_documents row"
+    echo "expected: $expected_charger_id"
+    echo "got:      $got_charger"
+    return 1
+  fi
+
+  if [[ "$got_doc_type" != "$expected_doc_type" ]]; then
+    echo "ASSERT FAIL: $label — wrong doc_type in dossier_documents row"
+    echo "expected: $expected_doc_type"
+    echo "got:      $got_doc_type"
+    return 1
+  fi
+
+  if [[ "$got_status" != "confirmed" ]]; then
+    echo "ASSERT FAIL: $label — expected status=confirmed"
+    echo "got: $got_status"
+    return 1
+  fi
+
+  if [[ "$got_sha" != "$expected_sha256" ]]; then
+    echo "ASSERT FAIL: $label — wrong file_sha256"
+    echo "expected: $expected_sha256"
+    echo "got:      $got_sha"
+    return 1
+  fi
+
+  if [[ -z "${got_path:-}" ]]; then
+    echo "ASSERT FAIL: $label — storage_path is empty"
+    return 1
+  fi
+
+  return 0
+}
+
+count_documents_for_dossier() {
+  curl -sS \
+    --connect-timeout 10 \
+    --max-time 30 \
+    "$SUPABASE_URL/rest/v1/dossier_documents?select=id&dossier_id=eq.$DOSSIER_ID" \
+    -H "apikey: $SUPABASE_ANON_KEY" \
+    -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+    | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d) if isinstance(d,list) else 0)"
+}
+
+count_documents_for_charger() {
+  local charger_id="$1"
+
+  curl -sS \
+    --connect-timeout 10 \
+    --max-time 30 \
+    "$SUPABASE_URL/rest/v1/dossier_documents?select=id&charger_id=eq.$charger_id" \
+    -H "apikey: $SUPABASE_ANON_KEY" \
+    -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+    | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d) if isinstance(d,list) else 0)"
+}
+
+count_charger_rows_for_dossier() {
+  curl -sS \
+    --connect-timeout 10 \
+    --max-time 30 \
+    "$SUPABASE_URL/rest/v1/dossier_chargers?select=id&dossier_id=eq.$DOSSIER_ID" \
+    -H "apikey: $SUPABASE_ANON_KEY" \
+    -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+    | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d) if isinstance(d,list) else 0)"
 }
 
 # -------------------------

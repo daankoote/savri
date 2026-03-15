@@ -73,6 +73,7 @@ reset_state
 
 DOSSIER_ID_STATE="$(get_state DOSSIER_ID)"
 DOSSIER_TOKEN_STATE="$(get_state DOSSIER_TOKEN)"
+DOSSIER_SESSION_TOKEN_STATE="$(get_state DOSSIER_SESSION_TOKEN)"
 
 if [[ -z "${DOSSIER_ID_STATE:-}" || -z "${DOSSIER_TOKEN_STATE:-}" ]]; then
   echo "FATAL: fresh bootstrap did not populate state DOSSIER_ID/DOSSIER_TOKEN"
@@ -81,6 +82,10 @@ fi
 
 export DOSSIER_ID="$DOSSIER_ID_STATE"
 export DOSSIER_TOKEN="$DOSSIER_TOKEN_STATE"
+
+if [[ -n "${DOSSIER_SESSION_TOKEN_STATE:-}" ]]; then
+  export DOSSIER_SESSION_TOKEN="$DOSSIER_SESSION_TOKEN_STATE"
+fi
 
 echo "RUN) using fresh DOSSIER_ID from state: $DOSSIER_ID"
 
@@ -120,14 +125,16 @@ echo "DOSSIER_ID: $DOSSIER_ID"
 "$DIR/01_setup.sh"
 echo ""
 echo "POST-SETUP PROOF:"
-echo " - DOSSIER_ID (state): $(get_state DOSSIER_ID)"
-echo " - DOSSIER_ID (env):   ${DOSSIER_ID:-<empty>}"
-echo " - token sha256 prefix: $(sha256_str "$(dossier_token)" | cut -c1-16)..."
+echo " - DOSSIER_ID (state):           $(get_state DOSSIER_ID)"
+echo " - DOSSIER_ID (env):             ${DOSSIER_ID:-<empty>}"
+echo " - token sha256 prefix:          $(sha256_str "$(dossier_token)" | cut -c1-16)..."
+echo " - session token present:        $(if [[ -n "$(dossier_session_token)" ]]; then echo yes; else echo NO; fi)"
 "$DIR/02_intake_contract.sh"
 "$DIR/03_login_tests.sh"
 echo ""
 echo "POST-LOGIN PROOF:"
-echo " - DOSSIER_TOKEN sha256 prefix: $(sha256_str "$(dossier_token)" | cut -c1-16)..."
+echo " - DOSSIER_TOKEN sha256 prefix:  $(sha256_str "$(dossier_token)" | cut -c1-16)..."
+echo " - session token present:        $(if [[ -n "$(dossier_session_token)" ]]; then echo yes; else echo NO; fi)"
 "$DIR/04_charger_contract.sh"
 "$DIR/05_upload_rejects.sh"
 "$DIR/06_upload_happy.sh"

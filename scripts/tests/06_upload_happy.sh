@@ -51,6 +51,14 @@ HAPPY_DOCS_CREATED=0
 HAPPY_PUT_OK=0
 HAPPY_CONFIRM_OK=0
 
+DOCS_BEFORE="$(count_documents_for_dossier)"
+if [[ -z "${DOCS_BEFORE:-}" ]]; then
+  echo "FATAL: could not read dossier_documents count before happy uploads"
+  exit 1
+fi
+
+echo "DB proof) dossier_documents before happy uploads: $DOCS_BEFORE"
+
 for cid in "${CREATED_IDS[@]}"; do
   echo ""
   echo "Charger (created this run): $cid"
@@ -65,7 +73,7 @@ for cid in "${CREATED_IDS[@]}"; do
 
     RESP_URL="$(http_call_with_idem \
       "$FN_UPLOAD_URL" \
-      "{\"dossier_id\":\"$DOSSIER_ID\",\"token\":\"$(dossier_token)\",\"doc_type\":\"$dt\",\"filename\":\"devtest-$dt-$cid.pdf\",\"content_type\":\"application/pdf\",\"size_bytes\":$FILE_SIZE,\"charger_id\":\"$cid\"}" \
+      "{\"dossier_id\":\"$DOSSIER_ID\",\"session_token\":\"$(dossier_session_token)\",\"doc_type\":\"$dt\",\"filename\":\"devtest-$dt-$cid.pdf\",\"content_type\":\"application/pdf\",\"size_bytes\":$FILE_SIZE,\"charger_id\":\"$cid\"}" \
       "$rid_url")"
 
     HTTP_URL="$(extract_http_status "$RESP_URL")"
@@ -113,7 +121,7 @@ for cid in "${CREATED_IDS[@]}"; do
 
     RESP_CONF="$(http_call_with_idem \
       "$FN_UPLOAD_CONFIRM" \
-      "{\"dossier_id\":\"$DOSSIER_ID\",\"token\":\"$(dossier_token)\",\"document_id\":\"$DOC_ID\",\"file_sha256\":\"$FILE_SHA256\"}" \
+      "{\"dossier_id\":\"$DOSSIER_ID\",\"session_token\":\"$(dossier_session_token)\",\"document_id\":\"$DOC_ID\",\"file_sha256\":\"$FILE_SHA256\"}" \
       "$rid_conf")"
 
     HTTP_CONF="$(extract_http_status "$RESP_CONF")"
@@ -129,14 +137,41 @@ for cid in "${CREATED_IDS[@]}"; do
 
     audit_assert_for_request_id "$rid_conf" "" "" "" "HAPPY upload-confirm ($dt)" || exit 1
 
+    assert_document_row_confirmed \
+      "$DOC_ID" \
+      "$cid" \
+      "$dt" \
+      "$FILE_SHA256" \
+      "HAPPY DB row confirmed ($dt)" || exit 1
+
+    echo "DB proof) confirmed row ok for document_id=$DOC_ID"
+
     HAPPY_DOCS_CREATED=$((HAPPY_DOCS_CREATED+1))
     HAPPY_PUT_OK=$((HAPPY_PUT_OK+1))
     HAPPY_CONFIRM_OK=$((HAPPY_CONFIRM_OK+1))
   done
 done
 
+DOCS_AFTER="$(count_documents_for_dossier)"
+if [[ -z "${DOCS_AFTER:-}" ]]; then
+  echo "FATAL: could not read dossier_documents count after happy uploads"
+  exit 1
+fi
+
+EXPECTED_DOCS_AFTER=$((DOCS_BEFORE + HAPPY_DOCS_CREATED))
+
+if [[ "$DOCS_AFTER" != "$EXPECTED_DOCS_AFTER" ]]; then
+  echo "ASSERT FAIL: dossier_documents count mismatch after happy uploads"
+  echo "before:   $DOCS_BEFORE"
+  echo "created:  $HAPPY_DOCS_CREATED"
+  echo "expected: $EXPECTED_DOCS_AFTER"
+  echo "actual:   $DOCS_AFTER"
+  exit 1
+fi
+
 echo ""
 echo "PASS happy uploads"
 echo "Happy docs (expected 2 * created_chargers): $HAPPY_DOCS_CREATED"
 echo "Storage PUT ok: $HAPPY_PUT_OK"
 echo "Upload-confirm ok: $HAPPY_CONFIRM_OK"
+echo "DB proof) dossier_documents after happy uploads: $DOCS_AFTER"

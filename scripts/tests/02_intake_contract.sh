@@ -1,3 +1,5 @@
+# scripts/tests/02_intake_contract.sh
+
 #!/usr/bin/env bash
 set -euo pipefail
 source "$(dirname "$0")/00_helpers.sh"
