@@ -848,4 +848,54 @@ Doel
 - CURRENT waarheid explicieter maken
 - Markdown rendering voorspelbaar houden
 
+
+## 2026-03-15 — Analysis v1 skeleton live + export v5 uitgebreid met analysis blocks
+
+Wijzigingen
+- Nieuwe derived analysis-laag toegevoegd, zonder mutatie van bestaande dossier core tabellen:
+  - `public.dossier_analysis_document`
+  - `public.dossier_analysis_charger`
+  - `public.dossier_analysis_summary`
+- Nieuwe shared helper:
+  - `supabase/functions/_shared/analysis.ts`
+- Nieuw CORE endpoint:
+  - `api-dossier-verify`
+  - session-auth via `requireCustomerSession(...)`
+  - scoped idempotency via session key
+  - draait alleen op confirmed documenten
+  - schrijft alleen naar analysis-tabellen
+- `api-dossier-export` uitgebreid naar schema_version `enval-dossier-export.v5` met:
+  - `analysis`
+  - `analysis_methods`
+  - `analysis_documents`
+  - `analysis_chargers`
+  - `analysis_summary`
+
+Analysis-semantiek (bewust)
+- Analysis is een derived consistency layer
+- Geen authenticity-claim
+- Geen compliance-claim
+- Geen certificeringsclaim
+- Geen lifecycle-mutatie van dossier/review/lock
+
+Bewezen runtime-gedrag
+- verlopen session → `dossier_verify_rejected` met reason `session_expired`
+- login recovery → nieuwe link + nieuwe session
+- `api-dossier-verify` → HTTP 200 op locked dossier met 4 confirmed docs / 2 chargers
+- writes bewezen:
+  - `dossier_analysis_document` = 4
+  - `dossier_analysis_charger` = 20
+  - `dossier_analysis_summary` = 1
+- audit events bewezen:
+  - `document_analysis_started`
+  - `document_analysis_completed`
+  - `charger_analysis_result_written`
+  - `dossier_analysis_summary_generated`
+- idempotency replay bewezen zonder duplicate rows
+- export v5 bevat analysis-blokken correct
+
+Belangrijke nuance
+- In export metadata is bewust `analysis_key` gebruikt in `analysis_methods`,
+  zodat dit niet semantisch botst met row-level `method_code = analysis_v1`.
+
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)

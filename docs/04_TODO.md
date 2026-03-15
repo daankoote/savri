@@ -1,4 +1,4 @@
-# ENVAL — TODO (CURRENT)
+# 04_TODO.md (CURRENT)
 
 Statusdatum: 2026-03-12  
 Prioriteit: audit-first.  
@@ -125,13 +125,60 @@ Regel: alleen open items; afgerond → naar changelog.
 
 ## P1.5 / Phase-2 (open risico’s)
 
-### 12) PDOK ambiguity zonder suffix
+### 12) Factuur analysis v1 (eerste echte inhoudelijke scope)
+- Context:
+  - Analysis v1 skeleton + export v5 zijn live en bewezen
+  - huidige document/charger analysis rows zijn nog skeleton / `not_checked`
+- DoD:
+  - alleen `factuur` in eerste echte analyseversie
+  - observed extraction fields opgeslagen in `dossier_analysis_document`
+  - charger-level checks geschreven in `dossier_analysis_charger`:
+    - `invoice_address_match`
+    - `invoice_brand_match`
+    - `invoice_model_match`
+    - `invoice_serial_match`
+    - `invoice_mid_match`
+  - dossier-summary geschreven in `dossier_analysis_summary`
+  - liever `inconclusive` dan geforceerde zekerheid
+  - export toont echte observed/evaluated waarden i.p.v. skeleton placeholders
+- Status: OPEN
+
+### 13) Foto analysis v1 (pas na factuur-scope)
+- Context:
+  - foto-analyse is zwakker en sneller inconclusive; daarom expliciet na factuur-scope
+  - skeleton-export en analysis-tabellen bestaan al
+- DoD:
+  - pas starten nadat factuur analysis-contract groen en bewezen is
+  - checks beperkt tot zichtbaarheid / zichtbare match:
+    - `photo_charger_visible`
+    - `photo_brand_match`
+    - `photo_model_match`
+    - `photo_serial_match`
+    - `photo_mid_match`
+  - duidelijke limitation-semantiek in export en audit
+  - standaard liever `inconclusive` dan geforceerde zekerheid
+- Status: OPEN
+
+### 14) Analysis extensibility guardrail documenteren
+- Context:
+  - toekomstige bronnen zoals backend portal / HEMS / remote observed data mogen Analysis v1 niet blokkeren
+- DoD:
+  - analysis-model expliciet voorbereid op latere bronsoorten:
+    - `customer_declared`
+    - `document_observed`
+    - `remote_observed`
+    - `system_evaluated`
+  - bevestigd dat v1 schema hiervoor uitbreidbaar is zonder herbouw
+  - geen implementatie in v1
+- Status: OPEN
+
+### 15) PDOK ambiguity zonder suffix
 - DoD:
   - als meerdere candidates → suffix verplicht of `verified=false` + audit ambiguous
   - geen save bij onopgeloste ambiguity
 - Status: OPEN
 
-### 13) Upload-confirm performance redesign / deferred verificatie
+### 16) Upload-confirm performance redesign / deferred verificatie
 - DoD:
   - alternatief verify-ontwerp + besluit + implementatieplan
   - expliciet auditcontract voor waar sha256-verificatie gebeurt:
@@ -142,12 +189,12 @@ Regel: alleen open items; afgerond → naar changelog.
     - gate-verificatie schrijft audit event (success + reject)
 - Status: OPEN
 
-### 14a) Orphaned storage reconciler
+### 17a) Orphaned storage reconciler
 - DoD:
   - job/edge function die storage failures opnieuw probeert op basis van audit events
 - Status: OPEN
 
-### 14b) Storage object cleanup proof sluiten
+### 17b) Storage object cleanup proof sluiten
 - Context:
   - DB cleanup proof is nu geleverd:
     - `dossier_documents` rows verdwijnen
@@ -159,7 +206,7 @@ Regel: alleen open items; afgerond → naar changelog.
   - bewijs vastleggen zonder secrets/signatures te lekken
 - Status: OPEN
 
-### 15) Export gate contract tests
+### 18) Export gate contract tests
 - Context:
   - upload/runtime suite is nu sterk genoeg
   - export is productkritische eindgate en nog onvoldoende contractueel bewezen in fresh flow
@@ -172,7 +219,7 @@ Regel: alleen open items; afgerond → naar changelog.
   - output-contract van export artifact vastgelegd
 - Status: OPEN
 
-### 16a) Email verification assumption (audit risk)
+### 19) Email verification assumption (audit risk)
 - Context:
   - huidig gedrag: `email_verified_at` gezet op link-click
   - dit bewijst geen mailbox-control, alleen possession of link
@@ -184,7 +231,9 @@ Regel: alleen open items; afgerond → naar changelog.
 - Status: OPEN
 
 
-### 17) Installer flows definitief deprecaten
+
+
+### 20) Installer flows definitief deprecaten
 - Context:
   - `installer_signup` en `installer_to_customer` zijn nog restmatig aanwezig
   - backend retourneert 410
@@ -194,7 +243,7 @@ Regel: alleen open items; afgerond → naar changelog.
   - verwijder legacy bindings zodat self-serve journey single-path blijft (`ev_direct` + contact)
 - Status: OPEN
 
-### 18) Abuse controls
+### 21) Abuse controls
 - DoD:
   - rate limit / abuse detection op `api-lead-submit` en contactflow
   - basic throttling + logging + minimale blokkade

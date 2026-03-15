@@ -78,6 +78,23 @@ Nieuwe expliciete nuance:
 - **Audit Pack Standard** (schema_versioned export + checks + auditstream) is het centrale productartefact.
 - Alle toekomstige modules (verbruik, partners, dashboards) pluggen hierop in.
 
+**Nieuwe derived laag (CURRENT, 2026-03-15):**
+- **Analysis v1** is geïntroduceerd als derived consistency layer bovenop het dossier.
+- Analysis leest uit:
+  - `dossiers`
+  - `dossier_chargers`
+  - `dossier_documents`
+- Analysis schrijft uitsluitend naar:
+  - `dossier_analysis_document`
+  - `dossier_analysis_charger`
+  - `dossier_analysis_summary`
+- Analysis muteert géén bestaande dossierdata en verandert de review/lock state machine niet.
+- Export bevat nu naast dossier/checks/docs ook analysis-blokken.
+- Positionering blijft strikt:
+  - geen authenticity-claim
+  - geen compliance-claim
+  - geen certificeringsclaim
+
 ## 4) Frontend runtime-config model (nieuw 2026-02-19)
 
 Doel:
@@ -217,6 +234,11 @@ Gate = “audit-contract stabiel en consistent over alle dossier write endpoints
 - Reject-audit coverage aantoonbaar via tests
 - Download/export alleen op locked dossiers + confirmed docs
 - Export = schema_versioned + assumptions/not_verified expliciet (Audit Pack Standard v1)
+- Analysis v1 skeleton actief:
+  - derived analysis-tabellen
+  - session-auth `api-dossier-verify`
+  - audit events voor document/charger/summary analysis
+  - export v5 met analysis-blokken
 
 ### Phase 2 — Sharing + performance / cost / ops (PLANNED)
 Gate = “product werkt audit-proof in real-world”
