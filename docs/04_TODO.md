@@ -1,6 +1,7 @@
 # 04_TODO.md (CURRENT)
 
 Statusdatum: 2026-03-15  
+Statusdatum: 2026-03-15  
 Prioriteit: audit-first.  
 Regel: alleen open items; afgerond → naar changelog.
 
