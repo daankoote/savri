@@ -742,4 +742,35 @@ Doc-hygiëne regel:
 - Eventuele historische secties die nog naar `legacy.css` verwijzen blijven staan als historie,
   maar worden vanaf nu als **OUTDATED** beschouwd.
 
+### Update 2026-03-16 — Dev unlock + session refresh workflow bewezen
+
+Wat is bewezen:
+- `api-dossier-dev-unlock` werkt correct met geldige `session_token`.
+- Eerdere 401’s kwamen niet door unlock-logica, maar door verlopen runtime sessions.
+- CURRENT session model is operationeel bevestigd:
+  - link-token (`t`) = one-time exchange token
+  - session_token = short-lived runtime auth (CURRENT: 2 uur)
+- Nieuwe dev-routine vastgesteld:
+  1. `api-dossier-login-request`
+  2. nieuwste `dossier_link` lezen uit `outbound_emails`
+  3. link-token exchangen via `api-dossier-get`
+  4. nieuwe `session_token` gebruiken voor runtime endpoints
+- Dev helper script toegevoegd:
+  - `scripts/tools/refresh-dossier-session.sh`
+
+Belangrijke CURRENT waarheid:
+- UI accepteert géén `session_token` via query param `t`.
+- UI gebruikt:
+  - `t` uitsluitend als link-token voor initiële exchange
+  - daarna localStorage key `enval_session_token:<dossier_id>` als runtime source-of-truth
+
+Dev-operational meaning:
+- Voor browsergebruik met een reeds geminte session moet de session_token in localStorage worden gezet.
+- De URL `/dossier.html?d=<id>&t=<session_token>` is per definitie fout, omdat `t` semantisch link-token betekent.
+
+Open structurele verbetering (nog niet gebouwd):
+- dev-only session inject helper of dev-only refresh flow in UI
+- of langere session TTL in dev
+
+
 # EINDE 00_GLOBAL.md (current state, rewrite-ok)

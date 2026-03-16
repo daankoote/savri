@@ -281,6 +281,7 @@ function invalidatePrecheck(reason = "") {
   syncReviewButtons();
 }
 
+
 function syncReviewButtons() {
   const locked = isLocked();
 
@@ -389,6 +390,7 @@ function setAllUiLocked(locked) {
   $("btnPrecheck")?.addEventListener("click", onPrecheckClicked);
   $("btnFinalize")?.addEventListener("click", onFinalizeClicked);
   $("btnExportDossier")?.addEventListener("click", onExportClicked);
+  $("btnDevUnlock")?.addEventListener("click", onDevUnlockClicked);
 
 
   $("addressForm")?.addEventListener("submit", onAddressSave);
@@ -566,9 +568,18 @@ function renderStatus() {
 
   const exportBox = $("exportBox");
   const btnExport = $("btnExportDossier");
+  const btnDevUnlock = $("btnDevUnlock");
 
   if (exportBox) exportBox.classList.toggle("hidden", !locked);
   if (btnExport) btnExport.disabled = !locked;
+  if (btnDevUnlock) {
+    btnDevUnlock.disabled = !(locked && isDevUnlockEnabled());
+    btnDevUnlock.classList.toggle("hidden", !isDevUnlockEnabled());
+  }
+
+  if (!locked && $("devUnlockState")) {
+    $("devUnlockState").textContent = "";
+  }
 }
 
 /**
@@ -1831,6 +1842,60 @@ async function onFinalizeClicked() {
 
   return runEvaluate(true);
 }
+
+async function onDevUnlockClicked() {
+  const btn = $("btnDevUnlock");
+  const state = $("devUnlockState");
+
+  if (!isDevUnlockEnabled()) {
+    return showToast("Dev unlock is hier niet beschikbaar.", "error");
+  }
+
+  if (!isLocked()) {
+    return showToast("Dossier is al ontgrendeld.", "error");
+  }
+
+  const okConfirm = confirm(
+    "Dit ontgrendelt het dossier alleen voor development.\n\n" +
+    "Status gaat terug naar 'incomplete' en je moet opnieuw controleren/indienen.\n\n" +
+    "Doorgaan?"
+  );
+  if (!okConfirm) return;
+
+  lockSubmit(btn, true, "Ontgrendelen…");
+
+  try {
+    if (state) state.textContent = "Dossier wordt ontgrendeld…";
+
+    const js = await apiAuthed("api-dossier-dev-unlock", {});
+
+    if (!js?.ok) {
+      throw new Error(js?.error || "Dev unlock mislukt.");
+    }
+
+    precheckOk = false;
+    dirtySincePrecheck = true;
+
+    if ($("reviewState")) {
+      $("reviewState").textContent =
+        "Dev unlock uitgevoerd. Controleer volledigheid opnieuw voordat je opnieuw indient.";
+    }
+
+    if (state) {
+      state.textContent =
+        "Dossier ontgrendeld voor development. Controleer volledigheid opnieuw.";
+    }
+
+    showToast("Dossier ontgrendeld voor development.", "success");
+    await reloadAll();
+  } catch (e) {
+    if (state) state.textContent = e.message || "Dev unlock mislukt.";
+    showToast(e.message || "Dev unlock mislukt.", "error");
+  } finally {
+    lockSubmit(btn, false, "Ontgrendel dossier (dev)");
+  }
+}
+
 
 async function onExportClicked() {
   if (!isLocked()) {

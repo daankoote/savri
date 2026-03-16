@@ -790,6 +790,60 @@ Impact:
 - “Legacy isolation via file separation” is OUTDATED.
 - Isolatie gebeurt via component-contract + HTML normalisatie binnen dezelfde stylesheet.
 
+## APPEND-ONLY UPDATE — 2026-03-16 — Dev unlock + browser runtime-auth waarheid bewezen
+
+### Dev unlock endpoint
+Nieuw bewezen CORE behavior:
+- `api-dossier-dev-unlock`
+  - auth: session-auth (zelfde runtime model als dossier-endpoints)
+  - doel: locked dossier in DEV terugzetten naar editable state
+  - bewezen response:
+    - `ok=true`
+    - `unlocked=true`
+    - `status="incomplete"`
+    - `locked_at=null`
+    - `previous_status`
+    - `previous_locked_at`
+
+### Root cause van eerdere 401’s
+- Niet de unlock function zelf
+- Wel: verlopen `dossier_sessions.expires_at`
+- Bewezen via:
+  - `api-dossier-get` met oude session → 401
+  - `api-dossier-dev-unlock` met oude session → 401
+  - DB row in `public.dossier_sessions` met matching hash maar verlopen `expires_at`
+
+### Browser/UI runtime waarheid (bevestigd)
+De browserflow kent 2 auth-fasen:
+
+1. URL start-auth
+- `/dossier.html?d=<uuid>&t=<link_token>`
+- `t` betekent uitsluitend one-time link-token
+
+2. Runtime-auth
+- na exchange bewaart frontend de session in:
+  - `localStorage["enval_session_token:<dossier_id>"]`
+
+Belangrijk:
+- de UI leest géén `session_token` uit query param `t`
+- `/dossier.html?d=<id>&t=<session_token>` is dus ongeldig gedrag
+- voor dev/browsergebruik met reeds geminte session moet localStorage handmatig of via helper worden gevuld
+
+### Nieuw dev helper script
+Bestand:
+- `scripts/tools/refresh-dossier-session.sh`
+
+Doel:
+- login-request triggeren
+- nieuwste dossier_link mail uit `outbound_emails` lezen
+- link-token extraheren
+- exchangen naar nieuwe `session_token`
+- export statements printen voor huidige shell
+
+Operational result:
+- minder handmatige mail/curl/SQL stappen
+- consistente refresh routine voor verlopen sessies
+
 ---
 
 # EINDE 01_SYSTEM_MAP.md (current state, rewrite-ok)

@@ -538,4 +538,47 @@ Contract:
   - (optioneel) `payment_session_created` (success)
 
 
+## APPEND-ONLY UPDATE — 2026-03-16 — Dev unlock auditpositie + bewezen session expiry oorzaak
+
+### Dev unlock
+Endpoint:
+- `api-dossier-dev-unlock`
+
+Success
+- dossier_dev_unlocked — success — api-dossier-dev-unlock
+  - event_data minimaal:
+    - previous_status
+    - previous_locked_at
+    - new_status
+    - new_locked_at
+    - request_id
+    - actor_ref
+    - ip
+    - ua
+    - environment
+
+Reject/Fail
+- dossier_dev_unlock_rejected — reject — api-dossier-dev-unlock
+  - stages:
+    - auth
+    - dossier_lookup
+    - lock_state
+    - db_write
+  - bewezen reason:
+    - session_expired
+
+### Bewezen session expiry patroon
+Runtime rejects op session-auth endpoints kunnen CURRENT reason dragen:
+- session_not_found
+- session_expired
+- session_revoked (indien van toepassing)
+
+Bewezen in audit:
+- `dossier_get_rejected` met reason `session_expired`
+- `dossier_dev_unlock_rejected` met reason `session_expired`
+
+Belangrijk:
+- deze rejects zijn endpoint-scoped session-auth failures
+- er bestaat CURRENT nog geen apart top-level audit event `session_expired`
+
 # EINDE 02_AUDIT_MATRIX.md (spec, updated)

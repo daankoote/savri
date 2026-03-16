@@ -906,4 +906,45 @@ Belangrijke nuance
 - In export metadata is bewust `analysis_key` gebruikt in `analysis_methods`,
   zodat dit niet semantisch botst met row-level `method_code = analysis_v1`.
 
+
+## 2026-03-16 — Dev unlock bewezen groen + session refresh routine gestandaardiseerd
+
+Bewezen runtime-gedrag
+- `api-dossier-dev-unlock` succesvol getest met geldige `session_token`
+- Response bevestigd:
+  - `ok=true`
+  - `unlocked=true`
+  - `status="incomplete"`
+  - `locked_at=null`
+  - `previous_status="in_review"`
+  - `previous_locked_at` gevuld
+- Daarmee is bevestigd dat de dev-unlock function inhoudelijk werkt
+
+Root cause eerdere failures
+- 401’s op zowel `api-dossier-get` als `api-dossier-dev-unlock` bleken veroorzaakt door verlopen runtime sessions
+- DB bewijs geleverd in `public.dossier_sessions`:
+  - matching `session_token_hash`
+  - `revoked_at = null`
+  - `expires_at` lag in het verleden
+
+Nieuwe operationele routine
+- Canonical dev session refresh flow vastgesteld:
+  1. `api-dossier-login-request`
+  2. nieuwste `dossier_link` lezen uit `outbound_emails`
+  3. link-token exchangen via `api-dossier-get`
+  4. nieuwe `session_token` gebruiken voor runtime calls
+- Dev helper script toegevoegd:
+  - `scripts/tools/refresh-dossier-session.sh`
+
+Browser/UI nuance expliciet bevestigd
+- query param `t` blijft exclusief gereserveerd voor link-token
+- een `session_token` in `?t=` plaatsen werkt per definitie niet
+- browsergebruik met reeds geminte session vereist localStorage key:
+  - `enval_session_token:<dossier_id>`
+
+Analysis-context
+- testdossier met meerdere invoice-/foto varianten blijft bruikbaar voor verdere Analysis v1 uitwerking
+- skeleton analysis staat; volgende stap verschuift van infrastructuur naar echte invoice consistency extraction/matching
+
+
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)
