@@ -214,20 +214,34 @@ function populateBrandModel() {
 const dossier_id = window.ENVAL.api.getDossierIdFromUrl();
 const token = window.ENVAL.api.getLinkTokenFromUrl();
 
+function sessionStorageKey() {
+  return `enval_session_token:${dossier_id}`;
+}
+
 function getSessionToken() {
-  return window.ENVAL.api.getSessionToken(dossier_id);
+  try {
+    return localStorage.getItem(sessionStorageKey());
+  } catch (_) {
+    return null;
+  }
 }
 
 function setSessionToken(v) {
-  return window.ENVAL.api.setSessionToken(dossier_id, v);
+  try {
+    if (!v) return;
+    localStorage.setItem(sessionStorageKey(), String(v));
+  } catch (_) {}
 }
 
 function clearSessionToken() {
-  return window.ENVAL.api.clearSessionToken(dossier_id);
+  try {
+    localStorage.removeItem(sessionStorageKey());
+  } catch (_) {}
 }
 
 function cleanupLegacySessionKey() {
-  return window.ENVAL.api.cleanupLegacySessionKey();
+  // Tijdelijk bewust NO-OP.
+  // api.js storage helpers zijn nu verdacht en mogen deze flow niet meer beïnvloeden.
 }
 
 let current = null;
@@ -281,6 +295,10 @@ function invalidatePrecheck(reason = "") {
   syncReviewButtons();
 }
 
+function isDevUnlockEnabled() {
+  const env = String(window.ENVAL?.ENVIRONMENT || "").toLowerCase();
+  return window.ENVAL?.DEV_UNLOCK_ENABLED === true || env === "dev";
+}
 
 function syncReviewButtons() {
   const locked = isLocked();
@@ -423,37 +441,46 @@ async function reloadAll() {
   try {
     if ($("statusPill")) $("statusPill").textContent = "laden…";
 
-    // 1) Prefer session_token
     const session_token = getSessionToken();
+
+    console.log("DOSSIER reloadAll session_token =", session_token);
+    console.log("DOSSIER reloadAll sessionStorageKey =", sessionStorageKey());
+
+    // 1) Eerst proberen met bestaande session token
     if (session_token) {
+      let sessionResponse = null;
+
       try {
-        current = await apiPost("api-dossier-get", { dossier_id, session_token });
+        sessionResponse = await apiPost("api-dossier-get", { dossier_id, session_token });
+      } catch (e) {
+        const msg = String(e?.message || e);
+        console.warn("Session API call failed, clearing session token:", msg);
+        clearSessionToken();
+        sessionResponse = null;
+      }
+
+      if (sessionResponse) {
+        current = sessionResponse;
+
+        // BELANGRIJK:
+        // render fouten mogen NOOIT de sessie wissen
         renderAll();
         return;
-      } catch (e) {
-        // Session expired/revoked -> clear and fall back to link-token
-        const msg = String(e?.message || e);
-        console.warn("Session load failed, clearing session token:", msg);
-        clearSessionToken();
       }
     }
 
-    // 2) Fallback: link-token exchange (one-time)
+    // 2) Fallback: eenmalige link-token exchange
     if (!token) throw new Error("Sessie verlopen. Open je dossierlink opnieuw.");
 
     const r = await apiPost("api-dossier-get", { dossier_id, token });
 
-    // HARD FAIL als backend geen session_token teruggeeft
     if (!r?.session_token) {
-      // laat de URL INTACT zodat je niet jezelf buitensluit
       console.error("api-dossier-get response (no session_token):", r);
       throw new Error("Backend gaf geen session_token terug. Fix api-dossier-get (token→sessie exchange).");
     }
 
-    // ✅ pas nu sessie opslaan
     setSessionToken(r.session_token);
 
-    // ✅ pas nu token uit URL verwijderen
     try {
       const u = new URL(location.href);
       u.searchParams.delete("t");
@@ -462,16 +489,17 @@ async function reloadAll() {
 
     current = r;
     renderAll();
+  } catch (e) {
+    console.error("reloadAll failed:", e);
+    showToast(e.message || "Fout bij laden", "error");
 
-    } catch (e) {
-      console.error(e);
-      showToast(e.message || "Fout bij laden", "error");
-
-      if ($("statusPill")) {
-        $("statusPill").className = "pill err";
-        $("statusPill").textContent = "Fout";
-      }
-      if ($("statusExplain")) $("statusExplain").textContent = `Fout: ${e.message}`;
+    if ($("statusPill")) {
+      $("statusPill").className = "pill err";
+      $("statusPill").textContent = "Fout";
+    }
+    if ($("statusExplain")) {
+      $("statusExplain").textContent = `Fout: ${e.message}`;
+    }
   }
 }
 
@@ -568,16 +596,18 @@ function renderStatus() {
 
   const exportBox = $("exportBox");
   const btnExport = $("btnExportDossier");
+  const devUnlockBox = $("devUnlockBox");
   const btnDevUnlock = $("btnDevUnlock");
 
   if (exportBox) exportBox.classList.toggle("hidden", !locked);
   if (btnExport) btnExport.disabled = !locked;
-  if (btnDevUnlock) {
-    btnDevUnlock.disabled = !(locked && isDevUnlockEnabled());
-    btnDevUnlock.classList.toggle("hidden", !isDevUnlockEnabled());
-  }
 
-  if (!locked && $("devUnlockState")) {
+  const showDevUnlock = locked && isDevUnlockEnabled();
+
+  if (devUnlockBox) devUnlockBox.classList.toggle("hidden", !showDevUnlock);
+  if (btnDevUnlock) btnDevUnlock.disabled = !showDevUnlock;
+
+  if (!showDevUnlock && $("devUnlockState")) {
     $("devUnlockState").textContent = "";
   }
 }
