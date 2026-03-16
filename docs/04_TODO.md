@@ -127,7 +127,7 @@ Regel: alleen open items; afgerond → naar changelog.
 
 ## P1.5 / Phase-2 (open risico’s)
 
-### 12) Factuur analysis v1 (eerste echte inhoudelijke scope)
+### 11) Factuur analysis v1 (eerste echte inhoudelijke implementatie)
 - Context:
   - Analysis v1 skeleton + export v5 zijn live en bewezen
   - testdossier + meerdere invoice-varianten zijn nu beschikbaar voor ontwikkelwerk
@@ -164,7 +164,7 @@ Regel: alleen open items; afgerond → naar changelog.
   - export toont echte analysis-blokken i.p.v. skeleton placeholders
 - Status: OPEN
 
-### 13) Foto analysis v1 (pas na factuur-scope)
+### 12) Foto analysis v1 (fase ná factuur)
 - Context:
   - foto-analyse blijft bewust secundair aan factuur-analyse
   - foto-checks zijn zwakker en zullen vaak terecht `inconclusive` zijn
@@ -191,7 +191,7 @@ Regel: alleen open items; afgerond → naar changelog.
   - duidelijke limitations in export en audit
 - Status: OPEN
 
-### 14) Analysis extensibility guardrail documenteren
+### 13) Analysis source-model guardrail expliciet vastleggen
 - Context:
   - `11_ANALYSE_PLAN.md` maakt nu hard onderscheid tussen:
     - declared
