@@ -1,6 +1,7 @@
 # 04_TODO.md (CURRENT)
 
 Statusdatum: 2026-03-15  
+Statusdatum: 2026-03-15  
 Prioriteit: audit-first.  
 Regel: alleen open items; afgerond → naar changelog.
 
@@ -49,17 +50,21 @@ Regel: alleen open items; afgerond → naar changelog.
     - met reason `stuck_processing_timeout`
 - Status: OPEN
 
-### 5) Session-auth hardening bewijs sluiten (`dossier_sessions`)
+### 5) Session-auth hardening afronden (`dossier_sessions`)
 - Context:
-  - runtime testsuite is nu bewezen aligned op `session_token`
+  - runtime testsuite is bewezen aligned op `session_token`
   - shared helper `supabase/functions/_shared/customer_auth.ts` bestaat
-  - CURRENT bewezen reason-waarde is o.a. `session_not_found`
+  - expired session reject is nu runtime-bewezen op meerdere endpoints:
+    - `api-dossier-get`
+    - `api-dossier-dev-unlock`
+  - CURRENT bewezen reason-waarden:
+    - `session_not_found`
+    - `session_expired`
 - Open DoD:
   - bevestigen dat alle dossier runtime endpoints shared auth helper gebruiken waar dat logisch is
   - reason-enums documenteren waar ze bewust specifieker zijn dan generiek `unauthorized`
   - beslissen of `last_seen_at` actief wordt bijgewerkt of bewust deferred blijft
   - expliciet bewijs leveren voor:
-    - expired session reject
     - revoked session reject
     - op meerdere endpoints (minimaal read + write)
 - Status: OPEN
@@ -122,50 +127,84 @@ Regel: alleen open items; afgerond → naar changelog.
 
 ## P1.5 / Phase-2 (open risico’s)
 
-### 11) Factuur analysis v1 (eerste echte inhoudelijke scope)
+### 12) Factuur analysis v1 (eerste echte inhoudelijke scope)
 - Context:
   - Analysis v1 skeleton + export v5 zijn live en bewezen
-  - huidige document/charger analysis rows zijn nog skeleton / `not_checked`
+  - testdossier + meerdere invoice-varianten zijn nu beschikbaar voor ontwikkelwerk
+  - richting is aangescherpt in `11_ANALYSE_PLAN.md`
 - DoD:
-  - alleen `factuur` in eerste echte analyseversie
-  - observed extraction fields opgeslagen in `dossier_analysis_document`
-  - charger-level checks geschreven in `dossier_analysis_charger`:
+  - scope v1 blijft eerst strikt `factuur`
+  - in `dossier_analysis_document.observed_fields` opslaan:
+    - `address_text`
+    - `postcode`
+    - `house_number`
+    - `street`
+    - `city`
+    - `brand`
+    - `model`
+    - `serial_number`
+    - `mid_number`
+    - `invoice_date`
+  - in `dossier_analysis_charger` schrijven:
     - `invoice_address_match`
     - `invoice_brand_match`
     - `invoice_model_match`
     - `invoice_serial_match`
     - `invoice_mid_match`
-  - dossier-summary geschreven in `dossier_analysis_summary`
-  - liever `inconclusive` dan geforceerde zekerheid
-  - export toont echte observed/evaluated waarden i.p.v. skeleton placeholders
+  - statussen uitsluitend:
+    - `pass`
+    - `fail`
+    - `inconclusive`
+    - `not_checked`
+  - observed / declared / evaluated semantiek expliciet gescheiden houden
+  - geen lifecycle-impact:
+    - geen lock mutatie
+    - geen dossier_checks mutatie
+    - geen export gate op analysis-uitkomst
+  - export toont echte analysis-blokken i.p.v. skeleton placeholders
 - Status: OPEN
 
-### 12) Foto analysis v1 (pas na factuur-scope)
+### 13) Foto analysis v1 (pas na factuur-scope)
 - Context:
-  - foto-analyse is zwakker en sneller inconclusive; daarom expliciet na factuur-scope
-  - skeleton-export en analysis-tabellen bestaan al
+  - foto-analyse blijft bewust secundair aan factuur-analyse
+  - foto-checks zijn zwakker en zullen vaak terecht `inconclusive` zijn
+  - richting is aangescherpt in `11_ANALYSE_PLAN.md`
 - DoD:
-  - pas starten nadat factuur analysis-contract groen en bewezen is
-  - checks beperkt tot zichtbaarheid / zichtbare match:
+  - alleen starten nadat factuur analysis v1 contractueel groen is
+  - document-level observed fields voorbereiden voor:
+    - `charger_visible`
+    - `brand_visible`
+    - `brand`
+    - `model_visible`
+    - `model`
+    - `serial_label_visible`
+    - `serial_number`
+    - `mid_label_visible`
+    - `mid_number`
+  - charger-level checks beperkt tot:
     - `photo_charger_visible`
     - `photo_brand_match`
     - `photo_model_match`
     - `photo_serial_match`
     - `photo_mid_match`
-  - duidelijke limitation-semantiek in export en audit
   - standaard liever `inconclusive` dan geforceerde zekerheid
+  - duidelijke limitations in export en audit
 - Status: OPEN
 
-### 13) Analysis extensibility guardrail documenteren
+### 14) Analysis extensibility guardrail documenteren
 - Context:
-  - toekomstige bronnen zoals backend portal / HEMS / remote observed data mogen Analysis v1 niet blokkeren
+  - `11_ANALYSE_PLAN.md` maakt nu hard onderscheid tussen:
+    - declared
+    - observed
+    - evaluated
+  - toekomstige remote observed bronnen mogen Analysis v1 niet blokkeren
 - DoD:
-  - analysis-model expliciet voorbereid op latere bronsoorten:
+  - analysis-model expliciet voorbereid op bronsoorten:
     - `customer_declared`
     - `document_observed`
     - `remote_observed`
     - `system_evaluated`
-  - bevestigd dat v1 schema hiervoor uitbreidbaar is zonder herbouw
+  - bevestigd dat v1 schema en exportcontract hiervoor uitbreidbaar zijn zonder herbouw
   - geen implementatie in v1
 - Status: OPEN
 

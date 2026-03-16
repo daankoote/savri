@@ -44,6 +44,7 @@ CORE_FUNCS=(
   "api-dossier-consents-save"
   "api-dossier-doc-delete"
   "api-dossier-doc-download-url"
+  "api-dossier-dev-unlock"
   "api-dossier-evaluate"
   "api-dossier-export"
   "api-dossier-get"

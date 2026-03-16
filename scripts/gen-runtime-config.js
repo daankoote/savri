@@ -1,4 +1,4 @@
-// scripts/gen-runtime-config.js
+// assets/scripts/gen-runtime-config.js
 // Genereert assets/js/config.runtime.js tijdens build (Netlify)
 // GEEN secrets: SUPABASE_ANON_KEY is publiek (anon), maar blijft runtime-inject.
 

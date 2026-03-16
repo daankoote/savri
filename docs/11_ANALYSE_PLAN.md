@@ -665,4 +665,36 @@ Toekomstige richting:
 Zo blijft het model uitbreidbaar zonder herbouw.
 
 
+---
+
+## Update 2026-03-16 — Operational dev status + implementatievolgorde aangescherpt
+
+Wat nu bewezen is:
+- Analysis v1 skeleton draait technisch end-to-end
+- `api-dossier-verify` schrijft naar:
+  - `dossier_analysis_document`
+  - `dossier_analysis_charger`
+  - `dossier_analysis_summary`
+- export v5 bevat analysis-blokken
+- testdossier met meerdere invoice-/foto-documenten is beschikbaar als ontwikkelbasis
+- dev unlock + session refresh routine zijn nu werkbaar, waardoor analysis iteraties op hetzelfde dossier sneller uitvoerbaar zijn
+
+Aangescherpte implementatievolgorde:
+1. Factuur observed fields echt vullen in `dossier_analysis_document`
+2. Factuur charger-level matching schrijven in `dossier_analysis_charger`
+3. Dossier-summary op basis van echte factuur-uitkomsten
+4. Pas daarna foto observed fields en foto matching
+
+Belangrijke operational nuance:
+- Voor browsergebruik met een reeds geminte runtime-session moet de UI session uit localStorage lezen
+- `session_token` via query param `t` is ongeldig, omdat `t` semantisch exclusief link-token betekent
+- Dit is een dev-ergonomie issue, geen analysis issue
+
+Harde v1 discipline blijft:
+- eerst invoice consistency
+- daarna pas photo evidence
+- liever `inconclusive` dan geforceerde zekerheid
+- geen lifecycle-impact van analysis-uitkomsten
+
+
 # EINDE 11_ANALYSE_PLAN.md

@@ -92,6 +92,282 @@ export type SummaryAnalysisRow = {
   updated_at: string;
 };
 
+export type InvoiceObservedFields = {
+  address_line: string | null;
+  city_line: string | null;
+  street: string | null;
+  house_number: string | null;
+  suffix: string | null;
+  postcode: string | null;
+  city: string | null;
+  brand: string | null;
+  model: string | null;
+  serial_number: string | null;
+  mid_number: string | null;
+};
+
+function cleanLine(s: string): string {
+  return String(s || "").replace(/\s+/g, " ").trim();
+}
+
+function normalizeCompareValue(v: unknown): string {
+  return String(v ?? "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeCompact(v: unknown): string {
+  return String(v ?? "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .trim();
+}
+
+function normalizePostcode(v: unknown): string {
+  return normalizeCompact(v);
+}
+
+function normalizeSerial(v: unknown): string {
+  return normalizeCompact(v);
+}
+
+function normalizeMid(v: unknown): string {
+  return normalizeCompact(v);
+}
+
+function splitDutchStreetLine(input: string): {
+  street: string | null;
+  house_number: string | null;
+  suffix: string | null;
+} {
+  const s = cleanLine(input);
+  if (!s) return { street: null, house_number: null, suffix: null };
+
+  const m = s.match(/^(.*?)[\s]+(\d+)(?:[-\s]*([A-Za-z0-9]+))?$/);
+  if (!m) {
+    return { street: s || null, house_number: null, suffix: null };
+  }
+
+  return {
+    street: cleanLine(m[1]) || null,
+    house_number: m[2] || null,
+    suffix: m[3] ? cleanLine(m[3]) : null,
+  };
+}
+
+function splitDutchCityLine(input: string): {
+  postcode: string | null;
+  city: string | null;
+} {
+  const s = cleanLine(input);
+  if (!s) return { postcode: null, city: null };
+
+  const m = s.match(/(\d{4}\s?[A-Za-z]{2})\s+(.+)$/);
+  if (!m) return { postcode: null, city: s || null };
+
+  return {
+    postcode: normalizePostcode(m[1]),
+    city: cleanLine(m[2]) || null,
+  };
+}
+
+function matchLabeledValue(text: string, labels: string[]): string | null {
+  for (const label of labels) {
+    const re = new RegExp(`(?:^|\\n)\\s*${label}\\s*[:]?\\s*(.+)`, "i");
+    const m = text.match(re);
+    if (m?.[1]) return cleanLine(m[1]);
+  }
+  return null;
+}
+
+export function extractInvoiceObservedFieldsFromText(textRaw: string): InvoiceObservedFields {
+  const text = String(textRaw || "").replace(/\r/g, "");
+
+  const address_line =
+    matchLabeledValue(text, ["Address"]) ||
+    null;
+
+  const city_line =
+    matchLabeledValue(text, ["City"]) ||
+    null;
+
+  const brand =
+    matchLabeledValue(text, ["Brand"]) || null;
+
+  const model =
+    matchLabeledValue(text, ["Model"]) || null;
+
+  const serial_number =
+    matchLabeledValue(text, ["Serial number", "Serial Number", "Serial"]) || null;
+
+  const mid_number =
+    matchLabeledValue(text, ["MID number", "MID Number", "MID"]) || null;
+
+  const streetParts = splitDutchStreetLine(address_line || "");
+  const cityParts = splitDutchCityLine(city_line || "");
+
+  return {
+    address_line,
+    city_line,
+    street: streetParts.street,
+    house_number: streetParts.house_number,
+    suffix: streetParts.suffix,
+    postcode: cityParts.postcode,
+    city: cityParts.city,
+    brand,
+    model,
+    serial_number,
+    mid_number,
+  };
+}
+
+function evaluateStringMatch(
+  declaredRaw: unknown,
+  observedRaw: unknown,
+): {
+  status: AnalysisResultStatus;
+  declared_normalized: string | null;
+  observed_normalized: string | null;
+  reason: string;
+} {
+  const declared = normalizeCompareValue(declaredRaw);
+  const observed = normalizeCompareValue(observedRaw);
+
+  if (!declared || !observed) {
+    return {
+      status: "inconclusive",
+      declared_normalized: declared || null,
+      observed_normalized: observed || null,
+      reason: "missing_declared_or_observed",
+    };
+  }
+
+  if (declared === observed) {
+    return {
+      status: "pass",
+      declared_normalized: declared,
+      observed_normalized: observed,
+      reason: "exact_normalized_match",
+    };
+  }
+
+  return {
+    status: "fail",
+    declared_normalized: declared,
+    observed_normalized: observed,
+    reason: "normalized_mismatch",
+  };
+}
+
+function evaluateCompactMatch(
+  declaredRaw: unknown,
+  observedRaw: unknown,
+  normalizer: (v: unknown) => string,
+): {
+  status: AnalysisResultStatus;
+  declared_normalized: string | null;
+  observed_normalized: string | null;
+  reason: string;
+} {
+  const declared = normalizer(declaredRaw);
+  const observed = normalizer(observedRaw);
+
+  if (!declared || !observed) {
+    return {
+      status: "inconclusive",
+      declared_normalized: declared || null,
+      observed_normalized: observed || null,
+      reason: "missing_declared_or_observed",
+    };
+  }
+
+  if (declared === observed) {
+    return {
+      status: "pass",
+      declared_normalized: declared,
+      observed_normalized: observed,
+      reason: "exact_normalized_match",
+    };
+  }
+
+  return {
+    status: "fail",
+    declared_normalized: declared,
+    observed_normalized: observed,
+    reason: "normalized_mismatch",
+  };
+}
+
+function evaluateInvoiceAddress(
+  dossier: DossierRow,
+  observed: InvoiceObservedFields,
+): {
+  status: AnalysisResultStatus;
+  declared_value: Record<string, unknown>;
+  observed_value: Record<string, unknown>;
+  evaluation_details: Record<string, unknown>;
+} {
+  const declared = {
+    street: dossier.address_street ?? null,
+    house_number: dossier.address_house_number ?? null,
+    suffix: dossier.address_suffix ?? null,
+    postcode: dossier.address_postcode ?? null,
+    city: dossier.address_city ?? null,
+  };
+
+  const observedValue = {
+    street: observed.street,
+    house_number: observed.house_number,
+    suffix: observed.suffix,
+    postcode: observed.postcode,
+    city: observed.city,
+  };
+
+  const parts = [
+    evaluateStringMatch(declared.street, observed.street),
+    evaluateCompactMatch(declared.house_number, observed.house_number, normalizeCompact),
+    evaluateCompactMatch(declared.suffix, observed.suffix, normalizeCompact),
+    evaluateCompactMatch(declared.postcode, observed.postcode, normalizePostcode),
+    evaluateStringMatch(declared.city, observed.city),
+  ];
+
+  if (parts.some((p) => p.status === "fail")) {
+    return {
+      status: "fail",
+      declared_value: declared,
+      observed_value: observedValue,
+      evaluation_details: {
+        reason: "one_or_more_address_parts_mismatch",
+        parts,
+      },
+    };
+  }
+
+  if (parts.some((p) => p.status === "inconclusive")) {
+    return {
+      status: "inconclusive",
+      declared_value: declared,
+      observed_value: observedValue,
+      evaluation_details: {
+        reason: "one_or_more_address_parts_missing",
+        parts,
+      },
+    };
+  }
+
+  return {
+    status: "pass",
+    declared_value: declared,
+    observed_value: observedValue,
+    evaluation_details: {
+      reason: "all_address_parts_match",
+      parts,
+    },
+  };
+}
+
+
 function nowIso(): string {
   return new Date().toISOString();
 }
@@ -125,6 +401,11 @@ export function buildDeclaredAddressSnapshot(dossier: DossierRow): Record<string
 export function buildDocumentAnalysisRow(
   dossier: DossierRow,
   doc: DocumentRow,
+  opts?: {
+    invoice_observed_fields?: InvoiceObservedFields | null;
+    limitations?: string[];
+    summary_extra?: Record<string, unknown>;
+  },
 ): DocumentAnalysisRow {
   const ts = nowIso();
   const docType = String(doc.doc_type || "").trim();
@@ -132,6 +413,10 @@ export function buildDocumentAnalysisRow(
   if (!isSupportedDocType(docType)) {
     throw new Error(`Unsupported document type for analysis: ${docType || "(empty)"}`);
   }
+
+  const observed = opts?.invoice_observed_fields ?? null;
+  const limitations = opts?.limitations ?? [];
+  const summaryExtra = opts?.summary_extra ?? {};
 
   return {
     dossier_id: dossier.id,
@@ -142,18 +427,14 @@ export function buildDocumentAnalysisRow(
     status: "completed",
     method_code: ANALYSIS_METHOD_CODE,
     method_version: ANALYSIS_METHOD_VERSION,
-    observed_fields: {},
+    observed_fields: observed ? observed as Record<string, unknown> : {},
     confidence: {},
-    limitations: [
-      "skeleton_phase_only",
-      "real_document_extraction_not_implemented_yet",
-    ],
+    limitations,
     summary: {
-      mode: "skeleton",
       doc_type: docType,
       filename: doc.filename ?? null,
       storage_path: doc.storage_path ?? null,
-      reason: "no_observed_fields_extracted_yet",
+      ...summaryExtra,
     },
     created_at: ts,
     updated_at: ts,
@@ -187,67 +468,6 @@ function makeNotCheckedRow(
     created_at: ts,
     updated_at: ts,
   };
-}
-
-function buildInvoiceRows(
-  dossier: DossierRow,
-  charger: ChargerRow,
-  invoiceDoc: DocumentRow | null,
-): ChargerAnalysisRow[] {
-  const declaredAddress = buildDeclaredAddressSnapshot(dossier);
-  const declaredBrand = { brand: charger.brand ?? null };
-  const declaredModel = { model: charger.model ?? null };
-  const declaredSerial = { serial_number: charger.serial_number ?? null };
-  const declaredMid = { mid_number: charger.mid_number ?? null };
-
-  const reason = invoiceDoc
-    ? "supported_invoice_present_but_extraction_not_implemented"
-    : "missing_invoice_document";
-
-  const sourceDocumentId = invoiceDoc ? invoiceDoc.id : null;
-
-  return [
-    makeNotCheckedRow(
-      dossier,
-      charger,
-      sourceDocumentId,
-      "invoice_address_match",
-      declaredAddress,
-      reason,
-    ),
-    makeNotCheckedRow(
-      dossier,
-      charger,
-      sourceDocumentId,
-      "invoice_brand_match",
-      declaredBrand,
-      reason,
-    ),
-    makeNotCheckedRow(
-      dossier,
-      charger,
-      sourceDocumentId,
-      "invoice_model_match",
-      declaredModel,
-      reason,
-    ),
-    makeNotCheckedRow(
-      dossier,
-      charger,
-      sourceDocumentId,
-      "invoice_serial_match",
-      declaredSerial,
-      reason,
-    ),
-    makeNotCheckedRow(
-      dossier,
-      charger,
-      sourceDocumentId,
-      "invoice_mid_match",
-      declaredMid,
-      reason,
-    ),
-  ];
 }
 
 function buildPhotoRows(
@@ -305,21 +525,144 @@ function buildPhotoRows(
   ];
 }
 
-export function buildChargerAnalysisRows(
+export function buildInvoiceRowsFromObserved(
+  dossier: DossierRow,
+  charger: ChargerRow,
+  invoiceDoc: DocumentRow | null,
+  observed: InvoiceObservedFields | null,
+): ChargerAnalysisRow[] {
+  const ts = nowIso();
+  const sourceDocumentId = invoiceDoc ? invoiceDoc.id : null;
+
+  if (!invoiceDoc) {
+    return [
+      makeNotCheckedRow(dossier, charger, null, "invoice_address_match", buildDeclaredAddressSnapshot(dossier), "missing_invoice_document"),
+      makeNotCheckedRow(dossier, charger, null, "invoice_brand_match", { brand: charger.brand ?? null }, "missing_invoice_document"),
+      makeNotCheckedRow(dossier, charger, null, "invoice_model_match", { model: charger.model ?? null }, "missing_invoice_document"),
+      makeNotCheckedRow(dossier, charger, null, "invoice_serial_match", { serial_number: charger.serial_number ?? null }, "missing_invoice_document"),
+      makeNotCheckedRow(dossier, charger, null, "invoice_mid_match", { mid_number: charger.mid_number ?? null }, "missing_invoice_document"),
+    ];
+  }
+
+  if (!observed) {
+    const mk = (
+      analysis_code: string,
+      declared_value: Record<string, unknown>,
+    ): ChargerAnalysisRow => ({
+      dossier_id: dossier.id,
+      charger_id: charger.id,
+      source_document_id: sourceDocumentId,
+      analysis_code,
+      status: "inconclusive",
+      declared_value,
+      observed_value: {},
+      evaluation_details: {
+        reason: "invoice_present_but_no_observed_fields_available",
+      },
+      method_code: ANALYSIS_METHOD_CODE,
+      method_version: ANALYSIS_METHOD_VERSION,
+      created_at: ts,
+      updated_at: ts,
+    });
+
+    return [
+      mk("invoice_address_match", buildDeclaredAddressSnapshot(dossier)),
+      mk("invoice_brand_match", { brand: charger.brand ?? null }),
+      mk("invoice_model_match", { model: charger.model ?? null }),
+      mk("invoice_serial_match", { serial_number: charger.serial_number ?? null }),
+      mk("invoice_mid_match", { mid_number: charger.mid_number ?? null }),
+    ];
+  }
+
+  const addrEval = evaluateInvoiceAddress(dossier, observed);
+  const brandEval = evaluateStringMatch(charger.brand, observed.brand);
+  const modelEval = evaluateStringMatch(charger.model, observed.model);
+  const serialEval = evaluateCompactMatch(charger.serial_number, observed.serial_number, normalizeSerial);
+  const midEval = evaluateCompactMatch(charger.mid_number, observed.mid_number, normalizeMid);
+
+  return [
+    {
+      dossier_id: dossier.id,
+      charger_id: charger.id,
+      source_document_id: sourceDocumentId,
+      analysis_code: "invoice_address_match",
+      status: addrEval.status,
+      declared_value: addrEval.declared_value,
+      observed_value: addrEval.observed_value,
+      evaluation_details: addrEval.evaluation_details,
+      method_code: ANALYSIS_METHOD_CODE,
+      method_version: ANALYSIS_METHOD_VERSION,
+      created_at: ts,
+      updated_at: ts,
+    },
+    {
+      dossier_id: dossier.id,
+      charger_id: charger.id,
+      source_document_id: sourceDocumentId,
+      analysis_code: "invoice_brand_match",
+      status: brandEval.status,
+      declared_value: { brand: charger.brand ?? null },
+      observed_value: { brand: observed.brand ?? null },
+      evaluation_details: brandEval,
+      method_code: ANALYSIS_METHOD_CODE,
+      method_version: ANALYSIS_METHOD_VERSION,
+      created_at: ts,
+      updated_at: ts,
+    },
+    {
+      dossier_id: dossier.id,
+      charger_id: charger.id,
+      source_document_id: sourceDocumentId,
+      analysis_code: "invoice_model_match",
+      status: modelEval.status,
+      declared_value: { model: charger.model ?? null },
+      observed_value: { model: observed.model ?? null },
+      evaluation_details: modelEval,
+      method_code: ANALYSIS_METHOD_CODE,
+      method_version: ANALYSIS_METHOD_VERSION,
+      created_at: ts,
+      updated_at: ts,
+    },
+    {
+      dossier_id: dossier.id,
+      charger_id: charger.id,
+      source_document_id: sourceDocumentId,
+      analysis_code: "invoice_serial_match",
+      status: serialEval.status,
+      declared_value: { serial_number: charger.serial_number ?? null },
+      observed_value: { serial_number: observed.serial_number ?? null },
+      evaluation_details: serialEval,
+      method_code: ANALYSIS_METHOD_CODE,
+      method_version: ANALYSIS_METHOD_VERSION,
+      created_at: ts,
+      updated_at: ts,
+    },
+    {
+      dossier_id: dossier.id,
+      charger_id: charger.id,
+      source_document_id: sourceDocumentId,
+      analysis_code: "invoice_mid_match",
+      status: midEval.status,
+      declared_value: { mid_number: charger.mid_number ?? null },
+      observed_value: { mid_number: observed.mid_number ?? null },
+      evaluation_details: midEval,
+      method_code: ANALYSIS_METHOD_CODE,
+      method_version: ANALYSIS_METHOD_VERSION,
+      created_at: ts,
+      updated_at: ts,
+    },
+  ];
+}
+
+export function buildPhotoAnalysisRows(
   dossier: DossierRow,
   charger: ChargerRow,
   docsForCharger: DocumentRow[],
 ): ChargerAnalysisRow[] {
-  const invoiceDoc =
-    docsForCharger.find((d) => norm(d.doc_type) === "factuur") ?? null;
-
   const photoDoc =
     docsForCharger.find((d) => norm(d.doc_type) === "foto_laadpunt") ?? null;
 
-  return [
-    ...buildInvoiceRows(dossier, charger, invoiceDoc),
-    ...buildPhotoRows(dossier, charger, photoDoc),
-  ];
+  return buildPhotoRows(dossier, charger, photoDoc);
 }
 
 export function computeOverallStatus(
@@ -330,8 +673,16 @@ export function computeOverallStatus(
 
   if (chargerRows.some((r) => r.status === "fail")) return "review_required";
 
-  const allPass = chargerRows.length > 0 && chargerRows.every((r) => r.status === "pass");
-  if (allPass) return "pass";
+  if (chargerRows.length > 0 && chargerRows.every((r) => r.status === "pass")) {
+    return "pass";
+  }
+
+  if (
+    chargerRows.some((r) => r.status === "inconclusive") ||
+    chargerRows.some((r) => r.status === "not_checked")
+  ) {
+    return "partial_pass";
+  }
 
   return "partial_pass";
 }
@@ -370,11 +721,11 @@ export function buildSummaryAnalysisRow(
       chargers_seen: chargersSeen,
       document_analysis: documentCounts,
       charger_analysis: chargerCounts,
-      mode: "skeleton",
+      mode: "invoice_pdf_v1",
     },
     limitations: [
-      "skeleton_phase_only",
-      "real_document_extraction_not_implemented_yet",
+      "invoice_pdf_only",
+      "photo_extraction_not_implemented_yet",
       "no_authenticity_claim",
       "no_compliance_claim",
     ],
