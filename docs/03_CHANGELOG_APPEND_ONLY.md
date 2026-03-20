@@ -947,4 +947,46 @@ Analysis-context
 - skeleton analysis staat; volgende stap verschuift van infrastructuur naar echte invoice consistency extraction/matching
 
 
+
+## 2026-03-20 — Analysis verify evidence-script verdiept + factuur eerst / foto later aangescherpt
+
+Wijzigingen
+- `scripts/tools/verify-analysis-run.sh` verder uitgebreid als dev evidence-tool voor Analysis v1.
+- Script schrijft nu één leesbare log weg naar:
+  - `scripts/tools/output/latest-analysis-verify.log`
+- Log bevat nu naast verify response en summary ook:
+  - document analysis rows
+  - raw `observed_fields` per document
+  - document → charger trace
+  - per charger-resultaat:
+    - observed
+    - expected_db
+    - reason
+- Hierdoor is de analysis-keten nu direct reviewbaar:
+  - document extractie
+  - gekoppelde charger-evaluatie
+  - dossier-summary
+
+Bewezen runtime-inzicht
+- De verify-pipeline zelf werkt technisch correct:
+  - `api-dossier-verify` draait
+  - analysis-tabellen worden gevuld
+  - output is leesbaar en correleerbaar
+- Huidige zwakte zit niet primair in pipeline/infrastructuur,
+  maar in factuurveldextractie en documentvariatie.
+
+Aangescherpte uitvoeringskeuze
+- Eerst factuurspoor hardenen.
+- `foto_laadpunt` blijft voorlopig bewust skeleton / `not_checked`.
+- Geen laadpaalfoto-analyse starten zonder representatieve dataset.
+- Geen OCR in deze fase.
+- Eerst uitbreiden op:
+  - text-based invoice extraction
+  - realistische slechte factuurvarianten
+  - field-level observed vs expected review
+
+Architecturale betekenis
+- Analysis v1 verschuift nu van “kan technisch draaien” naar “kan inhoudelijk robuust vergelijken”.
+- Dev evidence-script is daarmee onderdeel van de canonical analysis debug/proof loop.
+
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)

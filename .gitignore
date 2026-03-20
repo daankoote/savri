@@ -1,5 +1,10 @@
+# macOS / Finder
 .DS_Store
-Thumbs.db
+.AppleDouble
+.LSOverride
+
+# logs
+*.log
 
 # env secrets
 .env
@@ -32,3 +37,9 @@ supabase-functions-archive/
 scripts/tests/.tmp/
 scripts/tests/output/
 /tmp/
+
+# local tool output
+scripts/tools/output/
+
+# local personal cheatsheets
+docs/Cheatsheets/

@@ -32,7 +32,22 @@ import {
   type DocumentAnalysisRow,
   type DocumentRow,
   type DossierRow,
+  type SummaryAnalysisRow,
 } from "../_shared/analysis.ts";
+
+import {
+  createAnalysisRun,
+  markAnalysisRunRunning,
+  markAnalysisRunCompleted,
+  markAnalysisRunFailed,
+} from "../_shared/analysis_runs.ts";
+
+import {
+  downloadStorageBytes,
+  extractTextFromPdfBytes,
+  debugPdfStreams,
+} from "../_shared/pdf_text.ts";
+
 
 // -------------------- CORS --------------------
 function parseAllowedOrigins(): string[] {
@@ -88,36 +103,6 @@ function getEnvironment(): string {
     Deno.env.get("APP_ENV") ||
     "unknown"
   ).toLowerCase();
-}
-
-type SummaryInsertRow = {
-  dossier_id: string;
-  overall_status: string;
-  method_code: string;
-  method_version: string;
-  summary: Record<string, unknown>;
-  limitations: unknown[];
-  created_at: string;
-  updated_at: string;
-};
-
-async function downloadStorageText(
-  SB: ReturnType<typeof createClient>,
-  bucket: string,
-  path: string,
-): Promise<string> {
-  const { data, error } = await SB.storage.from(bucket).download(path);
-  if (error) throw new Error(`Storage download failed: ${error.message}`);
-  return await data.text();
-}
-
-function extractPdfLikeText(raw: string): string {
-  return String(raw || "")
-    .replace(/\r/g, "\n")
-    .replace(/[^\x09\x0A\x0D\x20-\x7E€]/g, " ")
-    .replace(/\s+\n/g, "\n")
-    .replace(/\n{2,}/g, "\n")
-    .trim();
 }
 
 
@@ -281,6 +266,8 @@ serve(async (req) => {
   const chargerRows = (chargers || []) as ChargerRow[];
   const confirmedDocs = (docsRaw || []) as DocumentRow[];
 
+  let analysisRunId: string | null = null;
+
   for (const doc of confirmedDocs) {
     try {
       assertConfirmedDocumentShape(doc);
@@ -292,268 +279,164 @@ serve(async (req) => {
     }
   }
 
-  // refresh mode = clear previous rows for exact method version, then rebuild
-  if (mode === "refresh") {
-    const [{ error: delDocErr }, { error: delChErr }, { error: delSumErr }] =
-      await Promise.all([
-        SB.from("dossier_analysis_document")
-          .delete()
-          .eq("dossier_id", dossier_id)
-          .eq("method_code", ANALYSIS_METHOD_CODE)
-          .eq("method_version", ANALYSIS_METHOD_VERSION),
+  try {
+    const supportedDocs = confirmedDocs.filter((d) =>
+      isSupportedDocType(String(d.doc_type || "").trim())
+    );
 
-        SB.from("dossier_analysis_charger")
-          .delete()
-          .eq("dossier_id", dossier_id)
-          .eq("method_code", ANALYSIS_METHOD_CODE)
-          .eq("method_version", ANALYSIS_METHOD_VERSION),
+    const analysisRun = await createAnalysisRun(SB, {
+      dossier_id,
+      trigger_type: "manual_rerun",
+      requested_by_actor_type: "customer",
+      requested_by_actor_ref: auth.actor_ref,
+      request_source: "api-dossier-verify",
+      mode,
+      method_code: ANALYSIS_METHOD_CODE,
+      method_version: ANALYSIS_METHOD_VERSION,
+      worker_runtime: "supabase_edge_function",
+      worker_version: ANALYSIS_METHOD_VERSION,
+      trigger_reason: "customer_verify_refresh",
+      document_count: confirmedDocs.length,
+      supported_document_count: supportedDocs.length,
+    });
 
-        SB.from("dossier_analysis_summary")
-          .delete()
-          .eq("dossier_id", dossier_id)
-          .eq("method_code", ANALYSIS_METHOD_CODE)
-          .eq("method_version", ANALYSIS_METHOD_VERSION),
-      ]);
+    analysisRunId = analysisRun.id;
 
-    if (delDocErr) {
-      return reject("analysis_refresh_delete_document", 500, delDocErr.message, {
-        reason: "db_error",
-      });
-    }
-    if (delChErr) {
-      return reject("analysis_refresh_delete_charger", 500, delChErr.message, {
-        reason: "db_error",
-      });
-    }
-    if (delSumErr) {
-      return reject("analysis_refresh_delete_summary", 500, delSumErr.message, {
-        reason: "db_error",
-      });
-    }
-  }
+    await markAnalysisRunRunning(SB, analysisRunId, {
+      document_count: confirmedDocs.length,
+      supported_document_count: supportedDocs.length,
+      worker_runtime: "supabase_edge_function",
+      worker_version: ANALYSIS_METHOD_VERSION,
+    });
 
-  const supportedDocs = confirmedDocs.filter((d) =>
-    isSupportedDocType(String(d.doc_type || "").trim())
-  );
+    await insertAuditFailOpen(
+      SB,
+      {
+        dossier_id,
+        actor_type: "customer",
+        event_type: "analysis_run_started",
+        event_data: {
+          run_id: analysisRunId,
+          trigger_type: "manual_rerun",
+          request_source: "api-dossier-verify",
+          mode,
+          method_code: ANALYSIS_METHOD_CODE,
+          method_version: ANALYSIS_METHOD_VERSION,
+          document_count: confirmedDocs.length,
+          supported_document_count: supportedDocs.length,
+          status: "running",
+        },
+      },
+      meta,
+      { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
+    );
 
   const documentAnalysisRows: DocumentAnalysisRow[] = [];
   const documentFailures: DocumentAnalysisRow[] = [];
 
   const invoiceObservedByDocumentId: Record<string, InvoiceObservedFields | null> = {};
 
-for (const doc of supportedDocs) {
-  const docType = String(doc.doc_type || "").trim();
-
-  await insertAuditFailOpen(
-    SB,
-    {
-      dossier_id,
-      actor_type: "customer",
-      event_type: "document_analysis_started",
-      event_data: {
-        document_id: doc.id,
-        charger_id: doc.charger_id || null,
-        doc_type: docType,
-        analysis_kind: docType === "factuur" ? "factuur_extract_v1" : "foto_extract_v1",
-        method_code: ANALYSIS_METHOD_CODE,
-        method_version: ANALYSIS_METHOD_VERSION,
-        status: "queued",
-      },
-    },
-    meta,
-    { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
-  );
-
-  try {
-    let row: DocumentAnalysisRow;
-
-    if (
-      docType === "factuur" &&
-      String(doc.content_type || "").toLowerCase() === "application/pdf" &&
-      doc.storage_bucket &&
-      doc.storage_path
-    ) {
-      const raw = await downloadStorageText(
-        SB,
-        String(doc.storage_bucket),
-        String(doc.storage_path),
-      );
-
-      const text = extractPdfLikeText(raw);
-      const observed = extractInvoiceObservedFieldsFromText(text);
-
-      invoiceObservedByDocumentId[doc.id] = observed;
-
-      row = buildDocumentAnalysisRow(dossier, doc, {
-        invoice_observed_fields: observed,
-        limitations: [],
-        summary_extra: {
-          mode: "invoice_pdf_extract_v1",
-          extraction_source: "text_based_pdf",
-        },
-      });
-    } else if (docType === "factuur") {
-      invoiceObservedByDocumentId[doc.id] = null;
-
-      row = buildDocumentAnalysisRow(dossier, doc, {
-        invoice_observed_fields: null,
-        limitations: [
-          "invoice_image_extraction_not_implemented",
-        ],
-        summary_extra: {
-          mode: "invoice_extract_skipped",
-          reason: "non_pdf_invoice_not_supported_yet",
-        },
-      });
-    } else {
-      row = buildDocumentAnalysisRow(dossier, doc, {
-        limitations: [
-          "photo_extraction_not_implemented_yet",
-        ],
-        summary_extra: {
-          mode: "photo_extract_skipped",
-          reason: "photo_analysis_not_implemented_yet",
-        },
-      });
-    }
-
-    documentAnalysisRows.push(row);
+  for (const doc of supportedDocs) {
+    const docType = String(doc.doc_type || "").trim();
 
     await insertAuditFailOpen(
       SB,
       {
         dossier_id,
         actor_type: "customer",
-        event_type: "document_analysis_completed",
+        event_type: "document_analysis_started",
         event_data: {
+          run_id: analysisRunId,
           document_id: doc.id,
           charger_id: doc.charger_id || null,
           doc_type: docType,
-          analysis_kind: row.analysis_kind,
-          method_code: row.method_code,
-          method_version: row.method_version,
-          status: row.status,
+          analysis_kind: docType === "factuur" ? "factuur_extract_v1" : "foto_extract_v1",
+          method_code: ANALYSIS_METHOD_CODE,
+          method_version: ANALYSIS_METHOD_VERSION,
+          status: "queued",
         },
       },
       meta,
       { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
     );
-  } catch (e: any) {
-    const ts = new Date().toISOString();
-    const failedRow: DocumentAnalysisRow = {
-      dossier_id,
-      document_id: doc.id,
-      charger_id: doc.charger_id ? String(doc.charger_id) : null,
-      doc_type: docType,
-      analysis_kind: docType === "factuur" ? "factuur_extract_v1" : "foto_extract_v1",
-      status: "failed",
-      method_code: ANALYSIS_METHOD_CODE,
-      method_version: ANALYSIS_METHOD_VERSION,
-      observed_fields: {},
-      confidence: {},
-      limitations: [
-        "document_analysis_exception",
-      ],
-      summary: {
-        error: String(e?.message || e),
-      },
-      created_at: ts,
-      updated_at: ts,
-    };
 
-    if (docType === "factuur") {
-      invoiceObservedByDocumentId[doc.id] = null;
-    }
+    try {
+      let row: DocumentAnalysisRow;
 
-    documentFailures.push(failedRow);
+      if (
+        docType === "factuur" &&
+        String(doc.content_type || "").toLowerCase() === "application/pdf" &&
+        doc.storage_bucket &&
+        doc.storage_path
+      ) {
+        const pdfBytes = await downloadStorageBytes(
+          SB,
+          String(doc.storage_bucket),
+          String(doc.storage_path),
+        );
 
-    await insertAuditFailOpen(
-      SB,
-      {
-        dossier_id,
-        actor_type: "customer",
-        event_type: "document_analysis_failed",
-        event_data: {
-          document_id: doc.id,
-          charger_id: doc.charger_id || null,
-          doc_type: docType,
-          analysis_kind: failedRow.analysis_kind,
-          method_code: failedRow.method_code,
-          method_version: failedRow.method_version,
-          status: failedRow.status,
-          message: String(e?.message || e),
-        },
-      },
-      meta,
-      { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
-    );
-  }
-}
+        const debugStreams = await debugPdfStreams(pdfBytes);
+        const text = await extractTextFromPdfBytes(pdfBytes);
+        const observed = extractInvoiceObservedFieldsFromText(text);
 
-  const allDocumentRows = [...documentAnalysisRows, ...documentFailures];
+        console.log("ANALYSIS_DEBUG_DOC_ID", doc.id);
+        console.log("ANALYSIS_DEBUG_DOC_FILENAME", doc.filename || null);
+        console.log("ANALYSIS_DEBUG_PDF_BYTES_LENGTH", pdfBytes.length);
+        console.log("ANALYSIS_DEBUG_STREAM_COUNT", debugStreams.length);
+        console.log("ANALYSIS_DEBUG_STREAMS", JSON.stringify(debugStreams));
+        console.log("ANALYSIS_DEBUG_TEXT_LENGTH", text.length);
+        console.log("ANALYSIS_DEBUG_TEXT_PREVIEW", text.slice(0, 1000));
+        console.log("ANALYSIS_DEBUG_OBSERVED", JSON.stringify(observed));
 
-  if (allDocumentRows.length > 0) {
-    const { error: insDocErr } = await SB
-      .from("dossier_analysis_document")
-      .insert(allDocumentRows);
+        invoiceObservedByDocumentId[doc.id] = observed;
 
-    if (insDocErr) {
-      return reject("analysis_document_insert", 500, insDocErr.message, {
-        reason: "db_error",
-      });
-    }
-  }
+        row = buildDocumentAnalysisRow(dossier, doc, analysisRunId!, {
+          invoice_observed_fields: observed,
+          limitations: [],
+          summary_extra: {
+            mode: "invoice_pdf_extract_v1",
+            extraction_source: "text_based_pdf",
+          },
+        });
+      } else if (docType === "factuur") {
+        invoiceObservedByDocumentId[doc.id] = null;
 
-  const docsByCharger = groupConfirmedDocsByCharger(supportedDocs);
-  const chargerAnalysisRows: ChargerAnalysisRow[] = [];
+        row = buildDocumentAnalysisRow(dossier, doc, analysisRunId!, {
+          invoice_observed_fields: null,
+          limitations: [
+            "invoice_image_extraction_not_implemented",
+          ],
+          summary_extra: {
+            mode: "invoice_extract_skipped",
+            reason: "non_pdf_invoice_not_supported_yet",
+          },
+        });
+      } else {
+        row = buildDocumentAnalysisRow(dossier, doc, analysisRunId!, {
+          limitations: [
+            "photo_extraction_not_implemented_yet",
+          ],
+          summary_extra: {
+            mode: "photo_extract_skipped",
+            reason: "photo_analysis_not_implemented_yet",
+          },
+        });
+      }
 
-for (const charger of chargerRows) {
-  const docsForCharger = docsByCharger[String(charger.id)] || [];
+      documentAnalysisRows.push(row);
 
-  const invoiceDoc =
-    docsForCharger.find((d) => String(d.doc_type || "").trim() === "factuur") ?? null;
-
-  const photoRows = buildPhotoAnalysisRows(
-    dossier,
-    charger,
-    docsForCharger.filter((d) => String(d.doc_type || "").trim() === "foto_laadpunt"),
-  );
-
-  const invoiceObserved =
-    invoiceDoc ? (invoiceObservedByDocumentId[invoiceDoc.id] ?? null) : null;
-
-  const invoiceRows = buildInvoiceRowsFromObserved(
-    dossier,
-    charger,
-    invoiceDoc,
-    invoiceObserved,
-  );
-
-  chargerAnalysisRows.push(...invoiceRows, ...photoRows);
-}
-
-  if (chargerAnalysisRows.length > 0) {
-    const { error: insChErr } = await SB
-      .from("dossier_analysis_charger")
-      .insert(chargerAnalysisRows);
-
-    if (insChErr) {
-      return reject("analysis_charger_insert", 500, insChErr.message, {
-        reason: "db_error",
-      });
-    }
-
-    for (const row of chargerAnalysisRows) {
       await insertAuditFailOpen(
         SB,
         {
           dossier_id,
           actor_type: "customer",
-          event_type: "charger_analysis_result_written",
+          event_type: "document_analysis_completed",
           event_data: {
-            charger_id: row.charger_id,
-            document_id: row.source_document_id,
-            analysis_code: row.analysis_code,
+            run_id: analysisRunId,
+            document_id: doc.id,
+            charger_id: doc.charger_id || null,
+            doc_type: docType,
+            analysis_kind: row.analysis_kind,
             method_code: row.method_code,
             method_version: row.method_version,
             status: row.status,
@@ -562,57 +445,257 @@ for (const charger of chargerRows) {
         meta,
         { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
       );
+    } catch (e: any) {
+      const ts = new Date().toISOString();
+      const failedRow: DocumentAnalysisRow = {
+        dossier_id,
+        run_id: analysisRunId!,
+        document_id: doc.id,
+        charger_id: doc.charger_id ? String(doc.charger_id) : null,
+        doc_type: docType,
+        analysis_kind: docType === "factuur" ? "factuur_extract_v1" : "foto_extract_v1",
+        status: "failed",
+        method_code: ANALYSIS_METHOD_CODE,
+        method_version: ANALYSIS_METHOD_VERSION,
+        observed_fields: {},
+        confidence: {},
+        limitations: [
+          "document_analysis_exception",
+        ],
+        summary: {
+          error: String(e?.message || e),
+        },
+        created_at: ts,
+        updated_at: ts,
+      };
+
+      if (docType === "factuur") {
+        invoiceObservedByDocumentId[doc.id] = null;
+      }
+
+      documentFailures.push(failedRow);
+
+      await insertAuditFailOpen(
+        SB,
+        {
+          dossier_id,
+          actor_type: "customer",
+          event_type: "document_analysis_failed",
+          event_data: {
+            run_id: analysisRunId,
+            document_id: doc.id,
+            charger_id: doc.charger_id || null,
+            doc_type: docType,
+            analysis_kind: failedRow.analysis_kind,
+            method_code: failedRow.method_code,
+            method_version: failedRow.method_version,
+            status: failedRow.status,
+            message: String(e?.message || e),
+          },
+        },
+        meta,
+        { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
+      );
     }
   }
 
-  const summaryRow: SummaryInsertRow = buildSummaryAnalysisRow(
-    dossier,
-    allDocumentRows,
-    chargerAnalysisRows,
-  );
+    const allDocumentRows = [...documentAnalysisRows, ...documentFailures];
 
-  const { error: insSumErr } = await SB
-    .from("dossier_analysis_summary")
-    .insert(summaryRow);
+    if (allDocumentRows.length > 0) {
+      const { error: insDocErr } = await SB
+        .from("dossier_analysis_document")
+        .insert(allDocumentRows);
 
-  if (insSumErr) {
-    return reject("analysis_summary_insert", 500, insSumErr.message, {
-      reason: "db_error",
-    });
+      if (insDocErr) {
+        throw new Error(`analysis_document_insert: ${insDocErr.message}`);
+      }
+    }
+
+    const docsByCharger = groupConfirmedDocsByCharger(supportedDocs);
+    const chargerAnalysisRows: ChargerAnalysisRow[] = [];
+
+  for (const charger of chargerRows) {
+    const docsForCharger = docsByCharger[String(charger.id)] || [];
+
+    const invoiceDoc =
+      docsForCharger.find((d) => String(d.doc_type || "").trim() === "factuur") ?? null;
+
+    const photoRows = buildPhotoAnalysisRows(
+      dossier,
+      charger,
+      analysisRunId!,
+      docsForCharger.filter((d) => String(d.doc_type || "").trim() === "foto_laadpunt"),
+    );
+
+    const invoiceObserved =
+      invoiceDoc ? (invoiceObservedByDocumentId[invoiceDoc.id] ?? null) : null;
+
+    const invoiceRows = buildInvoiceRowsFromObserved(
+      dossier,
+      charger,
+      analysisRunId!,
+      invoiceDoc,
+      invoiceObserved,
+    );
+
+    chargerAnalysisRows.push(...invoiceRows, ...photoRows);
   }
 
-  await insertAuditFailOpen(
-    SB,
-    {
-      dossier_id,
-      actor_type: "customer",
-      event_type: "dossier_analysis_summary_generated",
-      event_data: {
-        method_code: summaryRow.method_code,
-        method_version: summaryRow.method_version,
-        overall_status: summaryRow.overall_status,
-        document_analysis_count: allDocumentRows.length,
-        charger_analysis_count: chargerAnalysisRows.length,
+    if (chargerAnalysisRows.length > 0) {
+      const { error: insChErr } = await SB
+        .from("dossier_analysis_charger")
+        .insert(chargerAnalysisRows);
+
+      if (insChErr) {
+        throw new Error(`analysis_charger_insert: ${insChErr.message}`);
+      }
+
+      for (const row of chargerAnalysisRows) {
+        await insertAuditFailOpen(
+          SB,
+          {
+            dossier_id,
+            actor_type: "customer",
+            event_type: "charger_analysis_result_written",
+            event_data: {
+              run_id: analysisRunId,
+              charger_id: row.charger_id,
+              document_id: row.source_document_id,
+              analysis_code: row.analysis_code,
+              method_code: row.method_code,
+              method_version: row.method_version,
+              status: row.status,
+            },
+          },
+          meta,
+          { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
+        );
+      }
+    }
+
+    const summaryRow: SummaryAnalysisRow = buildSummaryAnalysisRow(
+      dossier,
+      analysisRunId!,
+      allDocumentRows,
+      chargerAnalysisRows,
+    );
+
+    const { error: insSumErr } = await SB
+      .from("dossier_analysis_summary")
+      .insert(summaryRow);
+
+    if (insSumErr) {
+      throw new Error(`analysis_summary_insert: ${insSumErr.message}`);
+    }
+
+    await insertAuditFailOpen(
+      SB,
+      {
+        dossier_id,
+        actor_type: "customer",
+        event_type: "dossier_analysis_summary_generated",
+        event_data: {
+          run_id: analysisRunId,
+          method_code: summaryRow.method_code,
+          method_version: summaryRow.method_version,
+          overall_status: summaryRow.overall_status,
+          document_analysis_count: allDocumentRows.length,
+          charger_analysis_count: chargerAnalysisRows.length,
+        },
       },
-    },
-    meta,
-    { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
-  );
+      meta,
+      { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
+    );
 
-  const body = {
-    ok: true,
-    dossier_id,
-    mode,
-    analysis_status: summaryRow.overall_status,
-    analysis_run: {
-      documents_seen: confirmedDocs.length,
-      supported_documents_seen: supportedDocs.length,
-      document_analyses_completed: documentAnalysisRows.filter((r) => r.status === "completed").length,
-      document_analyses_failed: documentFailures.length,
-      charger_results_written: chargerAnalysisRows.length,
-      summary_written: true,
-    },
-  };
+    await markAnalysisRunCompleted(SB, analysisRunId!, {
+      document_count: confirmedDocs.length,
+      supported_document_count: supportedDocs.length,
+    });
 
-  return finalize(200, body);
+    await insertAuditFailOpen(
+      SB,
+      {
+        dossier_id,
+        actor_type: "customer",
+        event_type: "analysis_run_completed",
+        event_data: {
+          run_id: analysisRunId,
+          trigger_type: "manual_rerun",
+          request_source: "api-dossier-verify",
+          mode,
+          method_code: ANALYSIS_METHOD_CODE,
+          method_version: ANALYSIS_METHOD_VERSION,
+          overall_status: summaryRow.overall_status,
+          document_analysis_count: allDocumentRows.length,
+          charger_analysis_count: chargerAnalysisRows.length,
+          status: "completed",
+        },
+      },
+      meta,
+      { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
+    );
+
+    const body = {
+      ok: true,
+      dossier_id,
+      run_id: analysisRunId,
+      mode,
+      analysis_status: summaryRow.overall_status,
+      analysis_run: {
+        documents_seen: confirmedDocs.length,
+        supported_documents_seen: supportedDocs.length,
+        document_analyses_completed: documentAnalysisRows.filter((r) => r.status === "completed").length,
+        document_analyses_failed: documentFailures.length,
+        charger_results_written: chargerAnalysisRows.length,
+        summary_written: true,
+      },
+    };
+
+    return finalize(200, body);
+
+  } catch (e: any) {
+    if (analysisRunId) {
+      try {
+        await markAnalysisRunFailed(SB, analysisRunId, {
+          error_code: "analysis_execution_failed",
+          error_message: String(e?.message || e),
+          document_count: confirmedDocs.length,
+          supported_document_count: supportedDocs.length,
+        });
+
+        await insertAuditFailOpen(
+          SB,
+          {
+            dossier_id,
+            actor_type: "customer",
+            event_type: "analysis_run_failed",
+            event_data: {
+              run_id: analysisRunId,
+              trigger_type: "manual_rerun",
+              request_source: "api-dossier-verify",
+              mode,
+              method_code: ANALYSIS_METHOD_CODE,
+              method_version: ANALYSIS_METHOD_VERSION,
+              status: "failed",
+              message: String(e?.message || e),
+            },
+          },
+          meta,
+          { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
+        );
+      } catch (inner) {
+        console.error("analysis run fail bookkeeping failed:", inner);
+      }
+    }
+
+    return reject(
+      "analysis_execution",
+      500,
+      String(e?.message || e),
+      {
+        reason: "analysis_execution_failed",
+        run_id: analysisRunId,
+      },
+    );
+  }
 });
