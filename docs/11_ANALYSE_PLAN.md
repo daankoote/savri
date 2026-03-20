@@ -1,6 +1,6 @@
 # 11_ANALYSE_PLAN.md
 
-Statusdatum: 2026-03-15
+Statusdatum: 2026-03-20
 Type: voorstel / ontwerpdocument
 Status: DRAFT
 
@@ -161,6 +161,12 @@ Deze laag is samenvattend en template-based.
 
 ## 6) Scope v1
 
+Belangrijke CURRENT nuance (2026-03-20):
+- Scope v1 blijft formeel factuur + foto,
+  maar de uitvoeringsvolgorde is nu bewust asymmetrisch:
+  - eerst factuur hardenen
+  - foto blijft voorlopig skeleton
+
 ### 6.1 Factuur consistency checks
 
 Per charger met documenttype `factuur`:
@@ -186,6 +192,11 @@ Belangrijk:
 
 - foto-checks zullen vaak `inconclusive` zijn
 - dat is correct gedrag, geen fout
+
+Operational reality (CURRENT):
+- dit spoor wordt nu bewust niet verder uitgewerkt
+- eerst moet een representatieve laadpaalfoto-dataset bestaan
+- tot die tijd is `not_checked` de correcte uitkomst, niet een tijdelijk ongemak
 
 ---
 
@@ -605,19 +616,28 @@ nieuw endpoint:
 Nog zonder slimme extractie.
 
 Fase B — factuur extraction + matching
+
 Eerst alleen factuur.
 
 Doel:
-- extracted fields opslaan
-- 5 invoice checks schrijven
-- export uitbreiden met analysis-blokken
+- extracted fields robuuster opslaan
+- 5 invoice checks inhoudelijk betrouwbaarder maken
+- verify-run log gebruiken als vaste evidence-loop
+- export blijft analysis-blokken tonen, maar de focus ligt nu op betere inhoud i.p.v. alleen structuur
 
 Fase C — foto evidence checks
 
+Startvoorwaarde:
+- pas beginnen wanneer er een bruikbare laadpaalfoto-dataset is
+
 Doel:
-- basic visible/presence checks
+- pas na dataset-opbouw basic visible/presence checks invoeren
 - alleen matchen als observed field voldoende zeker is
-- standaard liever inconclusive dan geforceerde false certainty
+- standaard liever `inconclusive` dan geforceerde false certainty
+
+Tot die tijd:
+- foto-analysis blijft skeleton
+- verify/export/logs moeten deze beperking expliciet zichtbaar houden
 
 Fase D — human summary
 
@@ -695,6 +715,68 @@ Harde v1 discipline blijft:
 - daarna pas photo evidence
 - liever `inconclusive` dan geforceerde zekerheid
 - geen lifecycle-impact van analysis-uitkomsten
+
+
+## Update 2026-03-20 — Richting aangescherpt: factuur hardenen eerst, laadpaalfoto’s bewust later
+
+Wat nu expliciet besloten is:
+- We gaan nu niet door op laadpaalfoto-analyse.
+- Reden:
+  - de huidige beschikbare “slechte voorbeelden” zijn vooral facturen
+  - er is nog geen representatieve laadpaalfoto-dataset
+  - verder bouwen op foto-extractie zou nu vooral schijnvoortgang zijn
+
+Daarom is CURRENT focus:
+1. verify-pipeline behouden zoals die nu bewezen draait
+2. factuur-extractie robuuster maken
+3. testset uitbreiden met realistische slechte factuurvarianten
+4. pas daarna laadpaalfoto-spoor oppakken
+
+Nieuwe uitvoeringsregel:
+- `foto_laadpunt` blijft voorlopig:
+  - skeleton
+  - `not_checked`
+  - expliciet beperkt in export/logs/summary
+
+Factuur-spoor wordt nu opgesplitst in twee niveaus:
+
+### A) Extractierobuustheid
+Verbeteren van `extractInvoiceObservedFieldsFromText()` van label-only naar hybrid extractie.
+
+Doel:
+- minder afhankelijk zijn van exacte labels zoals `Address`, `City`, `Brand`, `Model`
+- eerst hardere identifiers en adrespatronen vinden
+- daarna pas zwakkere velden invullen
+
+Praktisch betekent dit:
+- serial/MID eerst via ID-achtige patronen
+- adres via kandidaatregels i.p.v. alleen labelvelden
+- explicieter omgaan met ontbrekende velden
+- liever `inconclusive` dan fake zekerheid
+
+### B) Bewijsbaarheid / reviewbaarheid
+De verify-run tooling moet laten zien:
+- wat exact observed is
+- uit welk document dat kwam
+- hoe dat doorliep naar charger-resultaten
+- wat expected_db was
+- waarom iets pass/fail/inconclusive werd
+
+De verify-log is daarmee niet alleen debug-output,
+maar onderdeel van de development proof-loop.
+
+Harde beperkingen die blijven gelden:
+- geen OCR in deze fase
+- alleen `text_based_pdf` voor facturen
+- geen authenticity claim
+- geen compliance claim
+- geen lifecycle-mutatie op basis van analysis-uitkomst
+
+Concreet gevolg voor implementatievolgorde:
+1. factuur extractie verbeteren
+2. verify-run log behouden/uitbreiden als evidence tool
+3. slechte factuurset uitbreiden
+4. pas daarna laadpaalfoto-dataset verzamelen en foto-analysis starten
 
 
 # EINDE 11_ANALYSE_PLAN.md

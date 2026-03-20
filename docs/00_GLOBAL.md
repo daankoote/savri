@@ -234,11 +234,29 @@ Gate = “audit-contract stabiel en consistent over alle dossier write endpoints
 - Reject-audit coverage aantoonbaar via tests
 - Download/export alleen op locked dossiers + confirmed docs
 - Export = schema_versioned + assumptions/not_verified expliciet (Audit Pack Standard v1)
-- Analysis v1 skeleton actief:
+- Analysis v1 actief als derived consistency layer:
   - derived analysis-tabellen
   - session-auth `api-dossier-verify`
   - audit events voor document/charger/summary analysis
   - export v5 met analysis-blokken
+  - verify-run evidence script voor leesbare runtime proof
+- CURRENT uitvoeringsfocus binnen Analysis v1:
+  - eerst factuur-extractie en factuur-consistency hardenen
+  - `foto_laadpunt` blijft voorlopig skeleton / `not_checked`
+  - geen OCR in deze fase
+  - geen authenticity-claim
+  - geen compliance-claim
+  - geen certificeringsclaim
+
+  Nieuwe operationele nuance (CURRENT, 2026-03-20):
+- De verify-pipeline zelf is nu technisch bewezen:
+  - `api-dossier-verify` schrijft correct naar analysis-tabellen
+  - `scripts/tools/verify-analysis-run.sh` geeft leesbare document→charger trace
+  - observed vs expected_db is runtime zichtbaar per analysis row
+- Het huidige werk verschuift daarom van infrastructuur naar extractiekwaliteit:
+  - betere factuurveldextractie
+  - sterkere testset met realistische slechte factuurvarianten
+  - laadpaalfoto-analyse bewust uitgesteld tot representatieve dataset bestaat
 
 ### Phase 2 — Sharing + performance / cost / ops (PLANNED)
 Gate = “product werkt audit-proof in real-world”

@@ -51,6 +51,7 @@ export type DocumentRow = {
 
 export type DocumentAnalysisRow = {
   dossier_id: string;
+  run_id: string;
   document_id: string;
   charger_id: string | null;
   doc_type: string;
@@ -68,6 +69,7 @@ export type DocumentAnalysisRow = {
 
 export type ChargerAnalysisRow = {
   dossier_id: string;
+  run_id: string;
   charger_id: string;
   source_document_id: string | null;
   analysis_code: string;
@@ -83,6 +85,7 @@ export type ChargerAnalysisRow = {
 
 export type SummaryAnalysisRow = {
   dossier_id: string;
+  run_id: string;
   overall_status: AnalysisOverallStatus;
   method_code: string;
   method_version: string;
@@ -181,28 +184,199 @@ function matchLabeledValue(text: string, labels: string[]): string | null {
   return null;
 }
 
+function isLikelyNameLine(input: string): boolean {
+  const s = cleanLine(input);
+  if (!s) return false;
+  if (s.length < 4 || s.length > 120) return false;
+  if (/\d/.test(s)) return false;
+
+  const lowered = s.toLowerCase();
+  const banned = [
+    "invoice",
+    "factuur",
+    "bill to",
+    "customer",
+    "customer name",
+    "address",
+    "city",
+    "brand",
+    "model",
+    "serial",
+    "mid",
+    "product",
+    "amount",
+    "description",
+    "subtotal",
+    "total",
+    "vat",
+    "invoice no",
+    "invoice date",
+    "payment terms",
+    "charger details",
+  ];
+
+  if (banned.some((x) => lowered.includes(x))) return false;
+
+  return /[a-z]/i.test(s);
+}
+
+function isLikelyStreetLine(input: string): boolean {
+  const s = cleanLine(input);
+  if (!s) return false;
+  if (!/\d/.test(s)) return false;
+  if (s.length < 6 || s.length > 120) return false;
+
+  const lowered = s.toLowerCase();
+  const banned = [
+    "invoice no",
+    "invoice date",
+    "customer ref",
+    "serial",
+    "mid",
+    "vat",
+    "total",
+    "amount",
+    "qty",
+    "unit price",
+  ];
+  if (banned.some((x) => lowered.includes(x))) return false;
+
+  const split = splitDutchStreetLine(s);
+  return !!(split.street && split.house_number);
+}
+
+function isLikelyCityLine(input: string): boolean {
+  const s = cleanLine(input);
+  if (!s) return false;
+  const split = splitDutchCityLine(s);
+  return !!(split.postcode && split.city);
+}
+
+function isLikelyCountryLine(input: string): boolean {
+  const s = cleanLine(input).toLowerCase();
+  if (!s) return false;
+
+  return [
+    "netherlands",
+    "nederland",
+    "the netherlands",
+    "belgië",
+    "belgie",
+    "belgium",
+    "deutschland",
+    "germany",
+  ].includes(s);
+}
+
+function collectAddressBlockCandidates(text: string): Array<{
+  name_line: string | null;
+  address_line: string;
+  city_line: string;
+  score: number;
+}> {
+  const lines = String(text || "")
+    .replace(/\r/g, "\n")
+    .split("\n")
+    .map((line) => cleanLine(line))
+    .filter(Boolean);
+
+  const candidates: Array<{
+    name_line: string | null;
+    address_line: string;
+    city_line: string;
+    score: number;
+  }> = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (!isLikelyStreetLine(line)) continue;
+
+    for (let j = i + 1; j <= Math.min(i + 3, lines.length - 1); j++) {
+      const maybeCity = lines[j];
+      if (!isLikelyCityLine(maybeCity)) continue;
+
+      const prev1 = i - 1 >= 0 ? lines[i - 1] : null;
+      const prev2 = i - 2 >= 0 ? lines[i - 2] : null;
+      const next1 = j + 1 < lines.length ? lines[j + 1] : null;
+
+      let score = 0;
+      let nameLine: string | null = null;
+
+      score += 5; // street + city pair is the base signal
+
+      if (prev1 && isLikelyNameLine(prev1)) {
+        nameLine = prev1;
+        score += 3;
+      } else if (prev2 && isLikelyNameLine(prev2)) {
+        nameLine = prev2;
+        score += 2;
+      }
+
+      if (next1 && isLikelyCountryLine(next1)) {
+        score += 1;
+      }
+
+      candidates.push({
+        name_line: nameLine,
+        address_line: line,
+        city_line: maybeCity,
+        score,
+      });
+    }
+  }
+
+  return candidates.sort((a, b) => b.score - a.score);
+}
+
+function pickBestAddressBlock(text: string): {
+  address_line: string | null;
+  city_line: string | null;
+} {
+  const candidates = collectAddressBlockCandidates(text);
+  const best = candidates[0];
+
+  if (!best) {
+    return {
+      address_line: null,
+      city_line: null,
+    };
+  }
+
+  return {
+    address_line: best.address_line,
+    city_line: best.city_line,
+  };
+}
+
+
 export function extractInvoiceObservedFieldsFromText(textRaw: string): InvoiceObservedFields {
   const text = String(textRaw || "").replace(/\r/g, "");
 
-  const address_line =
-    matchLabeledValue(text, ["Address"]) ||
+  const labeledAddress =
+    matchLabeledValue(text, ["Address", "Adres"]) ||
     null;
 
-  const city_line =
-    matchLabeledValue(text, ["City"]) ||
+  const labeledCity =
+    matchLabeledValue(text, ["City", "Plaats", "Postcode en plaats"]) ||
     null;
+
+  const inferredBlock = pickBestAddressBlock(text);
+
+  const address_line = labeledAddress || inferredBlock.address_line || null;
+  const city_line = labeledCity || inferredBlock.city_line || null;
 
   const brand =
-    matchLabeledValue(text, ["Brand"]) || null;
+    matchLabeledValue(text, ["Brand", "Merk"]) || null;
 
   const model =
-    matchLabeledValue(text, ["Model"]) || null;
+    matchLabeledValue(text, ["Model", "Type"]) || null;
 
   const serial_number =
-    matchLabeledValue(text, ["Serial number", "Serial Number", "Serial"]) || null;
+    matchLabeledValue(text, ["Serial number", "Serial Number", "Serial", "Serienummer"]) || null;
 
   const mid_number =
-    matchLabeledValue(text, ["MID number", "MID Number", "MID"]) || null;
+    matchLabeledValue(text, ["MID number", "MID Number", "MID", "MID nummer"]) || null;
 
   const streetParts = splitDutchStreetLine(address_line || "");
   const cityParts = splitDutchCityLine(city_line || "");
@@ -401,6 +575,7 @@ export function buildDeclaredAddressSnapshot(dossier: DossierRow): Record<string
 export function buildDocumentAnalysisRow(
   dossier: DossierRow,
   doc: DocumentRow,
+  runId: string,
   opts?: {
     invoice_observed_fields?: InvoiceObservedFields | null;
     limitations?: string[];
@@ -420,6 +595,7 @@ export function buildDocumentAnalysisRow(
 
   return {
     dossier_id: dossier.id,
+    run_id: runId,
     document_id: doc.id,
     charger_id: doc.charger_id ? String(doc.charger_id) : null,
     doc_type: docType,
@@ -444,6 +620,7 @@ export function buildDocumentAnalysisRow(
 function makeNotCheckedRow(
   dossier: DossierRow,
   charger: ChargerRow,
+  runId: string,
   sourceDocumentId: string | null,
   analysisCode: string,
   declaredValue: Record<string, unknown>,
@@ -453,6 +630,7 @@ function makeNotCheckedRow(
 
   return {
     dossier_id: dossier.id,
+    run_id: runId,
     charger_id: charger.id,
     source_document_id: sourceDocumentId,
     analysis_code: analysisCode,
@@ -473,6 +651,7 @@ function makeNotCheckedRow(
 function buildPhotoRows(
   dossier: DossierRow,
   charger: ChargerRow,
+  runId: string,
   photoDoc: DocumentRow | null,
 ): ChargerAnalysisRow[] {
   const reason = photoDoc
@@ -485,6 +664,7 @@ function buildPhotoRows(
     makeNotCheckedRow(
       dossier,
       charger,
+      runId,
       sourceDocumentId,
       "photo_charger_visible",
       {},
@@ -493,6 +673,7 @@ function buildPhotoRows(
     makeNotCheckedRow(
       dossier,
       charger,
+      runId,
       sourceDocumentId,
       "photo_brand_match",
       { brand: charger.brand ?? null },
@@ -501,6 +682,7 @@ function buildPhotoRows(
     makeNotCheckedRow(
       dossier,
       charger,
+      runId,
       sourceDocumentId,
       "photo_model_match",
       { model: charger.model ?? null },
@@ -509,6 +691,7 @@ function buildPhotoRows(
     makeNotCheckedRow(
       dossier,
       charger,
+      runId,
       sourceDocumentId,
       "photo_serial_match",
       { serial_number: charger.serial_number ?? null },
@@ -517,6 +700,7 @@ function buildPhotoRows(
     makeNotCheckedRow(
       dossier,
       charger,
+      runId,
       sourceDocumentId,
       "photo_mid_match",
       { mid_number: charger.mid_number ?? null },
@@ -528,6 +712,7 @@ function buildPhotoRows(
 export function buildInvoiceRowsFromObserved(
   dossier: DossierRow,
   charger: ChargerRow,
+  runId: string,
   invoiceDoc: DocumentRow | null,
   observed: InvoiceObservedFields | null,
 ): ChargerAnalysisRow[] {
@@ -536,11 +721,11 @@ export function buildInvoiceRowsFromObserved(
 
   if (!invoiceDoc) {
     return [
-      makeNotCheckedRow(dossier, charger, null, "invoice_address_match", buildDeclaredAddressSnapshot(dossier), "missing_invoice_document"),
-      makeNotCheckedRow(dossier, charger, null, "invoice_brand_match", { brand: charger.brand ?? null }, "missing_invoice_document"),
-      makeNotCheckedRow(dossier, charger, null, "invoice_model_match", { model: charger.model ?? null }, "missing_invoice_document"),
-      makeNotCheckedRow(dossier, charger, null, "invoice_serial_match", { serial_number: charger.serial_number ?? null }, "missing_invoice_document"),
-      makeNotCheckedRow(dossier, charger, null, "invoice_mid_match", { mid_number: charger.mid_number ?? null }, "missing_invoice_document"),
+      makeNotCheckedRow(dossier, charger, runId, null, "invoice_address_match", buildDeclaredAddressSnapshot(dossier), "missing_invoice_document"),
+      makeNotCheckedRow(dossier, charger, runId, null, "invoice_brand_match", { brand: charger.brand ?? null }, "missing_invoice_document"),
+      makeNotCheckedRow(dossier, charger, runId, null, "invoice_model_match", { model: charger.model ?? null }, "missing_invoice_document"),
+      makeNotCheckedRow(dossier, charger, runId, null, "invoice_serial_match", { serial_number: charger.serial_number ?? null }, "missing_invoice_document"),
+      makeNotCheckedRow(dossier, charger, runId, null, "invoice_mid_match", { mid_number: charger.mid_number ?? null }, "missing_invoice_document"),
     ];
   }
 
@@ -550,6 +735,7 @@ export function buildInvoiceRowsFromObserved(
       declared_value: Record<string, unknown>,
     ): ChargerAnalysisRow => ({
       dossier_id: dossier.id,
+      run_id: runId,
       charger_id: charger.id,
       source_document_id: sourceDocumentId,
       analysis_code,
@@ -583,6 +769,7 @@ export function buildInvoiceRowsFromObserved(
   return [
     {
       dossier_id: dossier.id,
+      run_id: runId,
       charger_id: charger.id,
       source_document_id: sourceDocumentId,
       analysis_code: "invoice_address_match",
@@ -597,6 +784,7 @@ export function buildInvoiceRowsFromObserved(
     },
     {
       dossier_id: dossier.id,
+      run_id: runId,
       charger_id: charger.id,
       source_document_id: sourceDocumentId,
       analysis_code: "invoice_brand_match",
@@ -611,6 +799,7 @@ export function buildInvoiceRowsFromObserved(
     },
     {
       dossier_id: dossier.id,
+      run_id: runId,
       charger_id: charger.id,
       source_document_id: sourceDocumentId,
       analysis_code: "invoice_model_match",
@@ -625,6 +814,7 @@ export function buildInvoiceRowsFromObserved(
     },
     {
       dossier_id: dossier.id,
+      run_id: runId,
       charger_id: charger.id,
       source_document_id: sourceDocumentId,
       analysis_code: "invoice_serial_match",
@@ -639,6 +829,7 @@ export function buildInvoiceRowsFromObserved(
     },
     {
       dossier_id: dossier.id,
+      run_id: runId,
       charger_id: charger.id,
       source_document_id: sourceDocumentId,
       analysis_code: "invoice_mid_match",
@@ -657,12 +848,13 @@ export function buildInvoiceRowsFromObserved(
 export function buildPhotoAnalysisRows(
   dossier: DossierRow,
   charger: ChargerRow,
+  runId: string,
   docsForCharger: DocumentRow[],
 ): ChargerAnalysisRow[] {
   const photoDoc =
     docsForCharger.find((d) => norm(d.doc_type) === "foto_laadpunt") ?? null;
 
-  return buildPhotoRows(dossier, charger, photoDoc);
+  return buildPhotoRows(dossier, charger, runId, photoDoc);
 }
 
 export function computeOverallStatus(
@@ -689,6 +881,7 @@ export function computeOverallStatus(
 
 export function buildSummaryAnalysisRow(
   dossier: DossierRow,
+  runId: string,
   documentRows: DocumentAnalysisRow[],
   chargerRows: ChargerAnalysisRow[],
 ): SummaryAnalysisRow {
@@ -714,6 +907,7 @@ export function buildSummaryAnalysisRow(
 
   return {
     dossier_id: dossier.id,
+    run_id: runId,
     overall_status: overallStatus,
     method_code: ANALYSIS_METHOD_CODE,
     method_version: ANALYSIS_METHOD_VERSION,

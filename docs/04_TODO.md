@@ -82,14 +82,19 @@ Regel: alleen open items; afgerond → naar changelog.
 - Status: OPEN
 
 
-### 7) Docs hygiene: CURRENT docs consistent en renderbaar houden
+### 7) Docs hygiene: analysis-richting en CURRENT waarheid synchroon houden
 - Context:
-  - docs zijn inhoudelijk sterk, maar markdown-formatting en CURRENT-vs-historie kunnen weer gaan divergeren
+  - analysis-richting is aangescherpt:
+    - factuur eerst
+    - foto later
+    - verify evidence-script is nu onderdeel van de proof-loop
 - DoD:
-  - codevoorbeelden staan in fenced code blocks
-  - CURRENT secties spreken append-only historie niet tegen
-  - geen dubbele of dode secties
-  - bij architectuurwijziging: current doc + changelog blijven synchroon
+  - `00_GLOBAL.md`, `04_TODO.md`, `11_ANALYSE_PLAN.md` en changelog spreken elkaar niet tegen
+  - analysis-docs beschrijven expliciet:
+    - factuur hardening eerst
+    - foto-analysis deferred
+    - geen OCR in deze fase
+  - geen dubbele of verouderde analysis-richting in docs
 - Status: OPEN
 
 ### 8) Frontend contract: MID veldnaam volledig consistent met spec
@@ -127,68 +132,67 @@ Regel: alleen open items; afgerond → naar changelog.
 
 ## P1.5 / Phase-2 (open risico’s)
 
-### 11) Factuur analysis v1 (eerste echte inhoudelijke implementatie)
+### 11) Factuur analysis v1 hardenen (CURRENT eerstvolgende uitvoerfase)
 - Context:
-  - Analysis v1 skeleton + export v5 zijn live en bewezen
-  - testdossier + meerdere invoice-varianten zijn nu beschikbaar voor ontwikkelwerk
-  - richting is aangescherpt in `11_ANALYSE_PLAN.md`
+  - Analysis v1 pipeline is technisch bewezen:
+    - `api-dossier-verify`
+    - analysis-tabellen
+    - export v5
+    - verify evidence-script
+  - huidige zwakte zit vooral in extractiekwaliteit van facturen, niet in de verify-pipeline zelf
+  - focus blijft bewust op `factuur`, niet op laadpaalfoto’s
 - DoD:
-  - scope v1 blijft eerst strikt `factuur`
-  - in `dossier_analysis_document.observed_fields` opslaan:
-    - `address_text`
-    - `postcode`
-    - `house_number`
+  - `extractInvoiceObservedFieldsFromText()` verschuift van label-only naar hybrid extractie
+  - v1 blijft strikt `text_based_pdf`
+  - observed fields in `dossier_analysis_document.observed_fields` minimaal robuust voor:
+    - `address_line`
+    - `city_line`
     - `street`
+    - `house_number`
+    - `suffix`
+    - `postcode`
     - `city`
     - `brand`
     - `model`
     - `serial_number`
     - `mid_number`
-    - `invoice_date`
-  - in `dossier_analysis_charger` schrijven:
+  - charger-level checks blijven:
     - `invoice_address_match`
     - `invoice_brand_match`
     - `invoice_model_match`
     - `invoice_serial_match`
     - `invoice_mid_match`
-  - statussen uitsluitend:
-    - `pass`
-    - `fail`
-    - `inconclusive`
-    - `not_checked`
-  - observed / declared / evaluated semantiek expliciet gescheiden houden
+  - verify-run log toont per factuur:
+    - raw observed fields
+    - document → charger trace
+    - observed vs expected_db
   - geen lifecycle-impact:
     - geen lock mutatie
-    - geen dossier_checks mutatie
+    - geen `dossier_checks` mutatie
     - geen export gate op analysis-uitkomst
-  - export toont echte analysis-blokken i.p.v. skeleton placeholders
+- Open subwerk:
+  - ID-first extractie voor serial/MID
+  - betere address candidate logica
+  - field-level source / confidence / limitation discipline
+  - uitbreiding met realistische slechte factuurvarianten
 - Status: OPEN
 
-### 12) Foto analysis v1 (fase ná factuur)
+### 12) Foto analysis v1 uitgesteld tot representatieve laadpaalfoto-dataset bestaat
 - Context:
-  - foto-analyse blijft bewust secundair aan factuur-analyse
-  - foto-checks zijn zwakker en zullen vaak terecht `inconclusive` zijn
-  - richting is aangescherpt in `11_ANALYSE_PLAN.md`
+  - huidige beschikbare slechte voorbeelden gaan vooral over facturen, niet over laadpalen
+  - foto-analysis zonder echte laadpaalfoto-set is nu schijnvoortgang
+  - CURRENT skeleton (`not_checked`) is daarom correct gedrag
 - DoD:
-  - alleen starten nadat factuur analysis v1 contractueel groen is
-  - document-level observed fields voorbereiden voor:
-    - `charger_visible`
-    - `brand_visible`
-    - `brand`
-    - `model_visible`
-    - `model`
-    - `serial_label_visible`
-    - `serial_number`
-    - `mid_label_visible`
-    - `mid_number`
-  - charger-level checks beperkt tot:
-    - `photo_charger_visible`
-    - `photo_brand_match`
-    - `photo_model_match`
-    - `photo_serial_match`
-    - `photo_mid_match`
-  - standaard liever `inconclusive` dan geforceerde zekerheid
-  - duidelijke limitations in export en audit
+  - pas starten nadat een bruikbare laadpaalfoto-dataset bestaat
+  - dataset moet minimaal voorbeelden bevatten van:
+    - volledig laadpunt zichtbaar
+    - merk/model zichtbaar
+    - serial/MID label zichtbaar of juist niet zichtbaar
+    - realistische slechte kwaliteit / hoek / licht / blur
+  - tot die tijd:
+    - `foto_laadpunt` blijft skeleton
+    - verify-run log moet dit expliciet zichtbaar houden
+    - geen geforceerde extractie of pseudo-zekerheid
 - Status: OPEN
 
 ### 13) Analysis source-model guardrail expliciet vastleggen
