@@ -32,3 +32,6 @@ supabase-functions-archive/
 scripts/tests/.tmp/
 scripts/tests/output/
 /tmp/
+
+# local tool output
+scripts/tools/output/
