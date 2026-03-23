@@ -14,6 +14,14 @@ import {
   scopedSessionIdemKey,
 } from "../_shared/customer_auth.ts";
 
+import { getLatestCompletedAnalysisRun } from "../_shared/analysis_runs.ts";
+import {
+  evaluateAnalysisGate,
+  type DocumentAnalysisRow,
+  type ChargerAnalysisRow,
+  type SummaryAnalysisRow,
+} from "../_shared/analysis.ts";
+
 // -------------------- CORS --------------------
 function parseAllowedOrigins(): string[] {
   const raw =
@@ -111,6 +119,8 @@ serve(async (req) => {
   const dossier_id = parsed?.dossier_id ? String(parsed.dossier_id) : null;
   const session_token = parsed?.session_token ? String(parsed.session_token) : null;
   const doFinalize = parsed?.finalize === true;
+  const evaluation_mode =
+    parsed?.evaluation_mode === "core" ? "core" : "full";
 
   let SB: ReturnType<typeof createClient>;
   try {
@@ -235,10 +245,20 @@ serve(async (req) => {
     });
   }
 
+  const latestCompletedRun =
+    evaluation_mode === "full"
+      ? await getLatestCompletedAnalysisRun(SB, dossier_id)
+      : null;
+
+  const latestRunId = latestCompletedRun?.id || null;
+
   const [
     { data: consentsRaw, error: cErr },
     { data: chargers, error: chErr },
     { data: documents, error: docErr },
+    { data: analysisDocuments, error: aDocErr },
+    { data: analysisChargers, error: aChErr },
+    { data: analysisSummaryRows, error: aSumErr },
   ] = await Promise.all([
     SB.from("dossier_consents")
       .select("consent_type, accepted, accepted_at, created_at")
@@ -253,11 +273,38 @@ serve(async (req) => {
     SB.from("dossier_documents")
       .select("doc_type, charger_id, status")
       .eq("dossier_id", dossier_id),
+
+    evaluation_mode === "full" && latestRunId
+      ? SB.from("dossier_analysis_document")
+          .select("run_id, document_id, charger_id, doc_type, analysis_kind, status, method_code, method_version, observed_fields, confidence, limitations, summary, created_at, updated_at")
+          .eq("dossier_id", dossier_id)
+          .eq("run_id", latestRunId)
+          .order("created_at", { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+
+    evaluation_mode === "full" && latestRunId
+      ? SB.from("dossier_analysis_charger")
+          .select("run_id, charger_id, source_document_id, analysis_code, status, declared_value, observed_value, evaluation_details, method_code, method_version, created_at, updated_at")
+          .eq("dossier_id", dossier_id)
+          .eq("run_id", latestRunId)
+          .order("created_at", { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+
+    evaluation_mode === "full" && latestRunId
+      ? SB.from("dossier_analysis_summary")
+          .select("run_id, overall_status, method_code, method_version, summary, limitations, created_at, updated_at")
+          .eq("dossier_id", dossier_id)
+          .eq("run_id", latestRunId)
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
   if (cErr) return reject("consents_read", 500, `Consents read failed: ${cErr.message}`);
   if (chErr) return reject("chargers_read", 500, `Chargers read failed: ${chErr.message}`);
   if (docErr) return reject("documents_read", 500, `Documents read failed: ${docErr.message}`);
+  if (aDocErr) return reject("analysis_documents_read", 500, `Analysis documents read failed: ${aDocErr.message}`);
+  if (aChErr) return reject("analysis_chargers_read", 500, `Analysis chargers read failed: ${aChErr.message}`);
+  if (aSumErr) return reject("analysis_summary_read", 500, `Analysis summary read failed: ${aSumErr.message}`);
 
   const consentMap: Record<string, boolean> = {};
   const seenType = new Set<string>();
@@ -348,6 +395,34 @@ serve(async (req) => {
 
   const docsPerChargerOk = chargerRows.length > 0 && missingDocsPerCharger.length === 0;
 
+  const analysisSummaryLatest =
+    Array.isArray(analysisSummaryRows) && analysisSummaryRows.length > 0
+      ? (analysisSummaryRows[0] as SummaryAnalysisRow)
+      : null;
+
+  const analysisGate =
+    evaluation_mode === "full"
+      ? evaluateAnalysisGate({
+          run_id: latestRunId,
+          summary_row: analysisSummaryLatest,
+          document_rows: (analysisDocuments || []) as DocumentAnalysisRow[],
+          charger_rows: (analysisChargers || []) as ChargerAnalysisRow[],
+        })
+      : {
+          submit_allowed: true,
+          blocking_reasons: [],
+          warnings: [],
+          summary: {
+            run_id: null,
+            overall_status: "not_run" as const,
+            invoice_required_total: 0,
+            invoice_required_pass: 0,
+            invoice_required_fail: 0,
+            invoice_required_inconclusive: 0,
+            photo_not_checked: 0,
+          },
+        };
+
   const checks: Array<{ check_code: string; status: CheckStatus; details: Record<string, unknown> }> = [
     { check_code: "email_verified", status: emailOk ? "pass" : "fail", details: {} },
     { check_code: "address_verified", status: addressOk ? "pass" : "fail", details: {} },
@@ -355,9 +430,32 @@ serve(async (req) => {
     { check_code: "charger_exact_count", status: chargerExactOk ? "pass" : "fail", details: { required: requiredChargers, current: chargerCount } },
     { check_code: "docs_per_charger", status: docsPerChargerOk ? "pass" : "fail", details: { rule: "only_confirmed_docs_count", missing_per_charger: missingDocsPerCharger } },
     { check_code: "consents_required", status: (hasTerms && hasPrivacy && hasMandaat) ? "pass" : "fail", details: { terms: hasTerms, privacy: hasPrivacy, mandaat: hasMandaat } },
+    ...(evaluation_mode === "full"
+      ? [{
+          check_code: "analysis_invoice_gate",
+          status: analysisGate.submit_allowed ? "pass" as CheckStatus : "fail" as CheckStatus,
+          details: {
+            run_id: analysisGate.summary.run_id,
+            overall_status: analysisGate.summary.overall_status,
+            blocking_reasons: analysisGate.blocking_reasons,
+            warnings: analysisGate.warnings,
+            invoice_required_total: analysisGate.summary.invoice_required_total,
+            invoice_required_pass: analysisGate.summary.invoice_required_pass,
+            invoice_required_fail: analysisGate.summary.invoice_required_fail,
+            invoice_required_inconclusive: analysisGate.summary.invoice_required_inconclusive,
+            photo_not_checked: analysisGate.summary.photo_not_checked,
+          },
+        }]
+      : []),
   ];
 
-  const allRequiredPass = checks.every((c) => c.status === "pass");
+  const coreChecksPass = checks
+    .filter((c) => c.check_code !== "analysis_invoice_gate")
+    .every((c) => c.status === "pass");
+
+  const allRequiredPass =
+    coreChecksPass &&
+    (evaluation_mode === "core" ? true : analysisGate.submit_allowed === true);
 
   const missingSteps: string[] = [];
   if (!emailOk) missingSteps.push("1) E-mail geverifieerd");
@@ -366,6 +464,9 @@ serve(async (req) => {
   if (!midPerChargerOk) missingSteps.push("3) Laadpalen: MID-nummer per laadpaal verplicht");
   if (!docsPerChargerOk) missingSteps.push("4) Documenten (factuur + foto per laadpunt) — upload moet bevestigd zijn");
   if (!(hasTerms && hasPrivacy && hasMandaat)) missingSteps.push("5) Toestemmingen");
+  if (evaluation_mode === "full" && !analysisGate.submit_allowed) {
+    missingSteps.push("6) Factuurcontrole / analyse");
+  }
 
   const ts = nowIso();
 
@@ -413,6 +514,11 @@ serve(async (req) => {
       status: newStatus,
       missingSteps,
       checks,
+      submit_allowed: false,
+      evaluation_mode,
+      blocking_reasons: evaluation_mode === "full" ? analysisGate.blocking_reasons : [],
+      warnings: evaluation_mode === "full" ? analysisGate.warnings : [],
+      analysis_gate: evaluation_mode === "full" ? analysisGate : null,
       doFinalize,
     });
   }
@@ -448,6 +554,11 @@ serve(async (req) => {
       all_required_pass: true,
       checks,
       missingSteps: [],
+      submit_allowed: true,
+      evaluation_mode,
+      blocking_reasons: [],
+      warnings: evaluation_mode === "full" ? analysisGate.warnings : [],
+      analysis_gate: evaluation_mode === "full" ? analysisGate : null,
       doFinalize,
     });
   }
@@ -510,6 +621,11 @@ serve(async (req) => {
     all_required_pass: true,
     checks,
     missingSteps: [],
+    submit_allowed: true,
+    evaluation_mode,
+    blocking_reasons: [],
+    warnings: evaluation_mode === "full" ? analysisGate.warnings : [],
+    analysis_gate: evaluation_mode === "full" ? analysisGate : null,
     doFinalize,
   });
 });

@@ -737,6 +737,18 @@ Nieuwe uitvoeringsregel:
   - skeleton
   - `not_checked`
   - expliciet beperkt in export/logs/summary
+  
+Aanvullend bewezen (2026-03-22):
+- non-PDF facturen (`jpg/png`) volgen CURRENT een gecontroleerde fallback-route:
+  - document-level:
+    - `status = completed`
+    - `observed_fields = {}`
+    - `invoice_image_extraction_not_implemented`
+    - `invoice_extract_skipped`
+  - charger-level:
+    - invoice checks worden `inconclusive`
+    - reason: `invoice_present_but_no_observed_fields_available`
+- Dit is CURRENT correct gedrag en geen tijdelijke fouttoestand.
 
 Factuur-spoor wordt nu opgesplitst in twee niveaus:
 

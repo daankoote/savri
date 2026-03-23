@@ -79,6 +79,149 @@ type ConsentRow = {
   created_at?: string | null;
 };
 
+type ExportAnalysisDocumentRow = {
+  run_id?: string | null;
+  document_id?: string | null;
+  charger_id?: string | null;
+  doc_type?: string | null;
+  analysis_kind?: string | null;
+  status?: string | null;
+  method_code?: string | null;
+  method_version?: string | null;
+  observed_fields?: Record<string, unknown>;
+  confidence?: Record<string, unknown>;
+  limitations?: unknown[];
+  summary?: Record<string, unknown>;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+type ExportAnalysisChargerRow = {
+  run_id?: string | null;
+  charger_id?: string | null;
+  source_document_id?: string | null;
+  analysis_code?: string | null;
+  status?: string | null;
+  declared_value?: Record<string, unknown>;
+  observed_value?: Record<string, unknown>;
+  evaluation_details?: Record<string, unknown>;
+  method_code?: string | null;
+  method_version?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+function asRecord(v: unknown): Record<string, unknown> {
+  return v && typeof v === "object" && !Array.isArray(v)
+    ? v as Record<string, unknown>
+    : {};
+}
+
+function asArray(v: unknown): unknown[] {
+  return Array.isArray(v) ? v : [];
+}
+
+function pickReasonFromEvaluationDetails(v: unknown): string | null {
+  const rec = asRecord(v);
+  const reason = rec.reason;
+  return typeof reason === "string" && reason.trim() ? reason.trim() : null;
+}
+
+function buildAnalysisReadable(args: {
+  chargers: Record<string, unknown>[];
+  docsRaw: Record<string, unknown>[];
+  analysisDocuments: ExportAnalysisDocumentRow[];
+  analysisChargers: ExportAnalysisChargerRow[];
+  analysisSummaryLatest: Record<string, unknown> | null;
+  latestRunId: string | null;
+}) {
+  const {
+    chargers,
+    docsRaw,
+    analysisDocuments,
+    analysisChargers,
+    analysisSummaryLatest,
+    latestRunId,
+  } = args;
+
+  const docById = new Map<string, Record<string, unknown>>();
+  for (const d of docsRaw || []) {
+    const id = String(d.id || "").trim();
+    if (!id) continue;
+    docById.set(id, d);
+  }
+
+  const chargerRows = (chargers || []).map((charger) => {
+    const chargerId = String(charger.id || "").trim();
+
+    const results = (analysisChargers || [])
+      .filter((r) => String(r.charger_id || "") === chargerId)
+      .map((r) => {
+        const sourceDocumentId = String(r.source_document_id || "").trim() || null;
+        const sourceDocument = sourceDocumentId ? docById.get(sourceDocumentId) : null;
+
+        return {
+          analysis_code: r.analysis_code || null,
+          status: r.status || null,
+          source_document_id: sourceDocumentId,
+          source_document_filename: sourceDocument?.filename || null,
+          source_document_doc_type: sourceDocument?.doc_type || null,
+          reason: pickReasonFromEvaluationDetails(r.evaluation_details),
+          declared_value: asRecord(r.declared_value),
+          observed_value: asRecord(r.observed_value),
+          evaluation_details: asRecord(r.evaluation_details),
+          method_code: r.method_code || null,
+          method_version: r.method_version || null,
+          created_at: r.created_at || null,
+          updated_at: r.updated_at || null,
+        };
+      });
+
+    return {
+      charger_id: chargerId || null,
+      charger_label: {
+        brand: charger.brand || null,
+        model: charger.model || null,
+        serial_number: charger.serial_number || null,
+        mid_number: charger.mid_number || null,
+      },
+      analysis_results: results,
+    };
+  });
+
+  const documentRows = (analysisDocuments || []).map((r) => {
+    const documentId = String(r.document_id || "").trim() || null;
+    const sourceDocument = documentId ? docById.get(documentId) : null;
+
+    return {
+      document_id: documentId,
+      filename: sourceDocument?.filename || null,
+      charger_id: r.charger_id || null,
+      doc_type: r.doc_type || null,
+      analysis_kind: r.analysis_kind || null,
+      status: r.status || null,
+      method_code: r.method_code || null,
+      method_version: r.method_version || null,
+      observed_fields: asRecord(r.observed_fields),
+      confidence: asRecord(r.confidence),
+      limitations: asArray(r.limitations),
+      summary: asRecord(r.summary),
+      created_at: r.created_at || null,
+      updated_at: r.updated_at || null,
+    };
+  });
+
+  return {
+    version: "enval-analysis-readable.v1",
+    run_id: latestRunId,
+    overall_status: analysisSummaryLatest?.overall_status || "not_run",
+    summary: asRecord(analysisSummaryLatest?.summary),
+    limitations: asArray(analysisSummaryLatest?.limitations),
+    documents: documentRows,
+    chargers: chargerRows,
+  };
+}
+
 serve(async (req) => {
   const meta = getReqMeta(req);
   const ENVIRONMENT = getEnvironment();
@@ -436,6 +579,15 @@ serve(async (req) => {
   }
   : null;
       
+  const analysis_readable = buildAnalysisReadable({
+    chargers: (chargers || []) as Record<string, unknown>[],
+    docsRaw: (docsRaw || []) as Record<string, unknown>[],
+    analysisDocuments: (analysisDocuments || []) as ExportAnalysisDocumentRow[],
+    analysisChargers: (analysisChargers || []) as ExportAnalysisChargerRow[],
+    analysisSummaryLatest: analysis_summary_latest as Record<string, unknown> | null,
+    latestRunId,
+  });
+
   const missingSha = documents_confirmed.filter((d) => !d.file_sha256);
   if (missingSha.length) {
     await auditReject(
@@ -469,6 +621,7 @@ serve(async (req) => {
     analysis,
     analysis_run,
     analysis_methods,
+    analysis_readable,
     analysis_documents: analysis_documents_out,
     analysis_chargers: analysis_chargers_out,
     analysis_summary: analysis_summary_out,

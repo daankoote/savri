@@ -2,7 +2,7 @@
 
 # ENVAL — System Map (CURRENT)
 
-Statusdatum: 2026-02-19  
+Statusdatum: 2026-03-23  
 Repo root: /Users/daankoote/dev/enval  
 Branch context: feature/dev (main = pilot index)
 
@@ -73,7 +73,6 @@ Canonical policy:
 - ./assets/js/script.js
 - ./assets/js/api.js (frontend shared helpers: url params, session token storage, idempotent apiPost wrapper)
 - ./assets/js/pages/dossier.js
-- ./assets/js/api.js (shared helpers: url params, session token storage, apiPost wrapper)
 
 
 ---
@@ -210,19 +209,50 @@ Locked UX wanneer:
 - `dossier.locked_at != null`
 - of `status IN ('in_review','ready_for_booking')`
 
-Evaluate-flow:
-- `finalize=false` → precheck (`ready_for_review`, geen lock)
-- `finalize=true` → indienen (`in_review`, lock)
-- client-side gating:
-  - `precheckOk === true`
-  - `dirtySincePrecheck === false`
-- “Dossier indienen” blijft verborgen tot succesvolle precheck zonder latere mutaties.
+Dev unlock UX (CURRENT, alleen development-context):
+- frontend ondersteunt `api-dossier-dev-unlock`
+- knop is alleen zichtbaar wanneer dev unlock expliciet is toegestaan
+- doel:
+  - locked dossier terugzetten naar editable state in DEV
+  - daarna opnieuw precheck/finalize uitvoeren
+- dit is geen productiegedrag en geen lifecycle-shortcut voor live dossiers
 
-### Uploadgedrag (Phase-2, actueel)
-- Foto’s (`foto_laadpunt`) worden **client-side geoptimaliseerd** vóór upload.
-- Originele bestanden tot **25MB** toegestaan vóór verwerking.
-- Finale upload naar storage is doorgaans <500KB.
-- Wizard stuurt uitsluitend finale bytes + metadata naar Edge.
+Evaluate-flow (CURRENT frontend orchestration):
+- stap 1:
+  - `api-dossier-evaluate(finalize=false, evaluation_mode="core")`
+  - doel: completeness gate
+- stap 2:
+  - `api-dossier-verify(mode="refresh")`
+  - doel: derived analysis verversen op confirmed documenten
+- stap 3:
+  - `api-dossier-evaluate(finalize=false, evaluation_mode="full")`
+  - doel: blocking reasons + warnings op basis van complete dossier + analysis
+- stap 4:
+  - `api-dossier-evaluate(finalize=true, evaluation_mode="full")`
+  - doel: lock + status `in_review`
+
+Client-side gating:
+- `precheckOk === true`
+- `dirtySincePrecheck === false`
+
+Invariant:
+- elke dossiermutatie invalidate de precheck client-side:
+  - access save
+  - address save
+  - charger save/delete
+  - document upload/delete
+  - consents save
+
+UI-gedrag:
+- “Dossier indienen” blijft verborgen tot succesvolle precheck zonder latere mutaties.
+- locked dossiers tonen export; analysis kan daarna read-only worden geladen/getoond.
+
+### Uploadgedrag (CURRENT frontend)
+- Foto’s (`foto_laadpunt`) worden client-side geoptimaliseerd vóór upload.
+- Originele bestanden tot 25MB toegestaan vóór verwerking.
+- Finale upload heeft een frontend hard cap van 15MB.
+- Wizard stuurt uitsluitend finale bytes + `client_transform` metadata naar Edge.
+- Audit-hash (`file_sha256`) wordt client-side berekend over de finale bytes.
 
 ## 3) Backend platform
 - Supabase DB + Storage

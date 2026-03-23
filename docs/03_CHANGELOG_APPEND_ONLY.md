@@ -989,4 +989,170 @@ Architecturale betekenis
 - Analysis v1 verschuift nu van “kan technisch draaien” naar “kan inhoudelijk robuust vergelijken”.
 - Dev evidence-script is daarmee onderdeel van de canonical analysis debug/proof loop.
 
+
+## 2026-03-22 — Analysis v1: non-PDF invoice fallback runtime-bewezen (JPG factuur = gecontroleerd inconclusive)
+
+Bewezen via `scripts/tools/verify-analysis-run.sh` op een locked testdossier met gemengde documentset:
+
+### Wat is bewezen
+- Een non-PDF factuur (`.jpg`) veroorzaakt geen pipeline failure.
+- `api-dossier-verify` verwerkt de JPG factuur gecontroleerd als ondersteund documenttype zonder extractie.
+- In `dossier_analysis_document` wordt voor de JPG factuur correct geschreven:
+  - `status = completed`
+  - `observed_fields = {}`
+  - `limitations = ["invoice_image_extraction_not_implemented"]`
+  - `summary.mode = "invoice_extract_skipped"`
+  - `summary.reason = "non_pdf_invoice_not_supported_yet"`
+
+### Charger-level gedrag (bewezen)
+Voor een charger met alleen een JPG factuur als `factuur` document schrijft Analysis v1 correct:
+- `invoice_address_match = inconclusive`
+- `invoice_brand_match = inconclusive`
+- `invoice_model_match = inconclusive`
+- `invoice_serial_match = inconclusive`
+- `invoice_mid_match = inconclusive`
+
+Met reason:
+- `invoice_present_but_no_observed_fields_available`
+
+### Betekenis
+- Non-PDF facturen geven CURRENT geen false pass en geen false fail.
+- De pipeline degradeert bewust en uitlegbaar naar `inconclusive`.
+- Dit bevestigt dat Analysis v1 in deze fase veilig beperkt blijft tot:
+  - robuuste `text_based_pdf` extractie voor facturen
+  - gecontroleerde fallback voor non-PDF invoices
+  - skeleton / `not_checked` voor `foto_laadpunt`
+
+### Belangrijke nuance
+- In dezelfde gemengde run bleef `overall_status = review_required`, maar uitsluitend door de reeds bekende en bewust gecreëerde serial mismatch op de andere charger.
+- De JPG fallback zelf introduceerde geen nieuwe fail.
+
+## 2026-03-22 — Analysis v1 invoice parser boundary-tests 10 t/m 14 bewezen (Paul)
+
+Bewezen via `scripts/tools/verify-analysis-run.sh` op locked testdossier met Paul-varianten 10 t/m 14.
+
+### Variant 10 — serial wrong
+Bestand:
+- `invoice_paul_-_real_like_-_10_serial_wrong_01.pdf`
+
+Bewezen resultaat:
+- `invoice_serial_match = fail`
+- address/brand/model/mid = `pass`
+
+Conclusie:
+- serial mismatch detectie werkt correct en geïsoleerd.
+
+### Variant 11 — all correct
+Bestand:
+- `invoice_paul_-_real_like_-_11_all_correct_01.pdf`
+
+Bewezen resultaat:
+- alle invoice checks = `pass`
+
+Conclusie:
+- happy-flow voor volledige text-based PDF factuur werkt correct.
+
+### Variant 12 — chaos
+Bestand:
+- `invoice_paul_-_real_like_-_12_chaos_01.pdf`
+
+Bewezen resultaat:
+- `invoice_address_match = inconclusive`
+- brand/model/mid/serial = `pass`
+- observed address fields bleven `null`
+
+Conclusie:
+- chaos-layout breekt CURRENT address extractie,
+  maar niet de andere text-based labeled fields.
+
+### Variant 13 — multi-page
+Bestand:
+- `invoice_paul_-_real_like_-_13_multi-page_01.pdf`
+
+Bewezen resultaat:
+- alle invoice checks = `pass`
+
+Conclusie:
+- multipage text-based PDF wordt CURRENT correct ondersteund.
+
+### Variant 14 — multi-page + chaos
+Bestand:
+- `invoice_paul_-_real_like_-_14_multi-page_chaos_01.pdf`
+
+Bewezen resultaat:
+- `invoice_address_match = inconclusive`
+- brand/model/mid/serial = `pass`
+- observed address fields bleven `null`
+
+Conclusie:
+- multipage op zichzelf is niet het probleem;
+- de bewezen limiet zit in address block reconstruction bij chaos-layouts.
+
+### Harde eindconclusie
+Analysis v1 ondersteunt CURRENT aantoonbaar:
+- text-based PDF facturen
+- multipage PDF facturen
+- mismatch-detectie voor:
+  - address
+  - brand
+  - model
+  - serial
+  - MID
+
+Analysis v1 ondersteunt CURRENT aantoonbaar níet robuust:
+- reconstructie van adresvelden wanneer straat/huisnummer/postcode/plaats
+  los en ongeordend door de PDF verspreid staan
+
+Auditmatig is dit gewenst gedrag:
+- geen false pass
+- geen verzonnen adreswaarden
+- veilige degradatie naar `inconclusive`
+
+## 2026-03-23 — Dossier frontend hardening: precheck/full-evaluate flow, analysis-weergave, export/dev-unlock UX
+
+Wijzigingen in `assets/js/pages/dossier.js`
+- Frontend dossierflow aangescherpt naar expliciete volgorde:
+  1. `api-dossier-evaluate(finalize=false, evaluation_mode="core")`
+  2. `api-dossier-verify(mode="refresh")`
+  3. `api-dossier-evaluate(finalize=false, evaluation_mode="full")`
+  4. `api-dossier-evaluate(finalize=true, evaluation_mode="full")`
+- “Dossier indienen” wordt client-side pas zichtbaar wanneer:
+  - `precheckOk === true`
+  - `dirtySincePrecheck === false`
+- Elke mutatie invalidate bestaande precheck client-side:
+  - access
+  - address
+  - charger save/delete
+  - document upload/delete
+  - consents save
+
+Analysis/UI
+- `analysis_readable` wordt nu leesbaar gerenderd in de dossier-UI:
+  - overall status
+  - charger-level resultaten
+  - document-level observed fields
+  - limitations
+  - summary
+- Locked dossiers tonen export/read-only analysis-context beter in de UI.
+
+Dev / ops
+- Frontend dev-unlock flow toegevoegd:
+  - `api-dossier-dev-unlock`
+  - alleen zichtbaar in dev-toegestane context
+  - zet client-side precheck-status terug naar ongeldig na unlock
+- Session runtime model in browser verder gehardend:
+  - localStorage key `enval_session_token:<dossier_id>`
+  - `t` blijft exclusief link-token voor initiële exchange
+
+Upload/UI
+- Client-side foto-optimalisatie actief gehouden
+- frontend hard caps expliciet in UI-flow:
+  - `UI_MAX_CHARGERS = 4`
+  - originele file cap 25MB
+  - finale upload cap 15MB
+
+Architecturale betekenis
+- Geen wijziging aan backend lifecycle of audit semantics.
+- Wel scherpere frontend discipline zodat review/lock/analysis-flow minder impliciet en minder foutgevoelig is.
+
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)

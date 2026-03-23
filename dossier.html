@@ -8,23 +8,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Enval – Dossier</title>
 
-    <meta name="robots" content="noindex,follow">
+    <meta name="robots" content="noindex,follow" />
     <link rel="canonical" href="https://www.enval.nl/dossier.html" />
-    <meta name="description" content="Dossieromgeving van Enval. Toegang verloopt via een persoonlijke dossierlink.">
+    <meta
+      name="description"
+      content="Dossieromgeving van Enval. Toegang verloopt via een persoonlijke dossierlink."
+    />
 
-    <!-- Flavicon -->
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16.png" />
     <link rel="stylesheet" href="/assets/css/style.css" />
-
   </head>
 
   <body>
-    <!-- ======================================================
-         Header / Nav
-         ====================================================== -->
-     <header>
+    <header>
       <div class="container header-inner">
         <div class="logo">
           <a href="/index.html" aria-label="Enval home">
@@ -45,7 +43,6 @@
         <nav id="siteNav">
           <a href="/index.html">Home</a>
           <a href="/aanmelden.html">Start Dossier</a>
-          <!-- a href="/pricing.html">Tarieven</a> -->
 
           <div class="nav-dd" role="none">
             <button class="nav-dd-btn" type="button" aria-haspopup="true" aria-expanded="false">
@@ -62,17 +59,13 @@
       </div>
     </header>
 
-
     <main>
       <section class="section">
         <div class="container">
-          <!-- ======================================================
-               Dossier header card (status + refresh)
-               ====================================================== -->
           <div class="card">
             <div class="statusbar">
               <div>
-                <h1 style="margin:0 0 6px 0;">Jouw Enval dossier</h1>
+                <h1 class="my-0">Jouw Enval dossier</h1>
                 <div class="muted small">
                   Dossier: <span id="dossierId" class="mono">-</span>
                 </div>
@@ -83,29 +76,25 @@
               </div>
             </div>
 
-            <div style="margin-top:14px;">
+            <div class="mt-14">
               <div class="muted">
-                Vul onderstaande stappen in. Na elke stap kun je het dossier laten controleren via <b>Review dossier</b>.
+                Vul onderstaande stappen in. Na elke stap kun je het dossier laten controleren via
+                <b>Review dossier</b>.
               </div>
-              <div id="lockedBanner" class="notice hidden" style="margin-top:10px;">
-                <b>Dit dossier is ingediend en staat in review.</b><br/>
+              <div id="lockedBanner" class="notice hidden mt-10">
+                <b>Dit dossier is ingediend en staat in review.</b><br />
                 Wijzigingen zijn nu vergrendeld.
               </div>
             </div>
           </div>
 
-          <!-- ======================================================
-               Grid: steps 1..6
-               ====================================================== -->
-          <div class="grid2" style="margin-top:18px;">
-            <!-- Step 1 -->
+          <div class="grid2 mt-18">
             <div class="card">
-              <h2 style="margin-top:0;">1) Toegang</h2>
+              <h2 class="mt-0">1) Toegang</h2>
 
               <form id="accessForm" class="form" novalidate>
                 <label><span>Voornaam</span><input type="text" name="first_name" placeholder="Voornaam" required /></label>
                 <label><span>Achternaam</span><input type="text" name="last_name" placeholder="Achternaam" required /></label>
-
                 <label><span>Mobiel (optioneel)</span><input type="text" name="customer_phone" placeholder="06xxxxxxxx of +316xxxxxxxx" /></label>
 
                 <label>
@@ -117,10 +106,7 @@
                     <option value="3">3</option>
                     <option value="4">4</option>
                   </select>
-                  <div class="small muted" style="margin-top:6px;">
-                    Meer dan 4 laadpalen? Neem contact op.
-                  </div>
-
+                  <div class="small muted mt-8">Meer dan 4 laadpalen? Neem contact op.</div>
                 </label>
 
                 <label>
@@ -136,46 +122,37 @@
                   <button id="btnAccessSave" class="btn primary full-width" type="submit">Opslaan</button>
                   <div id="accessState" class="small muted"></div>
                 </div>
-
               </form>
 
-              <div id="accessSummary" class="notice small" style="margin-top:1px;">laden…</div>
+              <div id="accessSummary" class="notice small">laden…</div>
             </div>
 
-            <!-- Step 2 -->
             <div class="card">
-              <h2 style="margin-top:0;">2) Adres</h2>
+              <h2 class="mt-0">2) Adres</h2>
 
               <form id="addressForm" class="form" novalidate>
                 <label><span>Postcode</span><input type="text" name="postcode" placeholder="1234AB" required /></label>
                 <label><span>Huisnummer</span><input type="text" name="house_number" placeholder="28" required /></label>
                 <label><span>Toevoeging (optioneel)</span><input type="text" name="suffix" placeholder="1H" /></label>
-
                 <label><span>Straat</span><input type="text" name="street_ro" readonly /></label>
                 <label><span>Plaats</span><input type="text" name="city_ro" readonly /></label>
 
                 <div class="form-actions">
                   <button id="btnAddressSave" type="submit" class="btn primary full-width" disabled>Opslaan</button>
-
-                  <!-- UI status bewust verborgen; audit info staat in Overzicht-box -->
                   <div id="addressState" class="small muted hidden"></div>
                 </div>
-
-
               </form>
 
-              <div id="addressSummary" class="notice small" style="margin-top:12px;">laden…</div>
+              <div id="addressSummary" class="notice small mt-12">laden…</div>
             </div>
 
-            <!-- Step 3 -->
             <div class="card">
-              <h2 style="margin-top:0;">3) Laadpalen</h2>
-              <div id="chargerHint" class="notice small" style="margin-bottom:10px;">laden…</div>
+              <h2 class="mt-0">3) Laadpalen</h2>
+              <div id="chargerHint" class="notice small mb-10">laden…</div>
 
               <form id="chargerForm" class="form" novalidate>
                 <input type="hidden" name="charger_id" />
 
-                <!-- gewenste volgorde -->
                 <label><span>Merk</span><select id="chargerBrand" required></select></label>
                 <label><span>Model</span><select id="chargerModel" required></select></label>
 
@@ -201,7 +178,7 @@
                 </div>
               </form>
 
-              <div style="margin-top:14px;">
+              <div class="mt-14">
                 <table class="table table-chargers">
                   <thead>
                     <tr>
@@ -220,11 +197,9 @@
               </div>
             </div>
 
-
-            <!-- Step 4 -->
             <div class="card">
-              <h2 style="margin-top:0;">4) Documenten uploaden</h2>
-              <div id="docsHint" class="notice small" style="margin-bottom:10px;">laden…</div>
+              <h2 class="mt-0">4) Documenten uploaden</h2>
+              <div id="docsHint" class="notice small mb-10">laden…</div>
 
               <form id="uploadForm" class="form" novalidate>
                 <label>
@@ -259,7 +234,7 @@
                 <div id="uploadState" class="small muted"></div>
               </form>
 
-              <div style="margin-top:14px;">
+              <div class="mt-14">
                 <table class="table table-docs">
                   <thead>
                     <tr>
@@ -276,28 +251,27 @@
               </div>
             </div>
 
-            <!-- Step 5 -->
             <div class="card">
-              <h2 style="margin-top:0;">5) Toestemmingen</h2>
+              <h2 class="mt-0">5) Toestemmingen</h2>
 
               <form id="consentsForm" class="form" novalidate>
                 <div class="checkbox-row">
                   <input type="checkbox" id="cTerms" />
                   <label for="cTerms">Ik ga akkoord met de <a href="/voorwaarden.html" target="_blank" rel="noopener">voorwaarden</a></label>
                 </div>
+
                 <div class="checkbox-row">
                   <input type="checkbox" id="cPrivacy" />
                   <label for="cPrivacy">Ik ga akkoord met de <a href="/privacyverklaring.html" target="_blank" rel="noopener">privacyverklaring</a></label>
                 </div>
+
                 <div class="checkbox-row">
                   <input type="checkbox" id="cMandaat" />
-                 <!-- <label for="cMandaat">Ik geef middels dit <a href="/mandaat.html" target="_blank" rel="noopener">mandaat</a> toestemming.</label> -->
                   <label for="cMandaat">
                     Ik geef Enval toestemming om mijn dossier te beheren (opslaan/structureren/controleren op volledigheid) en mij te benaderen over ontbrekende stukken.
                     Dit is geen garantie op inboeken of vergoeding.
                     Zie <a href="/mandaat.html" target="_blank" rel="noopener">toestemming & werkwijze</a>.
                   </label>
-
                 </div>
 
                 <button id="btnConsentsSave" class="btn primary full-width" type="submit">Opslaan</button>
@@ -306,40 +280,79 @@
               </form>
             </div>
 
-            <!-- Step 6 -->
             <div class="card">
-              <h2 style="margin-top:0;">6) Review</h2>
+              <h2 class="mt-0">6) Review</h2>
 
               <div id="statusExplain" class="muted small">laden…</div>
 
-              <div class="row" style="margin-top:10px; gap:10px; flex-wrap:wrap;">
+              <div class="row mt-10">
                 <button id="btnPrecheck" class="btn outline" type="button">Controleer volledigheid</button>
                 <button id="btnFinalize" class="btn primary" type="button">Dossier indienen</button>
               </div>
 
-              <div id="reviewState" class="small muted" style="margin-top:8px;"></div>
+              <div id="reviewState" class="mt-10"></div>
 
-              <div id="exportBox" class="notice hidden" style="margin-top:14px;">
+              <div id="exportBox" class="notice hidden mt-14">
                 <b>Export / Dev</b><br />
                 Zodra het dossier is ingediend, kunt u een overdraagbare export downloaden.
                 Dit is een dossier-export, geen garantie op inboeken of vergoeding.
 
-                <div class="row" style="margin-top:10px; gap:10px; flex-wrap:wrap;">
+                <div class="row mt-10">
                   <button id="btnExportDossier" class="btn outline" type="button">Exporteer dossier</button>
                 </div>
 
-                <div id="devUnlockBox" class="hidden" style="margin-top:10px;">
+                <div id="devUnlockBox" class="hidden mt-10">
                   <button id="btnDevUnlock" class="btn outline" type="button">Ontgrendel dossier (dev)</button>
-                  <div id="devUnlockState" class="small muted" style="margin-top:6px;"></div>
+                  <div id="devUnlockState" class="small muted mt-8"></div>
                 </div>
 
-                <div id="exportState" class="small muted" style="margin-top:8px;"></div>
+                <div id="exportState" class="small muted mt-8"></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="analysisSection" class="card hidden mt-18">
+            <div class="statusbar">
+              <div>
+                <h2 class="my-0">Analyse (dev)</h2>
+                <div class="muted small">Laat de laatste analysis-run zien op basis van de bestaande exportdata.</div>
+              </div>
+              <div class="row">
+                <button id="btnLoadAnalysis" class="btn outline" type="button">Laad analyse</button>
               </div>
             </div>
 
+            <div id="analysisState" class="small muted mt-10"></div>
+
+            <div id="analysisSummaryUi" class="mt-14">
+              <div class="card">
+                <h3 class="mt-0">Analyse samenvatting</h3>
+                <div class="small">
+                  Overall: <span id="analysisOverallBadge"></span>
+                </div>
+                <div id="analysisLegend" class="small muted mt-8"></div>
+                <div id="analysisSummaryMeta" class="small mt-8"></div>
+              </div>
+            </div>
+
+            <div id="analysisChargersUi" class="mt-14">
+              <div class="card">
+                <h3 class="mt-0">Analyse per laadpaal</h3>
+                <div id="analysisChargersEmpty" class="muted small hidden">Geen analysis charger data.</div>
+                <div id="analysisChargersList"></div>
+              </div>
+            </div>
+
+            <div id="analysisDocumentsUi" class="mt-14">
+              <div class="card">
+                <h3 class="mt-0">Analyse per document</h3>
+                <div id="analysisDocumentsEmpty" class="muted small hidden">Geen analysis document data.</div>
+                <div id="analysisDocumentsList"></div>
+              </div>
+            </div>
           </div>
 
-          <div style="height:24px;"></div>
+          <div class="dossier-spacer"></div>
         </div>
       </section>
     </main>
@@ -351,11 +364,9 @@
         <div class="footer-links">
           <a href="/privacyverklaring.html">Privacyverklaring</a>
           <a href="/voorwaarden.html">Voorwaarden</a>
-          <!-- <a href="/mandaat.html">Mandaat</a> -->
         </div>
       </div>
     </footer>
-
 
     <script src="/assets/js/config.runtime.js"></script>
     <script src="/assets/js/config.js"></script>

@@ -2,7 +2,7 @@
 
 # ENVAL — Global Product & Phase Plan (CURRENT)
 
-Statusdatum: 2026-03-02 
+Statusdatum: 2026-03-23 
 Repo: /Users/daankoote/dev/enval  
 Branch context: feature/dev (main = pilot index)
 
@@ -790,5 +790,47 @@ Open structurele verbetering (nog niet gebouwd):
 - dev-only session inject helper of dev-only refresh flow in UI
 - of langere session TTL in dev
 
+### Update 2026-03-23 — Dossier UI hardening: precheck/finalize discipline, analysis-weergave, export en dev-unlock
+
+Wat vandaag frontend-side is aangescherpt in `assets/js/pages/dossier.js`:
+
+- De dossierwizard gebruikt nu expliciet een **precheck → finalize** discipline:
+  - `api-dossier-evaluate(finalize=false, evaluation_mode="core")`
+  - daarna `api-dossier-verify`
+  - daarna `api-dossier-evaluate(finalize=false, evaluation_mode="full")`
+  - pas daarna mag `api-dossier-evaluate(finalize=true, evaluation_mode="full")` worden uitgevoerd
+- “Dossier indienen” blijft verborgen totdat:
+  - `precheckOk === true`
+  - `dirtySincePrecheck === false`
+- Elke mutatie in het dossier invalidate expliciet de eerdere precheck:
+  - access
+  - adres
+  - charger save/delete
+  - document upload/delete
+  - consents
+
+Nieuwe of aangescherpte frontend-waarheden:
+- `api-dossier-verify` wordt nu actief gebruikt vanuit de dossier-UI om analysis te verversen vóór full evaluate.
+- Analysis-output (`analysis_readable`) wordt in de UI leesbaar gemaakt:
+  - overall status
+  - charger-resultaten
+  - document-level observed/limitations/summary
+- Export blijft alleen beschikbaar op locked dossiers.
+- Dev unlock is nu ook als expliciete frontend dev-flow aanwezig:
+  - `api-dossier-dev-unlock`
+  - alleen zichtbaar wanneer dev unlock is toegestaan
+  - unlock zet de precheck-status client-side terug naar ongeldig
+
+Upload/UI aanscherpingen:
+- Client-side foto-optimalisatie blijft actief voor `foto_laadpunt`.
+- UI-cap blijft 4 laadpalen (`UI_MAX_CHARGERS`) voor self-serve.
+- Session runtime truth in de browser blijft:
+  - localStorage key `enval_session_token:<dossier_id>`
+  - query param `t` is uitsluitend link-token voor initiële exchange
+
+Belangrijke architectuurbetekenis:
+- Dit verandert de backend lifecycle niet.
+- Dit maakt de frontend alleen explicieter en strakker aligned met de bestaande audit-first reviewflow.
+- Analysis blijft ondersteunend en derived; geen lock- of compliance-engine.
 
 # EINDE 00_GLOBAL.md (current state, rewrite-ok)

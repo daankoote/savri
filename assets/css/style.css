@@ -1355,6 +1355,21 @@
 
   /* DOSSIER */
   .notice { background:#f8fafc; border:1px solid #e2e8f0; padding:10px; border-radius:10px; }
+  .dossier-spacer { height: 24px; }
+
+  .table-wrap { overflow-x: auto; }
+
+  .analysis-block{
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
+  }
+
+  .analysis-pre{
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    margin: 6px 0 0 0;
+  }
   .danger { color:#b91c1c; }
   .ok { color:#15803d; }
 
@@ -1524,48 +1539,155 @@
     border-radius: 16px;
   }
 
-  @media (max-width: 899px){
+    @media (max-width: 899px){
     .media-slot{ display: none; }
   }
- 
-  /* ======================================================
-    UTILITIES
-    - Kleine helpers die overal mogen gelden
-  ====================================================== */
+}
 
-  @layer utilities {
-    .hidden { display: none !important; }
-    .muted { color: #64748b; }
-    .small { font-size: 0.85rem; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+/* ======================================================
+   UTILITIES
+   - Kleine helpers die overal mogen gelden
+====================================================== */
 
-    /* (optioneel) kleine lists */
-    .missing-list { margin: 8px 0 0 18px; }
-    .statuslist { margin: 8px 0 0 18px; padding: 0; }
-    .statuslist li { margin: 4px 0; }
-    .accent-title{ color: var(--brand);
-    }
-    
-    /* spacing utilities (legacy pages: remove inline style="...") */
-    .mt-0 { margin-top: 0 !important; }
-    .mt-8 { margin-top: 8px !important; }
-    .mt-10 { margin-top: 10px !important; }
-    .mt-12 { margin-top: 12px !important; }
-    .mt-14 { margin-top: 14px !important; }
-    .mt-18 { margin-top: 18px !important; } /* wrapper spacing */
+@layer utilities {
+  .hidden { display: none !important; }
+  .muted { color: #64748b; }
+  .small { font-size: 0.85rem; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
 
-    .mb-0 { margin-bottom: 0 !important; }
-    .mb-10 { margin-bottom: 10px !important; }
-    .mb-14 { margin-bottom: 14px !important; }
-
-    .my-0 { margin-top: 0 !important; margin-bottom: 0 !important; }
-
-    /* layout utilities (voor inline flex-rows verwijderen) */
-    .flex { display: flex !important; }
-    .items-start { align-items: flex-start !important; }
-    .gap-12 { gap: 12px !important; }
-
+  /* review / dossier status UI */
+  .review-panel{
+    margin-top: 10px;
+    display: grid;
+    gap: 12px;
   }
+
+  .review-box{
+    border: 1px solid var(--soft-border);
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
+  }
+
+  .review-box--error{
+    border-color: rgba(239,68,68,0.22);
+    background: rgba(239,68,68,0.04);
+  }
+
+  .review-box--warn{
+    border-color: rgba(245,158,11,0.24);
+    background: rgba(245,158,11,0.06);
+  }
+
+  .review-box--ok{
+    border-color: rgba(16,185,129,0.24);
+    background: rgba(16,185,129,0.06);
+  }
+
+  .review-title{
+    margin: 0 0 8px 0;
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--ink);
+  }
+
+  .review-intro{
+    margin: 0;
+    font-size: 0.9rem;
+    color: rgba(15,23,42,0.74);
+  }
+
+  .review-items{
+    display: grid;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .review-item{
+    display: grid;
+    grid-template-columns: 24px 1fr;
+    gap: 10px;
+    align-items: start;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.72);
+    border: 1px solid rgba(15,23,42,0.08);
+    min-width: 0;
+  }
+
+  .review-item__icon{
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 900;
+    line-height: 1;
+    margin-top: 1px;
+    border: 1px solid rgba(15,23,42,0.10);
+    background: rgba(15,23,42,0.04);
+    color: rgba(15,23,42,0.72);
+    flex: 0 0 auto;
+  }
+
+  .review-item--error .review-item__icon{
+    background: rgba(239,68,68,0.12);
+    border-color: rgba(239,68,68,0.18);
+    color: #991b1b;
+  }
+
+  .review-item--warn .review-item__icon{
+    background: rgba(245,158,11,0.14);
+    border-color: rgba(245,158,11,0.22);
+    color: #92400e;
+  }
+
+  .review-item--ok .review-item__icon{
+    background: rgba(16,185,129,0.14);
+    border-color: rgba(16,185,129,0.20);
+    color: #065f46;
+  }
+
+  .review-item__text{
+    min-width: 0;
+    font-size: 0.92rem;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+  }
+
+  .review-item__sub{
+    display: block;
+    margin-top: 4px;
+    font-size: 0.82rem;
+    color: rgba(15,23,42,0.62);
+  }
+
+  .statuslist { margin: 8px 0 0 18px; padding: 0; }
+  .statuslist li { margin: 4px 0; }
+  .accent-title{ color: var(--brand); }
+  
+  /* spacing utilities (legacy pages: remove inline style="...") */
+  .mt-0 { margin-top: 0 !important; }
+  .mt-8 { margin-top: 8px !important; }
+  .mt-10 { margin-top: 10px !important; }
+  .mt-12 { margin-top: 12px !important; }
+  .mt-14 { margin-top: 14px !important; }
+  .mt-18 { margin-top: 18px !important; }
+  .mt-24 { margin-top: 24px !important; }
+
+  .mb-0 { margin-bottom: 0 !important; }
+  .mb-10 { margin-bottom: 10px !important; }
+  .mb-14 { margin-bottom: 14px !important; }
+
+  .my-0 { margin-top: 0 !important; margin-bottom: 0 !important; }
+
+  /* layout utilities */
+  .flex { display: flex !important; }
+  .items-start { align-items: flex-start !important; }
+  .gap-12 { gap: 12px !important; }
 }
 
 /* HOLDING PAGE FIX (2026-03-03) DEZE TWEE DINGEN MOGEN GEWIST WORDEN NADAT AANMELDEN WEER CORRECT IS*/

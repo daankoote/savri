@@ -459,6 +459,50 @@ Belangrijk:
 - Ze vervangen geen bestaande dossier lifecycle events
 - Analysis beïnvloedt CURRENT geen lock/review gate
 
+### Parser boundary (CURRENT, bewezen 2026-03-22)
+
+Analysis v1 ondersteunt text-based PDF facturen ook wanneer relevante velden over meerdere pagina’s zijn verspreid,
+zolang de velden zelf nog herkenbaar en label-/blok-achtig aanwezig zijn.
+
+Bewezen:
+- multipage factuur met:
+  - address op page 1
+  - brand/model op page 2
+  - serial/MID op page 3
+  → alle invoice checks kunnen CURRENT `pass` geven
+
+Huidige bewezen limiet:
+- address extractie is afhankelijk van een herkenbaar address block
+- bij chaos-layouts waar straat/huisnummer/postcode/plaats los en ongeordend door de PDF staan,
+  worden address fields CURRENT niet gereconstrueerd
+- resultaat is dan:
+  - `invoice_address_match = inconclusive`
+  - met reason `one_or_more_address_parts_missing`
+
+Belangrijk:
+- Dit is CURRENT geen multipage-probleem
+- Dit is CURRENT een address block reconstruction limiet
+
+Bewezen boundary varianten (Paul):
+- `invoice_paul_-_real_like_-_10_serial_wrong_01.pdf`
+  - `invoice_serial_match = fail`
+- `invoice_paul_-_real_like_-_11_all_correct_01.pdf`
+  - alle invoice checks = `pass`
+- `invoice_paul_-_real_like_-_12_chaos_01.pdf`
+  - `invoice_address_match = inconclusive`
+  - brand/model/mid/serial = `pass`
+- `invoice_paul_-_real_like_-_13_multi-page_01.pdf`
+  - alle invoice checks = `pass`
+- `invoice_paul_-_real_like_-_14_multi-page_chaos_01.pdf`
+  - `invoice_address_match = inconclusive`
+  - brand/model/mid/serial = `pass`
+
+Auditinterpretatie:
+- CURRENT gedrag is bewust veilig:
+  - geen false pass bij onduidelijk adres
+  - geen verzonnen address reconstruction
+  - degradeert naar `inconclusive` i.p.v. normatieve claim
+
 ## 9) System — Mail (dossier-scoped on-chain vanaf 2026-02-09)
 Regel: mail audit events worden alleen gelogd wanneer `outbound_emails.dossier_id != null`.
 
