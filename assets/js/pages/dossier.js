@@ -24,16 +24,6 @@ const PHOTO_JPEG_QUALITY = 0.78;     // pragmatisch: kwaliteit vs size
  */
 function $(id) { return document.getElementById(id); }
 
-/**
- * escapeHtml(s)
- * Doel: veilige HTML output (tabellen/labels)
- */
-function escapeHtml(s) {
-  return String(s ?? "")
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-}
-
 function trunc(s, max) {
   const str = String(s ?? "");
   if (!max || str.length <= max) return str;
@@ -165,41 +155,52 @@ function populateBrandModel() {
   const modelSel = $("chargerModel");
   if (!brandSel || !modelSel) return;
 
-  brandSel.innerHTML =
-    `<option value="">Kies…</option>` +
-    Object.keys(BRAND_MODELS)
-      .map((b) => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`)
-      .join("") +
-    `<option value="Anders">Anders…</option>`;
+  setSelectOptions(
+    brandSel,
+    [
+      ...Object.keys(BRAND_MODELS).map((brand) => ({ value: brand, label: brand })),
+      { value: "Anders", label: "Anders…" },
+    ],
+    "Kies…"
+  );
 
-  modelSel.innerHTML = `<option value="">Kies eerst merk…</option>`;
+  setSelectOptions(modelSel, [], "Kies eerst merk…");
   modelSel.disabled = true;
 
   brandSel.addEventListener("change", () => {
     const brand = brandSel.value;
 
     if (!brand) {
+      setSelectOptions(modelSel, [], "Kies eerst merk…");
       modelSel.disabled = true;
-      modelSel.innerHTML = `<option value="">Kies eerst merk…</option>`;
       toggleChargerNotes();
       return;
     }
 
     if (brand === "Anders") {
-      modelSel.disabled = true;
-      modelSel.innerHTML = `<option value="Onbekend">Vul merk/model in bij Toelichting</option>`;
+      clearNode(modelSel);
+
+      const opt = document.createElement("option");
+      opt.value = "Onbekend";
+      opt.textContent = "Vul merk/model in bij Toelichting";
+      modelSel.appendChild(opt);
+
       modelSel.value = "Onbekend";
+      modelSel.disabled = true;
       toggleChargerNotes();
       return;
     }
 
     const models = BRAND_MODELS[brand] || [];
+    setSelectOptions(
+      modelSel,
+      [
+        ...models.map((model) => ({ value: model, label: model })),
+        { value: "Anders", label: "Anders…" },
+      ],
+      "Kies…"
+    );
     modelSel.disabled = false;
-    modelSel.innerHTML =
-      `<option value="">Kies…</option>` +
-      models.map((m) => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join("") +
-      `<option value="Anders">Anders…</option>`;
-
     toggleChargerNotes();
   });
 
@@ -245,6 +246,7 @@ function cleanupLegacySessionKey() {
 }
 
 let current = null;
+let latestPrecheckAnalysis = null;
 
 function downloadJsonFile(filename, data) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json;charset=utf-8" });
@@ -263,6 +265,699 @@ function downloadJsonFile(filename, data) {
 function exportFilename() {
   const safeId = String(dossier_id || "unknown").replace(/[^a-zA-Z0-9_-]/g, "");
   return `enval-dossier-export-${safeId}.json`;
+}
+
+function setText(id, value) {
+  const el = $(id);
+  if (el) el.textContent = value;
+}
+
+
+function clearNode(node) {
+  if (node) node.replaceChildren();
+}
+
+function createEl(tag, className, text) {
+  const el = document.createElement(tag);
+  if (className) el.className = className;
+  if (text != null) el.textContent = text;
+  return el;
+}
+
+function appendTextLine(parent, label, value, valueClassName = "") {
+  const line = document.createElement("div");
+
+  const labelNode = document.createTextNode(`${label}: `);
+  line.appendChild(labelNode);
+
+  const valueNode = document.createElement("b");
+  if (valueClassName) valueNode.className = valueClassName;
+  valueNode.textContent = value;
+  line.appendChild(valueNode);
+
+  parent.appendChild(line);
+}
+
+function appendMutedLine(parent, text, className = "muted small") {
+  const div = document.createElement("div");
+  div.className = className;
+  div.textContent = text;
+  parent.appendChild(div);
+}
+
+function createReviewItemNode(itemToneClass, icon, text, sub) {
+  const item = document.createElement("div");
+  item.className = `review-item ${itemToneClass}`;
+
+  const iconNode = document.createElement("div");
+  iconNode.className = "review-item__icon";
+  iconNode.textContent = icon;
+
+  const textWrap = document.createElement("div");
+  textWrap.className = "review-item__text";
+  textWrap.textContent = text || "";
+
+  if (sub) {
+    const subNode = document.createElement("span");
+    subNode.className = "review-item__sub";
+    subNode.textContent = sub;
+    textWrap.appendChild(subNode);
+  }
+
+  item.appendChild(iconNode);
+  item.appendChild(textWrap);
+
+  return item;
+}
+
+function setSelectOptions(selectEl, options, placeholder) {
+  if (!selectEl) return;
+
+  clearNode(selectEl);
+
+  if (placeholder != null) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = placeholder;
+    selectEl.appendChild(opt);
+  }
+
+  options.forEach((entry) => {
+    const opt = document.createElement("option");
+    opt.value = String(entry.value ?? "");
+    opt.textContent = String(entry.label ?? "");
+    selectEl.appendChild(opt);
+  });
+}
+
+function clearAnalysisUi() {
+  renderPillInto($("analysisOverallBadge"), "-");
+  setText("analysisLegend", "");
+  setText("analysisSummaryMeta", "");
+
+  const chargersList = $("analysisChargersList");
+  const documentsList = $("analysisDocumentsList");
+
+  if (chargersList) chargersList.replaceChildren();
+  if (documentsList) documentsList.replaceChildren();
+
+  $("analysisChargersEmpty")?.classList.add("hidden");
+  $("analysisDocumentsEmpty")?.classList.add("hidden");
+}
+
+function renderReviewStatePanel(opts) {
+  const el = $("reviewState");
+  if (!el) return;
+
+  clearNode(el);
+
+  const tone = String(opts?.tone || "error").toLowerCase();
+  const title = String(opts?.title || "").trim();
+  const intro = String(opts?.intro || "").trim();
+  const items = Array.isArray(opts?.items) ? opts.items.filter(Boolean) : [];
+
+  const boxToneClass =
+    tone === "ok" ? "review-box--ok" :
+    tone === "warn" ? "review-box--warn" :
+    "review-box--error";
+
+  const itemToneClass =
+    tone === "ok" ? "review-item--ok" :
+    tone === "warn" ? "review-item--warn" :
+    "review-item--error";
+
+  const icon =
+    tone === "ok" ? "✓" :
+    tone === "warn" ? "!" :
+    "×";
+
+  const panel = createEl("div", "review-panel");
+  const box = createEl("div", `review-box ${boxToneClass}`);
+
+  if (title) {
+    box.appendChild(createEl("div", "review-title", title));
+  }
+
+  if (intro) {
+    box.appendChild(createEl("div", "review-intro", intro));
+  }
+
+  if (items.length) {
+    const itemsWrap = createEl("div", "review-items");
+
+    items.forEach((item) => {
+      if (typeof item === "string") {
+        itemsWrap.appendChild(createReviewItemNode(itemToneClass, icon, item, ""));
+        return;
+      }
+
+      const text = String(item?.text || "").trim();
+      const sub = String(item?.sub || "").trim();
+
+      itemsWrap.appendChild(createReviewItemNode(itemToneClass, icon, text, sub));
+    });
+
+    box.appendChild(itemsWrap);
+  }
+
+  panel.appendChild(box);
+  el.appendChild(panel);
+}
+
+function renderMissingStepsPanel(missing, fallbackMessage) {
+  const items = Array.isArray(missing) ? missing : [];
+  renderReviewStatePanel({
+    tone: "error",
+    title: "Dossier is nog niet volledig",
+    intro: items.length
+      ? "Vul eerst alle onderstaande onderdelen aan voordat documentcontrole kan starten."
+      : (fallbackMessage || "Er ontbreken nog onderdelen."),
+    items,
+  });
+}
+
+function renderBlockingAnalysisPanel(args) {
+  const missingRaw = Array.isArray(args?.missing) ? args.missing : [];
+  const blockingRaw = Array.isArray(args?.blocking) ? args.blocking : [];
+  const warningsRaw = Array.isArray(args?.warnings) ? args.warnings : [];
+  const fallbackMessage = String(args?.fallbackMessage || "").trim();
+
+  const missing = missingRaw
+    .map(humanizeMissingStep)
+    .filter(Boolean);
+
+  const blocking = blockingRaw
+    .map(humanizeBlockingReason)
+    .filter(Boolean);
+
+  const warnings = warningsRaw
+    .map(humanizeWarning)
+    .filter(Boolean);
+
+  const items = [];
+
+  for (const x of missing) {
+    items.push({
+      text: x,
+      sub: "Ontbrekend of nog niet volledig ingevuld.",
+    });
+  }
+
+  for (const x of blocking) {
+    items.push({
+      text: x,
+      sub: "Deze controle blokkeert indiening.",
+    });
+  }
+
+  for (const x of warnings) {
+    items.push({
+      text: x,
+      sub: "Dit is een waarschuwing en blokkeert indiening niet.",
+    });
+  }
+
+  renderReviewStatePanel({
+    tone: "error",
+    title: "Dossier kan nog niet worden ingediend",
+    intro: items.length
+      ? "De onderstaande punten zijn gevonden tijdens controle van volledigheid en documentinhoud."
+      : (fallbackMessage || "De controle blokkeert indiening."),
+    items,
+  });
+}
+
+function renderPrecheckSuccessPanel(warnings) {
+  const warnItems = Array.isArray(warnings)
+    ? warnings.map(humanizeWarning).filter(Boolean)
+    : [];
+
+  if (!warnItems.length) {
+    renderReviewStatePanel({
+      tone: "ok",
+      title: "Dossier klaar voor indiening",
+      intro: "Volledigheid en documentcontrole zijn geslaagd. U kunt het dossier nu indienen.",
+      items: [],
+    });
+    return;
+  }
+
+  renderReviewStatePanel({
+    tone: "warn",
+    title: "Dossier klaar voor indiening",
+    intro: "Het dossier mag worden ingediend. Hieronder staan nog aandachtspunten die niet blokkeren.",
+    items: warnItems.map((x) => ({
+      text: x,
+      sub: "Niet-blokkerende waarschuwing.",
+    })),
+  });
+}
+
+function normalizeApiErrorPayload(err, fallbackMessage = "Controle mislukt.") {
+  const payload =
+    err?.body ||
+    err?.payload ||
+    err?.data ||
+    err?.details ||
+    err?.response?.body ||
+    err?.responseJSON ||
+    err?.json ||
+    null;
+
+  return {
+    ok: false,
+    error: String(
+      payload?.error ||
+      payload?.message ||
+      err?.message ||
+      fallbackMessage
+    ).trim(),
+    missingSteps: Array.isArray(payload?.missingSteps) ? payload.missingSteps : [],
+    blocking_reasons: Array.isArray(payload?.blocking_reasons) ? payload.blocking_reasons : [],
+    warnings: Array.isArray(payload?.warnings) ? payload.warnings : [],
+  };
+}
+
+function humanizeMissingStep(step) {
+  const s = String(step || "").trim();
+
+  if (!s) return "";
+
+  if (s.startsWith("1)")) return "Stap 1 is nog niet compleet ingevuld.";
+  if (s.startsWith("2)")) return "Stap 2 (adres) is nog niet compleet ingevuld.";
+  if (s.includes("exact aantal")) return "Het aantal ingevulde laadpalen klopt nog niet met het gekozen aantal laadpunten.";
+  if (s.includes("MID-nummer per laadpaal verplicht")) return "Niet elke laadpaal heeft een MID-nummer.";
+  if (s.includes("Documenten")) return "Niet voor elke laadpaal zijn de vereiste documenten toegevoegd en bevestigd.";
+  if (s.startsWith("5)")) return "Stap 5 (toestemmingen) is nog niet compleet.";
+  if (s.startsWith("6)")) return "";
+
+  return s;
+}
+
+function humanizeBlockingReason(reason) {
+  const s = String(reason || "").trim();
+
+  if (!s) return "";
+
+  if (s.startsWith("invoice_mid_match:")) {
+    return "Het MID-nummer op de factuur komt niet overeen met het MID-nummer van de laadpaal in het dossier.";
+  }
+
+  if (s.startsWith("invoice_serial_match:")) {
+    return "Het serienummer op de factuur komt niet overeen met het serienummer van de laadpaal in het dossier.";
+  }
+
+  if (s.startsWith("invoice_address_match:")) {
+    if (s.includes("onvoldoende zeker")) {
+      return "Het adres kon niet voldoende zeker uit de factuur worden gelezen.";
+    }
+    return "Het adres op de factuur komt niet overeen met het dossieradres.";
+  }
+
+  if (s.includes("onvoldoende zeker")) {
+    return "Een verplicht gegeven kon niet voldoende zeker uit de factuur worden gelezen.";
+  }
+
+  if (s.includes("niet uitgevoerd")) {
+    return "Een verplichte documentcontrole is niet uitgevoerd.";
+  }
+
+  if (s.includes("factuur-analyse is technisch mislukt")) {
+    return "De factuurcontrole is technisch mislukt. Probeer het opnieuw of gebruik een beter leesbaar document.";
+  }
+
+  if (s.includes("Geen bruikbare factuur-analyse beschikbaar")) {
+    return "De factuur kon niet bruikbaar worden geanalyseerd.";
+  }
+
+  if (s.includes("Verplichte factuurchecks ontbreken")) {
+    return "De verplichte factuurcontroles ontbreken.";
+  }
+
+  if (s.includes("Analyse ontbreekt of is nog niet uitgevoerd")) {
+    return "De documentcontrole is nog niet uitgevoerd.";
+  }
+
+  return s;
+}
+
+function humanizeWarning(warning) {
+  const s = String(warning || "").trim();
+
+  if (!s) return "";
+
+  if (s.includes("Foto-analyse is nog niet geïmplementeerd")) {
+    return "De foto is wel aanwezig, maar foto-inhoud wordt op dit moment nog niet automatisch gecontroleerd.";
+  }
+
+  if (s.startsWith("invoice_brand_match:")) {
+    return "Merk op de factuur kon niet betrouwbaar worden bevestigd, maar dit blokkeert indiening niet.";
+  }
+
+  if (s.startsWith("invoice_model_match:")) {
+    return "Model op de factuur kon niet betrouwbaar worden bevestigd, maar dit blokkeert indiening niet.";
+  }
+
+  return s;
+}
+
+function analysisStatusMeta(status) {
+  const s = String(status || "").toLowerCase();
+
+  if (s === "pass") return { cls: "pill ok", text: "pass" };
+  if (s === "fail") return { cls: "pill err", text: "fail" };
+  if (s === "inconclusive") return { cls: "pill warn", text: "inconclusive" };
+  if (s === "not_checked") return { cls: "pill", text: "not_checked" };
+  if (s === "partial_pass") return { cls: "pill warn", text: "partial_pass" };
+  if (s === "completed") return { cls: "pill", text: "completed" };
+
+  return { cls: "pill", text: String(status || "-") };
+}
+
+function renderPillInto(container, status) {
+  if (!container) return;
+  container.replaceChildren();
+
+  const meta = analysisStatusMeta(status);
+  const span = document.createElement("span");
+  span.className = meta.cls;
+  span.textContent = meta.text;
+  container.appendChild(span);
+}
+
+function createAnalysisBlock() {
+  const block = document.createElement("div");
+  block.className = "analysis-block";
+  return block;
+}
+
+function createAnalysisPre(value) {
+  const pre = document.createElement("pre");
+  pre.className = "mono analysis-pre";
+  pre.textContent = JSON.stringify(value ?? {}, null, 2);
+  return pre;
+}
+
+function createAnalysisTable(headers, rows) {
+  const wrap = document.createElement("div");
+  wrap.className = "table-wrap mt-10";
+
+  const table = document.createElement("table");
+  table.className = "table table-docs";
+
+  const thead = document.createElement("thead");
+  const headRow = document.createElement("tr");
+
+  headers.forEach((label) => {
+    const th = document.createElement("th");
+    th.textContent = label;
+    headRow.appendChild(th);
+  });
+
+  thead.appendChild(headRow);
+
+  const tbody = document.createElement("tbody");
+
+  rows.forEach((row) => {
+    const tr = document.createElement("tr");
+
+    row.forEach((cell) => {
+      const td = document.createElement("td");
+
+      if (cell.className) td.className = cell.className;
+      if (cell.title) td.title = cell.title;
+
+      if (cell.node) {
+        td.appendChild(cell.node);
+      } else {
+        td.textContent = cell.text || "";
+      }
+
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(thead);
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+
+  return wrap;
+}
+
+function createSimpleCell(text, className = "", title = "") {
+  const td = document.createElement("td");
+  if (className) td.className = className;
+  if (title) td.title = title;
+  td.textContent = text;
+  return td;
+}
+
+function createIconButton({ className = "", label = "", title = "", action = "", id = "" }) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = className;
+  button.setAttribute("aria-label", label);
+  button.title = title;
+  button.dataset.act = action;
+  button.dataset.id = id;
+  button.textContent = "×";
+  return button;
+}
+
+function createRightActionCell(button) {
+  const td = document.createElement("td");
+  td.className = "right";
+
+  const stack = document.createElement("div");
+  stack.className = "btnstack";
+  stack.appendChild(button);
+
+  td.appendChild(stack);
+  return td;
+}
+
+function createStatusListItem(serial, invoiceCount, photoCount) {
+  const li = document.createElement("li");
+
+  const serialSpan = document.createElement("span");
+  serialSpan.className = "mono";
+  serialSpan.textContent = serial;
+
+  const invoiceStrong = document.createElement("b");
+  invoiceStrong.textContent = String(invoiceCount);
+
+  const photoStrong = document.createElement("b");
+  photoStrong.textContent = String(photoCount);
+
+  const slash = document.createElement("span");
+  slash.className = "muted";
+  slash.textContent = "/";
+
+  li.appendChild(serialSpan);
+  li.appendChild(document.createTextNode(": facturen "));
+  li.appendChild(invoiceStrong);
+  li.appendChild(document.createTextNode(invoiceCount >= 1 ? " ✅ " : " ⏳ "));
+  li.appendChild(slash);
+  li.appendChild(document.createTextNode(" foto's "));
+  li.appendChild(photoStrong);
+  li.appendChild(document.createTextNode(photoCount >= 1 ? " ✅" : " ⏳"));
+
+  return li;
+}
+
+function renderAnalysisUiEmptyState() {
+  const locked = isLocked();
+  const hasCachedAnalysis = !!latestPrecheckAnalysis;
+
+  const section = $("analysisSection");
+  if (section) {
+    section.classList.toggle("hidden", !(locked || hasCachedAnalysis));
+  }
+
+  const loadBtn = $("btnLoadAnalysis");
+  if (loadBtn) {
+    loadBtn.classList.add("hidden");
+    loadBtn.disabled = true;
+  }
+
+  if (hasCachedAnalysis) {
+    setText("analysisState", `Analyse geladen. Run: ${latestPrecheckAnalysis.run_id || "-"}`);
+    renderAnalysisExportData({ analysis_readable: latestPrecheckAnalysis });
+    return;
+  }
+
+  if (!locked) {
+    setText("analysisState", "");
+    clearAnalysisUi();
+    return;
+  }
+
+  setText("analysisState", "Analyse wordt getoond zodra deze beschikbaar is.");
+}
+
+
+
+function renderAnalysisExportData(data) {
+  const readable = data?.analysis_readable || null;
+  const summary = readable?.summary || {};
+  const chargerSummary = summary?.charger_analysis || {};
+  const docSummary = summary?.document_analysis || {};
+  const chargers = Array.isArray(readable?.chargers) ? readable.chargers : [];
+  const documents = Array.isArray(readable?.documents) ? readable.documents : [];
+
+  renderPillInto($("analysisOverallBadge"), readable?.overall_status || "not_run");
+
+  setText(
+    "analysisLegend",
+    "Let op: pass betekent dat een specifiek veld uit een document is gelezen en inhoudelijk matcht met het dossier of de laadpaal. not_checked betekent dat het document wel aanwezig is, maar dat die analyse nog niet is geïmplementeerd.",
+  );
+
+  setText(
+    "analysisSummaryMeta",
+    [
+      `Run ID: ${readable?.run_id || "-"}`,
+      `Chargers seen: ${summary?.chargers_seen ?? "-"}`,
+      `Pass: ${chargerSummary?.pass ?? 0} · Fail: ${chargerSummary?.fail ?? 0} · Inconclusive: ${chargerSummary?.inconclusive ?? 0} · Not checked: ${chargerSummary?.not_checked ?? 0}`,
+      `Documents completed: ${docSummary?.completed ?? 0} / ${docSummary?.total ?? 0}`,
+    ].join("\n"),
+  );
+
+  const chargersList = $("analysisChargersList");
+  const documentsList = $("analysisDocumentsList");
+
+  if (chargersList) chargersList.replaceChildren();
+  if (documentsList) documentsList.replaceChildren();
+
+  $("analysisChargersEmpty")?.classList.toggle("hidden", chargers.length > 0);
+  $("analysisDocumentsEmpty")?.classList.toggle("hidden", documents.length > 0);
+
+  chargers.forEach((ch) => {
+    if (!chargersList) return;
+
+    const label = ch?.charger_label || {};
+    const results = Array.isArray(ch?.analysis_results) ? ch.analysis_results : [];
+
+    const block = createAnalysisBlock();
+
+    const head = document.createElement("div");
+    head.className = "small";
+
+    const strong = document.createElement("b");
+    strong.textContent = `${label?.brand || "-"} ${label?.model || "-"}`.trim();
+
+    const snLine = document.createElement("div");
+    snLine.appendChild(document.createTextNode("SN: "));
+    const snValue = document.createElement("span");
+    snValue.className = "mono";
+    snValue.textContent = label?.serial_number || "-";
+    snLine.appendChild(snValue);
+
+    const midLine = document.createElement("div");
+    midLine.appendChild(document.createTextNode("MID: "));
+    const midValue = document.createElement("span");
+    midValue.className = "mono";
+    midValue.textContent = label?.mid_number || "-";
+    midLine.appendChild(midValue);
+
+    head.appendChild(strong);
+    head.appendChild(document.createElement("br"));
+    head.appendChild(snLine);
+    head.appendChild(midLine);
+
+    const rows = results.map((r) => {
+      const statusNodeWrap = document.createElement("div");
+      renderPillInto(statusNodeWrap, r?.status || "-");
+
+      return [
+        { text: r?.analysis_code || "-", className: "mono" },
+        { node: statusNodeWrap },
+        {
+          text: trunc(r?.source_document_filename || "-", 42),
+          title: r?.source_document_filename || "-",
+        },
+        {
+          text: trunc(r?.reason || "-", 42),
+          title: r?.reason || "-",
+        },
+      ];
+    });
+
+    block.appendChild(head);
+    block.appendChild(
+      createAnalysisTable(
+        ["Code", "Status", "Bronbestand", "Reason"],
+        rows,
+      ),
+    );
+
+    chargersList.appendChild(block);
+  });
+
+  documents.forEach((d) => {
+    if (!documentsList) return;
+
+    const observed = d?.observed_fields || {};
+    const limitations = Array.isArray(d?.limitations) ? d.limitations : [];
+    const summaryObj = d?.summary || {};
+
+    const block = createAnalysisBlock();
+
+    const top = document.createElement("div");
+
+    const filename = document.createElement("b");
+    filename.textContent = d?.filename || "-";
+    filename.title = d?.filename || "-";
+
+    const metaRow = document.createElement("div");
+    metaRow.className = "small";
+
+    const metaLabel = document.createElement("span");
+    metaLabel.className = "muted";
+    metaLabel.textContent = `Type: ${d?.doc_type || "-"} · Status: `;
+
+    const statusWrap = document.createElement("span");
+    renderPillInto(statusWrap, d?.status || "-");
+
+    metaRow.appendChild(metaLabel);
+    metaRow.appendChild(statusWrap);
+
+    top.appendChild(filename);
+    top.appendChild(document.createElement("br"));
+    top.appendChild(metaRow);
+
+    const observedWrap = document.createElement("div");
+    observedWrap.className = "small mt-10";
+    const observedTitle = document.createElement("b");
+    observedTitle.textContent = "Observed fields";
+    observedWrap.appendChild(observedTitle);
+    observedWrap.appendChild(document.createElement("br"));
+    observedWrap.appendChild(createAnalysisPre(observed));
+
+    const limitationsWrap = document.createElement("div");
+    limitationsWrap.className = "small mt-10";
+    const limitationsTitle = document.createElement("b");
+    limitationsTitle.textContent = "Limitations";
+    limitationsWrap.appendChild(limitationsTitle);
+    limitationsWrap.appendChild(document.createElement("br"));
+    limitationsWrap.appendChild(createAnalysisPre(limitations));
+
+    const summaryWrap = document.createElement("div");
+    summaryWrap.className = "small mt-10";
+    const summaryTitle = document.createElement("b");
+    summaryTitle.textContent = "Summary";
+    summaryWrap.appendChild(summaryTitle);
+    summaryWrap.appendChild(document.createElement("br"));
+    summaryWrap.appendChild(createAnalysisPre(summaryObj));
+
+    block.appendChild(top);
+    block.appendChild(observedWrap);
+    block.appendChild(limitationsWrap);
+    block.appendChild(summaryWrap);
+
+    documentsList.appendChild(block);
+  });
 }
 
 function authedBody(extra) {
@@ -287,17 +982,44 @@ let dirtySincePrecheck = true;
 function invalidatePrecheck(reason = "") {
   precheckOk = false;
   dirtySincePrecheck = true;
-  if ($("reviewState")) {
-    $("reviewState").textContent = reason
-      ? `Wijziging gedaan. Controleer volledigheid opnieuw. (${reason})`
-      : "Wijziging gedaan. Controleer volledigheid opnieuw.";
-  }
+  latestPrecheckAnalysis = null;
+
+  renderReviewStatePanel({
+    tone: "warn",
+    title: "Controle opnieuw nodig",
+    intro: reason
+      ? `Er is een wijziging gedaan in het dossier (${reason}). Controleer volledigheid opnieuw.`
+      : "Er is een wijziging gedaan in het dossier. Controleer volledigheid opnieuw.",
+    items: [],
+  });
+
+  setText(
+    "analysisState",
+    "Analyse vervallen door wijziging in dossier. Controleer volledigheid opnieuw.",
+  );
+
+  clearAnalysisUi();
+  renderAnalysisUiEmptyState();
   syncReviewButtons();
 }
 
 function isDevUnlockEnabled() {
   const env = String(window.ENVAL?.ENVIRONMENT || "").toLowerCase();
-  return window.ENVAL?.DEV_UNLOCK_ENABLED === true || env === "dev";
+  const host = String(window.location.hostname || "").toLowerCase();
+
+  if (window.ENVAL?.DEV_UNLOCK_ENABLED === true) return true;
+  if (env === "dev") return true;
+
+  // extra dev-safety voor lokale/dev hosts
+  if (
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host.endsWith(".netlify.app")
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 function syncReviewButtons() {
@@ -377,11 +1099,11 @@ function setAllUiLocked(locked) {
 // 5) Boot / event wiring
 // ======================================================
 
-  document.addEventListener("DOMContentLoaded", async () => {
-    cleanupLegacySessionKey();
-    if ($("year")) $("year").textContent = new Date().getFullYear();
+document.addEventListener("DOMContentLoaded", async () => {
+  cleanupLegacySessionKey();
+  if ($("year")) $("year").textContent = new Date().getFullYear();
 
-    if (!dossier_id) {
+  if (!dossier_id) {
     showToast("Ongeldige dossierlink (d ontbreekt).", "error");
     if ($("statusPill")) {
       $("statusPill").className = "pill err";
@@ -408,6 +1130,11 @@ function setAllUiLocked(locked) {
   $("btnPrecheck")?.addEventListener("click", onPrecheckClicked);
   $("btnFinalize")?.addEventListener("click", onFinalizeClicked);
   $("btnExportDossier")?.addEventListener("click", onExportClicked);
+  $("btnLoadAnalysis")?.addEventListener("click", onLoadAnalysisClicked);
+  if ($("btnLoadAnalysis")) {
+    $("btnLoadAnalysis").classList.add("hidden");
+    $("btnLoadAnalysis").disabled = true;
+  }
   $("btnDevUnlock")?.addEventListener("click", onDevUnlockClicked);
 
 
@@ -514,24 +1241,10 @@ function renderAll() {
   renderChargers();
   renderDocs();
   renderConsents();
+  renderAnalysisUiEmptyState();
 
-  // 1) dossier-lock (in_review / ready_for_booking) => alles locken
+  // dossier-lock (in_review / ready_for_booking) => alles locken
   setAllUiLocked(isLocked());
-
-  // 2) consents-lock is een ANDERE lock dan dossier-lock.
-  // setAllUiLocked(false) zou anders je checkboxes weer unlocken.
-  const cons = current?.consents || [];
-  const latest = {};
-  for (const c of cons) {
-    if (!latest[c.consent_type]) latest[c.consent_type] = c;
-  }
-
-  const consentsLocked =
-    latest["terms"]?.accepted === true &&
-    latest["privacy"]?.accepted === true &&
-    latest["mandaat"]?.accepted === true;
-
-  setConsentsLocked(consentsLocked);
 }
 
 
@@ -602,7 +1315,15 @@ function renderStatus() {
   if (exportBox) exportBox.classList.toggle("hidden", !locked);
   if (btnExport) btnExport.disabled = !locked;
 
-  const showDevUnlock = locked && isDevUnlockEnabled();
+ const showDevUnlock = locked && isDevUnlockEnabled();
+
+  console.log("DEV_UNLOCK_DEBUG", {
+    locked,
+    env: window.ENVAL?.ENVIRONMENT,
+    dev_unlock_enabled: window.ENVAL?.DEV_UNLOCK_ENABLED,
+    hostname: window.location.hostname,
+    showDevUnlock,
+  });
 
   if (devUnlockBox) devUnlockBox.classList.toggle("hidden", !showDevUnlock);
   if (btnDevUnlock) btnDevUnlock.disabled = !showDevUnlock;
@@ -640,33 +1361,33 @@ function renderAccess() {
     "";
 
   const firstNice = normalizePersonName(first);
-  const lastNice  = normalizePersonName(last);
+  const lastNice = normalizePersonName(last);
 
   const f = $("accessForm");
   if (f) {
     const inFirst = f.querySelector('[name="first_name"]');
     const inLast = f.querySelector('[name="last_name"]');
-    if (inFirst) inFirst.value = firstNice || "";
-    if (inLast) inLast.value = lastNice || "";
-
     const inPhone = f.querySelector('[name="customer_phone"]');
     const inCount = f.querySelector('[name="charger_count"]');
     const inOwn = f.querySelector('[name="own_premises"]');
 
+    if (inFirst) inFirst.value = firstNice || "";
+    if (inLast) inLast.value = lastNice || "";
     if (inPhone) inPhone.value = d.customer_phone || "";
 
-    // UI max 4, maar legacy dossiers kunnen >4 hebben.
-    // Als >4: toon waarde maar blokkeer edits (batch/contact).
     if (inCount) {
       const v = d.charger_count ? String(d.charger_count) : "";
       const n = v ? Number(v) : null;
 
-      // Zorg dat legacy value zichtbaar is in select (anders "verdwijnt" het).
       if (n && n > UI_MAX_CHARGERS) {
-        const opt = document.createElement("option");
-        opt.value = String(n);
-        opt.textContent = `${n} (batch/contact)`;
-        inCount.appendChild(opt);
+        const exists = Array.from(inCount.options).some((opt) => opt.value === String(n));
+        if (!exists) {
+          const opt = document.createElement("option");
+          opt.value = String(n);
+          opt.textContent = `${n} (batch/contact)`;
+          inCount.appendChild(opt);
+        }
+
         inCount.value = String(n);
         inCount.disabled = true;
 
@@ -676,39 +1397,56 @@ function renderAccess() {
           btn.title = "Dossier met >4 laadpalen valt buiten onze scope online. Neem contact op met ons voor maatwerk.";
         }
 
-        if ($("accessState")) {
-          $("accessState").textContent =
-            "Dit dossier bevat meer dan 4 laadpalen. Aanmelding is beperkt tot 4 laadpalen. Neem contact op voor maatwerk. ";
-        }
+        setText(
+          "accessState",
+          "Dit dossier bevat meer dan 4 laadpalen. Aanmelding is beperkt tot 4 laadpalen. Neem contact op voor maatwerk."
+        );
       } else {
-        inCount.disabled = false;
+        inCount.disabled = !!isLocked();
         inCount.value = v || "";
+
+        const btn = $("btnAccessSave");
+        if (btn) {
+          btn.disabled = !!isLocked();
+          btn.title = "";
+        }
+
+        setText("accessState", "");
       }
     }
 
-    if (inOwn) inOwn.value = d.own_premises === true ? "ja" : (d.own_premises === false ? "nee" : "");
-
+    if (inOwn) {
+      inOwn.value =
+        d.own_premises === true ? "ja" :
+        d.own_premises === false ? "nee" :
+        "";
+    }
   }
 
   const ownTxt = d.own_premises === true ? "Ja" : (d.own_premises === false ? "Nee" : "—");
-  const phoneTxt = d.customer_phone ? escapeHtml(d.customer_phone) : "—";
+  const phoneTxt = d.customer_phone || "—";
   const cntTxt = d.charger_count ? String(d.charger_count) : "—";
+  const emailTxt = email || "—";
+  const naamTxt = `${firstNice || ""} ${lastNice || ""}`.trim() || "—";
 
-  if ($("accessSummary")) {
-    const emailTxt = email ? escapeHtml(email) : "—";
-    const naamTxt = `${firstNice || ""} ${lastNice || ""}`.trim() || "—";
+  const summary = $("accessSummary");
+  if (summary) {
+    clearNode(summary);
 
-    $("accessSummary").innerHTML =
-      `<b>Overzicht</b><br/>` +
-      `Naam: <b>${escapeHtml(naamTxt)}</b><br/>` +
-      `E-mail: <b>${emailTxt}</b><br/>` +
-      `Aantal laadpunten: <b>${escapeHtml(cntTxt)}</b><br/>` +
-      `Op eigen terrein: <b>${escapeHtml(ownTxt)}</b><br/>` +
-      `Mobiel: <b>${phoneTxt}</b>`;
+    const title = document.createElement("b");
+    title.textContent = "Overzicht";
+    summary.appendChild(title);
+
+    appendTextLine(summary, "Naam", naamTxt);
+    appendTextLine(summary, "E-mail", emailTxt);
+    appendTextLine(summary, "Aantal laadpunten", cntTxt);
+    appendTextLine(summary, "Op eigen terrein", ownTxt);
+    appendTextLine(summary, "Mobiel", phoneTxt);
   }
 
-  // Bewust leeg: "Vergrendeld sinds..." mag niet tussen knop en overzicht verschijnen
-  if ($("accessState")) $("accessState").textContent = "";
+  if ($("accessState") && !(Number(d.charger_count || 0) > UI_MAX_CHARGERS)) {
+    $("accessState").textContent = "";
+  }
 }
 
 
@@ -775,27 +1513,33 @@ function renderAddress() {
 
   setAddressPreview(street, city);
 
-  // Opslaan enabled:
-  // - als server al verified heeft (address_verified_at)
-  // - of als client preview verified heeft (addressVerifiedPreview)
-  if (d.address_verified_at) setAddressSaveEnabled(!isLocked());
-  else setAddressSaveEnabled(!!addressVerifiedPreview && !isLocked());
-
-  // Overzicht-box
-  const sum = $("addressSummary");
-  if (sum) {
-    const nrTxt = hn ? `${hn}${suf ? " " + String(suf).trim() : ""}` : "—";
-    sum.innerHTML =
-      `<b>Overzicht</b><br/>` +
-      `Straat: <b>${escapeHtml(street || "—")}</b><br/>` +
-      `Nummer: <b>${escapeHtml(nrTxt)}</b><br/>` +
-      `Postcode: <b>${escapeHtml(pc || "—")}</b><br/>` +
-      `Stad: <b>${escapeHtml(city || "—")}</b>` +
-      (checkedTxt ? `<br/><span class="muted small">Gecontroleerd op: ${escapeHtml(checkedTxt)}</span>` : "");
+  if (d.address_verified_at) {
+    setAddressSaveEnabled(!isLocked());
+  } else {
+    setAddressSaveEnabled(!!addressVerifiedPreview && !isLocked());
   }
 
-  // UI status bewust leeg/verborgen
-  if ($("addressState")) $("addressState").textContent = "";
+  const sum = $("addressSummary");
+  if (sum) {
+    clearNode(sum);
+
+    const title = document.createElement("b");
+    title.textContent = "Overzicht";
+    sum.appendChild(title);
+
+    const nrTxt = hn ? `${hn}${suf ? " " + String(suf).trim() : ""}` : "—";
+
+    appendTextLine(sum, "Straat", street || "—");
+    appendTextLine(sum, "Nummer", nrTxt);
+    appendTextLine(sum, "Postcode", pc || "—");
+    appendTextLine(sum, "Stad", city || "—");
+
+    if (checkedTxt) {
+      appendMutedLine(sum, `Gecontroleerd op: ${checkedTxt}`);
+    }
+  }
+
+  setText("addressState", "");
 }
 
 /**
@@ -851,6 +1595,8 @@ function renderChargers() {
   const tbody = $("chargersTbody");
   if (!tbody) return;
 
+  clearNode(tbody);
+
   const d = current?.dossier || {};
   const required = Number(d.charger_count || 0) || 0;
   const chargers = current?.chargers || [];
@@ -859,18 +1605,35 @@ function renderChargers() {
   const remaining = required > 0 ? Math.max(0, required - have) : 0;
   const over = required > 0 ? Math.max(0, have - required) : 0;
 
-  if ($("chargerHint")) {
+  const hint = $("chargerHint");
+  if (hint) {
+    clearNode(hint);
+
     if (required > 0) {
       if (remaining === 0 && over === 0) {
-        $("chargerHint").innerHTML = `<span class="ok"><b>Compleet:</b></span> ${have}/${required} laadpalen ingevoerd.`;
+        const span = createEl("span", "ok");
+        const bold = document.createElement("b");
+        bold.textContent = "Compleet:";
+        span.appendChild(bold);
+
+        hint.appendChild(span);
+        hint.appendChild(document.createTextNode(` ${have}/${required} laadpalen ingevoerd.`));
       } else if (remaining === 0 && over > 0) {
-        $("chargerHint").innerHTML =
-          `<span class="danger"><b>Te veel laadpalen:</b></span> ${have}/${required}. Verwijder ${over} laadpaal(en).`;
+        const span = createEl("span", "danger");
+        const bold = document.createElement("b");
+        bold.textContent = "Te veel laadpalen:";
+        span.appendChild(bold);
+
+        hint.appendChild(span);
+        hint.appendChild(document.createTextNode(` ${have}/${required}. Verwijder ${over} laadpaal(en).`));
       } else {
-        $("chargerHint").innerHTML = `<b>Nog te doen:</b> ${remaining} laadpaal(en). (${have}/${required})`;
+        const bold = document.createElement("b");
+        bold.textContent = "Nog te doen:";
+        hint.appendChild(bold);
+        hint.appendChild(document.createTextNode(` ${remaining} laadpaal(en). (${have}/${required})`));
       }
     } else {
-      $("chargerHint").textContent = "Voeg minimaal 1 laadpaal toe.";
+      hint.textContent = "Voeg minimaal 1 laadpaal toe.";
     }
   }
 
@@ -887,47 +1650,43 @@ function renderChargers() {
   }
 
   if (!chargers.length) {
-    tbody.innerHTML = `<tr><td colspan="6" class="muted">Nog geen laadpalen toegevoegd.</td></tr>`;
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 6;
+    td.className = "muted";
+    td.textContent = "Nog geen laadpalen toegevoegd.";
+    tr.appendChild(td);
+    tbody.appendChild(tr);
     return;
   }
 
-  tbody.innerHTML = chargers.map((c) => {
+  chargers.forEach((c) => {
+    const tr = document.createElement("tr");
+
     const brandFull = c.brand || "-";
     const modelFull = c.model || "-";
     const snFull = c.serial_number || "-";
     const midFull = c.mid_number || "-";
     const notesFull = c.notes || "-";
 
-    const brand = trunc(brandFull, 10);
-    const model = trunc(modelFull, 14);
-    const sn = trunc(snFull, 14);
-    const mid = trunc(midFull, 14);
-    const notes = notesFull;
+    tr.appendChild(createSimpleCell(trunc(brandFull, 10), "", brandFull));
+    tr.appendChild(createSimpleCell(trunc(modelFull, 14), "", modelFull));
+    tr.appendChild(createSimpleCell(trunc(snFull, 14), "mono", snFull));
+    tr.appendChild(createSimpleCell(trunc(midFull, 14), "mono", midFull));
+    tr.appendChild(createSimpleCell(notesFull, "", notesFull));
 
-    return `
-      <tr>
-        <td title="${escapeHtml(brandFull)}">${escapeHtml(brand)}</td>
-        <td title="${escapeHtml(modelFull)}">${escapeHtml(model)}</td>
-        <td class="mono" title="${escapeHtml(snFull)}">${escapeHtml(sn)}</td>
-        <td class="mono" title="${escapeHtml(midFull)}">${escapeHtml(mid)}</td>
-        <td title="${escapeHtml(notesFull)}">${escapeHtml(notes)}</td>
-        <td class="right">
-          <div class="btnstack">
-            <button
-              class="iconbtn iconbtn--danger ${locked ? "hidden" : ""}"
-              data-lock-hide="1"
-              type="button"
-              aria-label="Verwijder laadpaal"
-              title="Verwijder"
-              data-act="del"
-              data-id="${c.id}"
-            >×</button>
-          </div>
-        </td>
-      </tr>
-    `;
-  }).join("");
+    const deleteButton = createIconButton({
+      className: `iconbtn iconbtn--danger ${locked ? "hidden" : ""}`,
+      label: "Verwijder laadpaal",
+      title: "Verwijder",
+      action: "del",
+      id: c.id,
+    });
+    deleteButton.setAttribute("data-lock-hide", "1");
 
+    tr.appendChild(createRightActionCell(deleteButton));
+    tbody.appendChild(tr);
+  });
 
   if (locked) return;
 
@@ -942,7 +1701,6 @@ function renderChargers() {
         showToast("Laadpaal verwijderd.", "success");
         invalidatePrecheck("laadpaal verwijderd");
         await reloadAll();
-
       } catch (e) {
         showToast(e.message, "error");
       } finally {
@@ -969,38 +1727,60 @@ function renderDocs() {
   const tbody = $("docsTbody");
   if (!tbody) return;
 
+  clearNode(tbody);
+
   const locked = isLocked();
 
   const hint = $("docsHint");
-  if (hint) hint.textContent = "Per laadpaal: minimaal 1 factuur installatie + 1 foto van het laadpunt.";
+  if (hint) {
+    hint.textContent = "Per laadpaal: minimaal 1 factuur installatie + 1 foto van het laadpunt.";
+  }
 
   const chargers = current?.chargers || [];
   const chargerById = {};
-  chargers.forEach((c) => { chargerById[String(c.id)] = c; });
+  chargers.forEach((c) => {
+    chargerById[String(c.id)] = c;
+  });
 
   const sel = $("docChargerId");
   if (sel) {
-    sel.innerHTML =
-      `<option value="">Kies laadpaal…</option>` +
+    setSelectOptions(
+      sel,
       chargers.map((c) => {
-        const id = String(c.id);
         const sn = c.serial_number ? String(c.serial_number) : "—";
         const b = c.brand ? String(c.brand) : "";
         const m = c.model ? String(c.model) : "";
-        const label = `${sn} — ${b} ${m}`.trim();
-        return `<option value="${escapeHtml(id)}">${escapeHtml(label)}</option>`;
-      }).join("");
+        return {
+          value: String(c.id),
+          label: `${sn} — ${b} ${m}`.trim(),
+        };
+      }),
+      "Kies laadpaal…"
+    );
     sel.disabled = !!locked || chargers.length === 0;
   }
 
   const needHint = $("docChargerHint");
   if (needHint) {
+    clearNode(needHint);
+
     if (!chargers.length) {
       needHint.textContent = "Voeg eerst laadpalen toe in stap 3.";
     } else {
+      const title = document.createElement("b");
+      title.textContent = "Status per laadpaal";
+      needHint.appendChild(title);
+
+      const list = document.createElement("ul");
+      list.className = "statuslist";
+
       const per = {};
       chargers.forEach((c) => {
-        per[String(c.id)] = { factuur: 0, foto_laadpunt: 0, serial: c.serial_number || "" };
+        per[String(c.id)] = {
+          factuur: 0,
+          foto_laadpunt: 0,
+          serial: c.serial_number || "",
+        };
       });
 
       docs.forEach((x) => {
@@ -1011,38 +1791,36 @@ function renderDocs() {
         if (dt === "foto_laadpunt") per[chId].foto_laadpunt += 1;
       });
 
-      const itemsHtml = chargers.map((c) => {
+      chargers.forEach((c) => {
         const chId = String(c.id);
         const sn = c.serial_number ? String(c.serial_number) : "—";
         const p = per[chId] || { factuur: 0, foto_laadpunt: 0 };
-        const okF = p.factuur >= 1;
-        const okP = p.foto_laadpunt >= 1;
+        list.appendChild(createStatusListItem(sn, p.factuur, p.foto_laadpunt));
+      });
 
-        return `
-          <li>
-            <span class="mono">${escapeHtml(sn)}</span>:
-            facturen <b>${escapeHtml(p.factuur)}</b> ${okF ? "✅" : "⏳"}
-            <span class="muted">/</span>
-            foto's <b>${escapeHtml(p.foto_laadpunt)}</b> ${okP ? "✅" : "⏳"}
-          </li>
-        `;
-      }).join("");
-
-      needHint.innerHTML = `<b>Status per laadpaal</b><ul class="statuslist">${itemsHtml}</ul>`;
+      needHint.appendChild(list);
     }
   }
 
   if (!docs.length) {
-    tbody.innerHTML = `<tr><td colspan="4" class="muted">Nog geen documenten geüpload.</td></tr>`;
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 4;
+    td.className = "muted";
+    td.textContent = "Nog geen documenten geüpload.";
+    tr.appendChild(td);
+    tbody.appendChild(tr);
     return;
   }
 
-  tbody.innerHTML = docs.map((x) => {
+  docs.forEach((x) => {
+    const tr = document.createElement("tr");
+
     const typeFull = String(x.doc_type || "-");
-    const type = trunc(typeFull, 15); // past sowieso, maar dit houdt het consistent
+    const type = trunc(typeFull, 15);
 
     const filenameFull = x.filename || "-";
-    const filename = filenameFull; // laat CSS ellipsis doen, maar title toont alles
+    const filename = filenameFull;
 
     const chId = x.charger_id ? String(x.charger_id) : "";
     const ch = chId ? chargerById[chId] : null;
@@ -1054,34 +1832,39 @@ function renderDocs() {
 
     const chargerLabel = trunc(chargerLabelFull, 10);
 
-    return `
-      <tr>
-        <td title="${escapeHtml(typeFull)}">${escapeHtml(type)}</td>
-        <td class="mono" title="${escapeHtml(chargerLabelFull)}">${escapeHtml(chargerLabel)}</td>
-        <td title="${escapeHtml(filenameFull)}">
-          <a href="#" data-act="open" data-id="${x.id}">${escapeHtml(filename)}</a>
-        </td>
-        <td class="right">
-          <div class="btnstack">
-            <button
-              class="iconbtn iconbtn--danger ${locked ? "hidden" : ""}"
-              data-lock-hide="1"
-              type="button"
-              aria-label="Verwijder document"
-              title="Verwijder"
-              data-act="del"
-              data-id="${x.id}"
-            >×</button>
-          </div>
-        </td>
-      </tr>
-    `;
-  }).join("");
+    tr.appendChild(createSimpleCell(type, "", typeFull));
+    tr.appendChild(createSimpleCell(chargerLabel, "mono", chargerLabelFull));
+
+    const filenameTd = document.createElement("td");
+    filenameTd.title = filenameFull;
+
+    const openLink = document.createElement("a");
+    openLink.href = "#";
+    openLink.dataset.act = "open";
+    openLink.dataset.id = x.id;
+    openLink.textContent = filename;
+
+    filenameTd.appendChild(openLink);
+    tr.appendChild(filenameTd);
+
+    const deleteButton = createIconButton({
+      className: `iconbtn iconbtn--danger ${locked ? "hidden" : ""}`,
+      label: "Verwijder document",
+      title: "Verwijder",
+      action: "del",
+      id: x.id,
+    });
+    deleteButton.setAttribute("data-lock-hide", "1");
+
+    tr.appendChild(createRightActionCell(deleteButton));
+    tbody.appendChild(tr);
+  });
 
   tbody.querySelectorAll("a[data-act='open']").forEach((a) => {
     a.addEventListener("click", async (e) => {
       e.preventDefault();
       const id = a.getAttribute("data-id");
+
       try {
         a.classList.add("muted");
         const r = await apiAuthed("api-dossier-doc-download-url", { document_id: id });
@@ -1108,7 +1891,6 @@ function renderDocs() {
         showToast("Document verwijderd.", "success");
         invalidatePrecheck("document verwijderd");
         await reloadAll();
-
       } catch (e) {
         showToast(e.message, "error");
       } finally {
@@ -1131,10 +1913,8 @@ function setConsentsLocked(locked) {
     const el = $(id);
     if (!el) return;
 
-    // unclickable
     el.disabled = !!locked;
 
-    // visueel grijs (zonder CSS wijzigingen)
     if (locked) {
       el.style.opacity = "0.6";
       el.style.cursor = "not-allowed";
@@ -1143,7 +1923,6 @@ function setConsentsLocked(locked) {
       el.style.cursor = "";
     }
 
-    // label ook grijs maken
     const label = document.querySelector(`label[for="${id}"]`);
     if (label) {
       if (locked) {
@@ -1156,16 +1935,12 @@ function setConsentsLocked(locked) {
     }
   });
 
-  // knop weg na lock
   const btn = $("btnConsentsSave");
   if (btn) {
     btn.disabled = !!locked;
     btn.classList.toggle("hidden", !!locked);
-    if (locked) btn.style.display = "none";
-    else btn.style.display = "";
   }
 
-  // statusregel
   const state = $("consentsState");
   if (state) {
     state.textContent = locked
@@ -1175,10 +1950,6 @@ function setConsentsLocked(locked) {
 }
 
 
-/**
- * renderConsents()
- * Doel: checkbox state + laatst opgeslagen timestamp.
- */
 /**
  * renderConsents()
  * Doel: checkbox state + laatst opgeslagen timestamp + lock UI na save.
@@ -1770,17 +2541,19 @@ async function runEvaluate(finalize) {
 
   const d = current?.dossier || {};
 
-  // Als al locked / in review => geen actie meer nodig
   if (d.locked_at || String(d.status || "") === "in_review" || String(d.status || "") === "ready_for_booking") {
     showToast("Dit dossier is al ingediend.", "success");
-    if ($("reviewState")) {
-      const ts = d.locked_at ? formatDateNL(d.locked_at) : "";
-      $("reviewState").textContent = ts ? `Al ingediend. In review sinds: ${ts}` : "Al ingediend.";
-    }
+    renderReviewStatePanel({
+      tone: "ok",
+      title: "Dossier al ingediend",
+      intro: d.locked_at
+        ? `In review sinds: ${formatDateNL(d.locked_at)}`
+        : "Dit dossier staat al in review.",
+      items: [],
+    });
     return;
   }
 
-  // Alleen bij indienen: harde confirm
   if (finalize) {
     const okConfirm = confirm(
       "Klopt alle informatie? Na indienen kunt u niets meer veranderen.\n\nDossier indienen?"
@@ -1791,68 +2564,209 @@ async function runEvaluate(finalize) {
   lockSubmit(btn, true, finalize ? "Indienen…" : "Controleren…");
 
   try {
-    if ($("reviewState")) {
-      $("reviewState").textContent = finalize
-        ? "Server controleert en dient dossier in…"
-        : "Server controleert volledigheid…";
-    }
+    renderReviewStatePanel({
+      tone: "warn",
+      title: finalize ? "Dossier wordt ingediend" : "Controle wordt uitgevoerd",
+      intro: finalize
+        ? "Server controleert het dossier en probeert het daarna in te dienen."
+        : "Volledigheid wordt gecontroleerd.",
+      items: [],
+    });
 
-    const js = await apiAuthed("api-dossier-evaluate", { finalize: !!finalize });
-
-    if (!js?.ok) {
-      const missing = Array.isArray(js?.missingSteps) ? js.missingSteps : [];
-      const msg = js?.error || js?.message || `Evaluate failed (${res.status})`;
-
-      if ($("reviewState")) {
-        if (missing.length) {
-          $("reviewState").innerHTML =
-            `<div class="danger"><b>Er ontbreken nog onderdelen.</b></div>` +
-            `<div class="small">Vul deze stappen in:</div>` +
-            `<ul class="missing-list">` +
-            missing.map((x) => `<li class="danger">${escapeHtml(x)}</li>`).join("") +
-            `</ul>`;
-        } else {
-          $("reviewState").textContent = msg;
-        }
+    if (!finalize) {
+      // =====================================================
+      // 1) CORE COMPLETENESS
+      // =====================================================
+      let coreJs;
+      try {
+        coreJs = await apiAuthed("api-dossier-evaluate", {
+          finalize: false,
+          evaluation_mode: "core",
+        });
+      } catch (e) {
+        coreJs = normalizeApiErrorPayload(e, "Volledigheidscheck mislukt.");
       }
 
-      showToast(missing.length ? "Dossier is nog niet compleet." : msg, "error");
-      return;
-    }
+      if (!coreJs?.ok) {
+        const missing = Array.isArray(coreJs?.missingSteps) ? coreJs.missingSteps : [];
+        const msg = coreJs?.error || coreJs?.message || "Volledigheidscheck mislukt.";
 
+        latestPrecheckAnalysis = null;
+        precheckOk = false;
+        dirtySincePrecheck = true;
+        syncReviewButtons();
 
+        if ($("analysisState")) {
+          $("analysisState").textContent = "Analyse niet uitgevoerd: dossier is nog niet volledig.";
+        }
+        clearAnalysisUi();
+        renderAnalysisUiEmptyState();
 
-    // Succes pad
-    if (finalize) {
-      // finalize moet lock opleveren
-      if (!js.locked_at) {
-        if ($("reviewState")) $("reviewState").textContent =
-          "Indienen lijkt gelukt, maar dossier is niet vergrendeld. Probeer opnieuw.";
-        showToast("Indienen fout: dossier is niet vergrendeld.", "error");
+        renderMissingStepsPanel(missing, msg);
+
+        showToast("Dossier is nog niet volledig.", "error");
         return;
       }
 
-      showToast("Dossier ingediend. Staat nu in review.", "success");
-      if ($("reviewState")) $("reviewState").textContent = `In review sinds: ${formatDateNL(js.locked_at)}`;
-    } else {
-      // ✅ precheck OK => finalize mag (tot er weer iets wijzigt)
+      renderReviewStatePanel({
+        tone: "warn",
+        title: "Documentcontrole wordt uitgevoerd",
+        intro: "Dossier is volledig. De inhoud van de documenten wordt nu gecontroleerd.",
+        items: [],
+      });
+
+      // =====================================================
+      // 2) VERIFY / ANALYSIS
+      // =====================================================
+      try {
+        const verifyJs = await apiAuthed("api-dossier-verify", { mode: "refresh" });
+
+        if (verifyJs?.analysis_readable) {
+          latestPrecheckAnalysis = verifyJs.analysis_readable;
+
+          if ($("analysisSection")) $("analysisSection").classList.remove("hidden");
+          renderAnalysisExportData({ analysis_readable: latestPrecheckAnalysis });
+
+          if ($("analysisState")) {
+            $("analysisState").textContent =
+              `Analyse geladen. Run: ${latestPrecheckAnalysis.run_id || "-"}`;
+          }
+        } else {
+          latestPrecheckAnalysis = null;
+
+          if ($("analysisState")) {
+            $("analysisState").textContent =
+              "Analyse uitgevoerd, maar geen leesbare analyse-output ontvangen.";
+          }
+        }
+      } catch (e) {
+        latestPrecheckAnalysis = null;
+        if ($("analysisState")) {
+          $("analysisState").textContent =
+            `Analyse uitvoeren mislukt: ${String(e?.message || e)}`;
+        }
+      }
+
+      // =====================================================
+      // 3) FULL EVALUATE
+      // =====================================================
+      let fullJs;
+      try {
+        fullJs = await apiAuthed("api-dossier-evaluate", {
+          finalize: false,
+          evaluation_mode: "full",
+        });
+      } catch (e) {
+        fullJs = normalizeApiErrorPayload(e, "Documentcontrole blokkeert indiening.");
+      }
+
+      if (!fullJs?.ok) {
+        const missing = Array.isArray(fullJs?.missingSteps) ? fullJs.missingSteps : [];
+        const blocking = Array.isArray(fullJs?.blocking_reasons) ? fullJs.blocking_reasons : [];
+        const warnings = Array.isArray(fullJs?.warnings) ? fullJs.warnings : [];
+        const msg = fullJs?.error || fullJs?.message || "Documentcontrole blokkeert indiening.";
+
+        precheckOk = false;
+        dirtySincePrecheck = true;
+        syncReviewButtons();
+
+        renderBlockingAnalysisPanel({
+          missing,
+          blocking,
+          warnings,
+          fallbackMessage: msg,
+        });
+
+        showToast("Documentcontrole blokkeert indiening.", "error");
+        return;
+      }
+
       precheckOk = true;
       dirtySincePrecheck = false;
       syncReviewButtons();
 
-      showToast("Volledigheidscheck OK. Klaar om in te dienen.", "success");
-      if ($("reviewState")) $("reviewState").textContent =
-        "Alles staat op groen. Klik op ‘Dossier indienen’ om het dossier te vergrendelen en naar review te sturen.";
+      const warnings = Array.isArray(fullJs?.warnings) ? fullJs.warnings : [];
+      renderPrecheckSuccessPanel(warnings);
+
+      showToast("Volledigheidscheck en documentcontrole OK. Klaar om in te dienen.", "success");
+      await reloadAll();
+      return;
     }
 
-    await reloadAll();
-
-
-    
+    // =====================================================
+    // FINALIZE FLOW
+    // =====================================================
+    let js;
+    try {
+      js = await apiAuthed("api-dossier-evaluate", {
+        finalize: true,
+        evaluation_mode: "full",
+      });
     } catch (e) {
-      showToast(e.message, "error");
-      if ($("reviewState")) $("reviewState").textContent = e.message;
-    } finally {
+      js = normalizeApiErrorPayload(e, "Indienen geblokkeerd.");
+    }
+
+    if (!js?.ok) {
+      const missing = Array.isArray(js?.missingSteps) ? js.missingSteps : [];
+      const blocking = Array.isArray(js?.blocking_reasons) ? js.blocking_reasons : [];
+      const warnings = Array.isArray(js?.warnings) ? js.warnings : [];
+      const msg = js?.error || js?.message || "Indienen geblokkeerd.";
+
+      precheckOk = false;
+      dirtySincePrecheck = true;
+      syncReviewButtons();
+
+      renderBlockingAnalysisPanel({
+        missing,
+        blocking,
+        warnings,
+        fallbackMessage: msg,
+      });
+
+      showToast("Indienen geblokkeerd.", "error");
+      return;
+    }
+
+    if (!js.locked_at) {
+      renderReviewStatePanel({
+        tone: "error",
+        title: "Indienen mislukt",
+        intro: "Indienen lijkt gelukt, maar dossier is niet vergrendeld. Probeer opnieuw.",
+        items: [],
+      });
+      showToast("Indienen fout: dossier is niet vergrendeld.", "error");
+      return;
+    }
+
+    latestPrecheckAnalysis = null;
+
+    renderReviewStatePanel({
+      tone: "ok",
+      title: "Dossier ingediend",
+      intro: `In review sinds: ${formatDateNL(js.locked_at)}`,
+      items: Array.isArray(js?.warnings)
+        ? js.warnings.map((x) => ({ text: x, sub: "Niet-blokkerende waarschuwing." }))
+        : [],
+    });
+
+    showToast("Dossier ingediend. Staat nu in review.", "success");
+    await reloadAll();
+  } catch (e) {
+    const normalized = normalizeApiErrorPayload(e, "Controle mislukt.");
+
+    precheckOk = false;
+    dirtySincePrecheck = true;
+    syncReviewButtons();
+
+    renderBlockingAnalysisPanel({
+      missing: normalized.missingSteps,
+      blocking: normalized.blocking_reasons,
+      warnings: normalized.warnings,
+      fallbackMessage: normalized.error,
+    });
+
+    showToast(normalized.error, "error");
+  } finally {
     lockSubmit(btn, false, finalize ? "Dossier indienen" : "Controleer volledigheid");
   }
 }
@@ -1906,10 +2820,12 @@ async function onDevUnlockClicked() {
     precheckOk = false;
     dirtySincePrecheck = true;
 
-    if ($("reviewState")) {
-      $("reviewState").textContent =
-        "Dev unlock uitgevoerd. Controleer volledigheid opnieuw voordat je opnieuw indient.";
-    }
+    renderReviewStatePanel({
+      tone: "warn",
+      title: "Dossier ontgrendeld voor development",
+      intro: "Controleer volledigheid opnieuw voordat je opnieuw indient.",
+      items: [],
+    });
 
     if (state) {
       state.textContent =
@@ -1926,6 +2842,41 @@ async function onDevUnlockClicked() {
   }
 }
 
+async function onLoadAnalysisClicked() {
+  if (!isLocked()) {
+    return showToast("Analyse is pas beschikbaar nadat het dossier is ingediend.", "error");
+  }
+
+  const btn = $("btnLoadAnalysis");
+  const state = $("analysisState");
+  if (!btn) return;
+
+  lockSubmit(btn, true, "Laden…");
+
+  try {
+    if (state) state.textContent = "Analyse wordt opgehaald…";
+
+    const data = await apiAuthed("api-dossier-export", {});
+
+    if (!data?.analysis_readable) {
+      throw new Error("Geen analysis_readable gevonden in export.");
+    }
+
+    renderAnalysisExportData(data);
+
+    if (state) {
+      state.textContent =
+        `Analyse geladen. Run: ${data.analysis_readable.run_id || "-"}`;
+    }
+
+    showToast("Analyse geladen.", "success");
+  } catch (e) {
+    if (state) state.textContent = e.message || "Analyse laden mislukt.";
+    showToast(e.message || "Analyse laden mislukt.", "error");
+  } finally {
+    lockSubmit(btn, false, "Laad analyse");
+  }
+}
 
 async function onExportClicked() {
   if (!isLocked()) {

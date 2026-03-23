@@ -1,5 +1,3 @@
-// supabase/functions/_shared/analysis.ts
-
 export const ANALYSIS_METHOD_CODE = "analysis_v1";
 export const ANALYSIS_METHOD_VERSION = "2026-03-15";
 
@@ -108,6 +106,17 @@ export type InvoiceObservedFields = {
   serial_number: string | null;
   mid_number: string | null;
 };
+
+const HARD_REQUIRED_INVOICE_CODES = new Set<string>([
+  "invoice_address_match",
+  "invoice_serial_match",
+  "invoice_mid_match",
+]);
+
+const OPTIONAL_INVOICE_CODES = new Set<string>([
+  "invoice_brand_match",
+  "invoice_model_match",
+]);
 
 function cleanLine(s: string): string {
   return String(s || "").replace(/\s+/g, " ").trim();
@@ -303,7 +312,7 @@ function collectAddressBlockCandidates(text: string): Array<{
       let score = 0;
       let nameLine: string | null = null;
 
-      score += 5; // street + city pair is the base signal
+      score += 5;
 
       if (prev1 && isLikelyNameLine(prev1)) {
         nameLine = prev1;
@@ -349,9 +358,246 @@ function pickBestAddressBlock(text: string): {
   };
 }
 
+function splitLinesForExtraction(text: string): string[] {
+  return String(text || "")
+    .replace(/\r/g, "\n")
+    .split("\n")
+    .map((line) => cleanLine(line))
+    .filter(Boolean);
+}
+
+function looksLikeNoiseLine(input: string): boolean {
+  const s = cleanLine(input).toLowerCase();
+  if (!s) return true;
+
+  const banned = [
+    "invoice",
+    "factuur",
+    "invoice no",
+    "invoice number",
+    "invoice date",
+    "customer",
+    "bill to",
+    "subtotal",
+    "total",
+    "vat",
+    "btw",
+    "qty",
+    "quantity",
+    "unit price",
+    "amount",
+    "description",
+    "payment",
+    "iban",
+    "kvk",
+    "coc",
+    "www.",
+    "http://",
+    "https://",
+    "@",
+  ];
+
+  return banned.some((x) => s.includes(x));
+}
+
+function looksLikeBrandValue(input: string): boolean {
+  const s = cleanLine(input);
+  if (!s) return false;
+  if (s.length < 2 || s.length > 60) return false;
+  if (/\d{4,}/.test(s)) return false;
+  if (looksLikeNoiseLine(s)) return false;
+  return /[a-z]/i.test(s);
+}
+
+function looksLikeModelValue(input: string): boolean {
+  const s = cleanLine(input);
+  if (!s) return false;
+  if (s.length < 2 || s.length > 80) return false;
+  if (looksLikeNoiseLine(s)) return false;
+  return /[a-z0-9]/i.test(s);
+}
+
+function looksLikeMidValue(input: string): boolean {
+  const compact = normalizeMid(input);
+  if (!compact) return false;
+  if (compact.length < 6 || compact.length > 30) return false;
+  return compact.startsWith("MID") || /^M\d{6,}$/.test(compact) || /^\d{6,}$/.test(compact);
+}
+
+function looksLikeSerialValue(input: string): boolean {
+  const compact = normalizeSerial(input);
+  if (!compact) return false;
+  if (compact.length < 6 || compact.length > 40) return false;
+  if (/^MID[A-Z0-9]+$/.test(compact)) return false;
+  return true;
+}
+
+function extractValueAfterLabelInLine(line: string, labels: string[]): string | null {
+  const s = cleanLine(line);
+  if (!s) return null;
+
+  for (const label of labels) {
+    const re = new RegExp(`^${label}\\s*[:#-]?\\s*(.+)$`, "i");
+    const m = s.match(re);
+    if (!m?.[1]) continue;
+
+    let value = cleanLine(m[1]);
+    value = value.replace(/^(nummer|nr\\.?|no\\.?|number)\\s*[:#-]?\\s*/i, "").trim();
+
+    if (value) return value;
+  }
+
+  return null;
+}
+
+function extractFieldFromNearbyLines(
+  lines: string[],
+  labels: string[],
+  validator: (input: string) => boolean,
+): string | null {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    const inlineValue = extractValueAfterLabelInLine(line, labels);
+    if (inlineValue && validator(inlineValue)) {
+      return inlineValue;
+    }
+
+    const isBareLabel = labels.some((label) => {
+      const re = new RegExp(`^${label}\\s*[:#-]?$`, "i");
+      return re.test(line);
+    });
+
+    if (!isBareLabel) continue;
+
+    for (let j = i + 1; j <= Math.min(i + 2, lines.length - 1); j++) {
+      const candidate = cleanLine(lines[j]);
+      if (candidate && validator(candidate)) {
+        return candidate;
+      }
+    }
+  }
+
+  return null;
+}
+
+function findCompactCandidatesFromLines(
+  lines: string[],
+  labels: string[],
+  validator: (input: string) => boolean,
+): string[] {
+  const out: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    const inlineValue = extractValueAfterLabelInLine(line, labels);
+    if (inlineValue && validator(inlineValue)) {
+      out.push(inlineValue);
+    }
+
+    const isBareLabel = labels.some((label) => {
+      const re = new RegExp(`^${label}\\s*[:#-]?$`, "i");
+      return re.test(line);
+    });
+
+    if (!isBareLabel) continue;
+
+    for (let j = i + 1; j <= Math.min(i + 2, lines.length - 1); j++) {
+      const candidate = cleanLine(lines[j]);
+      if (candidate && validator(candidate)) {
+        out.push(candidate);
+      }
+    }
+  }
+
+  return Array.from(new Set(out.map((x) => cleanLine(x)).filter(Boolean)));
+}
+
+function findMidCandidate(lines: string[]): string | null {
+  const labeled = findCompactCandidatesFromLines(
+    lines,
+    [
+      "MID number",
+      "MID Number",
+      "MID nummer",
+      "MID-nummer",
+      "MID nr",
+      "MID nr\\.",
+      "MID no",
+      "MID no\\.",
+      "MID",
+    ],
+    looksLikeMidValue,
+  );
+
+  for (const candidate of labeled) {
+    const cleaned = cleanLine(candidate)
+      .replace(/^(nummer|nr\\.?|no\\.?|number)\\s*[:#-]?\\s*/i, "")
+      .trim();
+
+    if (cleaned && looksLikeMidValue(cleaned)) {
+      return cleaned;
+    }
+  }
+
+  for (const line of lines) {
+    const cleanedLine = cleanLine(line);
+
+    const labelValueMatch = cleanedLine.match(
+      /\bMID(?:\s*[-]?\s*(?:nummer|nr\.?|no\.?|number))?\b\s*[:#-]?\s*(M\d{6,}|MID[A-Z0-9]{4,}|\d{6,})\b/i,
+    );
+    if (labelValueMatch?.[1] && looksLikeMidValue(labelValueMatch[1])) {
+      return cleanLine(labelValueMatch[1]);
+    }
+  }
+
+  for (const line of lines) {
+    const m = line.match(/\b(MID[A-Z0-9]{4,}|M\d{6,}|\d{6,})\b/i);
+    if (m?.[1] && looksLikeMidValue(m[1])) {
+      return cleanLine(m[1]);
+    }
+  }
+
+  return null;
+}
+
+function findSerialCandidate(lines: string[], midCandidate: string | null): string | null {
+  const labeled = findCompactCandidatesFromLines(
+    lines,
+    ["Serial number", "Serial Number", "Serial", "Serienummer", "S/N", "SN"],
+    looksLikeSerialValue,
+  );
+
+  for (const candidate of labeled) {
+    if (normalizeSerial(candidate) !== normalizeSerial(midCandidate)) {
+      return candidate;
+    }
+  }
+
+  for (const line of lines) {
+    const m = line.match(/\b(SN[\s:-]*[A-Z0-9]{4,}|[A-Z]*\d[A-Z0-9]{5,})\b/i);
+    if (m?.[1] && looksLikeSerialValue(m[1])) {
+      if (normalizeSerial(m[1]) !== normalizeSerial(midCandidate)) {
+        return cleanLine(m[1]);
+      }
+    }
+  }
+
+  return null;
+}
+
+function findBrandCandidate(lines: string[]): string | null {
+  return extractFieldFromNearbyLines(lines, ["Brand", "Merk"], looksLikeBrandValue);
+}
+
+function findModelCandidate(lines: string[]): string | null {
+  return extractFieldFromNearbyLines(lines, ["Model", "Type"], looksLikeModelValue);
+}
 
 export function extractInvoiceObservedFieldsFromText(textRaw: string): InvoiceObservedFields {
   const text = String(textRaw || "").replace(/\r/g, "");
+  const lines = splitLinesForExtraction(text);
 
   const labeledAddress =
     matchLabeledValue(text, ["Address", "Adres"]) ||
@@ -367,16 +613,24 @@ export function extractInvoiceObservedFieldsFromText(textRaw: string): InvoiceOb
   const city_line = labeledCity || inferredBlock.city_line || null;
 
   const brand =
-    matchLabeledValue(text, ["Brand", "Merk"]) || null;
+    matchLabeledValue(text, ["Brand", "Merk"]) ||
+    findBrandCandidate(lines) ||
+    null;
 
   const model =
-    matchLabeledValue(text, ["Model", "Type"]) || null;
-
-  const serial_number =
-    matchLabeledValue(text, ["Serial number", "Serial Number", "Serial", "Serienummer"]) || null;
+    matchLabeledValue(text, ["Model", "Type"]) ||
+    findModelCandidate(lines) ||
+    null;
 
   const mid_number =
-    matchLabeledValue(text, ["MID number", "MID Number", "MID", "MID nummer"]) || null;
+    findMidCandidate(lines) ||
+    matchLabeledValue(text, ["MID number", "MID Number", "MID nummer", "MID-nummer", "MID nr", "MID nr.", "MID"]) ||
+    null;
+
+  const serial_number =
+    matchLabeledValue(text, ["Serial number", "Serial Number", "Serial", "Serienummer", "S/N", "SN"]) ||
+    findSerialCandidate(lines, mid_number) ||
+    null;
 
   const streetParts = splitDutchStreetLine(address_line || "");
   const cityParts = splitDutchCityLine(city_line || "");
@@ -473,6 +727,54 @@ function evaluateCompactMatch(
   };
 }
 
+function evaluateOptionalCompactMatch(
+  declaredRaw: unknown,
+  observedRaw: unknown,
+  normalizer: (v: unknown) => string,
+): {
+  status: AnalysisResultStatus;
+  declared_normalized: string | null;
+  observed_normalized: string | null;
+  reason: string;
+} {
+  const declared = normalizer(declaredRaw);
+  const observed = normalizer(observedRaw);
+
+  if (!declared && !observed) {
+    return {
+      status: "pass",
+      declared_normalized: null,
+      observed_normalized: null,
+      reason: "both_missing_not_applicable",
+    };
+  }
+
+  if (!declared || !observed) {
+    return {
+      status: "inconclusive",
+      declared_normalized: declared || null,
+      observed_normalized: observed || null,
+      reason: "missing_declared_or_observed",
+    };
+  }
+
+  if (declared === observed) {
+    return {
+      status: "pass",
+      declared_normalized: declared,
+      observed_normalized: observed,
+      reason: "exact_normalized_match",
+    };
+  }
+
+  return {
+    status: "fail",
+    declared_normalized: declared,
+    observed_normalized: observed,
+    reason: "normalized_mismatch",
+  };
+}
+
 function evaluateInvoiceAddress(
   dossier: DossierRow,
   observed: InvoiceObservedFields,
@@ -501,7 +803,7 @@ function evaluateInvoiceAddress(
   const parts = [
     evaluateStringMatch(declared.street, observed.street),
     evaluateCompactMatch(declared.house_number, observed.house_number, normalizeCompact),
-    evaluateCompactMatch(declared.suffix, observed.suffix, normalizeCompact),
+    evaluateOptionalCompactMatch(declared.suffix, observed.suffix, normalizeCompact),
     evaluateCompactMatch(declared.postcode, observed.postcode, normalizePostcode),
     evaluateStringMatch(declared.city, observed.city),
   ];
@@ -540,7 +842,6 @@ function evaluateInvoiceAddress(
     },
   };
 }
-
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -857,13 +1158,174 @@ export function buildPhotoAnalysisRows(
   return buildPhotoRows(dossier, charger, runId, photoDoc);
 }
 
+export type AnalysisGateDecision = {
+  submit_allowed: boolean;
+  blocking_reasons: string[];
+  warnings: string[];
+  summary: {
+    run_id: string | null;
+    overall_status: AnalysisOverallStatus | "not_run";
+    invoice_required_total: number;
+    invoice_required_pass: number;
+    invoice_required_fail: number;
+    invoice_required_inconclusive: number;
+    photo_not_checked: number;
+  };
+};
+
+export function evaluateAnalysisGate(args: {
+  run_id: string | null;
+  summary_row?: SummaryAnalysisRow | null;
+  document_rows?: DocumentAnalysisRow[] | null;
+  charger_rows?: ChargerAnalysisRow[] | null;
+}): AnalysisGateDecision {
+  const summaryRow = args.summary_row || null;
+  const documentRows = Array.isArray(args.document_rows) ? args.document_rows : [];
+  const chargerRows = Array.isArray(args.charger_rows) ? args.charger_rows : [];
+
+  const blocking_reasons: string[] = [];
+  const warnings: string[] = [];
+
+  if (!args.run_id || !summaryRow) {
+    blocking_reasons.push("Analyse ontbreekt of is nog niet uitgevoerd.");
+    return {
+      submit_allowed: false,
+      blocking_reasons,
+      warnings,
+      summary: {
+        run_id: args.run_id || null,
+        overall_status: "not_run",
+        invoice_required_total: 0,
+        invoice_required_pass: 0,
+        invoice_required_fail: 0,
+        invoice_required_inconclusive: 0,
+        photo_not_checked: 0,
+      },
+    };
+  }
+
+  const invoiceDocs = documentRows.filter((r) => norm(r.doc_type) === "factuur");
+  const completedInvoiceDocs = invoiceDocs.filter((r) => r.status === "completed");
+  const failedInvoiceDocs = invoiceDocs.filter((r) => r.status === "failed");
+
+  if (invoiceDocs.length === 0) {
+    blocking_reasons.push("Geen factuur-analyse gevonden.");
+  }
+
+  if (completedInvoiceDocs.length === 0) {
+    blocking_reasons.push("Geen bruikbare factuur-analyse beschikbaar.");
+  }
+
+  if (failedInvoiceDocs.length > 0) {
+    blocking_reasons.push("Minimaal één factuur-analyse is technisch mislukt.");
+  }
+
+  const requiredRows = chargerRows.filter((r) =>
+    HARD_REQUIRED_INVOICE_CODES.has(String(r.analysis_code || ""))
+  );
+
+  const requiredPass = requiredRows.filter((r) => r.status === "pass");
+  const requiredFail = requiredRows.filter((r) => r.status === "fail");
+  const requiredInconclusive = requiredRows.filter((r) => r.status === "inconclusive");
+  const requiredNotChecked = requiredRows.filter((r) => r.status === "not_checked");
+
+  if (requiredRows.length === 0) {
+    blocking_reasons.push("Verplichte factuurchecks ontbreken.");
+  }
+
+  const chargerIdsWithInvoiceAnalysis = Array.from(new Set(
+    chargerRows
+      .filter((r) => String(r.analysis_code || "").startsWith("invoice_"))
+      .map((r) => String(r.charger_id || "").trim())
+      .filter(Boolean),
+  ));
+
+  for (const chargerId of chargerIdsWithInvoiceAnalysis) {
+    for (const code of HARD_REQUIRED_INVOICE_CODES) {
+      const exists = requiredRows.some((r) =>
+        String(r.charger_id || "").trim() === chargerId &&
+        String(r.analysis_code || "") === code
+      );
+
+      if (!exists) {
+        blocking_reasons.push(`${code}: ontbreekt voor charger ${chargerId}`);
+      }
+    }
+  }
+
+  for (const row of requiredFail) {
+    blocking_reasons.push(
+      `${row.analysis_code}: mismatch (${String(row.evaluation_details?.reason || "fail")})`,
+    );
+  }
+
+  for (const row of requiredInconclusive) {
+    blocking_reasons.push(
+      `${row.analysis_code}: onvoldoende zeker (${String(row.evaluation_details?.reason || "inconclusive")})`,
+    );
+  }
+
+  for (const row of requiredNotChecked) {
+    blocking_reasons.push(
+      `${row.analysis_code}: niet uitgevoerd (${String(row.evaluation_details?.reason || "not_checked")})`,
+    );
+  }
+
+  const optionalInvoiceRows = chargerRows.filter((r) =>
+    OPTIONAL_INVOICE_CODES.has(String(r.analysis_code || ""))
+  );
+
+  for (const row of optionalInvoiceRows) {
+    if (row.status === "fail" || row.status === "inconclusive") {
+      warnings.push(
+        `${row.analysis_code}: ${String(row.evaluation_details?.reason || row.status)}`,
+      );
+    }
+  }
+
+  const photoRows = chargerRows.filter((r) => String(r.analysis_code || "").startsWith("photo_"));
+  const photoNotChecked = photoRows.filter((r) => r.status === "not_checked");
+
+  if (photoNotChecked.length > 0) {
+    warnings.push("Foto-analyse is nog niet geïmplementeerd en blokkeert deze precheck niet.");
+  }
+
+  return {
+    submit_allowed: blocking_reasons.length === 0,
+    blocking_reasons,
+    warnings,
+    summary: {
+      run_id: args.run_id,
+      overall_status: summaryRow.overall_status || "not_run",
+      invoice_required_total: requiredRows.length,
+      invoice_required_pass: requiredPass.length,
+      invoice_required_fail: requiredFail.length,
+      invoice_required_inconclusive: requiredInconclusive.length + requiredNotChecked.length,
+      photo_not_checked: photoNotChecked.length,
+    },
+  };
+}
+
 export function computeOverallStatus(
   documentRows: DocumentAnalysisRow[],
   chargerRows: ChargerAnalysisRow[],
 ): AnalysisOverallStatus {
   if (documentRows.length === 0 && chargerRows.length === 0) return "not_run";
 
-  if (chargerRows.some((r) => r.status === "fail")) return "review_required";
+  const hardRequiredRows = chargerRows.filter((r) =>
+    HARD_REQUIRED_INVOICE_CODES.has(String(r.analysis_code || ""))
+  );
+
+  if (hardRequiredRows.some((r) => r.status === "fail")) {
+    return "review_required";
+  }
+
+  if (
+    hardRequiredRows.some((r) => r.status === "inconclusive") ||
+    hardRequiredRows.some((r) => r.status === "not_checked")
+  ) {
+    return "partial_pass";
+  }
 
   if (chargerRows.length > 0 && chargerRows.every((r) => r.status === "pass")) {
     return "pass";
@@ -871,7 +1333,10 @@ export function computeOverallStatus(
 
   if (
     chargerRows.some((r) => r.status === "inconclusive") ||
-    chargerRows.some((r) => r.status === "not_checked")
+    chargerRows.some((r) => r.status === "not_checked") ||
+    chargerRows.some((r) =>
+      OPTIONAL_INVOICE_CODES.has(String(r.analysis_code || "")) && r.status === "fail"
+    )
   ) {
     return "partial_pass";
   }
@@ -954,10 +1419,22 @@ export function isLockedOrReviewable(status: unknown, lockedAt: unknown): boolea
   return !!lockedAt || st === "in_review" || st === "ready_for_booking";
 }
 
+export function isAnalysisAllowedForPrecheck(status: unknown, lockedAt: unknown): boolean {
+  const st = norm(status);
+
+  if (!!lockedAt) return true;
+
+  return (
+    st === "incomplete" ||
+    st === "ready_for_review" ||
+    st === "in_review" ||
+    st === "ready_for_booking"
+  );
+}
+
 export function assertConfirmedDocumentShape(doc: DocumentRow): void {
   if (!doc.id) throw new Error("Document missing id");
   if (!isSupportedDocType(String(doc.doc_type || "").trim())) {
-    // supported-doc filtering gebeurt elders; geen throw nodig
     return;
   }
   if (!nonEmpty(doc.charger_id)) {

@@ -21,7 +21,7 @@ import {
   buildDocumentAnalysisRow,
   buildSummaryAnalysisRow,
   groupConfirmedDocsByCharger,
-  isLockedOrReviewable,
+  isAnalysisAllowedForPrecheck,
   isSupportedDocType,
   sanitizeMode,
   extractInvoiceObservedFieldsFromText,
@@ -105,6 +105,97 @@ function getEnvironment(): string {
   ).toLowerCase();
 }
 
+function buildAnalysisReadablePayload(args: {
+  run_id: string;
+  overall_status: string;
+  summary: Record<string, unknown>;
+  limitations: unknown[];
+  documents: Array<Record<string, unknown>>;
+  charger_results: Array<Record<string, unknown>>;
+  source_docs: Array<Record<string, unknown>>;
+  source_chargers: Array<Record<string, unknown>>;
+}) {
+  const docById: Record<string, Record<string, unknown>> = {};
+  for (const d of args.source_docs || []) {
+    const id = String(d.id || "");
+    if (id) docById[id] = d;
+  }
+
+  const chargerById: Record<string, Record<string, unknown>> = {};
+  for (const ch of args.source_chargers || []) {
+    const id = String(ch.id || "");
+    if (id) chargerById[id] = ch;
+  }
+
+  const documents = (args.documents || []).map((d) => ({
+    document_id: d.document_id || null,
+    filename: docById[String(d.document_id || "")]?.filename || null,
+    charger_id: d.charger_id || null,
+    doc_type: d.doc_type || null,
+    analysis_kind: d.analysis_kind || null,
+    status: d.status || null,
+    method_code: d.method_code || null,
+    method_version: d.method_version || null,
+    observed_fields: d.observed_fields || {},
+    confidence: d.confidence || {},
+    limitations: d.limitations || [],
+    summary: d.summary || {},
+    created_at: d.created_at || null,
+    updated_at: d.updated_at || null,
+  }));
+
+  const chargerGroups: Record<string, Array<Record<string, unknown>>> = {};
+  for (const row of args.charger_results || []) {
+    const chargerId = String(row.charger_id || "");
+    if (!chargerId) continue;
+    if (!chargerGroups[chargerId]) chargerGroups[chargerId] = [];
+    chargerGroups[chargerId].push(row);
+  }
+
+  const chargers = Object.entries(chargerGroups).map(([chargerId, rows]) => {
+    const ch = chargerById[chargerId] || {};
+
+    return {
+      charger_id: chargerId,
+      charger_label: {
+        brand: ch.brand || null,
+        model: ch.model || null,
+        serial_number: ch.serial_number || null,
+        mid_number: ch.mid_number || null,
+      },
+      analysis_results: rows.map((r) => {
+        const srcId = String(r.source_document_id || "");
+        const srcDoc = srcId ? docById[srcId] || {} : {};
+
+        return {
+          analysis_code: r.analysis_code || null,
+          status: r.status || null,
+          source_document_id: r.source_document_id || null,
+          source_document_filename: srcDoc.filename || null,
+          source_document_doc_type: srcDoc.doc_type || null,
+          reason: r.evaluation_details?.reason || null,
+          declared_value: r.declared_value || {},
+          observed_value: r.observed_value || {},
+          evaluation_details: r.evaluation_details || {},
+          method_code: r.method_code || null,
+          method_version: r.method_version || null,
+          created_at: r.created_at || null,
+          updated_at: r.updated_at || null,
+        };
+      }),
+    };
+  });
+
+  return {
+    version: "enval-analysis-readable.v1",
+    run_id: args.run_id,
+    overall_status: args.overall_status,
+    summary: args.summary || {},
+    limitations: args.limitations || [],
+    documents,
+    chargers,
+  };
+}
 
 serve(async (req) => {
   const meta = getReqMeta(req);
@@ -222,13 +313,13 @@ serve(async (req) => {
     });
   }
 
-  if (!isLockedOrReviewable(dossier.status, dossier.locked_at)) {
+  if (!isAnalysisAllowedForPrecheck(dossier.status, dossier.locked_at)) {
     return reject(
       "analysis_gate",
       409,
-      "Analyse is alleen toegestaan voor dossiers die zijn ingediend (locked/in_review).",
+      "Analyse is niet toegestaan voor deze dossierstatus.",
       {
-        reason: "not_locked",
+        reason: "status_not_allowed",
         status: dossier.status || null,
         locked_at: dossier.locked_at || null,
       },
@@ -635,6 +726,17 @@ serve(async (req) => {
       { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
     );
 
+    const analysis_readable = buildAnalysisReadablePayload({
+      run_id: analysisRunId!,
+      overall_status: summaryRow.overall_status,
+      summary: summaryRow.summary,
+      limitations: summaryRow.limitations,
+      documents: allDocumentRows as Array<Record<string, unknown>>,
+      charger_results: chargerAnalysisRows as Array<Record<string, unknown>>,
+      source_docs: supportedDocs as Array<Record<string, unknown>>,
+      source_chargers: chargerRows as Array<Record<string, unknown>>,
+    });
+
     const body = {
       ok: true,
       dossier_id,
@@ -649,6 +751,7 @@ serve(async (req) => {
         charger_results_written: chargerAnalysisRows.length,
         summary_written: true,
       },
+      analysis_readable,
     };
 
     return finalize(200, body);

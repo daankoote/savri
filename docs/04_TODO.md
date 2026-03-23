@@ -1,13 +1,33 @@
 # 04_TODO.md (CURRENT)
 
-Statusdatum: 2026-03-15  
-Statusdatum: 2026-03-15  
+Statusdatum: 2026-03-23  
 Prioriteit: audit-first.  
 Regel: alleen open items; afgerond → naar changelog.
 
 ## P1 (must/should)
 
-### 1) api-lead-submit: eligibility gate ordering harden + regressie-test
+### 1) Dossier frontend-flow live verifiëren op CURRENT contract
+- Context:
+  - `assets/js/pages/dossier.js` is nu inhoudelijk aangescherpt:
+    - core evaluate
+    - verify refresh
+    - full evaluate
+    - finalize
+    - precheck invalidation
+    - analysis rendering
+    - dev unlock UX
+- DoD:
+  - 1 volledige browser-run bevestigd op CURRENT gedrag:
+    - precheck faalt zolang dossier incompleet is
+    - verify draait pas na core-completeness
+    - finalize blijft verborgen tot geldige precheck
+    - mutatie na precheck maakt finalize weer ongeldig
+    - locked dossier toont export correct
+    - dev unlock zet dossier terug naar editable state in DEV
+  - geen client-side drift meer tussen docs en runtime-gedrag
+- Status: OPEN
+
+### 2) api-lead-submit: eligibility gate ordering harden + regressie-test
 - Context:
   - Behavior is bewezen: pre-dossier reject (NL/MID) + `intake_audit_events` + idempotency replay.
 - DoD:
@@ -20,14 +40,14 @@ Regel: alleen open items; afgerond → naar changelog.
     - OK → lead + dossier + mail
 - Status: OPEN
 
-### 2) Defense-in-depth policies op audit tabellen
+### 3) Defense-in-depth policies op audit tabellen
 - DoD:
   - `deny_all` policy aanwezig op `public.intake_audit_events` en `public.dossier_audit_events` voor anon/auth
   - grants blijven dicht
   - bevestigd via `pg_policies`
 - Status: OPEN
 
-### 3) OPS-runbook enforcement: gateway-401 preventie (mail-worker + alle functions)
+### 4) OPS-runbook enforcement: gateway-401 preventie (mail-worker + alle functions)
 - DoD:
   - `06_OPS_RUN_DEBUG_BOOK.md` bevat canonical rule + diagnose matrix voor gateway-401 vs function-401
   - alle curl snippets in docs bevatten standaard:
@@ -37,7 +57,7 @@ Regel: alleen open items; afgerond → naar changelog.
   - 1× herhalingstest door Daan bevestigd
 - Status: OPEN
 
-### 4) Mail-worker stuck processing recovery — bewijs sluiten
+### 5) Mail-worker stuck processing recovery — bewijs sluiten
 - Context:
   - Implementatie staat beschreven in changelog, maar bewijs-eis was strenger: één geforceerde stuck case aantonen.
 - DoD:
@@ -50,7 +70,7 @@ Regel: alleen open items; afgerond → naar changelog.
     - met reason `stuck_processing_timeout`
 - Status: OPEN
 
-### 5) Session-auth hardening afronden (`dossier_sessions`)
+### 6) Session-auth hardening afronden (`dossier_sessions`)
 - Context:
   - runtime testsuite is bewezen aligned op `session_token`
   - shared helper `supabase/functions/_shared/customer_auth.ts` bestaat
@@ -69,7 +89,7 @@ Regel: alleen open items; afgerond → naar changelog.
     - op meerdere endpoints (minimaal read + write)
 - Status: OPEN
 
-### 6) Tombstone / archive lifecycle voor audit-gebonden testdossiers
+### 7) Tombstone / archive lifecycle voor audit-gebonden testdossiers
 - Context:
   - fresh tests ruimen mutable child rows op, maar retained dossier/outbound/audit shell blijft bestaan
   - hard delete van dossier faalt CURRENT by design door audit immutability
@@ -82,22 +102,24 @@ Regel: alleen open items; afgerond → naar changelog.
 - Status: OPEN
 
 
-### 7) Docs hygiene: analysis-richting en CURRENT waarheid synchroon houden
+### 8) Docs hygiene: contradictions en dubbele waarheid actief blijven opruimen
 - Context:
-  - analysis-richting is aangescherpt:
-    - factuur eerst
-    - foto later
-    - verify evidence-script is nu onderdeel van de proof-loop
+  - core docs bevatten nog geregeld:
+    - dubbele statusregels
+    - oude statusdatums
+    - historische tekst die te veel op CURRENT waarheid lijkt
 - DoD:
-  - `00_GLOBAL.md`, `04_TODO.md`, `11_ANALYSE_PLAN.md` en changelog spreken elkaar niet tegen
-  - analysis-docs beschrijven expliciet:
-    - factuur hardening eerst
-    - foto-analysis deferred
-    - geen OCR in deze fase
-  - geen dubbele of verouderde analysis-richting in docs
+  - bij elke inhoudelijke werkdag:
+    - 00_GLOBAL
+    - 01_SYSTEM_MAP
+    - 03_CHANGELOG_APPEND_ONLY
+    - 04_TODO
+    worden op contradicties gecontroleerd
+  - dubbele regels, dubbele assets-lijsten en verouderde CURRENT-claims worden direct opgeschoond
+  - append-only blijft append-only; CURRENT docs blijven daadwerkelijk CURRENT
 - Status: OPEN
 
-### 8) Frontend contract: MID veldnaam volledig consistent met spec
+### 9) Frontend contract: MID veldnaam volledig consistent met spec
 - Context:
   - CURRENT docs en backend-contract gebruiken `mid_number` als canonical veld.
   - Dit item blijft alleen OPEN totdat grep-bewijs expliciet is vastgelegd na merge/sync check.
@@ -108,7 +130,7 @@ Regel: alleen open items; afgerond → naar changelog.
   - grep-bewijs expliciet vastgelegd
 - Status: OPEN totdat grep formeel bevestigd en vastgelegd is
 
-### 9) Positionering consistent houden in product & copy
+### 10) Positionering consistent houden in product & copy
 - DoD:
   - geen compliance-claims in UI
   - geen verificatieclaims
@@ -116,7 +138,7 @@ Regel: alleen open items; afgerond → naar changelog.
   - Inboeker ≠ Enval expliciet zichtbaar
 - Status: OPEN (doorlopend)
 
-### 10) SEO artifacts live zetten / verifiëren
+### 11) SEO artifacts live zetten / verifiëren
 - Waarom:
   - duplicate content voorkomen
   - Google index alleen canoniek houden
@@ -139,7 +161,16 @@ Regel: alleen open items; afgerond → naar changelog.
     - analysis-tabellen
     - export v5
     - verify evidence-script
-  - huidige zwakte zit vooral in extractiekwaliteit van facturen, niet in de verify-pipeline zelf
+  - PDF factuurspoor is runtime-bewezen voor:
+    - volledige match → pass
+    - ontbrekende brand/model → inconclusive
+    - identifier mismatch → fail
+  - non-PDF factuurfallback is nu ook runtime-bewezen:
+    - `status=completed`
+    - `observed_fields={}`
+    - `invoice_image_extraction_not_implemented`
+    - charger-level invoice checks → gecontroleerd `inconclusive`
+  - huidige zwakte zit dus niet in pipeline-stabiliteit, maar in extractiekwaliteit van facturen
   - focus blijft bewust op `factuur`, niet op laadpaalfoto’s
 - DoD:
   - `extractInvoiceObservedFieldsFromText()` verschuift van label-only naar hybrid extractie
@@ -166,6 +197,10 @@ Regel: alleen open items; afgerond → naar changelog.
     - raw observed fields
     - document → charger trace
     - observed vs expected_db
+  - non-PDF facturen blijven expliciet gecontroleerd fallbackgedrag houden:
+    - geen crash
+    - geen pseudo-extractie
+    - `invoice_present_but_no_observed_fields_available` op charger-niveau
   - geen lifecycle-impact:
     - geen lock mutatie
     - geen `dossier_checks` mutatie
