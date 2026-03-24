@@ -437,54 +437,76 @@ function renderMissingStepsPanel(missing, fallbackMessage) {
 }
 
 function renderBlockingAnalysisPanel(args) {
+  const el = $("reviewState");
+  if (!el) return;
+
+  clearNode(el);
+
   const missingRaw = Array.isArray(args?.missing) ? args.missing : [];
   const blockingRaw = Array.isArray(args?.blocking) ? args.blocking : [];
   const warningsRaw = Array.isArray(args?.warnings) ? args.warnings : [];
   const fallbackMessage = String(args?.fallbackMessage || "").trim();
 
-  const missing = missingRaw
-    .map(humanizeMissingStep)
-    .filter(Boolean);
+  const missing = missingRaw.map(humanizeMissingStep).filter(Boolean);
+  const blocking = blockingRaw.map(humanizeBlockingReason).filter(Boolean);
+  const warnings = warningsRaw.map(humanizeWarning).filter(Boolean);
 
-  const blocking = blockingRaw
-    .map(humanizeBlockingReason)
-    .filter(Boolean);
+  const panel = createEl("div", "review-panel");
+  const box = createEl("div", "review-box review-box--error");
 
-  const warnings = warningsRaw
-    .map(humanizeWarning)
-    .filter(Boolean);
+  box.appendChild(createEl("div", "review-title", "Dossier kan nog niet worden ingediend"));
 
-  const items = [];
+  box.appendChild(
+    createEl(
+      "div",
+      "review-intro",
+      (missing.length || blocking.length || warnings.length)
+        ? "De onderstaande punten zijn gevonden tijdens controle van volledigheid en documentinhoud."
+        : (fallbackMessage || "De controle blokkeert indiening.")
+    )
+  );
 
-  for (const x of missing) {
-    items.push({
-      text: x,
-      sub: "Ontbrekend of nog niet volledig ingevuld.",
-    });
-  }
+  const itemsWrap = createEl("div", "review-items");
 
-  for (const x of blocking) {
-    items.push({
-      text: x,
-      sub: "Deze controle blokkeert indiening.",
-    });
-  }
-
-  for (const x of warnings) {
-    items.push({
-      text: x,
-      sub: "Dit is een waarschuwing en blokkeert indiening niet.",
-    });
-  }
-
-  renderReviewStatePanel({
-    tone: "error",
-    title: "Dossier kan nog niet worden ingediend",
-    intro: items.length
-      ? "De onderstaande punten zijn gevonden tijdens controle van volledigheid en documentinhoud."
-      : (fallbackMessage || "De controle blokkeert indiening."),
-    items,
+  missing.forEach((text) => {
+    itemsWrap.appendChild(
+      createReviewItemNode(
+        "review-item--error",
+        "×",
+        text,
+        "Ontbrekend of nog niet volledig ingevuld."
+      )
+    );
   });
+
+  blocking.forEach((text) => {
+    itemsWrap.appendChild(
+      createReviewItemNode(
+        "review-item--error",
+        "×",
+        text,
+        "Deze controle blokkeert indiening."
+      )
+    );
+  });
+
+  warnings.forEach((text) => {
+    itemsWrap.appendChild(
+      createReviewItemNode(
+        "review-item--warn",
+        "!",
+        text,
+        "Dit is een waarschuwing en blokkeert indiening niet."
+      )
+    );
+  });
+
+  if (itemsWrap.childNodes.length) {
+    box.appendChild(itemsWrap);
+  }
+
+  panel.appendChild(box);
+  el.appendChild(panel);
 }
 
 function renderPrecheckSuccessPanel(warnings) {
@@ -502,15 +524,81 @@ function renderPrecheckSuccessPanel(warnings) {
     return;
   }
 
-  renderReviewStatePanel({
-    tone: "warn",
-    title: "Dossier klaar voor indiening",
-    intro: "Het dossier mag worden ingediend. Hieronder staan nog aandachtspunten die niet blokkeren.",
-    items: warnItems.map((x) => ({
-      text: x,
-      sub: "Niet-blokkerende waarschuwing.",
-    })),
+  const el = $("reviewState");
+  if (!el) return;
+
+  clearNode(el);
+
+  const panel = createEl("div", "review-panel");
+  const box = createEl("div", "review-box review-box--ok");
+
+  box.appendChild(createEl("div", "review-title", "Dossier klaar voor indiening"));
+  box.appendChild(
+    createEl(
+      "div",
+      "review-intro",
+      "Het dossier mag worden ingediend. Hieronder staan nog aandachtspunten die niet blokkeren."
+    )
+  );
+
+  const itemsWrap = createEl("div", "review-items");
+  warnItems.forEach((text) => {
+    itemsWrap.appendChild(
+      createReviewItemNode(
+        "review-item--warn",
+        "!",
+        text,
+        "Niet-blokkerende waarschuwing."
+      )
+    );
   });
+
+  box.appendChild(itemsWrap);
+  panel.appendChild(box);
+  el.appendChild(panel);
+}
+
+function renderLockedReviewPanel(lockedAt, warningsRaw = []) {
+  const el = $("reviewState");
+  if (!el) return;
+
+  clearNode(el);
+
+  const warnings = Array.isArray(warningsRaw)
+    ? warningsRaw.map(humanizeWarning).filter(Boolean)
+    : [];
+
+  const panel = createEl("div", "review-panel");
+  const box = createEl("div", "review-box review-box--ok");
+
+  box.appendChild(createEl("div", "review-title", "Dossier ingediend"));
+  box.appendChild(
+    createEl(
+      "div",
+      "review-intro",
+      `In review sinds: ${formatDateNL(lockedAt)}`
+    )
+  );
+
+  if (warnings.length) {
+    const itemsWrap = createEl("div", "review-items");
+
+    warnings.forEach((text) => {
+      itemsWrap.appendChild(
+        createReviewItemNode(
+          "review-item--warn",
+          "!",
+          text,
+          "Niet-blokkerende waarschuwing."
+        )
+      );
+    });
+
+    box.appendChild(itemsWrap);
+  }
+
+  panel.appendChild(box);
+  el.appendChild(panel);
 }
 
 function normalizeApiErrorPayload(err, fallbackMessage = "Controle mislukt.") {
@@ -539,24 +627,11 @@ function normalizeApiErrorPayload(err, fallbackMessage = "Controle mislukt.") {
 }
 
 function humanizeMissingStep(step) {
-  const s = String(step || "").trim();
-
-  if (!s) return "";
-
-  if (s.startsWith("1)")) return "Stap 1 is nog niet compleet ingevuld.";
-  if (s.startsWith("2)")) return "Stap 2 (adres) is nog niet compleet ingevuld.";
-  if (s.includes("exact aantal")) return "Het aantal ingevulde laadpalen klopt nog niet met het gekozen aantal laadpunten.";
-  if (s.includes("MID-nummer per laadpaal verplicht")) return "Niet elke laadpaal heeft een MID-nummer.";
-  if (s.includes("Documenten")) return "Niet voor elke laadpaal zijn de vereiste documenten toegevoegd en bevestigd.";
-  if (s.startsWith("5)")) return "Stap 5 (toestemmingen) is nog niet compleet.";
-  if (s.startsWith("6)")) return "";
-
-  return s;
+  return String(step || "").trim();
 }
 
 function humanizeBlockingReason(reason) {
   const s = String(reason || "").trim();
-
   if (!s) return "";
 
   if (s.startsWith("invoice_mid_match:")) {
@@ -603,7 +678,6 @@ function humanizeBlockingReason(reason) {
 
 function humanizeWarning(warning) {
   const s = String(warning || "").trim();
-
   if (!s) return "";
 
   if (s.includes("Foto-analyse is nog niet geïmplementeerd")) {
@@ -706,14 +780,6 @@ function createAnalysisTable(headers, rows) {
   return wrap;
 }
 
-function createSimpleCell(text, className = "", title = "") {
-  const td = document.createElement("td");
-  if (className) td.className = className;
-  if (title) td.title = title;
-  td.textContent = text;
-  return td;
-}
-
 function createIconButton({ className = "", label = "", title = "", action = "", id = "" }) {
   const button = document.createElement("button");
   button.type = "button";
@@ -726,45 +792,60 @@ function createIconButton({ className = "", label = "", title = "", action = "",
   return button;
 }
 
-function createRightActionCell(button) {
-  const td = document.createElement("td");
-  td.className = "right";
 
-  const stack = document.createElement("div");
-  stack.className = "btnstack";
-  stack.appendChild(button);
+function createDocSection({ title, docs, locked }) {
+  const section = createEl("div", "doc-group-section");
 
-  td.appendChild(stack);
-  return td;
+  const sectionTitle = createEl("div", "doc-group-section__title", title);
+  section.appendChild(sectionTitle);
+
+  if (!Array.isArray(docs) || !docs.length) {
+    section.appendChild(
+      createEl("div", "doc-group-section__empty muted small", "Nog niet geüpload.")
+    );
+    return section;
+  }
+
+  docs.forEach((doc) => {
+    const row = createEl("div", "doc-entry");
+
+    const fileWrap = createEl("div", "doc-entry__file");
+
+    const fileLink = document.createElement("a");
+    fileLink.href = "#";
+    fileLink.dataset.act = "open";
+    fileLink.dataset.id = doc.id;
+    fileLink.className = "doc-card__link";
+    fileLink.title = doc.filename || "-";
+    fileLink.textContent = doc.filename || "-";
+
+    fileWrap.appendChild(fileLink);
+
+    const actions = createEl("div", "doc-entry__actions");
+
+    const deleteButton = createIconButton({
+      className: `iconbtn iconbtn--danger ${locked ? "hidden" : ""}`,
+      label: "Verwijder document",
+      title: "Verwijder",
+      action: "del",
+      id: doc.id,
+    });
+    deleteButton.setAttribute("data-lock-hide", "1");
+
+    actions.appendChild(deleteButton);
+
+    row.appendChild(fileWrap);
+    row.appendChild(actions);
+
+    section.appendChild(row);
+  });
+
+  return section;
 }
 
-function createStatusListItem(serial, invoiceCount, photoCount) {
-  const li = document.createElement("li");
 
-  const serialSpan = document.createElement("span");
-  serialSpan.className = "mono";
-  serialSpan.textContent = serial;
-
-  const invoiceStrong = document.createElement("b");
-  invoiceStrong.textContent = String(invoiceCount);
-
-  const photoStrong = document.createElement("b");
-  photoStrong.textContent = String(photoCount);
-
-  const slash = document.createElement("span");
-  slash.className = "muted";
-  slash.textContent = "/";
-
-  li.appendChild(serialSpan);
-  li.appendChild(document.createTextNode(": facturen "));
-  li.appendChild(invoiceStrong);
-  li.appendChild(document.createTextNode(invoiceCount >= 1 ? " ✅ " : " ⏳ "));
-  li.appendChild(slash);
-  li.appendChild(document.createTextNode(" foto's "));
-  li.appendChild(photoStrong);
-  li.appendChild(document.createTextNode(photoCount >= 1 ? " ✅" : " ⏳"));
-
-  return li;
+function getChargersForUi() {
+  return Array.isArray(current?.chargers) ? [...current.chargers] : [];
 }
 
 function renderAnalysisUiEmptyState() {
@@ -1074,14 +1155,13 @@ function setAllUiLocked(locked) {
     "btnAccessSave",
     "btnAddressSave",
     "btnChargerSave",
-    "btnUpload",
     "btnConsentsSave",
   ].forEach((id) => {
     const el = $(id);
     if (el) el.disabled = !!locked;
   });
 
-  ["accessForm", "addressForm", "chargerForm", "uploadForm", "consentsForm"].forEach((fid) => {
+  ["accessForm", "addressForm", "chargerForm", "consentsForm"].forEach((fid) => {
     const f = $(fid);
     if (!f) return;
     f.querySelectorAll("input, select, textarea").forEach((el) => {
@@ -1141,7 +1221,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("addressForm")?.addEventListener("submit", onAddressSave);
   $("accessForm")?.addEventListener("submit", onAccessSave);
   $("chargerForm")?.addEventListener("submit", onChargerSave);
-  $("uploadForm")?.addEventListener("submit", onUpload);
+  // Upload gebeurt nu per documentvak in de laadpaalkaarten van stap 4.
   $("consentsForm")?.addEventListener("submit", onConsentsSave);
 
   // auto-verify address (debounce)
@@ -1307,6 +1387,10 @@ function renderStatus() {
 
   syncReviewButtons();
 
+  if (locked) {
+    renderLockedReviewPanel(current?.dossier?.locked_at || null, []);
+  }
+
   const exportBox = $("exportBox");
   const btnExport = $("btnExportDossier");
   const devUnlockBox = $("devUnlockBox");
@@ -1369,7 +1453,6 @@ function renderAccess() {
     const inLast = f.querySelector('[name="last_name"]');
     const inPhone = f.querySelector('[name="customer_phone"]');
     const inCount = f.querySelector('[name="charger_count"]');
-    const inOwn = f.querySelector('[name="own_premises"]');
 
     if (inFirst) inFirst.value = firstNice || "";
     if (inLast) inLast.value = lastNice || "";
@@ -1414,16 +1497,8 @@ function renderAccess() {
         setText("accessState", "");
       }
     }
-
-    if (inOwn) {
-      inOwn.value =
-        d.own_premises === true ? "ja" :
-        d.own_premises === false ? "nee" :
-        "";
-    }
   }
 
-  const ownTxt = d.own_premises === true ? "Ja" : (d.own_premises === false ? "Nee" : "—");
   const phoneTxt = d.customer_phone || "—";
   const cntTxt = d.charger_count ? String(d.charger_count) : "—";
   const emailTxt = email || "—";
@@ -1440,7 +1515,6 @@ function renderAccess() {
     appendTextLine(summary, "Naam", naamTxt);
     appendTextLine(summary, "E-mail", emailTxt);
     appendTextLine(summary, "Aantal laadpunten", cntTxt);
-    appendTextLine(summary, "Op eigen terrein", ownTxt);
     appendTextLine(summary, "Mobiel", phoneTxt);
   }
 
@@ -1592,14 +1666,14 @@ function onAddressInputChanged() {
  * - tabel render + delete acties
  */
 function renderChargers() {
-  const tbody = $("chargersTbody");
-  if (!tbody) return;
+  const wrap = $("chargersCards");
+  if (!wrap) return;
 
-  clearNode(tbody);
+  clearNode(wrap);
 
   const d = current?.dossier || {};
   const required = Number(d.charger_count || 0) || 0;
-  const chargers = current?.chargers || [];
+  const chargers = getChargersForUi();
   const have = chargers.length;
 
   const remaining = required > 0 ? Math.max(0, required - have) : 0;
@@ -1650,47 +1724,71 @@ function renderChargers() {
   }
 
   if (!chargers.length) {
-    const tr = document.createElement("tr");
-    const td = document.createElement("td");
-    td.colSpan = 6;
-    td.className = "muted";
-    td.textContent = "Nog geen laadpalen toegevoegd.";
-    tr.appendChild(td);
-    tbody.appendChild(tr);
+    const empty = createEl("div", "notice small muted", "Nog geen laadpalen toegevoegd.");
+    wrap.appendChild(empty);
     return;
   }
 
-  chargers.forEach((c) => {
-    const tr = document.createElement("tr");
+  chargers.forEach((c, index) => {
+    const card = createEl("div", "charger-card");
 
-    const brandFull = c.brand || "-";
-    const modelFull = c.model || "-";
-    const snFull = c.serial_number || "-";
-    const midFull = c.mid_number || "-";
-    const notesFull = c.notes || "-";
+    const head = createEl("div", "charger-card__head");
+    const titleWrap = createEl("div", "charger-card__titlewrap");
 
-    tr.appendChild(createSimpleCell(trunc(brandFull, 10), "", brandFull));
-    tr.appendChild(createSimpleCell(trunc(modelFull, 14), "", modelFull));
-    tr.appendChild(createSimpleCell(trunc(snFull, 14), "mono", snFull));
-    tr.appendChild(createSimpleCell(trunc(midFull, 14), "mono", midFull));
-    tr.appendChild(createSimpleCell(notesFull, "", notesFull));
+    const title = createEl("div", "charger-card__title", `Laadpaal ${index + 1}`);
+    const subtitle = createEl(
+      "div",
+      "doc-card__subtitle",
+      `${c.brand || "Onbekend merk"} — ${c.model || "Onbekend model"}`
+    );
 
-    const deleteButton = createIconButton({
-      className: `iconbtn iconbtn--danger ${locked ? "hidden" : ""}`,
-      label: "Verwijder laadpaal",
-      title: "Verwijder",
-      action: "del",
-      id: c.id,
-    });
-    deleteButton.setAttribute("data-lock-hide", "1");
+    titleWrap.appendChild(title);
+    titleWrap.appendChild(subtitle);
 
-    tr.appendChild(createRightActionCell(deleteButton));
-    tbody.appendChild(tr);
+    const actions = createEl("div", "charger-card__actions");
+    if (!locked) {
+      const delBtn = document.createElement("button");
+      delBtn.type = "button";
+      delBtn.className = "iconbtn iconbtn--danger";
+      delBtn.setAttribute("aria-label", "Verwijder laadpaal");
+      delBtn.title = "Verwijder";
+      delBtn.dataset.act = "del";
+      delBtn.dataset.id = c.id;
+      delBtn.textContent = "×";
+      actions.appendChild(delBtn);
+    }
+
+    head.appendChild(titleWrap);
+    head.appendChild(actions);
+    card.appendChild(head);
+
+    const body = createEl("div", "charger-card__grid");
+
+    const midItem = createEl("div", "charger-card__item");
+    midItem.appendChild(createEl("div", "charger-card__label", "MID-nummer"));
+    midItem.appendChild(createEl("div", "charger-card__value mono", c.mid_number || "—"));
+
+    const serialItem = createEl("div", "charger-card__item");
+    serialItem.appendChild(createEl("div", "charger-card__label", "Serienummer"));
+    serialItem.appendChild(createEl("div", "charger-card__value mono", c.serial_number || "—"));
+
+    body.appendChild(midItem);
+    body.appendChild(serialItem);
+
+    if (c.notes) {
+      const notesItem = createEl("div", "charger-card__item charger-card__item--full");
+      notesItem.appendChild(createEl("div", "charger-card__label", "Toelichting"));
+      notesItem.appendChild(createEl("div", "charger-card__value", c.notes));
+      body.appendChild(notesItem);
+    }
+
+    card.appendChild(body);
+    wrap.appendChild(card);
   });
 
   if (locked) return;
 
-  tbody.querySelectorAll("button[data-act='del']").forEach((btn) => {
+  wrap.querySelectorAll("button[data-act='del']").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const id = btn.getAttribute("data-id");
       if (!confirm("Weet je zeker dat je deze laadpaal wilt verwijderen?")) return;
@@ -1712,22 +1810,166 @@ function renderChargers() {
 
 
 
-/**
- * renderDocs()
- * Doel:
- * - hint tekst (compact, 1 regel)
- * - populate laadpaal dropdown
- * - status per laadpaal (factuur/foto)
- * - tabel met open/delete
- *
- * CSS: ellipsis alleen op .td-filename
- */
+
+function createUploadSlot({ chargerId, docType, locked }) {
+  const slot = createEl("div", "doc-upload-slot doc-upload-slot--missing");
+  if (locked) slot.classList.add("doc-upload-slot--locked");
+
+  const title = createEl(
+    "div",
+    "doc-upload-slot__title",
+    "Document vereist"
+  );
+
+  const hint = createEl(
+    "div",
+    "doc-upload-slot__hint",
+    locked
+      ? "Dossier is vergrendeld."
+      : "Sleep bestand hierheen of klik om te uploaden."
+  );
+
+  slot.appendChild(title);
+  slot.appendChild(hint);
+
+  if (locked) {
+    return slot;
+  }
+
+  const input = document.createElement("input");
+  input.type = "file";
+  input.className = "hidden";
+  input.accept =
+    ".pdf,.png,.jpg,.jpeg,.doc,.docx,application/pdf,image/png,image/jpeg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+  input.addEventListener("change", async () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+
+    try {
+      await uploadDocumentForCard({
+        charger_id: chargerId,
+        doc_type: docType,
+        file,
+        slot,
+      });
+    } finally {
+      input.value = "";
+    }
+  });
+
+  slot.addEventListener("click", () => {
+    input.click();
+  });
+
+  slot.addEventListener("dragenter", (e) => {
+    e.preventDefault();
+    slot.classList.add("is-dragover");
+  });
+
+  slot.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    slot.classList.add("is-dragover");
+  });
+
+  slot.addEventListener("dragleave", (e) => {
+    if (!slot.contains(e.relatedTarget)) {
+      slot.classList.remove("is-dragover");
+    }
+  });
+
+  slot.addEventListener("drop", async (e) => {
+    e.preventDefault();
+    slot.classList.remove("is-dragover");
+
+    const file = e.dataTransfer?.files && e.dataTransfer.files[0];
+    if (!file) return;
+
+    await uploadDocumentForCard({
+      charger_id: chargerId,
+      doc_type: docType,
+      file,
+      slot,
+    });
+  });
+
+  slot.appendChild(input);
+  return slot;
+}
+
+function createDocSection({ title, docs, locked, chargerId, docType }) {
+  const hasDocs = Array.isArray(docs) && docs.length > 0;
+
+  const sectionTone = hasDocs
+    ? "doc-group-section doc-group-section--ok"
+    : "doc-group-section doc-group-section--missing";
+
+  const section = createEl("div", sectionTone);
+
+  const sectionTitle = createEl("div", "doc-group-section__title", title);
+  section.appendChild(sectionTitle);
+
+  // MVP/DB-contract: maximaal 1 document per type per laadpaal.
+  // Daarom tonen we upload alleen zolang de sectie nog leeg is.
+  if (!hasDocs) {
+    section.appendChild(
+      createUploadSlot({
+        chargerId,
+        docType,
+        locked,
+      })
+    );
+
+    section.appendChild(
+      createEl("div", "doc-group-section__empty muted small", "Nog niet geüpload.")
+    );
+
+    return section;
+  }
+
+  docs.forEach((doc) => {
+    const row = createEl("div", "doc-entry");
+
+    const fileWrap = createEl("div", "doc-entry__file");
+
+    const fileLink = document.createElement("a");
+    fileLink.href = "#";
+    fileLink.dataset.act = "open";
+    fileLink.dataset.id = doc.id;
+    fileLink.className = "doc-card__link";
+    fileLink.title = doc.filename || "-";
+    fileLink.textContent = doc.filename || "-";
+
+    fileWrap.appendChild(fileLink);
+
+    const actions = createEl("div", "doc-entry__actions");
+
+    const deleteButton = createIconButton({
+      className: `iconbtn iconbtn--danger ${locked ? "hidden" : ""}`,
+      label: "Verwijder document",
+      title: "Verwijder",
+      action: "del",
+      id: doc.id,
+    });
+    deleteButton.setAttribute("data-lock-hide", "1");
+
+    actions.appendChild(deleteButton);
+
+    row.appendChild(fileWrap);
+    row.appendChild(actions);
+
+    section.appendChild(row);
+  });
+
+  return section;
+}
+
 function renderDocs() {
   const docs = current?.documents || [];
-  const tbody = $("docsTbody");
-  if (!tbody) return;
+  const cardsWrap = $("docsCards");
+  if (!cardsWrap) return;
 
-  clearNode(tbody);
+  clearNode(cardsWrap);
 
   const locked = isLocked();
 
@@ -1736,133 +1978,94 @@ function renderDocs() {
     hint.textContent = "Per laadpaal: minimaal 1 factuur installatie + 1 foto van het laadpunt.";
   }
 
-  const chargers = current?.chargers || [];
-  const chargerById = {};
-  chargers.forEach((c) => {
-    chargerById[String(c.id)] = c;
-  });
+  const chargers = getChargersForUi();
 
-  const sel = $("docChargerId");
-  if (sel) {
-    setSelectOptions(
-      sel,
-      chargers.map((c) => {
-        const sn = c.serial_number ? String(c.serial_number) : "—";
-        const b = c.brand ? String(c.brand) : "";
-        const m = c.model ? String(c.model) : "";
-        return {
-          value: String(c.id),
-          label: `${sn} — ${b} ${m}`.trim(),
-        };
-      }),
-      "Kies laadpaal…"
-    );
-    sel.disabled = !!locked || chargers.length === 0;
-  }
-
-  const needHint = $("docChargerHint");
-  if (needHint) {
-    clearNode(needHint);
-
-    if (!chargers.length) {
-      needHint.textContent = "Voeg eerst laadpalen toe in stap 3.";
-    } else {
-      const title = document.createElement("b");
-      title.textContent = "Status per laadpaal";
-      needHint.appendChild(title);
-
-      const list = document.createElement("ul");
-      list.className = "statuslist";
-
-      const per = {};
-      chargers.forEach((c) => {
-        per[String(c.id)] = {
-          factuur: 0,
-          foto_laadpunt: 0,
-          serial: c.serial_number || "",
-        };
-      });
-
-      docs.forEach((x) => {
-        const dt = String(x.doc_type || "").toLowerCase();
-        const chId = x.charger_id ? String(x.charger_id) : "";
-        if (!chId || !per[chId]) return;
-        if (dt === "factuur") per[chId].factuur += 1;
-        if (dt === "foto_laadpunt") per[chId].foto_laadpunt += 1;
-      });
-
-      chargers.forEach((c) => {
-        const chId = String(c.id);
-        const sn = c.serial_number ? String(c.serial_number) : "—";
-        const p = per[chId] || { factuur: 0, foto_laadpunt: 0 };
-        list.appendChild(createStatusListItem(sn, p.factuur, p.foto_laadpunt));
-      });
-
-      needHint.appendChild(list);
-    }
-  }
-
-  if (!docs.length) {
-    const tr = document.createElement("tr");
-    const td = document.createElement("td");
-    td.colSpan = 4;
-    td.className = "muted";
-    td.textContent = "Nog geen documenten geüpload.";
-    tr.appendChild(td);
-    tbody.appendChild(tr);
+  if (!chargers.length) {
+    cardsWrap.appendChild(createEl("div", "notice small muted", "Voeg eerst laadpalen toe in stap 3."));
     return;
   }
 
-  docs.forEach((x) => {
-    const tr = document.createElement("tr");
-
-    const typeFull = String(x.doc_type || "-");
-    const type = trunc(typeFull, 15);
-
-    const filenameFull = x.filename || "-";
-    const filename = filenameFull;
-
-    const chId = x.charger_id ? String(x.charger_id) : "";
-    const ch = chId ? chargerById[chId] : null;
-
-    const dt = typeFull.toLowerCase();
-    const chargerLabelFull = ch
-      ? `${ch.serial_number || "—"}`
-      : (dt === "factuur" || dt === "foto_laadpunt" ? "— (niet gekoppeld)" : "—");
-
-    const chargerLabel = trunc(chargerLabelFull, 10);
-
-    tr.appendChild(createSimpleCell(type, "", typeFull));
-    tr.appendChild(createSimpleCell(chargerLabel, "mono", chargerLabelFull));
-
-    const filenameTd = document.createElement("td");
-    filenameTd.title = filenameFull;
-
-    const openLink = document.createElement("a");
-    openLink.href = "#";
-    openLink.dataset.act = "open";
-    openLink.dataset.id = x.id;
-    openLink.textContent = filename;
-
-    filenameTd.appendChild(openLink);
-    tr.appendChild(filenameTd);
-
-    const deleteButton = createIconButton({
-      className: `iconbtn iconbtn--danger ${locked ? "hidden" : ""}`,
-      label: "Verwijder document",
-      title: "Verwijder",
-      action: "del",
-      id: x.id,
-    });
-    deleteButton.setAttribute("data-lock-hide", "1");
-
-    tr.appendChild(createRightActionCell(deleteButton));
-    tbody.appendChild(tr);
+  const docsByCharger = {};
+  chargers.forEach((c) => {
+    docsByCharger[String(c.id)] = {
+      factuur: [],
+      foto_laadpunt: [],
+    };
   });
 
-  tbody.querySelectorAll("a[data-act='open']").forEach((a) => {
+  docs.forEach((doc) => {
+    const chId = doc.charger_id ? String(doc.charger_id) : "";
+    if (!chId || !docsByCharger[chId]) return;
+
+    const dt = String(doc.doc_type || "").toLowerCase();
+    if (dt === "factuur") docsByCharger[chId].factuur.push(doc);
+    if (dt === "foto_laadpunt") docsByCharger[chId].foto_laadpunt.push(doc);
+  });
+
+  chargers.forEach((c, index) => {
+    const chId = String(c.id);
+    const grouped = docsByCharger[chId] || { factuur: [], foto_laadpunt: [] };
+
+    const card = createEl("div", "charger-card doc-group-card");
+
+    const head = createEl("div", "charger-card__head");
+    const titleWrap = createEl("div", "charger-card__titlewrap");
+
+    const title = createEl("div", "charger-card__title", `Laadpaal ${index + 1}`);
+    const subtitle = createEl(
+      "div",
+      "doc-card__subtitle",
+      `${c.brand || "—"} — ${c.model || "—"}`
+    );
+
+    titleWrap.appendChild(title);
+    titleWrap.appendChild(subtitle);
+    head.appendChild(titleWrap);
+    card.appendChild(head);
+
+    const metaGrid = createEl("div", "charger-card__grid");
+
+    const midItem = createEl("div", "charger-card__item");
+    midItem.appendChild(createEl("div", "charger-card__label", "MID-nummer"));
+    midItem.appendChild(createEl("div", "charger-card__value mono", c.mid_number || "—"));
+
+    const serialItem = createEl("div", "charger-card__item");
+    serialItem.appendChild(createEl("div", "charger-card__label", "Serienummer"));
+    serialItem.appendChild(createEl("div", "charger-card__value mono", c.serial_number || "—"));
+
+    metaGrid.appendChild(midItem);
+    metaGrid.appendChild(serialItem);
+
+    card.appendChild(metaGrid);
+
+    card.appendChild(
+      createDocSection({
+        title: "Factuur",
+        docs: grouped.factuur,
+        locked,
+        chargerId: chId,
+        docType: "factuur",
+      })
+    );
+
+    card.appendChild(
+      createDocSection({
+        title: "Foto laadpunt",
+        docs: grouped.foto_laadpunt,
+        locked,
+        chargerId: chId,
+        docType: "foto_laadpunt",
+      })
+    );
+
+    cardsWrap.appendChild(card);
+  });
+
+  cardsWrap.querySelectorAll("a[data-act='open']").forEach((a) => {
     a.addEventListener("click", async (e) => {
       e.preventDefault();
+      e.stopPropagation();
+
       const id = a.getAttribute("data-id");
 
       try {
@@ -1880,8 +2083,11 @@ function renderDocs() {
 
   if (locked) return;
 
-  tbody.querySelectorAll("button[data-act='del']").forEach((btn) => {
-    btn.addEventListener("click", async () => {
+  cardsWrap.querySelectorAll("button[data-act='del']").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
       const id = btn.getAttribute("data-id");
       if (!confirm("Weet je zeker dat je dit document wilt verwijderen?")) return;
 
@@ -1891,8 +2097,8 @@ function renderDocs() {
         showToast("Document verwijderd.", "success");
         invalidatePrecheck("document verwijderd");
         await reloadAll();
-      } catch (e) {
-        showToast(e.message, "error");
+      } catch (e2) {
+        showToast(e2.message, "error");
       } finally {
         btn.disabled = false;
       }
@@ -2018,15 +2224,8 @@ async function onAccessSave(e) {
     return showToast("Vul een geldig mobiel nummer in (06xxxxxxxx of +316xxxxxxxx).", "error");
   }
 
-
   const charger_count_raw = (f.querySelector('[name="charger_count"]')?.value || "").trim();
   const charger_count = charger_count_raw ? Number(charger_count_raw) : null;
-
-  const own_raw = (f.querySelector('[name="own_premises"]')?.value || "").trim().toLowerCase();
-  const own_premises =
-    own_raw === "ja" ? true :
-    own_raw === "nee" ? false :
-    null;
 
   if (!first_name) return showToast("Voornaam is verplicht.", "error");
   if (!last_name) return showToast("Achternaam is verplicht.", "error");
@@ -2035,10 +2234,6 @@ async function onAccessSave(e) {
   }
   if (charger_count > UI_MAX_CHARGERS) {
     return showToast("Aanmelding is beperkt tot maximaal 4 laadpalen. Neem contact op voor batch dossiers.", "error");
-  }
-
-  if (own_premises === null) {
-    return showToast("Kies of het op eigen terrein is.", "error");
   }
 
   lockSubmit(btn, true, "Opslaan…");
@@ -2050,7 +2245,6 @@ async function onAccessSave(e) {
         last_name,
         customer_phone: customer_phone || null,
         charger_count,
-        own_premises,
       });
     } catch (e1) {
       await apiAuthed("api-dossier-access-update", {
@@ -2058,11 +2252,9 @@ async function onAccessSave(e) {
         last_name,
         customer_phone: customer_phone || null,
         charger_count,
-        own_premises,
       });
     }
 
-    // normalize terug in UI
     const inFirst = f.querySelector('[name="first_name"]');
     const inLast  = f.querySelector('[name="last_name"]');
     if (inFirst) inFirst.value = first_name;
@@ -2138,8 +2330,6 @@ async function onChargerSave(e) {
     const serial_number = (f.querySelector('[name="serial_number"]')?.value || "").trim();
     const mid_number = (f.querySelector('[name="mid_number"]')?.value || "").trim();
     const notes = (f.querySelector('[name="notes"]')?.value || "").trim();
-    const power_kw_raw = (f.querySelector('[name="power_kw"]').value || "").trim();
-    const power_kw = power_kw_raw ? Number(power_kw_raw.replace(",", ".")) : null;
 
     if (!serial_number) return showToast("Serienummer is verplicht.", "error");
     if (!mid_number) return showToast("MID-nummer is verplicht.", "error");
@@ -2162,7 +2352,6 @@ async function onChargerSave(e) {
       mid_number,
       brand,
       model,
-      power_kw,
       notes: (brand === "Anders" || model === "Anders") ? notes : null,
     });
 
@@ -2353,131 +2542,120 @@ async function sha256FileHex(file) {
     .join("");
 }
 
-
-async function onUpload(e) {
-  e.preventDefault();
-  if (isLocked()) return showToast("Dossier is vergrendeld.", "error");
-
-  const f = e.target;
-  const btn = $("btnUpload");
-  if (btn?.disabled) return;
-
-  const doc_type = f.querySelector('[name="doc_type"]').value;
-  const charger_id = (f.querySelector('[name="charger_id"]')?.value || "").trim();
-
-  const fileInput = f.querySelector('[name="file"]');
-  const file = fileInput.files && fileInput.files[0];
-
-  if (!doc_type) return showToast("Kies documenttype.", "error");
-
-  const dt = String(doc_type || "").toLowerCase();
-  if ((dt === "factuur" || dt === "foto_laadpunt") && !charger_id) {
-    return showToast("Kies eerst voor welke laadpaal dit document is.", "error");
+async function uploadDocumentForCard({ charger_id, doc_type, file, slot }) {
+  if (isLocked()) {
+    showToast("Dossier is vergrendeld.", "error");
+    return;
   }
 
-  if (!file) return showToast("Kies bestand.", "error");
-
-  // Hard cap op ORIGINEEL om memory/abuse te beperken (compressie komt hierna)
-  const MAX_ORIGINAL_BYTES = 25 * 1024 * 1024; // 25MB
-  if (file.size > MAX_ORIGINAL_BYTES) {
-    return showToast("Bestand is te groot. Max 25MB (origineel).", "error");
+  if (!charger_id) {
+    showToast("Ongeldige laadpaal.", "error");
+    return;
   }
 
-
-  const allowedExt = new Set(["pdf", "png", "jpg", "jpeg", "doc", "docx"]);
-  const allowedMime = new Set([
-    "application/pdf",
-    "image/png",
-    "image/jpeg",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  ]);
-
-  const name = (file.name || "").trim();
-  const ext = name.toLowerCase().split(".").pop() || "";
-  const mime = (file.type || "").trim();
-
-  if (!allowedExt.has(ext)) {
-    return showToast("Ongeldig bestandstype. Alleen: PDF, PNG, JPG/JPEG, DOC, DOCX.", "error");
-  }
-  if (mime && !allowedMime.has(mime)) {
-    return showToast("Ongeldig bestandstype. Alleen: PDF, PNG, JPG/JPEG, DOC, DOCX.", "error");
+  if (!doc_type) {
+    showToast("Ongeldig documenttype.", "error");
+    return;
   }
 
- 
+  if (!file) {
+    showToast("Kies eerst een bestand.", "error");
+    return;
+  }
 
-  lockSubmit(btn, true, "Upload…");
-
+  const originalHint = slot?.querySelector(".doc-upload-slot__hint");
+  const originalHintText = originalHint ? originalHint.textContent : "";
 
   try {
-    
-    // 1) Prepare (compress images client-side where needed)
-    if ($("uploadState")) $("uploadState").textContent = "Bestand optimaliseren…";
+    if (slot) slot.classList.add("is-busy");
+    if (originalHint) originalHint.textContent = "Bestand wordt verwerkt…";
 
+    const MAX_ORIGINAL_BYTES = 25 * 1024 * 1024;
+    if (file.size > MAX_ORIGINAL_BYTES) {
+      throw new Error("Bestand is te groot. Max 25MB (origineel).");
+    }
+
+    const allowedExt = new Set(["pdf", "png", "jpg", "jpeg", "doc", "docx"]);
+    const allowedMime = new Set([
+      "application/pdf",
+      "image/png",
+      "image/jpeg",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ]);
+
+    const name = (file.name || "").trim();
+    const ext = name.toLowerCase().split(".").pop() || "";
+    const mime = (file.type || "").trim();
+
+    if (!allowedExt.has(ext)) {
+      throw new Error("Ongeldig bestandstype. Alleen: PDF, PNG, JPG/JPEG, DOC, DOCX.");
+    }
+    if (mime && !allowedMime.has(mime)) {
+      throw new Error("Ongeldig bestandstype. Alleen: PDF, PNG, JPG/JPEG, DOC, DOCX.");
+    }
+
+    if (originalHint) originalHint.textContent = "Bestand optimaliseren…";
     const prepared = await prepareUploadFile(file, doc_type);
     const uploadFile = prepared.uploadFile;
     const client_transform = prepared.client_transform;
 
-    // 2) Max check op FINALE bytes (dit is de echte upload)
-    const MAX_FINAL_BYTES = 15 * 1024 * 1024; // 15MB
+    const MAX_FINAL_BYTES = 15 * 1024 * 1024;
     if (uploadFile.size > MAX_FINAL_BYTES) {
-      return showToast("Bestand is te groot na optimalisatie. Max 15MB.", "error");
+      throw new Error("Bestand is te groot na optimalisatie. Max 15MB.");
     }
 
-    // 3) Hash berekenen over FINALE bytes (audit-proof)
-    if ($("uploadState")) $("uploadState").textContent = "Hash berekenen…";
+    if (originalHint) originalHint.textContent = "Hash berekenen…";
     const file_sha256 = await sha256FileHex(uploadFile);
 
-    if ($("uploadState")) $("uploadState").textContent = "Upload voorbereiden…";
-
+    if (originalHint) originalHint.textContent = "Upload voorbereiden…";
     const meta = await apiAuthed("api-dossier-upload-url", {
       doc_type,
-      charger_id: charger_id || null,
+      charger_id,
       filename: uploadFile.name,
       content_type: uploadFile.type || "application/octet-stream",
       size_bytes: uploadFile.size,
       client_transform,
     });
 
-
     if (!meta?.document_id) throw new Error("Upload voorbereiding faalde (geen document_id).");
     if (!meta?.signed_url) throw new Error("Upload voorbereiding faalde (geen signed_url).");
 
-    if ($("uploadState")) $("uploadState").textContent = "Uploaden…";
-
+    if (originalHint) originalHint.textContent = "Uploaden…";
     const putRes = await fetch(meta.signed_url, {
       method: "PUT",
       headers: { "Content-Type": uploadFile.type || "application/octet-stream" },
       body: uploadFile,
     });
 
+    if (!putRes.ok) {
+      throw new Error(`Upload failed: ${putRes.status}`);
+    }
 
-    if (!putRes.ok) throw new Error(`Upload failed: ${putRes.status}`);
-
-    if ($("uploadState")) $("uploadState").textContent = "Bevestigen…";
-
-    // ✅ stuur sha mee
+    if (originalHint) originalHint.textContent = "Bevestigen…";
     await apiAuthed("api-dossier-upload-confirm", {
       document_id: meta.document_id,
       file_sha256,
       client_transform,
     });
 
-
-    if ($("uploadState")) $("uploadState").textContent = "Geüpload en bevestigd.";
+    setText("uploadState", "Geüpload en bevestigd.");
     showToast("Upload gelukt.", "success");
-
-    f.reset();
     invalidatePrecheck("document toegevoegd");
     await reloadAll();
-  } catch (e2) {
-    if ($("uploadState")) $("uploadState").textContent = e2.message;
-    showToast(e2.message, "error");
+  } catch (e) {
+    setText("uploadState", e.message || "Upload mislukt.");
+    showToast(e.message || "Upload mislukt.", "error");
   } finally {
-    lockSubmit(btn, false, "Upload");
+    if (slot) {
+      slot.classList.remove("is-busy");
+      slot.classList.remove("is-dragover");
+    }
+    if (originalHint) {
+      originalHint.textContent = originalHintText || "Sleep bestand hierheen of klik om te uploaden.";
+    }
   }
 }
-
 
 
 /**
@@ -2740,14 +2918,7 @@ async function runEvaluate(finalize) {
 
     latestPrecheckAnalysis = null;
 
-    renderReviewStatePanel({
-      tone: "ok",
-      title: "Dossier ingediend",
-      intro: `In review sinds: ${formatDateNL(js.locked_at)}`,
-      items: Array.isArray(js?.warnings)
-        ? js.warnings.map((x) => ({ text: x, sub: "Niet-blokkerende waarschuwing." }))
-        : [],
-    });
+    renderLockedReviewPanel(js.locked_at, Array.isArray(js?.warnings) ? js.warnings : []);
 
     showToast("Dossier ingediend. Staat nu in review.", "success");
     await reloadAll();

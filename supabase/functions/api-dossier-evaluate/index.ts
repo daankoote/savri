@@ -458,15 +458,15 @@ serve(async (req) => {
     (evaluation_mode === "core" ? true : analysisGate.submit_allowed === true);
 
   const missingSteps: string[] = [];
-  if (!emailOk) missingSteps.push("1) E-mail geverifieerd");
-  if (!addressOk) missingSteps.push("2) Adres");
-  if (!chargerExactOk) missingSteps.push("3) Laadpalen (exact aantal)");
-  if (!midPerChargerOk) missingSteps.push("3) Laadpalen: MID-nummer per laadpaal verplicht");
-  if (!docsPerChargerOk) missingSteps.push("4) Documenten (factuur + foto per laadpunt) — upload moet bevestigd zijn");
-  if (!(hasTerms && hasPrivacy && hasMandaat)) missingSteps.push("5) Toestemmingen");
-  if (evaluation_mode === "full" && !analysisGate.submit_allowed) {
-    missingSteps.push("6) Factuurcontrole / analyse");
-  }
+  if (!emailOk) missingSteps.push("1) E-mail is nog niet geverifieerd");
+if (!addressOk) missingSteps.push("2) Adres is niet volledig ingevuld");
+if (!chargerExactOk) missingSteps.push("3) Aantal ingevoerde laadpalen komt niet overeen met het opgegeven aantal in 1) Basisgegevens ");
+if (!midPerChargerOk) missingSteps.push("3) Per laadpaal zijn serienummer en MID-nummer verplicht");
+if (!docsPerChargerOk) missingSteps.push("4) Per laadpaal moet 1 factuur en 1 foto bevestigd zijn");
+if (!(hasTerms && hasPrivacy && hasMandaat)) missingSteps.push("5) Alle vereiste toestemmingen moeten akkoord zijn gegeven");
+if (evaluation_mode === "full" && !analysisGate.submit_allowed) {
+  missingSteps.push("6) Factuurcontrole / analyse blokkeert indiening");
+}
 
   const ts = nowIso();
 

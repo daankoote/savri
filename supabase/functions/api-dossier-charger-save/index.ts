@@ -96,7 +96,7 @@ serve(async (req) => {
     return bad(req, "Server misconfigured (missing secrets)", 500);
   }
 
-  const parsed = await req.json().catch(() => ({} as any));
+  const parsed = await req.json().catch(() => ({} as Record<string, unknown>));
   const dossier_id = parsed?.dossier_id ? String(parsed.dossier_id) : null;
   const session_token = parsed?.session_token ? String(parsed.session_token).trim() : null;
 
@@ -121,12 +121,17 @@ serve(async (req) => {
 
   const idemScopedKey = scopedSessionIdemKey(dossier_id, auth.session_token_hash, idemKey);
 
-  async function finalize(status: number, body: any) {
+  async function finalize(status: number, body: Record<string, unknown>) {
     await storeIdempotentResponseFailOpen(SB, idemScopedKey, status, body);
     return json(req, status, body);
   }
 
-  async function reject(stage: string, status: number, message: string, extra?: Record<string, unknown>) {
+  async function reject(
+    stage: string,
+    status: number,
+    message: string,
+    extra?: Record<string, unknown>,
+  ) {
     await insertAuditFailOpen(
       SB,
       {
@@ -141,7 +146,12 @@ serve(async (req) => {
     return finalize(status, { ok: false, error: message });
   }
 
-  async function fail(stage: string, status: number, message: string, extra?: Record<string, unknown>) {
+  async function fail(
+    stage: string,
+    status: number,
+    message: string,
+    extra?: Record<string, unknown>,
+  ) {
     await insertAuditFailOpen(
       SB,
       {
@@ -207,18 +217,6 @@ serve(async (req) => {
     });
   }
 
-  const kw =
-    parsed?.power_kw === null || parsed?.power_kw === undefined || String(parsed?.power_kw).trim() === ""
-      ? null
-      : Number(String(parsed?.power_kw).replace(",", "."));
-
-  if (kw !== null && (!Number.isFinite(kw) || kw < 0 || kw > 1000)) {
-    return reject("validate_input", 400, "Vermogen (kW) is ongeldig.", {
-      reason: "power_kw_invalid",
-      power_kw: String(parsed?.power_kw ?? ""),
-    });
-  }
-
   const st = String(dossier.status || "");
   if (dossier.locked_at || st === "in_review" || st === "ready_for_booking") {
     return reject("validate_lock", 409, "Dossier is definitief ingediend en kan niet meer gewijzigd worden.", {
@@ -236,7 +234,7 @@ serve(async (req) => {
 
   const { data: existingChargers, error: cErr } = await SB
     .from("dossier_chargers")
-    .select("id, serial_number")
+    .select("id, serial_number, mid_number")
     .eq("dossier_id", dossier_id);
 
   if (cErr) {
@@ -253,7 +251,7 @@ serve(async (req) => {
     return reject(
       "validate_max_chargers",
       409,
-      `Maximaal aantal laadpalen bereikt (${required}). Verwijder (of voeg) eerst een laadpaal (toe).`,
+      `Maximaal aantal laadpalen bereikt (${required}). Verwijder eerst een laadpaal of verhoog het aantal in stap 1.`,
       {
         reason: "max_chargers_reached",
         required,
@@ -262,35 +260,45 @@ serve(async (req) => {
     );
   }
 
-  if (!isUpdate) {
-    const inSameDossier = (existingChargers || []).some((x: any) => String(x.serial_number || "") === serial);
-    if (inSameDossier) {
-      return reject("validate_duplicate", 409, "Deze laadpaal (serienummer) is al toegevoegd in dit dossier.", {
-        reason: "duplicate_serial_same_dossier",
-        serial_number: serial,
-      });
-    }
 
-    const { data: anyCharger, error: sErr } = await SB
-      .from("dossier_chargers")
-      .select("id, dossier_id")
-      .eq("serial_number", serial)
-      .limit(1)
-      .maybeSingle();
 
-    if (sErr) {
-      return fail("validate_duplicate", 500, `Serial check failed: ${sErr.message}`, {
-        reason: "serial_check_failed",
-        error: sErr.message,
-      });
-    }
+  const sameDossierDuplicateMid = (existingChargers || []).some((x: Record<string, unknown>) => {
+    if (String(x.id || "") === String(charger_id || "")) return false;
+    return String(x.mid_number || "") === mid;
+  });
 
-    if (anyCharger && String(anyCharger.dossier_id) !== String(dossier_id)) {
-      return reject("validate_duplicate", 409, "Dit serienummer is al gebruikt in een ander dossier. Controleer het serienummer.", {
-        reason: "duplicate_serial_other_dossier",
-        serial_number: serial,
-      });
-    }
+  if (sameDossierDuplicateMid) {
+    return reject("validate_duplicate", 409, "Dit MID-nummer is al toegevoegd in dit dossier.", {
+      reason: "duplicate_mid_same_dossier",
+      mid_number: mid,
+    });
+  }
+
+  let midGlobalQuery = SB
+    .from("dossier_chargers")
+    .select("id, dossier_id")
+    .eq("mid_number", mid);
+
+  if (charger_id) {
+    midGlobalQuery = midGlobalQuery.neq("id", charger_id);
+  }
+
+  const { data: anyMid, error: mErr } = await midGlobalQuery
+    .limit(1)
+    .maybeSingle();
+
+  if (mErr) {
+    return fail("validate_duplicate_mid_global", 500, `MID check failed: ${mErr.message}`, {
+      reason: "mid_check_failed",
+      error: mErr.message,
+    });
+  }
+
+  if (anyMid && String(anyMid.dossier_id) !== String(dossier_id)) {
+    return reject("validate_duplicate", 409, "Dit MID-nummer is al gebruikt in een ander dossier. Controleer het MID-nummer.", {
+      reason: "duplicate_mid_other_dossier",
+      mid_number: mid,
+    });
   }
 
   const ts = nowIso();
@@ -317,7 +325,6 @@ serve(async (req) => {
         mid_number: mid,
         brand: b,
         model: m,
-        power_kw: kw,
         notes: n,
         updated_at: ts,
       })
@@ -325,9 +332,9 @@ serve(async (req) => {
       .eq("dossier_id", dossier_id);
 
     if (upErr) {
-      const pgCode = (upErr as any)?.code || "";
+      const pgCode = (upErr as { code?: string })?.code || "";
       if (pgCode === "23505") {
-        return reject("db_update", 409, "Dit serienummer is al gebruikt. Controleer het serienummer.", {
+        return reject("db_update", 409, "Dit MID-nummer is al gebruikt. Controleer het MID-nummer.", {
           reason: "unique_violation",
           code: "23505",
           charger_id,
@@ -354,7 +361,6 @@ serve(async (req) => {
           mid_number: mid,
           brand: b,
           model: m,
-          power_kw: kw,
           notes: n,
           invalidated_ready_for_review: invalidated,
         },
@@ -374,7 +380,6 @@ serve(async (req) => {
       mid_number: mid,
       brand: b,
       model: m,
-      power_kw: kw,
       notes: n,
       created_at: ts,
       updated_at: ts,
@@ -383,12 +388,13 @@ serve(async (req) => {
     .maybeSingle();
 
   if (insErr) {
-    const pgCode = (insErr as any)?.code || "";
+    const pgCode = (insErr as { code?: string })?.code || "";
     if (pgCode === "23505") {
-      return reject("db_insert", 409, "Dit serienummer is al gebruikt. Controleer het serienummer.", {
+      return reject("db_insert", 409, "Dit MID-nummer is al gebruikt. Controleer het MID-nummer.", {
         reason: "unique_violation",
         code: "23505",
         serial_number: serial,
+        mid_number: mid,
       });
     }
     return fail("db_insert", 500, `Insert failed: ${insErr.message}`, {
@@ -411,7 +417,6 @@ serve(async (req) => {
         mid_number: mid,
         brand: b,
         model: m,
-        power_kw: kw,
         notes: n,
         invalidated_ready_for_review: invalidated,
       },

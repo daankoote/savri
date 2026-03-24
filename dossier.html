@@ -65,7 +65,7 @@
           <div class="card">
             <div class="statusbar">
               <div>
-                <h1 class="my-0">Jouw Enval dossier</h1>
+                <h1 class="my-0">Uw Enval dossier</h1>
                 <div class="muted small">
                   Dossier: <span id="dossierId" class="mono">-</span>
                 </div>
@@ -90,7 +90,7 @@
 
           <div class="grid2 mt-18">
             <div class="card">
-              <h2 class="mt-0">1) Toegang</h2>
+              <h2 class="mt-0">1) Basisgegevens</h2>
 
               <form id="accessForm" class="form" novalidate>
                 <label><span>Voornaam</span><input type="text" name="first_name" placeholder="Voornaam" required /></label>
@@ -107,15 +107,6 @@
                     <option value="4">4</option>
                   </select>
                   <div class="small muted mt-8">Meer dan 4 laadpalen? Neem contact op.</div>
-                </label>
-
-                <label>
-                  <span>Op eigen terrein?</span>
-                  <select name="own_premises" required>
-                    <option value="">Kies…</option>
-                    <option value="ja">Ja</option>
-                    <option value="nee">Nee</option>
-                  </select>
                 </label>
 
                 <div class="form-actions">
@@ -156,21 +147,19 @@
                 <label><span>Merk</span><select id="chargerBrand" required></select></label>
                 <label><span>Model</span><select id="chargerModel" required></select></label>
 
-                <label>
-                  <span>Serienummer (verplicht)</span>
-                  <input type="text" name="serial_number" placeholder="SN123456" required />
-                </label>
-
-                <label>
-                  <span>MID-nummer (verplicht)</span>
-                  <input type="text" name="mid_number" placeholder="MID…" required />
-                </label>
-
-                <label><span>Vermogen kW (optioneel)</span><input type="text" name="power_kw" placeholder="11" /></label>
-
                 <label id="chargerNotesRow" class="hidden">
                   <span>Toelichting (verplicht bij Anders)</span>
                   <input type="text" name="notes" placeholder="Vul merk en model in (bijv. MyBrand X200)" />
+                </label>
+
+                <label>
+                  <span>MID-nummer</span>
+                  <input type="text" name="mid_number" placeholder="MID…" required />
+                </label>
+
+                <label>
+                  <span>Serienummer</span>
+                  <input type="text" name="serial_number" placeholder="SN123456" required />
                 </label>
 
                 <div class="row">
@@ -179,21 +168,9 @@
               </form>
 
               <div class="mt-14">
-                <table class="table table-chargers">
-                  <thead>
-                    <tr>
-                      <th>Merk</th>
-                      <th>Model</th>
-                      <th>Serienummer</th>
-                      <th>MID</th>
-                      <th>Toelichting</th>
-                      <th class="right">Acties</th>
-                    </tr>
-                  </thead>
-                  <tbody id="chargersTbody">
-                    <tr><td colspan="6" class="muted">laden…</td></tr>
-                  </tbody>
-                </table>
+                <div id="chargersCards" class="charger-cards">
+                  <div class="notice small muted">laden…</div>
+                </div>
               </div>
             </div>
 
@@ -201,53 +178,12 @@
               <h2 class="mt-0">4) Documenten uploaden</h2>
               <div id="docsHint" class="notice small mb-10">laden…</div>
 
-              <form id="uploadForm" class="form" novalidate>
-                <label>
-                  <span>Type document</span>
-                  <select name="doc_type" required>
-                    <option value="">Kies…</option>
-                    <option value="factuur">Factuur Installatie</option>
-                    <option value="foto_laadpunt">Foto Laadpunt</option>
-                  </select>
-                </label>
-
-                <label>
-                  <span>Voor welke laadpaal?</span>
-                  <select name="charger_id" id="docChargerId" required>
-                    <option value="">Kies laadpaal…</option>
-                  </select>
-                </label>
-
-                <div class="small muted" id="docChargerHint"></div>
-
-                <label>
-                  <span>Bestand</span>
-                  <input
-                    type="file"
-                    name="file"
-                    required
-                    accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,application/pdf,image/png,image/jpeg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                  />
-                </label>
-
-                <button id="btnUpload" class="btn primary full-width" type="submit">Upload</button>
-                <div id="uploadState" class="small muted"></div>
-              </form>
+              <div id="uploadState" class="small muted"></div>
 
               <div class="mt-14">
-                <table class="table table-docs">
-                  <thead>
-                    <tr>
-                      <th>Type</th>
-                      <th>Paalnummer</th>
-                      <th>Bestand</th>
-                      <th class="right">Acties</th>
-                    </tr>
-                  </thead>
-                  <tbody id="docsTbody">
-                    <tr><td colspan="4" class="muted">laden…</td></tr>
-                  </tbody>
-                </table>
+                <div id="docsCards" class="charger-cards">
+                  <div class="notice small muted">laden…</div>
+                </div>
               </div>
             </div>
 
@@ -299,9 +235,6 @@
 
                 <div class="row mt-10">
                   <button id="btnExportDossier" class="btn outline" type="button">Exporteer dossier</button>
-                </div>
-
-                <div id="devUnlockBox" class="hidden" style="margin-top:10px;">
                 </div>
 
                 <div id="devUnlockBox" class="hidden mt-10">

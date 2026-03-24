@@ -45,9 +45,6 @@ function json(req: Request, status: number, payload: unknown) {
     headers: { "Content-Type": "application/json", ...corsHeadersFor(req) },
   });
 }
-function ok(req: Request, data: Record<string, unknown> = {}) {
-  return json(req, 200, { ok: true, ...data });
-}
 function bad(req: Request, msg: string, code = 400) {
   return json(req, code, { ok: false, error: msg });
 }
@@ -83,7 +80,7 @@ serve(async (req) => {
     const idemKey = String(meta.idempotency_key || "").trim();
     if (!idemKey) return bad(req, "Missing Idempotency-Key", 400);
 
-    const parsed = await req.json().catch(() => ({} as any));
+    const parsed = await req.json().catch(() => ({} as Record<string, unknown>));
     const dossier_id = parsed?.dossier_id ? String(parsed.dossier_id) : null;
     const session_token = parsed?.session_token ? String(parsed.session_token) : null;
     const document_id = parsed?.document_id ? String(parsed.document_id) : null;
@@ -114,7 +111,7 @@ serve(async (req) => {
     const cached = await tryGetIdempotentResponse(SB, idemScopedKey);
     if (cached) return json(req, cached.status, cached.body);
 
-    async function finalize(status: number, body: any) {
+    async function finalize(status: number, body: Record<string, unknown>) {
       await storeIdempotentResponseFailOpen(SB, idemScopedKey, status, body);
       return json(req, status, body);
     }
@@ -151,24 +148,6 @@ serve(async (req) => {
     if (!dossier) {
       await auditReject("dossier_lookup", 404, "Dossier not found", { reason: "not_found" });
       return finalize(404, { ok: false, error: "Dossier not found" });
-    }
-
-    if (
-      !dossier.locked_at &&
-      !["in_review", "ready_for_booking"].includes(String(dossier.status))
-    ) {
-      await auditReject(
-        "export_gate",
-        409,
-        "Dossier not locked for review",
-        {
-          reason: "not_locked",
-          status: String(dossier.status || ""),
-          locked_at: dossier.locked_at || null,
-          document_id,
-        },
-      );
-      return finalize(409, { ok: false, error: "Dossier not locked for review" });
     }
 
     const { data: doc, error: docErr } = await SB
@@ -229,7 +208,7 @@ serve(async (req) => {
           document_id,
           storage_bucket: String(doc.storage_bucket || ""),
           storage_path: String(doc.storage_path || ""),
-          storage_error: String((sErr as any)?.message || sErr || ""),
+          storage_error: String((sErr as Error | null)?.message || sErr || ""),
         },
       );
       return finalize(500, { ok: false, error: "Signed URL generation failed" });
@@ -245,6 +224,8 @@ serve(async (req) => {
           document_id,
           doc_type: doc.doc_type,
           expires_in_seconds: expiresIn,
+          dossier_status: String(dossier.status || ""),
+          dossier_locked_at: dossier.locked_at || null,
         },
       },
       meta,

@@ -1,4 +1,4 @@
-console.log("ENVAL script.js versie 260219_10");
+// assets/js/script.js
 
 // ======================================================
 // 0) Config (komt uit /assets/js/config.js)
@@ -444,7 +444,7 @@ async function handleEvForm(e) {
     }
 
     keepAndReset(form, [], 'input[name="first_name"]');
-    showToast("Aanmelding ontvangen. U ontvangt e-mail met dossierlink.", "success");
+    showToast("Aanmelding ontvangen. U ontvangt per e-mail een dossierlink zodra de intake is geaccepteerd.", "success");
   } catch (err) {
     console.error("ev_direct exception:", err);
     showToast("Er ging iets mis (netwerk). Probeer later opnieuw.", "error");

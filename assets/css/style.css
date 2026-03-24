@@ -1460,6 +1460,220 @@
   }
 
  
+    .charger-cards{
+    display: grid;
+    gap: 12px;
+  }
+
+  .charger-card{
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #ffffff;
+    padding: 14px;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
+  }
+
+  .charger-card__head{
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .charger-card__titlewrap{
+    min-width: 0;
+  }
+
+  .charger-card__title{
+    font-weight: 800;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .charger-card__actions{
+    flex: 0 0 auto;
+  }
+
+  .charger-card__grid{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .charger-card__item{
+    min-width: 0;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+  }
+
+  .charger-card__item--full{
+    grid-column: 1 / -1;
+  }
+
+  .charger-card__label{
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #64748b;
+    margin-bottom: 4px;
+  }
+
+  .charger-card__value{
+    font-size: 0.95rem;
+    color: #0f172a;
+    overflow-wrap: anywhere;
+  }
+
+  @media (max-width: 640px){
+    .charger-card__grid{
+      grid-template-columns: 1fr;
+    }
+  }
+
+    .doc-card__subtitle{
+    margin-top: 4px;
+    font-size: 0.88rem;
+    color: #64748b;
+    overflow-wrap: anywhere;
+  }
+
+  .doc-card__link{
+    display: inline-block;
+    max-width: 100%;
+    color: var(--brand);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .doc-card__link:hover{
+    color: var(--brand-600);
+  }
+
+    .doc-group-card{
+    display: grid;
+    gap: 14px;
+  }
+
+  .doc-group-section{
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+  }
+
+  .doc-group-section--missing{
+    background: rgba(245,158,11,0.06);
+    border-color: rgba(245,158,11,0.24);
+  }
+
+  .doc-group-section--ok{
+    background: rgba(16,185,129,0.05);
+    border-color: rgba(16,185,129,0.18);
+  }
+
+  .doc-group-section__title{
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 10px;
+  }
+
+  .doc-group-section__empty{
+    margin-top: 10px;
+  }
+
+  .doc-upload-slot{
+    border: 1.5px dashed #cbd5e1;
+    border-radius: 12px;
+    background: #ffffff;
+    padding: 14px;
+    cursor: pointer;
+    transition:
+      border-color 120ms ease,
+      background 120ms ease,
+      box-shadow 120ms ease,
+      transform 120ms ease;
+  }
+
+  .doc-upload-slot:hover{
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
+  }
+
+  .doc-upload-slot--missing{
+    border-color: rgba(245,158,11,0.38);
+    background: rgba(255,255,255,0.9);
+  }
+
+  .doc-upload-slot--locked{
+    cursor: default;
+    opacity: 0.72;
+  }
+
+  .doc-upload-slot.is-dragover{
+    border-color: var(--brand);
+    background: rgba(16,185,129,0.08);
+    box-shadow: 0 0 0 3px var(--ring);
+  }
+
+  .doc-upload-slot.is-busy{
+    opacity: 0.72;
+    pointer-events: none;
+  }
+
+  .doc-upload-slot__title{
+    font-size: 0.88rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 4px;
+  }
+
+  .doc-upload-slot__hint{
+    font-size: 0.84rem;
+    color: #64748b;
+    overflow-wrap: anywhere;
+  }
+
+  .doc-entry{
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: start;
+    padding-top: 10px;
+  }
+
+  .doc-entry:first-of-type{
+    padding-top: 0;
+  }
+
+  .doc-entry + .doc-entry{
+    margin-top: 10px;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  .doc-entry__file{
+    min-width: 0;
+  }
+
+  .doc-entry__actions{
+    flex: 0 0 auto;
+  }
+
+  @media (max-width: 640px){
+    .doc-entry{
+      grid-template-columns: 1fr;
+    }
+
+    .doc-entry__actions{
+      display: flex;
+      justify-content: flex-end;
+    }
+  }
+
   /* EV aanmelden layout */
   .card--wide{
     max-width: 1040px;
@@ -1665,8 +1879,6 @@
     color: rgba(15,23,42,0.62);
   }
 
-  .statuslist { margin: 8px 0 0 18px; padding: 0; }
-  .statuslist li { margin: 4px 0; }
   .accent-title{ color: var(--brand); }
   
   /* spacing utilities (legacy pages: remove inline style="...") */
