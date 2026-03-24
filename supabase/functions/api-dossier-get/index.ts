@@ -355,7 +355,7 @@ serve(async (req) => {
         "updated_at",
       ].join(","))
       .eq("dossier_id", dossier_id)
-      .order("created_at", { ascending: false })
+      .order("created_at", { ascending: true })
       .limit(LIMIT),
 
     SB.from("dossier_checks")
