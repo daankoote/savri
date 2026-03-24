@@ -6,25 +6,23 @@ Regel: alleen open items; afgerond → naar changelog.
 
 ## P1 (must/should)
 
-### 1) Dossier frontend-flow live verifiëren op CURRENT contract
+### 1) Dossier frontend-flow resterende live regressiecheck compact houden
 - Context:
-  - `assets/js/pages/dossier.js` is nu inhoudelijk aangescherpt:
-    - core evaluate
-    - verify refresh
-    - full evaluate
-    - finalize
-    - precheck invalidation
-    - analysis rendering
-    - dev unlock UX
+  - kernflow is inmiddels browsermatig bewezen:
+    - precheck gating
+    - finalize gating
+    - export op locked dossier
+    - dev unlock in DEV
+    - upload per laadpaalkaart
+    - stabiele laadpaalnummering
+- Open restdoel:
+  - 1 compacte regressieronde uitvoeren na eerstvolgende dossier-UI wijziging, zodat bewezen blijft dat de vereenvoudigde documentflow niet opnieuw drift veroorzaakt
 - DoD:
-  - 1 volledige browser-run bevestigd op CURRENT gedrag:
-    - precheck faalt zolang dossier incompleet is
-    - verify draait pas na core-completeness
-    - finalize blijft verborgen tot geldige precheck
-    - mutatie na precheck maakt finalize weer ongeldig
-    - locked dossier toont export correct
-    - dev unlock zet dossier terug naar editable state in DEV
-  - geen client-side drift meer tussen docs en runtime-gedrag
+  - 1 volledige browser-run na volgende dossier-UI wijziging
+  - bevestigen dat:
+    - nummering stabiel blijft
+    - uploadslot per type correct verdwijnt/terugkomt
+    - finalize alleen zichtbaar wordt na geldige precheck
 - Status: OPEN
 
 ### 2) api-lead-submit: eligibility gate ordering harden + regressie-test
@@ -119,16 +117,19 @@ Regel: alleen open items; afgerond → naar changelog.
   - append-only blijft append-only; CURRENT docs blijven daadwerkelijk CURRENT
 - Status: OPEN
 
-### 9) Frontend contract: MID veldnaam volledig consistent met spec
+### 9) MID leidend maken in hele dossierketen
 - Context:
-  - CURRENT docs en backend-contract gebruiken `mid_number` als canonical veld.
-  - Dit item blijft alleen OPEN totdat grep-bewijs expliciet is vastgelegd na merge/sync check.
+  - CURRENT veldnaam is `mid_number`
+  - serial uniqueness is losgelaten als harde systeemaanname
+  - productmatig is MID nu leidend
 - DoD:
-  - `dossier.html` input name = `mid_number`
-  - `dossier.js` gebruikt `mid_number` in payload en render
+  - `mid_number` is overal canonical in core flow
   - geen `meter_id` references meer in core flow
-  - grep-bewijs expliciet vastgelegd
-- Status: OPEN totdat grep formeel bevestigd en vastgelegd is
+  - geen documentatie meer die serial uniqueness als harde waarheid presenteert
+  - analyse-/matchingdocs maken expliciet onderscheid tussen:
+    - MID als leidende identifier
+    - serial als aanvullende observatie/check
+- Status: OPEN
 
 ### 10) Positionering consistent houden in product & copy
 - DoD:
@@ -212,7 +213,7 @@ Regel: alleen open items; afgerond → naar changelog.
   - uitbreiding met realistische slechte factuurvarianten
 - Status: OPEN
 
-### 12) Foto analysis v1 uitgesteld tot representatieve laadpaalfoto-dataset bestaat
+### 12a) Foto analysis v1 uitgesteld tot representatieve laadpaalfoto-dataset bestaat
 - Context:
   - huidige beschikbare slechte voorbeelden gaan vooral over facturen, niet over laadpalen
   - foto-analysis zonder echte laadpaalfoto-set is nu schijnvoortgang
@@ -228,6 +229,21 @@ Regel: alleen open items; afgerond → naar changelog.
     - `foto_laadpunt` blijft skeleton
     - verify-run log moet dit expliciet zichtbaar houden
     - geen geforceerde extractie of pseudo-zekerheid
+- Status: OPEN
+
+### 12b) Multi-document support per laadpaal expliciet uitgesteld houden
+- Context:
+  - CURRENT MVP ondersteunt per laadpaal slechts:
+    - 1 factuur
+    - 1 foto laadpunt
+  - UI is daar nu bewust strak op aangepast
+- DoD:
+  - toekomstig ontwerp vastleggen voor:
+    - meerdere facturen per laadpaal
+    - meerdere foto’s per laadpaal
+    - volgorde / primary document semantics
+    - analysis-bronkeuze wanneer meerdere documenten van hetzelfde type bestaan
+  - pas daarna UI en backend uitbreiden
 - Status: OPEN
 
 ### 13) Analysis source-model guardrail expliciet vastleggen

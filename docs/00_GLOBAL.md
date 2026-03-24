@@ -2,7 +2,7 @@
 
 # ENVAL — Global Product & Phase Plan (CURRENT)
 
-Statusdatum: 2026-03-23 
+Statusdatum: 2026-03-24 
 Repo: /Users/daankoote/dev/enval  
 Branch context: feature/dev (main = pilot index)
 
@@ -832,5 +832,44 @@ Belangrijke architectuurbetekenis:
 - Dit verandert de backend lifecycle niet.
 - Dit maakt de frontend alleen explicieter en strakker aligned met de bestaande audit-first reviewflow.
 - Analysis blijft ondersteunend en derived; geen lock- of compliance-engine.
+
+### Update 2026-03-24 — Dossier UI vereenvoudigd: upload per laadpaalkaart + stabiele nummering + MID leidend
+
+Wat vandaag functioneel is aangescherpt in de dossierflow:
+
+- Stap 4 gebruikt niet langer een centrale uploadform met:
+  - documenttype dropdown
+  - laadpaal dropdown
+  - los bestandveld
+- Upload gebeurt nu direct **per laadpaalkaart** in de documentsecties:
+  - Factuur
+  - Foto laadpunt
+
+Nieuwe CURRENT waarheid:
+- De dossier-UI toont laadpalen in een **stabiele vaste volgorde**.
+- “Laadpaal 1 / 2 / 3 / …” blijft daardoor visueel consistent tussen refreshes.
+- Nieuwe laadpalen verschijnen onderaan i.p.v. de volgorde onbedoeld om te keren.
+- Documenten horen visueel en functioneel direct bij de betreffende laadpaalkaart.
+
+MVP-bewuste beperking (expliciet):
+- CURRENT ondersteunt per laadpaal:
+  - maximaal **1 factuur**
+  - maximaal **1 foto laadpunt**
+- Zodra een document van dat type aanwezig is, verdwijnt het uploadslot voor dat type uit de UI.
+- Meerdere facturen of meerdere foto’s per laadpaal zijn bewust **geen MVP-scope**.
+
+Backend-/databetekenis:
+- Deze wijziging verandert de audit lifecycle niet:
+  - upload-url
+  - PUT
+  - upload-confirm
+  - confirmed
+  blijven identiek.
+- De UI is alleen strakker aligned gemaakt met de huidige database- en MVP-realiteit.
+
+Identifier-betekenis (CURRENT):
+- MID-nummer is in deze fase de leidende dossier-identificatie voor laadpalen.
+- Serial uniqueness is bewust losgelaten als harde systeemaanname, omdat serienummers merk-overstijgend theoretisch kunnen overlappen.
+- Analyse- en matchinglogica blijven voorlopig beide velden gebruiken waar relevant, maar productmatig is MID leidend.
 
 # EINDE 00_GLOBAL.md (current state, rewrite-ok)

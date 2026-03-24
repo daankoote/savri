@@ -2,7 +2,7 @@
 
 # ENVAL — System Map (CURRENT)
 
-Statusdatum: 2026-03-23  
+Statusdatum: 2026-03-24  
 Repo root: /Users/daankoote/dev/enval  
 Branch context: feature/dev (main = pilot index)
 
@@ -254,6 +254,22 @@ UI-gedrag:
 - Wizard stuurt uitsluitend finale bytes + `client_transform` metadata naar Edge.
 - Audit-hash (`file_sha256`) wordt client-side berekend over de finale bytes.
 
+### Document UI contract (CURRENT, 2026-03-24)
+- Stap 4 gebruikt geen centrale uploadform meer.
+- Upload gebeurt direct in de documentvakken binnen de laadpaalkaarten.
+- Per laadpaal bestaan in de UI exact 2 documentvakken:
+  - `factuur`
+  - `foto_laadpunt`
+- CURRENT MVP-beperking:
+  - maximaal 1 factuur per laadpaal
+  - maximaal 1 foto laadpunt per laadpaal
+- Zodra een document van het betreffende type al bestaat, wordt het uploadslot voor dat type niet meer getoond.
+- Delete maakt het type weer vrij, waarna het uploadslot opnieuw verschijnt.
+
+Belangrijk:
+- Dit is een bewuste MVP-beperking van de UI en huidige flow.
+- Multi-document support per type is uitgesteld en is geen CURRENT contract.
+
 ## 3) Backend platform
 - Supabase DB + Storage
 - Edge functions (Supabase Functions)
@@ -286,7 +302,7 @@ Doel:
 
 ### Dossier core
 - `dossiers` (status, locked_at, access_token_hash, address fields, charger_count, own_premises, email_verified_at MVP)
-- `dossier_chargers` (serial unique, dossier link)
+- `dossier_chargers` (dossier link; MID leidend; serial_number niet langer als harde globale uniqueness-aanname behandelen)
 - MID informatie per laadpaal: `dossier_chargers.mid_number` (CURRENT, NOT NULL; zie Stap 3)
 - `dossier_documents` (issued/confirmed, sha256, storage bucket/path, immutability op confirmed)
 - `dossier_consents` (append-only, immutable)
@@ -395,6 +411,12 @@ Lock rule (source of truth):
 - locked_at != null OR status IN ('in_review','ready_for_booking')
 
 ## 6) Edge functions inventory (current)
+
+### Read / bootstrap
+- api-dossier-get
+  - token→session exchange of session-based dossier read
+  - levert dossier + documents + consents + audit + chargers + checks
+  - chargers worden CURRENT in stabiele oplopende `created_at` volgorde teruggegeven zodat de frontend vaste laadpaalnummering kan tonen
 
 ### Lead + mail
 - api-lead-submit
@@ -875,5 +897,36 @@ Operational result:
 - consistente refresh routine voor verlopen sessies
 
 ---
+
+## APPEND-ONLY UPDATE — 2026-03-24 — Dossier UI aligned op huidige documentrealiteit + stabiele laadpaalvolgorde
+
+### Wat is gewijzigd
+- `dossier.html` bevat niet langer de centrale uploadform in stap 4.
+- `assets/js/pages/dossier.js` rendert documentacties nu per laadpaalkaart.
+- Upload gebeurt per kaart en per documenttype via het documentvak zelf.
+
+### CURRENT documentcontract in de UI
+Per laadpaal:
+- exact 1 `factuur`
+- exact 1 `foto_laadpunt`
+
+Zodra aanwezig:
+- uploadslot voor dat type verdwijnt
+
+Na delete:
+- uploadslot voor dat type verschijnt opnieuw
+
+### Waarom dit CURRENT correct is
+- Dit sluit aan op de huidige database-/MVP-realiteit.
+- Multi-upload per type is bewust uitgesteld.
+- De UI stopt dus met doen alsof meerdere documenten per type al ondersteund worden.
+
+### Stabiele nummering
+- `api-dossier-get` geeft chargers nu in stabiele volgorde terug.
+- Frontend draait die volgorde niet meer om.
+- Resultaat:
+  - laadpaalnummers blijven consistent
+  - nieuw toegevoegde laadpalen verschijnen onderaan
+  - documentkaarten blijven visueel logisch gekoppeld aan dezelfde laadpaal
 
 # EINDE 01_SYSTEM_MAP.md (current state, rewrite-ok)
