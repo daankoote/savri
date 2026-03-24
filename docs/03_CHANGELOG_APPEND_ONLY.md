@@ -1155,4 +1155,45 @@ Architecturale betekenis
 - Geen wijziging aan backend lifecycle of audit semantics.
 - Wel scherpere frontend discipline zodat review/lock/analysis-flow minder impliciet en minder foutgevoelig is.
 
+## 2026-03-24 — Dossier UI aligned op MVP-documentmodel + stabiele laadpaalnummering + MID leidend
+
+Wijzigingen
+- `dossier.html`
+  - centrale uploadform in stap 4 verwijderd
+  - alleen `uploadState` + documentkaarten blijven over
+- `assets/js/pages/dossier.js`
+  - upload gebeurt nu direct per laadpaalkaart en per documenttype
+  - stabiele laadpaalvolgorde behouden in de UI
+  - nieuwe laadpalen verschijnen onderaan
+  - uploadslot verdwijnt zodra het enige toegestane document van dat type al aanwezig is
+- `assets/css/style.css`
+  - documentvakken en kaartstatus verder opgeschoond/gealigneerd op de nieuwe per-kaart uploadflow
+- `supabase/functions/api-dossier-get/index.ts`
+  - charger-volgorde aangepast zodat frontend stabiele nummering kan tonen
+- migratie toegevoegd:
+  - `20260324_drop_serial_unique_indexes_dossier_chargers.sql`
+
+Bewezen functioneel gedrag
+- laadpaalnummering blijft stabiel over refreshes
+- nieuwe laadpaal komt onderaan i.p.v. bovenaan
+- upload werkt direct vanuit de juiste laadpaalkaart
+- zodra factuur of foto aanwezig is, verdwijnt het uploadslot voor dat type
+- delete maakt dat type weer uploadbaar
+- dossierflow blijft verder werken:
+  - upload
+  - confirm
+  - precheck
+  - finalize
+  - export
+
+Architecturale betekenis
+- Geen wijziging aan audit lifecycle of reviewstate.
+- Wel duidelijke reductie van frontend-schijncomplexiteit:
+  - geen dropdown voor documenttype/laadpaal meer
+  - geen UI die multi-document support suggereert terwijl CURRENT MVP dat niet ondersteunt
+
+Identifier-richting
+- Serial uniqueness is losgelaten als harde systeemaanname.
+- MID is in deze fase leidend voor product- en dossierlogica.
+
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)
