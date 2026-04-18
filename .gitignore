@@ -31,8 +31,6 @@ supabase-functions-archive/
 **/*.old
 **/*.archive
 
-
-
 # test artifacts
 scripts/tests/.tmp/
 scripts/tests/output/
@@ -43,3 +41,23 @@ scripts/tools/output/
 
 # local personal cheatsheets
 docs/Cheatsheets/
+docs/Facturen/
+
+# Supabase local state
+supabase/.branches
+supabase/.temp/
+
+# dotenvx / local env overlays
+.env.keys
+.env.local
+.env.*.local
+
+# analysis worker local runtime
+scripts/analysis_worker/output/
+.venv/
+scripts/analysis_worker/convert_pdf_tests_to_jpg.py
+scripts/analysis_worker/run_pdf_derived_image_batch.py
+scripts/analysis_worker/run_pdf_batch.py
+
+# migrations
+supabase/migrations/

@@ -1,4 +1,4 @@
-// /dossier.js  (NON-module, gebruikt window.ENVAL uit /config.js)
+// assets/js/pages/dossier.js  (NON-module, gebruikt window.ENVAL uit /config.js)
 
 console.log("ENVAL DOSSIER.JS versie 260312_export_session_align");
 
@@ -700,6 +700,7 @@ function analysisStatusMeta(status) {
 
   if (s === "pass") return { cls: "pill ok", text: "pass" };
   if (s === "fail") return { cls: "pill err", text: "fail" };
+  if (s === "review_required") return { cls: "pill err", text: "fail" };
   if (s === "inconclusive") return { cls: "pill warn", text: "inconclusive" };
   if (s === "not_checked") return { cls: "pill", text: "not_checked" };
   if (s === "partial_pass") return { cls: "pill warn", text: "partial_pass" };
@@ -793,57 +794,6 @@ function createIconButton({ className = "", label = "", title = "", action = "",
 }
 
 
-function createDocSection({ title, docs, locked }) {
-  const section = createEl("div", "doc-group-section");
-
-  const sectionTitle = createEl("div", "doc-group-section__title", title);
-  section.appendChild(sectionTitle);
-
-  if (!Array.isArray(docs) || !docs.length) {
-    section.appendChild(
-      createEl("div", "doc-group-section__empty muted small", "Nog niet geüpload.")
-    );
-    return section;
-  }
-
-  docs.forEach((doc) => {
-    const row = createEl("div", "doc-entry");
-
-    const fileWrap = createEl("div", "doc-entry__file");
-
-    const fileLink = document.createElement("a");
-    fileLink.href = "#";
-    fileLink.dataset.act = "open";
-    fileLink.dataset.id = doc.id;
-    fileLink.className = "doc-card__link";
-    fileLink.title = doc.filename || "-";
-    fileLink.textContent = doc.filename || "-";
-
-    fileWrap.appendChild(fileLink);
-
-    const actions = createEl("div", "doc-entry__actions");
-
-    const deleteButton = createIconButton({
-      className: `iconbtn iconbtn--danger ${locked ? "hidden" : ""}`,
-      label: "Verwijder document",
-      title: "Verwijder",
-      action: "del",
-      id: doc.id,
-    });
-    deleteButton.setAttribute("data-lock-hide", "1");
-
-    actions.appendChild(deleteButton);
-
-    row.appendChild(fileWrap);
-    row.appendChild(actions);
-
-    section.appendChild(row);
-  });
-
-  return section;
-}
-
-
 function getChargersForUi() {
   return Array.isArray(current?.chargers) ? [...current.chargers] : [];
 }
@@ -854,7 +804,8 @@ function renderAnalysisUiEmptyState() {
 
   const section = $("analysisSection");
   if (section) {
-    section.classList.toggle("hidden", !(locked || hasCachedAnalysis));
+    // Tijdens development altijd zichtbaar houden.
+    section.classList.remove("hidden");
   }
 
   const loadBtn = $("btnLoadAnalysis");
@@ -869,9 +820,10 @@ function renderAnalysisUiEmptyState() {
     return;
   }
 
+  clearAnalysisUi();
+
   if (!locked) {
-    setText("analysisState", "");
-    clearAnalysisUi();
+    setText("analysisState", "Nog geen analyse geladen. Voer eerst ‘Controleer volledigheid’ uit.");
     return;
   }
 
@@ -892,7 +844,7 @@ function renderAnalysisExportData(data) {
 
   setText(
     "analysisLegend",
-    "Let op: pass betekent dat een specifiek veld uit een document is gelezen en inhoudelijk matcht met het dossier of de laadpaal. not_checked betekent dat het document wel aanwezig is, maar dat die analyse nog niet is geïmplementeerd.",
+    "Let op: pass betekent dat een specifiek veld uit een document is gelezen en inhoudelijk matcht. partial_pass betekent dat minimaal één relevante controle pass is, maar nog niet alles. inconclusive betekent dat er onvoldoende bruikbare data is om een betrouwbare conclusie te trekken. not_checked betekent dat de analyse voor dat documenttype nog niet is geïmplementeerd. fail betekent dat een relevante controle inhoudelijk niet overeenkomt.",
   );
 
   setText(
@@ -1055,6 +1007,158 @@ async function apiAuthed(fnName, extra, options) {
   return apiPost(fnName, authedBody(extra), options || {});
 }
 
+function getAnalyseImageStep1Precheck() {
+  return window.ENVAL?.image_step_1_precheck || null;
+}
+
+function getAnalyseImageStep1Upload() {
+  return window.ENVAL?.image_step_1_upload || null;
+}
+
+function getAnalyseVerifyPayload() {
+  return window.ENVAL?.verify_payload || null;
+}
+
+async function upsertObservedSourceForInvoiceDocument(args) {
+  const document_id = String(args?.document_id || "").trim();
+  const parserResult = args?.parser_result || null;
+
+  if (!document_id) {
+    throw new Error("upsertObservedSourceForInvoiceDocument: missing document_id");
+  }
+  if (!parserResult || typeof parserResult !== "object") {
+    throw new Error("upsertObservedSourceForInvoiceDocument: missing parser_result");
+  }
+
+  const confidence = parserResult?.confidence || {};
+  const limitations = Array.isArray(parserResult?.limitations) ? parserResult.limitations : [];
+  const observedCount = Number(confidence?.observed_non_null_fields || 0);
+
+  const shouldSkipPersist =
+    String(parserResult?.source_kind || "").trim().toLowerCase() === "pdf" &&
+    (
+      observedCount <= 0 ||
+      limitations.includes("pdf_text_extraction_empty")
+    );
+
+  if (shouldSkipPersist) {
+    console.warn("Skipping persisted observed-source upsert for empty PDF parser result", {
+      document_id,
+      parser_kind: parserResult?.parser_kind,
+      parser_version: parserResult?.parser_version,
+      confidence,
+      limitations,
+      summary: parserResult?.summary || {},
+      debug: parserResult?.debug || null,
+    });
+
+    return {
+      skipped: true,
+      reason: "empty_pdf_parser_result_not_persisted",
+    };
+  }
+
+  await apiAuthed("api-dossier-observed-source-upsert", {
+    document_id,
+    producer_kind: String(parserResult?.parser_kind || "").trim() || null,
+    producer_version: String(parserResult?.parser_version || "").trim() || null,
+    source_kind: String(parserResult?.source_kind || "").trim() || "unknown",
+    status: "completed",
+    observed_fields: parserResult?.observed_fields || {},
+    confidence,
+    limitations,
+    summary: parserResult?.summary || {},
+    field_sources: parserResult?.field_sources || {},
+    pages: Array.isArray(parserResult?.pages) ? parserResult.pages : [],
+  });
+
+  return {
+    skipped: false,
+    reason: null,
+  };
+}
+
+function humanizeInvoiceImagePrecheckError(code) {
+  const s = String(code || "").trim();
+
+  if (s === "missing_file") {
+    return "Geen bestand ontvangen voor factuurcontrole.";
+  }
+
+  if (s === "unsupported_invoice_image_type") {
+    return "Bestand afgewezen. Gebruik voor een factuurafbeelding alleen PNG of JPG/JPEG.";
+  }
+
+  if (s === "image_decode_failed") {
+    return "Afbeelding afgewezen. Het bestand kon niet als bruikbare afbeelding worden geopend.";
+  }
+
+  if (s === "image_dimensions_unavailable") {
+    return "Afbeelding afgewezen. De resolutie kon niet worden bepaald.";
+  }
+
+  if (s === "image_byte_length_invalid") {
+    return "Afbeelding afgewezen. Bestand is leeg of technisch ongeldig.";
+  }
+
+  if (s === "image_byte_length_too_low") {
+    return "Afbeelding afgewezen. Bestand is te klein of te sterk gecomprimeerd voor betrouwbare factuurcontrole.";
+  }
+
+  if (s === "image_width_far_too_low") {
+    return "Afbeelding afgewezen. De breedte is te laag voor betrouwbare factuurcontrole. Gebruik een scherpere of grotere afbeelding, of upload de originele PDF.";
+  }
+
+  if (s === "image_height_far_too_low") {
+    return "Afbeelding afgewezen. De hoogte is te laag voor betrouwbare factuurcontrole. Gebruik een scherpere of grotere afbeelding, of upload de originele PDF.";
+  }
+
+  return s || "Afbeelding afgewezen. Factuurafbeelding is niet bruikbaar voor betrouwbare controle.";
+}
+
+function humanizeInvoiceImagePrecheckWarning(code) {
+  const s = String(code || "").trim();
+
+  if (s === "image_width_low") {
+    return "Waarschuwing: afbeeldingsbreedte is beperkt. Tekstuitlezing kan mislukken. Gebruik bij voorkeur een scherpere afbeelding of de originele PDF.";
+  }
+
+  if (s === "image_height_low") {
+    return "Waarschuwing: afbeeldingshoogte is beperkt. Tekstuitlezing kan mislukken. Gebruik bij voorkeur een scherpere afbeelding of de originele PDF.";
+  }
+
+  if (s === "image_aspect_ratio_too_wide_for_invoice") {
+    return "Waarschuwing: afbeelding heeft een afwijkende brede uitsnede. Controleer of de volledige factuur zichtbaar is.";
+  }
+
+  if (s === "image_aspect_ratio_too_tall_for_invoice") {
+    return "Waarschuwing: afbeelding heeft een afwijkende smalle of langgerekte uitsnede. Controleer of de volledige factuur zichtbaar is.";
+  }
+
+  return s || "Waarschuwing: factuurafbeelding is niet ideaal voor betrouwbare controle.";
+}
+
+function buildInvoiceImagePrecheckMessage(precheck) {
+  const decision = String(precheck?.decision || "").trim();
+  const errors = Array.isArray(precheck?.errors) ? precheck.errors : [];
+  const warnings = Array.isArray(precheck?.warnings) ? precheck.warnings : [];
+
+  if (decision === "reject") {
+    if (!errors.length) {
+      return "Deze factuurafbeelding lijkt niet bruikbaar voor controle. Gebruik een duidelijkere afbeelding of een PDF.";
+    }
+    return errors.map(humanizeInvoiceImagePrecheckError).join(" ");
+  }
+
+  if (decision === "warn") {
+    if (!warnings.length) {
+      return "Deze factuurafbeelding is niet ideaal, maar wordt wel doorgestuurd voor servercontrole.";
+    }
+    return warnings.map(humanizeInvoiceImagePrecheckWarning).join(" ");
+  }
+
+  return "";
+}
 
 // Precheck UX state (client-side)
 let precheckOk = false;
@@ -1315,6 +1419,11 @@ async function reloadAll() {
 // ======================================================
 
 function renderAll() {
+  const verifyPayload = getAnalyseVerifyPayload();
+  if (verifyPayload) {
+    verifyPayload.syncCurrentSnapshot(current);
+  }
+
   renderStatus();
   renderAccess();
   renderAddress();
@@ -1898,7 +2007,10 @@ function createUploadSlot({ chargerId, docType, locked }) {
 }
 
 function createDocSection({ title, docs, locked, chargerId, docType }) {
-  const hasDocs = Array.isArray(docs) && docs.length > 0;
+  const list = Array.isArray(docs) ? docs : [];
+  const hasDocs = list.length > 0;
+  const hasIssued = list.some((doc) => String(doc?.status || "").toLowerCase() === "issued");
+  const hasConfirmed = list.some((doc) => String(doc?.status || "").toLowerCase() === "confirmed");
 
   const sectionTone = hasDocs
     ? "doc-group-section doc-group-section--ok"
@@ -1909,8 +2021,6 @@ function createDocSection({ title, docs, locked, chargerId, docType }) {
   const sectionTitle = createEl("div", "doc-group-section__title", title);
   section.appendChild(sectionTitle);
 
-  // MVP/DB-contract: maximaal 1 document per type per laadpaal.
-  // Daarom tonen we upload alleen zolang de sectie nog leeg is.
   if (!hasDocs) {
     section.appendChild(
       createUploadSlot({
@@ -1927,7 +2037,23 @@ function createDocSection({ title, docs, locked, chargerId, docType }) {
     return section;
   }
 
-  docs.forEach((doc) => {
+  if (hasIssued && !locked) {
+    const recovery = createEl(
+      "div",
+      "doc-group-section__empty muted small",
+      "Upload gestart maar nog niet bevestigd. Verwijder dit document en upload opnieuw als de vorige poging is mislukt."
+    );
+    section.appendChild(recovery);
+  } else if (hasConfirmed) {
+    const info = createEl(
+      "div",
+      "doc-group-section__empty muted small",
+      "Document aanwezig."
+    );
+    section.appendChild(info);
+  }
+
+  list.forEach((doc) => {
     const row = createEl("div", "doc-entry");
 
     const fileWrap = createEl("div", "doc-entry__file");
@@ -1941,6 +2067,15 @@ function createDocSection({ title, docs, locked, chargerId, docType }) {
     fileLink.textContent = doc.filename || "-";
 
     fileWrap.appendChild(fileLink);
+
+    const statusText = String(doc?.status || "").trim();
+    if (statusText) {
+      const statusMeta = analysisStatusMeta(statusText);
+      const statusBadge = document.createElement("span");
+      statusBadge.className = `${statusMeta.cls} ml-8`;
+      statusBadge.textContent = statusMeta.text;
+      fileWrap.appendChild(statusBadge);
+    }
 
     const actions = createEl("div", "doc-entry__actions");
 
@@ -1975,7 +2110,7 @@ function renderDocs() {
 
   const hint = $("docsHint");
   if (hint) {
-    hint.textContent = "Per laadpaal: minimaal 1 factuur installatie + 1 foto van het laadpunt.";
+    hint.textContent = "Per laadpaal: minimaal 1 factuur installatie + 1 foto van het laadpunt. Een document telt pas mee na bevestigde upload.";
   }
 
   const chargers = getChargersForUi();
@@ -2094,6 +2229,12 @@ function renderDocs() {
       try {
         btn.disabled = true;
         await apiAuthed("api-dossier-doc-delete", { document_id: id });
+
+        const verifyPayload = getAnalyseVerifyPayload();
+        if (verifyPayload) {
+          verifyPayload.removeUploadedDocument(id);
+        }
+
         showToast("Document verwijderd.", "success");
         invalidatePrecheck("document verwijderd");
         await reloadAll();
@@ -2595,10 +2736,87 @@ async function uploadDocumentForCard({ charger_id, doc_type, file, slot }) {
       throw new Error("Ongeldig bestandstype. Alleen: PDF, PNG, JPG/JPEG, DOC, DOCX.");
     }
 
-    if (originalHint) originalHint.textContent = "Bestand optimaliseren…";
-    const prepared = await prepareUploadFile(file, doc_type);
-    const uploadFile = prepared.uploadFile;
-    const client_transform = prepared.client_transform;
+let uploadFile = file;
+let client_transform = {
+  applied: false,
+  kind: null,
+  original_bytes: file.size,
+  final_bytes: file.size,
+  original_mime: file.type || null,
+  final_mime: file.type || null,
+  original_filename: file.name || null,
+  final_filename: file.name || null,
+  max_dim: null,
+  quality: null,
+  out_w: null,
+  out_h: null,
+};
+
+const imageStep1Precheck = getAnalyseImageStep1Precheck();
+const imageStep1Upload = getAnalyseImageStep1Upload();
+
+if (
+  doc_type === "factuur" &&
+  imageStep1Upload &&
+  imageStep1Precheck &&
+  (
+    String(file?.type || "").toLowerCase() === "image/jpeg" ||
+    String(file?.type || "").toLowerCase() === "image/png" ||
+    String(file?.name || "").toLowerCase().endsWith(".jpg") ||
+    String(file?.name || "").toLowerCase().endsWith(".jpeg") ||
+    String(file?.name || "").toLowerCase().endsWith(".png")
+  )
+) {
+  if (originalHint) originalHint.textContent = "Factuur precheck…";
+
+  const invoicePrecheck = await imageStep1Upload.prepareInvoiceImagePrecheck(file, doc_type);
+  const invoicePrecheckSummary = imageStep1Upload.summarizeInvoiceUploadPrecheck(invoicePrecheck);
+
+  if (invoicePrecheck?.ok && invoicePrecheckSummary?.messages?.length) {
+    console.log("ANALYSE_IMAGE_STEP_1_PRECHECK", invoicePrecheckSummary);
+  }
+
+  if (imageStep1Upload.shouldBlockInvoiceUpload(invoicePrecheck)) {
+    throw new Error(
+      invoicePrecheckSummary?.messages?.[0] ||
+      "Factuur-afbeelding is client-side afgekeurd."
+    );
+  }
+  console.log("ANALYSE_IMAGE_STEP_1_PRECHECK", invoicePrecheck);
+
+  if (!invoicePrecheck?.ok) {
+    if (invoicePrecheck?.reason === "unsupported_invoice_image_type") {
+      // pdf/doc/docx of ander niet-image type: normale bestaande flow
+    } else {
+      throw new Error(buildInvoiceImagePrecheckMessage(invoicePrecheck));
+    }
+  } else {
+    const decision = String(invoicePrecheck.decision || "").trim();
+
+    if (decision === "reject") {
+      throw new Error(buildInvoiceImagePrecheckMessage(invoicePrecheck));
+    }
+
+    if (decision === "warn") {
+      const warnMsg = buildInvoiceImagePrecheckMessage(invoicePrecheck);
+      if (warnMsg) {
+        showToast(warnMsg, "warning");
+      }
+    }
+  }
+}
+
+if (originalHint) originalHint.textContent = "Bestand optimaliseren…";
+
+if (imageStep1Upload) {
+  const prepared = await imageStep1Upload.prepareUploadFile(file, doc_type);
+  uploadFile = prepared.uploadFile;
+  client_transform = prepared.client_transform;
+} else {
+  const prepared = await prepareUploadFile(file, doc_type);
+  uploadFile = prepared.uploadFile;
+  client_transform = prepared.client_transform;
+}
 
     const MAX_FINAL_BYTES = 15 * 1024 * 1024;
     if (uploadFile.size > MAX_FINAL_BYTES) {
@@ -2606,7 +2824,10 @@ async function uploadDocumentForCard({ charger_id, doc_type, file, slot }) {
     }
 
     if (originalHint) originalHint.textContent = "Hash berekenen…";
-    const file_sha256 = await sha256FileHex(uploadFile);
+    const imageStep1UploadForHash = getAnalyseImageStep1Upload();
+    const file_sha256 = imageStep1UploadForHash
+      ? await imageStep1UploadForHash.sha256FileHex(uploadFile)
+      : await sha256FileHex(uploadFile);
 
     if (originalHint) originalHint.textContent = "Upload voorbereiden…";
     const meta = await apiAuthed("api-dossier-upload-url", {
@@ -2639,13 +2860,102 @@ async function uploadDocumentForCard({ charger_id, doc_type, file, slot }) {
       client_transform,
     });
 
-    setText("uploadState", "Geüpload en bevestigd.");
+    const verifyPayload = getAnalyseVerifyPayload();
+    if (verifyPayload) {
+      verifyPayload.registerUploadedDocument({
+        document_id: meta.document_id,
+        charger_id,
+        doc_type,
+        filename: uploadFile.name,
+        content_type: uploadFile.type || "application/octet-stream",
+        size_bytes: uploadFile.size,
+        file_sha256,
+        client_transform,
+      });
+    }
+
+    let invoiceAnalysisState = null;
+    let observedSourceUpserted = false;
+    let observedSourceUpsertState = null;
+
+    if (String(doc_type || "").toLowerCase() === "factuur") {
+      const verifyPayload = getAnalyseVerifyPayload();
+
+      if (verifyPayload?.maybeParseAndRegisterInvoiceDocument) {
+        invoiceAnalysisState = await verifyPayload.maybeParseAndRegisterInvoiceDocument({
+          file: uploadFile,
+          document_id: meta.document_id,
+          doc_type,
+          content_type: uploadFile.type || "application/octet-stream",
+          filename: uploadFile.name,
+        });
+
+        const parsedPdf =
+          invoiceAnalysisState &&
+          invoiceAnalysisState.ok !== false &&
+          invoiceAnalysisState.skipped === false &&
+          invoiceAnalysisState.parser_result &&
+          String(invoiceAnalysisState?.parser_result?.source_kind || "").trim().toLowerCase() === "pdf";
+
+        if (parsedPdf) {
+          observedSourceUpsertState = await upsertObservedSourceForInvoiceDocument({
+            document_id: meta.document_id,
+            parser_result: invoiceAnalysisState.parser_result,
+          });
+
+          observedSourceUpserted = observedSourceUpsertState?.skipped !== true;
+        }
+      } else {
+        invoiceAnalysisState = {
+          ok: false,
+          skipped: true,
+          reason: "verify_payload_pdf_registration_helper_missing",
+        };
+      }
+    }
+
+    if (invoiceAnalysisState?.ok && invoiceAnalysisState?.skipped === false) {
+      if (observedSourceUpserted) {
+        setText("uploadState", "Geüpload, bevestigd, lokaal geanalyseerd en server-side vastgelegd.");
+      } else if (observedSourceUpsertState?.reason === "empty_pdf_parser_result_not_persisted") {
+        setText("uploadState", "Geüpload en bevestigd. Browser PDF-analyse gaf geen bruikbare velden; niets server-side opgeslagen.");
+      } else {
+        setText("uploadState", "Geüpload en bevestigd. Lokale analyse beschikbaar, maar nog niet server-side vastgelegd.");
+      }
+    } else if (
+      String(doc_type || "").toLowerCase() === "factuur" &&
+      invoiceAnalysisState &&
+      invoiceAnalysisState?.skipped === false
+    ) {
+      setText("uploadState", "Geüpload en bevestigd. Lokale factuuranalyse mislukte.");
+    } else {
+      setText("uploadState", "Geüpload en bevestigd.");
+    }
     showToast("Upload gelukt.", "success");
     invalidatePrecheck("document toegevoegd");
     await reloadAll();
   } catch (e) {
-    setText("uploadState", e.message || "Upload mislukt.");
-    showToast(e.message || "Upload mislukt.", "error");
+    const msg = String(e?.message || "Upload mislukt.");
+
+    setText("uploadState", msg);
+    showToast(msg, "error");
+
+    const lower = msg.toLowerCase();
+    const looksLikeExistingDocConflict =
+      lower.includes("er is al een factuur toegevoegd") ||
+      lower.includes("er is al een document toegevoegd") ||
+      lower.includes("409");
+
+    if (looksLikeExistingDocConflict) {
+      setText(
+        "uploadState",
+        "Er staat nog een document voor deze laadpaal open. De documentlijst wordt opnieuw geladen."
+      );
+
+      try {
+        await reloadAll();
+      } catch (_) {}
+    }
   } finally {
     if (slot) {
       slot.classList.remove("is-busy");
@@ -2797,7 +3107,14 @@ async function runEvaluate(finalize) {
       // 2) VERIFY / ANALYSIS
       // =====================================================
       try {
-        const verifyJs = await apiAuthed("api-dossier-verify", { mode: "refresh" });
+        const verifyPayload = getAnalyseVerifyPayload();
+        const verifyExtra = verifyPayload
+          ? verifyPayload.buildVerifyExtra({ mode: "refresh" })
+          : { mode: "refresh", client_verify_payload: null };
+
+        console.log("DOSSIER verifyExtra", verifyExtra);
+
+        const verifyJs = await apiAuthed("api-dossier-verify", verifyExtra);
 
         if (verifyJs?.analysis_readable) {
           latestPrecheckAnalysis = verifyJs.analysis_readable;
