@@ -15,6 +15,8 @@ Regel: alleen open items; afgerond → naar changelog.
     - dev unlock in DEV
     - upload per laadpaalkaart
     - stabiele laadpaalnummering
+    - browser-PDF parser → verify end-to-end
+    - `issued` recovery UX in documentflow
 - Open restdoel:
   - 1 compacte regressieronde uitvoeren na eerstvolgende dossier-UI wijziging, zodat bewezen blijft dat de vereenvoudigde documentflow niet opnieuw drift veroorzaakt
 - DoD:
@@ -22,6 +24,8 @@ Regel: alleen open items; afgerond → naar changelog.
   - bevestigen dat:
     - nummering stabiel blijft
     - uploadslot per type correct verdwijnt/terugkomt
+    - `issued` zichtbaar blijft wanneer confirm niet is afgerond
+    - conflict recovery de UI direct hersynct naar server truth
     - finalize alleen zichtbaar wordt na geldige precheck
 - Status: OPEN
 
@@ -155,62 +159,81 @@ Regel: alleen open items; afgerond → naar changelog.
 
 ## P1.5 / Phase-2 (open risico’s)
 
-### 11) Factuur analysis v1 hardenen (CURRENT eerstvolgende uitvoerfase)
+### 11) PDF parser → verify end-to-end wiring afronden
 - Context:
-  - Analysis v1 pipeline is technisch bewezen:
-    - `api-dossier-verify`
-    - analysis-tabellen
-    - export v5
-    - verify evidence-script
-  - PDF factuurspoor is runtime-bewezen voor:
-    - volledige match → pass
-    - ontbrekende brand/model → inconclusive
-    - identifier mismatch → fail
-  - non-PDF factuurfallback is nu ook runtime-bewezen:
-    - `status=completed`
-    - `observed_fields={}`
-    - `invoice_image_extraction_not_implemented`
-    - charger-level invoice checks → gecontroleerd `inconclusive`
-  - huidige zwakte zit dus niet in pipeline-stabiliteit, maar in extractiekwaliteit van facturen
-  - focus blijft bewust op `factuur`, niet op laadpaalfoto’s
-- DoD:
-  - `extractInvoiceObservedFieldsFromText()` verschuift van label-only naar hybrid extractie
-  - v1 blijft strikt `text_based_pdf`
-  - observed fields in `dossier_analysis_document.observed_fields` minimaal robuust voor:
-    - `address_line`
-    - `city_line`
-    - `street`
-    - `house_number`
-    - `suffix`
-    - `postcode`
-    - `city`
-    - `brand`
-    - `model`
-    - `serial_number`
-    - `mid_number`
-  - charger-level checks blijven:
-    - `invoice_address_match`
-    - `invoice_brand_match`
-    - `invoice_model_match`
-    - `invoice_serial_match`
-    - `invoice_mid_match`
-  - verify-run log toont per factuur:
-    - raw observed fields
-    - document → charger trace
-    - observed vs expected_db
-  - non-PDF facturen blijven expliciet gecontroleerd fallbackgedrag houden:
-    - geen crash
-    - geen pseudo-extractie
-    - `invoice_present_but_no_observed_fields_available` op charger-niveau
-  - geen lifecycle-impact:
-    - geen lock mutatie
-    - geen `dossier_checks` mutatie
-    - geen export gate op analysis-uitkomst
-- Open subwerk:
-  - ID-first extractie voor serial/MID
-  - betere address candidate logica
-  - field-level source / confidence / limitation discipline
-  - uitbreiding met realistische slechte factuurvarianten
+  - `api-dossier-verify` accepteert nu `client_verify_payload`
+  - verify is ontkoppeld van inline PDF/image parsing
+  - `assets/js/analyse/analyse_verify_payload.js` bestaat
+  - browser-side PDF parserresultaten worden nu in de normale dossierflow geregistreerd en meegestuurd naar verify
+- Open DoD:
+  - regressie compact houden na eerstvolgende dossier-UI wijziging
+  - bevestigen dat PDF facturen zonder handmatige bridge nog steeds echte observed payload naar verify sturen
+  - fallback naar placeholder blijft alleen bestaan bij echte missende parseroutput
+- Status: OPEN
+
+### 11b) Analysis component status als CURRENT truth in docs vastzetten
+- Context:
+  - runtime-code, proof-scripts en oudere analyse-docs lopen deels door elkaar
+  - daardoor ontstaat verwarring tussen:
+    - actieve runtime-lanes
+    - stubbed onderdelen
+    - lokale proof-/referentielagen
+    - bewust uitgestelde foto-analysis
+- Open DoD:
+  - `01_SYSTEM_MAP.md` bevat een expliciete analysis component status-matrix
+  - per onderdeel is zichtbaar:
+    - locatie/runtime
+    - current state
+    - canonieke rol
+    - next action
+  - `00_GLOBAL.md` bevat geen verouderde CURRENT claims meer over server-side canonieke invoice-image runtime
+  - `11_ANALYSE_PLAN.md` blijft DRAFT en wordt niet meer gelezen als current source-of-truth
+- Status: OPEN
+
+### 11c) Upload/persist flow expliciet aligned houden op verify-richting
+- Context:
+  - huidige documentflow blijft `upload-url` → PUT → `upload-confirm`
+  - verify-richting gebruikt nu parser/worker observed payload als aanvullende input
+  - extractie moet zo licht en goedkoop mogelijk blijven:
+    - PDF client-side
+    - image via lokale/interne worker
+  - verify blijft compare/write laag en niet de zware extractieruntime
+- Harde ontwerpregel:
+  - `upload-confirm` blijft de canonieke ankerstap voor documenttruth
+  - analysis mag niet canoniek worden op andere bytes dan de bytes die uiteindelijk als `confirmed` dossierdocument gelden
+- Open DoD:
+  - docs expliciet aligned op:
+    - confirmed documents zijn source-of-truth
+    - observed payload is aanvullend, niet vervangend
+  - verify consumeert payload die gekoppeld is aan actuele confirmed document rows
+  - submit/review/export steunen niet op ongeconfirmde parser/worker bytes
+  - geen herintroductie van zware server-side extractie in verify
+- Status: OPEN
+
+### 11d) Volledige factuur-regressiematrix opnieuw draaien zodra analysis-flow stabiel staat
+- Context:
+  - de huidige runtimebewijzen zijn vooral gebaseerd op perfecte of relatief schone voorbeelden
+  - de browser-PDF lane is nu weer end-to-end werkend
+  - juist daardoor ontstaat regressierisico op moeilijkere varianten:
+    - mindere kwaliteit
+    - minimale info
+    - verkeerde waarde in één veld
+    - chaos-layout
+    - multi-page
+- Open DoD:
+  - na stabilisatie van de analysis-flow de volledige factuurmatrix opnieuw draaien
+  - minimaal opnieuw beoordelen:
+    - clean baseline
+    - minimal PDF
+    - single-field negatieve varianten
+    - chaos-layout
+    - multi-page
+    - multi-page chaos
+  - per variant expliciet vastleggen:
+    - parser observed fields
+    - verify charger-resultaten
+    - afwijking t.o.v. verwachte matrix
+  - regressies documenteren in changelog en matrix waar nodig aanscherpen
 - Status: OPEN
 
 ### 12a) Foto analysis v1 uitgesteld tot representatieve laadpaalfoto-dataset bestaat
@@ -336,5 +359,13 @@ Regel: alleen open items; afgerond → naar changelog.
   - rate limit / abuse detection op `api-lead-submit` en contactflow
   - basic throttling + logging + minimale blokkade
 - Status: OPEN
+
+### Phase 2 
+
+### 21) Invoice image precheck UX persistence
+  - Bij client-side warning op factuurafbeelding: uploadvak visueel oranje laten staan
+  - Rechtsboven een info-icoon tonen
+  - Hover / tooltip met exacte warningtekst tonen
+  - Warning mag niet blokkeren; alleen persistent zichtbaar maken
 
 # EINDE 04_TODO.md

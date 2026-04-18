@@ -417,6 +417,38 @@ Event_data minimaal:
 - `method_version`
 - `status`
 
+Waar relevant ook:
+- `content_type`
+- `extraction_method`
+- `extraction_stage`
+
+### Invoice image analysis boundary (CURRENT richting)
+Voor `doc_type = factuur` met `content_type = image/jpeg | image/png` geldt:
+
+- `api-dossier-verify` is CURRENT niet de image-extractieruntime zelf
+- verify blijft de canonieke evaluator/writer
+- de actieve extractielane voor image facturen ligt CURRENT in de lokale/interne OCR worker
+- client-side precheck/compressie blijft geen canonieke analysis-bron
+
+Wanneer verify geldige worker-afgeleide observed payload ontvangt:
+- document analysis row kan `completed` worden geschreven met echte observed fields
+- charger-level invoice checks kunnen inhoudelijk `pass` / `fail` / `inconclusive` worden
+
+Wanneer image worker-output voor een document ontbreekt:
+- verify degradeert gecontroleerd naar placeholder/inconclusive semantics
+- document analysis row blijft `completed` wanneer de verify-run zelf technisch slaagt
+- charger-level invoice checks degraderen gecontroleerd naar `inconclusive`
+
+Wanneer de verify-run of ingest van worker-output technisch crasht:
+- document analysis row wordt `failed`
+- audit event: `document_analysis_failed`
+
+Auditregel:
+- “geen worker-output / geen bruikbare extractie” is niet hetzelfde als “verify technisch mislukt”
+- Dit onderscheid moet zichtbaar blijven in:
+  - `document_analysis_completed`
+  - vs `document_analysis_failed`
+
 ### Charger analysis
 - charger_analysis_result_written — success — api-dossier-verify
 
@@ -438,6 +470,27 @@ Event_data minimaal:
 - `document_analysis_count`
 - `charger_analysis_count`
 
+CURRENT allowed overall_status values:
+- `not_run`
+- `inconclusive`
+- `partial_pass`
+- `pass`
+- `review_required`
+
+Semantiek (CURRENT):
+- `review_required`
+  - minstens één inhoudelijke fail in charger-level analysis
+- `pass`
+  - alle geschreven charger-level resultaten zijn `pass`
+- `partial_pass`
+  - minstens één relevante check is `pass`, maar nog niet alles is volledig pass
+- `inconclusive`
+  - geen fail, maar ook geen voldoende pass-basis; resultaten bestaan uitsluitend uit
+    - `inconclusive`
+    - en/of `not_checked`
+- `not_run`
+  - alleen wanneer er nog geen analysis-resultaten bestaan
+
 ### Reject/Fail
 - dossier_verify_rejected — reject — api-dossier-verify
 
@@ -458,6 +511,26 @@ Belangrijk:
 - Analysis-events zijn aanvullend
 - Ze vervangen geen bestaande dossier lifecycle events
 - Analysis beïnvloedt CURRENT geen lock/review gate
+
+### Analysis incident class — summary/status drift (bewezen 2026-03-30)
+Specifiek bewezen failure mode:
+- backend kan document-/charger-analysis al geschreven hebben,
+  terwijl de run alsnog faalt op summary insert wanneer
+  `dossier_analysis_summary.overall_status` database-side niet aligned is met de code.
+
+Concreet bewezen voorbeeld:
+- code retourneerde `overall_status = inconclusive`
+- DB check constraint kende `inconclusive` nog niet
+- gevolg:
+  - summary insert faalt
+  - run kan blijven hangen op `running`
+  - vervolgrun faalt op “one active run per dossier”
+
+Auditbetekenis:
+- een foutmelding over “actieve analyse-run bestaat al” kan dus secundair zijn
+- primaire root cause kan liggen in misalignment tussen:
+  - code-level `AnalysisOverallStatus`
+  - database constraint op `dossier_analysis_summary.overall_status`
 
 ### Parser boundary (CURRENT, bewezen 2026-03-22)
 

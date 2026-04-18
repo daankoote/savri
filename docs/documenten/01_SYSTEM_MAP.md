@@ -72,9 +72,11 @@ Canonical policy:
 - ./assets/js/config.js (no-secrets)
 - ./assets/js/script.js
 - ./assets/js/api.js (frontend shared helpers: url params, session token storage, idempotent apiPost wrapper)
+- ./assets/js/analyse/analyse_image_step_1_constants.js
+- ./assets/js/analyse/analyse_image_step_1_precheck.js
+- ./assets/js/analyse/analyse_image_step_1_upload.js
+- ./assets/js/analyse/analyse_verify_payload.js
 - ./assets/js/pages/dossier.js
-
-
 ---
 
 
@@ -153,8 +155,6 @@ Dit voorkomt “dead dossiers” en houdt intake rejects los van dossier lifecyc
 
 - Conversie: aanmelden prefill via query params (`charger_count`, `own_premises`) vanuit index eligibility gate (2026-02-19).
 
-
-
 ### 2.3 dossier.js (wizard)
 Entry: `./dossier.html?d=<uuid>&t=<token>`
 - `reloadAll()` → `api-dossier-get`
@@ -187,23 +187,61 @@ Entry URL blijft:
   - `newIdempotencyKey()`
   - `apiPost()`
 
-**Legacy cleanup**
-- Oude single-key localStorage entry:
-  - `enval_session_token`
-  wordt actief opgeschoond via `cleanupLegacySessionKey()`.
+**Analyse client helperlaag (CURRENT)**
+- `assets/js/analyse/analyse_verify_payload.js` is toegevoegd als aparte orchestrationlaag
+- Doel:
+  - current dossier/charger/document snapshot synchroniseren
+  - upload metadata registreren
+  - client observed invoice results registreren
+  - verify body opbouwen buiten `assets/js/pages/dossier.js`
+  ### Analysis component status (CURRENT)
 
-**Server-side source of truth**
-- Sessions staan in `public.dossier_sessions`.
-- Runtime auth enforcement gebeurt via:
-  - `authSession(...)`
-  - en gedeelde helper `supabase/functions/_shared/customer_auth.ts`
+Doel:
+- één technische waarheid vastleggen over welke analyse-onderdelen:
+  - actief zijn
+  - stubbed zijn
+  - alleen proof/dev tooling zijn
+  - of bewust uitgesteld zijn
 
-**Canonical dossier-flow**
-- `reloadAll()`:
-  1. probeert eerst `{ dossier_id, session_token }`
-  2. valt alleen bij ontbrekende/mislukte sessie terug op `{ dossier_id, token }`
-  3. verwacht daarna een nieuwe `session_token` van `api-dossier-get`
-  4. slaat die op en verwijdert pas daarna `t` uit de URL
+| Onderdeel | Locatie/runtime | Bestand(en) | CURRENT status | Canonieke rol | Opmerking / next action |
+|---|---|---|---|---|---|
+| Factuur image precheck / uploadvoorbereiding | browser/client | `assets/js/analyse/analyse_image_step_1_constants.js`, `assets/js/analyse/analyse_image_step_1_precheck.js`, `assets/js/analyse/analyse_image_step_1_upload.js` | werkend | actief | alleen preflight / compressie / UX; geen canonieke extractielaag |
+| Factuur PDF parser | browser/client | `assets/js/analyse/analyse_invoice_parser.js` (`parseInvoicePdfFile`) | werkend | actief | CURRENT primaire parserlane voor PDF facturen |
+| Factuur image parser (browser) | browser/client | n.v.t. | verwijderd | geen | browser-side image parsing is niet langer onderdeel van de actieve of legacy runtime; image facturen lopen CURRENT uitsluitend via de lokale/interne worker-lane |
+| Verify payload orchestration | browser/client | `assets/js/analyse/analyse_verify_payload.js` | werkend voor PDF-lane + bewezen dev-handoff voor image-lane | actief | payloadcontract bestaat; browser-side PDF parseroutput wordt in de normale dossierflow geregistreerd en meegestuurd naar verify; image worker-output is nu runtime-bewezen op dezelfde contractvorm via `scripts/tools/bridge-image-worker-verify.py`, inclusief mixed image/PDF verify-run |
+| Verify orchestration / compare / writes | server / Supabase Edge | `supabase/functions/api-dossier-verify/index.ts` | werkend | canoniek | verify blijft canonieke evaluator/writer; geen inline factuurparsing meer; runtime-bewezen dat worker-afgeleide image observed payload zonder backend-herbouw geconsumeerd kan worden |
+| Standalone invoice image worker | lokaal / Python buiten Edge | `scripts/analysis_worker/ocr_extract.py`, `scripts/analysis_worker/extract_invoice_image.py` | werkend / actieve image-lane | actief voor image facturen | CURRENT actieve extractieroute voor image facturen; levert observed fields buiten browser/Edge; reproduceerbare dev-handoff naar verify bestaat nu via `scripts/tools/bridge-image-worker-verify.py` |
+| Standalone invoice PDF worker | lokaal / Python buiten Edge | `scripts/analysis_worker/pdf_extract.py` | werkend als proof-tool | proof-loop / referentie | nuttig voor regressie/proof; browser PDF-lane blijft primair |
+| Compare-laag image/pdf | lokaal / Python buiten Edge | `scripts/analysis_worker/compare_invoice_results_image.py`, `scripts/analysis_worker/compare_invoice_results_pdf.py` | werkend | proof-loop | bedoeld voor parserkwaliteit en regressiecontrole, niet voor productie-runtime |
+| Multipage image aggregation | lokaal / Python buiten Edge | `scripts/analysis_worker/aggregate_invoice_image_multipage.py` | werkend als proof-tool | proof-loop / later integreren | pas relevant nadat image integratie verder wordt gehard |
+| Foto laadpunt analysis | n.v.t. / skeleton | verify + future parserlaag | uitgesteld | nog niet actief | CURRENT correct gedrag = `not_checked` / skeleton tot representatieve dataset bestaat |
+| “Charger PDF parser” als aparte lane | n.v.t. | n.v.t. | niet bestaand / niet gewenst | geen | factuur-PDF blijft de relevante PDF-lane; geen kunstmatige extra parsercategorie introduceren |
+
+Harde CURRENT waarheid:
+- PDF facturen:
+  - parser = client-side extractieruntime
+  - verify = server-side evaluator/writer
+- image facturen:
+  - extractie = lokale/interne OCR worker
+  - verify = server-side evaluator/writer
+- browser-side image OCR/Tesseract.js is geprobeerd maar niet robuust genoeg gebleken en is daarom verlaten als primaire route
+- `foto_laadpunt` blijft bewust uitgesteld
+
+**Evaluate-flow (CURRENT frontend orchestration)**
+- stap 1:
+  - `api-dossier-evaluate(finalize=false, evaluation_mode="core")`
+- stap 2:
+  - `api-dossier-verify(mode="refresh", client_verify_payload=...)`
+- stap 3:
+  - `api-dossier-evaluate(finalize=false, evaluation_mode="full")`
+- stap 4:
+  - `api-dossier-evaluate(finalize=true, evaluation_mode="full")`
+
+Belangrijke CURRENT waarheid:
+- `api-dossier-verify` doet geen inline PDF/image parsing meer
+- verify consumeert client-side observed payload voor facturen
+- zolang client observed payload voor een document ontbreekt,
+  degradeert verify gecontroleerd naar placeholder/inconclusive semantics
 
 Locked UX wanneer:
 - `dossier.locked_at != null`
@@ -216,20 +254,6 @@ Dev unlock UX (CURRENT, alleen development-context):
   - locked dossier terugzetten naar editable state in DEV
   - daarna opnieuw precheck/finalize uitvoeren
 - dit is geen productiegedrag en geen lifecycle-shortcut voor live dossiers
-
-Evaluate-flow (CURRENT frontend orchestration):
-- stap 1:
-  - `api-dossier-evaluate(finalize=false, evaluation_mode="core")`
-  - doel: completeness gate
-- stap 2:
-  - `api-dossier-verify(mode="refresh")`
-  - doel: derived analysis verversen op confirmed documenten
-- stap 3:
-  - `api-dossier-evaluate(finalize=false, evaluation_mode="full")`
-  - doel: blocking reasons + warnings op basis van complete dossier + analysis
-- stap 4:
-  - `api-dossier-evaluate(finalize=true, evaluation_mode="full")`
-  - doel: lock + status `in_review`
 
 Client-side gating:
 - `precheckOk === true`
@@ -254,6 +278,14 @@ UI-gedrag:
 - Wizard stuurt uitsluitend finale bytes + `client_transform` metadata naar Edge.
 - Audit-hash (`file_sha256`) wordt client-side berekend over de finale bytes.
 
+Belangrijke CURRENT nuance:
+- deze uploadflow is nog de bestaande storage-first route
+- maar dat is niet langer de gewenste canonieke analysis-richting
+- de nieuwe canonieke analysis-richting is:
+  - eerst client parser observed payload
+  - daarna server-side verify
+- verdere uitlijning van persist/storage op die verify-richting is nog OPEN
+
 ### Document UI contract (CURRENT, 2026-03-24)
 - Stap 4 gebruikt geen centrale uploadform meer.
 - Upload gebeurt direct in de documentvakken binnen de laadpaalkaarten.
@@ -265,6 +297,14 @@ UI-gedrag:
   - maximaal 1 foto laadpunt per laadpaal
 - Zodra een document van het betreffende type al bestaat, wordt het uploadslot voor dat type niet meer getoond.
 - Delete maakt het type weer vrij, waarna het uploadslot opnieuw verschijnt.
+
+Belangrijke CURRENT nuance:
+- documentstatus `issued` is een echte recovery-state:
+  - upload gestart
+  - nog niet bevestigd
+- zolang een `issued` documentrow bestaat voor hetzelfde type / dezelfde laadpaal,
+  blokkeert `api-dossier-upload-url` terecht een nieuwe upload-url
+- frontend moet `issued` daarom expliciet zichtbaar en herstelbaar tonen
 
 Belangrijk:
 - Dit is een bewuste MVP-beperking van de UI en huidige flow.
@@ -284,19 +324,32 @@ Belangrijk:
     - `requireCustomerSession(...)`
     - `actorRefForSession(...)`
     - `scopedSessionIdemKey(...)`
+
 - `supabase/functions/_shared/analysis.ts`
   - gedeelde helper voor Analysis v1
   - levert:
-    - document-level skeleton analysis rows
-    - charger-level skeleton analysis rows
+    - document-level analysis rows
+    - charger-level analysis rows
     - dossier-level analysis summary row
+    - invoice compare-/shape helpers
     - status/shape helpers voor supported analysis-documents
 
+Belangrijke CURRENT wijziging:
+- `api-dossier-verify` gebruikt geen inline parserhelpers meer voor factuur-PDF of factuur-image extractie
+- verify consumeert client-side observed invoice payload
+- oude server-side parserhelpers horen niet meer bij de canonieke verify-runtime
+
+Lokale parser/proof-loop (CURRENT, buiten Edge runtime):
+- `scripts/analysis_worker/ocr_extract.py`
+- `scripts/analysis_worker/pdf_extract.py`
+- `scripts/analysis_worker/compare_invoice_results_image.py`
+- `scripts/analysis_worker/compare_invoice_results_pdf.py`
+- `scripts/analysis_worker/aggregate_invoice_image_multipage.py`
+
 Doel:
-- uniforme session-auth over dossier runtime endpoints
-- uniforme actor_ref op basis van session token hash
-- uniforme idempotency scoping per dossier + session
-- modulaire analysis-pipeline zonder mutatie van bestaande dossierdata
+- parser/compare/aggregation lokaal bewijzen
+- verify server-side als compare/write/audit laag houden
+- geen mutatie van bestaande dossierdata
 
 ## 4) Core DB tables (samenvatting)
 
@@ -333,6 +386,8 @@ Doel:
     - `partial_pass`
     - `pass`
     - `review_required`
+    - `inconclusive`
+    
 
 Belangrijk:
 - Analysis is volledig derived
@@ -545,9 +600,25 @@ Stap 6 — Review
 Evidence / export
 - api-dossier-verify
   - session-auth
-  - draait analysis op confirmed documenten
-  - schrijft uitsluitend naar analysis-tabellen
+  - derived analysis orchestrator
+  - accepteert:
+    - `dossier_id`
+    - `session_token`
+    - `mode`
+    - `client_verify_payload`
+  - gebruikt declared data uit:
+    - `dossiers`
+    - `dossier_chargers`
+  - gebruikt observed data uit:
+    - client-side parser payload per factuurdocument
+  - schrijft uitsluitend naar:
+    - `dossier_analysis_document`
+    - `dossier_analysis_charger`
+    - `dossier_analysis_summary`
   - muteert geen bestaande dossierdata
+  - voert geen inline OCR/PDF parsing uit
+  - fallback:
+    - ontbrekende client observed payload → placeholder/inconclusive semantics
 - api-dossier-export
   - session-auth
   - export artifact
@@ -701,6 +772,46 @@ Wanneer niet:
 
 ### 9.2 Local sanity checks (macOS)
 - Gebruik `python3` (niet `python`) voor sanity scripts.
+
+## 9.3 Analysis worker tooling (CURRENT, local standalone lane)
+
+Doel:
+- standalone invoice-image extractie lokaal bewijzen vóór Edge-koppeling
+- regressies zichtbaar maken zonder `api-dossier-verify` al te belasten
+
+Bestanden (CURRENT):
+- `scripts/analysis_worker/ocr_extract.py`
+  - lokale invoice-image extractor
+  - output bevat zowel approved waarden als raw candidates voor serial/MID
+- `scripts/analysis_worker/compare_invoice_results.py`
+  - lokale compare-laag:
+    - expected
+    - observed_raw
+    - observed_approved
+    - field status
+    - overall_status
+    - overall_reason
+- `scripts/analysis_worker/convert_pdf_tests_to_jpg.py`
+  - converteert PDF testset lokaal naar JPG’s
+- `scripts/analysis_worker/run_pdf_derived_image_batch.py`
+  - batch-runner voor PDF-afgeleide JPG lane
+
+Outputmappen (CURRENT):
+- `scripts/analysis_worker/output/`
+- `scripts/analysis_worker/output/batch_image_tests/`
+- `scripts/analysis_worker/output/batch_image_tests_pdf_derived/`
+
+Belangrijke CURRENT ontwerpregel:
+- deze lokale workerlane is proof/dev tooling
+- nog niet gekoppeld aan `api-dossier-verify`
+- nog geen analysis-table writes vanuit deze standalone scripts
+- doel is eerst extractie- en compare-contract lokaal stabiel maken
+
+Belangrijke parserregel (CURRENT):
+- raw candidate logging voor identifiers is verplicht onderdeel van de lokale output:
+  - `serial_candidate_raw`
+  - `mid_candidate_raw`
+- noisy candidates mogen niet stil worden omgezet naar schijnbaar geldige approved values
 
 ## 10) Working Agreement (hoe wij werken)
 Input van Daan per sessie:

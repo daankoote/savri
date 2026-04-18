@@ -23,8 +23,32 @@ Niet voor:
 
 Ondersteunde uitvoerstatus (CURRENT):
 
-* PDF text-based facturen → ondersteund
-* invoice images / camera shots → nog niet ondersteund, dus verwacht `inconclusive` of document limitation
+* browser/runtime ondersteunt CURRENT:
+  - client-side PDF factuurparser
+  - verify met `client_verify_payload`
+  - placeholder/inconclusive fallback wanneer parserpayload ontbreekt
+* browser/runtime ondersteunt CURRENT nog niet inhoudelijk:
+  - client-side image factuurparser (nog niet operationeel)
+* lokale parser/proof-loop ondersteunt daarnaast:
+  - text-based PDF facturen
+  - invoice images / camera shots
+  - multipage image aggregation (document-level, lokaal)
+
+Belangrijke CURRENT scheiding:
+* deze matrix beschrijft primair parser-/compare-waarheid
+* niet automatisch de integratiestatus van de dossier-UI
+
+Dat betekent:
+* PDF-cases kunnen zowel parser-proof als runtime-relevant zijn
+* image-cases kunnen lokaal inhoudelijk al beoordeeld worden terwijl de browser/runtime-lane nog niet volledig operationeel is
+
+Belangrijke CURRENT nuance:
+* mismatch tussen parser-proof en verify-runtime is een integratie-open punt
+* zo’n mismatch is dus niet automatisch een parserfail
+* nieuwe bewezen nuance (2026-04-15):
+  - worker-afgeleide image observed payload kan handmatig door `api-dossier-verify` worden geconsumeerd
+  - verify/compare is dus niet de blocker
+  - de blocker zit in de structurele handoff van worker-output naar verify-contract
 
 ---
 
@@ -307,6 +331,24 @@ Conclusie:
   - strikt block-based blijft, of
   - uitgebreid wordt met losse candidate reconstruction voor street / house_number / postcode / city.
 
+## 9.1 Nieuwe werkregel voor image-cases
+Voor alle JPG/PNG factuurcases in deze matrix geldt voorlopig een dubbel onderscheid:
+
+1. CURRENT behavior
+- preflight-only
+- geen bruikbare observed fields
+- charger-level invoice checks vaak `inconclusive`
+
+2. TARGET behavior
+- server-side image extractie levert observed fields waar leesbaarheid dat toelaat
+- daarna pas inhoudelijke beoordeling:
+  - pass
+  - fail
+  - inconclusive
+
+Belangrijk:
+- matrix mag CURRENT fallback-gedrag documenteren,
+  maar moet niet doen alsof dat de gewenste eindtoestand is.
 
 ## 10) Analysis verification — invoice parser boundary tests (Paul)
 
@@ -326,5 +368,51 @@ Statusdatum: 2026-03-22
 - Bij chaos-layouts zonder duidelijk adresblok wordt address niet foutief gepassed, maar inconclusive.
 - Huidige limiet zit dus in address block reconstruction, niet in multipage ondersteuning.
 
+
+## 11) Update 2026-04-02 — Lokale parser/compare lane is leidend; verify consumeert client payload
+
+Belangrijke CURRENT nuance:
+- De oorspronkelijke matrix beschrijft nog het oude CURRENT gedrag binnen Analysis v1 / `api-dossier-verify`:
+  - invoice images route aanwezig
+  - maar inhoudelijk nog preflight-only / inconclusive
+- Sinds 2026-03-31 bestaat daarnaast een aparte lokale standalone lane buiten Edge:
+  - `scripts/analysis_worker/ocr_extract.py`
+  - `scripts/analysis_worker/compare_invoice_results.py`
+  - `scripts/analysis_worker/run_pdf_derived_image_batch.py`
+
+Dat betekent:
+- de tabel hierboven blijft geldig als beschrijving van CURRENT verify/Edge-gedrag
+- maar niet meer als volledige waarheid voor de lokale standalone parserlane
+
+Nieuwe werkregel:
+- voor image-cases maken we vanaf nu onderscheid tussen:
+  1. `verify_current`
+     - huidige behavior in `api-dossier-verify`
+     - image cases nog niet canoniek gekoppeld
+  2. `standalone_local_target`
+     - lokale workerroute die observed fields al echt probeert te vullen
+
+Belangrijke nieuwe testbron:
+- PDF→JPG lane uit:
+  - `docs/facturen/facturen_pdf`
+  - naar:
+  - `docs/facturen/facturen_image`
+
+Nieuwe bewezen parserinzichten uit die lane:
+- single-page PDF-afgeleide JPG’s zijn waardevol voor image-regressietests
+- multipage PDF-afgeleide JPG’s moeten voorlopig per pagina beoordeeld worden
+- page-level parser-hardening gaat vóór multipage image aggregation
+
+Open probleemcases die nu leidend zijn voor de volgende parseriteratie:
+- `invoice_paul_pdf_01_p01.jpg`
+  - customer_name regressie door stacked extractor
+- `invoice_paul_pdf_04 brand_model_variant_02_p01.jpg`
+  - Dutch stacked label/value pairing nog fout
+
+Conclusie:
+- de matrix blijft leidend voor scenario’s en expected outcomes
+- maar image-case interpretatie moet nu in twee lanes worden gelezen:
+  - verify/Edge CURRENT
+  - standalone/local worker CURRENT
 
 # EINDE ENVAL — Analysis Test Matrix
