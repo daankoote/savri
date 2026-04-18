@@ -1170,6 +1170,13 @@
     border: 1px solid #52c41a;
     color: #135200;
   }
+
+  .toast--warning {
+    background: #fff7e6;
+    border: 1px solid #faad14;
+    color: #ad6800;
+  }
+
   .toast--error {
     background: #fff2f0;
     border: 1px solid #ff4d4f;

@@ -242,21 +242,87 @@ Gate = “audit-contract stabiel en consistent over alle dossier write endpoints
   - verify-run evidence script voor leesbare runtime proof
 - CURRENT uitvoeringsfocus binnen Analysis v1:
   - eerst factuur-extractie en factuur-consistency hardenen
+  - daarbinnen nu expliciet:
+    - text-based PDF facturen hard houden
+    - client-side factuurparser als extractieruntime gebruiken
+    - `api-dossier-verify` server-side als canonieke evaluator/writer gebruiken
   - `foto_laadpunt` blijft voorlopig skeleton / `not_checked`
-  - geen OCR in deze fase
+  - client-side image handling bevat CURRENT:
+    - precheck
+    - optimalisatie/compressie
+    - verify payload-opbouw
+  - belangrijke CURRENT nuance:
+    - browser-side PDF parser is operationeel
+    - browser-side image parser is nog niet operationeel en levert CURRENT geen echte observed fields
+  - lokale Python parser-/compare-scripts blijven bestaan als proof-/referentielaag
+  - geen externe OCR/vision provider
   - geen authenticity-claim
   - geen compliance-claim
   - geen certificeringsclaim
 
-  Nieuwe operationele nuance (CURRENT, 2026-03-20):
-- De verify-pipeline zelf is nu technisch bewezen:
-  - `api-dossier-verify` schrijft correct naar analysis-tabellen
-  - `scripts/tools/verify-analysis-run.sh` geeft leesbare document→charger trace
-  - observed vs expected_db is runtime zichtbaar per analysis row
-- Het huidige werk verschuift daarom van infrastructuur naar extractiekwaliteit:
-  - betere factuurveldextractie
-  - sterkere testset met realistische slechte factuurvarianten
-  - laadpaalfoto-analyse bewust uitgesteld tot representatieve dataset bestaat
+Nieuwe expliciete CURRENT waarheid (2026-04-15 / 2026-04-16):
+- De canonieke runtime-richting is gesplitst per factuurtype:
+  - PDF facturen:
+    - parser client-side
+    - verify server-side
+  - image facturen (`image/jpeg`, `image/png`):
+    - lokale/interne OCR worker als actieve extractielane
+    - verify server-side
+- Dat betekent:
+  - `api-dossier-verify` blijft de canonieke evaluator/writer
+  - verify doet compare + analysis writes + audit writes
+  - verify doet geen inline PDF/image parsing meer
+- Belangrijke nuance:
+  - de browser PDF-lane is CURRENT operationeel in de normale dossierflow
+  - de browser image-lane is CURRENT niet operationeel als extractieroute
+  - de browser image parser blijft voorlopig een legacy-stub, niet de actieve implementatieroute
+- Documentupload nuance:
+  - `issued` is een echte tussenstatus:
+    - upload-url uitgegeven / documentrow aangemaakt
+    - upload nog niet bevestigd
+  - zolang een `issued` row bestaat voor hetzelfde documenttype en dezelfde laadpaal,
+    blijft nieuwe upload-url uitgifte terecht geblokkeerd
+
+Belangrijke expliciete koerscorrectie:
+- Tesseract.js / browser-side OCR voor factuurafbeeldingen is geprobeerd in de client-side route,
+  maar bleek niet robuust genoeg voor de gewenste extractiekwaliteit en operational betrouwbaarheid.
+- Daarom is de browser image-OCR route verlaten als primaire implementatieroute.
+- Voor image facturen is de CURRENT actieve extractielane:
+  - lokale/interne OCR worker
+  - met hetzelfde observed-fields contract als de overige analysis-lagen
+
+Nieuwe CURRENT proof-/extractielaag:
+- `scripts/analysis_worker/ocr_extract.py`
+- `scripts/analysis_worker/extract_invoice_image.py`
+- `scripts/analysis_worker/pdf_extract.py`
+- `scripts/analysis_worker/compare_invoice_results_image.py`
+- `scripts/analysis_worker/compare_invoice_results_pdf.py`
+- `scripts/analysis_worker/aggregate_invoice_image_multipage.py`
+
+Nieuwe CURRENT werkvolgorde binnen facturen:
+1. PDF facturen:
+   - parser client-side observed fields opbouwen
+   - verify payload naar server sturen
+2. image facturen:
+   - lokale/interne OCR worker observed fields laten bepalen
+   - output disciplineren naar hetzelfde observed contract
+   - handoff naar verify loopt via het bestaande `client_verify_payload` contract
+3. `api-dossier-verify` vergelijkt declared vs observed
+4. analysis-tabellen + audit bijwerken
+5. daarna pas verdere state-/persist-/integratiehardening
+
+Nieuwe expliciete CURRENT nuance:
+- de image worker → verify handoff is nu runtime-bewezen
+- niet alleen als losse single-lane proof, maar ook in een mixed run samen met een PDF factuur-lane
+- verify accepteert dus CURRENT:
+  - browser-PDF observed payload
+  - worker-afgeleide image observed payload
+  - binnen hetzelfde server-side compare/write model
+
+Belangrijke CURRENT grens:
+- multipage image aggregation bestaat inhoudelijk al in de lokale proof-loop
+- browser-side doorvertaling van multipage image observed payload is geen actieve prioriteit
+- browser image extractie is CURRENT niet de leidende route
 
 ### Phase 2 — Sharing + performance / cost / ops (PLANNED)
 Gate = “product werkt audit-proof in real-world”

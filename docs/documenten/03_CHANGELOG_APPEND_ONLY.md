@@ -1196,4 +1196,627 @@ Identifier-richting
 - Serial uniqueness is losgelaten als harde systeemaanname.
 - MID is in deze fase leidend voor product- en dossierlogica.
 
+## 2026-03-30 — Analysis overall-status semantics gecorrigeerd: `inconclusive` toegevoegd en summary-constraint aligned
+
+Probleem
+- Na introductie van de nieuwe overall-status `inconclusive` kon `api-dossier-verify` runs starten en document-/charger-analysis rows schrijven,
+  maar faalde de summary-write op `public.dossier_analysis_summary.overall_status_check`.
+- Gevolg:
+  - analysis runs konden blijven hangen op `running`
+  - vervolgruns botsten op `uq_analysis_runs_one_active_per_dossier`
+  - de zichtbare fout “er draait al een actieve analyse-run” was daardoor secundair, niet de primaire oorzaak
+
+Fix
+- DB constraint op `public.dossier_analysis_summary.overall_status` uitgebreid met:
+  - `inconclusive`
+- Vastgelopen runs handmatig hersteld / vrijgegeven
+- Backend semantics in `_shared/analysis.ts` aligned:
+  - `AnalysisOverallStatus` bevat nu:
+    - `not_run`
+    - `inconclusive`
+    - `partial_pass`
+    - `pass`
+    - `review_required`
+- `computeOverallStatus()` aangepast zodat:
+  - `fail` → `review_required`
+  - alleen volledig pass → `pass`
+  - minimaal één echte pass + rest onzeker/niet-gecheckt → `partial_pass`
+  - geen pass, geen fail, alleen `inconclusive`/`not_checked` → `inconclusive`
+
+UI / dossier.js
+- Analysis badge-mapping uitgebreid met:
+  - `inconclusive`
+- Analysis-dev blok tijdens development expliciet zichtbaar gehouden
+- Legendtekst aangescherpt zodat verschil tussen:
+  - `pass`
+  - `partial_pass`
+  - `inconclusive`
+  - `not_checked`
+  - `fail`
+  nu explicieter is
+
+Runtime-bewijs
+- Nieuwe analysis-run wordt weer correct afgerond
+- Analysis summary toont nu correct:
+  - `overall = inconclusive`
+  wanneer:
+  - factuur-image geen bruikbare observed fields oplevert
+  - laadpaalfoto-analysis nog `not_checked` is
+
+Belangrijke inhoudelijke conclusie
+- De semantiek is nu correcter, maar invoice image extractie is nog niet echt operationeel.
+- Bewijs uit de document-output laat zien dat JPG-facturen CURRENT alleen door de preflight/light-stage gaan:
+  - `observed_fields = {}`
+  - `image_text_stage2_not_implemented_yet`
+  - `image_text_no_local_ocr_engine_available`
+  - `image_text_extraction_not_performed`
+  - `mode = invoice_image_extract_preflight_only`
+- Dus:
+  - statuslaag verbeterd
+  - extractielaag voor invoice images blijft OPEN werk
+
+## 2026-03-30 — Invoice-image analysis richting expliciet gemaakt in CURRENT docs
+
+Context
+- `api-dossier-verify` ondersteunt al factuurdocumenten met:
+  - `application/pdf`
+  - `image/jpeg`
+  - `image/png`
+- De image-route liep inhoudelijk nog via `supabase/functions/_shared/image_text.ts` in preflight-only modus:
+  - formaatdetectie
+  - width/height
+  - byte_length
+  - geen echte tekstextractie
+- Daardoor degradeerden JPG/PNG facturen gecontroleerd naar:
+  - document-level `completed` met limitations
+  - charger-level invoice checks = `inconclusive`
+
+Wat nu expliciet is vastgezet
+- Invoice-image extractie is CURRENT open uitvoerfase binnen Analysis v1.
+- Canonieke extractie voor factuurafbeeldingen wordt server-side bepaald.
+- Client-side blijft beperkt tot:
+  - precheck
+  - optimalisatie/compressie
+  - UX-waarschuwingen
+- `foto_laadpunt` blijft voorlopig bewust skeleton / `not_checked`.
+
+Belangrijke doc-correctie
+- Oude formuleringen zoals “geen OCR in deze fase” zijn voor invoice-images niet meer de juiste richting.
+- De juiste CURRENT waarheid is:
+  - geen externe OCR/vision provider
+  - wel server-side invoice-image extractie als onderdeel van Analysis v1
+  - met veilige degradatie naar `inconclusive` wanneer extractie onvoldoende bruikbaar is
+
+Status
+- Documentatie aligned
+- Implementatie nog OPEN
+
+## 2026-03-30 — Invoice-image OCR in Supabase Edge expliciet afgewezen; koers verplaatst naar standalone interne worker
+
+Context
+- Analysis v1 orchestration is technisch gezond:
+  - `api-dossier-verify` draait
+  - analysis-tabellen worden gevuld
+  - summary-semantiek is aligned
+- De inhoudelijke blokkade zat specifiek in invoice-image extractie binnen de Supabase Edge runtime.
+
+Wat is expliciet mislukt
+- Poging om lokale invoice-image OCR direct binnen `api-dossier-verify` / `_shared/image_text.ts` te laten draaien.
+- Praktisch resultaat:
+  - image facturen bleven hangen op preflight-only / lege `observed_fields`
+  - verify-run eindigde gecontroleerd op:
+    - document-level `completed`
+    - charger-level `inconclusive`
+  - en tussentijds zijn ook runtime-/resourceproblemen opgetreden bij de OCR-route in Edge-context
+
+Architecturale conclusie
+- Het probleem zit niet in:
+  - analysis-tabellen
+  - verify orchestration
+  - exportmodel
+- Het probleem zit wél in:
+  - de gekozen runtime-plaatsing van de lokale OCR-engine
+
+Besluit
+- Geen externe OCR/vision provider
+- Geen browser-side canonieke OCR
+- Geen verdere investering in zware invoice-image OCR binnen Supabase Edge runtime
+
+Nieuwe richting
+- Invoice-image extractie wordt eerst gebouwd als aparte interne standalone worker buiten Edge
+- Doel van fase 1:
+  - lokaal/intern bewezen OCR op factuurafbeeldingen
+  - output laten landen op hetzelfde observed/evaluated contract als PDF facturen
+- Pas daarna:
+  - koppeling naar `api-dossier-verify`
+  - daarna pas laadpaalfoto-analysis
+
+Betekenis voor de codebasis
+- `api-dossier-verify` blijft derived orchestrator
+- `_shared/image_text.ts` blijft contract-/normalisatielaag
+- Edge wordt voorlopig niet meer gebruikt als runtime-host voor de zware invoice-image OCR-engine zelf
+
+## 2026-03-31 — Standalone invoice-image worker lokaal bewezen + compare-laag toegevoegd + PDF→JPG regressielane opgezet
+
+Context
+- De koerswijziging van 2026-03-30 blijft staan:
+  - geen zware invoice-image OCR meer in Supabase Edge runtime
+  - eerst standalone/internal worker buiten Edge
+- Op 2026-03-31 is die richting lokaal inhoudelijk verdiept en bruikbaar bewezen.
+
+### Wat is toegevoegd
+
+#### A) Lokale standalone invoice-image extractor
+Nieuwe lokale workerflow in `scripts/analysis_worker/ocr_extract.py` verder gehardend.
+
+Bewezen output-contract bevat nu per analysedocument:
+- `customer_name`
+- `address_line`
+- `house_number`
+- `postcode_line`
+- `city_line`
+- `country_line`
+- `serial_number`
+- `serial_candidate_raw`
+- `mid_number`
+- `mid_candidate_raw`
+- `address_block_ambiguous`
+- `brand`
+- `model`
+
+Belangrijke inhoudelijke keuze:
+- raw candidate preservation is nu expliciet onderdeel van het contract
+- parser mag veilig normaliseren
+- parser mag niet gokken
+- noisy of ongeldige MID/serial candidates worden niet “gerepareerd”, maar:
+  - raw wordt bewaard
+  - approved value blijft `null`
+  - limitation markeert de reject
+
+Voorbeelden van bewezen veilig gedrag:
+- noisy MID candidate → `mid_candidate_raw` gevuld, `mid_number = null`, limitation `mid_candidate_rejected`
+- serial mismatch blijft zichtbaar als observed mismatch en wordt niet stil gecorrigeerd
+
+#### B) Lokale compare-laag tussen expected / observed_raw / observed_approved
+Nieuw lokaal script:
+- `scripts/analysis_worker/compare_invoice_results.py`
+
+Doel:
+- brug tussen parser en latere verify-integratie
+- per bestand en per veld zichtbaar maken:
+  - `expected`
+  - `observed_raw`
+  - `observed_approved`
+  - `status`
+  - `reason`
+
+Inhoudelijke status-taxonomie lokaal bewezen:
+- `pass`
+- `fail`
+- `inconclusive`
+- `partial`
+- `mixed`
+
+Belangrijke verfijning:
+- load-bearing velden tellen zwaarder dan brand/model
+- `overall_reason` is toegevoegd, o.a.:
+  - `all_expected_fields_match`
+  - `serial_value_mismatch`
+  - `mid_candidate_rejected`
+  - `multiple_load_bearing_mismatches`
+  - `seller_or_company_block_detected`
+
+#### C) PDF→JPG image-testlane toegevoegd
+Nieuwe lokale conversie- en batchroute opgezet:
+- PDF testset → JPG’s in repo
+- aparte batch-run voor `docs/facturen/facturen_image`
+- output in bestaande analysis_worker outputstructuur
+
+Nieuwe scripts:
+- `scripts/analysis_worker/convert_pdf_tests_to_jpg.py`
+- `scripts/analysis_worker/run_pdf_derived_image_batch.py`
+
+Belang:
+- dezelfde testfamilie als PDF analysis matrix kan nu ook als image-lane worden beoordeeld
+- regressies tussen PDF-gebaseerde en image-gebaseerde layouts worden zichtbaar
+
+### Wat inhoudelijk is bewezen
+
+#### 1. Camera/screenshot/synthetic lane is sterk genoeg voor een eerste standalone fase
+De lokale invoice-image extractor leest inmiddels in meerdere cases correct:
+- customer-side address block
+- postcode/city normalisatie
+- serial/MID
+- brand/model waar expliciet aanwezig
+
+#### 2. Parser boundary is nu duidelijker en eerlijker
+Niet meer:
+- noisy punctuation zelf omzetten naar schijnbaar geldige digits
+
+Wel:
+- raw candidate bewaren
+- approved alleen bij voldoende harde candidate
+- limitation gebruiken om inconclusive zichtbaar te maken
+
+#### 3. Compare-laag laat correct verschil zien tussen extractie en beoordeling
+Voorbeeld:
+- OCR leest een geldige maar verkeerde serial
+- parser bewaart die observed value
+- compare-laag markeert vervolgens `value_mismatch`
+- dit wordt dus niet meer onterecht als parser-“succes” verkocht
+
+#### 4. PDF→JPG lane levert echte parserinzichten op
+Single-page PDF-afgeleide JPG’s bleken vaak verrassend goed leesbaar.
+Daarmee is bewezen dat de image-lane niet alleen relevant is voor slechte camera-shots,
+maar ook voor layout-gedreven regressietests.
+
+### Nieuwe bewezen parsergrenzen
+
+#### A) Gestapelde label/value-layouts
+Een gerichte stacked label/value extractor is toegevoegd.
+
+Hiermee is o.a. bewezen verbeterd:
+- `invoice_daan_pdf_03_p01.jpg`
+  - serial en MID worden nu correct gelezen uit stacked layout
+  - eerdere fout “Product” / “Serial Number” als candidate is opgelost
+
+#### B) Nog open: Dutch stacked label block variant
+Er blijft een open parserbug voor de specifieke Dutch variant:
+- `invoice_paul_pdf_04 brand_model_variant_02_p01.jpg`
+
+Huidige foutgedrag daar:
+- address is inmiddels correct
+- maar brand/model/serial/MID pairing is nog fout
+- labels worden deels nog als waarden behandeld
+
+#### C) Nieuwe regressie na stacked patch
+Bij:
+- `invoice_paul_pdf_01_p01.jpg`
+wordt customer_name nu foutief:
+- `Thank you for your purchase.`
+
+Conclusie:
+- stacked extractor was netto positief
+- maar customer-name selectie moet nog strakker worden begrensd
+
+### Wat bewust nog NIET is gedaan
+
+Niet gedaan:
+- geen koppeling van de standalone worker naar `api-dossier-verify`
+- geen multipage image aggregation over `_p01/_p02/_p03`
+- geen laadpaalfoto-analysis
+- geen nieuwe audit-events
+
+Rationale:
+- page-level parser-hardening is nog niet af
+- multipage aggregation bovenop foutieve page-level extraction zou de analyse vervuilen
+- verify-integratie is pas zinvol zodra standalone observed output stabieler is
+
+### Harde next step
+Volgende stap blijft:
+1. customer_name selectie begrenzen in stacked layouts
+2. expliciete Dutch stacked label parser voor variant_02
+3. daarna pas multipage image aggregation
+4. daarna pas verify-integratie
+
+## 2026-04-02 — Verify ontkoppeld van inline factuurparsing; client parser payload contract geïntroduceerd
+
+Wijzigingen
+- `api-dossier-verify` is expliciet teruggebracht naar:
+  - orchestration
+  - compare
+  - analysis writes
+  - audit
+- Inline factuurparsing in verify verwijderd:
+  - geen server-side PDF text extractie meer in verify
+  - geen server-side image extractie meer in verify
+- Verify accepteert nu een nieuwe request-structuur:
+  - `client_verify_payload`
+- Nieuwe client helperlaag toegevoegd:
+  - `assets/js/analyse/analyse_verify_payload.js`
+- `assets/js/pages/dossier.js` synchroniseert nu:
+  - current snapshot
+  - upload metadata
+  - verify body-opbouw via deze helperlaag
+- `dossier.html` laadt deze helper nu vóór `assets/js/pages/dossier.js`
+
+Belangrijke architecturale koers
+- canonieke parser-richting is nu:
+  - client-side parser
+  - server-side verify
+- verify gebruikt declared data uit dossier/chargers
+- verify consumeert observed data uit client parser payload
+- verify blijft de enige server truth voor:
+  - `dossier_analysis_document`
+  - `dossier_analysis_charger`
+  - `dossier_analysis_summary`
+  - audit trail
+
+Belangrijke CURRENT nuance
+- end-to-end browser wiring van echte observed invoice fields naar verify is nog niet volledig af
+- daarom ondersteunt verify CURRENT twee modi:
+  1. client observed payload aanwezig → inhoudelijke vergelijking
+  2. payload ontbreekt → placeholder/inconclusive fallback
+
+## 2026-04-15 — Image worker → verify bridge runtime-bewezen op testdossier
+
+Bewezen op dossier:
+- `88dc2983-fefd-410d-9992-60f3b0b84f49`
+
+Doel van de test:
+- niet browser image parsing bewijzen
+- wel bewijzen dat `api-dossier-verify` worker-afgeleide image observed payload correct kan consumeren
+
+Uitvoering:
+- verse dossier snapshot opgehaald via `api-dossier-get`
+- bestaand worker-resultaat gebruikt voor:
+  - `invoice_paul_synthetic_good_02.jpg`
+  - document_id `00117b4d-d3ba-437e-91e7-cceb13530436`
+- handmatig `client_verify_payload.document_snapshot.client_invoice_observed[]` gebouwd
+- payload ingestuurd naar `api-dossier-verify`
+- daarna `api-dossier-evaluate(finalize=false, evaluation_mode="full")` opnieuw gedraaid
+
+Bewezen resultaat:
+- `api-dossier-verify` accepteert worker-afgeleide image observed payload zonder codewijziging
+- verify schrijft voor de image factuur echte `observed_fields` weg in `dossier_analysis_document`
+- charger-level compare draait inhoudelijk op die observed fields
+- charger 2 ging uit placeholder/inconclusive op address naar:
+  - `invoice_address_match = pass`
+- charger 2 bleef inhoudelijk correct falen op:
+  - brand mismatch
+  - model mismatch
+  - serial mismatch
+  - MID mismatch
+- charger 1 bleef inconclusive omdat de PDF-factuur in deze run geen observed payload meekreeg
+
+Harde conclusie:
+- verify-model / compare-laag / analysis writes zijn niet de bottleneck
+- de bottleneck is de handoff:
+  - image worker output → verify payload contract
+
+Nieuwe expliciete waarheid:
+- voor image facturen hoeft `api-dossier-verify` inhoudelijk niet herbouwd te worden
+- eerstvolgende technische stap is:
+  - een gecontroleerde bridge/toolinglaag bouwen
+  - die worker-output normaliseert naar het bestaande verify-contract
+
+Belangrijke contractnuance:
+- `parseClientVerifyPayload(...)` gebruikt CURRENT:
+  - `document_id`
+  - `parser_payload.observed_fields`
+  - `parser_payload.confidence`
+  - `parser_payload.limitations`
+  - `parser_payload.summary`
+  - optioneel:
+    - `parser_kind`
+    - `parser_version`
+    - `source_kind`
+- item-level veld `source` is CURRENT niet runtime-load-bearing
+
+## 2026-04-15 — Image worker → verify bridge-script bewezen op charger-2 image factuur
+
+Bewezen met:
+- script: `scripts/tools/bridge-image-worker-verify.py`
+- dossier: `88dc2983-fefd-410d-9992-60f3b0b84f49`
+- document_id: `00117b4d-d3ba-437e-91e7-cceb13530436`
+- target filename: `invoice_paul_synthetic_good_02.jpg`
+
+Wat is bewezen:
+- `api-dossier-verify` accepteert worker-afgeleide image observed payload via het bestaande `client_verify_payload` contract
+- verify schrijft voor de image factuur echte `observed_fields` weg in `dossier_analysis_document`
+- charger-level compare draait inhoudelijk op die observed fields
+- charger 2 ging uit placeholder/inconclusive voor adres naar:
+  - `invoice_address_match = pass`
+- charger 2 bleef inhoudelijk correct falen op:
+  - `invoice_brand_match = fail`
+  - `invoice_model_match = fail`
+  - `invoice_serial_match = fail`
+  - `invoice_mid_match = fail`
+- die fails zijn correct omdat worker-observed waarden niet overeenkomen met de CURRENT declared charger-2 waarden
+
+Harde conclusie:
+- verify / compare / analysis writes zijn niet de bottleneck
+- de bottleneck is de handoff:
+  - image worker output → verify payload contract
+
+Nieuwe CURRENT dev-waarheid:
+- `scripts/tools/bridge-image-worker-verify.py` is de reproduceerbare dev-bridge voor:
+  - dossier snapshot lezen
+  - worker-output normaliseren
+  - `api-dossier-verify` draaien
+  - `api-dossier-evaluate` draaien
+- Dit script hoort onder `scripts/tools/` en niet onder `scripts/analysis_worker/`,
+  omdat het geen parser/compare-script is maar een operationele orchestration tool.
+
+## 2026-04-16 — Browser PDF parser → verify runtime bewezen in normale dossierflow
+
+Bewezen in de normale dossier-UI flow:
+- PDF factuur upload bevestigd
+- browser-side PDF parser draaide automatisch
+- `registerInvoiceObservedResult(...)` werd aangeroepen
+- `buildClientObservedSnapshot()` bevatte parserpayload
+- `DOSSIER verifyExtra` stuurde `client_verify_payload` mee
+- `api-dossier-verify` gaf HTTP 200 terug
+
+Harde conclusie:
+- de browser-PDF lane is nu end-to-end operationeel in de echte dossierflow
+- voor PDF facturen is geen handmatige bridge/payload-file meer nodig om verify van echte observed payload te voorzien
+
+Nieuwe CURRENT waarheid:
+- PDF facturen:
+  - parser client-side
+  - payload via `analyse_verify_payload.js`
+  - verify server-side
+- image facturen:
+  - browser image parser blijft geen actieve route
+  - interne/lokale worker + bridge blijft de huidige dev/integratieroute
+
+## 2026-04-16 — `issued` documentstatus bevestigd als echte recovery-state in uploadflow
+
+Bewezen via runtime + DB:
+- `api-dossier-upload-url` blokkeert terecht met 409 wanneer voor dezelfde laadpaal al een factuurrow met status `issued` bestaat
+- `api-dossier-get` en directe DB-query wezen naar dezelfde open `issued` row
+- `api-dossier-doc-delete` verwijderde de `issued` row correct
+- herhaalde delete gaf idempotent `{ deleted:false, reason:"not_found" }`
+
+Harde conclusie:
+- er was geen backend drift tussen read-model en write-gate
+- het echte open punt zat in de frontend UX:
+  - `issued` moet zichtbaar en herstelbaar zijn
+  - upload conflict moet direct terug syncen naar server truth
+
+Nieuwe CURRENT dev-waarheid:
+- `issued` is geen “verborgen intern detail”, maar een echte tussenstatus:
+  - upload gestart / nog niet bevestigd
+  - recovery via delete + opnieuw uploaden
+- frontend moet `issued` expliciet tonen en bij conflict direct hersyncen
+
+## 2026-04-16 — Browser PDF parser → verify runtime bewezen in normale dossierflow
+
+Bewezen in de normale dossier-UI flow:
+- PDF factuur upload bevestigd
+- browser-side PDF parser draaide automatisch
+- `registerInvoiceObservedResult(...)` werd aangeroepen
+- `buildClientObservedSnapshot()` bevatte parserpayload
+- `DOSSIER verifyExtra` stuurde `client_verify_payload` mee
+- `api-dossier-verify` gaf HTTP 200 terug
+
+Harde conclusie:
+- de browser-PDF lane is nu end-to-end operationeel in de echte dossierflow
+- voor PDF facturen is geen handmatige bridge/payload-file meer nodig om verify van echte observed payload te voorzien
+
+Nieuwe CURRENT waarheid:
+- PDF facturen:
+  - parser client-side
+  - payload via `assets/js/analyse/analyse_verify_payload.js`
+  - verify server-side
+- image facturen:
+  - browser image parser blijft geen actieve route
+  - interne/lokale worker + bridge blijft de huidige dev/integratieroute
+
+## 2026-04-16 — `issued` document recovery UX frontend afgerond
+
+Bewezen via runtime + dossier-UI:
+- `issued` documentstatus wordt nu expliciet zichtbaar in de documentsectie
+- frontend toont hersteltekst:
+  - upload gestart / nog niet bevestigd
+  - verwijderen en opnieuw uploaden bij mislukte vorige poging
+- documentstatusbadge wordt op documentniveau getoond
+- upload conflict op `api-dossier-upload-url` forceert directe `reloadAll()` en hersync naar server truth
+
+Belangrijke conclusie:
+- backend read/write waarheid was al consistent
+- de open stap zat in frontend recovery-UX
+- die recovery-UX is nu functioneel aangebracht in `assets/js/pages/dossier.js`
+
+Scopegrens:
+- dit sluit de UX-hardening voor `issued` in de huidige MVP-documentflow
+- het is nog geen brede multi-document of resumable upload architectuur
+
+## 2026-04-16 — Browser image parser verwijderd uit runtime-code
+
+Wijziging
+- `parseInvoiceImageFile(...)` verwijderd uit:
+  - `assets/js/analyse/analyse_invoice_parser.js`
+- export verwijderd uit:
+  - `window.ENVAL.invoice_parser`
+
+Reden
+- browser-side image parsing was al geen actieve lane meer
+- actieve image-lane ligt CURRENT in de lokale/interne OCR worker
+- runtime grep bevestigde dat de browser image parser geen callers meer had buiten de eigen definitie/export en doc-verwijzingen
+
+Harde conclusie
+- browser-side image parsing bestaat CURRENT niet meer als runtime-pad
+- PDF blijft de enige browser-side invoice parser-lane
+- image facturen lopen CURRENT uitsluitend via worker → verify handoff
+
+## 2026-04-16 — Mixed image/PDF handoff naar verify in één run bewezen
+
+Bewezen op testdossier:
+- `88dc2983-fefd-410d-9992-60f3b0b84f49`
+
+Run-opzet:
+- image factuur:
+  - document_id `5bce3bc7-7f00-42d4-956c-b27c8642d4ee`
+  - bestand `invoice_paul_synthetic_good_02.jpg`
+  - lane: lokale/interne OCR worker → bridge → `client_verify_payload`
+- PDF factuur:
+  - document_id `e4fa54b0-eb21-41ce-a3aa-27bf52171787`
+  - bestand `invoice_paul_pdf_11_all_correct_01.pdf`
+  - lane: payload-file / PDF observed payload → `client_verify_payload`
+
+Bewezen resultaat:
+- `api-dossier-verify` accepteert in één run tegelijk:
+  - worker-afgeleide image observed payload
+  - PDF observed payload
+- verify response:
+  - `ok = true`
+  - `client_invoice_observed_count = 2`
+  - `document_analyses_completed = 4`
+  - `document_analyses_failed = 0`
+  - `charger_results_written = 20`
+
+Inhoudelijk bewezen compare-gedrag:
+- charger 1 / image factuur:
+  - `invoice_address_match = pass`
+  - `invoice_serial_match = pass`
+  - `invoice_mid_match = pass`
+  - `invoice_brand_match = fail`
+  - `invoice_model_match = fail`
+- charger 2 / PDF factuur:
+  - `invoice_address_match = pass`
+  - `invoice_brand_match = fail`
+  - `invoice_model_match = fail`
+  - `invoice_serial_match = fail`
+  - `invoice_mid_match = fail`
+
+Harde conclusie:
+- image worker lane en PDF lane landen nu aantoonbaar op hetzelfde verify-contract
+- verify / compare / analysis writes zijn niet de bottleneck
+- de handoff is nu niet alleen single-lane, maar ook mixed-lane runtime-bewezen
+
+Nieuwe CURRENT dev-waarheid:
+- `scripts/tools/bridge-image-worker-verify.py` is nu bewezen bruikbaar voor:
+  - image worker observed payload
+  - PDF payload-file observed payload
+  - gecombineerde mixed verify-runs op actuele confirmed document rows
+
+## 2026-04-18 — Browser PDF parser hersteld in normale dossierflow + persisted observed source weer gevuld
+
+Wijzigingen
+- `assets/js/analyse/analyse_invoice_parser.js` hersteld zodat browser-side PDF extractie weer echte tekst oplevert in de normale dossierflow.
+- PDF stream decoding gehardend:
+  - byte → string mapping aligned op Python-semantiek
+  - stream extraction robuuster
+  - inflate via pako als primaire route
+- Browser-PDF parser schrijft weer bruikbare observed payload met:
+  - `pdf_text_length`
+  - `observed_non_null_fields`
+  - `extracted_text_preview`
+- `api-dossier-observed-source-upsert` wordt weer gevuld vanuit de normale dossier-UI flow voor PDF facturen.
+
+Bewezen runtime-gedrag
+- PDF factuur upload bevestigd in dossier-UI
+- browser parser draaide automatisch
+- persisted observed source row aanwezig met:
+  - `producer_kind = invoice_pdf_parser`
+  - `source_kind = pdf`
+  - `status = completed`
+  - `pdf_text_length = 214`
+  - `observed_non_null_fields = 11`
+- verify gebruikt deze PDF-observed data correct in de analysis-run
+- charger 1 invoice-checks pass
+- charger 2 krijgt inhoudelijk correcte fails op niet-matchende invoice-velden
+- `foto_laadpunt` blijft bewust `not_checked`
+
+Architecturale betekenis
+- PDF lane:
+  - parser client-side
+  - verify server-side
+- image lane blijft:
+  - worker/local extractie
+  - verify server-side
+- geen herintroductie van browser-side image parsing
+
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)

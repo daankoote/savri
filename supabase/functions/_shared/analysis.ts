@@ -1,10 +1,12 @@
+// supabase/functions/_shared/analysis.ts
+
 export const ANALYSIS_METHOD_CODE = "analysis_v1";
-export const ANALYSIS_METHOD_VERSION = "2026-03-15";
+export const ANALYSIS_METHOD_VERSION = "2026-03-30-image-ocr-v1";
 
 export type SupportedDocType = "factuur" | "foto_laadpunt";
 export type AnalysisDocumentStatus = "queued" | "completed" | "failed";
 export type AnalysisResultStatus = "pass" | "fail" | "inconclusive" | "not_checked";
-export type AnalysisOverallStatus = "not_run" | "partial_pass" | "pass" | "review_required";
+export type AnalysisOverallStatus = "not_run" | "inconclusive" | "partial_pass" | "pass" | "review_required";
 
 export type DossierRow = {
   id: string;
@@ -94,17 +96,18 @@ export type SummaryAnalysisRow = {
 };
 
 export type InvoiceObservedFields = {
+  customer_name: string | null;
   address_line: string | null;
-  city_line: string | null;
-  street: string | null;
   house_number: string | null;
-  suffix: string | null;
-  postcode: string | null;
-  city: string | null;
+  postcode_line: string | null;
+  city_line: string | null;
+  country_line: string | null;
   brand: string | null;
   model: string | null;
   serial_number: string | null;
+  serial_candidate_raw: string | null;
   mid_number: string | null;
+  mid_candidate_raw: string | null;
 };
 
 const HARD_REQUIRED_INVOICE_CODES = new Set<string>([
@@ -421,15 +424,72 @@ function looksLikeMidValue(input: string): boolean {
   const compact = normalizeMid(input);
   if (!compact) return false;
   if (compact.length < 6 || compact.length > 30) return false;
-  return compact.startsWith("MID") || /^M\d{6,}$/.test(compact) || /^\d{6,}$/.test(compact);
+  return (
+    compact.startsWith("MID") ||
+    /^M\d{6,}$/.test(compact) ||
+    /^\d{6,}$/.test(compact)
+  );
+}
+
+function looksLikeGarbageSerialValue(input: string): boolean {
+  const s = cleanLine(input);
+  if (!s) return true;
+
+  const compact = normalizeSerial(s);
+  if (!compact) return true;
+
+  const lowered = s.toLowerCase();
+
+  if (
+    lowered === "serial" ||
+    lowered === "serial number" ||
+    lowered === "serial no" ||
+    lowered === "serial no." ||
+    lowered === "serial nr" ||
+    lowered === "serial nr." ||
+    lowered === "serienummer" ||
+    lowered === "number" ||
+    lowered === "nummer" ||
+    lowered === "nr" ||
+    lowered === "nr." ||
+    lowered === "no" ||
+    lowered === "no." ||
+    lowered === "sn" ||
+    lowered === "s/n"
+  ) {
+    return true;
+  }
+
+  if (/^[:#=\-–—.]+$/.test(s)) return true;
+  if (/^[A-Z]+$/.test(compact)) return true;
+
+  return false;
 }
 
 function looksLikeSerialValue(input: string): boolean {
-  const compact = normalizeSerial(input);
+  const cleaned = cleanLine(input);
+  const compact = normalizeSerial(cleaned);
+
+  if (!cleaned) return false;
   if (!compact) return false;
   if (compact.length < 6 || compact.length > 40) return false;
   if (/^MID[A-Z0-9]+$/.test(compact)) return false;
+  if (looksLikeGarbageSerialValue(cleaned)) return false;
+  if (!/\d/.test(compact)) return false;
+
   return true;
+}
+
+function sanitizeExtractedSerialValue(input: string | null): string | null {
+  const s = cleanLine(input || "");
+  if (!s) return null;
+  if (!looksLikeSerialValue(s)) return null;
+  if (looksLikeGarbageSerialValue(s)) return null;
+  return s;
+}
+
+function escapeRegex(input: string): string {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function extractValueAfterLabelInLine(line: string, labels: string[]): string | null {
@@ -437,12 +497,15 @@ function extractValueAfterLabelInLine(line: string, labels: string[]): string | 
   if (!s) return null;
 
   for (const label of labels) {
-    const re = new RegExp(`^${label}\\s*[:#-]?\\s*(.+)$`, "i");
+    const re = new RegExp(`^${escapeRegex(label)}\\s*[:#-]?\\s*(.+)$`, "i");
     const m = s.match(re);
     if (!m?.[1]) continue;
 
     let value = cleanLine(m[1]);
-    value = value.replace(/^(nummer|nr\\.?|no\\.?|number)\\s*[:#-]?\\s*/i, "").trim();
+    value = value
+      .replace(/^(nummer|nr\\.?|no\\.?|number)\\s*[:#-]?\\s*/i, "")
+      .replace(/^[=\\-–—:#.]+\\s*/, "")
+      .trim();
 
     if (value) return value;
   }
@@ -464,7 +527,7 @@ function extractFieldFromNearbyLines(
     }
 
     const isBareLabel = labels.some((label) => {
-      const re = new RegExp(`^${label}\\s*[:#-]?$`, "i");
+      const re = new RegExp(`^${escapeRegex(label)}\\s*[:#-]?$`, "i");
       return re.test(line);
     });
 
@@ -481,110 +544,195 @@ function extractFieldFromNearbyLines(
   return null;
 }
 
-function findCompactCandidatesFromLines(
+type IdCandidateSource = "labeled" | "inline_regex" | "loose_regex";
+
+type IdExtractorConfig = {
+  labels: string[];
+  validator: (input: string) => boolean;
+  normalizer: (input: unknown) => string;
+  rejectCompacts?: Set<string>;
+  extraInlineRegexes?: RegExp[];
+  extraLooseRegexes?: RegExp[];
+  scoreCandidate?: (
+    raw: string,
+    compact: string,
+    source: IdCandidateSource,
+  ) => number;
+};
+
+function findBestLabeledIdCandidate(
   lines: string[],
-  labels: string[],
-  validator: (input: string) => boolean,
-): string[] {
-  const out: string[] = [];
+  config: IdExtractorConfig,
+): string | null {
+  const scored: Array<{ raw: string; compact: string; score: number }> = [];
+  const rejectCompacts = config.rejectCompacts || new Set<string>();
+
+  const pushCandidate = (
+    raw: string,
+    source: IdCandidateSource,
+    baseScore: number,
+  ) => {
+    const cleaned = cleanLine(raw);
+    const compact = config.normalizer(cleaned);
+
+    if (!cleaned) return;
+    if (!compact) return;
+    if (!config.validator(cleaned)) return;
+    if (rejectCompacts.has(compact)) return;
+
+    const score = config.scoreCandidate
+      ? config.scoreCandidate(cleaned, compact, source)
+      : baseScore;
+
+    scored.push({ raw: cleaned, compact, score });
+  };
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    const inlineValue = extractValueAfterLabelInLine(line, labels);
-    if (inlineValue && validator(inlineValue)) {
-      out.push(inlineValue);
+    const inlineValue = extractValueAfterLabelInLine(line, config.labels);
+    if (inlineValue) {
+      pushCandidate(inlineValue, "labeled", 10);
     }
 
-    const isBareLabel = labels.some((label) => {
-      const re = new RegExp(`^${label}\\s*[:#-]?$`, "i");
+    const isBareLabel = config.labels.some((label) => {
+      const re = new RegExp(`^${escapeRegex(label)}\\s*[:#-]?$`, "i");
       return re.test(line);
     });
 
-    if (!isBareLabel) continue;
-
-    for (let j = i + 1; j <= Math.min(i + 2, lines.length - 1); j++) {
-      const candidate = cleanLine(lines[j]);
-      if (candidate && validator(candidate)) {
-        out.push(candidate);
+    if (isBareLabel) {
+      for (let j = i + 1; j <= Math.min(i + 2, lines.length - 1); j++) {
+        const candidate = cleanLine(lines[j]);
+        if (candidate) {
+          pushCandidate(candidate, "labeled", 10);
+        }
       }
-    }
-  }
-
-  return Array.from(new Set(out.map((x) => cleanLine(x)).filter(Boolean)));
-}
-
-function findMidCandidate(lines: string[]): string | null {
-  const labeled = findCompactCandidatesFromLines(
-    lines,
-    [
-      "MID number",
-      "MID Number",
-      "MID nummer",
-      "MID-nummer",
-      "MID nr",
-      "MID nr\\.",
-      "MID no",
-      "MID no\\.",
-      "MID",
-    ],
-    looksLikeMidValue,
-  );
-
-  for (const candidate of labeled) {
-    const cleaned = cleanLine(candidate)
-      .replace(/^(nummer|nr\\.?|no\\.?|number)\\s*[:#-]?\\s*/i, "")
-      .trim();
-
-    if (cleaned && looksLikeMidValue(cleaned)) {
-      return cleaned;
     }
   }
 
   for (const line of lines) {
     const cleanedLine = cleanLine(line);
 
-    const labelValueMatch = cleanedLine.match(
-      /\bMID(?:\s*[-]?\s*(?:nummer|nr\.?|no\.?|number))?\b\s*[:#-]?\s*(M\d{6,}|MID[A-Z0-9]{4,}|\d{6,})\b/i,
-    );
-    if (labelValueMatch?.[1] && looksLikeMidValue(labelValueMatch[1])) {
-      return cleanLine(labelValueMatch[1]);
+    for (const re of config.extraInlineRegexes || []) {
+      const m = cleanedLine.match(re);
+      if (m?.[1]) {
+        pushCandidate(m[1], "inline_regex", 9);
+      }
     }
   }
 
   for (const line of lines) {
-    const m = line.match(/\b(MID[A-Z0-9]{4,}|M\d{6,}|\d{6,})\b/i);
-    if (m?.[1] && looksLikeMidValue(m[1])) {
-      return cleanLine(m[1]);
+    for (const re of config.extraLooseRegexes || []) {
+      const matches = line.match(re) || [];
+      for (const match of matches) {
+        pushCandidate(match, "loose_regex", 3);
+      }
     }
+  }
+
+  if (!scored.length) return null;
+
+  scored.sort((a, b) => b.score - a.score);
+
+  const seen = new Set<string>();
+  for (const item of scored) {
+    if (seen.has(item.compact)) continue;
+    seen.add(item.compact);
+    return item.raw;
   }
 
   return null;
 }
 
+const MID_LABELS = [
+  "MID number",
+  "MID Number",
+  "MID nummer",
+  "MID-nummer",
+  "MID nr",
+  "MID nr.",
+  "MID no",
+  "MID no.",
+  "MID",
+];
+
+const SERIAL_LABELS = [
+  "Charger serial number",
+  "Serial number",
+  "Serial Number",
+  "Serial no",
+  "Serial no.",
+  "Serial nr",
+  "Serial nr.",
+  "Serienummer",
+  "S/N",
+  "SN",
+  "Serial",
+];
+
+function findMidCandidate(lines: string[]): string | null {
+  return findBestLabeledIdCandidate(lines, {
+    labels: MID_LABELS,
+    validator: looksLikeMidValue,
+    normalizer: normalizeMid,
+    extraInlineRegexes: [
+      /\bMID(?:\s*[-]?\s*(?:nummer|nr\.?|no\.?|number))?\b\s*[:#-]?\s*(M\d{6,}|MID[A-Z0-9]{4,}|\d{6,})\b/i,
+    ],
+    extraLooseRegexes: [
+      /\b(?:MID[A-Z0-9]{4,}|M\d{6,}|\d{6,})\b/gi,
+    ],
+    scoreCandidate: (_raw, compact, source) => {
+      let score =
+        source === "labeled" ? 10 :
+        source === "inline_regex" ? 9 : 3;
+
+      if (compact.startsWith("MID")) score += 4;
+      if (/^M\d{6,}$/.test(compact)) score += 3;
+      if (/^\d{6,}$/.test(compact)) score += 1;
+
+      return score;
+    },
+  });
+}
+
 function findSerialCandidate(lines: string[], midCandidate: string | null): string | null {
-  const labeled = findCompactCandidatesFromLines(
-    lines,
-    ["Serial number", "Serial Number", "Serial", "Serienummer", "S/N", "SN"],
-    looksLikeSerialValue,
-  );
+  const rejectCompacts = new Set<string>();
+  const midCompact = normalizeMid(midCandidate);
+  if (midCompact) rejectCompacts.add(midCompact);
 
-  for (const candidate of labeled) {
-    if (normalizeSerial(candidate) !== normalizeSerial(midCandidate)) {
-      return candidate;
-    }
-  }
+  return findBestLabeledIdCandidate(lines, {
+    labels: SERIAL_LABELS,
+    validator: (input: string) => {
+      const cleaned = cleanLine(input);
+      const compact = normalizeSerial(cleaned);
 
-  for (const line of lines) {
-    const m = line.match(/\b(SN[\s:-]*[A-Z0-9]{4,}|[A-Z]*\d[A-Z0-9]{5,})\b/i);
-    if (m?.[1] && looksLikeSerialValue(m[1])) {
-      if (normalizeSerial(m[1]) !== normalizeSerial(midCandidate)) {
-        return cleanLine(m[1]);
-      }
-    }
-  }
+      if (!looksLikeSerialValue(cleaned)) return false;
+      if (looksLikeGarbageSerialValue(cleaned)) return false;
+      if (compact.startsWith("MID")) return false;
+      if (looksLikeMidValue(cleaned) && normalizeMid(cleaned) === compact) return false;
 
-  return null;
+      return true;
+    },
+    normalizer: normalizeSerial,
+    rejectCompacts,
+    extraInlineRegexes: [
+      /\b(?:Serial(?:\s+(?:number|no\.?|nr\.?))?|Serienummer|S\/N|SN)\b\s*[:#-]?\s*([A-Z0-9][A-Z0-9\s\-]{5,})\b/i,
+    ],
+    extraLooseRegexes: [
+      /\b(?:SN[\s:-]*[A-Z0-9][A-Z0-9\s\-]{4,}|\d[\d\s\-]{5,})\b/gi,
+    ],
+    scoreCandidate: (_raw, compact, source) => {
+      let score =
+        source === "labeled" ? 10 :
+        source === "inline_regex" ? 9 : 3;
+
+      if (/^SN[A-Z0-9]+$/.test(compact)) score += 4;
+      if (/[A-Z]/.test(compact) && /\d/.test(compact)) score += 2;
+      if (/^\d{6,}$/.test(compact)) score += 2;
+
+      return score;
+    },
+  });
 }
 
 function findBrandCandidate(lines: string[]): string | null {
@@ -610,7 +758,16 @@ export function extractInvoiceObservedFieldsFromText(textRaw: string): InvoiceOb
   const inferredBlock = pickBestAddressBlock(text);
 
   const address_line = labeledAddress || inferredBlock.address_line || null;
-  const city_line = labeledCity || inferredBlock.city_line || null;
+  const cityLineRaw = labeledCity || inferredBlock.city_line || null;
+
+  const cityParts = splitDutchCityLine(cityLineRaw || "");
+  const postcode_line = cityParts.postcode || null;
+  const city_line = cityParts.city || null;
+
+  const country_line =
+    matchLabeledValue(text, ["Country", "Land"]) ||
+    splitLinesForExtraction(text).find((line) => isLikelyCountryLine(line)) ||
+    null;
 
   const brand =
     matchLabeledValue(text, ["Brand", "Merk"]) ||
@@ -622,31 +779,64 @@ export function extractInvoiceObservedFieldsFromText(textRaw: string): InvoiceOb
     findModelCandidate(lines) ||
     null;
 
-  const mid_number =
+  const mid_candidate_raw =
     findMidCandidate(lines) ||
-    matchLabeledValue(text, ["MID number", "MID Number", "MID nummer", "MID-nummer", "MID nr", "MID nr.", "MID"]) ||
+    null;
+
+  const mid_number =
+    mid_candidate_raw && looksLikeMidValue(mid_candidate_raw)
+      ? normalizeMid(mid_candidate_raw)
+      : null;
+
+  const serial_candidate_raw =
+    findSerialCandidate(lines, mid_number) ||
+    matchLabeledValue(
+      text,
+      [
+        "Charger serial number",
+        "Serial number",
+        "Serial Number",
+        "Serial no",
+        "Serial no.",
+        "Serial nr",
+        "Serial nr.",
+        "Serienummer",
+        "S/N",
+        "SN",
+        "Serial",
+      ],
+    ) ||
     null;
 
   const serial_number =
-    matchLabeledValue(text, ["Serial number", "Serial Number", "Serial", "Serienummer", "S/N", "SN"]) ||
-    findSerialCandidate(lines, mid_number) ||
+    sanitizeExtractedSerialValue(serial_candidate_raw) ||
     null;
 
+  let customer_name =
+    matchLabeledValue(text, ["Customer name", "Naam", "Customer"]) ||
+    null;
+
+  if (!customer_name) {
+    const candidates = collectAddressBlockCandidates(text);
+    const best = candidates[0];
+    customer_name = best?.name_line || null;
+  }
+
   const streetParts = splitDutchStreetLine(address_line || "");
-  const cityParts = splitDutchCityLine(city_line || "");
 
   return {
+    customer_name: customer_name || null,
     address_line,
-    city_line,
-    street: streetParts.street,
     house_number: streetParts.house_number,
-    suffix: streetParts.suffix,
-    postcode: cityParts.postcode,
-    city: cityParts.city,
+    postcode_line,
+    city_line,
+    country_line: country_line ? cleanLine(country_line) : null,
     brand,
     model,
     serial_number,
+    serial_candidate_raw: serial_candidate_raw ? cleanLine(serial_candidate_raw) : null,
     mid_number,
+    mid_candidate_raw: mid_candidate_raw ? cleanLine(mid_candidate_raw) : null,
   };
 }
 
@@ -792,20 +982,31 @@ function evaluateInvoiceAddress(
     city: dossier.address_city ?? null,
   };
 
+  const observedStreetParts = splitDutchStreetLine(observed.address_line || "");
+  const observedCityParts = {
+    postcode: observed.postcode_line ? normalizePostcode(observed.postcode_line) : null,
+    city: observed.city_line ? cleanLine(observed.city_line) : null,
+  };
+
   const observedValue = {
-    street: observed.street,
-    house_number: observed.house_number,
-    suffix: observed.suffix,
-    postcode: observed.postcode,
-    city: observed.city,
+    address_line: observed.address_line ?? null,
+    postcode_line: observed.postcode_line ?? null,
+    city_line: observed.city_line ?? null,
+    parsed: {
+      street: observedStreetParts.street,
+      house_number: observedStreetParts.house_number,
+      suffix: observedStreetParts.suffix,
+      postcode: observedCityParts.postcode,
+      city: observedCityParts.city,
+    },
   };
 
   const parts = [
-    evaluateStringMatch(declared.street, observed.street),
-    evaluateCompactMatch(declared.house_number, observed.house_number, normalizeCompact),
-    evaluateOptionalCompactMatch(declared.suffix, observed.suffix, normalizeCompact),
-    evaluateCompactMatch(declared.postcode, observed.postcode, normalizePostcode),
-    evaluateStringMatch(declared.city, observed.city),
+    evaluateStringMatch(declared.street, observedStreetParts.street),
+    evaluateCompactMatch(declared.house_number, observedStreetParts.house_number, normalizeCompact),
+    evaluateOptionalCompactMatch(declared.suffix, observedStreetParts.suffix, normalizeCompact),
+    evaluateCompactMatch(declared.postcode, observedCityParts.postcode, normalizePostcode),
+    evaluateStringMatch(declared.city, observedCityParts.city),
   ];
 
   if (parts.some((p) => p.status === "fail")) {
@@ -881,6 +1082,7 @@ export function buildDocumentAnalysisRow(
     invoice_observed_fields?: InvoiceObservedFields | null;
     limitations?: string[];
     summary_extra?: Record<string, unknown>;
+    confidence?: Record<string, unknown>;
   },
 ): DocumentAnalysisRow {
   const ts = nowIso();
@@ -893,6 +1095,7 @@ export function buildDocumentAnalysisRow(
   const observed = opts?.invoice_observed_fields ?? null;
   const limitations = opts?.limitations ?? [];
   const summaryExtra = opts?.summary_extra ?? {};
+  const confidence = opts?.confidence ?? {};
 
   return {
     dossier_id: dossier.id,
@@ -905,7 +1108,7 @@ export function buildDocumentAnalysisRow(
     method_code: ANALYSIS_METHOD_CODE,
     method_version: ANALYSIS_METHOD_VERSION,
     observed_fields: observed ? observed as Record<string, unknown> : {},
-    confidence: {},
+    confidence,
     limitations,
     summary: {
       doc_type: docType,
@@ -1076,8 +1279,18 @@ export function buildInvoiceRowsFromObserved(
       analysis_code: "invoice_address_match",
       status: addrEval.status,
       declared_value: addrEval.declared_value,
-      observed_value: addrEval.observed_value,
-      evaluation_details: addrEval.evaluation_details,
+      observed_value: {
+        ...addrEval.observed_value,
+        customer_name: observed.customer_name ?? null,
+        country_line: observed.country_line ?? null,
+      },
+      evaluation_details: {
+        ...addrEval.evaluation_details,
+        context: {
+          customer_name: observed.customer_name ?? null,
+          country_line: observed.country_line ?? null,
+        },
+      },
       method_code: ANALYSIS_METHOD_CODE,
       method_version: ANALYSIS_METHOD_VERSION,
       created_at: ts,
@@ -1091,7 +1304,10 @@ export function buildInvoiceRowsFromObserved(
       analysis_code: "invoice_brand_match",
       status: brandEval.status,
       declared_value: { brand: charger.brand ?? null },
-      observed_value: { brand: observed.brand ?? null },
+      observed_value: {
+        brand: observed.brand ?? null,
+        customer_name: observed.customer_name ?? null,
+      },
       evaluation_details: brandEval,
       method_code: ANALYSIS_METHOD_CODE,
       method_version: ANALYSIS_METHOD_VERSION,
@@ -1106,7 +1322,10 @@ export function buildInvoiceRowsFromObserved(
       analysis_code: "invoice_model_match",
       status: modelEval.status,
       declared_value: { model: charger.model ?? null },
-      observed_value: { model: observed.model ?? null },
+      observed_value: {
+        model: observed.model ?? null,
+        customer_name: observed.customer_name ?? null,
+      },
       evaluation_details: modelEval,
       method_code: ANALYSIS_METHOD_CODE,
       method_version: ANALYSIS_METHOD_VERSION,
@@ -1121,8 +1340,14 @@ export function buildInvoiceRowsFromObserved(
       analysis_code: "invoice_serial_match",
       status: serialEval.status,
       declared_value: { serial_number: charger.serial_number ?? null },
-      observed_value: { serial_number: observed.serial_number ?? null },
-      evaluation_details: serialEval,
+      observed_value: {
+        serial_number: observed.serial_number ?? null,
+        serial_candidate_raw: observed.serial_candidate_raw ?? null,
+      },
+      evaluation_details: {
+        ...serialEval,
+        raw_candidate: observed.serial_candidate_raw ?? null,
+      },
       method_code: ANALYSIS_METHOD_CODE,
       method_version: ANALYSIS_METHOD_VERSION,
       created_at: ts,
@@ -1136,8 +1361,14 @@ export function buildInvoiceRowsFromObserved(
       analysis_code: "invoice_mid_match",
       status: midEval.status,
       declared_value: { mid_number: charger.mid_number ?? null },
-      observed_value: { mid_number: observed.mid_number ?? null },
-      evaluation_details: midEval,
+      observed_value: {
+        mid_number: observed.mid_number ?? null,
+        mid_candidate_raw: observed.mid_candidate_raw ?? null,
+      },
+      evaluation_details: {
+        ...midEval,
+        raw_candidate: observed.mid_candidate_raw ?? null,
+      },
       method_code: ANALYSIS_METHOD_CODE,
       method_version: ANALYSIS_METHOD_VERSION,
       created_at: ts,
@@ -1312,36 +1543,34 @@ export function computeOverallStatus(
 ): AnalysisOverallStatus {
   if (documentRows.length === 0 && chargerRows.length === 0) return "not_run";
 
-  const hardRequiredRows = chargerRows.filter((r) =>
-    HARD_REQUIRED_INVOICE_CODES.has(String(r.analysis_code || ""))
-  );
+  const hasAnyFail = chargerRows.some((r) => r.status === "fail");
+  const hasAnyPass = chargerRows.some((r) => r.status === "pass");
+  const hasAnyInconclusive = chargerRows.some((r) => r.status === "inconclusive");
+  const hasAnyNotChecked = chargerRows.some((r) => r.status === "not_checked");
 
-  if (hardRequiredRows.some((r) => r.status === "fail")) {
+  // Hard fail blijft hard fail.
+  if (hasAnyFail) {
     return "review_required";
   }
 
-  if (
-    hardRequiredRows.some((r) => r.status === "inconclusive") ||
-    hardRequiredRows.some((r) => r.status === "not_checked")
-  ) {
-    return "partial_pass";
-  }
-
+  // Alleen volledige pass wanneer alles wat geschreven is ook echt pass is.
   if (chargerRows.length > 0 && chargerRows.every((r) => r.status === "pass")) {
     return "pass";
   }
 
-  if (
-    chargerRows.some((r) => r.status === "inconclusive") ||
-    chargerRows.some((r) => r.status === "not_checked") ||
-    chargerRows.some((r) =>
-      OPTIONAL_INVOICE_CODES.has(String(r.analysis_code || "")) && r.status === "fail"
-    )
-  ) {
+  // Partial pass alleen wanneer er minstens één echte pass is,
+  // maar het totaal nog niet volledig pass is.
+  if (hasAnyPass && (hasAnyInconclusive || hasAnyNotChecked)) {
     return "partial_pass";
   }
 
-  return "partial_pass";
+  // Geen fail, geen echte pass-combinatie, alleen onzeker / niet gecontroleerd.
+  if (!hasAnyPass && (hasAnyInconclusive || hasAnyNotChecked)) {
+    return "inconclusive";
+  }
+
+  // Fallback: veilig degraderen naar inconclusive.
+  return "inconclusive";
 }
 
 export function buildSummaryAnalysisRow(
@@ -1370,6 +1599,26 @@ export function buildSummaryAnalysisRow(
 
   const chargersSeen = Array.from(new Set(chargerRows.map((r) => r.charger_id))).length;
 
+  const limitationSet = new Set<string>();
+
+  for (const row of documentRows) {
+    const rowLimitations = Array.isArray(row.limitations) ? row.limitations : [];
+    for (const lim of rowLimitations) {
+      const s = String(lim ?? "").trim();
+      if (s) limitationSet.add(s);
+    }
+  }
+
+  for (const row of chargerRows) {
+    const reason = String(row.evaluation_details?.reason || "").trim();
+    if (reason === "supported_photo_present_but_extraction_not_implemented") {
+      limitationSet.add("photo_extraction_not_implemented_yet");
+    }
+  }
+
+  limitationSet.add("no_authenticity_claim");
+  limitationSet.add("no_compliance_claim");
+
   return {
     dossier_id: dossier.id,
     run_id: runId,
@@ -1380,14 +1629,9 @@ export function buildSummaryAnalysisRow(
       chargers_seen: chargersSeen,
       document_analysis: documentCounts,
       charger_analysis: chargerCounts,
-      mode: "invoice_pdf_v1",
+      mode: "invoice_analysis_v1",
     },
-    limitations: [
-      "invoice_pdf_only",
-      "photo_extraction_not_implemented_yet",
-      "no_authenticity_claim",
-      "no_compliance_claim",
-    ],
+    limitations: Array.from(limitationSet),
     created_at: ts,
     updated_at: ts,
   };

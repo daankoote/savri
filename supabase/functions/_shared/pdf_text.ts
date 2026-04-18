@@ -1,7 +1,5 @@
 // supabase/functions/_shared/pdf_text.ts
 
-// supabase/functions/_shared/pdf_text.ts
-
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 

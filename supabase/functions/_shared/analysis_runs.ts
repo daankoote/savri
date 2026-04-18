@@ -36,6 +36,114 @@ function nowIso() {
 
 type SB = ReturnType<typeof createClient>;
 
+const STALE_RUNNING_THRESHOLD_MS = 10 * 60 * 1000; // 10 minuten
+
+function isStaleIso(ts: string | null | undefined, nowMs: number): boolean {
+  if (!ts) return false;
+  const parsed = Date.parse(ts);
+  if (!Number.isFinite(parsed)) return false;
+  return (nowMs - parsed) > STALE_RUNNING_THRESHOLD_MS;
+}
+
+export async function recoverStaleActiveAnalysisRuns(
+  SB: SB,
+  dossier_id: string,
+) {
+  const { data, error } = await SB
+    .from("dossier_analysis_runs")
+    .select("id,status,started_at,created_at,finished_at")
+    .eq("dossier_id", dossier_id)
+    .in("status", [ANALYSIS_RUN_STATUS.QUEUED, ANALYSIS_RUN_STATUS.RUNNING])
+    .is("finished_at", null)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new Error(`Analysis stale-run lookup failed: ${error.message}`);
+  }
+
+  const rows = Array.isArray(data) ? data : [];
+  if (!rows.length) {
+    return { recovered_count: 0, recovered_ids: [] as string[] };
+  }
+
+  const nowMs = Date.now();
+  const staleIds = rows
+    .filter((row) => {
+      const refTs =
+        row.status === ANALYSIS_RUN_STATUS.RUNNING
+          ? row.started_at || row.created_at
+          : row.created_at;
+      return isStaleIso(refTs, nowMs);
+    })
+    .map((row) => String(row.id));
+
+  if (!staleIds.length) {
+    return { recovered_count: 0, recovered_ids: [] as string[] };
+  }
+
+  const ts = nowIso();
+
+  const { error: updErr } = await SB
+    .from("dossier_analysis_runs")
+    .update({
+      status: ANALYSIS_RUN_STATUS.FAILED,
+      finished_at: ts,
+      error_code: "stale_active_run_recovered",
+      error_message: "Recovered automatically before starting a new analysis run.",
+      updated_at: ts,
+    })
+    .in("id", staleIds);
+
+  if (updErr) {
+    throw new Error(`Analysis stale-run recovery failed: ${updErr.message}`);
+  }
+
+  return {
+    recovered_count: staleIds.length,
+    recovered_ids: staleIds,
+  };
+}
+
+export async function getActiveAnalysisRun(
+  SB: SB,
+  dossier_id: string,
+) {
+  const { data, error } = await SB
+    .from("dossier_analysis_runs")
+    .select([
+      "id",
+      "dossier_id",
+      "trigger_type",
+      "requested_by_actor_type",
+      "requested_by_actor_ref",
+      "request_source",
+      "mode",
+      "status",
+      "method_code",
+      "method_version",
+      "worker_runtime",
+      "worker_version",
+      "trigger_reason",
+      "document_count",
+      "supported_document_count",
+      "started_at",
+      "finished_at",
+      "error_code",
+      "error_message",
+      "created_at",
+      "updated_at",
+    ].join(","))
+    .eq("dossier_id", dossier_id)
+    .in("status", [ANALYSIS_RUN_STATUS.QUEUED, ANALYSIS_RUN_STATUS.RUNNING])
+    .is("finished_at", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw new Error(`Active analysis run read failed: ${error.message}`);
+  return data || null;
+}
+
 export async function createAnalysisRun(
   SB: SB,
   args: {
@@ -55,6 +163,8 @@ export async function createAnalysisRun(
   },
 ) {
   const ts = nowIso();
+
+  await recoverStaleActiveAnalysisRuns(SB, args.dossier_id);
 
   const { data, error } = await SB
     .from("dossier_analysis_runs")
@@ -79,7 +189,15 @@ export async function createAnalysisRun(
     .select("id,dossier_id,status,created_at")
     .maybeSingle();
 
-  if (error) throw new Error(`Analysis run create failed: ${error.message}`);
+  if (error) {
+    const msg = String(error.message || "");
+    if (msg.includes("uq_analysis_runs_one_active_per_dossier")) {
+      throw new Error(
+        "Analysis run create failed: active_analysis_run_exists",
+      );
+    }
+    throw new Error(`Analysis run create failed: ${msg}`);
+  }
   if (!data?.id) throw new Error("Analysis run create failed: no row returned");
 
   return data;

@@ -4,6 +4,66 @@ Statusdatum: 2026-03-20
 Type: voorstel / ontwerpdocument
 Status: DRAFT
 
+> BELANGRIJK:
+> Dit document is een ontwerp-/transitiedocument.
+> Het is expliciet niet de CURRENT source-of-truth.
+> CURRENT waarheid staat in:
+> - `00_GLOBAL.md`
+> - `01_SYSTEM_MAP.md`
+> - `03_CHANGELOG_APPEND_ONLY.md`
+> - `04_TODO.md`
+>
+> Bij conflict geldt:
+> - runtime-code + bovenstaande CURRENT docs winnen
+> - deze file mag historische tussenfasen en verlaten richtingen bevatten
+
+## AMENDMENT — 2026-04-15 — PDF browser-lane, image worker-lane, verify server-side canonical
+
+Deze draft is op één kritiek punt verouderd en moet scherper gelezen worden.
+
+De CURRENT richting is gesplitst per factuurtype:
+
+- PDF facturen:
+  - parser client-side
+  - verify server-side
+- image facturen:
+  - lokale/interne OCR worker als actieve extractielane
+  - verify server-side
+
+Dat betekent:
+
+- `api-dossier-verify` blijft de canonieke evaluator/writer
+- verify vergelijkt:
+  - declared
+  - observed
+- verify schrijft:
+  - document analysis
+  - charger analysis
+  - dossier summary
+  - audit
+- verify doet geen inline OCR/PDF parsing meer
+
+Belangrijke expliciete correctie:
+- browser-side OCR met Tesseract.js is eerder geprobeerd voor image facturen
+- die route bleek niet robuust genoeg als primaire productieroute
+- daarom is browser image-OCR verlaten als actieve implementatierichting
+
+Belangrijke consequentie:
+- browser-side parser-output blijft CURRENT relevant voor PDF facturen
+- lokale Python scripts zijn CURRENT niet alleen proof-loop, maar ook de actieve image-extractielane
+- verify blijft canoniek voor server truth,
+  maar niet voor extractieruntime zelf
+
+Transitie-nuance:
+- end-to-end wiring is nu verschillend per lane:
+  - PDF: browser parser → verify
+  - image: interne worker → verify
+- zolang observed payload ontbreekt, blijft placeholder/inconclusive fallback correct gedrag
+
+Belangrijke bewaakregels:
+- de eerdere poging om de lokale invoice-image OCR-engine direct binnen Supabase Edge te draaien is expliciet verlaten
+- browser image-OCR is ook niet de actieve route
+- image factuur-extractie loopt CURRENT via de lokale/interne OCR worker buiten Edge
 ---
 
 ## 1) Doel
@@ -161,11 +221,33 @@ Deze laag is samenvattend en template-based.
 
 ## 6) Scope v1
 
-Belangrijke CURRENT nuance (2026-03-20):
+Belangrijke CURRENT nuance (2026-03-27):
 - Scope v1 blijft formeel factuur + foto,
-  maar de uitvoeringsvolgorde is nu bewust asymmetrisch:
+  maar de uitvoeringsvolgorde is bewust asymmetrisch:
   - eerst factuur hardenen
-  - foto blijft voorlopig skeleton
+  - daarbinnen nu ook factuur-afbeeldingen ondersteunen
+  - laadpaalfoto blijft voorlopig skeleton
+
+Factuur-input splitst daarmee op in:
+- text-based PDF factuur
+- image-based factuur (jpg/png)
+
+Beide routes moeten uitkomen op dezelfde observed/evaluated contractlaag.
+
+Harde ontwerpregel:
+- geen externe OCR/vision provider
+- alleen interne/local extractie
+- de eerdere poging om de OCR-engine direct in Supabase Edge runtime te draaien is verlaten
+- nieuwe richting:
+  - standalone interne OCR worker buiten Edge
+  - `light`/preflight blijft contractuele basislaag
+  - standalone worker levert de echte invoice-image extractie
+- beide routes moeten uitkomen op dezelfde outputcontractlaag:
+  - PDF text extractie
+  - invoice image extractie
+- `light` mag dus niet verdwijnen:
+  - het blijft de image preflight- en normalisatielaag
+  - maar is niet langer het eindstation voor invoice-images
 
 ### 6.1 Factuur consistency checks
 
@@ -176,6 +258,24 @@ Per charger met documenttype `factuur`:
 - model match met charger.model
 - serienummer match met charger.serial_number
 - MID match met charger.mid_number
+
+### 6.1.1 Factuur input types (CURRENT)
+
+Analysis v1 ondersteunt voor facturen:
+
+- `application/pdf`
+- `image/jpeg`
+- `image/png`
+
+Niet in scope voor analysis v1:
+
+- `image/webp`
+- `application/msword`
+- `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
+
+Belangrijke nuance:
+- upload-support en analysis-support zijn niet automatisch hetzelfde
+- een bestandstype mag uploadbaar zijn zonder dat analysis v1 daar inhoudelijke extractie op doet
 
 ### 6.2 Foto evidence checks
 
@@ -252,6 +352,19 @@ Dus:
 - `queued`
 - `completed`
 - `failed`
+
+Betekenis:
+
+- `queued`
+  - analyse is aangemaakt maar nog niet afgerond
+- `completed`
+  - analyse is technisch uitgevoerd, ook als observed output leeg of beperkt is
+- `failed`
+  - analyse kon technisch niet worden uitgevoerd door runtime-, decode- of extractor-fout
+
+Belangrijke waarheidregel:
+- "geen bruikbare tekst gevonden" is geen `failed`, maar `completed` met expliciete `limitations`
+- technische extractor-crash is wel `failed`
 
 ### 9.2 Charger analysis result status
 
@@ -414,6 +527,28 @@ Observed fields:
 - `mid_number`
 - `invoice_date`
 
+### 12.1.1 Factuur image extractie (CURRENT richting)
+
+Voor image-based facturen geldt:
+
+- extractie blijft intern/local
+- geen externe OCR/vision provider
+- extractor wordt modulair opgezet in `image_text.ts`
+- architectuur is staged:
+  - `light` stage eerst
+  - zwaardere lokale stage later mogelijk
+- beide stages moeten hetzelfde outputcontract gebruiken
+
+Observed output blijft truth-first:
+- wat gelezen is → registreren
+- wat niet gelezen is → expliciet leeg laten
+- onzekerheid → via `limitations` en/of `inconclusive`, nooit maskeren als pass/fail
+
+Canonieke bronregel:
+- de browser mag image-bytes optimaliseren of waarschuwen,
+  maar de analysis-uitkomst voor een factuurafbeelding wordt server-side bepaald in `api-dossier-verify`.
+- client-side OCR of client-side extractie is geen source-of-truth voor analysis v1.
+
 ## 12.2 Factuur match v1
 
 Checks:
@@ -466,33 +601,20 @@ Voorbeeld input:
 {
   "dossier_id": "...",
   "session_token": "...",
-  "mode": "refresh"
-}
-```
-
-Voorbeeld response:
-
-{
-  "ok": true,
-  "analysis_status": "partial_pass",
-  "analysis_run": {
-    "documents_seen": 4,
-    "document_analyses_completed": 4,
-    "charger_results_written": 10,
-    "summary_written": true
+  "mode": "refresh",
+  "client_verify_payload": {
+    "version": "enval-client-verify-payload.v1",
+    "declared_snapshot": {
+      "dossier": {},
+      "chargers": []
+    },
+    "document_snapshot": {
+      "from_server": [],
+      "from_client_uploads": [],
+      "client_invoice_observed": []
+    }
   }
 }
-
-Belangrijke ontwerpregels:
-- api-dossier-verify doet compute + write
-- api-dossier-export doet read + package
-- api-dossier-verify muteert geen bestaande dossierdata
-- analysis draait alleen op confirmed documenten
-- onbekende of niet-ondersteunde documenttypes worden overgeslagen, niet geforceerd
-
-Dus:
-- verify = berekenen
-- export = verpakken
 
 14) Pipeline
 
@@ -625,7 +747,16 @@ Doel:
 - verify-run log gebruiken als vaste evidence-loop
 - export blijft analysis-blokken tonen, maar de focus ligt nu op betere inhoud i.p.v. alleen structuur
 
-Fase C — foto evidence checks
+Subvolgorde binnen factuur:
+1. text-based PDF hardenen
+2. image-based factuur toevoegen via aparte shared extractor (`image_text.ts`)
+3. beide extractieroutes laten landen in dezelfde observed/evaluated contractlaag
+
+Harde regel:
+- geen externe OCR/vision provider
+- liever `completed + limitations + inconclusive` dan schijnzekerheid
+
+Fase C — laadpaalfoto evidence checks
 
 Startvoorwaarde:
 - pas beginnen wanneer er een bruikbare laadpaalfoto-dataset is
@@ -636,7 +767,7 @@ Doel:
 - standaard liever `inconclusive` dan geforceerde false certainty
 
 Tot die tijd:
-- foto-analysis blijft skeleton
+- `foto_laadpunt` blijft skeleton
 - verify/export/logs moeten deze beperking expliciet zichtbaar houden
 
 Fase D — human summary
@@ -778,11 +909,15 @@ De verify-log is daarmee niet alleen debug-output,
 maar onderdeel van de development proof-loop.
 
 Harde beperkingen die blijven gelden:
-- geen OCR in deze fase
-- alleen `text_based_pdf` voor facturen
+- geen externe OCR/vision provider
 - geen authenticity claim
 - geen compliance claim
 - geen lifecycle-mutatie op basis van analysis-uitkomst
+
+CURRENT uitvoerfase binnen facturen:
+- `text_based_pdf` blijft hard ondersteund
+- `image/jpeg` en `image/png` worden nu server-side toegevoegd als invoice-image route
+- browser-side processing blijft niet-canoniek voor analysis
 
 Concreet gevolg voor implementatievolgorde:
 1. factuur extractie verbeteren
@@ -790,5 +925,90 @@ Concreet gevolg voor implementatievolgorde:
 3. slechte factuurset uitbreiden
 4. pas daarna laadpaalfoto-dataset verzamelen en foto-analysis starten
 
+
+## Update 2026-03-30 — Edge-OCR route verlaten; standalone worker eerst
+
+Expliciet besluit:
+- lokale invoice-image OCR direct binnen Supabase Edge runtime wordt niet verder doorontwikkeld
+
+Waarom:
+- de verify/orchestrationlaag werkt
+- de analysis-tabellen werken
+- de exportlaag werkt
+- de extractor-runtime in Edge bleek de verkeerde plek voor de zware invoice-image OCR-engine
+
+Nieuwe implementatievolgorde:
+1. standalone interne invoice OCR worker bouwen en lokaal bewijzen
+2. worker-output disciplineren naar hetzelfde observed-fields contract als PDF
+3. pas daarna koppelen aan `api-dossier-verify`
+4. pas daarna foto-analysis
+
+Belangrijke invariant:
+- analysis blijft derived
+- `api-dossier-verify` blijft writer/orchestrator
+- geen lifecycle-mutatie
+- geen compliance/authenticity claim
+
+## Update 2026-03-31 — Standalone worker verdiept: compare-laag + PDF→JPG lane + page-level parserhardening eerst
+
+Wat nu bewezen is:
+- standalone/local invoice-image worker is niet meer alleen een runtime-experiment,
+  maar een echte parser-proof-loop
+- output bevat nu:
+  - approved values
+  - raw candidates voor ID-velden
+  - limitations
+  - summary
+- daarboven bestaat nu een lokale compare-laag die expected vs observed vergelijkt
+
+Nieuwe expliciete werkverdeling:
+
+### A) Parserlaag (standalone/local)
+Doel:
+- observed extraction verbeteren zonder verify of analysis-tabellen al te raken
+
+CURRENT aandachtspunten:
+- stacked label/value layouts
+- Dutch stacked label/value layouts
+- customer-name selectie in stacked documenten
+- veilige ID candidate handling (raw bewaren, niet gokken)
+
+### B) Compare-laag (standalone/local)
+Doel:
+- parseruitkomst meteen tegen testverwachting leggen
+
+Status:
+- lokaal script bestaat
+- gebruikt:
+  - `expected`
+  - `observed_raw`
+  - `observed_approved`
+  - field status
+  - overall status
+  - overall reason
+
+Belang:
+- dit is de brug tussen parser en latere verify-integratie
+- compare is CURRENT nog geen analysis-table write, maar een lokale beoordelingslaag
+
+### C) PDF→JPG lane
+Doel:
+- dezelfde testfamilie als de PDF matrix ook als image-lane beoordelen
+
+Bewezen:
+- single-page PDF-afgeleide JPG’s geven waardevolle parser- en regressie-informatie
+- multipage PDF-afgeleide JPG’s tonen logisch gesplitste documentinformatie per pagina
+
+Belangrijke CURRENT ontwerpregel:
+- multipage image aggregation is nog niet aan de beurt
+- eerst page-level extraction stabiliseren
+- daarna pas document-level merge van `_p01/_p02/_p03`
+
+Nieuwe implementatievolgorde:
+1. single-page parser hardenen
+2. stacked / Dutch stacked label parsing hardenen
+3. regressies bewaken via compare + PDF→JPG lane
+4. pas daarna multipage image aggregation
+5. pas daarna koppeling naar `api-dossier-verify`
 
 # EINDE 11_ANALYSE_PLAN.md

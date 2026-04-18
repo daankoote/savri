@@ -24,7 +24,6 @@ import {
   isAnalysisAllowedForPrecheck,
   isSupportedDocType,
   sanitizeMode,
-  extractInvoiceObservedFieldsFromText,
   buildInvoiceRowsFromObserved,
   type InvoiceObservedFields,
   type ChargerAnalysisRow,
@@ -40,14 +39,9 @@ import {
   markAnalysisRunRunning,
   markAnalysisRunCompleted,
   markAnalysisRunFailed,
+  recoverStaleActiveAnalysisRuns,
+  getActiveAnalysisRun,
 } from "../_shared/analysis_runs.ts";
-
-import {
-  downloadStorageBytes,
-  extractTextFromPdfBytes,
-  debugPdfStreams,
-} from "../_shared/pdf_text.ts";
-
 
 // -------------------- CORS --------------------
 function parseAllowedOrigins(): string[] {
@@ -103,6 +97,194 @@ function getEnvironment(): string {
     Deno.env.get("APP_ENV") ||
     "unknown"
   ).toLowerCase();
+}
+
+function buildInvoicePreAnalysisObservedFields(): InvoiceObservedFields {
+  return {
+    customer_name: null,
+    address_line: null,
+    house_number: null,
+    postcode_line: null,
+    city_line: null,
+    country_line: null,
+    brand: null,
+    model: null,
+    serial_number: null,
+    serial_candidate_raw: null,
+    mid_number: null,
+    mid_candidate_raw: null,
+  };
+}
+
+function buildInvoicePreAnalysisConfidence(args: {
+  source_kind: "pdf" | "image";
+  extracted_text_length?: number;
+  extraction_method?: string | null;
+  extraction_stage?: string | null;
+}) {
+  return {
+    source_kind: args.source_kind,
+    extraction_method: args.extraction_method ?? null,
+    extraction_stage: args.extraction_stage ?? null,
+    extracted_text_length: args.extracted_text_length ?? 0,
+    analysis_mode: "pre_analysis_placeholder_only",
+  };
+}
+
+type ClientObservedInvoicePayload = {
+  document_id: string;
+  parser_kind: string | null;
+  parser_version: string | null;
+  source_kind: string | null;
+  observed_fields: InvoiceObservedFields;
+  confidence: Record<string, unknown>;
+  limitations: string[];
+  summary: Record<string, unknown>;
+  field_sources: Record<string, unknown> | null;
+  pages: unknown[] | null;
+};
+
+type ClientVerifyPayloadNormalized = {
+  version: string | null;
+  invoice_observed_by_document_id: Record<string, ClientObservedInvoicePayload>;
+};
+
+type PersistedObservedSourceRow = {
+  document_id: string;
+  source_kind?: string | null;
+  producer_kind?: string | null;
+  producer_version?: string | null;
+  status?: string | null;
+  observed_fields?: unknown;
+  confidence?: unknown;
+  limitations?: unknown;
+  summary?: unknown;
+  field_sources?: unknown;
+  pages?: unknown;
+};
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+function asStringOrNull(value: unknown): string | null {
+  const s = String(value ?? "").trim();
+  return s || null;
+}
+
+function asStringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.map((x) => String(x ?? "").trim()).filter(Boolean)
+    : [];
+}
+
+function normalizeInvoiceObservedFields(raw: unknown): InvoiceObservedFields {
+  const obj = asRecord(raw);
+
+  return {
+    customer_name: asStringOrNull(obj.customer_name),
+    address_line: asStringOrNull(obj.address_line),
+    house_number: asStringOrNull(obj.house_number),
+    postcode_line: asStringOrNull(obj.postcode_line),
+    city_line: asStringOrNull(obj.city_line),
+    country_line: asStringOrNull(obj.country_line),
+    brand: asStringOrNull(obj.brand),
+    model: asStringOrNull(obj.model),
+    serial_number: asStringOrNull(obj.serial_number),
+    serial_candidate_raw: asStringOrNull(obj.serial_candidate_raw),
+    mid_number: asStringOrNull(obj.mid_number),
+    mid_candidate_raw: asStringOrNull(obj.mid_candidate_raw),
+  };
+}
+
+function parseClientVerifyPayload(input: unknown): ClientVerifyPayloadNormalized {
+  const root = asRecord(input);
+  const version = asStringOrNull(root.version);
+
+  const documentSnapshot = asRecord(root.document_snapshot);
+  const clientObserved = Array.isArray(documentSnapshot.client_invoice_observed)
+    ? documentSnapshot.client_invoice_observed
+    : [];
+
+  const invoice_observed_by_document_id: Record<string, ClientObservedInvoicePayload> = {};
+
+  for (const itemRaw of clientObserved) {
+    const item = asRecord(itemRaw);
+    const document_id = asStringOrNull(item.document_id);
+    if (!document_id) continue;
+
+    const parserPayload = asRecord(item.parser_payload);
+
+    invoice_observed_by_document_id[document_id] = {
+      document_id,
+      parser_kind: asStringOrNull(parserPayload.parser_kind),
+      parser_version: asStringOrNull(parserPayload.parser_version),
+      source_kind: asStringOrNull(parserPayload.source_kind),
+      observed_fields: normalizeInvoiceObservedFields(parserPayload.observed_fields),
+      confidence: asRecord(parserPayload.confidence),
+      limitations: asStringArray(parserPayload.limitations),
+      summary: asRecord(parserPayload.summary),
+      field_sources: (() => {
+        const v = parserPayload.field_sources;
+        return v && typeof v === "object" && !Array.isArray(v)
+          ? v as Record<string, unknown>
+          : null;
+      })(),
+      pages: Array.isArray(parserPayload.pages) ? parserPayload.pages : null,
+    };
+  }
+
+  return {
+    version,
+    invoice_observed_by_document_id,
+  };
+}
+
+function normalizePersistedObservedSourceRow(
+  row: PersistedObservedSourceRow,
+): ClientObservedInvoicePayload | null {
+  const confidence = asRecord(row.confidence);
+  const limitations = asStringArray(row.limitations);
+  const observed_fields = normalizeInvoiceObservedFields(row.observed_fields);
+
+  const observedNonNullFields = Number(confidence.observed_non_null_fields || 0);
+
+  const hasAnyObservedField = Object.values(observed_fields).some((v) => {
+    const s = String(v ?? "").trim();
+    return !!s;
+  });
+
+  const looksEmptyPdfResult =
+    String(row.source_kind || "").trim().toLowerCase() === "pdf" &&
+    (
+      observedNonNullFields <= 0 ||
+      limitations.includes("pdf_text_extraction_empty") ||
+      !hasAnyObservedField
+    );
+
+  if (looksEmptyPdfResult) {
+    return null;
+  }
+
+  return {
+    document_id: String(row.document_id),
+    parser_kind: asStringOrNull(row.producer_kind),
+    parser_version: asStringOrNull(row.producer_version),
+    source_kind: asStringOrNull(row.source_kind),
+    observed_fields,
+    confidence,
+    limitations,
+    summary: asRecord(row.summary),
+    field_sources: (() => {
+      const v = row.field_sources;
+      return v && typeof v === "object" && !Array.isArray(v)
+        ? v as Record<string, unknown>
+        : null;
+    })(),
+    pages: Array.isArray(row.pages) ? row.pages : null,
+  };
 }
 
 function buildAnalysisReadablePayload(args: {
@@ -231,6 +413,8 @@ serve(async (req) => {
   } catch (e: any) {
     return bad(req, String(e?.message || e), 400);
   }
+
+  const clientVerifyPayload = parseClientVerifyPayload(parsed?.client_verify_payload);
 
   if (!dossier_id || !session_token) {
     return json(req, 400, { ok: false, error: "Missing dossier_id/session_token" });
@@ -375,6 +559,54 @@ serve(async (req) => {
       isSupportedDocType(String(d.doc_type || "").trim())
     );
 
+    const invoiceDocIds = supportedDocs
+      .filter((d) => String(d.doc_type || "").trim() === "factuur")
+      .map((d) => String(d.id));
+
+    let persistedInvoiceObservedByDocumentId: Record<string, ClientObservedInvoicePayload> = {};
+
+    if (invoiceDocIds.length > 0) {
+      const { data: persistedRows, error: persistedErr } = await SB
+        .from("dossier_document_observed_sources")
+        .select("document_id,source_kind,producer_kind,producer_version,status,observed_fields,confidence,limitations,summary,field_sources,pages")
+        .eq("dossier_id", dossier_id)
+        .in("document_id", invoiceDocIds);
+
+      if (persistedErr) {
+        throw new Error(`observed_source_read: ${persistedErr.message}`);
+      }
+
+      persistedInvoiceObservedByDocumentId = Object.fromEntries(
+        ((persistedRows || []) as PersistedObservedSourceRow[])
+          .map((row) => {
+            const normalized = normalizePersistedObservedSourceRow(row);
+            if (!normalized) return null;
+            return [String(row.document_id), normalized] as const;
+          })
+          .filter(Boolean) as Array<readonly [string, ClientObservedInvoicePayload]>,
+      );
+    }
+
+    const staleRecovery = await recoverStaleActiveAnalysisRuns(SB, dossier_id);
+
+    if (staleRecovery.recovered_count > 0) {
+      await insertAuditFailOpen(
+        SB,
+        {
+          dossier_id,
+          actor_type: "customer",
+          event_type: "analysis_run_recovered_stale",
+          event_data: {
+            recovered_count: staleRecovery.recovered_count,
+            recovered_ids: staleRecovery.recovered_ids,
+            reason: "stale_active_run_recovered_before_new_run",
+          },
+        },
+        meta,
+        { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
+      );
+    }
+
     const analysisRun = await createAnalysisRun(SB, {
       dossier_id,
       trigger_type: "manual_rerun",
@@ -415,6 +647,9 @@ serve(async (req) => {
           method_version: ANALYSIS_METHOD_VERSION,
           document_count: confirmedDocs.length,
           supported_document_count: supportedDocs.length,
+          client_invoice_observed_count: Object.keys(clientVerifyPayload.invoice_observed_by_document_id).length,
+          persisted_invoice_observed_count: Object.keys(persistedInvoiceObservedByDocumentId).length,
+          client_verify_payload_version: clientVerifyPayload.version,
           status: "running",
         },
       },
@@ -422,173 +657,275 @@ serve(async (req) => {
       { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
     );
 
-  const documentAnalysisRows: DocumentAnalysisRow[] = [];
-  const documentFailures: DocumentAnalysisRow[] = [];
+    const documentAnalysisRows: DocumentAnalysisRow[] = [];
+    const documentFailures: DocumentAnalysisRow[] = [];
 
-  const invoiceObservedByDocumentId: Record<string, InvoiceObservedFields | null> = {};
+    const invoiceObservedByDocumentId: Record<string, InvoiceObservedFields | null> = {};
 
-  for (const doc of supportedDocs) {
-    const docType = String(doc.doc_type || "").trim();
+    for (const doc of supportedDocs) {
+      const docType = String(doc.doc_type || "").trim();
+      const contentType = String(doc.content_type || "").trim().toLowerCase();
 
-    await insertAuditFailOpen(
-      SB,
-      {
-        dossier_id,
-        actor_type: "customer",
-        event_type: "document_analysis_started",
-        event_data: {
-          run_id: analysisRunId,
+      await insertAuditFailOpen(
+        SB,
+        {
+          dossier_id,
+          actor_type: "customer",
+          event_type: "document_analysis_started",
+          event_data: {
+            run_id: analysisRunId,
+            document_id: doc.id,
+            charger_id: doc.charger_id || null,
+            doc_type: docType,
+            analysis_kind: docType === "factuur" ? "factuur_extract_v1" : "foto_extract_v1",
+            method_code: ANALYSIS_METHOD_CODE,
+            method_version: ANALYSIS_METHOD_VERSION,
+            status: "queued",
+          },
+        },
+        meta,
+        { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
+      );
+
+      try {
+        let row: DocumentAnalysisRow;
+
+        const clientPayload = docType === "factuur"
+          ? (clientVerifyPayload.invoice_observed_by_document_id[doc.id] ?? null)
+          : null;
+
+        const persistedPayload = docType === "factuur"
+          ? (persistedInvoiceObservedByDocumentId[doc.id] ?? null)
+          : null;
+
+        if (docType === "factuur" && clientPayload) {
+          const payload = clientPayload;
+          const observed = payload.observed_fields;
+
+          invoiceObservedByDocumentId[doc.id] = observed;
+
+          row = buildDocumentAnalysisRow(dossier, doc, analysisRunId!, {
+            invoice_observed_fields: observed,
+            confidence: {
+              ...payload.confidence,
+              parser_kind: payload.parser_kind,
+              parser_version: payload.parser_version,
+              source_kind: payload.source_kind,
+              client_verify_payload_version: clientVerifyPayload.version,
+              analysis_mode: "client_parser_payload",
+            },
+            limitations: payload.limitations,
+            summary_extra: {
+              ...payload.summary,
+              parser_kind: payload.parser_kind,
+              parser_version: payload.parser_version,
+              source_kind: payload.source_kind,
+              field_sources: payload.field_sources,
+              pages: payload.pages,
+              extraction_source: "client_parser_payload",
+              content_analysis_mode: "client_parser_observed_fields",
+            },
+          });
+
+        } else if (docType === "factuur" && persistedPayload) {
+          const payload = persistedPayload;
+          const observed = payload.observed_fields;
+
+          invoiceObservedByDocumentId[doc.id] = observed;
+
+          row = buildDocumentAnalysisRow(dossier, doc, analysisRunId!, {
+            invoice_observed_fields: observed,
+            confidence: {
+              ...payload.confidence,
+              parser_kind: payload.parser_kind,
+              parser_version: payload.parser_version,
+              source_kind: payload.source_kind,
+              persisted_observed_source: true,
+              analysis_mode: "persisted_observed_source",
+            },
+            limitations: payload.limitations,
+            summary_extra: {
+              ...payload.summary,
+              parser_kind: payload.parser_kind,
+              parser_version: payload.parser_version,
+              source_kind: payload.source_kind,
+              field_sources: payload.field_sources,
+              pages: payload.pages,
+              extraction_source: "persisted_observed_source",
+              content_analysis_mode: "persisted_observed_fields",
+            },
+          });
+
+        } else if (
+          docType === "factuur" &&
+          contentType === "application/pdf"
+        ) {
+          const observed = buildInvoicePreAnalysisObservedFields();
+          invoiceObservedByDocumentId[doc.id] = observed;
+
+          row = buildDocumentAnalysisRow(dossier, doc, analysisRunId!, {
+            invoice_observed_fields: observed,
+            confidence: buildInvoicePreAnalysisConfidence({
+              source_kind: "pdf",
+            }),
+            limitations: [
+              "invoice_pdf_inline_extraction_removed_from_verify",
+              "invoice_worker_result_not_connected_yet",
+              "invoice_client_parser_payload_missing",
+            ],
+            summary_extra: {
+              mode: "invoice_extract_skipped",
+              reason: "inline_pdf_extraction_removed_from_verify",
+              extraction_source: "worker_pending",
+              content_type: contentType || null,
+              content_analysis_mode: "pre_analysis_placeholder_only",
+            },
+          });
+
+        } else if (
+          docType === "factuur" &&
+          (contentType === "image/jpeg" || contentType === "image/png")
+        ) {
+          const observed = buildInvoicePreAnalysisObservedFields();
+          invoiceObservedByDocumentId[doc.id] = observed;
+
+          row = buildDocumentAnalysisRow(dossier, doc, analysisRunId!, {
+            invoice_observed_fields: observed,
+            confidence: buildInvoicePreAnalysisConfidence({
+              source_kind: "image",
+            }),
+            limitations: [
+              "invoice_image_inline_extraction_removed_from_verify",
+              "invoice_worker_result_not_connected_yet",
+              "invoice_client_parser_payload_missing",
+            ],
+            summary_extra: {
+              mode: "invoice_extract_skipped",
+              reason: "inline_image_extraction_removed_from_verify",
+              extraction_source: "worker_pending",
+              content_type: contentType || null,
+              content_analysis_mode: "pre_analysis_placeholder_only",
+            },
+          });
+
+        } else if (docType === "factuur") {
+          const observed = buildInvoicePreAnalysisObservedFields();
+          invoiceObservedByDocumentId[doc.id] = observed;
+
+          row = buildDocumentAnalysisRow(dossier, doc, analysisRunId!, {
+            invoice_observed_fields: observed,
+            confidence: buildInvoicePreAnalysisConfidence({
+              source_kind: "pdf",
+            }),
+            limitations: [
+              "invoice_content_type_not_supported_for_analysis",
+              "invoice_worker_result_not_connected_yet",
+              "invoice_client_parser_payload_missing",
+            ],
+            summary_extra: {
+              mode: "invoice_extract_skipped",
+              reason: "unsupported_invoice_content_type",
+              extraction_source: "worker_pending",
+              content_type: contentType || null,
+              content_analysis_mode: "pre_analysis_placeholder_only",
+            },
+          });
+
+        } else {
+          row = buildDocumentAnalysisRow(dossier, doc, analysisRunId!, {
+            limitations: [
+              "photo_extraction_not_implemented_yet",
+            ],
+            summary_extra: {
+              mode: "photo_extract_skipped",
+              reason: "photo_analysis_not_implemented_yet",
+            },
+          });
+        }
+
+
+        documentAnalysisRows.push(row);
+
+        await insertAuditFailOpen(
+          SB,
+          {
+            dossier_id,
+            actor_type: "customer",
+            event_type: "document_analysis_completed",
+            event_data: {
+              run_id: analysisRunId,
+              document_id: doc.id,
+              charger_id: doc.charger_id || null,
+              doc_type: docType,
+              analysis_kind: row.analysis_kind,
+              method_code: row.method_code,
+              method_version: row.method_version,
+              status: row.status,
+              used_client_parser_payload:
+                docType === "factuur" &&
+                !!clientVerifyPayload.invoice_observed_by_document_id[doc.id],
+              used_persisted_observed_source:
+                docType === "factuur" &&
+                !clientVerifyPayload.invoice_observed_by_document_id[doc.id] &&
+                !!persistedInvoiceObservedByDocumentId[doc.id],
+            },
+          },
+          meta,
+          { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
+        );
+      } catch (e: any) {
+        const ts = new Date().toISOString();
+        const failedRow: DocumentAnalysisRow = {
+          dossier_id,
+          run_id: analysisRunId!,
           document_id: doc.id,
-          charger_id: doc.charger_id || null,
+          charger_id: doc.charger_id ? String(doc.charger_id) : null,
           doc_type: docType,
           analysis_kind: docType === "factuur" ? "factuur_extract_v1" : "foto_extract_v1",
+          status: "failed",
           method_code: ANALYSIS_METHOD_CODE,
           method_version: ANALYSIS_METHOD_VERSION,
-          status: "queued",
-        },
-      },
-      meta,
-      { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
-    );
+          observed_fields: {},
+          confidence: {},
+          limitations: [
+            "document_analysis_exception",
+          ],
+          summary: {
+            error: String(e?.message || e),
+          },
+          created_at: ts,
+          updated_at: ts,
+        };
 
-    try {
-      let row: DocumentAnalysisRow;
+        if (docType === "factuur") {
+          invoiceObservedByDocumentId[doc.id] = null;
+        }
 
-      if (
-        docType === "factuur" &&
-        String(doc.content_type || "").toLowerCase() === "application/pdf" &&
-        doc.storage_bucket &&
-        doc.storage_path
-      ) {
-        const pdfBytes = await downloadStorageBytes(
+        documentFailures.push(failedRow);
+
+        await insertAuditFailOpen(
           SB,
-          String(doc.storage_bucket),
-          String(doc.storage_path),
+          {
+            dossier_id,
+            actor_type: "customer",
+            event_type: "document_analysis_failed",
+            event_data: {
+              run_id: analysisRunId,
+              document_id: doc.id,
+              charger_id: doc.charger_id || null,
+              doc_type: docType,
+              analysis_kind: failedRow.analysis_kind,
+              method_code: failedRow.method_code,
+              method_version: failedRow.method_version,
+              status: failedRow.status,
+              message: String(e?.message || e),
+            },
+          },
+          meta,
+          { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
         );
-
-        const debugStreams = await debugPdfStreams(pdfBytes);
-        const text = await extractTextFromPdfBytes(pdfBytes);
-        const observed = extractInvoiceObservedFieldsFromText(text);
-
-        console.log("ANALYSIS_DEBUG_DOC_ID", doc.id);
-        console.log("ANALYSIS_DEBUG_DOC_FILENAME", doc.filename || null);
-        console.log("ANALYSIS_DEBUG_PDF_BYTES_LENGTH", pdfBytes.length);
-        console.log("ANALYSIS_DEBUG_STREAM_COUNT", debugStreams.length);
-        console.log("ANALYSIS_DEBUG_STREAMS", JSON.stringify(debugStreams));
-        console.log("ANALYSIS_DEBUG_TEXT_LENGTH", text.length);
-        console.log("ANALYSIS_DEBUG_TEXT_PREVIEW", text.slice(0, 1000));
-        console.log("ANALYSIS_DEBUG_OBSERVED", JSON.stringify(observed));
-
-        invoiceObservedByDocumentId[doc.id] = observed;
-
-        row = buildDocumentAnalysisRow(dossier, doc, analysisRunId!, {
-          invoice_observed_fields: observed,
-          limitations: [],
-          summary_extra: {
-            mode: "invoice_pdf_extract_v1",
-            extraction_source: "text_based_pdf",
-          },
-        });
-      } else if (docType === "factuur") {
-        invoiceObservedByDocumentId[doc.id] = null;
-
-        row = buildDocumentAnalysisRow(dossier, doc, analysisRunId!, {
-          invoice_observed_fields: null,
-          limitations: [
-            "invoice_image_extraction_not_implemented",
-          ],
-          summary_extra: {
-            mode: "invoice_extract_skipped",
-            reason: "non_pdf_invoice_not_supported_yet",
-          },
-        });
-      } else {
-        row = buildDocumentAnalysisRow(dossier, doc, analysisRunId!, {
-          limitations: [
-            "photo_extraction_not_implemented_yet",
-          ],
-          summary_extra: {
-            mode: "photo_extract_skipped",
-            reason: "photo_analysis_not_implemented_yet",
-          },
-        });
       }
-
-      documentAnalysisRows.push(row);
-
-      await insertAuditFailOpen(
-        SB,
-        {
-          dossier_id,
-          actor_type: "customer",
-          event_type: "document_analysis_completed",
-          event_data: {
-            run_id: analysisRunId,
-            document_id: doc.id,
-            charger_id: doc.charger_id || null,
-            doc_type: docType,
-            analysis_kind: row.analysis_kind,
-            method_code: row.method_code,
-            method_version: row.method_version,
-            status: row.status,
-          },
-        },
-        meta,
-        { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
-      );
-    } catch (e: any) {
-      const ts = new Date().toISOString();
-      const failedRow: DocumentAnalysisRow = {
-        dossier_id,
-        run_id: analysisRunId!,
-        document_id: doc.id,
-        charger_id: doc.charger_id ? String(doc.charger_id) : null,
-        doc_type: docType,
-        analysis_kind: docType === "factuur" ? "factuur_extract_v1" : "foto_extract_v1",
-        status: "failed",
-        method_code: ANALYSIS_METHOD_CODE,
-        method_version: ANALYSIS_METHOD_VERSION,
-        observed_fields: {},
-        confidence: {},
-        limitations: [
-          "document_analysis_exception",
-        ],
-        summary: {
-          error: String(e?.message || e),
-        },
-        created_at: ts,
-        updated_at: ts,
-      };
-
-      if (docType === "factuur") {
-        invoiceObservedByDocumentId[doc.id] = null;
-      }
-
-      documentFailures.push(failedRow);
-
-      await insertAuditFailOpen(
-        SB,
-        {
-          dossier_id,
-          actor_type: "customer",
-          event_type: "document_analysis_failed",
-          event_data: {
-            run_id: analysisRunId,
-            document_id: doc.id,
-            charger_id: doc.charger_id || null,
-            doc_type: docType,
-            analysis_kind: failedRow.analysis_kind,
-            method_code: failedRow.method_code,
-            method_version: failedRow.method_version,
-            status: failedRow.status,
-            message: String(e?.message || e),
-          },
-        },
-        meta,
-        { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
-      );
     }
-  }
 
     const allDocumentRows = [...documentAnalysisRows, ...documentFailures];
 
@@ -605,32 +942,32 @@ serve(async (req) => {
     const docsByCharger = groupConfirmedDocsByCharger(supportedDocs);
     const chargerAnalysisRows: ChargerAnalysisRow[] = [];
 
-  for (const charger of chargerRows) {
-    const docsForCharger = docsByCharger[String(charger.id)] || [];
+    for (const charger of chargerRows) {
+      const docsForCharger = docsByCharger[String(charger.id)] || [];
 
-    const invoiceDoc =
-      docsForCharger.find((d) => String(d.doc_type || "").trim() === "factuur") ?? null;
+      const invoiceDoc =
+        docsForCharger.find((d) => String(d.doc_type || "").trim() === "factuur") ?? null;
 
-    const photoRows = buildPhotoAnalysisRows(
-      dossier,
-      charger,
-      analysisRunId!,
-      docsForCharger.filter((d) => String(d.doc_type || "").trim() === "foto_laadpunt"),
-    );
+      const photoRows = buildPhotoAnalysisRows(
+        dossier,
+        charger,
+        analysisRunId!,
+        docsForCharger.filter((d) => String(d.doc_type || "").trim() === "foto_laadpunt"),
+      );
 
-    const invoiceObserved =
-      invoiceDoc ? (invoiceObservedByDocumentId[invoiceDoc.id] ?? null) : null;
+      const invoiceObserved =
+        invoiceDoc ? (invoiceObservedByDocumentId[invoiceDoc.id] ?? null) : null;
 
-    const invoiceRows = buildInvoiceRowsFromObserved(
-      dossier,
-      charger,
-      analysisRunId!,
-      invoiceDoc,
-      invoiceObserved,
-    );
+      const invoiceRows = buildInvoiceRowsFromObserved(
+        dossier,
+        charger,
+        analysisRunId!,
+        invoiceDoc,
+        invoiceObserved,
+      );
 
-    chargerAnalysisRows.push(...invoiceRows, ...photoRows);
-  }
+      chargerAnalysisRows.push(...invoiceRows, ...photoRows);
+    }
 
     if (chargerAnalysisRows.length > 0) {
       const { error: insChErr } = await SB
@@ -746,6 +1083,8 @@ serve(async (req) => {
       analysis_run: {
         documents_seen: confirmedDocs.length,
         supported_documents_seen: supportedDocs.length,
+        client_invoice_observed_count: Object.keys(clientVerifyPayload.invoice_observed_by_document_id).length,
+        persisted_invoice_observed_count: Object.keys(persistedInvoiceObservedByDocumentId).length,
         document_analyses_completed: documentAnalysisRows.filter((r) => r.status === "completed").length,
         document_analyses_failed: documentFailures.length,
         charger_results_written: chargerAnalysisRows.length,
@@ -791,10 +1130,33 @@ serve(async (req) => {
       }
     }
 
+    const errMsg = String(e?.message || e);
+
+    if (errMsg.includes("active_analysis_run_exists")) {
+      let activeRunId: string | null = null;
+
+      try {
+        const activeRun = await getActiveAnalysisRun(SB, dossier_id);
+        activeRunId = activeRun?.id || null;
+      } catch (_) {
+        activeRunId = null;
+      }
+
+      return reject(
+        "analysis_execution",
+        409,
+        "Er draait al een actieve analyse-run voor dit dossier. Wacht even en probeer opnieuw.",
+        {
+          reason: "active_analysis_run_exists",
+          run_id: activeRunId,
+        },
+      );
+    }
+
     return reject(
       "analysis_execution",
       500,
-      String(e?.message || e),
+      errMsg,
       {
         reason: "analysis_execution_failed",
         run_id: analysisRunId,
