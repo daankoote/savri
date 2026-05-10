@@ -139,7 +139,38 @@ Naast fast-path:
   - locked dossiers
   - stuck processing
 
-### 3. Abuse controls light
+### 3. Access recovery + retention lifecycle
+
+Doel:
+Geen handmatige interventie nodig wanneer een klant later terugkomt of wanneer een dossier niet wordt afgerond.
+
+MVP-regels:
+- Link-token blijft one-time.
+- Session-token blijft runtime-auth.
+- Als link-token verlopen/gebruikt is, kan klant via e-mail een nieuwe toeganglink aanvragen.
+- Draft dossiers worden tijdelijk bewaard, niet permanent.
+- Locked/unpaid dossiers krijgen reminder-mails en worden daarna verwijderd.
+- Alleen betaald/geëxporteerde dossiers worden langdurig bewaard.
+
+Retention:
+- Niet-locked dossiers: bewaren tot 7 dagen na laatste activiteit.
+- Locked/in_review maar niet betaald/geëxporteerd: bewaren tot 14 dagen.
+- Reminder-mails voor locked/unpaid: dag 3, dag 7, dag 10.
+- Na dag 14: verwijderen/anonymiseren + storage cleanup, tenzij export is betaald/gepreserveerd.
+
+Final preservation:
+- Na betaling/export wordt één immutable export artifact bewaard.
+- `dossier_exports` wordt de final source-of-truth voor audit retention.
+- Runtime-tabellen mogen daarna worden opgeschoond.
+- Storage objects waarnaar een preserved export verwijst, mogen niet worden verwijderd.
+
+Deliverable:
+- Klant kan zelfstandig nieuwe toeganglink aanvragen.
+- Abandoned dossiers blokkeren geen echte MID/dossierclaims.
+- Runtime database blijft schoon.
+- Betaalde exports blijven auditwaardig reproduceerbaar.
+
+### 4. Abuse controls light
 
 - Basic rate limit op api-lead-submit
 - Logging bij throttle

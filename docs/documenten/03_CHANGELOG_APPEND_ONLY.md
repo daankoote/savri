@@ -2167,4 +2167,34 @@ Harde CURRENT waarheid:
 - Een locked/in_review dossier mag niet via runtime endpoints worden opgeschoond.
 - Retained locked testdossiers zijn acceptabel totdat tombstone/archive lifecycle is ontworpen.
 
+## 2026-05-10 — Developer authority gate + export audit events + retention/preservation besluit
+
+Wijzigingen bewezen en gedeployed:
+- `api-dossier-dev-unlock` is niet langer afhankelijk van frontend/dev environment flags.
+- Developer unlock wordt server-side gegated via `dossiers.dossier_authority = 'developer'`.
+- Frontend toont dev unlock/analyse alleen via server-permission `permissions.can_view_analysis_details`.
+- `api-dossier-export` is uitgebreid met `audit_events` in het export artifact.
+- Tests bleven groen en functions zijn gedeployed:
+  - `api-dossier-dev-unlock`
+  - `api-dossier-export`
+
+Nieuw architectuurbesluit:
+- Link-token blijft one-time; session-token blijft runtime-auth.
+- Access recovery via `api-dossier-login-request` is nodig voor klanten die later terugkomen.
+- Runtime dossierdata wordt niet permanent bewaard tenzij betaald/geëxporteerd.
+- Niet-locked dossiers krijgen 7 dagen retention.
+- Locked/in_review maar unpaid/unexported dossiers krijgen 14 dagen retention met reminders op dag 3/7/10.
+- Paid/exported dossiers worden langdurig bewaard via een nieuwe final-retention laag: `dossier_exports`.
+- `dossier_exports` wordt de immutable source-of-truth voor auditretentie.
+- Runtime-tabellen mogen na preservation worden opgeschoond/geanonimiseerd.
+- Storage objects waarnaar een preserved export verwijst, mogen niet verwijderd worden.
+- Niet-preserved storage volgt de 7/14 dagen cleanup-regels.
+
+Open P1:
+- `dossier_exports` schema ontwerpen.
+- Preservation-flow bouwen.
+- Runtime cleanup/FK/immutability model herzien.
+- Reminder-flow bouwen.
+- MID/serial uniqueness aanpassen zodat abandoned drafts geen echte dossiers blokkeren.
+
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)

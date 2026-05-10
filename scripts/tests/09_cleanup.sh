@@ -1,4 +1,4 @@
-# scripts/tests/07_cleanup.sh
+# scripts/tests/09_cleanup.sh
 #!/usr/bin/env bash
 set -euo pipefail
 source "$(dirname "$0")/00_helpers.sh"
