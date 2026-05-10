@@ -105,17 +105,63 @@ Regel: alleen open items; afgerond → naar changelog.
     - op meerdere endpoints (minimaal read + write)
 - Status: OPEN
 
-### 7) Tombstone / archive lifecycle voor audit-gebonden testdossiers
+### 7) Retention lifecycle + export preservation invoeren
+
 - Context:
-  - fresh tests ruimen mutable child rows op, maar retained dossier/outbound/audit shell blijft bestaan
-  - hard delete van dossier faalt CURRENT by design door audit immutability
+  - CURRENT runtime houdt draft/locked test- en klantdossiers te lang vast.
+  - Hard delete faalt of is ongewenst zolang audit-gebonden runtime-tabellen als immutable zijn ingericht.
+  - Nieuwe productbeslissing:
+    - runtime-tabellen zijn tijdelijk werkmateriaal;
+    - alleen een betaald/geëxporteerd export artifact is final/immutable.
+  - `dossier_exports` moet de final source-of-truth worden voor betaalde/geëxporteerde auditretentie.
+
+- Retention policy:
+  - niet-locked dossiers:
+    - bewaren tot 7 dagen na laatste activiteit
+    - daarna verwijderen/anonymiseren + storage cleanup
+  - locked/in_review maar niet betaald/geëxporteerd:
+    - bewaren tot 14 dagen
+    - reminder-mails op dag 3, 7 en 10
+    - daarna verwijderen/anonymiseren + storage cleanup
+  - paid/exported:
+    - langdurig bewaren via immutable `dossier_exports`
+    - runtime-tabellen mogen na preservation worden opgeschoond
+    - storage objects waarnaar preserved export verwijst, mogen niet worden verwijderd
+
+- Schema/contract nodig:
+  - nieuwe tabel `public.dossier_exports`
+  - export JSON als immutable artifact
+  - export SHA256
+  - payment/export status
+  - storage bucket/path voor preserved artifact
+  - generated_at / paid_at / generated_request_id / generated_by_actor_ref
+
+- DB cleanup impact:
+  - huidige FK/trigger/immutability-regels moeten worden herzien zodat cleanup van niet-final runtime data mogelijk is.
+  - enige hard-immutable final retention table wordt `dossier_exports`.
+  - `dossier_audit_events` mag niet langer verhinderen dat abandoned draft/runtime data volgens policy wordt verwijderd of geanonimiseerd.
+  - audit events van paid/exported dossiers moeten in de preserved export JSON zitten vóór runtime cleanup.
+
+- Storage cleanup impact:
+  - alle non-preserved files volgen 7/14 dagen retention.
+  - files die in `dossier_exports.export_json` of export metadata als preserved source voorkomen, blijven bestaan.
+  - cleanup moet storage objecten nooit verwijderen als ze door een preserved export worden gereferenced.
+
+- MID/identifier impact:
+  - abandoned drafts mogen geen harde MID/serial claim blokkeren.
+  - eventuele uniqueness of conflict-detectie mag alleen final/preserved dossiers hard blokkeren.
+  - niet-final conflicts moeten hoogstens waarschuwing of soft conflict zijn.
+
 - DoD:
-  - kies lifecycle-semantiek voor retained dossiers:
-    - `tombstone` / `archived` / `test_retained`
-  - leg benodigde velden vast (bijv. `deleted_at`, `deleted_reason`, `retention_class`, `status`)
-  - bevestig dat audit trail intact blijft
-  - bevestig dat exports/reads zich correct gedragen voor tombstoned dossiers
-- Status: OPEN
+  - lifecycle decision vastgelegd in docs
+  - `dossier_exports` schema ontworpen
+  - cleanup-strategie ontworpen voor DB + Storage
+  - reminder-flow ontworpen voor locked/unpaid dag 3/7/10
+  - access recovery blijft werken zolang dossier binnen retention valt
+  - paid/exported export blijft reproduceerbaar na runtime cleanup
+  - fresh-only tests aangepast zodat retained-state proof niet botst met nieuwe preservation semantics
+
+- Status: OPEN — P1 MVP
 
 
 ### 8) Docs hygiene: contradictions en dubbele waarheid actief blijven opruimen

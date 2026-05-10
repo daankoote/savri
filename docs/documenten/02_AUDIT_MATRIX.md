@@ -141,6 +141,79 @@ Sommige rejects gebeuren **vóór** de edge function code draait (Supabase gatew
 - dossier_locked_for_review — success — api-dossier-evaluate
 - dossier_export_generated — success — api-dossier-export (locked only)
 - dossier_export_rejected — reject/fail — api-dossier-export
+- dossier_export_preserved — success — export preservation step after payment/export
+- dossier_export_preserve_failed — fail — export preservation step
+- dossier_runtime_cleanup_applied — success — retention cleanup after preservation or expiry
+- dossier_runtime_cleanup_failed — fail — retention cleanup
+
+### Export preservation / retention events (PLANNED P1)
+
+Nieuwe final-retention events:
+
+#### dossier_export_preserved
+Scope: dossier/export  
+Type: success  
+Trigger:
+- betaalde/geautoriseerde export is gegenereerd
+- export JSON is opgeslagen in `dossier_exports`
+- export SHA256 is berekend
+- eventueel export artifact is opgeslagen in Storage
+
+Event_data minimaal:
+- export_id
+- schema_version
+- export_sha256
+- payment_status
+- storage_bucket
+- storage_path
+- generated_request_id
+- actor_ref
+- environment
+
+#### dossier_export_preserve_failed
+Scope: dossier/export  
+Type: fail  
+Trigger:
+- export preservation faalt vóórdat runtime cleanup mag starten
+
+Event_data minimaal:
+- stage
+- status
+- message
+- reason
+- actor_ref
+- environment
+
+#### dossier_runtime_cleanup_applied
+Scope: system/dossier  
+Type: success  
+Trigger:
+- abandoned draft cleanup na retention expiry
+- locked/unpaid cleanup na retention expiry
+- runtime cleanup na succesvolle export preservation
+
+Event_data minimaal:
+- cleanup_reason
+- retention_class
+- dossier_id
+- export_id indien van toepassing
+- deleted_runtime_rows summary
+- deleted_storage_objects summary
+- preserved_storage_objects summary
+
+#### dossier_runtime_cleanup_failed
+Scope: system/dossier  
+Type: fail  
+Trigger:
+- DB cleanup of storage cleanup faalt
+
+Event_data minimaal:
+- cleanup_reason
+- retention_class
+- stage
+- status
+- message
+- reason
 
 Bewezen in fresh-only suite (2026-05-10):
 - not-locked export → HTTP 409 + `dossier_export_rejected`

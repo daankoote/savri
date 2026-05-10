@@ -612,6 +612,41 @@ Robots/sitemap (CURRENT policy):
 Stopregel
 - Als een pagina duplicaatcontent heeft of slechts een tijdelijke route is → noindex.
 
+## 11.1b Export preservation & runtime retention decision (PLANNED P1, 2026-05-10)
+
+Nieuwe lifecycle-beslissing:
+- `public.dossier_exports` wordt de final-retention tabel voor betaalde/geëxporteerde dossiers.
+- Alleen preserved exports zijn langdurig/immutable te bewaren.
+- Runtime-tabellen zijn tijdelijk werkmateriaal:
+  - `dossiers`
+  - `dossier_chargers`
+  - `dossier_documents`
+  - `dossier_checks`
+  - `dossier_consents`
+  - `dossier_audit_events`
+  - analysis-tabellen
+  - runtime sessions/mail rows waar passend
+
+Retention:
+- Niet-locked dossiers: 7 dagen na laatste activiteit.
+- Locked/in_review maar unpaid/unexported: 14 dagen, met reminders op dag 3, 7 en 10.
+- Paid/exported: preservation in `dossier_exports`; runtime data mag daarna worden opgeschoond, bij voorkeur na korte operationele grace-periode.
+
+MID-regel:
+- Runtime `dossier_chargers.mid_number` mag geen harde globale claim leggen.
+- Definitieve MID-conflictcontrole hoort bij preserved exports, niet bij drafts of locked/unpaid runtime dossiers.
+- Abandoned drafts en unpaid locked dossiers mogen echte klanten niet blokkeren.
+
+Storage-regel:
+- Storage objects die door een preserved export worden gereferenced, mogen niet worden verwijderd.
+- Alle overige storage volgt de 7/14 dagen cleanup-regels.
+
+Belangrijk:
+- Dit is een PLANNED P1 besluit.
+- De bestaande fresh-only cleanup-test bewijst CURRENT nog retained locked state.
+- Tests worden pas aangepast nadat export preservation runtime-bewezen is.
+
+
 ## 11.2 Fresh-only testsuite export/cleanup contract (CURRENT, 2026-05-10)
 
 De fresh-only testsuite is nu aligned op het volledige exportcontract:

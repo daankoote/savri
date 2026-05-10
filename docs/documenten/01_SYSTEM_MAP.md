@@ -375,6 +375,25 @@ Doel:
 - `dossier_checks` (UNIQUE dossier_id+check_code)
 - `dossier_audit_events` (append-only audit trail)
 
+### Export preservation layer (PLANNED P1)
+
+Nieuwe final-retention laag:
+
+- `dossier_exports`
+  - immutable paid/exported artifact
+  - bevat volledige export JSON
+  - bevat export SHA256
+  - bevat payment/export status
+  - bevat storage bucket/path van preserved export artifact
+  - bevat metadata: generated_at, paid_at, generated_request_id, generated_by_actor_ref
+
+Lifecycle-principe:
+- Runtime-tabellen (`dossiers`, `dossier_chargers`, `dossier_documents`, `dossier_checks`, `dossier_consents`, analysis-tabellen en runtime audit rows) zijn tijdelijk totdat export preservation is afgerond.
+- Na paid/exported preservation mag runtime data worden opgeschoond of geanonimiseerd.
+- `dossier_exports` is de final audit source-of-truth.
+- Storage objects waarnaar een preserved export verwijst, mogen niet door cleanup worden verwijderd.
+- Niet-preserved storage volgt draft/locked retention.
+
 ### Analysis layer (CURRENT, derived only)
 - `dossier_analysis_document`
   - document-level observed / extraction layer
