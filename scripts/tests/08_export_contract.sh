@@ -486,6 +486,16 @@ analysis_run = d.get("analysis_run")
 if not isinstance(analysis_run, dict) or not str(analysis_run.get("run_id") or "").strip():
     errors.append("analysis_run.run_id missing")
 
+if not str(d.get("export_id") or "").strip():
+    errors.append("export_id missing")
+
+export_sha256 = str(d.get("export_sha256") or "").strip()
+if len(export_sha256) != 64 or any(c not in "0123456789abcdef" for c in export_sha256):
+    errors.append("export_sha256 missing or invalid")
+
+if d.get("payment_status") != "waived":
+    errors.append(f"payment_status != waived (got {d.get('payment_status')!r})")
+
 if errors:
     print("FAIL")
     for e in errors:
@@ -501,4 +511,126 @@ if [[ "$(printf "%s" "$EXPORT_ASSERTS" | head -n 1)" != "OK" ]]; then
   exit 1
 fi
 
+EXPORT_ID="$(python3 - "$TMP_EXPORT_BODY" <<'PY'
+import json, sys
+with open(sys.argv[1], "r", encoding="utf-8") as fh:
+    d = json.load(fh)
+print(d.get("export_id") or "")
+PY
+)"
+
+EXPORT_SHA256="$(python3 - "$TMP_EXPORT_BODY" <<'PY'
+import json, sys
+with open(sys.argv[1], "r", encoding="utf-8") as fh:
+    d = json.load(fh)
+print(d.get("export_sha256") or "")
+PY
+)"
+
+if [[ -z "${EXPORT_ID:-}" || -z "${EXPORT_SHA256:-}" ]]; then
+  echo "ASSERT FAIL: export response missing export_id/export_sha256"
+  exit 1
+fi
+
+EXPORT_DB_JSON="$(curl -sS \
+  --connect-timeout 10 \
+  --max-time 30 \
+  "$SUPABASE_URL/rest/v1/dossier_exports?select=id,dossier_id,schema_version,export_status,payment_status,export_sha256,generated_request_id&id=eq.$EXPORT_ID&limit=1" \
+  -H "apikey: $SUPABASE_ANON_KEY" \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY")"
+
+EXPORT_DB_ASSERTS="$(python3 - "$DOSSIER_ID" "$EXPORT_ID" "$EXPORT_SHA256" "$rid_export_ok" "$EXPORT_DB_JSON" <<'PY'
+import json, sys
+
+expected_dossier_id = sys.argv[1]
+expected_export_id = sys.argv[2]
+expected_sha = sys.argv[3]
+expected_request_id = sys.argv[4]
+rows = json.loads(sys.argv[5])
+
+errors = []
+if not rows:
+    errors.append("dossier_exports row missing")
+else:
+    row = rows[0]
+    if str(row.get("id") or "") != expected_export_id:
+        errors.append("export id mismatch")
+    if str(row.get("dossier_id") or "") != expected_dossier_id:
+        errors.append("dossier_id mismatch")
+    if row.get("schema_version") != "enval-dossier-export.v5":
+        errors.append("schema_version mismatch")
+    if row.get("export_status") != "generated":
+        errors.append("export_status mismatch")
+    if row.get("payment_status") != "waived":
+        errors.append("payment_status mismatch")
+    if row.get("export_sha256") != expected_sha:
+        errors.append("export_sha256 mismatch")
+    if row.get("generated_request_id") != expected_request_id:
+        errors.append("generated_request_id mismatch")
+
+if errors:
+    print("FAIL")
+    for e in errors:
+        print(e)
+else:
+    print("OK")
+PY
+)"
+
+if [[ "$(printf "%s" "$EXPORT_DB_ASSERTS" | head -n 1)" != "OK" ]]; then
+  echo "ASSERT FAIL: dossier_exports preservation mismatch"
+  printf "%s\n" "$EXPORT_DB_ASSERTS" | tail -n +2
+  echo "DB JSON:"
+  print_json_safe_trunc "$EXPORT_DB_JSON" 1600
+  exit 1
+fi
+
+PRESERVED_AUDIT_JSON="$(curl -sS \
+  --connect-timeout 10 \
+  --max-time 30 \
+  "$SUPABASE_URL/rest/v1/dossier_audit_events?select=event_type,event_data&dossier_id=eq.$DOSSIER_ID&event_type=eq.dossier_export_preserved&event_data->>request_id=eq.$rid_export_ok&limit=1" \
+  -H "apikey: $SUPABASE_ANON_KEY" \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY")"
+
+PRESERVED_AUDIT_ASSERTS="$(python3 - "$EXPORT_ID" "$EXPORT_SHA256" "$PRESERVED_AUDIT_JSON" <<'PY'
+import json, sys
+
+expected_export_id = sys.argv[1]
+expected_sha = sys.argv[2]
+rows = json.loads(sys.argv[3])
+
+errors = []
+if not rows:
+    errors.append("dossier_export_preserved audit row missing")
+else:
+    row = rows[0]
+    if row.get("event_type") != "dossier_export_preserved":
+        errors.append("event_type mismatch")
+    event_data = row.get("event_data") or {}
+    if str(event_data.get("export_id") or "") != expected_export_id:
+        errors.append("audit export_id mismatch")
+    if str(event_data.get("export_sha256") or "") != expected_sha:
+        errors.append("audit export_sha256 mismatch")
+    if event_data.get("payment_status") != "waived":
+        errors.append("audit payment_status mismatch")
+
+if errors:
+    print("FAIL")
+    for e in errors:
+        print(e)
+else:
+    print("OK")
+PY
+)"
+
+if [[ "$(printf "%s" "$PRESERVED_AUDIT_ASSERTS" | head -n 1)" != "OK" ]]; then
+  echo "ASSERT FAIL: dossier_export_preserved audit proof mismatch"
+  printf "%s\n" "$PRESERVED_AUDIT_ASSERTS" | tail -n +2
+  echo "AUDIT JSON:"
+  print_json_safe_trunc "$PRESERVED_AUDIT_JSON" 1600
+  exit 1
+fi
+
 echo "PASS export success on locked dossier"
+echo "PASS export preservation row + SHA proof"
+echo "PASS export preserved audit proof"

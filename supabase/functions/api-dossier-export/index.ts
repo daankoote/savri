@@ -72,6 +72,14 @@ function getEnvironment(): string {
   ).toLowerCase();
 }
 
+async function sha256Hex(input: string): Promise<string> {
+  const bytes = new TextEncoder().encode(input);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 type ConsentRow = {
   consent_type: string;
   accepted: boolean;
@@ -287,6 +295,25 @@ serve(async (req) => {
         dossier_id,
         actor_type: "customer",
         event_type: "dossier_export_rejected",
+        event_data: { stage, status, message, ...(extra || {}) },
+      },
+      meta,
+      { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
+    );
+  }
+
+  async function auditPreserveFailed(
+    stage: string,
+    status: number,
+    message: string,
+    extra?: Record<string, unknown>,
+  ) {
+    await insertAuditFailOpen(
+      SB,
+      {
+        dossier_id,
+        actor_type: "customer",
+        event_type: "dossier_export_preserve_failed",
         event_data: { stage, status, message, ...(extra || {}) },
       },
       meta,
@@ -638,6 +665,75 @@ serve(async (req) => {
     analysis_summary: analysis_summary_out,
   };
 
+  const exportJsonString = JSON.stringify(body);
+  const exportSha256 = await sha256Hex(exportJsonString);
+
+  const { data: preservedExport, error: preserveErr } = await SB
+    .from("dossier_exports")
+    .insert({
+      dossier_id,
+      schema_version: body.schema_version,
+      export_status: "generated",
+      payment_status: "waived",
+      export_json: body,
+      export_sha256: exportSha256,
+      storage_bucket: null,
+      storage_path: null,
+      generated_by_actor_ref: auth.actor_ref,
+      generated_request_id: meta.request_id || null,
+    })
+    .select("id, created_at, exported_at, payment_status, export_status")
+    .single();
+
+  if (preserveErr || !preservedExport) {
+    const message = preserveErr?.message || "Export preservation failed";
+    await auditPreserveFailed(
+      "dossier_exports_insert",
+      500,
+      message,
+      {
+        reason: "db_error",
+        schema_version: body.schema_version,
+        payment_status: "waived",
+      },
+    );
+
+    return finalize(500, {
+      ok: false,
+      error: `Export preservation failed: ${message}`,
+    });
+  }
+
+  await insertAuditFailOpen(
+    SB,
+    {
+      dossier_id,
+      actor_type: "customer",
+      event_type: "dossier_export_preserved",
+      event_data: {
+        export_id: preservedExport.id,
+        schema_version: body.schema_version,
+        export_sha256: exportSha256,
+        payment_status: "waived",
+        export_status: preservedExport.export_status,
+        storage_bucket: null,
+        storage_path: null,
+        generated_request_id: meta.request_id || null,
+      },
+    },
+    meta,
+    { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
+  );
+
+  const responseBody = {
+    ...body,
+    preserved: true,
+    export_id: preservedExport.id,
+    export_sha256: exportSha256,
+    export_status: preservedExport.export_status,
+    payment_status: preservedExport.payment_status,
+  };
+
   await insertAuditFailOpen(
     SB,
     {
@@ -652,11 +748,15 @@ serve(async (req) => {
         analysis_charger_count: Array.isArray(analysisChargers) ? analysisChargers.length : 0,
         analysis_overall_status: analysis_summary_latest?.overall_status || "not_run",
         audit_event_count: Array.isArray(auditEvents) ? auditEvents.length : 0,
+        export_id: preservedExport.id,
+        export_sha256: exportSha256,
+        preserved: true,
+        payment_status: "waived",
       },
     },
     meta,
     { actor_ref: auth.actor_ref, environment: ENVIRONMENT },
   );
 
-  return finalize(200, body);
+  return finalize(200, responseBody);
 });
