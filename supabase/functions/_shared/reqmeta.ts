@@ -1,9 +1,10 @@
-// supabase/functions/_shared/reqmeta.ts
 export type ReqMeta = {
   request_id: string; // ALWAYS present
   idempotency_key: string | null; // header if provided
   ip: string | null;
   ua: string | null;
+  origin: string | null;
+  environment: string;
 };
 
 function firstNonEmpty(...vals: Array<string | null | undefined>): string | null {
@@ -22,7 +23,6 @@ export function getIdempotencyKey(req: Request): string | null {
 }
 
 export function getRequestId(req: Request): string {
-  // Prefer explicit request id header, then Idempotency-Key, else generate
   const rid = firstNonEmpty(
     req.headers.get("x-request-id"),
     req.headers.get("X-Request-Id"),
@@ -32,7 +32,6 @@ export function getRequestId(req: Request): string {
 }
 
 export function getIp(req: Request): string | null {
-  // Netlify / proxies / CDNs (best-effort)
   const xff = req.headers.get("x-forwarded-for") || req.headers.get("X-Forwarded-For") || "";
   if (xff) {
     const first = xff.split(",")[0]?.trim();
@@ -53,11 +52,27 @@ export function getUa(req: Request): string | null {
   return firstNonEmpty(req.headers.get("user-agent"), req.headers.get("User-Agent"));
 }
 
+export function getOrigin(req: Request): string | null {
+  return firstNonEmpty(
+    req.headers.get("origin"),
+    req.headers.get("Origin"),
+  );
+}
+
+export function getEnvironment(): string {
+  return firstNonEmpty(
+    Deno.env.get("ENVIRONMENT"),
+    Deno.env.get("ENV"),
+  ) || "unknown";
+}
+
 export function getReqMeta(req: Request): ReqMeta {
   return {
     request_id: getRequestId(req),
     idempotency_key: getIdempotencyKey(req),
     ip: getIp(req),
     ua: getUa(req),
+    origin: getOrigin(req),
+    environment: getEnvironment(),
   };
 }

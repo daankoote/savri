@@ -1819,4 +1819,352 @@ Architecturale betekenis
   - verify server-side
 - geen herintroductie van browser-side image parsing
 
+## 2026-04-19 — Invoice image precheck lane gehardend + batch-run bewezen + dossier.js messaging deduped
+
+Context
+- De browser-side invoice image precheck was functioneel te agressief:
+  - goede of bruikbare factuurafbeeldingen kregen te vaak warn/reject
+  - `dossier.js` bevatte daarnaast een tweede eigen humanizer-/message-laag
+- Daardoor ontstond zowel UX-ruis als documentatie-/runtime-drift.
+
+Wijzigingen
+
+### A) `analyse_image_step_1_precheck.js` explainable gemaakt
+- Precheck geeft nu per regel `rule_results` terug met:
+  - `code`
+  - `level`
+  - `measured_value`
+  - `threshold`
+  - `operator`
+  - `triggered`
+  - `metric`
+  - `note`
+- Harde reject-lane blijft beperkt tot technische onbruikbaarheid:
+  - ontbrekende afmetingen
+  - ongeldige byte-length
+  - te lage byte-length
+  - veel te lage width/height
+
+### B) Content-heuristiek uit user-facing besluitvorming gehaald
+- Content-/ink-/zone-/sharpness-regels blijven nog wel gemeten in `rule_results`
+- Maar deze regels bepalen CURRENT niet meer de user-facing warn/reject beslissing
+- Daardoor is de precheck nu:
+  - streng op evidente rommel
+  - veel stiller op goede of bruikbare documenten
+
+### C) Headless terminal batch-run toegevoegd
+Nieuwe lokale tool:
+- `scripts/tools/invoice-image-precheck.mjs`
+
+Nieuwe minimale toolinglaag:
+- `package.json`
+- lokale `playwright` dev dependency
+
+Doel:
+- exact dezelfde browser-precheck-code headless vanuit terminal over de volledige testmap draaien
+- geen drift tussen browser en testtool
+
+### D) Batch-run resultaat bewezen
+Batch-run over:
+- `docs/facturen/facturen_image`
+
+Bewezen totals:
+- total = 33
+- allow = 23
+- warn = 5
+- reject = 5
+- rare_total = 3
+- rare_reject = 3
+
+Interpretatie:
+- de 3 expliciete rare fail-cases blijven correct reject
+- daarnaast blijven 2 extra camera-bad voorbeelden reject op:
+  - `image_byte_length_too_low`
+- warn-ruis is sterk teruggebracht:
+  - van 24 warns naar 5 warns
+- `all_correct` en normale factuurbeelden vallen niet meer onterecht onder content-warnings
+
+### E) `dossier.js` messaging opgeschoond
+Verwijderd uit `assets/js/pages/dossier.js`:
+- `humanizeInvoiceImagePrecheckError`
+- `humanizeInvoiceImagePrecheckWarning`
+- `buildInvoiceImagePrecheckMessage`
+
+Toegevoegd:
+- `getInvoiceImagePrecheckUiSummary`
+- `getInvoiceImagePrecheckUiMessage`
+
+Betekenis:
+- `dossier.js` heeft niet langer een tweede waarheid voor precheck-messaging
+- browser uploadflow gebruikt nu de canonieke summary uit de analyse-laag
+- rare invoices worden correct afgewezen
+- warn-images worden correct doorgelaten met warning
+- correcte factuurimages gaan correct door
+
+Harde conclusie
+- Invoice image precheck is CURRENT productmatig bruikbaar:
+  - reject op evidente onbruikbaarheid
+  - beperkte en uitlegbare warn-lane
+  - geen hysterische content-ruis meer
+- `dossier.js` is voor deze lane nu beter aligned met de canonieke analyse-helperlaag
+
+## 2026-04-19 — Invoice image precheck warning-state persistent zichtbaar gemaakt in documentkaart-UI
+
+Context
+- Browser-side invoice image precheck was al functioneel gehardend:
+  - reject op technische onbruikbaarheid
+  - beperkte warn-lane
+  - canonieke summary-messaging
+- Open restpunt was nog:
+  - accepted-with-warning uploads werden wel doorgelaten,
+    maar verloren hun warning-semantiek na succesvolle upload / reload
+
+Wijziging
+- `assets/js/pages/dossier.js` bewaart nu client-side invoice image precheck warnings per `document_id` in `sessionStorage`
+- Warning-state wordt na succesvolle upload opnieuw gerenderd in de documentkaart-UI
+- Bestaande UI-styling wordt hergebruikt:
+  - documentsectie met warning gebruikt bestaande gele/oranje toon
+  - documentregel toont extra `warning` badge
+  - warning-tekst blijft zichtbaar onder bestandsnaam
+- Delete van document ruimt de warning-state weer op
+- `renderDocs()` prune’t stale warning-state wanneer document_id niet meer in de actuele serverdocumentlijst voorkomt
+
+Bewezen gedrag
+- allow-image:
+  - upload slaagt
+  - documentkaart blijft groen
+  - geen warning badge/tekst
+- warn-image:
+  - upload slaagt
+  - documentkaart blijft geel/oranje
+  - `warning` badge blijft zichtbaar
+  - warning-tekst blijft zichtbaar na `reloadAll()`
+- delete:
+  - warning-state verdwijnt correct
+  - geen stale warning-state na reload
+
+Architecturale betekenis
+- warning persistence blijft bewust client-side UX-state
+- geen audit-truth
+- geen server-state
+- geen extra CSS-bestand of nieuwe style-variant nodig
+
+## 2026-04-22 — Fresh-only testsuite volledig groen + intake/bootstrap/setup aligned op CURRENT contracttruth
+
+Context
+- De testsuite bevatte nog twee soorten drift:
+  - happy-path bootstrap bewees wel `dossier_id`, maar nog niet expliciet `lead_id` + outbound `dossier_link` row
+  - setup probeerde meerdere chargers aan te maken met hetzelfde test-MID, terwijl `api-dossier-charger-save` duplicate MID’s binnen dossier en globaal correct afwijst
+- Daarnaast gebruikte `api-lead-submit` al `meta.origin` en `meta.environment`, terwijl `_shared/reqmeta.ts` die velden nog niet leverde.
+
+Wijzigingen
+
+### A) `_shared/reqmeta.ts` contract aligned
+- `ReqMeta` uitgebreid met:
+  - `origin`
+  - `environment`
+- `getReqMeta(req)` levert deze velden nu expliciet.
+- Hiermee is de shared request-meta laag weer aligned met de load-bearing callers.
+
+### B) `00_fresh_dossier.sh` hard bewijs uitgebreid
+- Fresh bootstrap bewijst nu expliciet:
+  - HTTP 200 op intake
+  - `lead_id` aanwezig in response body
+  - `dossier_id` aanwezig in response body
+  - outbound `dossier_link` row bestaat voor het nieuwe dossier
+  - `to_email`, `dossier_id` en `message_type=dossier_link` worden gecontroleerd
+  - link-token wordt uit de daadwerkelijke outbound mail gehaald
+
+### C) `01_setup.sh` aligned op MID-uniqueness
+- Setup gebruikt nu niet meer één vast test-MID voor alle chargers.
+- Per aangemaakte charger wordt een uniek test-MID afgeleid uit de base `TEST_MID_NUMBER`.
+- Daardoor is de testsuite aligned met CURRENT backend-contract:
+  - duplicate MID binnen dossier → reject
+  - duplicate MID over dossiers → reject
+
+### D) Test-observability verbeterd
+- `create_charger_and_get_id()` logt failure-diagnostiek nu naar `stderr`, zodat echte foutdetails niet meer verdwijnen in command substitution.
+- Charger-create response parsing is robuuster gemaakt (`charger_id` / fallback `id`).
+
+### E) Full fresh-only suite bewezen groen
+Bewezen in één volledige run:
+- fresh dossier bootstrap
+- setup met 4 created chargers
+- intake contract rejects + idempotency
+- login throttle + mismatch
+- charger unauthorized + max-chargers reject
+- upload reject tests
+- happy uploads:
+  - 8 documenten confirmed
+  - DB proof per confirmed row
+- cleanup:
+  - created chargers verwijderd
+  - docs per charger naar 0
+  - dossier/outbound/audit shell bewust retained
+- eindstatus:
+  - `ALL TESTS PASSED`
+
+Harde conclusie
+- `api-lead-submit` eligibility ordering hoefde niet meer inhoudelijk gehard te worden;
+  die stond al correct.
+- Het open werk zat in bewijs, shared-meta alignment en testsuite-drift.
+- Die proof-close is nu geleverd.
+
+## 2026-04-22 — Export reject-test toegevoegd aan fresh-only suite + cleanup-volgorde opnieuw aligned
+
+Context
+- De fresh-only testsuite was na intake/bootstrap/setup hardening weer volledig groen,
+  maar export gate proof ontbrak nog in de suite.
+- CURRENT export-contract is smaller dan eerder grof in TODO stond:
+  - bewezen reject op not-locked dossier
+  - locked success-proof nog niet geleverd in fresh flow
+- Cleanup moet ná export-tests draaien, omdat cleanup de mutable child rows verwijdert die de fresh flow net heeft opgebouwd.
+
+Wijzigingen
+
+### A) Export contract test toegevoegd
+- Nieuwe testfile toegevoegd:
+  - `scripts/tests/08_export_contract.sh`
+- Deze test bewijst in de fresh flow expliciet:
+  - export op niet-locked dossier → HTTP 409
+  - response meldt correct dat export alleen is toegestaan voor ingediende / locked dossiers
+
+### B) Cleanup-volgorde aangepast
+- Cleanup is verplaatst naar:
+  - `scripts/tests/09_cleanup.sh`
+- `run_all.sh` draait nu:
+  - eerst `08_export_contract.sh`
+  - daarna `09_cleanup.sh`
+
+### C) Full suite opnieuw bewezen groen
+Bewezen in één volledige run:
+- fresh dossier bootstrap
+- setup met 4 created chargers
+- intake contract rejects + idempotency
+- login throttle + mismatch
+- charger unauthorized + max-chargers reject
+- upload reject tests
+- happy uploads:
+  - 8 documenten confirmed
+  - DB proof per confirmed row
+- export contract:
+  - reject op not-locked dossier bewezen
+- cleanup:
+  - created chargers verwijderd
+  - docs per charger naar 0
+  - dossier/outbound/audit shell bewust retained
+- eindstatus:
+  - `ALL TESTS PASSED`
+
+Belangrijke CURRENT waarheid
+- Export gate proof is nu gedeeltelijk gesloten:
+  - reject op not-locked dossier = bewezen
+- Nog niet bewezen:
+  - locked export success
+  - volledig output-contract van export artifact in de fresh suite
+  - reject op “incomplete maar locked” als aparte contracttest
+
+## 2026-05-10 — Fresh-only export contract volledig bewezen + cleanup aligned op locked dossier semantics
+
+Context
+- De fresh-only testsuite bewees al intake, setup, upload rejects en happy uploads.
+- Export proof was eerder nog gedeeltelijk:
+  - not-locked reject was bewezen
+  - locked export success en artifact shape waren nog niet volledig bewezen in de vaste suite.
+- Cleanup liep daarna tegen een 409 op `api-dossier-charger-delete` omdat het dossier inmiddels locked/in_review was.
+- Die 409 bleek correct backendgedrag, geen cleanup-bug.
+
+### A) Export contract uitgebreid
+
+Actieve testfile:
+- `scripts/tests/08_export_contract.sh`
+
+Bewezen in de fresh flow:
+- export op niet-locked dossier:
+  - HTTP 409
+  - audit: `dossier_export_rejected`
+  - reason: `not_locked`
+- address save/verify:
+  - HTTP 200
+  - audit: `address_saved_verified`
+- consents save:
+  - HTTP 200
+  - audit: `consents_saved`
+- synthetic invoice observed payload:
+  - aligned op declared dossier/charger data
+  - gebruikt voor deterministic lock/export proof
+- `api-dossier-verify`:
+  - HTTP 200
+  - `analysis_status = partial_pass`
+  - audit: `analysis_run_completed`
+- `api-dossier-evaluate(finalize=true)`:
+  - HTTP 200
+  - `status = in_review`
+  - `locked_at` gevuld
+  - audit: `dossier_locked_for_review`
+- locked export:
+  - HTTP 200
+  - audit: `dossier_export_generated`
+
+### B) Export artifact shape bewezen
+
+De fresh-only suite assert nu minimaal:
+
+- `ok = true`
+- `schema_version = enval-dossier-export.v5`
+- `dossier.id` matcht het fresh dossier
+- `documents_confirmed` bevat 8 documenten
+- `analysis.version = enval-analysis.v1`
+- `analysis_readable.version = enval-analysis-readable.v1`
+- `analysis_run.run_id` is aanwezig
+
+Betekenis:
+- export success is nu niet alleen een HTTP 200.
+- De load-bearing v5 exportstructuur wordt inhoudelijk gecontroleerd.
+
+### C) Cleanup aligned op locked/in_review semantics
+
+Actieve cleanupfile:
+- `scripts/tests/09_cleanup.sh`
+
+Wijziging:
+- Cleanup probeert na locked export niet langer `api-dossier-charger-delete` uit te voeren.
+- Reden:
+  - locked dossiers mogen via runtime endpoints niet meer gemuteerd worden
+  - eerdere 409 op charger-delete was dus correct backendgedrag, geen cleanup-fout
+
+Nieuw cleanupgedrag na export:
+- dossierstatus en `locked_at` worden getoond
+- created charger/doc rows worden vooraf zichtbaar gemaakt
+- runtime API delete wordt bewust geskipt
+- retained locked dossierdata wordt gecontroleerd
+
+Bewezen eindstatus:
+- cleanup verify OK
+- locked dossier data retained
+- retained charger rows aanwezig
+- retained document rows aanwezig
+- retained dossier row aanwezig
+- retained outbound email row aanwezig
+- retained audit rows aanwezig
+- `ALL TESTS PASSED`
+
+### D) Testsuite file layout gecorrigeerd
+
+Actieve volgorde:
+- `scripts/tests/08_export_contract.sh`
+- `scripts/tests/09_cleanup.sh`
+
+Niet meer actief:
+- `scripts/tests/07_cleanup.sh` is verwijderd/vervangen.
+
+Architecturale conclusie:
+- cleanup na export is geen mutable-child cleanup meer
+- cleanup na export is een lock-aware retained-state proof
+- dit is audit-correct omdat exportbewijs en audittrail intact blijven
+
+Harde CURRENT waarheid:
+- Een locked/in_review dossier mag niet via runtime endpoints worden opgeschoond.
+- Retained locked testdossiers zijn acceptabel totdat tombstone/archive lifecycle is ontworpen.
+
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)

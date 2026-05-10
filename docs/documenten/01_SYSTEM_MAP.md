@@ -2,7 +2,7 @@
 
 # ENVAL — System Map (CURRENT)
 
-Statusdatum: 2026-03-24  
+Statusdatum: 2026-05-10
 Repo root: /Users/daankoote/dev/enval  
 Branch context: feature/dev (main = pilot index)
 
@@ -205,7 +205,7 @@ Doel:
 
 | Onderdeel | Locatie/runtime | Bestand(en) | CURRENT status | Canonieke rol | Opmerking / next action |
 |---|---|---|---|---|---|
-| Factuur image precheck / uploadvoorbereiding | browser/client | `assets/js/analyse/analyse_image_step_1_constants.js`, `assets/js/analyse/analyse_image_step_1_precheck.js`, `assets/js/analyse/analyse_image_step_1_upload.js` | werkend | actief | alleen preflight / compressie / UX; geen canonieke extractielaag |
+| Factuur image precheck / uploadvoorbereiding | browser/client | `assets/js/analyse/analyse_image_step_1_constants.js`, `assets/js/analyse/analyse_image_step_1_precheck.js`, `assets/js/analyse/analyse_image_step_1_upload.js` | werkend en runtime-bewezen | actief | CURRENT rol = preflight / explainable quality gate / compressie. Reject-lane is beperkt tot technische onbruikbaarheid (decode/bytes/extreem lage resolutie). Content-/ink-/zone-/sharpness-metrieken blijven wel beschikbaar in `rule_results`, maar zijn CURRENT observability-only en niet user-facing beslissend. |
 | Factuur PDF parser | browser/client | `assets/js/analyse/analyse_invoice_parser.js` (`parseInvoicePdfFile`) | werkend | actief | CURRENT primaire parserlane voor PDF facturen |
 | Factuur image parser (browser) | browser/client | n.v.t. | verwijderd | geen | browser-side image parsing is niet langer onderdeel van de actieve of legacy runtime; image facturen lopen CURRENT uitsluitend via de lokale/interne worker-lane |
 | Verify payload orchestration | browser/client | `assets/js/analyse/analyse_verify_payload.js` | werkend voor PDF-lane + bewezen dev-handoff voor image-lane | actief | payloadcontract bestaat; browser-side PDF parseroutput wordt in de normale dossierflow geregistreerd en meegestuurd naar verify; image worker-output is nu runtime-bewezen op dezelfde contractvorm via `scripts/tools/bridge-image-worker-verify.py`, inclusief mixed image/PDF verify-run |
@@ -226,6 +226,19 @@ Harde CURRENT waarheid:
   - verify = server-side evaluator/writer
 - browser-side image OCR/Tesseract.js is geprobeerd maar niet robuust genoeg gebleken en is daarom verlaten als primaire route
 - `foto_laadpunt` blijft bewust uitgesteld
+
+Aanvullende CURRENT nuance (2026-04-19):
+- voor invoice image precheck bestaat nu een headless browser batch-runner:
+  - `scripts/tools/invoice-image-precheck.mjs`
+- Doel:
+  - exact dezelfde browser-precheck-code terminal-runbaar en reproduceerbaar testen
+  - geen drift tussen UI-lane en regressietooling
+- Bewezen batch-resultaat op `docs/facturen/facturen_image`:
+  - total: 33
+  - allow: 23
+  - warn: 5
+  - reject: 5
+  - rare invoices: 3/3 reject
 
 **Evaluate-flow (CURRENT frontend orchestration)**
 - stap 1:
@@ -723,7 +736,8 @@ Operational meaning:
 
 ## 9) Tooling & reproducibility
 
-### 9.1 scripts/tests/run_all.sh (contract test — CURRENT, bewezen 2026-03-15)
+### 9.1 scripts/tests/run_all.sh (contract test — CURRENT, bewezen 2026-05-10)
+
 Doel (CURRENT):
 - bootstrap van een volledig nieuw testdossier via echte intake/mailflow
 - extractie van `DOSSIER_ID` + link-token uit state/mail
@@ -731,7 +745,8 @@ Doel (CURRENT):
 - setup vult dossier exact aan tot `dossiers.charger_count`
 - reject tests draaien tegen CURRENT session-auth endpoints
 - happy uploads draaien uitsluitend op chargers die in deze run zijn aangemaakt
-- cleanup verwijdert alleen mutable child artefacten van die run
+- exportcontract wordt bewezen vóór cleanup
+- cleanup is lock-aware en verifieert retained locked state wanneer het dossier inmiddels is ingediend
 
 CURRENT contract:
 - fresh-only suite
@@ -739,6 +754,23 @@ CURRENT contract:
 - link-token blijft alleen bootstrap/debug input
 - testlog wordt volledig geredigeerd weggeschreven naar:
   - `scripts/tests/output/latest.log`
+
+Actieve testsuite-bestanden:
+- `scripts/tests/run_all.sh`
+- `scripts/tests/00_fresh_dossier.sh`
+- `scripts/tests/00_helpers.sh`
+- `scripts/tests/01_setup.sh`
+- `scripts/tests/02_intake_contract.sh`
+- `scripts/tests/03_login_tests.sh`
+- `scripts/tests/04_charger_contract.sh`
+- `scripts/tests/05_upload_rejects.sh`
+- `scripts/tests/06_upload_happy.sh`
+- `scripts/tests/08_export_contract.sh`
+- `scripts/tests/09_cleanup.sh`
+
+Niet meer actief:
+- `scripts/tests/07_cleanup.sh` is verwijderd/vervangen.
+- Cleanup draait nu bewust als `09_cleanup.sh`, ná `08_export_contract.sh`.
 
 Bewezen coverage:
 - intake rejects + idempotency replay
@@ -751,10 +783,24 @@ Bewezen coverage:
   - storage PUT
   - upload-confirm
   - DB proof op confirmed `dossier_documents` row
+- export contract:
+  - not-locked export reject → HTTP 409
+  - address save/verify
+  - consents save
+  - synthetic observed invoice payload aligned op declared data
+  - `api-dossier-verify` → analysis status `partial_pass`
+  - `api-dossier-evaluate(finalize=true)` → `status=in_review`
+  - locked export success → HTTP 200
+  - export artifact shape proof:
+    - `schema_version = enval-dossier-export.v5`
+    - 8 confirmed documents
+    - `analysis.version = enval-analysis.v1`
+    - `analysis_readable.version = enval-analysis-readable.v1`
+    - `analysis_run.run_id` aanwezig
 - cleanup proof:
-  - docs per created charger aanwezig vóór delete
-  - docs per charger = 0 na delete
-  - dossier-level mutable child rows = 0 na cleanup
+  - na export is dossier locked/in_review
+  - runtime delete wordt bewust niet uitgevoerd, omdat locked dossiers niet muteerbaar zijn
+  - retained locked dossierdata wordt gecontroleerd
   - dossier/outbound/audit shell blijft bewust bestaan
 
 Belangrijk:
@@ -762,10 +808,12 @@ Belangrijk:
   - sabotage op verkeerde audit reason → suite faalt
   - sabotage op verkeerde audit stage → suite faalt
   - sabotage op verkeerde file sha256 → suite faalt
+- cleanup na export is geen mutable-child cleanup meer, maar een retained-state proof.
+- Een 409 op runtime delete na lock is correct backendgedrag.
 
 Wanneer gebruiken:
 - na elke wijziging aan dossier auth/runtime endpoints
-- na wijzigingen aan upload/audit/idempotency/cleanup gedrag
+- na wijzigingen aan upload/audit/idempotency/export/cleanup gedrag
 
 Wanneer niet:
 - productie/live data

@@ -2,7 +2,7 @@
 
 # ENVAL — Global Product & Phase Plan (CURRENT)
 
-Statusdatum: 2026-03-24 
+Statusdatum: 2026-05-10
 Repo: /Users/daankoote/dev/enval  
 Branch context: feature/dev (main = pilot index)
 
@@ -253,7 +253,23 @@ Gate = “audit-contract stabiel en consistent over alle dossier write endpoints
     - verify payload-opbouw
   - belangrijke CURRENT nuance:
     - browser-side PDF parser is operationeel
-    - browser-side image parser is nog niet operationeel en levert CURRENT geen echte observed fields
+    - browser-side image parser is verwijderd uit de actieve runtime
+    - image facturen lopen CURRENT via lokale/interne OCR worker → verify handoff
+  - Nieuwe CURRENT nuance (2026-04-19):
+    - browser-side invoice image precheck is nu functioneel gehardend en stiller gemaakt
+    - harde reject blijft beperkt tot technische onbruikbaarheid:
+      - decode/afmetingen/byte-size/extreem lage resolutie
+    - content-/ink-/zone-/sharpness-heuristiek blijft wel gemeten,
+      maar is CURRENT geen user-facing beslissende gate meer
+    - hierdoor geldt CURRENT:
+      - evidente rommel wordt afgewezen
+      - borderline of bruikbare factuurbeelden worden niet meer onnodig weggeduwd door content-ruis
+    - headless batch-run over de image-testset bevestigde:
+      - 33 totaal
+      - 23 allow
+      - 5 warn
+      - 5 reject
+      - rare fail-cases 3/3 reject
   - lokale Python parser-/compare-scripts blijven bestaan als proof-/referentielaag
   - geen externe OCR/vision provider
   - geen authenticity-claim
@@ -274,8 +290,9 @@ Nieuwe expliciete CURRENT waarheid (2026-04-15 / 2026-04-16):
   - verify doet geen inline PDF/image parsing meer
 - Belangrijke nuance:
   - de browser PDF-lane is CURRENT operationeel in de normale dossierflow
-  - de browser image-lane is CURRENT niet operationeel als extractieroute
-  - de browser image parser blijft voorlopig een legacy-stub, niet de actieve implementatieroute
+  - de browser image-lane is CURRENT niet de extractieroute
+  - browser-side image parsing is verwijderd uit runtime-code
+  - image facturen lopen CURRENT via lokale/interne OCR worker → verify handoff
 - Documentupload nuance:
   - `issued` is een echte tussenstatus:
     - upload-url uitgegeven / documentrow aangemaakt
@@ -357,7 +374,7 @@ Gate = “product werkt audit-proof in real-world”
 - Bij twijfel: changelog entry + repo code is leidend.
 
 
-## 7) Current status snapshot (2026-02-12)
+## 7) Current status snapshot (2026-05-10)
 - Repo-first workflow voor edge functions via Supabase CLI deploy scripts.
 - Lead intake via `api-lead-submit` werkt audit-proof voor self-serve flows:
   - `installer_*` flows zijn legacy → 410 (hard kill)
@@ -366,6 +383,11 @@ Gate = “product werkt audit-proof in real-world”
 - Document lifecycle: upload-url → PUT → upload-confirm → confirmed (evidence-grade).
 - Review gating: evaluate finalize=false (ready_for_review), finalize=true (lock/in_review).
 - Export/download: alleen op locked dossier en confirmed docs.
+- Fresh-only testsuite bewijst CURRENT ook:
+  - not-locked export reject
+  - canonical lock via `api-dossier-evaluate(finalize=true)`
+  - locked export success met export artifact schema `enval-dossier-export.v5`
+  - cleanup als lock-aware retained-state check na export
 
 **Intake eligibility gates (CURRENT):**
 Voor een positieve reactie op dossier-opbouw moet gebruiker “Ja” antwoorden op:
@@ -542,6 +564,14 @@ Stopregel:
 - Eerst normaliseren wat er al is.
 - Daarna pas uitbreiden.
 
+Aanvullende CURRENT frontendwaarheid:
+- `assets/js/pages/dossier.js` heeft voor invoice image precheck geen eigen tweede humanizer-/message-laag meer
+- de uploadflow gebruikt nu de canonieke precheck-summary uit de analyse-helperlaag
+- doel:
+  - minder drift
+  - minder dubbele waarheid
+  - consistentere reject/warn messaging
+
 # 11.1) SEO & Indexing Hygiene (CURRENT)
 
 Doel:
@@ -581,6 +611,41 @@ Robots/sitemap (CURRENT policy):
 
 Stopregel
 - Als een pagina duplicaatcontent heeft of slechts een tijdelijke route is → noindex.
+
+## 11.2 Fresh-only testsuite export/cleanup contract (CURRENT, 2026-05-10)
+
+De fresh-only testsuite is nu aligned op het volledige exportcontract:
+
+- `scripts/tests/08_export_contract.sh` bewijst:
+  - export reject op niet-locked dossier
+  - address save/verify
+  - consents save
+  - synthetic invoice observed payload aligned op declared dossier/charger data
+  - `api-dossier-verify`
+  - `api-dossier-evaluate(finalize=true)` naar `status=in_review`
+  - locked export success
+  - export artifact shape:
+    - `schema_version = enval-dossier-export.v5`
+    - 8 confirmed documents
+    - analysis blocks aanwezig
+    - `analysis_run.run_id` aanwezig
+
+- `scripts/tests/09_cleanup.sh` is lock-aware:
+  - na export is het dossier locked/in_review
+  - runtime mutation endpoints moeten dan mutaties weigeren
+  - cleanup probeert daarom geen `api-dossier-charger-delete` meer na lock
+  - created chargers/documents blijven bewust retained als onderdeel van het locked dossierbewijs
+
+Niet meer actief:
+
+- `scripts/tests/07_cleanup.sh` is verwijderd/vervangen door `09_cleanup.sh`.
+
+Belangrijke auditwaarheid:
+
+- Een 409 op runtime delete na lock is correct backendgedrag.
+- Cleanup na locked export is geen database-leegmaakstap meer.
+- Het retained locked testdossier is CURRENT gewenst gedrag zolang audit trail en exportbewijs bewaard moeten blijven.
+
 
 ### AMENDMENT — 00_GLOBAL.md
 
