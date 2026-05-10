@@ -799,16 +799,25 @@ function getChargersForUi() {
 }
 
 function renderAnalysisUiEmptyState() {
+  const section = $("analysisSection");
+  const loadBtn = $("btnLoadAnalysis");
+
+  if (!isDevAnalysisEnabled()) {
+    if (section) section.classList.add("hidden");
+    if (loadBtn) {
+      loadBtn.classList.add("hidden");
+      loadBtn.disabled = true;
+    }
+    return;
+  }
+
   const locked = isLocked();
   const hasCachedAnalysis = !!latestPrecheckAnalysis;
 
-  const section = $("analysisSection");
   if (section) {
-    // Tijdens development altijd zichtbaar houden.
     section.classList.remove("hidden");
   }
 
-  const loadBtn = $("btnLoadAnalysis");
   if (loadBtn) {
     loadBtn.classList.add("hidden");
     loadBtn.disabled = true;
@@ -1210,6 +1219,24 @@ function invalidatePrecheck(reason = "") {
   clearAnalysisUi();
   renderAnalysisUiEmptyState();
   syncReviewButtons();
+}
+
+function isDevAnalysisEnabled() {
+  const env = String(window.ENVAL?.ENVIRONMENT || "").toLowerCase();
+  const host = String(window.location.hostname || "").toLowerCase();
+
+  if (window.ENVAL?.DEV_ANALYSIS_ENABLED === true) return true;
+  if (env === "dev") return true;
+
+  if (
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host.endsWith(".netlify.app")
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 function isDevUnlockEnabled() {
@@ -3187,12 +3214,14 @@ async function runEvaluate(finalize) {
         if (verifyJs?.analysis_readable) {
           latestPrecheckAnalysis = verifyJs.analysis_readable;
 
-          if ($("analysisSection")) $("analysisSection").classList.remove("hidden");
-          renderAnalysisExportData({ analysis_readable: latestPrecheckAnalysis });
+          if (isDevAnalysisEnabled()) {
+            if ($("analysisSection")) $("analysisSection").classList.remove("hidden");
+            renderAnalysisExportData({ analysis_readable: latestPrecheckAnalysis });
 
-          if ($("analysisState")) {
-            $("analysisState").textContent =
-              `Analyse geladen. Run: ${latestPrecheckAnalysis.run_id || "-"}`;
+            if ($("analysisState")) {
+              $("analysisState").textContent =
+                `Analyse geladen. Run: ${latestPrecheckAnalysis.run_id || "-"}`;
+            }
           }
         } else {
           latestPrecheckAnalysis = null;
