@@ -64,3 +64,5 @@ supabase/migrations/
 
 # images
 docs/images/big_images
+# generated frontend runtime config
+/assets/js/config.runtime.js

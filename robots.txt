@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
+Disallow: /aanmelden_real.html
 
 Sitemap: https://www.enval.nl/sitemap.xml

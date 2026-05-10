@@ -1,5 +1,5 @@
 <!-- aanmelden.html -->
-<!-- 03-03-2026 HOLDING (hero uses index.css) -->
+<!-- 10-05-2026 LIVE DOSSIER START -->
 
 <!DOCTYPE html>
 <html lang="nl">
@@ -10,16 +10,39 @@
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <title>Enval – Start dossier (binnenkort)</title>
-
+    <title>Start dossier – aanmelden privé-laadpaal (NL + MID)</title>
     <meta name="robots" content="index,follow,max-image-preview:large">
+
+    <meta
+      name="description"
+      content="Start uw dossier voor een privé-laadpaal (NL + MID). Aanmelding duurt 1 minuut. U ontvangt een dossierlink per e-mail."
+    />
     <link rel="canonical" href="https://www.enval.nl/aanmelden.html" />
+
+    <!-- Flavicon -->
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16.png" />
+
+    <!-- Open Graph -->
+    <meta property="og:site_name" content="Enval" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Start dossier – aanmelden privé-laadpaal (NL + MID)" />
+    <meta property="og:description" content="Start uw dossier voor een privé-laadpaal (NL + MID). Aanmelding duurt 1 minuut. U ontvangt een dossierlink per e-mail." />
+    <meta property="og:url" content="https://www.enval.nl/aanmelden.html" />
+    <meta property="og:image" content="https://www.enval.nl/assets/img/og-enval.jpg" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Start dossier – aanmelden privé-laadpaal (NL + MID)" />
+    <meta name="twitter:description" content="Start uw dossier voor een privé-laadpaal (NL + MID). Aanmelding duurt 1 minuut. U ontvangt een dossierlink per e-mail." />
+    <meta name="twitter:image" content="https://www.enval.nl/assets/img/og-enval.jpg" />
 
     <link rel="stylesheet" href="/assets/css/style.css" />
   </head>
 
-  <body class="holding-page">
-    <header>
+  <body>
+     <header>
       <div class="container header-inner">
         <div class="logo">
           <a href="/index.html" aria-label="Enval home">
@@ -40,7 +63,7 @@
         <nav id="siteNav">
           <a href="/index.html">Home</a>
           <a href="/aanmelden.html">Start Dossier</a>
-          <!-- a href="/pricing.html">Tarieven</a> -->
+          <a href="/pricing.html">Tarieven</a>
 
           <div class="nav-dd" role="none">
             <button class="nav-dd-btn" type="button" aria-haspopup="true" aria-expanded="false">
@@ -57,115 +80,90 @@
       </div>
     </header>
 
-    <!-- HERO (zelfde classes/structuur als index.html) -->
-    <section class="hero" id="hero">
-      <div class="container hero-inner">
-        <div class="hero-left">
-          <h1>ERE-vergoeding komt eraan — maar u kunt nog niet starten.</h1>
-
-          <p class="hero-sub">
-            De overheid heeft het consumentenproces nog niet definitief gemaakt.
-            Daardoor kunnen verificateurs en inboekers u nu nog niet vertellen welke administratie straks écht nodig is.
-          </p>
-
-          <!-- <p class="hero-sub" style="margin-top: 10px;">
-            U hoeft vandaag nog niets te ondernemen: De eerste vergoeding die consumenten kunnen ontvangen is pas vanaf <b>2027</b>
-            (over het jaar <b>2026</b>).
-          </p> -->
-
-          <div class="hero-cta">
-            <a href="#op-de-hoogte" class="btn cta">Blijf op de hoogte</a>
-            <a href="/index.html#check" class="btn outline">Eerst checken</a>
-          </div>
-
-          <div class="hero-mini">
-            Let op: partijen die nu “garantie” of “direct inboeken” beloven lopen vooruit op regels die nog niet vaststaan.
-          </div>
-        </div>
-
-        <div class="hero-right">
-          <div class="hero-trust-card">
-            <h3>Wat u nu wél kunt doen</h3>
-            <ul class="hero-trust-list">
-              <li>Geen lange termijn contracten tekenen</li>
-              <li>Wachten op definitieve eisen (overheid/verificateurs)</li>
-              <li>Uw situatie bij ons achterlaten — dan mailen we zodra u kunt starten</li>
-            </ul>
-          </div>
-        </div>
+    <!-- PAGE HERO -->
+    <section class="page-hero">
+      <div class="container">
+        <h1>Aanmelden</h1>
+        <p class="lead">
+          Vul uw gegevens in. U ontvangt daarna direct een e-mail met uw persoonlijke dossierlink.
+        </p>
       </div>
     </section>
 
-    <!-- HOLDING CONTENT (2 kolommen) -->
-    <section class="section section-alt" id="op-de-hoogte">
-      <div class="container two-column">
-        <div class="column">
-          <h2>Waarom u nu nog niet kunt starten</h2>
-          <p>
-            Omdat de spelregels nog niet definitief zijn. Zonder definitief akkoord kan niemand u betrouwbaar vertellen
-            welke bewijsstukken straks verplicht zijn — en dus kan “nu al regelen” u juist vastzetten.
-          </p>
+    <section class="section section-alt">
+      <div class="container">
+        <div class="card card--wide">
+          <form class="form form--ev" name="evrijder" method="post" novalidate>
+            <div class="ev-form-grid">
+              <!-- PANEL LINKS -->
+              <div class="form-panel">
+                <h4 class="ev-form-title">Persoon</h4>
 
-          <div class="card mt-14">
-            <h3>Belangrijk om te weten</h3>
-            <ul class="hero-trust-list">
-              <li>De overheid heeft nog geen definitief akkoord voor het consumentenproces.</li>
-              <li>Verificateurs kunnen daardoor nog geen harde administratie-eisen afstemmen met consumenten.</li>
-              <li>De eerste vergoeding kan pas vanaf 2027 (over 2026) — u hoeft nu niets te forceren.</li>
-              <li>Wees voorzichtig met inboekers die doen alsof dit al “klaar” is.</li>
-            </ul>
-          </div>
-        </div>
+                <label><span>Voornaam</span><input type="text" name="first_name" required /></label>
+                <label><span>Achternaam</span><input type="text" name="last_name" required /></label>
+                <label><span>E-mailadres</span><input type="email" name="email" required /></label>
+                <label><span>Mobiel nummer (optioneel)</span><input type="tel" name="telefoon" placeholder="06xxxxxxxx of +316xxxxxxxx" /></label>
+              </div>
 
-        <div class="column">
-          <div class="card">
-            <h3>Blijf op de hoogte</h3>
-            <p class="mb-0">
-              Zet kort uw situatie in het bericht (aantal laadpunten, NL, MID). Dan kunnen we u gericht informeren.
-            </p>
+              <!-- PANEL RECHTS -->
+              <div class="form-panel">
+                <h4 class="ev-form-title">Laadpunt</h4>
 
-            <!-- zelfde contact form contract als index -->
-            <form class="form mt-14" name="contact" method="post" novalidate>
-              <label>
-                <span>Voornaam</span>
-                <input type="text" name="first_name" required />
-              </label>
+                <label>
+                  <span>Aantal laadpunten op locatie</span>
+                  <select name="charger_count" required>
+                    <option value="">Selecteer aantal laadpunten</option>
+                    <option value="1">1 laadpunt</option>
+                    <option value="2">2 laadpunten</option>
+                    <option value="3">3 laadpunten</option>
+                    <option value="4">4 laadpunten</option>
+                  </select>
+                </label>
 
-              <label>
-                <span>Achternaam (optioneel)</span>
-                <input type="text" name="last_name" />
-              </label>
+                <label>
+                  <span>Is de (toekomstige) laadpaal op eigen terrein?</span>
+                  <select name="own_premises" required>
+                    <option value="">Maak een keuze</option>
+                    <option value="ja">Ja</option>
+                    <option value="nee">Nee</option>
+                    <option value="onzeker">Onzeker</option>
+                  </select>
+                </label>
 
-              <label>
-                <span>E-mailadres</span>
-                <input type="email" name="email" required />
-              </label>
+                <label>
+                  <span>Staat uw laadpaal in Nederland?</span>
+                  <select name="in_nl" required>
+                    <option value="">Maak een keuze</option>
+                    <option value="ja">Ja</option>
+                    <option value="nee">Nee</option>
+                  </select>
+                </label>
 
-              <label>
-                <span>Onderwerp</span>
-                <select name="onderwerp" required>
-                  <option value="">Maak een keuze</option>
-                  <option value="ev-rijder">Ik heb een privé-laadpaal</option>
-                  <option value="inboeker">Ik ben inboeker</option>
-                  <option value="grotere-locatie">Ik heb meer dan 4 laadpalen</option>
-                  <option value="op-de-hoogte" selected>Houd mij op de hoogte</option>
-                  <option value="overig">Overig</option>
-                </select>
-              </label>
+                <label>
+                  <span>Heeft uw laadpaal een MID-meter?</span>
+                  <select name="has_mid" required>
+                    <option value="">Maak een keuze</option>
+                    <option value="ja">Ja</option>
+                    <option value="nee">Nee</option>
+                  </select>
+                </label>
+              </div>
+            </div>
 
-              <label>
-                <span>Bericht</span>
-                <textarea name="bericht" rows="5" required> </textarea>
-              </label>
+            <div class="callout mt-14">
+              <div class="checkbox-row checkbox-row--roomy">
+                <input type="checkbox" id="akkoord_ev" name="akkoord" required />
+                <label for="akkoord_ev">
+                  Ik begrijp dat Enval een dossier- en registratieplatform is (geen inboeker/verificateur)
+                  en dat dit geen garantie is op inboeken of vergoeding.
+                </label>
+              </div>
+            </div>
 
-              <button type="submit" class="btn primary">Verstuur</button>
-
-              <p class="form-note mb-0">
-                Door te verzenden ga je akkoord met de
-                <a href="/privacyverklaring.html" target="_blank" rel="noopener">privacyverklaring</a>.
-              </p>
-            </form>
-          </div>
+            <div class="form-actions-inline">
+              <button type="submit" class="btn primary">Indienen</button>
+            </div>
+          </form>
         </div>
       </div>
     </section>

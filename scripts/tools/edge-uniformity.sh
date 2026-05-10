@@ -49,6 +49,7 @@ CORE_FUNCS=(
   "api-dossier-export"
   "api-dossier-get"
   "api-dossier-login-request"
+  api-dossier-observed-source-upsert
   "api-dossier-upload-confirm"
   "api-dossier-upload-url"
   "api-lead-submit"
