@@ -245,9 +245,8 @@ function cleanupLegacySessionKey() {
   // api.js storage helpers zijn nu verdacht en mogen deze flow niet meer beïnvloeden.
 }
 
-function canViewAnalysisDetails() {
-  return current?.permissions?.can_view_analysis_details === true;
-}
+let current = null;
+let latestPrecheckAnalysis = null;
 
 function canViewAnalysisDetails() {
   return current?.permissions?.can_view_analysis_details === true;
@@ -693,9 +692,7 @@ function humanizeWarning(warning) {
   if (!s) return "";
 
   if (s.includes("Foto-analyse is nog niet geïmplementeerd")) {
-   // return "De foto is wel aanwezig, maar foto-inhoud wordt op dit moment nog niet automatisch gecontroleerd.";
-  return "";
-}
+    return "";
   }
 
   if (s.startsWith("invoice_brand_match:")) {
@@ -2197,7 +2194,9 @@ function renderDocs() {
   const hint = $("docsHint");
   if (hint) {
     //hint.textContent = "Per laadpaal: minimaal 1 factuur installatie + 1 foto van het laadpunt. Een document telt pas mee na bevestigde upload.";
-    hint.textContent = "Per laadpaal: upload minimaal 1 factuur/installatiefactuur. Een document telt pas mee na bevestigde upload.";
+    hint.textContent = canViewAnalysisDetails()
+  ? "Per laadpaal: upload minimaal 1 factuur/installatiefactuur. Foto laadpunt is alleen zichtbaar voor developer-testen. Een document telt pas mee na bevestigde upload."
+  : "Per laadpaal: upload minimaal 1 factuur/installatiefactuur. Een document telt pas mee na bevestigde upload.";
   }
 
   const chargers = getChargersForUi();
