@@ -31,6 +31,9 @@ fi
 TMP_DIR="$(dirname "$0")/.tmp"
 mkdir -p "$TMP_DIR"
 TMP_FILE="$TMP_DIR/enval-devtest-upload.pdf"
+HAPPY_DOCS_FILE="$TMP_DIR/happy-documents.tsv"
+: > "$HAPPY_DOCS_FILE"
+set_state HAPPY_DOCS_FILE "$HAPPY_DOCS_FILE"
 
 # deterministic small file
 printf "ENVAL DEVTEST PDF PLACEHOLDER\n" > "$TMP_FILE"
@@ -83,6 +86,9 @@ for cid in "${CREATED_IDS[@]}"; do
       echo "ASSERT FAIL: upload-url expected 200, got $HTTP_URL (doc_type=$dt charger=$cid)"
       echo "BODY:"
       print_json_safe_trunc "$BODY_URL" 1200
+      echo ""
+      echo "RAW (first 40 lines):"
+      print_resp_head "$RESP_URL" 40
       exit 1
     fi
 
@@ -146,6 +152,8 @@ for cid in "${CREATED_IDS[@]}"; do
 
     echo "DB proof) confirmed row ok for document_id=$DOC_ID"
 
+    printf "%s\t%s\t%s\t%s\n" "$cid" "$dt" "$DOC_ID" "$FILE_SHA256" >> "$HAPPY_DOCS_FILE"
+
     HAPPY_DOCS_CREATED=$((HAPPY_DOCS_CREATED+1))
     HAPPY_PUT_OK=$((HAPPY_PUT_OK+1))
     HAPPY_CONFIRM_OK=$((HAPPY_CONFIRM_OK+1))
@@ -175,3 +183,4 @@ echo "Happy docs (expected 2 * created_chargers): $HAPPY_DOCS_CREATED"
 echo "Storage PUT ok: $HAPPY_PUT_OK"
 echo "Upload-confirm ok: $HAPPY_CONFIRM_OK"
 echo "DB proof) dossier_documents after happy uploads: $DOCS_AFTER"
+echo "Happy docs map file: $HAPPY_DOCS_FILE"

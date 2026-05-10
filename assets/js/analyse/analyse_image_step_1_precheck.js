@@ -248,9 +248,23 @@
     if (!arr.includes(value)) arr.push(value);
   }
 
+  function addRule(ruleResults, args) {
+    ruleResults.push({
+      code: String(args.code || "").trim(),
+      level: String(args.level || "warn").trim(),
+      measured_value: args.measured_value ?? null,
+      threshold: args.threshold ?? null,
+      operator: String(args.operator || "").trim() || null,
+      triggered: args.triggered === true,
+      metric: String(args.metric || "").trim() || null,
+      note: String(args.note || "").trim() || null,
+    });
+  }
+
   function buildDecision(meta) {
     const errors = [];
     const warnings = [];
+    const rule_results = [];
 
     const minWidth = Number(C.IMAGE_PRECHECK_MIN_WIDTH || 900);
     const minHeight = Number(C.IMAGE_PRECHECK_MIN_HEIGHT || 1200);
@@ -273,76 +287,255 @@
     const edgeDensityMean = Number(visual.edge_density_mean || 0);
     const edgeDensityCenter = Number(visual.edge_density_center || 0);
 
-    if (!width || !height) {
+    const noDimensions = !width || !height;
+    addRule(rule_results, {
+      code: "image_dimensions_unavailable",
+      level: "reject",
+      measured_value: { width, height },
+      threshold: "width>0 && height>0",
+      operator: "required",
+      triggered: noDimensions,
+      metric: "dimensions",
+      note: "Afmetingen moeten beschikbaar zijn.",
+    });
+    if (noDimensions) {
       pushUnique(errors, "image_dimensions_unavailable");
     }
 
-    if (byteLength <= 0) {
+    const invalidByteLength = byteLength <= 0;
+    addRule(rule_results, {
+      code: "image_byte_length_invalid",
+      level: "reject",
+      measured_value: byteLength,
+      threshold: 0,
+      operator: "<=",
+      triggered: invalidByteLength,
+      metric: "byte_length",
+      note: "Bestand mag niet leeg of technisch ongeldig zijn.",
+    });
+    if (invalidByteLength) {
       pushUnique(errors, "image_byte_length_invalid");
     }
 
-    if (byteLength > 0 && byteLength < rejectMinBytes) {
+    const tooFewBytes = byteLength > 0 && byteLength < rejectMinBytes;
+    addRule(rule_results, {
+      code: "image_byte_length_too_low",
+      level: "reject",
+      measured_value: byteLength,
+      threshold: rejectMinBytes,
+      operator: "<",
+      triggered: tooFewBytes,
+      metric: "byte_length",
+      note: "Bestand is te klein voor betrouwbare precheck.",
+    });
+    if (tooFewBytes) {
       pushUnique(errors, "image_byte_length_too_low");
     }
 
-    if (width > 0 && width < rejectWidth) {
+    const widthFarTooLow = width > 0 && width < rejectWidth;
+    addRule(rule_results, {
+      code: "image_width_far_too_low",
+      level: "reject",
+      measured_value: width,
+      threshold: rejectWidth,
+      operator: "<",
+      triggered: widthFarTooLow,
+      metric: "width",
+      note: "Breedte is te laag voor zinvolle factuurcontrole.",
+    });
+    if (widthFarTooLow) {
       pushUnique(errors, "image_width_far_too_low");
     }
 
-    if (height > 0 && height < rejectHeight) {
+    const heightFarTooLow = height > 0 && height < rejectHeight;
+    addRule(rule_results, {
+      code: "image_height_far_too_low",
+      level: "reject",
+      measured_value: height,
+      threshold: rejectHeight,
+      operator: "<",
+      triggered: heightFarTooLow,
+      metric: "height",
+      note: "Hoogte is te laag voor zinvolle factuurcontrole.",
+    });
+    if (heightFarTooLow) {
       pushUnique(errors, "image_height_far_too_low");
     }
 
-    if (width > 0 && width < minWidth) {
+    const widthLow = width > 0 && width < minWidth;
+    addRule(rule_results, {
+      code: "image_width_low",
+      level: "warn",
+      measured_value: width,
+      threshold: minWidth,
+      operator: "<",
+      triggered: widthLow,
+      metric: "width",
+      note: "Breedte is beperkt; extractie kan instabiel worden.",
+    });
+    if (widthLow) {
       pushUnique(warnings, "image_width_low");
     }
 
-    if (height > 0 && height < minHeight) {
+    const heightLow = height > 0 && height < minHeight;
+    addRule(rule_results, {
+      code: "image_height_low",
+      level: "warn",
+      measured_value: height,
+      threshold: minHeight,
+      operator: "<",
+      triggered: heightLow,
+      metric: "height",
+      note: "Hoogte is beperkt; extractie kan instabiel worden.",
+    });
+    if (heightLow) {
       pushUnique(warnings, "image_height_low");
     }
 
-    if (aspectRatio !== null) {
-      if (aspectRatio > 2.2) {
-        pushUnique(warnings, "image_aspect_ratio_too_wide_for_invoice");
-      } else if (aspectRatio < 0.45) {
-        pushUnique(warnings, "image_aspect_ratio_too_tall_for_invoice");
-      }
+    const aspectTooWide = aspectRatio !== null && aspectRatio > 2.2;
+    addRule(rule_results, {
+      code: "image_aspect_ratio_too_wide_for_invoice",
+      level: "warn",
+      measured_value: aspectRatio,
+      threshold: 2.2,
+      operator: ">",
+      triggered: aspectTooWide,
+      metric: "aspect_ratio",
+      note: "Afbeelding is ongebruikelijk breed voor een volledige factuur.",
+    });
+    if (aspectTooWide) {
+      pushUnique(warnings, "image_aspect_ratio_too_wide_for_invoice");
     }
 
-    // -----------------------------
-    // Light content plausibility
-    // -----------------------------
-    // Niet OCR, wel check of er waarschijnlijk genoeg document-inhoud zichtbaar is.
-
-    if (darkPixelRatio > 0 && darkPixelRatio < 0.006) {
-      pushUnique(errors, "image_content_ink_very_low");
-    } else if (darkPixelRatio > 0 && darkPixelRatio < 0.012) {
-      pushUnique(warnings, "image_content_ink_low");
+    const aspectTooTall = aspectRatio !== null && aspectRatio < 0.45;
+    addRule(rule_results, {
+      code: "image_aspect_ratio_too_tall_for_invoice",
+      level: "warn",
+      measured_value: aspectRatio,
+      threshold: 0.45,
+      operator: "<",
+      triggered: aspectTooTall,
+      metric: "aspect_ratio",
+      note: "Afbeelding is ongebruikelijk smal/hoog voor een volledige factuur.",
+    });
+    if (aspectTooTall) {
+      pushUnique(warnings, "image_aspect_ratio_too_tall_for_invoice");
     }
 
-    if (darkPixelRatioCenter > 0 && darkPixelRatioCenter < 0.004) {
-      pushUnique(errors, "image_content_center_ink_very_low");
-    } else if (darkPixelRatioCenter > 0 && darkPixelRatioCenter < 0.008) {
-      pushUnique(warnings, "image_content_center_ink_low");
-    }
+    // ------------------------------------------------------
+    // Content heuristics: CURRENT alleen observability.
+    // Niet user-facing beslissend, om warn-ruis te voorkomen.
+    // ------------------------------------------------------
 
-    if (totalZones > 0 && filledZones < 3) {
-      pushUnique(errors, "image_content_zone_coverage_very_low");
-    } else if (totalZones > 0 && filledZoneRatio < 0.45) {
-      pushUnique(warnings, "image_content_zone_coverage_low");
-    }
+    addRule(rule_results, {
+      code: "image_content_ink_very_low",
+      level: "info",
+      measured_value: darkPixelRatio,
+      threshold: 0.006,
+      operator: "<",
+      triggered: darkPixelRatio > 0 && darkPixelRatio < 0.006,
+      metric: "dark_pixel_ratio",
+      note: "Observability only. Zeer lage donkere-pixel-ratio.",
+    });
 
-    if (edgeDensityMean > 0 && edgeDensityMean < 8) {
-      pushUnique(errors, "image_content_sharpness_very_low");
-    } else if (edgeDensityMean > 0 && edgeDensityMean < 12) {
-      pushUnique(warnings, "image_content_sharpness_low");
-    }
+    addRule(rule_results, {
+      code: "image_content_ink_low",
+      level: "info",
+      measured_value: darkPixelRatio,
+      threshold: 0.012,
+      operator: "<",
+      triggered: darkPixelRatio >= 0.006 && darkPixelRatio < 0.012,
+      metric: "dark_pixel_ratio",
+      note: "Observability only. Lage donkere-pixel-ratio.",
+    });
 
-    if (edgeDensityCenter > 0 && edgeDensityCenter < 6) {
-      pushUnique(errors, "image_content_center_sharpness_very_low");
-    } else if (edgeDensityCenter > 0 && edgeDensityCenter < 10) {
-      pushUnique(warnings, "image_content_center_sharpness_low");
-    }
+    addRule(rule_results, {
+      code: "image_content_center_ink_very_low",
+      level: "info",
+      measured_value: darkPixelRatioCenter,
+      threshold: 0.004,
+      operator: "<",
+      triggered: darkPixelRatioCenter > 0 && darkPixelRatioCenter < 0.004,
+      metric: "dark_pixel_ratio_center",
+      note: "Observability only. Zeer lage centrale donkere-pixel-ratio.",
+    });
+
+    addRule(rule_results, {
+      code: "image_content_center_ink_low",
+      level: "info",
+      measured_value: darkPixelRatioCenter,
+      threshold: 0.008,
+      operator: "<",
+      triggered: darkPixelRatioCenter >= 0.004 && darkPixelRatioCenter < 0.008,
+      metric: "dark_pixel_ratio_center",
+      note: "Observability only. Lage centrale donkere-pixel-ratio.",
+    });
+
+    addRule(rule_results, {
+      code: "image_content_zone_coverage_very_low",
+      level: "info",
+      measured_value: filledZones,
+      threshold: 3,
+      operator: "<",
+      triggered: totalZones > 0 && filledZones < 3,
+      metric: "filled_zones",
+      note: "Observability only. Weinig zones met zichtbare inhoud.",
+    });
+
+    addRule(rule_results, {
+      code: "image_content_zone_coverage_low",
+      level: "info",
+      measured_value: filledZoneRatio,
+      threshold: 0.45,
+      operator: "<",
+      triggered: totalZones > 0 && filledZones >= 3 && filledZoneRatio < 0.45,
+      metric: "filled_zone_ratio",
+      note: "Observability only. Lage spreiding van inhoud over het canvas.",
+    });
+
+    addRule(rule_results, {
+      code: "image_content_sharpness_very_low",
+      level: "info",
+      measured_value: edgeDensityMean,
+      threshold: 8,
+      operator: "<",
+      triggered: edgeDensityMean > 0 && edgeDensityMean < 8,
+      metric: "edge_density_mean",
+      note: "Observability only. Lage globale randdichtheid.",
+    });
+
+    addRule(rule_results, {
+      code: "image_content_sharpness_low",
+      level: "info",
+      measured_value: edgeDensityMean,
+      threshold: 12,
+      operator: "<",
+      triggered: edgeDensityMean >= 8 && edgeDensityMean < 12,
+      metric: "edge_density_mean",
+      note: "Observability only. Matige globale randdichtheid.",
+    });
+
+    addRule(rule_results, {
+      code: "image_content_center_sharpness_very_low",
+      level: "info",
+      measured_value: edgeDensityCenter,
+      threshold: 6,
+      operator: "<",
+      triggered: edgeDensityCenter > 0 && edgeDensityCenter < 6,
+      metric: "edge_density_center",
+      note: "Observability only. Lage centrale randdichtheid.",
+    });
+
+    addRule(rule_results, {
+      code: "image_content_center_sharpness_low",
+      level: "info",
+      measured_value: edgeDensityCenter,
+      threshold: 10,
+      operator: "<",
+      triggered: edgeDensityCenter >= 6 && edgeDensityCenter < 10,
+      metric: "edge_density_center",
+      note: "Observability only. Matige centrale randdichtheid.",
+    });
 
     const decision =
       errors.length > 0
@@ -355,6 +548,7 @@
       decision,
       errors,
       warnings,
+      rule_results,
     };
   }
 
@@ -407,37 +601,6 @@
       return "Afbeelding is ongebruikelijk smal/hoog voor een volledige factuur.";
     }
 
-    if (s === "image_content_ink_very_low") {
-      return "Er is te weinig zichtbare tekst of documentinhoud in de afbeelding.";
-    }
-    if (s === "image_content_ink_low") {
-      return "Er is weinig zichtbare tekst of documentinhoud in de afbeelding.";
-    }
-    if (s === "image_content_center_ink_very_low") {
-      return "In het midden van de afbeelding is vrijwel geen bruikbare documentinhoud zichtbaar.";
-    }
-    if (s === "image_content_center_ink_low") {
-      return "In het midden van de afbeelding is weinig bruikbare documentinhoud zichtbaar.";
-    }
-    if (s === "image_content_zone_coverage_very_low") {
-      return "De afbeelding toont vermoedelijk slechts een klein deel van de factuur.";
-    }
-    if (s === "image_content_zone_coverage_low") {
-      return "De factuur vult maar een beperkt deel van de afbeelding. Gebruik bij voorkeur een vollediger beeld.";
-    }
-    if (s === "image_content_sharpness_very_low") {
-      return "De afbeelding is te onscherp voor betrouwbare factuurcontrole.";
-    }
-    if (s === "image_content_sharpness_low") {
-      return "De afbeelding is aan de onscherpe kant. Kies bij voorkeur een scherper beeld.";
-    }
-    if (s === "image_content_center_sharpness_very_low") {
-      return "Het centrale deel van de afbeelding is te onscherp voor betrouwbare factuurcontrole.";
-    }
-    if (s === "image_content_center_sharpness_low") {
-      return "Het centrale deel van de afbeelding is aan de onscherpe kant.";
-    }
-
     return s || "Onbekende precheck-uitkomst.";
   }
 
@@ -476,6 +639,7 @@
         meta: {},
         warnings: [],
         errors: ["doc_type_not_invoice"],
+        rule_results: [],
       };
     }
 
@@ -487,6 +651,7 @@
         meta: {},
         warnings: [],
         errors: ["missing_file"],
+        rule_results: [],
       };
     }
 
@@ -507,6 +672,7 @@
         },
         warnings: [],
         errors: ["unsupported_invoice_image_type"],
+        rule_results: [],
       };
     }
 
@@ -530,6 +696,7 @@
         },
         warnings: [],
         errors: ["image_decode_failed"],
+        rule_results: [],
       };
     }
 
@@ -554,6 +721,7 @@
       meta,
       warnings: decisionResult.warnings,
       errors: decisionResult.errors,
+      rule_results: decisionResult.rule_results,
     };
   }
 

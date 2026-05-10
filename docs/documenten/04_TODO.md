@@ -1,6 +1,6 @@
 # 04_TODO.md (CURRENT)
 
-Statusdatum: 2026-03-23  
+Statusdatum: 2026-05-10
 Prioriteit: audit-first.  
 Regel: alleen open items; afgerond → naar changelog.
 
@@ -29,18 +29,32 @@ Regel: alleen open items; afgerond → naar changelog.
     - finalize alleen zichtbaar wordt na geldige precheck
 - Status: OPEN
 
-### 2) api-lead-submit: eligibility gate ordering harden + regressie-test
+### 2) api-lead-submit eligibility ordering / intake proof gesloten houden
 - Context:
-  - Behavior is bewezen: pre-dossier reject (NL/MID) + `intake_audit_events` + idempotency replay.
+  - CURRENT runtime-proof is nu geleverd:
+    - pre-dossier reject op `in_nl` / `has_mid`
+    - `intake_audit_events` row aanwezig
+    - geen lead / geen dossier bij reject
+    - idempotency replay gelijk
+    - fresh happy-path bootstrap bewijst expliciet:
+      - `lead_id`
+      - `dossier_id`
+      - outbound `dossier_link` row
+  - `_shared/reqmeta.ts` is aligned op huidige callers (`origin`, `environment`)
+  - fresh-only testsuite loopt volledig groen
+- Open restdoel:
+  - dit gesloten bewijs alleen regressievrij houden bij volgende wijzigingen aan:
+    - `api-lead-submit`
+    - intake audit-flow
+    - fresh bootstrap tests
 - DoD:
-  - Guardrails in code expliciet en vroeg:
-    - eligibility checks vóór elke DB write (lead/dossier/mail)
-    - `intake_audit_events` write is fail-open maar best-effort
-  - Regressie-test aanwezig voor:
+  - bij eerstvolgende wijziging aan intake/bootstrap opnieuw bevestigen:
     - NL=false → 400 + `intake_audit_events` row + idempotency replay
     - MID=false → 400 + `intake_audit_events` row + idempotency replay
-    - OK → lead + dossier + mail
-- Status: OPEN
+    - OK → `lead_id` + `dossier_id` + outbound `dossier_link`
+  - geen nieuwe DB writes vóór eligibility reject introduceren
+  - geen drift tussen endpointcode en fresh-only testsuite
+- Status: OPEN (regressiewacht, geen actieve hardening meer)
 
 ### 3) Defense-in-depth policies op audit tabellen
 - DoD:
@@ -320,18 +334,49 @@ Regel: alleen open items; afgerond → naar changelog.
   - bewijs vastleggen zonder secrets/signatures te lekken
 - Status: OPEN
 
-### 17) Export gate contract tests
+### 17) Export contract regressiewacht + resterende edge-case beslissing
 - Context:
-  - upload/runtime suite is nu sterk genoeg
-  - export is productkritische eindgate en nog onvoldoende contractueel bewezen in fresh flow
+  - export reject in de fresh-only suite is bewezen:
+    - not-locked dossier → HTTP 409
+    - audit `dossier_export_rejected`
+    - reason `not_locked`
+  - locked export success is nu ook bewezen in de fresh-only suite:
+    - canonical address save/verify
+    - consents save
+    - synthetic invoice observed payload
+    - `api-dossier-verify`
+    - `api-dossier-evaluate(finalize=true)`
+    - locked export → HTTP 200
+    - audit `dossier_export_generated`
+  - export artifact shape wordt gecontroleerd:
+    - `schema_version = enval-dossier-export.v5`
+    - 8 confirmed documents
+    - analysis blocks aanwezig
+    - `analysis_run.run_id` aanwezig
+  - cleanup is na export lock-aware:
+    - geen runtime deletes na locked/in_review
+    - retained locked dossierdata is bewust correct
+
+- Reeds bewezen:
+  - export reject wanneer dossier niet locked is
+  - locked export success
+  - load-bearing export artifact shape
+  - export success audit event
+  - cleanup retained-state na locked export
+
+- Open restdoel:
+  - expliciet beslissen of er nog een aparte export rejectcase nodig is voor:
+    - locked maar incomplete confirmed-doc set
+  - of dat deze gate uitsluitend in evaluate/finalize hoort en export alleen locked+confirmed snapshot exporteert
+
 - DoD:
-  - test bewijst:
-    - export reject wanneer dossier niet locked is
-    - export reject wanneer niet alle vereiste docs confirmed zijn
-    - export success wanneer dossier locked is en confirmed-doc set klopt
-  - audit events voor export success + reject bevestigd
-  - output-contract van export artifact vastgelegd
-- Status: OPEN
+  - besluit vastleggen:
+    - aparte export rejectcase bouwen/testen
+    - of expliciet documenteren dat incomplete-doc gating bij evaluate/finalize hoort
+  - bij toekomstige exportwijzigingen fresh-only suite opnieuw groen draaien
+
+- Status: OPEN als regressiewacht / edge-case besluit, niet meer als basis exportcontract
+
 
 ### 18) Email verification assumption (audit risk)
 - Context:
@@ -362,10 +407,24 @@ Regel: alleen open items; afgerond → naar changelog.
 
 ### Phase 2 
 
-### 21) Invoice image precheck UX persistence
-  - Bij client-side warning op factuurafbeelding: uploadvak visueel oranje laten staan
-  - Rechtsboven een info-icoon tonen
-  - Hover / tooltip met exacte warningtekst tonen
-  - Warning mag niet blokkeren; alleen persistent zichtbaar maken
+### 21) Invoice image precheck warning-state server-persistent maken (alleen indien later nodig)
+- Context:
+  - browser-side invoice image precheck is CURRENT functioneel gehardend
+  - accepted-with-warning uploads blijven nu client-side persistent zichtbaar in de documentkaart-UI:
+    - gele/oranje sectietoon
+    - `warning` badge
+    - warning-tekst onder bestandsnaam
+  - state wordt CURRENT bewust client-side in `sessionStorage` bijgehouden en opgeschoond bij delete/reload
+- Open restdoel:
+  - alleen oppakken als later blijkt dat warning-state ook cross-session / cross-device persistent moet zijn
+- DoD:
+  - expliciete productbeslissing of warning-state:
+    - puur client-side UX-state blijft
+    - of server-side documentmetadata wordt
+  - bij server-side variant:
+    - warning-source en warning-tekst blijven uit canonieke precheck-summary komen
+    - geen tweede messaging-laag
+    - geen verwarring met audit-truth / analysis-truth
+- Status: OPEN (lage prioriteit / alleen bij echte productbehoefte)
 
 # EINDE 04_TODO.md

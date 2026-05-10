@@ -548,71 +548,97 @@ audit_assert_for_request_id_once() {
 
   sleep 0.5
 
-  local aud row
+  local aud
   aud="$(audit_fetch_since 300)"
 
-  if ! echo "$aud" | grep -q "\"request_id\"" ; then
-    return 1
-  fi
+  printf "%s" "$aud" | python3 -c '
+import json, sys
 
-  if ! echo "$aud" | grep -q "$rid"; then
-    return 1
-  fi
+rid = sys.argv[1]
+expected_event_type = sys.argv[2]
+expected_stage = sys.argv[3]
+expected_reason = sys.argv[4]
 
-    # Split objects inside JSON array reliably (handles '},{' and '},  {')
-  row="$(
-    echo "$aud" \
-    | tr -d '\n' \
-    | sed -E 's/},[[:space:]]*{/}\n{/g' \
-    | grep -E "\"request_id\"[[:space:]]*:[[:space:]]*\"$rid\"" \
-    | head -n 1
-  )"
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    sys.exit(1)
 
-  if [[ -z "$row" ]]; then
-    return 1
-  fi
+if not isinstance(data, list):
+    sys.exit(1)
 
-  # Always require these meta fields (audit-first)
-  if ! echo "$row" | grep -q "\"actor_ref\"" ; then
-    return 1
-  fi
-  if ! echo "$row" | grep -q "\"environment\"" ; then
-    return 1
-  fi
+target = None
+for row in data:
+    if not isinstance(row, dict):
+        continue
+    event_data = row.get("event_data") or {}
+    if not isinstance(event_data, dict):
+        continue
+    if str(event_data.get("request_id") or "") == rid:
+        target = row
+        break
 
-  if [[ -n "$expected_event_type" ]]; then
-    if ! echo "$row" | grep -q "\"event_type\":\"$expected_event_type\""; then
-      return 2  # special: event type mismatch
-    fi
-  fi
+if target is None:
+    sys.exit(1)
 
-  if [[ -n "$expected_stage" ]]; then
-    if ! echo "$row" | grep -q "\"stage\": \"$expected_stage\"" && ! echo "$row" | grep -q "\"stage\":\"$expected_stage\""; then
-      return 3
-    fi
-  fi
+event_data = target.get("event_data") or {}
+if not isinstance(event_data, dict):
+    sys.exit(1)
 
-  if [[ -n "$expected_reason" ]]; then
-    if ! echo "$row" | grep -q "\"reason\": \"$expected_reason\"" && ! echo "$row" | grep -q "\"reason\":\"$expected_reason\""; then
-      return 4
-    fi
-  fi
+if not str(event_data.get("actor_ref") or "").strip():
+    sys.exit(1)
 
-  return 0
+if not str(event_data.get("environment") or "").strip():
+    sys.exit(1)
+
+if expected_event_type:
+    if str(target.get("event_type") or "") != expected_event_type:
+        sys.exit(2)
+
+if expected_stage:
+    if str(event_data.get("stage") or "") != expected_stage:
+        sys.exit(3)
+
+if expected_reason:
+    if str(event_data.get("reason") or "") != expected_reason:
+        sys.exit(4)
+
+sys.exit(0)
+' "$rid" "$expected_event_type" "$expected_stage" "$expected_reason"
 }
 
 audit_debug_row_for_rid() {
   local rid="$1"
-  local aud row
+  local aud
   aud="$(audit_fetch_since 300)"
-  row="$(
-    echo "$aud" \
-    | tr -d '\n' \
-    | sed -E 's/},[[:space:]]*{/}\n{/g' \
-    | grep -E "\"request_id\"[[:space:]]*:[[:space:]]*\"$rid\"" \
-    | head -n 1
-  )"
-  echo "$row"
+
+  printf "%s" "$aud" | python3 -c '
+import json, sys
+
+rid = sys.argv[1]
+
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    print("")
+    raise SystemExit(0)
+
+if not isinstance(data, list):
+    print("")
+    raise SystemExit(0)
+
+for row in data:
+    if not isinstance(row, dict):
+        continue
+    event_data = row.get("event_data") or {}
+    if not isinstance(event_data, dict):
+        continue
+    if str(event_data.get("request_id") or "") == rid:
+        print(json.dumps(row, ensure_ascii=False))
+        raise SystemExit(0)
+
+print("")
+' "$rid"
 }
 
 audit_assert_for_request_id() {

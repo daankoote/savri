@@ -1078,86 +1078,110 @@ async function upsertObservedSourceForInvoiceDocument(args) {
   };
 }
 
-function humanizeInvoiceImagePrecheckError(code) {
-  const s = String(code || "").trim();
-
-  if (s === "missing_file") {
-    return "Geen bestand ontvangen voor factuurcontrole.";
+function getInvoiceImagePrecheckUiSummary(precheck) {
+  const imageStep1Upload = getAnalyseImageStep1Upload();
+  if (imageStep1Upload?.summarizeInvoiceUploadPrecheck) {
+    return imageStep1Upload.summarizeInvoiceUploadPrecheck(precheck);
   }
 
-  if (s === "unsupported_invoice_image_type") {
-    return "Bestand afgewezen. Gebruik voor een factuurafbeelding alleen PNG of JPG/JPEG.";
+  const imageStep1Precheck = getAnalyseImageStep1Precheck();
+  if (imageStep1Precheck?.summarizeInvoiceImagePrecheck) {
+    return imageStep1Precheck.summarizeInvoiceImagePrecheck(precheck);
   }
 
-  if (s === "image_decode_failed") {
-    return "Afbeelding afgewezen. Het bestand kon niet als bruikbare afbeelding worden geopend.";
-  }
-
-  if (s === "image_dimensions_unavailable") {
-    return "Afbeelding afgewezen. De resolutie kon niet worden bepaald.";
-  }
-
-  if (s === "image_byte_length_invalid") {
-    return "Afbeelding afgewezen. Bestand is leeg of technisch ongeldig.";
-  }
-
-  if (s === "image_byte_length_too_low") {
-    return "Afbeelding afgewezen. Bestand is te klein of te sterk gecomprimeerd voor betrouwbare factuurcontrole.";
-  }
-
-  if (s === "image_width_far_too_low") {
-    return "Afbeelding afgewezen. De breedte is te laag voor betrouwbare factuurcontrole. Gebruik een scherpere of grotere afbeelding, of upload de originele PDF.";
-  }
-
-  if (s === "image_height_far_too_low") {
-    return "Afbeelding afgewezen. De hoogte is te laag voor betrouwbare factuurcontrole. Gebruik een scherpere of grotere afbeelding, of upload de originele PDF.";
-  }
-
-  return s || "Afbeelding afgewezen. Factuurafbeelding is niet bruikbaar voor betrouwbare controle.";
+  return {
+    block: true,
+    title: "Factuurafbeelding afgekeurd",
+    messages: ["Precheck-resultaat ontbreekt of is ongeldig."],
+  };
 }
 
-function humanizeInvoiceImagePrecheckWarning(code) {
-  const s = String(code || "").trim();
-
-  if (s === "image_width_low") {
-    return "Waarschuwing: afbeeldingsbreedte is beperkt. Tekstuitlezing kan mislukken. Gebruik bij voorkeur een scherpere afbeelding of de originele PDF.";
-  }
-
-  if (s === "image_height_low") {
-    return "Waarschuwing: afbeeldingshoogte is beperkt. Tekstuitlezing kan mislukken. Gebruik bij voorkeur een scherpere afbeelding of de originele PDF.";
-  }
-
-  if (s === "image_aspect_ratio_too_wide_for_invoice") {
-    return "Waarschuwing: afbeelding heeft een afwijkende brede uitsnede. Controleer of de volledige factuur zichtbaar is.";
-  }
-
-  if (s === "image_aspect_ratio_too_tall_for_invoice") {
-    return "Waarschuwing: afbeelding heeft een afwijkende smalle of langgerekte uitsnede. Controleer of de volledige factuur zichtbaar is.";
-  }
-
-  return s || "Waarschuwing: factuurafbeelding is niet ideaal voor betrouwbare controle.";
+function getInvoiceImagePrecheckUiMessage(precheck) {
+  const summary = getInvoiceImagePrecheckUiSummary(precheck);
+  const messages = Array.isArray(summary?.messages) ? summary.messages.filter(Boolean) : [];
+  return messages.join(" ").trim();
 }
 
-function buildInvoiceImagePrecheckMessage(precheck) {
-  const decision = String(precheck?.decision || "").trim();
-  const errors = Array.isArray(precheck?.errors) ? precheck.errors : [];
-  const warnings = Array.isArray(precheck?.warnings) ? precheck.warnings : [];
+function invoiceImageWarningStorageKey() {
+  return `enval_invoice_image_precheck_warn:${dossier_id}`;
+}
 
-  if (decision === "reject") {
-    if (!errors.length) {
-      return "Deze factuurafbeelding lijkt niet bruikbaar voor controle. Gebruik een duidelijkere afbeelding of een PDF.";
-    }
-    return errors.map(humanizeInvoiceImagePrecheckError).join(" ");
+function readInvoiceImageWarningState() {
+  try {
+    const raw = sessionStorage.getItem(invoiceImageWarningStorageKey());
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (_) {
+    return {};
   }
+}
 
-  if (decision === "warn") {
-    if (!warnings.length) {
-      return "Deze factuurafbeelding is niet ideaal, maar wordt wel doorgestuurd voor servercontrole.";
+function writeInvoiceImageWarningState(state) {
+  try {
+    sessionStorage.setItem(
+      invoiceImageWarningStorageKey(),
+      JSON.stringify(state && typeof state === "object" ? state : {})
+    );
+  } catch (_) {}
+}
+
+function setInvoiceImageWarningForDocument(args) {
+  const documentId = String(args?.document_id || "").trim();
+  if (!documentId) return;
+
+  const state = readInvoiceImageWarningState();
+  state[documentId] = {
+    document_id: documentId,
+    charger_id: String(args?.charger_id || "").trim() || null,
+    doc_type: String(args?.doc_type || "").trim().toLowerCase() || null,
+    title: String(args?.title || "").trim() || "Factuurafbeelding twijfelachtig",
+    message: String(args?.message || "").trim() || "",
+    created_at: new Date().toISOString(),
+  };
+  writeInvoiceImageWarningState(state);
+}
+
+function getInvoiceImageWarningForDocument(documentId) {
+  const id = String(documentId || "").trim();
+  if (!id) return null;
+
+  const state = readInvoiceImageWarningState();
+  const item = state[id];
+  return item && typeof item === "object" ? item : null;
+}
+
+function removeInvoiceImageWarningForDocument(documentId) {
+  const id = String(documentId || "").trim();
+  if (!id) return;
+
+  const state = readInvoiceImageWarningState();
+  if (!Object.prototype.hasOwnProperty.call(state, id)) return;
+
+  delete state[id];
+  writeInvoiceImageWarningState(state);
+}
+
+function pruneInvoiceImageWarningState(documents) {
+  const keepIds = new Set(
+    (Array.isArray(documents) ? documents : [])
+      .map((doc) => String(doc?.id || "").trim())
+      .filter(Boolean)
+  );
+
+  const state = readInvoiceImageWarningState();
+  let changed = false;
+
+  Object.keys(state).forEach((documentId) => {
+    if (!keepIds.has(documentId)) {
+      delete state[documentId];
+      changed = true;
     }
-    return warnings.map(humanizeInvoiceImagePrecheckWarning).join(" ");
-  }
+  });
 
-  return "";
+  if (changed) {
+    writeInvoiceImageWarningState(state);
+  }
 }
 
 // Precheck UX state (client-side)
@@ -2012,9 +2036,20 @@ function createDocSection({ title, docs, locked, chargerId, docType }) {
   const hasIssued = list.some((doc) => String(doc?.status || "").toLowerCase() === "issued");
   const hasConfirmed = list.some((doc) => String(doc?.status || "").toLowerCase() === "confirmed");
 
-  const sectionTone = hasDocs
-    ? "doc-group-section doc-group-section--ok"
-    : "doc-group-section doc-group-section--missing";
+  const warningEntries = list
+    .map((doc) => ({
+      doc,
+      warning: getInvoiceImageWarningForDocument(doc?.id),
+    }))
+    .filter((entry) => !!entry.warning);
+
+  const hasWarning = warningEntries.length > 0;
+
+  const sectionTone = !hasDocs
+    ? "doc-group-section doc-group-section--missing"
+    : hasWarning
+      ? "doc-group-section doc-group-section--missing"
+      : "doc-group-section doc-group-section--ok";
 
   const section = createEl("div", sectionTone);
 
@@ -2044,6 +2079,13 @@ function createDocSection({ title, docs, locked, chargerId, docType }) {
       "Upload gestart maar nog niet bevestigd. Verwijder dit document en upload opnieuw als de vorige poging is mislukt."
     );
     section.appendChild(recovery);
+  } else if (hasWarning) {
+    const info = createEl(
+      "div",
+      "doc-group-section__empty muted small",
+      "Document aanwezig met waarschuwing uit client-side precheck."
+    );
+    section.appendChild(info);
   } else if (hasConfirmed) {
     const info = createEl(
       "div",
@@ -2054,6 +2096,9 @@ function createDocSection({ title, docs, locked, chargerId, docType }) {
   }
 
   list.forEach((doc) => {
+    const warningState = getInvoiceImageWarningForDocument(doc?.id);
+
+    const rowWrap = createEl("div", "");
     const row = createEl("div", "doc-entry");
 
     const fileWrap = createEl("div", "doc-entry__file");
@@ -2077,6 +2122,18 @@ function createDocSection({ title, docs, locked, chargerId, docType }) {
       fileWrap.appendChild(statusBadge);
     }
 
+    if (warningState) {
+      const warnBadge = document.createElement("span");
+      warnBadge.className = "pill warn ml-8";
+      warnBadge.textContent = "warning";
+      fileWrap.appendChild(warnBadge);
+    }
+
+    if (warningState?.message) {
+      const warnText = createEl("div", "muted small mt-8", warningState.message);
+      fileWrap.appendChild(warnText);
+    }
+
     const actions = createEl("div", "doc-entry__actions");
 
     const deleteButton = createIconButton({
@@ -2093,7 +2150,8 @@ function createDocSection({ title, docs, locked, chargerId, docType }) {
     row.appendChild(fileWrap);
     row.appendChild(actions);
 
-    section.appendChild(row);
+    rowWrap.appendChild(row);
+    section.appendChild(rowWrap);
   });
 
   return section;
@@ -2104,6 +2162,7 @@ function renderDocs() {
   const cardsWrap = $("docsCards");
   if (!cardsWrap) return;
 
+  pruneInvoiceImageWarningState(docs);
   clearNode(cardsWrap);
 
   const locked = isLocked();
@@ -2229,6 +2288,8 @@ function renderDocs() {
       try {
         btn.disabled = true;
         await apiAuthed("api-dossier-doc-delete", { document_id: id });
+
+        removeInvoiceImageWarningForDocument(id);
 
         const verifyPayload = getAnalyseVerifyPayload();
         if (verifyPayload) {
@@ -2736,87 +2797,79 @@ async function uploadDocumentForCard({ charger_id, doc_type, file, slot }) {
       throw new Error("Ongeldig bestandstype. Alleen: PDF, PNG, JPG/JPEG, DOC, DOCX.");
     }
 
-let uploadFile = file;
-let client_transform = {
-  applied: false,
-  kind: null,
-  original_bytes: file.size,
-  final_bytes: file.size,
-  original_mime: file.type || null,
-  final_mime: file.type || null,
-  original_filename: file.name || null,
-  final_filename: file.name || null,
-  max_dim: null,
-  quality: null,
-  out_w: null,
-  out_h: null,
-};
+    let uploadFile = file;
+    let client_transform = {
+      applied: false,
+      kind: null,
+      original_bytes: file.size,
+      final_bytes: file.size,
+      original_mime: file.type || null,
+      final_mime: file.type || null,
+      original_filename: file.name || null,
+      final_filename: file.name || null,
+      max_dim: null,
+      quality: null,
+      out_w: null,
+      out_h: null,
+    };
 
-const imageStep1Precheck = getAnalyseImageStep1Precheck();
-const imageStep1Upload = getAnalyseImageStep1Upload();
+    const imageStep1Precheck = getAnalyseImageStep1Precheck();
+    const imageStep1Upload = getAnalyseImageStep1Upload();
 
-if (
-  doc_type === "factuur" &&
-  imageStep1Upload &&
-  imageStep1Precheck &&
-  (
-    String(file?.type || "").toLowerCase() === "image/jpeg" ||
-    String(file?.type || "").toLowerCase() === "image/png" ||
-    String(file?.name || "").toLowerCase().endsWith(".jpg") ||
-    String(file?.name || "").toLowerCase().endsWith(".jpeg") ||
-    String(file?.name || "").toLowerCase().endsWith(".png")
-  )
-) {
-  if (originalHint) originalHint.textContent = "Factuur precheck…";
+    const isInvoiceImage =
+      doc_type === "factuur" &&
+      (
+        String(file?.type || "").toLowerCase() === "image/jpeg" ||
+        String(file?.type || "").toLowerCase() === "image/png" ||
+        String(file?.name || "").toLowerCase().endsWith(".jpg") ||
+        String(file?.name || "").toLowerCase().endsWith(".jpeg") ||
+        String(file?.name || "").toLowerCase().endsWith(".png")
+      );
 
-  const invoicePrecheck = await imageStep1Upload.prepareInvoiceImagePrecheck(file, doc_type);
-  const invoicePrecheckSummary = imageStep1Upload.summarizeInvoiceUploadPrecheck(invoicePrecheck);
+    let invoicePrecheckDecision = "allow";
+    let invoicePrecheckSummary = null;
+    let invoicePrecheckMessage = "";
 
-  if (invoicePrecheck?.ok && invoicePrecheckSummary?.messages?.length) {
-    console.log("ANALYSE_IMAGE_STEP_1_PRECHECK", invoicePrecheckSummary);
-  }
+    if (isInvoiceImage && imageStep1Upload && imageStep1Precheck) {
+      if (originalHint) originalHint.textContent = "Factuur precheck…";
 
-  if (imageStep1Upload.shouldBlockInvoiceUpload(invoicePrecheck)) {
-    throw new Error(
-      invoicePrecheckSummary?.messages?.[0] ||
-      "Factuur-afbeelding is client-side afgekeurd."
-    );
-  }
-  console.log("ANALYSE_IMAGE_STEP_1_PRECHECK", invoicePrecheck);
+      const invoicePrecheck = await imageStep1Upload.prepareInvoiceImagePrecheck(file, doc_type);
+      invoicePrecheckSummary = getInvoiceImagePrecheckUiSummary(invoicePrecheck);
+      invoicePrecheckMessage = getInvoiceImagePrecheckUiMessage(invoicePrecheck);
+      invoicePrecheckDecision = String(invoicePrecheck?.decision || "").trim().toLowerCase();
 
-  if (!invoicePrecheck?.ok) {
-    if (invoicePrecheck?.reason === "unsupported_invoice_image_type") {
-      // pdf/doc/docx of ander niet-image type: normale bestaande flow
-    } else {
-      throw new Error(buildInvoiceImagePrecheckMessage(invoicePrecheck));
-    }
-  } else {
-    const decision = String(invoicePrecheck.decision || "").trim();
+      console.log("ANALYSE_IMAGE_STEP_1_PRECHECK", {
+        precheck: invoicePrecheck,
+        summary: invoicePrecheckSummary,
+      });
 
-    if (decision === "reject") {
-      throw new Error(buildInvoiceImagePrecheckMessage(invoicePrecheck));
-    }
+      if (
+        !invoicePrecheck?.ok ||
+        imageStep1Upload.shouldBlockInvoiceUpload(invoicePrecheck) ||
+        invoicePrecheckSummary?.block === true
+      ) {
+        throw new Error(
+          invoicePrecheckMessage ||
+          "Factuur-afbeelding is client-side afgekeurd."
+        );
+      }
 
-    if (decision === "warn") {
-      const warnMsg = buildInvoiceImagePrecheckMessage(invoicePrecheck);
-      if (warnMsg) {
-        showToast(warnMsg, "warning");
+      if (String(invoicePrecheck?.decision || "").trim() === "warn" && invoicePrecheckMessage) {
+        showToast(invoicePrecheckMessage, "warning");
       }
     }
-  }
-}
 
-if (originalHint) originalHint.textContent = "Bestand optimaliseren…";
+    if (originalHint) originalHint.textContent = "Bestand optimaliseren…";
 
-if (imageStep1Upload) {
-  const prepared = await imageStep1Upload.prepareUploadFile(file, doc_type);
-  uploadFile = prepared.uploadFile;
-  client_transform = prepared.client_transform;
-} else {
-  const prepared = await prepareUploadFile(file, doc_type);
-  uploadFile = prepared.uploadFile;
-  client_transform = prepared.client_transform;
-}
+    if (imageStep1Upload) {
+      const prepared = await imageStep1Upload.prepareUploadFile(file, doc_type);
+      uploadFile = prepared.uploadFile;
+      client_transform = prepared.client_transform;
+    } else {
+      const prepared = await prepareUploadFile(file, doc_type);
+      uploadFile = prepared.uploadFile;
+      client_transform = prepared.client_transform;
+    }
 
     const MAX_FINAL_BYTES = 15 * 1024 * 1024;
     if (uploadFile.size > MAX_FINAL_BYTES) {
@@ -2859,6 +2912,20 @@ if (imageStep1Upload) {
       file_sha256,
       client_transform,
     });
+
+    if (
+      isInvoiceImage &&
+      invoicePrecheckDecision === "warn" &&
+      invoicePrecheckMessage
+    ) {
+      setInvoiceImageWarningForDocument({
+        document_id: meta.document_id,
+        charger_id,
+        doc_type,
+        title: invoicePrecheckSummary?.title || "Factuurafbeelding twijfelachtig",
+        message: invoicePrecheckMessage,
+      });
+    }
 
     const verifyPayload = getAnalyseVerifyPayload();
     if (verifyPayload) {
@@ -2931,6 +2998,7 @@ if (imageStep1Upload) {
     } else {
       setText("uploadState", "Geüpload en bevestigd.");
     }
+
     showToast("Upload gelukt.", "success");
     invalidatePrecheck("document toegevoegd");
     await reloadAll();

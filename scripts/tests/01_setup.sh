@@ -59,7 +59,48 @@ fi
 TOKEN_RESET=0
 
 # Test-only data (NOT secret)
-TEST_MID_NUMBER="${TEST_MID_NUMBER:-MID-TEST-0001}"
+# Base MID must be unique per created charger in this setup run,
+# because api-dossier-charger-save enforces MID uniqueness
+# both within the dossier and globally.
+TEST_MID_NUMBER="${TEST_MID_NUMBER:-1234567890123456}"
+
+make_setup_mid_for_index() {
+  local idx="$1"
+  python3 - "$TEST_MID_NUMBER" "$idx" <<'PY'
+import sys
+import time
+
+base = str(sys.argv[1]).strip()
+idx = int(sys.argv[2])
+
+# We need a run-unique numeric MID-like value to avoid collisions:
+# - within the same dossier
+# - across retained test dossiers from previous runs
+#
+# Strategy:
+# - take only digits from the provided base
+# - fallback to a deterministic numeric seed if needed
+# - combine with current unix time tail + charger index
+# - clamp to 16 digits so it stays compatible with current test expectations
+
+digits = "".join(ch for ch in base if ch.isdigit())
+if not digits:
+    digits = "1234567890120000"
+
+seed = int(digits[-8:])          # stable base tail
+run_tail = int(time.time()) % 10_000_000  # 7 digits, changes every run
+value = (seed * 10_000_000) + run_tail
+value = value + idx
+
+s = str(value)
+if len(s) < 16:
+    s = s.zfill(16)
+elif len(s) > 16:
+    s = s[-16:]
+
+print(s)
+PY
+}
 
 # SAFETY: service role key must NEVER equal anon
 if [[ "${SUPABASE_ANON_KEY:-}" == "${SUPABASE_SERVICE_ROLE_KEY:-}" ]]; then
@@ -117,38 +158,52 @@ create_charger_and_get_id() {
   local rid="$1"
   local serial="$2"
 
-  local resp http body id
-
-  # Canonical runtime auth = session_token
-  # Nooit meer link-token gebruiken op dossier runtime write endpoints.
+  local resp http body id mid_for_this_charger
+  mid_for_this_charger="$(make_setup_mid_for_index "$serial")"
 
   resp="$(http_call_with_idem \
     "$SUPABASE_URL/functions/v1/api-dossier-charger-save" \
-    "{\"dossier_id\":\"$DOSSIER_ID\",\"session_token\":\"$(dossier_session_token)\",\"serial_number\":\"TEST-$rid-$serial\",\"mid_number\":\"$TEST_MID_NUMBER\",\"brand\":\"TEST\",\"model\":\"TEST\",\"power_kw\":11,\"notes\":\"audit-test setup\"}" \
+    "{\"dossier_id\":\"$DOSSIER_ID\",\"session_token\":\"$(dossier_session_token)\",\"serial_number\":\"TEST-$rid-$serial\",\"mid_number\":\"$mid_for_this_charger\",\"brand\":\"TEST\",\"model\":\"TEST\",\"power_kw\":11,\"notes\":\"audit-test setup\"}" \
     "$rid")"
 
   http="$(extract_http_status "$resp")"
   body="$(extract_body_json "$resp")"
 
   if [[ "$http" != "200" ]]; then
-    echo "FATAL: charger-create failed (HTTP $http) rid=$rid"
-    echo "BODY:"
-    print_json_safe_trunc "$body" 1200
-    echo ""
-    echo "RAW (first 60 lines):"
-    print_resp_head "$resp" 60
+    echo "FATAL: charger-create failed (HTTP $http) rid=$rid" >&2
+    echo "BODY:" >&2
+    print_json_safe_trunc "$body" 1200 >&2
+    echo "" >&2
+    echo "RAW (first 60 lines):" >&2
+    print_resp_head "$resp" 60 >&2
     return 1
   fi
 
-  id="$(echo "$body" | sed -n 's/.*"charger_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
+  id="$(printf "%s" "$body" | python3 -c '
+import sys, json
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    print("")
+    raise SystemExit(0)
+
+for key in ("charger_id", "id"):
+    v = d.get(key)
+    if v is not None and str(v).strip():
+        print(str(v))
+        raise SystemExit(0)
+
+print("")
+')"
+
   if [[ -z "$id" ]]; then
-    echo "FATAL: charger-create returned 200 but no charger_id in response rid=$rid"
-    echo "BODY:"
-    echo "$body"
+    echo "FATAL: charger-create returned 200 but no charger_id/id in response rid=$rid" >&2
+    echo "BODY:" >&2
+    print_json_safe_trunc "$body" 1200 >&2
     return 1
   fi
 
-  echo "$id"
+  printf "%s\n" "$id"
   return 0
 }
 

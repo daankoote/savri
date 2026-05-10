@@ -61,3 +61,6 @@ scripts/analysis_worker/run_pdf_batch.py
 
 # migrations
 supabase/migrations/
+
+# images
+docs/images/big_images

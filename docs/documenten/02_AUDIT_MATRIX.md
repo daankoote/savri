@@ -2,7 +2,7 @@
 
 # ENVAL — Audit Matrix (SPEC)
 
-Statusdatum: 2026-02-17  
+Statusdatum: 2026-05-10
 Doel: canonical lijst van audit events + waar/wanneer ze ontstaan.  
 Regel: als een endpoint behavior wijzigt → update matrix + log change in changelog.
 
@@ -41,31 +41,65 @@ NB:
 - Ze worden **niet als kolommen** gemodelleerd, maar altijd opgenomen in `event_data` (jsonb).
 - Queries en exports moeten daarom `event_data->>'field'` gebruiken.
 
-### Test-suite cleanup positie (CURRENT, bewezen 2026-03-12)
+### Test-suite cleanup positie (CURRENT, bewezen 2026-05-10)
 
-Fresh test runs gebruiken een nieuw dossier, maar ruimen na afloop **alleen mutable child artefacten** op.
+Fresh test runs gebruiken een nieuw dossier.
 
-Wat cleanup wél verwijdert:
-- `dossier_chargers` (via canonical edge delete)
-- `dossier_documents` / storage-objecten die aan created chargers hangen
-- andere mutable child state voor zover via bestaande delete-contracten opruimbaar
+De cleanup-semantiek hangt CURRENT af van de testfase:
+
+#### A) Vóór locked export
+Historisch ruimde cleanup mutable child artefacten op via runtime endpoints:
+- `dossier_chargers`
+- gekoppelde `dossier_documents`
+- storage-objecten voor zover via bestaande delete-contracten opruimbaar
+
+Deze vorm blijft alleen logisch zolang het dossier niet locked/in_review is.
+
+#### B) Ná locked export
+Na `scripts/tests/08_export_contract.sh` is het fresh testdossier bewust:
+- locked
+- `status = in_review`
+- voorzien van confirmed documents
+- voorzien van analysis proof
+- succesvol geëxporteerd
+
+Daarom is runtime cleanup na export bewust lock-aware:
+
+Wat cleanup dan níet doet:
+- geen `api-dossier-charger-delete`
+- geen runtime child mutation
+- geen poging om locked dossierdata leeg te maken
+
+Waarom:
+- locked dossiers moeten via runtime endpoints immutabel zijn
+- een 409 op charger-delete na lock is correct backendgedrag
+- cleanup mag audit- en exportbewijs niet kapotmaken
+
+Wat cleanup dan wél doet:
+- dossierstatus en `locked_at` tonen
+- retained charger/document/dossier/outbound/audit state controleren
+- bevestigen dat de locked retained state verwacht is
 
 Wat cleanup bewust níet hard verwijdert:
 - `dossiers` row
+- `dossier_chargers` rows
+- `dossier_documents` rows
 - `outbound_emails` rows
 - `dossier_audit_events` rows
 
 Rationale:
 - `dossier_audit_events` is immutabel
+- locked exportbewijs moet reproduceerbaar blijven
 - hard delete van dossier-shell zou audit trail breken of FK/trigger-conflicten veroorzaken
 - test cleanup moet audit-first blijven, niet “database volledig leeg maken”
 
 Operational meaning:
-- een fresh testdossier eindigt als **retained dossier shell** met audit history
+- een fresh testdossier dat export success bewijst eindigt als retained locked dossier met audit history
 - dit is CURRENT gewenst gedrag, geen cleanup failure
 
 Toekomst:
 - als lifecycle verder wordt uitgewerkt, gebeurt dat via tombstone/archive semantics, niet via hard delete van audit-gebonden dossiers
+
 
 ### Test-suite sabotage-proof bewijs (CURRENT, bewezen 2026-03-15)
 
@@ -107,6 +141,16 @@ Sommige rejects gebeuren **vóór** de edge function code draait (Supabase gatew
 - dossier_locked_for_review — success — api-dossier-evaluate
 - dossier_export_generated — success — api-dossier-export (locked only)
 - dossier_export_rejected — reject/fail — api-dossier-export
+
+Bewezen in fresh-only suite (2026-05-10):
+- not-locked export → HTTP 409 + `dossier_export_rejected`
+- locked/in_review export → HTTP 200 + `dossier_export_generated`
+- export artifact bevat load-bearing v5-blokken:
+  - `schema_version = enval-dossier-export.v5`
+  - confirmed documents
+  - analysis
+  - analysis_readable
+  - analysis_run
 
 Beperking (bewust, MVP):
 - `email_verified_at` wordt (indien leeg) gezet bij geldige link-token consume.
