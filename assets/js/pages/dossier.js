@@ -1237,22 +1237,7 @@ function isDevAnalysisEnabled() {
 }
 
 function isDevUnlockEnabled() {
-  const env = String(window.ENVAL?.ENVIRONMENT || "").toLowerCase();
-  const host = String(window.location.hostname || "").toLowerCase();
-
-  if (window.ENVAL?.DEV_UNLOCK_ENABLED === true) return true;
-  if (env === "dev") return true;
-
-  // extra dev-safety voor lokale/dev hosts
-  if (
-    host === "localhost" ||
-    host === "127.0.0.1" ||
-    host.endsWith(".netlify.app")
-  ) {
-    return true;
-  }
-
-  return false;
+  return canViewAnalysisDetails();
 }
 
 function syncReviewButtons() {
@@ -1557,14 +1542,6 @@ function renderStatus() {
   if (btnExport) btnExport.disabled = !locked;
 
  const showDevUnlock = locked && isDevUnlockEnabled();
-
-  console.log("DEV_UNLOCK_DEBUG", {
-    locked,
-    env: window.ENVAL?.ENVIRONMENT,
-    dev_unlock_enabled: window.ENVAL?.DEV_UNLOCK_ENABLED,
-    hostname: window.location.hostname,
-    showDevUnlock,
-  });
 
   if (devUnlockBox) devUnlockBox.classList.toggle("hidden", !showDevUnlock);
   if (btnDevUnlock) btnDevUnlock.disabled = !showDevUnlock;

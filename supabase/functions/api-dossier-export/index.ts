@@ -363,6 +363,7 @@ serve(async (req) => {
     { data: docsRaw, error: docErr },
     { data: checks, error: chkErr },
     { data: consentsRaw, error: cErr },
+    { data: auditEvents, error: auditErr },
     { data: analysisDocuments, error: aDocErr },
     { data: analysisChargers, error: aChErr },
     { data: analysisSummaryRows, error: aSumErr },
@@ -387,6 +388,11 @@ serve(async (req) => {
       .eq("dossier_id", dossier_id)
       .order("accepted_at", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false, nullsFirst: false }),
+
+    SB.from("dossier_audit_events")
+      .select("id, created_at, dossier_id, actor_type, actor_label, event_type, event_data")
+      .eq("dossier_id", dossier_id)
+      .order("created_at", { ascending: true }),
 
     latestRunId
       ? SB.from("dossier_analysis_document")
@@ -428,6 +434,10 @@ serve(async (req) => {
   if (cErr) {
     await auditReject("consents_read", 500, cErr.message, { reason: "db_error" });
     return finalize(500, { ok: false, error: `Consents read failed: ${cErr.message}` });
+  }
+  if (auditErr) {
+    await auditReject("audit_events_read", 500, auditErr.message, { reason: "db_error" });
+    return finalize(500, { ok: false, error: `Audit events read failed: ${auditErr.message}` });
   }
   if (aDocErr) {
     await auditReject("analysis_documents_read", 500, aDocErr.message, { reason: "db_error" });
@@ -617,6 +627,7 @@ serve(async (req) => {
     checks: checks || [],
     consents_latest: consent_snapshot,
     documents_confirmed,
+    audit_events: auditEvents || [],
 
     analysis,
     analysis_run,
@@ -640,6 +651,7 @@ serve(async (req) => {
         analysis_document_count: Array.isArray(analysisDocuments) ? analysisDocuments.length : 0,
         analysis_charger_count: Array.isArray(analysisChargers) ? analysisChargers.length : 0,
         analysis_overall_status: analysis_summary_latest?.overall_status || "not_run",
+        audit_event_count: Array.isArray(auditEvents) ? auditEvents.length : 0,
       },
     },
     meta,

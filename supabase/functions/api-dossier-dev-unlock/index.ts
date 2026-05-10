@@ -78,6 +78,7 @@ type DossierRow = {
   id: string;
   status: string | null;
   locked_at: string | null;
+  dossier_authority: string | null;
 };
 
 serve(async (req) => {
@@ -166,18 +167,9 @@ serve(async (req) => {
     return finalize(status, { ok: false, error: message, ...(extra || {}) });
   }
 
-  if (ENVIRONMENT !== "dev") {
-    return reject(
-      "environment_gate",
-      403,
-      "Dev unlock is only available in dev environment.",
-      { reason: "environment_not_dev", environment: ENVIRONMENT },
-    );
-  }
-
-  const { data: dossier, error: dErr } = await SB
+const { data: dossier, error: dErr } = await SB
     .from("dossiers")
-    .select("id,status,locked_at")
+    .select("id,status,locked_at,dossier_authority")
     .eq("id", dossier_id)
     .maybeSingle<DossierRow>();
 
@@ -201,12 +193,26 @@ serve(async (req) => {
     return finalize(500, { ok: false, error: dErr.message });
   }
 
-  if (!dossier) {
+if (!dossier) {
     return reject(
       "dossier_lookup",
       404,
       "Dossier not found",
       { reason: "not_found" },
+    );
+  }
+
+  const dossierAuthority = String(dossier.dossier_authority || "client").toLowerCase();
+
+  if (dossierAuthority !== "developer") {
+    return reject(
+      "authority_gate",
+      403,
+      "Dev unlock is alleen beschikbaar voor developer-dossiers.",
+      {
+        reason: "dossier_authority_not_developer",
+        dossier_authority: dossierAuthority,
+      },
     );
   }
 
@@ -253,7 +259,7 @@ serve(async (req) => {
       updated_at: ts,
     })
     .eq("id", dossier_id)
-    .select("id,status,locked_at")
+    .select("id,status,locked_at,dossier_authority")
     .maybeSingle<DossierRow>();
 
   if (upErr) {
@@ -295,7 +301,7 @@ serve(async (req) => {
         previous_locked_at: dossier.locked_at || null,
         new_status: "incomplete",
         new_locked_at: null,
-        reason: "dev_only_manual_unlock",
+        reason: "developer_authority_manual_unlock",
       },
     },
     meta,
@@ -310,6 +316,6 @@ serve(async (req) => {
     locked_at: null,
     previous_status: currentStatus || null,
     previous_locked_at: dossier.locked_at || null,
-    message: "Dossier unlocked for dev.",
+    message: "Dossier unlocked for developer workflow.",
   });
 });
