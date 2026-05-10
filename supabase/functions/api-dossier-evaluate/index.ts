@@ -382,7 +382,9 @@ serve(async (req) => {
     const missing: string[] = [];
 
     if (cnt.factuur < 1) missing.push("factuur");
-    if (cnt.foto_laadpunt < 1) missing.push("foto_laadpunt");
+    // Foto laadpunt is tijdelijk niet verplicht in launch-flow.
+    // Foto-analyse bestaat nog niet; factuur blijft de harde document-gate.
+    // if (cnt.foto_laadpunt < 1) missing.push("foto_laadpunt");
 
     if (missing.length) {
       missingDocsPerCharger.push({
@@ -462,10 +464,11 @@ serve(async (req) => {
 if (!addressOk) missingSteps.push("2) Adres is niet volledig ingevuld");
 if (!chargerExactOk) missingSteps.push("3) Aantal ingevoerde laadpalen komt niet overeen met het opgegeven aantal in 1) Basisgegevens ");
 if (!midPerChargerOk) missingSteps.push("3) Per laadpaal zijn serienummer en MID-nummer verplicht");
-if (!docsPerChargerOk) missingSteps.push("4) Per laadpaal moet 1 factuur en 1 foto bevestigd zijn");
+//if (!docsPerChargerOk) missingSteps.push("4) Per laadpaal moet 1 factuur en 1 foto bevestigd zijn");
+if (!docsPerChargerOk) missingSteps.push("4) Per laadpaal moet minimaal 1 factuur bevestigd zijn");
 if (!(hasTerms && hasPrivacy && hasMandaat)) missingSteps.push("5) Alle vereiste toestemmingen moeten akkoord zijn gegeven");
 if (evaluation_mode === "full" && !analysisGate.submit_allowed) {
-  missingSteps.push("6) Factuurcontrole / analyse blokkeert indiening");
+  missingSteps.push("Er is een afwijking gevonden in de factuurcontrole");
 }
 
   const ts = nowIso();

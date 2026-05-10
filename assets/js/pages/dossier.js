@@ -245,8 +245,13 @@ function cleanupLegacySessionKey() {
   // api.js storage helpers zijn nu verdacht en mogen deze flow niet meer beïnvloeden.
 }
 
-let current = null;
-let latestPrecheckAnalysis = null;
+function canViewAnalysisDetails() {
+  return current?.permissions?.can_view_analysis_details === true;
+}
+
+function canViewAnalysisDetails() {
+  return current?.permissions?.can_view_analysis_details === true;
+}
 
 function downloadJsonFile(filename, data) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json;charset=utf-8" });
@@ -627,7 +632,14 @@ function normalizeApiErrorPayload(err, fallbackMessage = "Controle mislukt.") {
 }
 
 function humanizeMissingStep(step) {
-  return String(step || "").trim();
+  const s = String(step || "").trim();
+  if (!s) return "";
+
+  if (s.toLowerCase().includes("factuurcontrole") || s.toLowerCase().includes("analyse")) {
+    return "Er is een afwijking gevonden in de factuurcontrole. Controleer of het factuuradres, MID-nummer en serienummer overeenkomen met de gegevens in het dossier.";
+  }
+
+  return s;
 }
 
 function humanizeBlockingReason(reason) {
@@ -681,7 +693,9 @@ function humanizeWarning(warning) {
   if (!s) return "";
 
   if (s.includes("Foto-analyse is nog niet geïmplementeerd")) {
-    return "De foto is wel aanwezig, maar foto-inhoud wordt op dit moment nog niet automatisch gecontroleerd.";
+   // return "De foto is wel aanwezig, maar foto-inhoud wordt op dit moment nog niet automatisch gecontroleerd.";
+  return "";
+}
   }
 
   if (s.startsWith("invoice_brand_match:")) {
@@ -1222,21 +1236,7 @@ function invalidatePrecheck(reason = "") {
 }
 
 function isDevAnalysisEnabled() {
-  const env = String(window.ENVAL?.ENVIRONMENT || "").toLowerCase();
-  const host = String(window.location.hostname || "").toLowerCase();
-
-  if (window.ENVAL?.DEV_ANALYSIS_ENABLED === true) return true;
-  if (env === "dev") return true;
-
-  if (
-    host === "localhost" ||
-    host === "127.0.0.1" ||
-    host.endsWith(".netlify.app")
-  ) {
-    return true;
-  }
-
-  return false;
+  return canViewAnalysisDetails();
 }
 
 function isDevUnlockEnabled() {
@@ -2196,7 +2196,8 @@ function renderDocs() {
 
   const hint = $("docsHint");
   if (hint) {
-    hint.textContent = "Per laadpaal: minimaal 1 factuur installatie + 1 foto van het laadpunt. Een document telt pas mee na bevestigde upload.";
+    //hint.textContent = "Per laadpaal: minimaal 1 factuur installatie + 1 foto van het laadpunt. Een document telt pas mee na bevestigde upload.";
+    hint.textContent = "Per laadpaal: upload minimaal 1 factuur/installatiefactuur. Een document telt pas mee na bevestigde upload.";
   }
 
   const chargers = getChargersForUi();
@@ -2269,15 +2270,17 @@ function renderDocs() {
       })
     );
 
-    card.appendChild(
-      createDocSection({
-        title: "Foto laadpunt",
-        docs: grouped.foto_laadpunt,
-        locked,
-        chargerId: chId,
-        docType: "foto_laadpunt",
-      })
-    );
+    if (canViewAnalysisDetails()) {
+      card.appendChild(
+        createDocSection({
+          title: "Foto laadpunt",
+          docs: grouped.foto_laadpunt,
+          locked,
+          chargerId: chId,
+          docType: "foto_laadpunt",
+        })
+      );
+    }
 
     cardsWrap.appendChild(card);
   });

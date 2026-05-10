@@ -270,6 +270,7 @@ serve(async (req) => {
       "address_verified_at",
       "locked_at",
       "in_nl",
+      "dossier_authority",
     ].join(","))
     .eq("id", dossier_id)
     .maybeSingle();
@@ -385,8 +386,14 @@ serve(async (req) => {
   const chargers = chargersRes?.error ? [] : (chargersRes.data || []);
   const checks = checksRes?.error ? [] : (checksRes.data || []);
 
+  const dossierAuthority = String((dossier as any)?.dossier_authority || "client").toLowerCase();
+  const canViewAnalysisDetails = dossierAuthority === "developer";
+
   return ok(req, {
     dossier,
+    permissions: {
+      can_view_analysis_details: canViewAnalysisDetails,
+    },
     documents,
     consents,
     audit,
