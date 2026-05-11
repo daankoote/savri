@@ -414,14 +414,23 @@ Retention cleanup helpers:
   - weigert DB cleanup bij mismatch
   - gebruikt dezelfde gecontroleerde DB-owner bypass als retention cleanup
 
-Retention storage cleanup tool:
-- `scripts/tools/retention-storage-cleanup.mjs`
-  - handmatige target-only cleanup tool
-  - leest retention dry-run via RPC
-  - verwijdert uitsluitend `deletable_storage_paths`
-  - weigert zodra deletable paths overlappen met preserved paths
-  - roept daarna `enval_retention_cleanup_apply_after_storage(...)` aan
-  - bewijst post-cleanup dat runtime dossierdata weg is
+Retention worker:
+- `supabase/functions/retention-worker/index.ts`
+  - utility Edge Function
+  - protected via `RETENTION_WORKER_SECRET`
+  - gebruikt header `x-retention-worker-secret`
+  - voert retention dry-run en target/batch cleanup uit via service-role
+  - verwijdert storage uitsluitend voor `deletable_storage_paths`
+  - weigert wanneer deletable paths overlappen met preserved paths
+  - roept `enval_retention_cleanup_apply_after_storage(...)` aan na storage cleanup
+  - preserved runtime cleanup kan zonder storage-delete worden toegepast wanneer `deletable_storage_paths = []`
+  - retention windows staan bovenaan in `RETENTION_CONFIG` en worden doorgegeven aan de DB helpers
+
+Live proof:
+- dry-run worker call gaf candidates terug met config `3/7/14` en reminderdagen `3/7/10`
+- target apply op preserved dossier verwijderde runtime DB data
+- preserved storage bleef beschermd
+- `dossier_exports` bleef intact
 
 Trigger nuance:
 - `public._enval_enforce_document_lifecycle()` bevat een expliciete DB-owner bypass via:

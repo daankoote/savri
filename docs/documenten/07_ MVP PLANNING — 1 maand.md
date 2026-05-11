@@ -165,7 +165,9 @@ Final preservation:
 - DB runtime cleanup na preserved export is live bewezen via `public.enval_retention_cleanup(...)`.
 - Storage objects waarnaar een preserved export verwijst, mogen niet worden verwijderd.
 - Handmatige storage+DB cleanup voor niet-preserved files is bewezen via `scripts/tools/retention-storage-cleanup.mjs`.
-- Automatische scheduler/worker voor retention cleanup blijft een vervolgstap.
+- Retention worker is gebouwd, gedeployed en target-apply bewezen.
+- Automatische scheduler/cron voor periodieke retention cleanup blijft een vervolgstap.
+- Reminder-flow voor locked/unpaid dossiers blijft een vervolgstap.
 
 Deliverable:
 - Klant kan zelfstandig nieuwe toeganglink aanvragen.

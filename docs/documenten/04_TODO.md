@@ -127,6 +127,7 @@ Regel: alleen open items; afgerond → naar changelog.
     - preserved runtime cleanup verwijdert runtime data terwijl `dossier_exports` intact blijft
     - non-preserved cleanup met storage wordt geblokkeerd met `STORAGE_CLEANUP_REQUIRED_BEFORE_DB_DELETE`
   - Storage cleanup tool is handmatig gebouwd en bewezen.
+  - Retention worker is gebouwd, gedeployed en target-apply bewezen.
   - Scheduler en reminders zijn nog niet gebouwd.
   - CURRENT fresh-only cleanup in tests is nog bewust lock-aware retained-state proof.
 
@@ -165,7 +166,8 @@ Regel: alleen open items; afgerond → naar changelog.
   - `dossier_audit_events` verwijderen/anonymiseren mogelijk maken voor abandoned runtime dossiers waar nog geen preserved export bestaat
   - DONE: storage cleanup guard bouwen zodat preserved source files nooit worden verwijderd in handmatige tooling
   - DONE: runtime cleanup na successful preservation opnemen in regressietests
-  - later scheduler/worker maken voor automatische retention cleanup
+  - DONE: retention worker maken voor automatische retention cleanup
+  - scheduler/cron nog instellen voor periodieke automatische uitvoering
   - fresh-only tests aanpassen zodra cleanup van retained-state proof naar echte retention cleanup verschuift
 
 - DoD:
@@ -174,9 +176,10 @@ Regel: alleen open items; afgerond → naar changelog.
   - paid/exported exports blijven reproduceerbaar vanuit `dossier_exports`
   - storage cleanup verwijdert alleen non-preserved files
   - handmatige proof bestaat via `scripts/tools/retention-storage-cleanup.mjs`
-  - cleanup schrijft auditwaardige system events:
+  - cleanup worker probeert functionele system events te schrijven:
     - `dossier_runtime_cleanup_applied`
     - `dossier_runtime_cleanup_failed`
+  - permanente cleanup audit-log oplossing nog bepalen, omdat `dossier_audit_events` meeverwijdert wanneer runtime dossier wordt verwijderd
   - suite bewijst dat preserved export intact blijft na runtime cleanup
 
 - Status: OPEN — P1 MVP cleanup/access recovery

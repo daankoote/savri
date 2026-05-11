@@ -2337,4 +2337,63 @@ Open:
 - cleanup audit events laten schrijven door toekomstige worker/scheduler-laag
 - beslissen of post-export runtime cleanup direct, vertraagd of scheduled wordt uitgevoerd
 
+## 2026-05-11 — Retention worker gebouwd, gedeployed en target-apply bewezen
+
+Wijzigingen:
+- Nieuwe utility Edge Function toegevoegd:
+  - `supabase/functions/retention-worker/index.ts`
+- `scripts/tools/edge-uniformity.sh` uitgebreid:
+  - `retention-worker` is nu expliciet `utility`
+- Retention cleanup DB helpers zijn parametriseerbaar gemaakt:
+  - preserved grace days
+  - draft retention days
+  - locked/unpaid retention days
+- Worker bevat bovenaan één centrale `RETENTION_CONFIG`:
+  - `preservedRuntimeCleanupGraceDays = 3`
+  - `draftRetentionDays = 7`
+  - `lockedUnpaidRetentionDays = 14`
+  - `lockedUnpaidReminderDays = [3, 7, 10]`
+  - `batchLimit = 10`
+  - `storageDeleteBatchSize = 1000`
+- Worker geeft deze waarden door aan de DB helpers, zodat worker en SQL geen gesplitste retentionwaarheid krijgen.
+
+Security:
+- Worker is protected via:
+  - Supabase gateway headers
+  - `x-retention-worker-secret`
+  - Supabase secret `RETENTION_WORKER_SECRET`
+- Secretwaarde is niet in repo/docs opgenomen.
+
+Bewijs:
+- `edge-uniformity.sh`:
+  - `retention-worker | utility`
+  - baseline groen
+  - `EDGE_EXIT=0`
+- Dry-run live worker call:
+  - HTTP 200
+  - config zichtbaar in response
+  - candidates gevonden
+  - eerste candidates waren `preserved_runtime_cleanup`
+  - preserved storage count = 8
+  - deletable storage count = 0
+- Target apply live worker call op één preserved dossier:
+  - HTTP 200
+  - `candidate_count = 1`
+  - `processed_count = 1`
+  - `failed_count = 0`
+  - `retention_class = preserved_runtime_cleanup`
+  - `storage_deleted = 0`
+  - `db_cleanup_applied = true`
+  - `deleted_runtime_dossier = true`
+- Herhaalde dry-run op hetzelfde dossier:
+  - `candidate_count = 0`
+- Export preservation proof:
+  - `dossier_exports` row bleef bestaan
+  - `preserved_document_count = 8`
+
+Open:
+- scheduler/cron voor automatische worker-run nog niet ingesteld
+- reminder-flow voor locked/unpaid dag 3/7/10 nog niet gebouwd
+- permanente cleanup audit-log oplossing nog open, omdat `dossier_audit_events` cascaded met runtime dossier delete
+
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)

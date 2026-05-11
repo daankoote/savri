@@ -239,8 +239,12 @@ CURRENT retention cleanup proof:
   - herhaalde dry-run geeft `NO_CANDIDATE`
 
 Belangrijk:
-- Deze helpers/tooling schrijven CURRENT nog geen eigen cleanup audit event.
-- `dossier_runtime_cleanup_applied` en `dossier_runtime_cleanup_failed` blijven het geplande audit-event contract voor de latere scheduler/worker-laag.
+- `retention-worker` probeert CURRENT `dossier_runtime_cleanup_applied` en `dossier_runtime_cleanup_failed` te schrijven via `dossier_audit_events`.
+- Deze events zijn niet permanent betrouwbaar wanneer het runtime dossier daarna wordt verwijderd, omdat `dossier_audit_events` via dossier-FK meeverwijdert.
+- Permanente cleanup audit requires later:
+  - aparte system cleanup events tabel, of
+  - bewuste keuze dat cleanup proof in worker logs/ops-output zit.
+- `dossier_runtime_cleanup_applied` en `dossier_runtime_cleanup_failed` blijven dus het functionele event-contract, maar hun permanente bewaarmodel is nog OPEN.
 
 Bewezen in fresh-only suite:
 - not-locked export → HTTP 409 + `dossier_export_rejected`

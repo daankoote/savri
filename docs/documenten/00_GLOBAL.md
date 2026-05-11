@@ -684,11 +684,29 @@ CURRENT proof:
   - dossier/documents/chargers gaven daarna lege resultaten
   - herhaalde dry-run gaf `NO_CANDIDATE`
 
+Retention worker (CURRENT, bewezen):
+- `supabase/functions/retention-worker/index.ts` bestaat als utility Edge Function.
+- Worker is protected via `RETENTION_WORKER_SECRET`.
+- Retention windows staan bewust bovenaan de worker in `RETENTION_CONFIG`:
+  - preserved runtime cleanup grace: 3 dagen
+  - draft retention: 7 dagen
+  - locked/unpaid retention: 14 dagen
+  - reminderdagen: 3/7/10
+- Worker geeft deze waarden door aan de DB cleanup helpers om split-brain tussen worker en SQL te voorkomen.
+- Dry-run via worker is live bewezen.
+- Target apply op één preserved export is live bewezen:
+  - `retention_class = preserved_runtime_cleanup`
+  - `storage_deleted = 0`
+  - `db_cleanup_applied = true`
+  - `deleted_runtime_dossier = true`
+  - herhaalde dry-run op hetzelfde dossier gaf `candidate_count = 0`
+  - `dossier_exports` bleef bestaan met preserved documents.
+
 Nog OPEN:
 - reminder-flow bouwen voor locked/unpaid dag 3/7/10
 - scheduler/ops-runbook voor retention lifecycle toevoegen
-- automatische post-export runtime cleanup beslissen/bouwen
-- cleanup audit events laten schrijven door toekomstige worker/scheduler-laag
+- beslissen of post-export runtime cleanup automatisch direct of scheduled wordt uitgevoerd
+- permanente cleanup audit-log oplossing bepalen, omdat `dossier_audit_events` mee verdwijnt bij runtime dossier delete
 
 
 ## 11.2 Fresh-only testsuite export/cleanup contract (CURRENT, 2026-05-10)
