@@ -662,17 +662,33 @@ CURRENT proof:
 
 CURRENT cleanup boundary:
 - `public.enval_retention_cleanup(...)` is DB-cleanup only.
-- Storage cleanup is bewust separaat.
+- Storage cleanup is bewust separaat en gebeurt via tooling/API vóór DB-delete.
 - `p_apply=true` vereist expliciet `p_target_dossier_id`.
 - Non-preserved dossiers met storage worden niet DB-verwijderd zolang storage cleanup niet vooraf is uitgevoerd.
 - Guard error:
   - `STORAGE_CLEANUP_REQUIRED_BEFORE_DB_DELETE`
+- `public.enval_retention_cleanup_apply_after_storage(...)` past DB-cleanup toe nadat exact is bevestigd welke storage paths zijn verwijderd.
+- `scripts/tools/retention-storage-cleanup.mjs` voert handmatig en target-only storage+DB cleanup uit voor één dossier.
+- Tooling beschermt preserved storage paths tegen verwijdering.
+
+CURRENT proof:
+- `scripts/tests/10_retention_cleanup.sh` bewijst preserved runtime cleanup:
+  - mass apply zonder target geweigerd
+  - dry-run candidate zichtbaar
+  - runtime DB verwijderd na preservation
+  - `dossier_exports` blijft intact
+- `scripts/tools/retention-storage-cleanup.mjs` is handmatig bewezen op een non-preserved locked/unpaid testdossier:
+  - dry-run classificeerde `locked_unpaid_expired`
+  - 8 non-preserved storage objects verwijderd
+  - runtime DB daarna verwijderd
+  - dossier/documents/chargers gaven daarna lege resultaten
+  - herhaalde dry-run gaf `NO_CANDIDATE`
 
 Nog OPEN:
-- storage cleanup worker/helper bouwen voor non-preserved files
 - reminder-flow bouwen voor locked/unpaid dag 3/7/10
-- `scripts/tests/10_retention_cleanup.sh` toevoegen als regressieproof
 - scheduler/ops-runbook voor retention lifecycle toevoegen
+- automatische post-export runtime cleanup beslissen/bouwen
+- cleanup audit events laten schrijven door toekomstige worker/scheduler-laag
 
 
 ## 11.2 Fresh-only testsuite export/cleanup contract (CURRENT, 2026-05-10)

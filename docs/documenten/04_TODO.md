@@ -126,7 +126,8 @@ Regel: alleen open items; afgerond → naar changelog.
     - mass apply zonder target wordt geweigerd
     - preserved runtime cleanup verwijdert runtime data terwijl `dossier_exports` intact blijft
     - non-preserved cleanup met storage wordt geblokkeerd met `STORAGE_CLEANUP_REQUIRED_BEFORE_DB_DELETE`
-  - Storage cleanup, scheduler, reminders en regressietestscript zijn nog niet gebouwd.
+  - Storage cleanup tool is handmatig gebouwd en bewezen.
+  - Scheduler en reminders zijn nog niet gebouwd.
   - CURRENT fresh-only cleanup in tests is nog bewust lock-aware retained-state proof.
 
 - Retention policy:
@@ -157,13 +158,14 @@ Regel: alleen open items; afgerond → naar changelog.
   - migration voor retention cleanup is toegevoegd aan `supabase/migrations`.
 
 - Nog OPEN:
-  - storage cleanup-strategie bouwen voor non-preserved files
+  - DONE: handmatige storage cleanup tool bouwen voor non-preserved files
   - reminder-flow bouwen voor locked/unpaid dag 3/7/10
  - DONE: access recovery UX/flow voor gebruikte/verlopen dossierlinks is gebouwd en live bewezen.
   - FK/trigger/immutability model regressievrij houden nu DB cleanup bypass bestaat
   - `dossier_audit_events` verwijderen/anonymiseren mogelijk maken voor abandoned runtime dossiers waar nog geen preserved export bestaat
-  - storage cleanup guard bouwen zodat preserved source files nooit worden verwijderd
-  - runtime cleanup na successful preservation opnemen in regressietests en later scheduler/worker maken
+  - DONE: storage cleanup guard bouwen zodat preserved source files nooit worden verwijderd in handmatige tooling
+  - DONE: runtime cleanup na successful preservation opnemen in regressietests
+  - later scheduler/worker maken voor automatische retention cleanup
   - fresh-only tests aanpassen zodra cleanup van retained-state proof naar echte retention cleanup verschuift
 
 - DoD:
@@ -171,6 +173,7 @@ Regel: alleen open items; afgerond → naar changelog.
   - locked/unpaid dossiers krijgen reminders en worden na retention verwijderd/geanonimiseerd
   - paid/exported exports blijven reproduceerbaar vanuit `dossier_exports`
   - storage cleanup verwijdert alleen non-preserved files
+  - handmatige proof bestaat via `scripts/tools/retention-storage-cleanup.mjs`
   - cleanup schrijft auditwaardige system events:
     - `dossier_runtime_cleanup_applied`
     - `dossier_runtime_cleanup_failed`

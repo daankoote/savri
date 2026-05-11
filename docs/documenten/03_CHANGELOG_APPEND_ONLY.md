@@ -2297,4 +2297,44 @@ Legacy nuance:
 - Oude testexports van vóór de yearly MID claim patch kunnen `claim_year = null` en `claimed_mid_numbers = null` bevatten.
 - Nieuwe exports vullen CURRENT `claim_year` en `claimed_mid_numbers`.
 
+## 2026-05-11 — Retention storage cleanup tool handmatig bewezen
+
+Wijzigingen:
+- Nieuwe DB helper toegevoegd:
+  - `public.enval_retention_cleanup_apply_after_storage(...)`
+- Nieuwe lokale tool toegevoegd:
+  - `scripts/tools/retention-storage-cleanup.mjs`
+- Tool gebruikt geen extra npm dependency; Node `fetch` + service-role REST/Storage API volstaan.
+- Tool is target-only en vereist expliciet:
+  - `--dossier-id`
+  - `--apply --yes` voor mutaties
+
+Bewezen gedrag:
+- Dry-run op non-preserved locked/unpaid dossier classificeerde:
+  - `retention_class = locked_unpaid_expired`
+  - `preserved = false`
+  - `runtime_documents = 8`
+  - `runtime_chargers = 4`
+  - `runtime_storage_paths = 8`
+  - `deletable_storage_paths = 8`
+  - `preserved_storage_paths = 0`
+- Apply verwijderde eerst 8 storage objects uit `enval-dossiers`.
+- Daarna paste DB cleanup toe via `enval_retention_cleanup_apply_after_storage(...)`.
+- Post-cleanup proof:
+  - `dossiers = []`
+  - `dossier_documents = []`
+  - `dossier_chargers = []`
+  - herhaalde dry-run gaf `NO_CANDIDATE`
+
+Belangrijke correctie:
+- Export/preservation maakt `dossier_exports` aan.
+- Runtime cleanup gebeurt CURRENT nog niet automatisch in `api-dossier-export`.
+- Automatische cleanup blijft bewust uitgesteld totdat scheduler/worker/reminder-flow is gebouwd.
+
+Open:
+- scheduler/worker voor retention lifecycle bouwen
+- reminder-mails voor locked/unpaid dag 3/7/10 bouwen
+- cleanup audit events laten schrijven door toekomstige worker/scheduler-laag
+- beslissen of post-export runtime cleanup direct, vertraagd of scheduled wordt uitgevoerd
+
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)

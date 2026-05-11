@@ -230,9 +230,16 @@ CURRENT retention cleanup proof:
   - preserved storage paths beschermd
 - Non-preserved dossier met storage wordt geweigerd vóór DB-delete met:
   - `STORAGE_CLEANUP_REQUIRED_BEFORE_DB_DELETE`
+- `public.enval_retention_cleanup_apply_after_storage(...)` bestaat als gecontroleerde apply-helper nadat storage cleanup exact is bevestigd.
+- `scripts/tools/retention-storage-cleanup.mjs` is handmatig bewezen:
+  - dry-run classificeert non-preserved locked/unpaid dossier
+  - tool verwijdert alleen non-preserved `deletable_storage_paths`
+  - preserved storage paths worden beschermd
+  - daarna wordt runtime DB cleanup toegepast
+  - herhaalde dry-run geeft `NO_CANDIDATE`
 
 Belangrijk:
-- Deze helper schrijft CURRENT nog geen eigen cleanup audit event.
+- Deze helpers/tooling schrijven CURRENT nog geen eigen cleanup audit event.
 - `dossier_runtime_cleanup_applied` en `dossier_runtime_cleanup_failed` blijven het geplande audit-event contract voor de latere scheduler/worker-laag.
 
 Bewezen in fresh-only suite:

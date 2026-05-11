@@ -398,7 +398,7 @@ Lifecycle-principe:
 - Storage objects waarnaar een preserved export verwijst, mogen niet door cleanup worden verwijderd.
 - Niet-preserved storage volgt draft/locked retention.
 
-Retention cleanup helper:
+Retention cleanup helpers:
 - `public.enval_retention_cleanup(...)`
   - dry-run en apply helper voor runtime DB cleanup
   - `p_apply=true` vereist expliciet `p_target_dossier_id`
@@ -406,6 +406,22 @@ Retention cleanup helper:
   - preserved runtime cleanup is toegestaan wanneer export preservation bestaat
   - non-preserved cleanup met nog aanwezige storage wordt geweigerd met:
     - `STORAGE_CLEANUP_REQUIRED_BEFORE_DB_DELETE`
+
+- `public.enval_retention_cleanup_apply_after_storage(...)`
+  - apply helper voor runtime DB cleanup nadat storage cleanup exact is bevestigd
+  - vereist één expliciet `p_target_dossier_id`
+  - vergelijkt expected `deletable_storage_paths` met confirmed deleted storage paths
+  - weigert DB cleanup bij mismatch
+  - gebruikt dezelfde gecontroleerde DB-owner bypass als retention cleanup
+
+Retention storage cleanup tool:
+- `scripts/tools/retention-storage-cleanup.mjs`
+  - handmatige target-only cleanup tool
+  - leest retention dry-run via RPC
+  - verwijdert uitsluitend `deletable_storage_paths`
+  - weigert zodra deletable paths overlappen met preserved paths
+  - roept daarna `enval_retention_cleanup_apply_after_storage(...)` aan
+  - bewijst post-cleanup dat runtime dossierdata weg is
 
 Trigger nuance:
 - `public._enval_enforce_document_lifecycle()` bevat een expliciete DB-owner bypass via:

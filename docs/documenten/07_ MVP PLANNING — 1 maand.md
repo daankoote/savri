@@ -164,7 +164,8 @@ Final preservation:
 - Runtime-tabellen mogen daarna worden opgeschoond.
 - DB runtime cleanup na preserved export is live bewezen via `public.enval_retention_cleanup(...)`.
 - Storage objects waarnaar een preserved export verwijst, mogen niet worden verwijderd.
-- Storage cleanup voor niet-preserved files blijft een aparte vervolgstap.
+- Handmatige storage+DB cleanup voor niet-preserved files is bewezen via `scripts/tools/retention-storage-cleanup.mjs`.
+- Automatische scheduler/worker voor retention cleanup blijft een vervolgstap.
 
 Deliverable:
 - Klant kan zelfstandig nieuwe toeganglink aanvragen.
