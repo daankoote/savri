@@ -88,6 +88,28 @@
             </div>
           </div>
 
+          <div id="accessRecoveryCard" class="card hidden mt-18">
+            <h2 class="mt-0">Nieuwe toeganglink aanvragen</h2>
+            <p class="muted">
+              Deze dossierlink is verlopen of al gebruikt. Vul het e-mailadres in waarmee u het dossier heeft gestart.
+              Als dit e-mailadres bij dit dossier hoort, sturen wij een nieuwe toeganglink.
+            </p>
+
+            <form id="accessRecoveryForm" class="form" novalidate>
+              <label>
+                <span>E-mailadres</span>
+                <input type="email" name="email" placeholder="uw@email.nl" autocomplete="email" required />
+              </label>
+
+              <div class="form-actions">
+                <button id="btnAccessRecovery" class="btn primary full-width" type="submit">
+                  Stuur nieuwe toeganglink
+                </button>
+                <div id="accessRecoveryState" class="small muted"></div>
+              </div>
+            </form>
+          </div>
+
           <div class="grid2 mt-18">
             <div class="card">
               <h2 class="mt-0">1) Basisgegevens</h2>

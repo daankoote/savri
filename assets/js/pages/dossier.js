@@ -240,6 +240,60 @@ function clearSessionToken() {
   } catch (_) {}
 }
 
+function isRecoverableAccessError(err) {
+  const msg = String(err?.message || err || "").toLowerCase();
+
+  return (
+    msg.includes("link already used") ||
+    msg.includes("link expired") ||
+    msg.includes("sessie ontbreekt") ||
+    msg.includes("sessie verlopen") ||
+    msg.includes("open je dossierlink opnieuw")
+  );
+}
+
+function setMainDossierUiHidden(hidden) {
+  document.querySelectorAll(".grid2.mt-18, #analysisSection").forEach((el) => {
+    el.classList.toggle("hidden", !!hidden);
+  });
+}
+
+function showAccessRecovery(reasonMessage = "") {
+  clearSessionToken();
+
+  const card = $("accessRecoveryCard");
+  if (card) card.classList.remove("hidden");
+
+  setMainDossierUiHidden(true);
+
+  if ($("statusPill")) {
+    $("statusPill").className = "pill warn";
+    $("statusPill").textContent = "Nieuwe link nodig";
+  }
+
+  if ($("statusExplain")) {
+    $("statusExplain").textContent =
+      "Deze toeganglink is verlopen of al gebruikt. Vraag hieronder een nieuwe toeganglink aan.";
+  }
+
+  if ($("accessRecoveryState")) {
+    $("accessRecoveryState").textContent = reasonMessage
+      ? `Nieuwe toeganglink nodig.`
+      : "";
+  }
+}
+
+function hideAccessRecovery() {
+  const card = $("accessRecoveryCard");
+  if (card) card.classList.add("hidden");
+
+  setMainDossierUiHidden(false);
+
+  if ($("accessRecoveryState")) {
+    $("accessRecoveryState").textContent = "";
+  }
+}
+
 function cleanupLegacySessionKey() {
   // Tijdelijk bewust NO-OP.
   // api.js storage helpers zijn nu verdacht en mogen deze flow niet meer beïnvloeden.
@@ -1023,8 +1077,47 @@ async function apiPost(fnName, body, options) {
   return window.ENVAL.api.apiPost(fnName, body, options || {});
 }
 
-async function apiAuthed(fnName, extra, options) {
-  return apiPost(fnName, authedBody(extra), options || {});
+async function onAccessRecoverySubmit(e) {
+  e.preventDefault();
+
+  const form = e.target;
+  const btn = $("btnAccessRecovery");
+  const state = $("accessRecoveryState");
+  const email = String(form?.querySelector('[name="email"]')?.value || "").trim().toLowerCase();
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (state) state.textContent = "Vul een geldig e-mailadres in.";
+    showToast("Vul een geldig e-mailadres in.", "error");
+    return;
+  }
+
+  lockSubmit(btn, true, "Versturen…");
+
+  try {
+    await apiPost("api-dossier-login-request", {
+      dossier_id,
+      email,
+    });
+
+    if (state) {
+      state.textContent =
+        "Als dit e-mailadres bij dit dossier hoort, sturen wij een nieuwe toeganglink. Controleer ook uw spamfolder.";
+    }
+
+    showToast("Aanvraag ontvangen. Controleer uw e-mail.", "success");
+  } catch (err) {
+    console.error("access recovery failed:", err);
+
+    // Anti-enumeration UX: ook bij onverwachte frontend/API-fout niet te specifiek worden.
+    if (state) {
+      state.textContent =
+        "Als dit e-mailadres bij dit dossier hoort, sturen wij een nieuwe toeganglink. Controleer ook uw spamfolder.";
+    }
+
+    showToast("Aanvraag verwerkt. Controleer uw e-mail.", "success");
+  } finally {
+    lockSubmit(btn, false, "Stuur nieuwe toeganglink");
+  }
 }
 
 function getAnalyseImageStep1Precheck() {
@@ -1329,13 +1422,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  // token is alleen nodig als je nog géén session_token hebt
+  // token is alleen nodig als je nog géén session_token hebt.
+  // Zonder token/session tonen we recovery in plaats van een doodlopende fout.
   if (!getSessionToken() && !token) {
-    showToast("Sessie ontbreekt. Open de dossierlink uit je e-mail opnieuw.", "error");
-    if ($("statusPill")) {
-      $("statusPill").className = "pill err";
-      $("statusPill").textContent = "Sessie ontbreekt";
-    }
+    showAccessRecovery("missing_session_or_token");
     return;
   }
 
@@ -1353,6 +1443,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     $("btnLoadAnalysis").disabled = true;
   }
   $("btnDevUnlock")?.addEventListener("click", onDevUnlockClicked);
+  $("accessRecoveryForm")?.addEventListener("submit", onAccessRecoverySubmit);
 
 
   $("addressForm")?.addEventListener("submit", onAddressSave);
@@ -1390,6 +1481,8 @@ async function reloadAll() {
     console.log("DOSSIER reloadAll session_token =", session_token);
     console.log("DOSSIER reloadAll sessionStorageKey =", sessionStorageKey());
 
+    hideAccessRecovery();
+
     // 1) Eerst proberen met bestaande session token
     if (session_token) {
       let sessionResponse = null;
@@ -1414,7 +1507,10 @@ async function reloadAll() {
     }
 
     // 2) Fallback: eenmalige link-token exchange
-    if (!token) throw new Error("Sessie verlopen. Open je dossierlink opnieuw.");
+    if (!token) {
+      showAccessRecovery("missing_link_token");
+      return;
+    }
 
     const r = await apiPost("api-dossier-get", { dossier_id, token });
 
@@ -1435,6 +1531,13 @@ async function reloadAll() {
     renderAll();
   } catch (e) {
     console.error("reloadAll failed:", e);
+
+    if (isRecoverableAccessError(e)) {
+      showAccessRecovery(String(e?.message || ""));
+      showToast("Vraag een nieuwe toeganglink aan.", "error");
+      return;
+    }
+
     showToast(e.message || "Fout bij laden", "error");
 
     if ($("statusPill")) {
