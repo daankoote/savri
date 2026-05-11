@@ -274,33 +274,9 @@ serve(async (req) => {
     });
   }
 
-  let midGlobalQuery = SB
-    .from("dossier_chargers")
-    .select("id, dossier_id")
-    .eq("mid_number", mid);
-
-  if (charger_id) {
-    midGlobalQuery = midGlobalQuery.neq("id", charger_id);
-  }
-
-  const { data: anyMid, error: mErr } = await midGlobalQuery
-    .limit(1)
-    .maybeSingle();
-
-  if (mErr) {
-    return fail("validate_duplicate_mid_global", 500, `MID check failed: ${mErr.message}`, {
-      reason: "mid_check_failed",
-      error: mErr.message,
-    });
-  }
-
-  if (anyMid && String(anyMid.dossier_id) !== String(dossier_id)) {
-    return reject("validate_duplicate", 409, "Dit MID-nummer is al gebruikt in een ander dossier. Controleer het MID-nummer.", {
-      reason: "duplicate_mid_other_dossier",
-      mid_number: mid,
-    });
-  }
-
+  // Runtime MID values are not final claims.
+  // Cross-dossier MID conflicts are checked only at export preservation time
+  // against public.dossier_exports using MID + claim_year.
   const ts = nowIso();
 
   async function invalidateIfNeeded(): Promise<boolean> {
