@@ -2197,4 +2197,58 @@ Open P1:
 - Reminder-flow bouwen.
 - MID/serial uniqueness aanpassen zodat abandoned drafts geen echte dossiers blokkeren.
 
+
+## 2026-05-11 — Export preservation bewezen + yearly MID claim enforcement verplaatst naar `dossier_exports`
+
+Bewezen en gecommit:
+- `api-dossier-export` preserveert export artifacts in `public.dossier_exports`.
+- Export response bevat:
+  - `preserved = true`
+  - `export_id`
+  - `export_sha256`
+  - `payment_status = waived`
+  - `claim_year`
+  - `claimed_mid_numbers`
+- `dossier_exports.export_json` bevat de volledige export JSON.
+- `dossier_exports.export_sha256` bevat SHA256-proof over de export JSON.
+- `dossier_exports.claim_year` + `dossier_exports.claimed_mid_numbers` vormen de final MID-claim basis.
+- `dossier_export_preserved` wordt geschreven als audit event.
+- `dossier_export_preserve_failed` bestaat als fail-path wanneer preservation faalt vóór cleanup.
+
+Nieuw MID-contract:
+- Runtime `dossier_chargers.mid_number` is geen finale claim meer.
+- Cross-dossier duplicate MID wordt niet meer geblokkeerd bij `api-dossier-charger-save`.
+- Same-dossier duplicate MID blijft een runtime datakwaliteitsreject.
+- Definitieve MID-claim gebeurt uitsluitend bij export preservation.
+- Duplicate `MID + claim_year` wordt bij export geblokkeerd tegen bestaande non-voided preserved exports.
+- Conflict-export:
+  - geeft HTTP 409
+  - schrijft `dossier_export_rejected`
+  - gebruikt stage `final_mid_claim`
+  - gebruikt reason `mid_already_claimed_for_claim_year`
+  - maakt géén nieuwe `dossier_exports` row.
+
+DB/contract wijzigingen:
+- Runtime unique index op `public.dossier_chargers.mid_number` is verwijderd.
+- `public.dossier_exports` is gehardend met:
+  - `claim_year`
+  - `claimed_mid_numbers`
+  - SHA256 format constraint
+  - indexes voor dossier/request/claim lookup
+  - update/delete block triggers
+
+Bewezen in fresh-only suite:
+- locked export success
+- export preservation row + SHA proof
+- preserved audit proof
+- duplicate yearly MID export reject
+- geen `dossier_exports` row bij duplicate MID conflict
+- cleanup blijft CURRENT lock-aware retained-state proof.
+
+Open blijft:
+- access recovery voor gebruikte/verlopen dossierlinks.
+- retention cleanup na preservation.
+- reminder-flow voor locked/unpaid dossiers.
+- storage cleanup met preserved-export guard.
+
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)

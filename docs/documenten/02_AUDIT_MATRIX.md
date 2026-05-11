@@ -146,7 +146,7 @@ Sommige rejects gebeuren **vóór** de edge function code draait (Supabase gatew
 - dossier_runtime_cleanup_applied — success — retention cleanup after preservation or expiry
 - dossier_runtime_cleanup_failed — fail — retention cleanup
 
-### Export preservation / retention events (PLANNED P1)
+### Export preservation / retention events (CURRENT + PLANNED cleanup)
 
 Nieuwe final-retention events:
 
@@ -164,6 +164,9 @@ Event_data minimaal:
 - schema_version
 - export_sha256
 - payment_status
+- export_status
+- claim_year
+- claimed_mid_numbers
 - storage_bucket
 - storage_path
 - generated_request_id
@@ -215,15 +218,29 @@ Event_data minimaal:
 - message
 - reason
 
-Bewezen in fresh-only suite (2026-05-10):
+Bewezen in fresh-only suite:
 - not-locked export → HTTP 409 + `dossier_export_rejected`
 - locked/in_review export → HTTP 200 + `dossier_export_generated`
+- locked/in_review export → preservation row in `dossier_exports`
+- preservation bevat `export_sha256`
+- preservation bevat `claim_year`
+- preservation bevat `claimed_mid_numbers`
+- preservation schrijft `dossier_export_preserved`
 - export artifact bevat load-bearing v5-blokken:
   - `schema_version = enval-dossier-export.v5`
   - confirmed documents
   - analysis
   - analysis_readable
   - analysis_run
+
+Duplicate yearly MID claim reject:
+- endpoint: `api-dossier-export`
+- event_type: `dossier_export_rejected`
+- stage: `final_mid_claim`
+- reason: `mid_already_claimed_for_claim_year`
+- HTTP: 409
+- trigger: dezelfde MID komt al voor in een bestaande non-voided preserved export met hetzelfde `claim_year`
+- resultaat: géén nieuwe `dossier_exports` row voor de conflict-export
 
 Beperking (bewust, MVP):
 - `email_verified_at` wordt (indien leeg) gezet bij geldige link-token consume.
@@ -241,21 +258,29 @@ Bij:
 - in_nl_false
 - has_mid_false
 
-### MID enforcement (Optie A — harde systeemeis, bevestigd 2026-02-17)
+### MID enforcement (CURRENT)
 
 Self-serve ondersteunt uitsluitend laadpalen met MID.
 
 Regels:
-
-- Intake reject indien has_mid != true
-- dossier_chargers.mid_number verplicht (NOT NULL)
-- api-dossier-charger-save reject bij ontbrekend mid_number
-- Geen dossier-level has_mid veld
+- Intake reject indien `has_mid != true`.
+- `dossier_chargers.mid_number` is verplicht.
+- `api-dossier-charger-save` reject bij ontbrekend `mid_number`.
+- Same-dossier duplicate MID blijft een runtime datakwaliteitsreject.
+- Cross-dossier duplicate MID wordt runtime niet meer geblokkeerd.
+- Final MID conflict enforcement gebeurt bij export preservation.
+- Final claim key:
+  - `MID + claim_year`
+- Duplicate final claim:
+  - HTTP 409
+  - event_type `dossier_export_rejected`
+  - stage `final_mid_claim`
+  - reason `mid_already_claimed_for_claim_year`
+  - geen nieuwe `dossier_exports` row.
 
 Audit:
 
 charger_added / charger_updated event_data bevat:
-
 - mid_number
 - serial_number
 - brand
@@ -266,7 +291,7 @@ charger_added / charger_updated event_data bevat:
 Interpretatie in audit/export:
 “customer-declared MID-number; existence validated, authenticity not verified”.
 
-Gedrag:
+Gedrag bij intake eligibility reject:
 - intake_audit_events insert
 - HTTP 400
 - Geen lead

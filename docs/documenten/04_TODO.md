@@ -105,15 +105,22 @@ Regel: alleen open items; afgerond → naar changelog.
     - op meerdere endpoints (minimaal read + write)
 - Status: OPEN
 
-### 7) Retention lifecycle + export preservation invoeren
+### 7) Retention lifecycle + runtime cleanup na export preservation bouwen
 
 - Context:
-  - CURRENT runtime houdt draft/locked test- en klantdossiers te lang vast.
-  - Hard delete faalt of is ongewenst zolang audit-gebonden runtime-tabellen als immutable zijn ingericht.
-  - Nieuwe productbeslissing:
-    - runtime-tabellen zijn tijdelijk werkmateriaal;
-    - alleen een betaald/geëxporteerd export artifact is final/immutable.
-  - `dossier_exports` moet de final source-of-truth worden voor betaalde/geëxporteerde auditretentie.
+  - Export preservation is inmiddels gebouwd en bewezen.
+  - `dossier_exports` is de final source-of-truth voor preserved exports.
+  - Export preservation bevat:
+    - volledige `export_json`
+    - `export_sha256`
+    - `payment_status`
+    - `claim_year`
+    - `claimed_mid_numbers`
+  - Runtime MID uniqueness is verplaatst:
+    - cross-dossier runtime duplicate MID mag
+    - final duplicate `MID + claim_year` wordt bij export geblokkeerd
+  - Cleanup zelf is nog niet gebouwd.
+  - CURRENT cleanup in tests is nog bewust lock-aware retained-state proof.
 
 - Retention policy:
   - niet-locked dossiers:
@@ -123,45 +130,44 @@ Regel: alleen open items; afgerond → naar changelog.
     - bewaren tot 14 dagen
     - reminder-mails op dag 3, 7 en 10
     - daarna verwijderen/anonymiseren + storage cleanup
-  - paid/exported:
+  - paid/exported/preserved:
     - langdurig bewaren via immutable `dossier_exports`
     - runtime-tabellen mogen na preservation worden opgeschoond
     - storage objects waarnaar preserved export verwijst, mogen niet worden verwijderd
 
-- Schema/contract nodig:
-  - nieuwe tabel `public.dossier_exports`
-  - export JSON als immutable artifact
-  - export SHA256
-  - payment/export status
-  - storage bucket/path voor preserved artifact
-  - generated_at / paid_at / generated_request_id / generated_by_actor_ref
+- Al DONE:
+  - `public.dossier_exports` bestaat.
+  - export preservation is gebouwd.
+  - export SHA proof is getest.
+  - `dossier_export_preserved` audit proof is getest.
+  - yearly MID claim metadata is toegevoegd.
+  - duplicate `MID + claim_year` reject is getest.
+  - runtime MID unique index is verwijderd.
+  - cross-dossier duplicate MID is runtime toegestaan.
+  - final duplicate MID conflict blokkeert export.
 
-- DB cleanup impact:
-  - huidige FK/trigger/immutability-regels moeten worden herzien zodat cleanup van niet-final runtime data mogelijk is.
-  - enige hard-immutable final retention table wordt `dossier_exports`.
-  - `dossier_audit_events` mag niet langer verhinderen dat abandoned draft/runtime data volgens policy wordt verwijderd of geanonimiseerd.
-  - audit events van paid/exported dossiers moeten in de preserved export JSON zitten vóór runtime cleanup.
-
-- Storage cleanup impact:
-  - alle non-preserved files volgen 7/14 dagen retention.
-  - files die in `dossier_exports.export_json` of export metadata als preserved source voorkomen, blijven bestaan.
-  - cleanup moet storage objecten nooit verwijderen als ze door een preserved export worden gereferenced.
-
-- MID/identifier impact:
-  - abandoned drafts mogen geen harde MID/serial claim blokkeren.
-  - eventuele uniqueness of conflict-detectie mag alleen final/preserved dossiers hard blokkeren.
-  - niet-final conflicts moeten hoogstens waarschuwing of soft conflict zijn.
+- Nog OPEN:
+  - cleanup-strategie bouwen voor DB + Storage
+  - reminder-flow bouwen voor locked/unpaid dag 3/7/10
+  - access recovery UX/flow sluitend maken voor gebruikte/verlopen dossierlinks
+  - FK/trigger/immutability model aanpassen zodat niet-final runtime data volgens retention kan worden opgeschoond
+  - `dossier_audit_events` verwijderen/anonymiseren mogelijk maken voor abandoned runtime dossiers waar nog geen preserved export bestaat
+  - storage cleanup guard bouwen zodat preserved source files nooit worden verwijderd
+  - runtime cleanup na successful preservation bouwen of plannen met korte grace
+  - fresh-only tests aanpassen zodra cleanup van retained-state proof naar echte retention cleanup verschuift
 
 - DoD:
-  - lifecycle decision vastgelegd in docs
-  - `dossier_exports` schema ontworpen
-  - cleanup-strategie ontworpen voor DB + Storage
-  - reminder-flow ontworpen voor locked/unpaid dag 3/7/10
-  - access recovery blijft werken zolang dossier binnen retention valt
-  - paid/exported export blijft reproduceerbaar na runtime cleanup
-  - fresh-only tests aangepast zodat retained-state proof niet botst met nieuwe preservation semantics
+  - abandoned niet-locked dossiers worden na retention verwijderd/geanonimiseerd
+  - locked/unpaid dossiers krijgen reminders en worden na retention verwijderd/geanonimiseerd
+  - paid/exported exports blijven reproduceerbaar vanuit `dossier_exports`
+  - storage cleanup verwijdert alleen non-preserved files
+  - cleanup schrijft auditwaardige system events:
+    - `dossier_runtime_cleanup_applied`
+    - `dossier_runtime_cleanup_failed`
+  - suite bewijst dat preserved export intact blijft na runtime cleanup
 
-- Status: OPEN — P1 MVP
+- Status: OPEN — P1 MVP cleanup/access recovery
+
 
 
 ### 8) Docs hygiene: contradictions en dubbele waarheid actief blijven opruimen
@@ -181,19 +187,43 @@ Regel: alleen open items; afgerond → naar changelog.
   - append-only blijft append-only; CURRENT docs blijven daadwerkelijk CURRENT
 - Status: OPEN
 
-### 9) MID leidend maken in hele dossierketen
+### 9) MID final-claim regressiewacht
+
 - Context:
-  - CURRENT veldnaam is `mid_number`
-  - serial uniqueness is losgelaten als harde systeemaanname
-  - productmatig is MID nu leidend
+  - `mid_number` is canonical in core flow.
+  - Serial uniqueness is losgelaten als harde systeemaanname.
+  - Cross-dossier runtime duplicate MID is toegestaan.
+  - Final claim enforcement gebeurt via `dossier_exports.claim_year` + `dossier_exports.claimed_mid_numbers`.
+  - Duplicate `MID + claim_year` wordt bij export geblokkeerd.
+  - Same-dossier duplicate MID blijft een runtime datakwaliteitsreject.
+
+- Reeds bewezen:
+  - runtime duplicate MID tussen dossiers kan worden opgebouwd
+  - eerste preserved export claimt MID + claim_year
+  - tweede export met dezelfde MID + claim_year geeft HTTP 409
+  - reject audit:
+    - event_type `dossier_export_rejected`
+    - stage `final_mid_claim`
+    - reason `mid_already_claimed_for_claim_year`
+  - geen extra `dossier_exports` row bij conflict
+
+- Open restdoel:
+  - regressievrij houden bij wijzigingen aan:
+    - `api-dossier-charger-save`
+    - `api-dossier-export`
+    - `scripts/tests/08_export_contract.sh`
+    - `dossier_exports` schema
+
 - DoD:
-  - `mid_number` is overal canonical in core flow
   - geen `meter_id` references meer in core flow
-  - geen documentatie meer die serial uniqueness als harde waarheid presenteert
-  - analyse-/matchingdocs maken expliciet onderscheid tussen:
-    - MID als leidende identifier
+  - geen documentatie die serial uniqueness als harde waarheid presenteert
+  - duplicate yearly MID claim test blijft groen
+  - analysis-/matchingdocs blijven onderscheid maken tussen:
+    - MID als leidende identifier/final claim
     - serial als aanvullende observatie/check
-- Status: OPEN
+
+- Status: OPEN als regressiewacht, niet meer als basisimplementatie
+
 
 ### 10) Positionering consistent houden in product & copy
 - DoD:

@@ -375,24 +375,40 @@ Doel:
 - `dossier_checks` (UNIQUE dossier_id+check_code)
 - `dossier_audit_events` (append-only audit trail)
 
-### Export preservation layer (PLANNED P1)
+### Export preservation layer (CURRENT)
 
-Nieuwe final-retention laag:
+Final-retention laag:
 
 - `dossier_exports`
-  - immutable paid/exported artifact
-  - bevat volledige export JSON
-  - bevat export SHA256
+  - immutable final export artifact
+  - bevat volledige export JSON (`export_json`)
+  - bevat SHA256-proof over export JSON (`export_sha256`)
   - bevat payment/export status
-  - bevat storage bucket/path van preserved export artifact
-  - bevat metadata: generated_at, paid_at, generated_request_id, generated_by_actor_ref
+  - bevat request/actor metadata:
+    - `generated_request_id`
+    - `generated_by_actor_ref`
+  - bevat yearly MID claim metadata:
+    - `claim_year`
+    - `claimed_mid_numbers`
 
 Lifecycle-principe:
-- Runtime-tabellen (`dossiers`, `dossier_chargers`, `dossier_documents`, `dossier_checks`, `dossier_consents`, analysis-tabellen en runtime audit rows) zijn tijdelijk totdat export preservation is afgerond.
+- Runtime-tabellen (`dossiers`, `dossier_chargers`, `dossier_documents`, `dossier_checks`, `dossier_consents`, analysis-tabellen en runtime audit rows) zijn tijdelijk werkmateriaal totdat export preservation is afgerond.
 - Na paid/exported preservation mag runtime data worden opgeschoond of geanonimiseerd.
 - `dossier_exports` is de final audit source-of-truth.
 - Storage objects waarnaar een preserved export verwijst, mogen niet door cleanup worden verwijderd.
 - Niet-preserved storage volgt draft/locked retention.
+
+Final MID claim model:
+- Runtime `dossier_chargers.mid_number` is klantinvoer, geen finale claim.
+- Cross-dossier duplicate MID is runtime toegestaan.
+- Same-dossier duplicate MID blijft een datakwaliteitsreject.
+- Definitieve claim gebeurt bij export preservation.
+- Claim key:
+  - `MID + claim_year`
+- `claim_year` is CURRENT het UTC jaar van de export/preservation.
+- Duplicate `MID + claim_year` tegen een bestaande non-voided preserved export blokkeert export met HTTP 409.
+- Bij duplicate final claim wordt géén nieuwe `dossier_exports` row gemaakt.
+
 
 ### Analysis layer (CURRENT, derived only)
 - `dossier_analysis_document`
@@ -426,24 +442,32 @@ Belangrijk:
 - Analysis doet géén writes naar bestaande dossier core tabellen
 - Analysis verandert géén lifecycle / lock / review semantics
  
-### MID model (CURRENT — Optie A, harde systeemeis)
+### MID model (CURRENT)
 
 Self-serve dossiers ondersteunen uitsluitend laadpalen met MID-meter.
 
 Architectuur:
+- GEEN dossier-level `has_mid`.
+- `leads.has_mid` = intake indicatie.
+- Per laadpaal: `dossier_chargers.mid_number` blijft verplicht.
+- `api-dossier-charger-save` reject indien `mid_number` ontbreekt.
+- Non-MID dossiers worden niet aangemaakt.
 
-- GEEN dossier-level has_mid
-- leads.has_mid = intake indicatie (boolean)
-- Per laadpaal: mid_number (string, NOT NULL)
-- api-dossier-charger-save reject indien mid_number ontbreekt
-- Non-MID dossiers worden niet aangemaakt
+Runtime versus final claim:
+- Runtime `dossier_chargers.mid_number` is customer-declared input.
+- Runtime MID is geen finale claim.
+- Cross-dossier duplicate MID is toegestaan in runtime tabellen.
+- Same-dossier duplicate MID blijft verboden als datakwaliteitscheck.
+- Finale MID-claim gebeurt bij export preservation in `dossier_exports`.
+- Final claim key:
+  - `MID + claim_year`
+- `dossier_exports.claim_year` + `dossier_exports.claimed_mid_numbers` zijn de CURRENT final-claim basis.
 
 Audit/export interpretatie:
-- mid_number = “customer-declared MID-number”
-- Existence validated
-- Authenticity not verified
-
-
+- `mid_number` = “customer-declared MID-number”.
+- Existence validated.
+- Authenticity not verified.
+- Final conflict enforcement gebeurt pas bij export preservation tegen bestaande non-voided `dossier_exports`.
 
 ### Ops / intake
 - `leads`
@@ -656,6 +680,11 @@ Evidence / export
   - export artifact
   - only locked/in_review
   - only confirmed docs
+  - preserves export JSON in `public.dossier_exports`
+  - calculates `export_sha256`
+  - returns `export_id`, `export_sha256`, `preserved`, `payment_status`, `claim_year`, `claimed_mid_numbers`
+  - enforces final yearly MID conflict check against non-voided preserved exports
+  - duplicate `MID + claim_year` → HTTP 409, `dossier_export_rejected`, no new `dossier_exports` row
   - CURRENT export v5 bevat naast dossier/checks/docs ook:
     - `analysis`
     - `analysis_methods`
