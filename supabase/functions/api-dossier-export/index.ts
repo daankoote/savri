@@ -129,6 +129,28 @@ function asArray(v: unknown): unknown[] {
   return Array.isArray(v) ? v : [];
 }
 
+function normalizeMidNumber(v: unknown): string {
+  return String(v ?? "")
+    .trim()
+    .replace(/\s+/g, "")
+    .toUpperCase();
+}
+
+function uniqueSortedStrings(values: string[]): string[] {
+  return Array.from(new Set(values.filter(Boolean))).sort();
+}
+
+function extractClaimedMidNumbersFromExportJson(v: unknown): string[] {
+  const rec = asRecord(v);
+  const chargers = Array.isArray(rec.chargers) ? rec.chargers : [];
+
+  const mids = chargers
+    .map((charger) => normalizeMidNumber(asRecord(charger).mid_number))
+    .filter(Boolean);
+
+  return uniqueSortedStrings(mids);
+}
+
 function pickReasonFromEvaluationDetails(v: unknown): string | null {
   const rec = asRecord(v);
   const reason = rec.reason;
@@ -643,10 +665,19 @@ serve(async (req) => {
     });
   }
 
+  const generatedAt = new Date().toISOString();
+  const claimYear = new Date(generatedAt).getUTCFullYear();
+
+  const claimedMidNumbers = uniqueSortedStrings(
+    ((chargers || []) as Record<string, unknown>[])
+      .map((charger) => normalizeMidNumber(charger.mid_number))
+      .filter(Boolean),
+  );
+
   const body = {
     ok: true,
     schema_version: "enval-dossier-export.v5",
-    generated_at: new Date().toISOString(),
+    generated_at: generatedAt,
     environment: ENVIRONMENT,
 
     dossier,
@@ -665,6 +696,80 @@ serve(async (req) => {
     analysis_summary: analysis_summary_out,
   };
 
+  const claimYearStart = `${claimYear}-01-01T00:00:00.000Z`;
+  const claimYearEnd = `${claimYear + 1}-01-01T00:00:00.000Z`;
+
+  const { data: existingExports, error: existingExportsErr } = await SB
+    .from("dossier_exports")
+    .select("id,dossier_id,export_status,payment_status,exported_at,claim_year,claimed_mid_numbers,export_json")
+    .neq("export_status", "voided")
+    .gte("exported_at", claimYearStart)
+    .lt("exported_at", claimYearEnd)
+    .limit(5000);
+
+  if (existingExportsErr) {
+    await auditReject(
+      "final_mid_claim_lookup",
+      500,
+      existingExportsErr.message,
+      { reason: "db_error", claim_year: claimYear },
+    );
+
+    return finalize(500, {
+      ok: false,
+      error: `Final MID claim lookup failed: ${existingExportsErr.message}`,
+    });
+  }
+
+  const currentMidSet = new Set(claimedMidNumbers);
+  let midConflict: Record<string, unknown> | null = null;
+
+  for (const row of (existingExports || []) as Record<string, unknown>[]) {
+    if (String(row.dossier_id || "") === dossier_id) continue;
+
+    const rowClaimYear =
+      typeof row.claim_year === "number"
+        ? row.claim_year
+        : new Date(String(row.exported_at || "")).getUTCFullYear();
+
+    if (rowClaimYear !== claimYear) continue;
+
+    const rowClaimedMidNumbers = Array.isArray(row.claimed_mid_numbers) && row.claimed_mid_numbers.length
+      ? uniqueSortedStrings(row.claimed_mid_numbers.map((v) => normalizeMidNumber(v)))
+      : extractClaimedMidNumbersFromExportJson(row.export_json);
+
+    const conflictingMid = rowClaimedMidNumbers.find((mid) => currentMidSet.has(mid));
+    if (!conflictingMid) continue;
+
+    midConflict = {
+      mid_number: conflictingMid,
+      conflicting_export_id: row.id || null,
+      conflicting_dossier_id: row.dossier_id || null,
+      claim_year: claimYear,
+    };
+    break;
+  }
+
+  if (midConflict) {
+    await auditReject(
+      "final_mid_claim",
+      409,
+      "MID number is already claimed for this claim year.",
+      {
+        reason: "mid_already_claimed_for_claim_year",
+        ...midConflict,
+      },
+    );
+
+    return finalize(409, {
+      ok: false,
+      error: "MID-nummer is al geclaimd voor dit aanvraagjaar.",
+      reason: "mid_already_claimed_for_claim_year",
+      claim_year: claimYear,
+      mid_number: midConflict.mid_number,
+    });
+  }
+
   const exportJsonString = JSON.stringify(body);
   const exportSha256 = await sha256Hex(exportJsonString);
 
@@ -675,6 +780,8 @@ serve(async (req) => {
       schema_version: body.schema_version,
       export_status: "generated",
       payment_status: "waived",
+      claim_year: claimYear,
+      claimed_mid_numbers: claimedMidNumbers,
       export_json: body,
       export_sha256: exportSha256,
       storage_bucket: null,
@@ -682,7 +789,7 @@ serve(async (req) => {
       generated_by_actor_ref: auth.actor_ref,
       generated_request_id: meta.request_id || null,
     })
-    .select("id, created_at, exported_at, payment_status, export_status")
+    .select("id, created_at, exported_at, payment_status, export_status, claim_year, claimed_mid_numbers")
     .single();
 
   if (preserveErr || !preservedExport) {
@@ -716,6 +823,8 @@ serve(async (req) => {
         export_sha256: exportSha256,
         payment_status: "waived",
         export_status: preservedExport.export_status,
+        claim_year: claimYear,
+        claimed_mid_numbers: claimedMidNumbers,
         storage_bucket: null,
         storage_path: null,
         generated_request_id: meta.request_id || null,
@@ -732,6 +841,8 @@ serve(async (req) => {
     export_sha256: exportSha256,
     export_status: preservedExport.export_status,
     payment_status: preservedExport.payment_status,
+    claim_year: preservedExport.claim_year,
+    claimed_mid_numbers: preservedExport.claimed_mid_numbers || claimedMidNumbers,
   };
 
   await insertAuditFailOpen(
@@ -752,6 +863,8 @@ serve(async (req) => {
         export_sha256: exportSha256,
         preserved: true,
         payment_status: "waived",
+        claim_year: claimYear,
+        claimed_mid_numbers: claimedMidNumbers,
       },
     },
     meta,

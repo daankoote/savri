@@ -496,6 +496,14 @@ if len(export_sha256) != 64 or any(c not in "0123456789abcdef" for c in export_s
 if d.get("payment_status") != "waived":
     errors.append(f"payment_status != waived (got {d.get('payment_status')!r})")
 
+claim_year = d.get("claim_year")
+if not isinstance(claim_year, int) or claim_year < 2020:
+    errors.append(f"claim_year invalid (got {claim_year!r})")
+
+claimed_mid_numbers = d.get("claimed_mid_numbers")
+if not isinstance(claimed_mid_numbers, list) or not claimed_mid_numbers:
+    errors.append("claimed_mid_numbers missing or empty")
+
 if errors:
     print("FAIL")
     for e in errors:
@@ -535,7 +543,7 @@ fi
 EXPORT_DB_JSON="$(curl -sS \
   --connect-timeout 10 \
   --max-time 30 \
-  "$SUPABASE_URL/rest/v1/dossier_exports?select=id,dossier_id,schema_version,export_status,payment_status,export_sha256,generated_request_id&id=eq.$EXPORT_ID&limit=1" \
+  "$SUPABASE_URL/rest/v1/dossier_exports?select=id,dossier_id,schema_version,export_status,payment_status,export_sha256,generated_request_id,claim_year,claimed_mid_numbers&id=eq.$EXPORT_ID&limit=1" \
   -H "apikey: $SUPABASE_ANON_KEY" \
   -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY")"
 
@@ -567,6 +575,10 @@ else:
         errors.append("export_sha256 mismatch")
     if row.get("generated_request_id") != expected_request_id:
         errors.append("generated_request_id mismatch")
+    if not isinstance(row.get("claim_year"), int) or row.get("claim_year") < 2020:
+        errors.append("claim_year invalid")
+    if not isinstance(row.get("claimed_mid_numbers"), list) or not row.get("claimed_mid_numbers"):
+        errors.append("claimed_mid_numbers missing")
 
 if errors:
     print("FAIL")
@@ -613,6 +625,10 @@ else:
         errors.append("audit export_sha256 mismatch")
     if event_data.get("payment_status") != "waived":
         errors.append("audit payment_status mismatch")
+    if not isinstance(event_data.get("claim_year"), int) or event_data.get("claim_year") < 2020:
+        errors.append("audit claim_year invalid")
+    if not isinstance(event_data.get("claimed_mid_numbers"), list) or not event_data.get("claimed_mid_numbers"):
+        errors.append("audit claimed_mid_numbers missing")
 
 if errors:
     print("FAIL")
