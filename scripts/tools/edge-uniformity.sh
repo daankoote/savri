@@ -58,6 +58,7 @@ CORE_FUNCS=(
 
 UTILITY_FUNCS=(
   "mail-worker"
+  "retention-worker"
 )
 
 in_list() {
