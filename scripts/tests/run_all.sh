@@ -140,6 +140,7 @@ echo " - session token present:        $(if [[ -n "$(dossier_session_token)" ]];
 "$DIR/06_upload_happy.sh"
 "$DIR/08_export_contract.sh"
 "$DIR/09_cleanup.sh"
+"$DIR/10_retention_cleanup.sh"
 
 echo ""
 echo "ALL TESTS PASSED"
