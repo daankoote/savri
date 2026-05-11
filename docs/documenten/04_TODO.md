@@ -119,8 +119,15 @@ Regel: alleen open items; afgerond → naar changelog.
   - Runtime MID uniqueness is verplaatst:
     - cross-dossier runtime duplicate MID mag
     - final duplicate `MID + claim_year` wordt bij export geblokkeerd
-  - Cleanup zelf is nog niet gebouwd.
-  - CURRENT cleanup in tests is nog bewust lock-aware retained-state proof.
+  - DB cleanup helper is gebouwd en live bewezen:
+    - `public.enval_retention_cleanup(...)`
+    - dry-run werkt
+    - target-only apply werkt
+    - mass apply zonder target wordt geweigerd
+    - preserved runtime cleanup verwijdert runtime data terwijl `dossier_exports` intact blijft
+    - non-preserved cleanup met storage wordt geblokkeerd met `STORAGE_CLEANUP_REQUIRED_BEFORE_DB_DELETE`
+  - Storage cleanup, scheduler, reminders en regressietestscript zijn nog niet gebouwd.
+  - CURRENT fresh-only cleanup in tests is nog bewust lock-aware retained-state proof.
 
 - Retention policy:
   - niet-locked dossiers:
@@ -145,15 +152,18 @@ Regel: alleen open items; afgerond → naar changelog.
   - runtime MID unique index is verwijderd.
   - cross-dossier duplicate MID is runtime toegestaan.
   - final duplicate MID conflict blokkeert export.
+  - retention DB cleanup helper is live bewezen.
+  - preserved runtime cleanup na export preservation is live bewezen.
+  - migration voor retention cleanup is toegevoegd aan `supabase/migrations`.
 
 - Nog OPEN:
-  - cleanup-strategie bouwen voor DB + Storage
+  - storage cleanup-strategie bouwen voor non-preserved files
   - reminder-flow bouwen voor locked/unpaid dag 3/7/10
  - DONE: access recovery UX/flow voor gebruikte/verlopen dossierlinks is gebouwd en live bewezen.
-  - FK/trigger/immutability model aanpassen zodat niet-final runtime data volgens retention kan worden opgeschoond
+  - FK/trigger/immutability model regressievrij houden nu DB cleanup bypass bestaat
   - `dossier_audit_events` verwijderen/anonymiseren mogelijk maken voor abandoned runtime dossiers waar nog geen preserved export bestaat
   - storage cleanup guard bouwen zodat preserved source files nooit worden verwijderd
-  - runtime cleanup na successful preservation bouwen of plannen met korte grace
+  - runtime cleanup na successful preservation opnemen in regressietests en later scheduler/worker maken
   - fresh-only tests aanpassen zodra cleanup van retained-state proof naar echte retention cleanup verschuift
 
 - DoD:

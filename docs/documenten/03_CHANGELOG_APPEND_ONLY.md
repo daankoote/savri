@@ -2266,4 +2266,35 @@ Belangrijk:
 - Session-token blijft canonical runtime auth.
 - Recovery is customer-facing MVP functionaliteit en vervangt handmatige terminal-interventie.
 
+
+## 2026-05-11 — Retention cleanup DB helper live bewezen + migration vastgelegd
+
+Wijzigingen:
+- `public.enval_retention_cleanup(...)` toegevoegd als DB cleanup helper voor runtime dossierdata.
+- `public._enval_enforce_document_lifecycle()` uitgebreid met expliciete DB-owner cleanup bypass via `enval.dev_reset=YES`.
+- Nieuwe migration vastgelegd:
+  - `supabase/migrations/20260511_retention_cleanup_runtime_after_export.sql`
+
+Bewezen gedrag:
+- Dry-run werkt zonder mutatie.
+- Mass apply wordt geweigerd wanneer `p_apply=true` zonder expliciete `p_target_dossier_id` wordt aangeroepen.
+- Preserved runtime cleanup werkt:
+  - runtime dossier wordt verwijderd
+  - runtime child rows verdwijnen via cascade
+  - `dossier_exports` blijft bestaan
+  - preserved document count blijft behouden
+  - preserved storage paths worden niet als deletable aangemerkt
+- Non-preserved dossiers met storage worden geweigerd vóór DB-delete met:
+  - `STORAGE_CLEANUP_REQUIRED_BEFORE_DB_DELETE`
+
+Belangrijke auditgrens:
+- `dossier_exports` blijft de final source-of-truth.
+- Runtime-tabellen zijn tijdelijk werkmateriaal na preservation.
+- Storage cleanup is bewust nog separaat en nog niet gebouwd.
+- Cleanup scheduler/reminder-flow is nog OPEN.
+
+Legacy nuance:
+- Oude testexports van vóór de yearly MID claim patch kunnen `claim_year = null` en `claimed_mid_numbers = null` bevatten.
+- Nieuwe exports vullen CURRENT `claim_year` en `claimed_mid_numbers`.
+
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)

@@ -392,11 +392,25 @@ Final-retention laag:
     - `claimed_mid_numbers`
 
 Lifecycle-principe:
-- Runtime-tabellen (`dossiers`, `dossier_chargers`, `dossier_documents`, `dossier_checks`, `dossier_consents`, analysis-tabellen en runtime audit rows) zijn tijdelijk werkmateriaal totdat export preservation is afgerond.
-- Na paid/exported preservation mag runtime data worden opgeschoond of geanonimiseerd.
+- Runtime-tabellen (`dossiers`, `dossier_chargers`, `dossier_documents`, `dossier_checks`, `dossier_consents`, analysis-tabellen, runtime sessions en runtime audit rows) zijn tijdelijk werkmateriaal totdat export preservation is afgerond.
+- Na paid/exported preservation mag runtime data worden opgeschoond.
 - `dossier_exports` is de final audit source-of-truth.
 - Storage objects waarnaar een preserved export verwijst, mogen niet door cleanup worden verwijderd.
 - Niet-preserved storage volgt draft/locked retention.
+
+Retention cleanup helper:
+- `public.enval_retention_cleanup(...)`
+  - dry-run en apply helper voor runtime DB cleanup
+  - `p_apply=true` vereist expliciet `p_target_dossier_id`
+  - mass apply zonder target wordt geweigerd
+  - preserved runtime cleanup is toegestaan wanneer export preservation bestaat
+  - non-preserved cleanup met nog aanwezige storage wordt geweigerd met:
+    - `STORAGE_CLEANUP_REQUIRED_BEFORE_DB_DELETE`
+
+Trigger nuance:
+- `public._enval_enforce_document_lifecycle()` bevat een expliciete DB-owner bypass via:
+  - `set_config('enval.dev_reset', 'YES', true)`
+- Deze bypass is uitsluitend bedoeld voor gecontroleerde retention cleanup, niet voor runtime endpoints.
 
 Final MID claim model:
 - Runtime `dossier_chargers.mid_number` is klantinvoer, geen finale claim.

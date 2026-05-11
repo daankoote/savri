@@ -162,7 +162,9 @@ Final preservation:
 - Na betaling/export wordt één immutable export artifact bewaard.
 - `dossier_exports` wordt de final source-of-truth voor audit retention.
 - Runtime-tabellen mogen daarna worden opgeschoond.
+- DB runtime cleanup na preserved export is live bewezen via `public.enval_retention_cleanup(...)`.
 - Storage objects waarnaar een preserved export verwijst, mogen niet worden verwijderd.
+- Storage cleanup voor niet-preserved files blijft een aparte vervolgstap.
 
 Deliverable:
 - Klant kan zelfstandig nieuwe toeganglink aanvragen.

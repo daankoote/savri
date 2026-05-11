@@ -612,10 +612,10 @@ Robots/sitemap (CURRENT policy):
 Stopregel
 - Als een pagina duplicaatcontent heeft of slechts een tijdelijke route is → noindex.
 
-## 11.1b Export preservation & runtime retention decision (PLANNED P1, 2026-05-10)
+## 11.1b Export preservation & runtime retention lifecycle (CURRENT / PARTIALLY PROVEN, 2026-05-11)
 
-Nieuwe lifecycle-beslissing:
-- `public.dossier_exports` wordt de final-retention tabel voor betaalde/geëxporteerde dossiers.
+Lifecycle-beslissing:
+- `public.dossier_exports` is de final-retention tabel voor betaalde/geëxporteerde dossiers.
 - Alleen preserved exports zijn langdurig/immutable te bewaren.
 - Runtime-tabellen zijn tijdelijk werkmateriaal:
   - `dossiers`
@@ -630,21 +630,49 @@ Nieuwe lifecycle-beslissing:
 Retention:
 - Niet-locked dossiers: 7 dagen na laatste activiteit.
 - Locked/in_review maar unpaid/unexported: 14 dagen, met reminders op dag 3, 7 en 10.
-- Paid/exported: preservation in `dossier_exports`; runtime data mag daarna worden opgeschoond, bij voorkeur na korte operationele grace-periode.
+- Paid/exported/preserved: preservation in `dossier_exports`; runtime data mag daarna worden opgeschoond na korte operationele grace-periode.
 
 MID-regel:
-- Runtime `dossier_chargers.mid_number` mag geen harde globale claim leggen.
-- Definitieve MID-conflictcontrole hoort bij preserved exports, niet bij drafts of locked/unpaid runtime dossiers.
-- Abandoned drafts en unpaid locked dossiers mogen echte klanten niet blokkeren.
+- Runtime `dossier_chargers.mid_number` legt geen harde globale claim.
+- Definitieve MID-conflictcontrole gebeurt bij preserved exports, niet bij drafts of locked/unpaid runtime dossiers.
+- Final claim key:
+  - `MID + claim_year`
+- Nieuwe exports vullen CURRENT:
+  - `claim_year`
+  - `claimed_mid_numbers`
+- Legacy testexports van vóór deze patch kunnen `claim_year = null` en `claimed_mid_numbers = null` bevatten en worden niet retroactief aangepast.
 
 Storage-regel:
 - Storage objects die door een preserved export worden gereferenced, mogen niet worden verwijderd.
 - Alle overige storage volgt de 7/14 dagen cleanup-regels.
 
-Belangrijk:
-- Dit is een PLANNED P1 besluit.
-- De bestaande fresh-only cleanup-test bewijst CURRENT nog retained locked state.
-- Tests worden pas aangepast nadat export preservation runtime-bewezen is.
+CURRENT proof:
+- Export preservation schrijft een immutable `dossier_exports` row.
+- Export SHA proof is getest.
+- Yearly MID claim metadata is getest op nieuwe exports.
+- Duplicate `MID + claim_year` reject is getest.
+- Runtime cross-dossier duplicate MID is toegestaan.
+- DB runtime cleanup na preserved export is live bewezen met:
+  - `public.enval_retention_cleanup(...)`
+  - `retention_class = preserved_runtime_cleanup`
+  - runtime dossier verwijderd
+  - `dossier_exports` behouden
+  - preserved document count behouden
+  - preserved storage paths beschermd
+
+CURRENT cleanup boundary:
+- `public.enval_retention_cleanup(...)` is DB-cleanup only.
+- Storage cleanup is bewust separaat.
+- `p_apply=true` vereist expliciet `p_target_dossier_id`.
+- Non-preserved dossiers met storage worden niet DB-verwijderd zolang storage cleanup niet vooraf is uitgevoerd.
+- Guard error:
+  - `STORAGE_CLEANUP_REQUIRED_BEFORE_DB_DELETE`
+
+Nog OPEN:
+- storage cleanup worker/helper bouwen voor non-preserved files
+- reminder-flow bouwen voor locked/unpaid dag 3/7/10
+- `scripts/tests/10_retention_cleanup.sh` toevoegen als regressieproof
+- scheduler/ops-runbook voor retention lifecycle toevoegen
 
 
 ## 11.2 Fresh-only testsuite export/cleanup contract (CURRENT, 2026-05-10)

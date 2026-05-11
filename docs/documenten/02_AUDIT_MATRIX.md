@@ -218,6 +218,23 @@ Event_data minimaal:
 - message
 - reason
 
+CURRENT retention cleanup proof:
+- `public.enval_retention_cleanup(...)` bestaat als DB cleanup helper.
+- Dry-run classificeert retention candidates zonder mutatie.
+- Apply is target-only:
+  - `p_apply=true` zonder `p_target_dossier_id` wordt geweigerd.
+- Preserved runtime cleanup is bewezen:
+  - runtime dossierdata verwijderd
+  - `dossier_exports` behouden
+  - preserved document count behouden
+  - preserved storage paths beschermd
+- Non-preserved dossier met storage wordt geweigerd vóór DB-delete met:
+  - `STORAGE_CLEANUP_REQUIRED_BEFORE_DB_DELETE`
+
+Belangrijk:
+- Deze helper schrijft CURRENT nog geen eigen cleanup audit event.
+- `dossier_runtime_cleanup_applied` en `dossier_runtime_cleanup_failed` blijven het geplande audit-event contract voor de latere scheduler/worker-laag.
+
 Bewezen in fresh-only suite:
 - not-locked export → HTTP 409 + `dossier_export_rejected`
 - locked/in_review export → HTTP 200 + `dossier_export_generated`
