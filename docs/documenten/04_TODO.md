@@ -149,7 +149,7 @@ Regel: alleen open items; afgerond → naar changelog.
 - Nog OPEN:
   - cleanup-strategie bouwen voor DB + Storage
   - reminder-flow bouwen voor locked/unpaid dag 3/7/10
-  - access recovery UX/flow sluitend maken voor gebruikte/verlopen dossierlinks
+ - DONE: access recovery UX/flow voor gebruikte/verlopen dossierlinks is gebouwd en live bewezen.
   - FK/trigger/immutability model aanpassen zodat niet-final runtime data volgens retention kan worden opgeschoond
   - `dossier_audit_events` verwijderen/anonymiseren mogelijk maken voor abandoned runtime dossiers waar nog geen preserved export bestaat
   - storage cleanup guard bouwen zodat preserved source files nooit worden verwijderd

@@ -2251,4 +2251,19 @@ Open blijft:
 - reminder-flow voor locked/unpaid dossiers.
 - storage cleanup met preserved-export guard.
 
+
+## 2026-05-11 — Access recovery UI live bewezen
+
+Bewezen en gecommit:
+- Gebruikte/verlopen dossierlinks lopen niet meer dood in de frontend.
+- Dossierpagina toont recovery UI wanneer link-token ontbreekt, verlopen is of al gebruikt is.
+- Klant kan via dossier-id + e-mailadres een nieuwe toeganglink aanvragen.
+- `api-dossier-login-request` blijft anti-enumeration: neutrale response richting gebruiker.
+- Nieuwe toeganglink opent het dossier opnieuw via normale token → session exchange.
+
+Belangrijk:
+- Link-token blijft one-time.
+- Session-token blijft canonical runtime auth.
+- Recovery is customer-facing MVP functionaliteit en vervangt handmatige terminal-interventie.
+
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)
