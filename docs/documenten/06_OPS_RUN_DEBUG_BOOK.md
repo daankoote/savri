@@ -230,6 +230,7 @@ curl -i -s "$RETENTION_FN" \
   -H "x-request-id: $RID" \
   -H "Content-Type: application/json" \
   -d '{"mode":"dry_run","apply":false,"limit":10}'
+```
 
 Expected responses:
 
@@ -301,6 +302,7 @@ Als dry-run cron faalt:
 Niet apply scheduler bouwen.
 Eerst gateway headers, Vault secret names en worker logs controleren.
 
+
 ## 5) INTAKE (api-lead-submit) DEBUG
 
 Gates:
@@ -330,7 +332,7 @@ Verwacht:
 * lead_id
 * dossier_id
 * outbound_emails row
-```
+
 ---
 
 ## 6) DOSSIER FLOW DEBUG (LOCK / EXPORT DECOUPLING)
