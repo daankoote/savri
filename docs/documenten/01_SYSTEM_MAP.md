@@ -443,18 +443,6 @@ Belangrijke grens:
 - Er is nog géén retention apply cron.
 - Reminder-flow voor locked/unpaid dossiers dag 3/7/10 is nog niet gebouwd.
 - Permanente cleanup audit-log oplossing blijft open.
-- dry-run cron is live bewezen via `pg_cron` + `pg_net` + `vault.decrypted_secrets`
-- cron job:
-  - `enval-retention-worker-dry-run-hourly`
-  - schedule `0 * * * *`
-  - response HTTP 200
-  - `apply=false`
-  - `candidate_count=0` op laatste proof-run
-
-Belangrijke grens:
-- Er is nog géén retention apply cron.
-- Reminder-flow voor locked/unpaid dossiers dag 3/7/10 is nog niet gebouwd.
-- Permanente cleanup audit-log oplossing blijft open.
 
 Trigger nuance:
 - `public._enval_enforce_document_lifecycle()` bevat een expliciete DB-owner bypass via:
