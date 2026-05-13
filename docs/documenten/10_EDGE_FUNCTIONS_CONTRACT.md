@@ -196,9 +196,16 @@ Waarom META verplicht is:
 ## 3.3 Canonical UTILITY lijst
 
 * mail-worker
+* retention-worker
 
 Nieuwe utility?
 → expliciet toevoegen aan script + dit document.
+
+Retention-worker nuance:
+- `retention-worker` is een UTILITY function.
+- Auth gebeurt via gateway headers + `x-retention-worker-secret`.
+- Dry-run cron is toegestaan via `pg_cron` + `pg_net` + `vault.decrypted_secrets`.
+- Apply cleanup blijft safety-sensitive en mag niet stilzwijgend worden gescheduled zonder expliciet bewijs- en rollbackplan.
 
 ---
 

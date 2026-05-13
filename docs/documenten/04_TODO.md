@@ -128,7 +128,9 @@ Regel: alleen open items; afgerond → naar changelog.
     - non-preserved cleanup met storage wordt geblokkeerd met `STORAGE_CLEANUP_REQUIRED_BEFORE_DB_DELETE`
   - Storage cleanup tool is handmatig gebouwd en bewezen.
   - Retention worker is gebouwd, gedeployed en target-apply bewezen.
-  - Scheduler en reminders zijn nog niet gebouwd.
+  - Retention worker dry-run cron is live bewezen via `pg_cron` + `pg_net` + `vault.decrypted_secrets`.
+  - Apply cron is bewust nog niet gebouwd.
+  - Reminder-flow is nog niet gebouwd.
   - CURRENT fresh-only cleanup in tests is nog bewust lock-aware retained-state proof.
 
 - Retention policy:
@@ -167,7 +169,8 @@ Regel: alleen open items; afgerond → naar changelog.
   - DONE: storage cleanup guard bouwen zodat preserved source files nooit worden verwijderd in handmatige tooling
   - DONE: runtime cleanup na successful preservation opnemen in regressietests
   - DONE: retention worker maken voor automatische retention cleanup
-  - scheduler/cron nog instellen voor periodieke automatische uitvoering
+  - DONE: retention-worker dry-run cron ingesteld en live bewezen
+  - apply cron nog niet bouwen tot cleanup audit-log model en safety criteria expliciet zijn
   - fresh-only tests aanpassen zodra cleanup van retained-state proof naar echte retention cleanup verschuift
 
 - DoD:
@@ -183,6 +186,8 @@ Regel: alleen open items; afgerond → naar changelog.
   - suite bewijst dat preserved export intact blijft na runtime cleanup
 
 - Status: OPEN — P1 MVP cleanup/access recovery
+  - dry-run scheduler is DONE
+  - apply scheduler, locked/unpaid reminder-flow en permanente cleanup audit-log oplossing blijven OPEN
 
 
 

@@ -2396,4 +2396,45 @@ Open:
 - reminder-flow voor locked/unpaid dag 3/7/10 nog niet gebouwd
 - permanente cleanup audit-log oplossing nog open, omdat `dossier_audit_events` cascaded met runtime dossier delete
 
+## 2026-05-13 — Retention-worker dry-run cron live bewezen via pg_cron + pg_net + Vault
+
+Context
+- `retention-worker` was al gebouwd, gedeployed en handmatig bewezen.
+- Ontbrekende stap was autonome scheduling zonder secrets in repo of chat.
+- Bestaande mail-worker scheduler gebruikt `pg_cron` + `pg_net` + `vault.decrypted_secrets`.
+- Retention-worker is op hetzelfde scheduler-patroon aangesloten.
+
+Wijziging / ops-config
+- Vault uitgebreid met:
+  - `retention_worker_secret`
+- Nieuwe cron job aangemaakt:
+  - `enval-retention-worker-dry-run-hourly`
+  - schedule: `0 * * * *`
+- Cron roept `retention-worker` aan via `net.http_post`.
+- Secrets worden gelezen uit `vault.decrypted_secrets`:
+  - `project_url`
+  - `anon_key`
+  - `retention_worker_secret`
+- Geen secrets in repo, docs of chat.
+
+Bewezen
+- `cron.job_run_details` toont meerdere succesvolle hourly runs:
+  - `status = succeeded`
+  - `return_message = 1 row`
+- `net._http_response` toont HTTP 200 voor cron calls.
+- Worker response:
+  - `ok = true`
+  - `apply = false`
+  - `candidate_count = 0`
+  - config `3/7/14`
+  - reminder days `3/7/10`
+- `dossier_exports` bleef intact.
+- Preserved exports tonen nog steeds gevulde `export_sha256`.
+
+Belangrijke grens
+- Dit is uitsluitend dry-run scheduling.
+- Er is nog géén apply cron.
+- Reminder-flow voor locked/unpaid dossiers dag 3/7/10 is nog niet gebouwd.
+- Permanente cleanup audit-log oplossing blijft open.
+
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)

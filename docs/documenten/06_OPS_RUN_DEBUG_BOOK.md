@@ -211,6 +211,96 @@ Expected responses:
 
 ---
 
+## 4.1 RETENTION-WORKER DEBUG
+
+Retention-worker heeft 2 lagen:
+
+* Supabase gateway auth
+* Interne secret check (`x-retention-worker-secret`)
+
+Canonical curl (copy-paste):
+```bash
+RETENTION_FN="$SUPABASE_URL/functions/v1/retention-worker"
+RID="debug-retention-worker-dryrun-$(date +%s)"
+
+curl -i -s "$RETENTION_FN" \
+  -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+  -H "apikey: $SUPABASE_ANON_KEY" \
+  -H "x-retention-worker-secret: $RETENTION_WORKER_SECRET" \
+  -H "x-request-id: $RID" \
+  -H "Content-Type: application/json" \
+  -d '{"mode":"dry_run","apply":false,"limit":10}'
+
+Expected responses:
+
+200 + ok=true + apply=false → auth + secret + dry-run OK
+401 Unauthorized → RETENTION_WORKER_SECRET mismatch
+401 Missing authorization header → gateway headers ontbreken
+500 JSON → worker/runtime/RPC issue; Edge logs checken op request_id
+
+Cron proof checks via SQL Editor:
+
+select
+  j.jobname,
+  r.status,
+  r.return_message,
+  r.start_time,
+  r.end_time
+from cron.job_run_details r
+join cron.job j on j.jobid = r.jobid
+where j.jobname = 'enval-retention-worker-dry-run-hourly'
+order by r.start_time desc
+limit 10;
+
+Expected:
+
+status = succeeded
+return_message = 1 row
+
+HTTP response proof:
+
+select
+  id,
+  status_code,
+  timed_out,
+  error_msg,
+  created,
+  left(content::text, 500) as response_preview
+from net._http_response
+where content::text ilike '%candidate_count%'
+   or content::text ilike '%retention%'
+order by created desc
+limit 10;
+
+Expected:
+
+status_code = 200
+timed_out = false
+error_msg is null
+response bevat ok=true, apply=false, candidate_count
+
+Secret-source rule:
+
+Cron gebruikt vault.decrypted_secrets.
+Geen secretwaarden in docs, repo, chat of migration zetten.
+Edge Function Secrets en Vault secrets zijn verschillende stores:
+Edge secrets zijn beschikbaar in Deno.env
+Vault secrets zijn beschikbaar voor Postgres/cron SQL
+
+Current cron:
+
+enval-retention-worker-dry-run-hourly
+schedule: 0 * * * *
+dry-run only
+geen apply cron
+
+STOP RULE:
+
+Als dry-run cron faalt:
+
+Niet apply scheduler bouwen.
+Eerst gateway headers, Vault secret names en worker logs controleren.
+
 ## 5) INTAKE (api-lead-submit) DEBUG
 
 Gates:
@@ -240,7 +330,7 @@ Verwacht:
 * lead_id
 * dossier_id
 * outbound_emails row
-
+```
 ---
 
 ## 6) DOSSIER FLOW DEBUG (LOCK / EXPORT DECOUPLING)
