@@ -449,7 +449,12 @@ Belangrijke grens:
   - geen raw storage paths
   - `dossier_id` blijft alleen als historische referentie
 - Non-preserved draft target-apply success tombstone is live bewezen.
-- Failed tombstone path, storage-delete tombstone path en preserved cleanup tombstone path blijven nog bewijs-open.
+- Failed tombstone path is live bewezen via dev-only controlled failure na `started` tombstone insert:
+  - tombstone status werd `failed`
+  - runtime dossier bleef bestaan
+  - DB cleanup werd niet toegepast
+  - recovery apply op hetzelfde dossier schreef daarna een nieuwe `success` tombstone
+- Storage-delete tombstone path en preserved cleanup tombstone path blijven nog bewijs-open.
 
 Trigger nuance:
 - `public._enval_enforce_document_lifecycle()` bevat een expliciete DB-owner bypass via:

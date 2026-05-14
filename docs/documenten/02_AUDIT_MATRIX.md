@@ -253,8 +253,17 @@ Belangrijk:
   - target apply → `status = success`
   - runtime dossier + child rows verwijderd
   - tombstone bleef bestaan
+- Live bewezen aanvullend:
+  - forced failed tombstone path:
+    - dev-only failure injection na `started` tombstone insert
+    - tombstone status werd `failed`
+    - `db_cleanup_applied = false`
+    - `deleted_runtime_dossier = false`
+    - runtime dossier bleef bestaan
+  - recovery success op hetzelfde dossier:
+    - tweede tombstone row met `status = success`
+    - runtime dossier daarna verwijderd
 - Nog bewijs-open:
-  - failed tombstone path
   - storage-delete tombstone path
   - preserved runtime cleanup tombstone path
 - `dossier_runtime_cleanup_applied` en `dossier_runtime_cleanup_failed` blijven functionele dossier-scoped events zolang runtime dossierdata nog bestaat, maar permanente cleanup evidence hoort in `retention_cleanup_events`.

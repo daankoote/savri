@@ -2506,4 +2506,65 @@ Boundaries
 - Preserved runtime cleanup tombstone path is not yet re-proven after this patch.
 - No apply cron exists.
 
+## 2026-05-14 — Retention cleanup tombstone failed-path + recovery proof
+
+Context
+- `public.retention_cleanup_events` was al gebouwd en non-preserved draft success-path was live bewezen.
+- Nog open bewijs: failed tombstone path.
+- Doel: bewijzen dat de worker na een gecontroleerde apply-fout de tombstone van `started` naar `failed` bijwerkt zonder runtime data te verwijderen.
+
+Wijziging
+- `retention-worker` bevat nu een dev-only failure injection hook:
+  - alleen toegestaan wanneer `environment != production`
+  - alleen bij expliciet `target_dossier_id`
+  - alleen wanneer request body `force_failure_stage = "after_tombstone_started"` bevat
+  - failure gebeurt ná `started` tombstone insert
+  - failure gebeurt vóór storage delete / DB cleanup
+
+Proof
+- Disposable fresh dossier aangemaakt:
+  - dossier_id `60350d82-ecdf-489f-aeef-2965e80f19b8`
+- Target dry-run:
+  - `candidate_count = 1`
+  - `retention_class = draft_expired`
+  - `preserved = false`
+  - storage path counts = 0
+- Forced failure apply:
+  - HTTP 500
+  - `candidate_count = 1`
+  - `processed_count = 1`
+  - `failed_count = 1`
+  - error `RETENTION_TEST_FAILURE_AFTER_TOMBSTONE_STARTED`
+  - `cleanup_event_id = 65d438ce-3b3d-4ce9-8df3-11cf4fd38382`
+- Failed tombstone row:
+  - `status = failed`
+  - `cleanup_reason = draft_retention_expired`
+  - `db_cleanup_applied = false`
+  - `deleted_runtime_dossier = false`
+  - `deleted_storage_object_count = 0`
+  - `error_stage = retention_worker_apply`
+  - `error_message = RETENTION_TEST_FAILURE_AFTER_TOMBSTONE_STARTED`
+  - `pii_included = false`
+  - `raw_storage_paths_included = false`
+  - `has_dossier_foreign_key = false`
+- Runtime dossier remained intact after forced failure:
+  - `dossier_rows = 1`
+  - no storage or DB cleanup happened
+- Recovery apply on the same dossier:
+  - `ok = true`
+  - `processed_count = 1`
+  - `failed_count = 0`
+  - `cleanup_event_id = 7152125a-e600-4f32-ab0b-d4a088b33a4a`
+  - `db_cleanup_applied = true`
+  - `deleted_runtime_dossier = true`
+- Tombstone table now contains two rows for the same test dossier:
+  - latest `success`
+  - earlier `failed`
+
+Boundaries
+- This proves the failed tombstone path and recovery-success path for a non-preserved draft candidate.
+- Storage-delete tombstone path is not yet runtime-proven.
+- Preserved runtime cleanup tombstone path is not yet re-proven after the tombstone patch.
+- No apply cron exists.
+
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)
