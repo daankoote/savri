@@ -159,6 +159,100 @@ function rpcParams(base: Record<string, unknown>) {
   };
 }
 
+function cleanupReasonFor(row: RetentionRow) {
+  if (row.preserved) return "preserved_runtime_cleanup";
+  if (row.retention_class === "draft_expired") return "draft_retention_expired";
+  if (row.retention_class === "locked_unpaid_expired") return "locked_unpaid_retention_expired";
+  return "retention_policy_cleanup";
+}
+
+function cleanupBaseRow(
+  row: RetentionRow,
+  runtimeStoragePaths: Array<{ bucket: string; path: string }>,
+  preservedStoragePaths: Array<{ bucket: string; path: string }>,
+  deletableStoragePaths: Array<{ bucket: string; path: string }>,
+  meta: ReturnType<typeof getReqMeta>,
+) {
+  return {
+    request_id: meta.request_id,
+    environment: meta.environment,
+    actor_ref: RETENTION_CONFIG.actorRef,
+
+    dossier_id: row.dossier_id,
+    retention_class: row.retention_class,
+    cleanup_reason: cleanupReasonFor(row),
+    apply: true,
+    preserved: row.preserved,
+    export_id: row.export_id || null,
+
+    runtime_documents_count: Number(row.runtime_documents || 0),
+    runtime_chargers_count: Number(row.runtime_chargers || 0),
+    runtime_audit_events_count: Number(row.runtime_audit_events || 0),
+    runtime_sessions_count: Number(row.runtime_sessions || 0),
+    runtime_analysis_runs_count: Number(row.runtime_analysis_runs || 0),
+    runtime_observed_sources_count: Number(row.runtime_observed_sources || 0),
+
+    runtime_storage_path_count: runtimeStoragePaths.length,
+    preserved_storage_path_count: preservedStoragePaths.length,
+    deletable_storage_path_count: deletableStoragePaths.length,
+
+    event_data: {
+      method: "retention-worker",
+      policy: {
+        preserved_runtime_cleanup_grace_days: RETENTION_CONFIG.preservedRuntimeCleanupGraceDays,
+        draft_retention_days: RETENTION_CONFIG.draftRetentionDays,
+        locked_unpaid_retention_days: RETENTION_CONFIG.lockedUnpaidRetentionDays,
+      },
+      privacy: {
+        pii_included: false,
+        raw_storage_paths_included: false,
+        has_dossier_foreign_key: false,
+      },
+    },
+  };
+}
+
+async function insertRetentionCleanupStarted(
+  supabase: ReturnType<typeof createClient>,
+  row: RetentionRow,
+  runtimeStoragePaths: Array<{ bucket: string; path: string }>,
+  preservedStoragePaths: Array<{ bucket: string; path: string }>,
+  deletableStoragePaths: Array<{ bucket: string; path: string }>,
+  meta: ReturnType<typeof getReqMeta>,
+) {
+  const payload = {
+    ...cleanupBaseRow(row, runtimeStoragePaths, preservedStoragePaths, deletableStoragePaths, meta),
+    status: "started",
+  };
+
+  const { data, error } = await supabase
+    .from("retention_cleanup_events")
+    .insert([payload])
+    .select("id")
+    .single();
+
+  if (error || !data?.id) {
+    throw new Error(`RETENTION_TOMBSTONE_INSERT_FAILED: ${error?.message || "missing id"}`);
+  }
+
+  return String(data.id);
+}
+
+async function updateRetentionCleanupEvent(
+  supabase: ReturnType<typeof createClient>,
+  cleanupEventId: string,
+  patch: Record<string, unknown>,
+) {
+  const { error } = await supabase
+    .from("retention_cleanup_events")
+    .update(patch)
+    .eq("id", cleanupEventId);
+
+  if (error) {
+    throw new Error(`RETENTION_TOMBSTONE_UPDATE_FAILED: ${error.message}`);
+  }
+}
+
 async function auditFailOpen(
   supabase: ReturnType<typeof createClient>,
   dossierId: string,
@@ -270,7 +364,20 @@ async function runWorker(req: Request) {
       db_cleanup_applied: false,
     };
 
+    let cleanupEventId: string | null = null;
+
     try {
+      cleanupEventId = await insertRetentionCleanupStarted(
+        supabase,
+        row,
+        runtimeStoragePaths,
+        preservedStoragePaths,
+        deletableStoragePaths,
+        meta,
+      );
+
+      result.cleanup_event_id = cleanupEventId;
+
       if (protectedOverlap.length > 0) {
         throw new Error("RETENTION_STORAGE_GUARD_FAILED: deletable paths overlap preserved paths");
       }
@@ -312,6 +419,28 @@ async function runWorker(req: Request) {
       result.deleted_runtime_dossier = true;
       result.export_id = applied.export_id || null;
 
+      if (!cleanupEventId) {
+        throw new Error("RETENTION_TOMBSTONE_UPDATE_FAILED: missing cleanup_event_id");
+      }
+
+      await updateRetentionCleanupEvent(supabase, cleanupEventId, {
+        status: "success",
+        export_id: applied.export_id || row.export_id || null,
+        deleted_storage_object_count: Number(result.storage_deleted || 0),
+        db_cleanup_applied: true,
+        deleted_runtime_dossier: true,
+        event_data: {
+          tombstone_version: 1,
+          method: "retention-worker",
+          result: "success",
+          privacy: {
+            pii_included: false,
+            raw_storage_paths_included: false,
+            has_dossier_foreign_key: false,
+          },
+        },
+      });
+
       // Note:
       // For runtime-deleted dossiers this dossier_audit_events row may be removed by cascade.
       // Permanent cleanup audit events require a separate system cleanup event table later.
@@ -328,6 +457,32 @@ async function runWorker(req: Request) {
       const msg = err instanceof Error ? err.message : String(err);
 
       result.error = msg;
+
+      if (cleanupEventId) {
+        try {
+          await updateRetentionCleanupEvent(supabase, cleanupEventId, {
+            status: "failed",
+            deleted_storage_object_count: Number(result.storage_deleted || 0),
+            db_cleanup_applied: Boolean(result.db_cleanup_applied),
+            deleted_runtime_dossier: Boolean(result.deleted_runtime_dossier),
+            error_stage: "retention_worker_apply",
+            error_message: msg,
+            event_data: {
+              tombstone_version: 1,
+              method: "retention-worker",
+              result: "failed",
+              privacy: {
+                pii_included: false,
+                raw_storage_paths_included: false,
+                has_dossier_foreign_key: false,
+              },
+            },
+          });
+        } catch (tombstoneErr) {
+          const tombstoneMsg = tombstoneErr instanceof Error ? tombstoneErr.message : String(tombstoneErr);
+          result.tombstone_update_error = tombstoneMsg;
+        }
+      }
 
       await auditFailOpen(supabase, dossierId, "dossier_runtime_cleanup_failed", {
         retention_class: row.retention_class,
