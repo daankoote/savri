@@ -2645,4 +2645,14 @@ Boundary
 - Preserved runtime cleanup tombstone path is still not re-proven after the tombstone patch.
 - No apply cron exists.
 
+[
+  {
+    "charger_rows": 0,
+    "document_rows": 0,
+    "dossier_audit_rows": 0,
+    "session_rows": 0,
+    "outbound_rows": 0
+  }
+]
+
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)

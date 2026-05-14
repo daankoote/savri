@@ -135,6 +135,7 @@ Regel: alleen open items; afgerond → naar changelog.
   - Non-preserved draft target-apply success tombstone is live bewezen.
   - Failed tombstone path + recovery-success path zijn live bewezen via dev-only controlled failure.
   - Storage-delete tombstone path is live bewezen.
+  - Preserved runtime cleanup tombstone path is live bewezen.
   - CURRENT fresh-only cleanup in tests is nog bewust lock-aware retained-state proof.
 
 - Retention policy:
@@ -178,7 +179,8 @@ Regel: alleen open items; afgerond → naar changelog.
   - DONE: non-preserved draft target-apply success tombstone live bewezen
   - DONE: failed tombstone path + recovery-success path live bewezen
   - DONE: storage-delete tombstone path live bewezen
-  - apply cron nog niet bouwen tot preserved-path tombstone proof expliciet groen is
+  - DONE: preserved runtime cleanup tombstone path live bewezen
+  - apply cron nog niet bouwen tot expliciet scheduler-besluit + rollback/disable procedure is vastgelegd
   - fresh-only tests aanpassen zodra cleanup van retained-state proof naar echte retention cleanup verschuift
 
 - DoD:
@@ -193,7 +195,7 @@ Regel: alleen open items; afgerond → naar changelog.
   - DONE: permanente cleanup audit-log richting gekozen en gebouwd als privacy-hard tombstone table zonder FK naar `dossiers`
   - DONE: failed tombstone path runtime-bewijs geleverd
   - DONE: storage-delete tombstone path runtime-bewijs geleverd
-  - OPEN: preserved runtime cleanup tombstone path runtime-bewijs leveren
+  - DONE: preserved runtime cleanup tombstone path runtime-bewijs geleverd
   - suite bewijst dat preserved export intact blijft na runtime cleanup
 
 - Status: OPEN — P1 MVP cleanup/access recovery
@@ -203,7 +205,8 @@ Regel: alleen open items; afgerond → naar changelog.
   - non-preserved draft success-path is bewezen
   - failed tombstone path + recovery-success path zijn bewezen
   - storage-delete tombstone path is bewezen
-  - preserved tombstone proof blijft OPEN
+  - preserved runtime cleanup tombstone path is bewezen
+  - tombstone proof-gates zijn groen
 
 
 

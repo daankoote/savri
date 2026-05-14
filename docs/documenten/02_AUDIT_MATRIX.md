@@ -271,8 +271,17 @@ Belangrijk:
     - apply gaf `storage_deleted = 1`
     - tombstone gaf `deleted_storage_object_count = 1`
     - runtime dossier + child rows zijn verwijderd
+- Live bewezen aanvullend:
+  - preserved runtime cleanup tombstone success-path:
+    - preserved export bleef intact
+    - preserved storage object bleef bereikbaar na cleanup
+    - apply gaf `storage_deleted = 0`
+    - tombstone gaf `preserved = true`
+    - tombstone bevatte gevuld `export_id`
+    - tombstone gaf `deleted_storage_object_count = 0`
+    - runtime dossier + child rows zijn verwijderd
 - Nog bewijs-open:
-  - preserved runtime cleanup tombstone path
+  - geen tombstone proof-gates meer vóór apply scheduler
 - `dossier_runtime_cleanup_applied` en `dossier_runtime_cleanup_failed` blijven functionele dossier-scoped events zolang runtime dossierdata nog bestaat, maar permanente cleanup evidence hoort in `retention_cleanup_events`.
 
 Bewezen in fresh-only suite:

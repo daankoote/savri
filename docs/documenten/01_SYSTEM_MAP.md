@@ -460,7 +460,12 @@ Belangrijke grens:
   - apply gaf `storage_deleted = 1`
   - tombstone gaf `deleted_storage_object_count = 1`
   - runtime dossier + child rows zijn verwijderd
-- Preserved cleanup tombstone path blijft nog bewijs-open.
+- Preserved cleanup tombstone path is live bewezen:
+  - preserved export bleef intact
+  - preserved storage bleef bereikbaar na cleanup
+  - apply gaf `storage_deleted = 0`
+  - tombstone gaf `preserved = true`, `export_id` gevuld en `deleted_storage_object_count = 0`
+  - runtime dossier + child rows zijn verwijderd
 
 Trigger nuance:
 - `public._enval_enforce_document_lifecycle()` bevat een expliciete DB-owner bypass via:
