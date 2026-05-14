@@ -442,7 +442,14 @@ Live proof:
 Belangrijke grens:
 - Er is nog géén retention apply cron.
 - Reminder-flow voor locked/unpaid dossiers dag 3/7/10 is nog niet gebouwd.
-- Permanente cleanup audit-log oplossing blijft open.
+- Permanente cleanup audit-log oplossing is gekozen als privacy-hard tombstone model:
+  - tabel `public.retention_cleanup_events`
+  - geen FK naar `dossiers`
+  - geen PII
+  - geen raw storage paths
+  - `dossier_id` blijft alleen als historische referentie
+- Non-preserved draft target-apply success tombstone is live bewezen.
+- Failed tombstone path, storage-delete tombstone path en preserved cleanup tombstone path blijven nog bewijs-open.
 
 Trigger nuance:
 - `public._enval_enforce_document_lifecycle()` bevat een expliciete DB-owner bypass via:

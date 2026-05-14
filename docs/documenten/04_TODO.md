@@ -131,6 +131,8 @@ Regel: alleen open items; afgerond → naar changelog.
   - Retention worker dry-run cron is live bewezen via `pg_cron` + `pg_net` + `vault.decrypted_secrets`.
   - Apply cron is bewust nog niet gebouwd.
   - Reminder-flow is nog niet gebouwd.
+  - Privacy-hard `retention_cleanup_events` tombstone table is gebouwd.
+  - Non-preserved draft target-apply success tombstone is live bewezen.
   - CURRENT fresh-only cleanup in tests is nog bewust lock-aware retained-state proof.
 
 - Retention policy:
@@ -170,7 +172,9 @@ Regel: alleen open items; afgerond → naar changelog.
   - DONE: runtime cleanup na successful preservation opnemen in regressietests
   - DONE: retention worker maken voor automatische retention cleanup
   - DONE: retention-worker dry-run cron ingesteld en live bewezen
-  - apply cron nog niet bouwen tot cleanup audit-log model en safety criteria expliciet zijn
+  - DONE: privacy-hard cleanup tombstone model bouwen (`retention_cleanup_events`)
+  - DONE: non-preserved draft target-apply success tombstone live bewezen
+  - apply cron nog niet bouwen tot failure-path, storage-path en preserved-path tombstone proof expliciet groen zijn
   - fresh-only tests aanpassen zodra cleanup van retained-state proof naar echte retention cleanup verschuift
 
 - DoD:
@@ -182,12 +186,17 @@ Regel: alleen open items; afgerond → naar changelog.
   - cleanup worker probeert functionele system events te schrijven:
     - `dossier_runtime_cleanup_applied`
     - `dossier_runtime_cleanup_failed`
-  - permanente cleanup audit-log oplossing nog bepalen, omdat `dossier_audit_events` meeverwijdert wanneer runtime dossier wordt verwijderd
+  - DONE: permanente cleanup audit-log richting gekozen en gebouwd als privacy-hard tombstone table zonder FK naar `dossiers`
+  - OPEN: failed tombstone path runtime-bewijs leveren
+  - OPEN: storage-delete tombstone path runtime-bewijs leveren
+  - OPEN: preserved runtime cleanup tombstone path runtime-bewijs leveren
   - suite bewijst dat preserved export intact blijft na runtime cleanup
 
 - Status: OPEN — P1 MVP cleanup/access recovery
   - dry-run scheduler is DONE
-  - apply scheduler, locked/unpaid reminder-flow en permanente cleanup audit-log oplossing blijven OPEN
+  - apply scheduler en locked/unpaid reminder-flow blijven OPEN
+  - cleanup tombstone model is gebouwd en non-preserved draft success-path is bewezen
+  - failed/storage/preserved tombstone proof blijft OPEN
 
 
 

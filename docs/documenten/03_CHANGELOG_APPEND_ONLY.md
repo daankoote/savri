@@ -2437,4 +2437,73 @@ Belangrijke grens
 - Reminder-flow voor locked/unpaid dossiers dag 3/7/10 is nog niet gebouwd.
 - Permanente cleanup audit-log oplossing blijft open.
 
+## 2026-05-14 — Retention cleanup tombstone table + target apply proof
+
+Context
+- Retention-worker dry-run cron was al live bewezen.
+- Apply cron blijft bewust niet gebouwd.
+- Open auditpunt: `dossier_runtime_cleanup_*` events in `dossier_audit_events` verdwijnen mee wanneer runtime dossierdata wordt verwijderd.
+- Besluit: privacy-hard tombstone table voor cleanup proof, zonder PII en zonder FK naar `dossiers`.
+
+Wijziging
+- Nieuwe tabel:
+  - `public.retention_cleanup_events`
+- Privacy-hard model:
+  - geen email
+  - geen naam
+  - geen adres/postcode
+  - geen IP/UA
+  - geen raw storage paths
+  - geen FK naar `public.dossiers`
+  - `dossier_id` blijft alleen als historische referentie
+- RLS:
+  - enabled
+  - `deny_all` voor `anon` en `authenticated`
+- Grants:
+  - `service_role` heeft alleen `SELECT`, `INSERT`, `UPDATE`
+  - geen `DELETE` of `TRUNCATE` voor `service_role`
+- `retention-worker` schrijft nu:
+  - `started` tombstone vóór storage/DB cleanup
+  - `success` tombstone na geslaagde cleanup
+  - `failed` tombstone bij runtime apply failure, indien started row bestaat
+
+Proof
+- Disposable fresh dossier aangemaakt:
+  - dossier_id `7ddb7523-ba68-4853-8705-cd835eb626af`
+- Target dry-run met future `now` override:
+  - `candidate_count = 1`
+  - `retention_class = draft_expired`
+  - `preserved = false`
+  - storage path counts = 0
+- Target apply:
+  - `ok = true`
+  - `processed_count = 1`
+  - `failed_count = 0`
+  - `db_cleanup_applied = true`
+  - `deleted_runtime_dossier = true`
+  - `cleanup_event_id = 82c8b0a7-35d8-48ad-b753-7e92bae8d6cf`
+- Tombstone row:
+  - `status = success`
+  - `cleanup_reason = draft_retention_expired`
+  - `preserved = false`
+  - `export_id = null`
+  - `pii_included = false`
+  - `raw_storage_paths_included = false`
+  - `has_dossier_foreign_key = false`
+- Runtime rows after cleanup:
+  - `dossiers = 0`
+  - `dossier_chargers = 0`
+  - `dossier_documents = 0`
+  - `dossier_audit_events = 0`
+  - `dossier_sessions = 0`
+  - `outbound_emails = 0`
+- Existing `dossier_exports` remained intact with populated `export_sha256`.
+
+Boundaries
+- This proves non-preserved draft cleanup success tombstone path.
+- Failed tombstone path is not yet runtime-proven.
+- Storage-delete tombstone path is not yet runtime-proven.
+- Preserved runtime cleanup tombstone path is not yet re-proven after this patch.
+- No apply cron exists.
+
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)

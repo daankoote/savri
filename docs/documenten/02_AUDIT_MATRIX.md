@@ -239,12 +239,25 @@ CURRENT retention cleanup proof:
   - herhaalde dry-run geeft `NO_CANDIDATE`
 
 Belangrijk:
-- `retention-worker` probeert CURRENT `dossier_runtime_cleanup_applied` en `dossier_runtime_cleanup_failed` te schrijven via `dossier_audit_events`.
+- `retention-worker` probeert CURRENT nog steeds functionele `dossier_runtime_cleanup_applied` en `dossier_runtime_cleanup_failed` events te schrijven via `dossier_audit_events`.
 - Deze events zijn niet permanent betrouwbaar wanneer het runtime dossier daarna wordt verwijderd, omdat `dossier_audit_events` via dossier-FK meeverwijdert.
-- Permanente cleanup audit requires later:
-  - aparte system cleanup events tabel, of
-  - bewuste keuze dat cleanup proof in worker logs/ops-output zit.
-- `dossier_runtime_cleanup_applied` en `dossier_runtime_cleanup_failed` blijven dus het functionele event-contract, maar hun permanente bewaarmodel is nog OPEN.
+- Permanente cleanup proof loopt daarom via `public.retention_cleanup_events`.
+- `retention_cleanup_events` is een privacy-hard tombstone table:
+  - geen FK naar `dossiers`
+  - geen email/naam/adres/postcode/IP/UA
+  - geen raw storage paths
+  - wel `dossier_id` als historische referentie
+  - wel cleanup status/counts/reason/request_id
+- Live bewezen:
+  - non-preserved draft target dry-run → `candidate_count = 1`
+  - target apply → `status = success`
+  - runtime dossier + child rows verwijderd
+  - tombstone bleef bestaan
+- Nog bewijs-open:
+  - failed tombstone path
+  - storage-delete tombstone path
+  - preserved runtime cleanup tombstone path
+- `dossier_runtime_cleanup_applied` en `dossier_runtime_cleanup_failed` blijven functionele dossier-scoped events zolang runtime dossierdata nog bestaat, maar permanente cleanup evidence hoort in `retention_cleanup_events`.
 
 Bewezen in fresh-only suite:
 - not-locked export → HTTP 409 + `dossier_export_rejected`
