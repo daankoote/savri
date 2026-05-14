@@ -130,7 +130,9 @@ Regel: alleen open items; afgerond → naar changelog.
   - Retention worker is gebouwd, gedeployed en target-apply bewezen.
   - Retention worker dry-run cron is live bewezen via `pg_cron` + `pg_net` + `vault.decrypted_secrets`.
   - Apply cron is bewust nog niet gebouwd.
-  - Reminder-flow is nog niet gebouwd.
+  - Locked/unpaid reminder-worker is gebouwd.
+  - Day-3 reminder apply + idempotency + mail delivery zijn live bewezen.
+  - Day-7/day-10/skipped_no_email/scheduler blijven open.
   - Privacy-hard `retention_cleanup_events` tombstone table is gebouwd.
   - Non-preserved draft target-apply success tombstone is live bewezen.
   - Failed tombstone path + recovery-success path zijn live bewezen via dev-only controlled failure.
@@ -167,7 +169,11 @@ Regel: alleen open items; afgerond → naar changelog.
 
 - Nog OPEN:
   - DONE: handmatige storage cleanup tool bouwen voor non-preserved files
-  - reminder-flow bouwen voor locked/unpaid dag 3/7/10
+  - DONE: locked/unpaid reminder-worker built and day-3 proof completed
+  - OPEN: day-7 reminder proof
+  - OPEN: day-10 reminder proof
+  - OPEN: skipped_no_email branch proof
+  - OPEN: reminder-worker scheduler/cron
  - DONE: access recovery UX/flow voor gebruikte/verlopen dossierlinks is gebouwd en live bewezen.
   - FK/trigger/immutability model regressievrij houden nu DB cleanup bypass bestaat
   - `dossier_audit_events` verwijderen/anonymiseren mogelijk maken voor abandoned runtime dossiers waar nog geen preserved export bestaat
@@ -200,7 +206,8 @@ Regel: alleen open items; afgerond → naar changelog.
 
 - Status: OPEN — P1 MVP cleanup/access recovery
   - dry-run scheduler is DONE
-  - apply scheduler en locked/unpaid reminder-flow blijven OPEN
+  - apply scheduler blijft OPEN
+  - locked/unpaid reminder-worker is gebouwd; day-7/day-10/skipped_no_email/scheduler blijven OPEN
   - cleanup tombstone model is gebouwd
   - non-preserved draft success-path is bewezen
   - failed tombstone path + recovery-success path zijn bewezen

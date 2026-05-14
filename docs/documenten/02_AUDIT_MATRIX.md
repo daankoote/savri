@@ -284,6 +284,56 @@ Belangrijk:
   - geen tombstone proof-gates meer vóór apply scheduler
 - `dossier_runtime_cleanup_applied` en `dossier_runtime_cleanup_failed` blijven functionele dossier-scoped events zolang runtime dossierdata nog bestaat, maar permanente cleanup evidence hoort in `retention_cleanup_events`.
 
+### Locked/unpaid reminder-flow proof
+
+Worker:
+- `locked-unpaid-reminder-worker`
+
+Permanent proof table:
+- `public.locked_unpaid_reminder_events`
+
+Queue table:
+- `public.outbound_emails`
+
+Delivery:
+- existing `mail-worker`
+
+Live bewezen:
+- day-3 target reminder queued
+- reminder event written
+- outbound email row written
+- dossier audit event written
+- idempotency prevents duplicate queueing
+- mail-worker delivered outbound email successfully
+
+Audit boundaries:
+- no dossier lifecycle mutation
+- no payment/export mutation
+- no cleanup mutation
+- no scheduler yet
+
+Proof details:
+- target dossier:
+  - `85a5e34c-62de-4a37-8bb8-3659d7016d32`
+- reminder_day:
+  - `3`
+- message_type:
+  - `locked_unpaid_reminder_day_3`
+- reminder_event_id:
+  - `6b77de43-710d-4067-b131-d3a9feb85c92`
+- outbound_email_id:
+  - `26`
+- delivery result:
+  - `sent`
+  - attempts `1`
+  - error_message `null`
+
+Nog bewijs-open:
+- day-7 reminder
+- day-10 reminder
+- skipped_no_email branch
+- reminder-worker scheduler/cron
+
 Bewezen in fresh-only suite:
 - not-locked export → HTTP 409 + `dossier_export_rejected`
 - locked/in_review export → HTTP 200 + `dossier_export_generated`

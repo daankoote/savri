@@ -2655,4 +2655,85 @@ Boundary
   }
 ]
 
+## 2026-05-14 — Locked/unpaid reminder worker day-3 proof
+
+Context
+- Retention cleanup proof-gates waren groen.
+- Apply cron is bewust nog niet gebouwd.
+- Eerst is locked/unpaid reminder-flow gebouwd, zodat automatische cleanup later niet vóór klantwaarschuwingen komt.
+
+Implemented
+- New Edge Function:
+  - `supabase/functions/locked-unpaid-reminder-worker/index.ts`
+- New DB table:
+  - `public.locked_unpaid_reminder_events`
+- New RPC:
+  - `public.enval_queue_locked_unpaid_reminders(...)`
+- New migrations:
+  - `20260514_locked_unpaid_reminders.sql`
+  - `20260515_locked_unpaid_reminders_conflict_fix.sql`
+  - `20260516_locked_unpaid_reminders_identity_fix.sql`
+
+Design boundaries
+- Reminder-worker is producer only.
+- Existing `mail-worker` remains delivery worker.
+- No dossier lifecycle mutation.
+- No export/payment mutation.
+- No retention cleanup.
+- No scheduler yet.
+- Idempotency is enforced through unique `(dossier_id, reminder_day)` reminder event constraint.
+- Permanent proof is stored in `locked_unpaid_reminder_events`, not in `outbound_emails`, because `outbound_emails.dossier_id` can be nulled on dossier deletion.
+
+Live proof
+- Secret configured:
+  - `LOCKED_UNPAID_REMINDER_WORKER_SECRET`
+- Dry-run smoke:
+  - HTTP 200
+  - `ok = true`
+  - `apply = false`
+  - `candidate_count = 6`
+  - candidates were `in_review`
+  - first available reminder was day 3
+- Target proof dossier:
+  - dossier_id `85a5e34c-62de-4a37-8bb8-3659d7016d32`
+  - status `in_review`
+  - `locked_at = 2026-05-10 06:19:44.331+00`
+  - customer email was test-safe `@example.com`
+- Apply proof:
+  - reminder_day `3`
+  - message_type `locked_unpaid_reminder_day_3`
+  - reminder_event_id `6b77de43-710d-4067-b131-d3a9feb85c92`
+  - outbound_email_id `26`
+  - reminder event status `queued`
+  - outbound row status initially `queued`
+  - audit event `locked_unpaid_reminder_queued`
+- Idempotency proof:
+  - second apply returned `candidate_count = 0`
+  - `queued_count = 0`
+  - reminder_event_count remained `1`
+  - outbound_count remained `1`
+- Mail delivery proof:
+  - outbound_email_id `26`
+  - status `sent`
+  - attempts `1`
+  - `sent_at` populated
+  - provider_id populated
+  - error_message `null`
+
+Fixes during proof
+- Initial apply failed safely because `ON CONFLICT (dossier_id, reminder_day)` was ambiguous inside a `RETURNS TABLE` PL/pgSQL function.
+- Fixed with named constraint:
+  - `locked_unpaid_reminder_events_dossier_day_key`
+  - `ON CONFLICT ON CONSTRAINT locked_unpaid_reminder_events_dossier_day_key`
+- Second apply failed safely because `outbound_emails.id` is `GENERATED ALWAYS`.
+- Fixed by removing explicit id insert and using:
+  - `returning id into v_outbound_email_id`
+
+Still open
+- Day-7 proof.
+- Day-10 proof.
+- skipped_no_email branch proof.
+- Scheduler/cron for reminder-worker.
+- Apply cron remains intentionally not built.
+
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)

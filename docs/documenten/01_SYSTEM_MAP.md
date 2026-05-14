@@ -441,7 +441,22 @@ Live proof:
 
 Belangrijke grens:
 - Er is nog géén retention apply cron.
-- Reminder-flow voor locked/unpaid dossiers dag 3/7/10 is nog niet gebouwd.
+- Locked/unpaid reminder-flow is gebouwd als aparte producer-worker:
+  - `locked-unpaid-reminder-worker`
+  - RPC `public.enval_queue_locked_unpaid_reminders(...)`
+  - proof ledger `public.locked_unpaid_reminder_events`
+  - queues into existing `outbound_emails`
+  - existing `mail-worker` sends the queued email
+- Live bewezen:
+  - day-3 dry-run
+  - day-3 apply
+  - idempotency
+  - mail-worker delivery to `sent`
+- Nog open:
+  - day-7 proof
+  - day-10 proof
+  - skipped_no_email branch proof
+  - reminder scheduler/cron
 - Permanente cleanup audit-log oplossing is gekozen als privacy-hard tombstone model:
   - tabel `public.retention_cleanup_events`
   - geen FK naar `dossiers`
