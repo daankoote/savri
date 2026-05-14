@@ -263,8 +263,15 @@ Belangrijk:
   - recovery success op hetzelfde dossier:
     - tweede tombstone row met `status = success`
     - runtime dossier daarna verwijderd
+- Live bewezen aanvullend:
+  - storage-delete tombstone success-path:
+    - non-preserved draft dossier met 1 confirmed storage object
+    - storage object bestond vóór cleanup
+    - dry-run gaf `deletable_storage_path_count = 1`
+    - apply gaf `storage_deleted = 1`
+    - tombstone gaf `deleted_storage_object_count = 1`
+    - runtime dossier + child rows zijn verwijderd
 - Nog bewijs-open:
-  - storage-delete tombstone path
   - preserved runtime cleanup tombstone path
 - `dossier_runtime_cleanup_applied` en `dossier_runtime_cleanup_failed` blijven functionele dossier-scoped events zolang runtime dossierdata nog bestaat, maar permanente cleanup evidence hoort in `retention_cleanup_events`.
 

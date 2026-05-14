@@ -454,7 +454,13 @@ Belangrijke grens:
   - runtime dossier bleef bestaan
   - DB cleanup werd niet toegepast
   - recovery apply op hetzelfde dossier schreef daarna een nieuwe `success` tombstone
-- Storage-delete tombstone path en preserved cleanup tombstone path blijven nog bewijs-open.
+- Storage-delete tombstone path is live bewezen voor een non-preserved draft dossier met 1 confirmed storage object:
+  - storage object bestond vóór cleanup
+  - dry-run gaf `deletable_storage_path_count = 1`
+  - apply gaf `storage_deleted = 1`
+  - tombstone gaf `deleted_storage_object_count = 1`
+  - runtime dossier + child rows zijn verwijderd
+- Preserved cleanup tombstone path blijft nog bewijs-open.
 
 Trigger nuance:
 - `public._enval_enforce_document_lifecycle()` bevat een expliciete DB-owner bypass via:

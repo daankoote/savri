@@ -2567,4 +2567,82 @@ Boundaries
 - Preserved runtime cleanup tombstone path is not yet re-proven after the tombstone patch.
 - No apply cron exists.
 
+## 2026-05-14 — Retention cleanup storage-delete tombstone proof
+
+Context
+- `public.retention_cleanup_events` was al gebouwd.
+- Non-preserved draft success-path was live bewezen.
+- Forced failed tombstone path + recovery-success path waren live bewezen.
+- Nog open bewijs: storage-delete tombstone path.
+
+Proof setup
+- Disposable fresh dossier aangemaakt:
+  - dossier_id `b59c767d-ac01-43f6-8d71-84eff4e44b48`
+- Setup maakte 4 chargers.
+- Eén document bevestigd:
+  - document_id `cc20128e-6d33-4ad7-bd21-b49cdb4555cc`
+  - bucket `enval-dossiers`
+  - file SHA256 `916b6af1eccfeeafdd626454c28cf23efd6ac505f6fa5f95999460c0caaafae6`
+- Storage object existence vóór cleanup:
+  - HTTP 200
+
+Target dry-run
+- `candidate_count = 1`
+- `retention_class = draft_expired`
+- `preserved = false`
+- `runtime_documents = 1`
+- `runtime_chargers = 4`
+- `runtime_audit_events = 10`
+- `runtime_sessions = 1`
+- `runtime_storage_path_count = 1`
+- `preserved_storage_path_count = 0`
+- `deletable_storage_path_count = 1`
+
+Target apply
+- `ok = true`
+- `processed_count = 1`
+- `failed_count = 0`
+- `storage_deleted = 1`
+- `db_cleanup_applied = true`
+- `deleted_runtime_dossier = true`
+- `cleanup_event_id = 5090990c-a047-494e-a9ff-c692b2553a62`
+
+Storage proof after cleanup
+- Storage HEAD after cleanup returned HTTP 400.
+- In this proof context this confirms the object was no longer directly retrievable at the previous object endpoint.
+
+Tombstone proof
+- Tombstone row:
+  - `status = success`
+  - `cleanup_reason = draft_retention_expired`
+  - `preserved = false`
+  - `runtime_documents_count = 1`
+  - `runtime_chargers_count = 4`
+  - `runtime_audit_events_count = 10`
+  - `runtime_sessions_count = 1`
+  - `runtime_storage_path_count = 1`
+  - `preserved_storage_path_count = 0`
+  - `deletable_storage_path_count = 1`
+  - `deleted_storage_object_count = 1`
+  - `db_cleanup_applied = true`
+  - `deleted_runtime_dossier = true`
+  - `error_stage = null`
+  - `error_message = null`
+  - `pii_included = false`
+  - `raw_storage_paths_included = false`
+  - `has_dossier_foreign_key = false`
+
+Runtime rows after cleanup
+- `dossiers = 0`
+- `dossier_chargers = 0`
+- `dossier_documents = 0`
+- `dossier_audit_events = 0`
+- `dossier_sessions = 0`
+- `outbound_emails = 0`
+
+Boundary
+- This proves non-preserved storage-delete tombstone success-path.
+- Preserved runtime cleanup tombstone path is still not re-proven after the tombstone patch.
+- No apply cron exists.
+
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)
