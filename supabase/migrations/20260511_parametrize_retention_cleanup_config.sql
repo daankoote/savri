@@ -1,3 +1,113 @@
+-- ENVAL retention cleanup canonical migration
+-- Date: 2026-05-11
+--
+-- Canonicalized because earlier local repo state had multiple files with the same
+-- Supabase migration version 20260511. Supabase migration versions must be unique.
+--
+-- Contains:
+-- - document lifecycle trigger cleanup bypass
+-- - final parametrized retention cleanup helpers
+
+-- ENVAL retention cleanup runtime after export
+-- Date: 2026-05-11
+--
+-- Contract:
+-- - public.dossier_exports is immutable final audit truth.
+-- - Runtime dossier tables are temporary work material.
+-- - Preserved/exported dossiers may have runtime rows removed after preservation grace.
+-- - Non-preserved dossiers with storage are not DB-deleted until storage cleanup has run.
+-- - Storage cleanup is separate from this SQL function.
+-- - p_apply=true is intentionally restricted to one explicit dossier_id.
+
+-- ---------------------------------------------------------------------
+-- 1) Document lifecycle trigger: allow explicit DB-owner cleanup bypass
+-- ---------------------------------------------------------------------
+
+create or replace function public._enval_enforce_document_lifecycle()
+returns trigger
+language plpgsql
+security definer
+as $function$
+declare
+  v_locked_at timestamptz;
+  v_status text;
+  v_dossier_id uuid;
+begin
+  -- BYPASS:
+  -- Only DB owner session, and only when explicitly enabled.
+  -- Required for retention cleanup after export preservation has been proven.
+  if current_user = 'postgres' and current_setting('enval.dev_reset', true) = 'YES' then
+    if tg_op = 'DELETE' then
+      return old;
+    else
+      return new;
+    end if;
+  end if;
+
+  -- Determine dossier_id for this row.
+  v_dossier_id := coalesce(new.dossier_id, old.dossier_id);
+
+  select d.locked_at, d.status
+    into v_locked_at, v_status
+  from public.dossiers d
+  where d.id = v_dossier_id;
+
+  -- If dossier missing, fail closed.
+  if v_status is null then
+    raise exception 'dossier not found for dossier_documents change (dossier_id=%)', v_dossier_id;
+  end if;
+
+  -- Hard lock: once locked or in_review/ready_for_booking, no changes allowed.
+  if v_locked_at is not null or v_status in ('in_review', 'ready_for_booking') then
+    raise exception 'immutable_row: dossier locked or in review (status=%)', v_status;
+  end if;
+
+  -- PRE-REVIEW RULE: allow delete so user can replace wrong uploads.
+  if tg_op = 'DELETE' then
+    return old;
+  end if;
+
+  -- INSERT rules.
+  if tg_op = 'INSERT' then
+    if new.status is distinct from 'issued' then
+      raise exception 'invalid_status_on_insert: status must be issued';
+    end if;
+
+    return new;
+  end if;
+
+  -- UPDATE rules.
+  if tg_op = 'UPDATE' then
+    -- Disallow confirmed -> issued rollback.
+    if old.status = 'confirmed' and new.status = 'issued' then
+      raise exception 'immutable_row: confirmed documents cannot be reverted to issued';
+    end if;
+
+    -- Allow issued -> confirmed, but require confirmed_at + file_sha256.
+    if old.status = 'issued' and new.status = 'confirmed' then
+      if new.confirmed_at is null then
+        raise exception 'invalid_confirm: confirmed_at required';
+      end if;
+
+      if new.file_sha256 is null then
+        raise exception 'invalid_confirm: file_sha256 required';
+      end if;
+
+      return new;
+    end if;
+
+    -- All other updates allowed pre-review.
+    return new;
+  end if;
+
+  return coalesce(new, old);
+end;
+$function$;
+
+comment on function public._enval_enforce_document_lifecycle()
+is 'Enforces dossier document lifecycle immutability, with explicit DB-owner retention cleanup bypass via enval.dev_reset=YES.';
+
+
 -- ENVAL retention cleanup configurable retention windows
 -- Date: 2026-05-11
 --
