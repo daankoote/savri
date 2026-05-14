@@ -103,6 +103,22 @@ function asStringOrNull(v: unknown) {
   return s || null;
 }
 
+function environmentAllowsFailureInjection(meta: ReturnType<typeof getReqMeta>) {
+  return meta.environment !== "production";
+}
+
+function shouldForceFailureAfterTombstoneStarted(
+  body: Record<string, unknown>,
+  meta: ReturnType<typeof getReqMeta>,
+  targetDossierId: string | null,
+) {
+  return (
+    environmentAllowsFailureInjection(meta) &&
+    targetDossierId !== null &&
+    body.force_failure_stage === "after_tombstone_started"
+  );
+}
+
 function uniqStoragePaths(items: unknown): Array<{ bucket: string; path: string }> {
   if (!Array.isArray(items)) return [];
 
@@ -292,6 +308,11 @@ async function runWorker(req: Request) {
   const nowOverride = asStringOrNull(body.now);
   const targetDossierId = asStringOrNull(body.target_dossier_id);
   const limit = asInt(body.limit, RETENTION_CONFIG.batchLimit, 1, 50);
+  const forceFailureAfterTombstoneStarted = shouldForceFailureAfterTombstoneStarted(
+    body,
+    meta,
+    targetDossierId,
+  );
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { persistSession: false },
@@ -377,6 +398,10 @@ async function runWorker(req: Request) {
       );
 
       result.cleanup_event_id = cleanupEventId;
+
+      if (forceFailureAfterTombstoneStarted) {
+        throw new Error("RETENTION_TEST_FAILURE_AFTER_TOMBSTONE_STARTED");
+      }
 
       if (protectedOverlap.length > 0) {
         throw new Error("RETENTION_STORAGE_GUARD_FAILED: deletable paths overlap preserved paths");
