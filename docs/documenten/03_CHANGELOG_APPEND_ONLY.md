@@ -2736,4 +2736,106 @@ Still open
 - Scheduler/cron for reminder-worker.
 - Apply cron remains intentionally not built.
 
+## 2026-05-15 — Locked/unpaid reminder worker day-7/day-10/skipped_no_email proof
+
+Context
+- Locked/unpaid reminder-worker was gebouwd.
+- Day-3 proof was al groen.
+- Reminder scheduler/cron was bewust nog niet gebouwd.
+- Retention apply cron blijft geblokkeerd tot expliciet scheduler- en rollback/disable-besluit.
+
+Day-7 proof
+- Target dossier:
+  - `172558c8-f2d3-4e76-94fd-1eff48208f71`
+  - status `in_review`
+  - `locked_at = 2026-05-10 06:33:28.825+00`
+  - customer email `daankoote@gmail.com`
+- Controlled now:
+  - `2026-05-17 06:34:28.825+00`
+- Dry-run:
+  - `candidate_count = 1`
+  - `reminder_day = 7`
+  - `message_type = locked_unpaid_reminder_day_7`
+- Apply:
+  - `candidate_count = 1`
+  - `queued_count = 1`
+  - `reminder_event_id = 501b470a-c58e-4036-bace-a9743a43c956`
+  - `outbound_email_id = 27`
+  - reminder event status `queued`
+  - audit event `locked_unpaid_reminder_queued`
+- Idempotency replay:
+  - `candidate_count = 0`
+  - `queued_count = 0`
+- Delivery proof:
+  - `next_attempt_at` was dev-forced to `now()`
+  - mail-worker sent outbound email `27`
+  - status `sent`
+  - attempts `1`
+  - provider_id `857e6ede-5aac-4428-a767-8e45c4e9f87a`
+  - error_message `null`
+  - inbox receipt confirmed
+
+Day-10 proof
+- Target dossier:
+  - `172558c8-f2d3-4e76-94fd-1eff48208f71`
+- Controlled now:
+  - `2026-05-20 06:34:28.825+00`
+- Dry-run:
+  - `candidate_count = 1`
+  - `reminder_day = 10`
+  - `message_type = locked_unpaid_reminder_day_10`
+- Apply:
+  - `candidate_count = 1`
+  - `queued_count = 1`
+  - `reminder_event_id = 3b598405-4a2c-46be-8149-2505703a8030`
+  - `outbound_email_id = 28`
+  - reminder event status `queued`
+  - audit event `locked_unpaid_reminder_queued`
+- Idempotency replay:
+  - `candidate_count = 0`
+  - `queued_count = 0`
+- Delivery proof:
+  - `next_attempt_at` was dev-forced to `now()`
+  - mail-worker sent outbound email `28`
+  - status `sent`
+  - attempts `1`
+  - provider_id `3a5b590c-192c-49f1-a349-5121cf8350f4`
+  - error_message `null`
+  - inbox receipt confirmed
+
+skipped_no_email proof
+- Dev-only target dossier:
+  - `06bd3726-b5b6-408a-84d9-9817945e608a`
+  - source `dev_skipped_no_email_proof`
+  - status `in_review`
+  - `locked_at = 2026-05-10 06:33:28.825+00`
+  - `customer_email = null`
+- Controlled now:
+  - `2026-05-13 06:34:28.825+00`
+- Dry-run:
+  - `candidate_count = 1`
+  - `reminder_day = 3`
+  - `message_type = locked_unpaid_reminder_day_3`
+- Apply:
+  - `candidate_count = 1`
+  - `queued_count = 0`
+  - `skipped_count = 1`
+  - skipped_reason `missing_customer_email`
+  - `reminder_event_id = d6ffbfde-acdc-4950-8405-3d914c3b75d9`
+  - reminder event status `skipped_no_email`
+  - outbound_email_id `null`
+- Idempotency replay:
+  - `candidate_count = 0`
+  - `queued_count = 0`
+  - `skipped_count = 0`
+- DB proof:
+  - `locked_unpaid_reminder_events.status = skipped_no_email`
+  - `outbound_emails` returned no rows for the dev-only target dossier
+
+Boundary
+- Day-7/day-10 delivery proofs were dev-forced by manually moving `next_attempt_at` to `now()`.
+- This proves mail-worker/provider/inbox delivery, not scheduler timing.
+- Reminder-worker scheduler/cron remains open.
+- Retention apply cron remains intentionally not built.
+
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)

@@ -132,7 +132,10 @@ Regel: alleen open items; afgerond → naar changelog.
   - Apply cron is bewust nog niet gebouwd.
   - Locked/unpaid reminder-worker is gebouwd.
   - Day-3 reminder apply + idempotency + mail delivery zijn live bewezen.
-  - Day-7/day-10/skipped_no_email/scheduler blijven open.
+  - Day-7 reminder apply + idempotency + audit + dev-forced mail delivery zijn live bewezen.
+  - Day-10 reminder apply + idempotency + audit + dev-forced mail delivery zijn live bewezen.
+  - skipped_no_email branch is live bewezen met skipped_reason `missing_customer_email` en zonder outbound email row.
+  - reminder-worker scheduler/cron blijft open.
   - Privacy-hard `retention_cleanup_events` tombstone table is gebouwd.
   - Non-preserved draft target-apply success tombstone is live bewezen.
   - Failed tombstone path + recovery-success path zijn live bewezen via dev-only controlled failure.
@@ -170,9 +173,9 @@ Regel: alleen open items; afgerond → naar changelog.
 - Nog OPEN:
   - DONE: handmatige storage cleanup tool bouwen voor non-preserved files
   - DONE: locked/unpaid reminder-worker built and day-3 proof completed
-  - OPEN: day-7 reminder proof
-  - OPEN: day-10 reminder proof
-  - OPEN: skipped_no_email branch proof
+  - DONE: day-7 reminder proof
+  - DONE: day-10 reminder proof
+  - DONE: skipped_no_email branch proof
   - OPEN: reminder-worker scheduler/cron
  - DONE: access recovery UX/flow voor gebruikte/verlopen dossierlinks is gebouwd en live bewezen.
   - FK/trigger/immutability model regressievrij houden nu DB cleanup bypass bestaat
@@ -207,7 +210,7 @@ Regel: alleen open items; afgerond → naar changelog.
 - Status: OPEN — P1 MVP cleanup/access recovery
   - dry-run scheduler is DONE
   - apply scheduler blijft OPEN
-  - locked/unpaid reminder-worker is gebouwd; day-7/day-10/skipped_no_email/scheduler blijven OPEN
+  - locked/unpaid reminder-worker is gebouwd; day-7/day-10/skipped_no_email zijn bewezen; scheduler blijft OPEN
   - cleanup tombstone model is gebouwd
   - non-preserved draft success-path is bewezen
   - failed tombstone path + recovery-success path zijn bewezen

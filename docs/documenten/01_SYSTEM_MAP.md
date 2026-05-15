@@ -450,12 +450,23 @@ Belangrijke grens:
 - Live bewezen:
   - day-3 dry-run
   - day-3 apply
-  - idempotency
-  - mail-worker delivery to `sent`
+  - day-3 idempotency
+  - day-3 mail-worker delivery to `sent`
+  - day-7 dry-run
+  - day-7 apply
+  - day-7 idempotency
+  - day-7 audit event
+  - day-7 mail-worker delivery to `sent` via dev-forced `next_attempt_at = now()`
+  - day-10 dry-run
+  - day-10 apply
+  - day-10 idempotency
+  - day-10 audit event
+  - day-10 mail-worker delivery to `sent` via dev-forced `next_attempt_at = now()`
+  - skipped_no_email branch:
+    - status `skipped_no_email`
+    - skipped_reason `missing_customer_email`
+    - no outbound email row
 - Nog open:
-  - day-7 proof
-  - day-10 proof
-  - skipped_no_email branch proof
   - reminder scheduler/cron
 - Permanente cleanup audit-log oplossing is gekozen als privacy-hard tombstone model:
   - tabel `public.retention_cleanup_events`

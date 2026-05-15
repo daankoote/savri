@@ -328,10 +328,26 @@ Proof details:
   - attempts `1`
   - error_message `null`
 
+Live bewezen aanvullend:
+- day-7 target reminder queued
+- day-7 idempotency prevents duplicate queueing
+- day-7 dossier audit event written
+- day-7 mail-worker delivery was dev-forced by moving `next_attempt_at` to `now()`
+- day-7 outbound email delivered successfully
+- day-10 target reminder queued
+- day-10 idempotency prevents duplicate queueing
+- day-10 dossier audit event written
+- day-10 mail-worker delivery was dev-forced by moving `next_attempt_at` to `now()`
+- day-10 outbound email delivered successfully
+- skipped_no_email branch proof completed:
+  - dev-only target dossier with `customer_email = null`
+  - reminder_day `3`
+  - skipped_reason `missing_customer_email`
+  - reminder event status `skipped_no_email`
+  - no outbound email row created
+  - replay returned `candidate_count = 0`
+
 Nog bewijs-open:
-- day-7 reminder
-- day-10 reminder
-- skipped_no_email branch
 - reminder-worker scheduler/cron
 
 Bewezen in fresh-only suite:
