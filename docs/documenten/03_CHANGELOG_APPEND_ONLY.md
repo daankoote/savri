@@ -3061,4 +3061,60 @@ Operational boundary
 - This proves retention apply scheduler construction and transport.
 - It does not enable ongoing live retention apply scheduling.
 - Active retention apply remains OFF until an explicit live-retention decision.
+
+## 2026-05-17 — Retention and reminder scheduler jobs enabled as MVP runtime lifecycle state
+
+Context
+- Locked/unpaid reminder scheduler proof was completed.
+- Retention apply scheduler proof was completed.
+- Proof-only jobs had previously been disabled after proof as a safety state.
+- Decision was made to enable daily runtime lifecycle automation for MVP.
+
+Active scheduler state
+- Retention dry-run:
+  - jobid `18`
+  - jobname `enval-retention-worker-dry-run-daily`
+  - schedule `0 6 * * *`
+  - body `mode=dry_run`, `apply=false`, `limit=10`
+- Retention apply:
+  - jobid `19`
+  - jobname `enval-retention-worker-apply-daily`
+  - schedule `10 6 * * *`
+  - body `mode=apply`, `apply=true`, `limit=10`
+- Locked/unpaid reminder dry-run:
+  - jobid `20`
+  - jobname `enval-locked-unpaid-reminder-worker-dry-run-daily`
+  - schedule `15 6 * * *`
+  - body `apply=false`, `limit=10`
+- Locked/unpaid reminder apply:
+  - jobid `21`
+  - jobname `enval-locked-unpaid-reminder-worker-apply-daily`
+  - schedule `20 6 * * *`
+  - body `apply=true`, `limit=10`
+
+Operational meaning
+- Runtime lifecycle automation is now intentionally ON for MVP.
+- Draft / non-locked runtime cleanup follows the 7-day retention policy.
+- Locked / in_review unpaid reminder and cleanup flow follows the 14-day retention policy with reminder days 3, 7, and 10.
+- Preserved exports remain in `public.dossier_exports`.
+- Cleanup tombstone proof remains in `public.retention_cleanup_events`.
+- Preserved storage paths remain protected.
+
+Rollback
+- Temporary proof-only jobs remain disabled/removed.
+- Apply rollback remains available by unscheduling:
+  - `enval-retention-worker-apply-daily`
+  - `enval-locked-unpaid-reminder-worker-apply-daily`
+- Dry-run jobs may remain active for observability during rollback.
+
+Follow-up notes
+- Storage lifecycle remains an explicit follow-up:
+  - runtime-only storage and preserved/source-evidence storage currently share the same physical bucket
+  - cleanup protection is based on preserved export references and deletable/preserved path classification
+  - TODO remains to decide whether semantic separation is sufficient or whether physical prefix/bucket separation is needed
+- Before MVP launch, run a final cron/job inventory:
+  - confirm only intended lifecycle jobs are active
+  - confirm proof-only jobs are removed/disabled
+  - review job frequency and batch limits for MVP operations
+
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)

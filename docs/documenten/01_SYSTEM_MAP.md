@@ -397,6 +397,10 @@ Lifecycle-principe:
 - `dossier_exports` is de final audit source-of-truth.
 - Storage objects waarnaar een preserved export verwijst, mogen niet door cleanup worden verwijderd.
 - Niet-preserved storage volgt draft/locked retention.
+- CURRENT storage lifecycle is semantisch gescheiden, maar fysiek nog niet volledig gescheiden:
+  - runtime-only storage objects vallen onder retention cleanup
+  - preserved/source-evidence storage objects blijven beschermd via export references
+- OPEN: vóór of na MVP expliciet beslissen of deze semantische scheiding voldoende blijft, of dat fysieke prefix-/bucketscheiding nodig is.
 
 Retention cleanup helpers:
 - `public.enval_retention_cleanup(...)`
@@ -475,9 +479,36 @@ Live proof:
   - `failed_count=0`
   - proof cron disabled after proof
 
-Belangrijke grens:
-- Er is nog géén actieve retention apply cron.
-- Alleen retention dry-run cron blijft actief.
+Actieve runtime scheduler-state richting MVP:
+- Retention dry-run cron is actief:
+  - jobname `enval-retention-worker-dry-run-daily`
+  - schedule `0 6 * * *`
+  - jobid `18`
+  - body `mode=dry_run`, `apply=false`, `limit=10`
+- Retention apply cron is actief:
+  - jobname `enval-retention-worker-apply-daily`
+  - schedule `10 6 * * *`
+  - jobid `19`
+  - body `mode=apply`, `apply=true`, `limit=10`
+- Locked/unpaid reminder dry-run cron is actief:
+  - jobname `enval-locked-unpaid-reminder-worker-dry-run-daily`
+  - schedule `15 6 * * *`
+  - jobid `20`
+  - body `apply=false`, `limit=10`
+- Locked/unpaid reminder apply cron is actief:
+  - jobname `enval-locked-unpaid-reminder-worker-apply-daily`
+  - schedule `20 6 * * *`
+  - jobid `21`
+  - body `apply=true`, `limit=10`
+
+Operational boundary:
+- These jobs are now intentionally enabled as the MVP runtime lifecycle state.
+- Temporary proof-only jobs remain disabled/removed.
+- Rollback remains available by unscheduling the apply jobs.
+- Before MVP launch, run one final cron/job inventory to confirm:
+  - only intended lifecycle jobs are active
+  - no proof-only jobs remain active
+  - frequencies and batch limits are still appropriate
 - Locked/unpaid reminder-flow is gebouwd als aparte producer-worker:
   - `locked-unpaid-reminder-worker`
   - RPC `public.enval_queue_locked_unpaid_reminders(...)`
@@ -517,9 +548,7 @@ Belangrijke grens:
     - manual SQL apply proof returned `candidate_count=8`, `queued_count=8`, `skipped_count=0`
     - replay returned `candidate_count=0`, `queued_count=0`, `skipped_count=0`
   - outbound day-3 emails `29` through `36` reached `sent`
-  - scheduler jobs were disabled after proof as safety state
-- Nog open:
-  - retention apply cron
+  - scheduler jobs were later intentionally enabled as the MVP runtime lifecycle state
 - Permanente cleanup audit-log oplossing is gekozen als privacy-hard tombstone model:
   - tabel `public.retention_cleanup_events`
   - geen FK naar `dossiers`

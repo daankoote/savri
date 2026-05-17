@@ -265,6 +265,39 @@ Regel: alleen open items; afgerond → naar changelog.
   - append-only blijft append-only; CURRENT docs blijven daadwerkelijk CURRENT
 - Status: OPEN
 
+### 8b) Cron/job inventory eindcheck vóór MVP launch
+
+- Context:
+  - Lifecycle automation staat nu dagelijks aan richting MVP:
+    - retention dry-run
+    - retention apply
+    - locked/unpaid reminder dry-run
+    - locked/unpaid reminder apply
+  - Tijdens proof zijn meerdere tijdelijke cronjobs aangemaakt en weer verwijderd.
+  - Voor launch moet één keer hard worden gecontroleerd welke jobs actief zijn en of frequenties nog logisch zijn.
+
+- Open restdoel:
+  - vlak vóór MVP launch één cron/job inventory uitvoeren
+  - controleren of alleen bedoelde jobs actief zijn
+  - beoordelen of frequenties/batch limits nog passend zijn
+
+- DoD:
+  - SQL inventory vastgelegd van:
+    - `cron.job`
+    - recente `cron.job_run_details`
+    - recente `net._http_response`
+  - bevestigd dat geen proof-only jobs actief zijn
+  - bevestigd dat geen hourly lifecycle jobs actief zijn tenzij bewust gewenst
+  - bevestigd dat apply-jobs alleen deze bedoelde muterende lifecycle-jobs zijn:
+    - `enval-retention-worker-apply-daily`
+    - `enval-locked-unpaid-reminder-worker-apply-daily`
+  - optimalisatiebesluit vastgelegd:
+    - frequenties houden
+    - frequenties aanpassen
+    - of bepaalde jobs tijdelijk uitschakelen
+
+- Status: OPEN — finale MVP launch check
+
 ### 9) MID final-claim regressiewacht
 
 - Context:
@@ -476,16 +509,41 @@ Regel: alleen open items; afgerond → naar changelog.
   - job/edge function die storage failures opnieuw probeert op basis van audit events
 - Status: OPEN
 
-### 16b) Storage object cleanup proof sluiten
+### 16b) Storage lifecycle expliciet scheiden: runtime-only vs preserved/source-evidence storage
+
 - Context:
-  - DB cleanup proof is nu geleverd:
-    - `dossier_documents` rows verdwijnen
-    - docs per charger gaan naar 0
-  - storage object deletion is nog niet afzonderlijk runtime-bewezen als hard bewijsstap
+  - Supabase Storage bucket `enval-dossiers` bevat CURRENT zowel:
+    - runtime uploadobjecten tijdens dossieropbouw
+    - preserved/source-evidence objecten waar een preserved export naar verwijst
+  - Preserved cleanup is bewezen:
+    - preserved storage paths blijven beschermd
+    - `deletable_storage_path_count = 0`
+    - `storage_deleted = 0`
+  - Non-preserved storage-delete path is bewezen, maar het lifecycle-model moet nog explicieter worden gemaakt zodat runtime-only storage en preserved/source-evidence storage niet semantisch door elkaar lopen.
+
+- Open restdoel:
+  - expliciet vastleggen en/of technisch afdwingen welke storage objects:
+    - runtime-only zijn en onder 7/14 dagen retention vallen
+    - preserved/source-evidence zijn en niet door cleanup verwijderd mogen worden
+  - bepalen of dit voldoende blijft via metadata/path/reference checks, of dat bucket-/prefixscheiding nodig is
+
 - DoD:
-  - voor happy upload run minimaal 1 storage object key/pad vooraf vastleggen
-  - na cleanup bevestigen dat object niet meer opvraagbaar is / niet meer bestaat
-  - bewijs vastleggen zonder secrets/signatures te lekken
+  - storage lifecycle model is expliciet vastgelegd:
+    - runtime-only storage
+    - preserved/source-evidence storage
+  - cleanup gebruikt aantoonbaar alleen `deletable_storage_paths`
+  - preserved referenced objects blijven beschermd op basis van `dossier_exports`
+  - voor minimaal één non-preserved cleanup is object deletion hard bewezen:
+    - object key vooraf vastgelegd
+    - object na cleanup niet meer opvraagbaar / bestaat niet meer
+    - bewijs vastgelegd zonder secrets/signatures te lekken
+  - voor minimaal één preserved cleanup is bewezen:
+    - preserved object key vooraf vastgelegd
+    - object na runtime cleanup nog aanwezig/bereikbaar
+  - besluit vastgelegd:
+    - één bucket met harde path/reference discipline blijft voldoende
+    - of fysieke scheiding via aparte prefixes/buckets wordt later ingevoerd
+
 - Status: OPEN
 
 ### 17) Export contract regressiewacht + resterende edge-case beslissing
