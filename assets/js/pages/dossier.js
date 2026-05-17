@@ -253,9 +253,16 @@ function isRecoverableAccessError(err) {
 }
 
 function setMainDossierUiHidden(hidden) {
-  document.querySelectorAll(".grid2.mt-18, #analysisSection").forEach((el) => {
+  document.querySelectorAll(".grid2.mt-18").forEach((el) => {
     el.classList.toggle("hidden", !!hidden);
   });
+
+  // Access recovery mag analysis verbergen, maar nooit automatisch tonen.
+  // Analysis visibility wordt uitsluitend bepaald door renderAnalysisUiEmptyState().
+  const analysisSection = $("analysisSection");
+  if (hidden && analysisSection) {
+    analysisSection.classList.add("hidden");
+  }
 }
 
 function showAccessRecovery(reasonMessage = "") {
