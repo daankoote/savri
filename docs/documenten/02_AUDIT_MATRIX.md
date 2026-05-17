@@ -383,8 +383,57 @@ Operational boundary:
 - This proves scheduler construction, Vault transport, apply behavior, idempotency replay, and mail-worker delivery.
 - It does not enable ongoing production scheduling while jobs remain disabled.
 
-Nog bewijs-open:
-- retention apply cron
+Retention apply scheduler proof:
+- Preserved batch dry-run:
+  - request_id `437728`
+  - `candidate_count=4`
+  - all candidates `preserved_runtime_cleanup`
+  - `preserved=true`
+  - `deletable_storage_path_count=0`
+- Preserved batch apply:
+  - request_id `437729`
+  - `candidate_count=4`
+  - `processed_count=4`
+  - `failed_count=0`
+  - `storage_deleted=0`
+  - `db_cleanup_applied=true`
+  - `deleted_runtime_dossier=true`
+- Replay proof:
+  - request_id `437730`
+  - `candidate_count=0`
+  - `processed_count=0`
+  - `failed_count=0`
+- DB proof:
+  - runtime `dossiers=0`
+  - preserved `dossier_exports=4`
+  - `retention_cleanup_events_success=4`
+- Tombstone proof:
+  - `status=success`
+  - `retention_class=preserved_runtime_cleanup`
+  - `preserved=true`
+  - `export_id` filled
+  - `deleted_runtime_dossier=true`
+  - `db_cleanup_applied=true`
+  - `deleted_storage_object_count=0`
+  - `error_message=null`
+  - `event_data.privacy.pii_included=false`
+  - `event_data.privacy.raw_storage_paths_included=false`
+  - `event_data.privacy.has_dossier_foreign_key=false`
+- Scheduled apply proof:
+  - temporary cron job `enval-retention-worker-apply-proof-once`
+  - jobid `13`
+  - cron run `succeeded`
+  - pg_net response `437736`
+  - HTTP `200`
+  - `ok=true`
+  - `apply=true`
+  - `candidate_count=0`
+  - `processed_count=0`
+  - `failed_count=0`
+- Operational boundary:
+  - proof cron was disabled after proof
+  - no retention apply cron remains active
+  - retention dry-run cron remains active
 
 Bewezen in fresh-only suite:
 - not-locked export → HTTP 409 + `dossier_export_rejected`

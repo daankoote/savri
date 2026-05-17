@@ -437,10 +437,47 @@ Live proof:
   - schedule `0 * * * *`
   - response HTTP 200
   - `apply=false`
-  - `candidate_count=0` op laatste proof-run
+- preserved batch cleanup is live bewezen:
+  - dry-run request `437728`
+  - `candidate_count=4`
+  - all candidates `preserved_runtime_cleanup`
+  - `deletable_storage_path_count=0`
+  - apply request `437729`
+  - `processed_count=4`
+  - `failed_count=0`
+  - `storage_deleted=0`
+  - `db_cleanup_applied=true`
+  - `deleted_runtime_dossier=true`
+  - replay request `437730`
+  - `candidate_count=0`
+  - `processed_count=0`
+  - `failed_count=0`
+  - DB proof:
+    - runtime `dossiers=0`
+    - `dossier_exports=4`
+    - `retention_cleanup_events_success=4`
+  - tombstone proof:
+    - `status=success`
+    - `preserved=true`
+    - `export_id` gevuld
+    - `deleted_storage_object_count=0`
+    - `pii_included=false`
+    - `raw_storage_paths_included=false`
+- retention apply scheduler proof is live bewezen:
+  - temporary proof cron `enval-retention-worker-apply-proof-once`
+  - cron jobid `13`
+  - scheduled run `succeeded`
+  - pg_net response `437736`
+  - HTTP 200
+  - `apply=true`
+  - `candidate_count=0`
+  - `processed_count=0`
+  - `failed_count=0`
+  - proof cron disabled after proof
 
 Belangrijke grens:
-- Er is nog géén retention apply cron.
+- Er is nog géén actieve retention apply cron.
+- Alleen retention dry-run cron blijft actief.
 - Locked/unpaid reminder-flow is gebouwd als aparte producer-worker:
   - `locked-unpaid-reminder-worker`
   - RPC `public.enval_queue_locked_unpaid_reminders(...)`

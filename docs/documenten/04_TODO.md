@@ -129,7 +129,25 @@ Regel: alleen open items; afgerond → naar changelog.
   - Storage cleanup tool is handmatig gebouwd en bewezen.
   - Retention worker is gebouwd, gedeployed en target-apply bewezen.
   - Retention worker dry-run cron is live bewezen via `pg_cron` + `pg_net` + `vault.decrypted_secrets`.
-  - Apply cron is bewust nog niet gebouwd.
+  - Retention preserved batch apply is live bewezen:
+    - dry-run request `437728`
+    - apply request `437729`
+    - replay request `437730`
+    - `processed_count=4`
+    - `failed_count=0`
+    - runtime `dossiers=0`
+    - `dossier_exports=4`
+    - `retention_cleanup_events_success=4`
+  - Retention apply scheduler proof is live bewezen:
+    - temporary proof cron `enval-retention-worker-apply-proof-once`
+    - jobid `13`
+    - cron run `succeeded`
+    - pg_net response `437736`
+    - `apply=true`
+    - `candidate_count=0`
+    - `processed_count=0`
+    - `failed_count=0`
+    - proof cron disabled after proof
   - Locked/unpaid reminder-worker is gebouwd.
   - Day-3 reminder apply + idempotency + mail delivery zijn live bewezen.
   - Day-7 reminder apply + idempotency + audit + dev-forced mail delivery zijn live bewezen.
@@ -196,7 +214,8 @@ Regel: alleen open items; afgerond → naar changelog.
   - DONE: storage-delete tombstone path live bewezen
   - DONE: preserved runtime cleanup tombstone path live bewezen
   - DONE: reminder-worker apply cron gebouwd, bewezen en daarna disabled als safety state
-  - retention apply cron nog niet bouwen tot expliciet scheduler-besluit + rollback/disable procedure is vastgelegd
+  - DONE: retention apply scheduler proof gebouwd, bewezen en daarna disabled als safety state
+  - geen actieve retention apply cron totdat expliciet live-retention besluit is genomen
   - fresh-only tests aanpassen zodra cleanup van retained-state proof naar echte retention cleanup verschuift
 
 - DoD:
@@ -218,7 +237,8 @@ Regel: alleen open items; afgerond → naar changelog.
   - dry-run scheduler is DONE
   - reminder-worker apply scheduler proof is DONE and disabled after proof
   - locked/unpaid reminder-worker is gebouwd; day-7/day-10/skipped_no_email/scheduler zijn bewezen
-  - retention apply scheduler blijft OPEN
+  - retention apply scheduler proof is DONE and disabled after proof
+  - active retention apply scheduler blijft OFF tot expliciet live-retention besluit
   - cleanup tombstone model is gebouwd
   - non-preserved draft success-path is bewezen
   - failed tombstone path + recovery-success path zijn bewezen

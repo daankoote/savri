@@ -2933,4 +2933,132 @@ Operational boundary
 
 Still open
 - Retention apply cron remains intentionally not built.
+
+
+## 2026-05-17 — Retention preserved batch cleanup and apply scheduler proof completed
+
+Context
+- Retention worker was already built and dry-run cron was already live.
+- Open item was retention apply proof and scheduler proof.
+- Existing active cron before proof:
+  - `enval-retention-worker-dry-run-hourly`
+  - schedule `0 * * * *`
+  - `apply=false`
+- Locked/unpaid reminder scheduler had already been proven and disabled after proof.
+
+Preserved batch candidate review
+- Manual dry-run request:
+  - request_id `437728`
+  - HTTP `200`
+  - `ok=true`
+  - `apply=false`
+  - `candidate_count=4`
+- All candidates were:
+  - `retention_class=preserved_runtime_cleanup`
+  - `preserved=true`
+  - `runtime_documents=8`
+  - `runtime_chargers=4`
+  - `runtime_audit_events=101`
+  - `runtime_sessions=1`
+  - `runtime_analysis_runs=1`
+  - `runtime_storage_path_count=8`
+  - `preserved_storage_path_count=8`
+  - `deletable_storage_path_count=0`
+
+Preserved batch apply proof
+- Manual apply request:
+  - request_id `437729`
+  - HTTP `200`
+  - `ok=true`
+  - `apply=true`
+  - `candidate_count=4`
+  - `processed_count=4`
+  - `failed_count=0`
+- Applied candidates:
+  - `533572a8-4208-46f7-86ce-475d5b54f678`
+  - `c2e41ba6-b808-4637-9a5c-6ddca5f0a9a5`
+  - `e0c0d458-d8d7-45be-a88a-bf1690e73812`
+  - `73eb7cdb-89ef-410e-960d-1927fea56cb0`
+- Per candidate:
+  - `storage_deleted=0`
+  - `db_cleanup_applied=true`
+  - `deleted_runtime_dossier=true`
+  - `export_id` filled
+  - `cleanup_event_id` filled
+
+Replay proof
+- Manual replay request:
+  - request_id `437730`
+  - HTTP `200`
+  - `ok=true`
+  - `apply=true`
+  - `candidate_count=0`
+  - `processed_count=0`
+  - `failed_count=0`
+  - `results=[]`
+
+DB proof
+- Runtime rows:
+  - `dossiers=0`
+- Preserved export rows:
+  - `dossier_exports=4`
+- Tombstone rows:
+  - `retention_cleanup_events_success=4`
+- Export integrity:
+  - all 4 exports retained
+  - `export_sha256` filled
+  - `claim_year=2026`
+  - `claimed_mid_numbers` filled
+  - `export_status=generated`
+  - `payment_status=waived`
+
+Tombstone proof
+- 4 `retention_cleanup_events` success rows were confirmed.
+- Tombstone rows contained:
+  - `retention_class=preserved_runtime_cleanup`
+  - `cleanup_reason=preserved_runtime_cleanup`
+  - `status=success`
+  - `preserved=true`
+  - `export_id` filled
+  - `deleted_runtime_dossier=true`
+  - `db_cleanup_applied=true`
+  - `deleted_storage_object_count=0`
+  - `error_message=null`
+  - `event_data.method=retention-worker`
+  - `event_data.result=success`
+  - `event_data.privacy.pii_included=false`
+  - `event_data.privacy.has_dossier_foreign_key=false`
+  - `event_data.privacy.raw_storage_paths_included=false`
+  - `event_data.tombstone_version=1`
+
+Retention apply scheduler proof
+- Temporary proof cron created:
+  - jobname `enval-retention-worker-apply-proof-once`
+  - jobid `13`
+  - schedule `56 00 * * *`
+  - body `mode=apply`, `apply=true`, `limit=10`
+- Cron run proof:
+  - status `succeeded`
+  - return_message `1 row`
+  - start_time `2026-05-17 00:56:00.031382+00`
+  - end_time `2026-05-17 00:56:00.035423+00`
+- pg_net response:
+  - request_id `437736`
+  - HTTP `200`
+  - `ok=true`
+  - `apply=true`
+  - `candidate_count=0`
+  - `processed_count=0`
+  - `failed_count=0`
+  - `results=[]`
+
+Operational boundary
+- Temporary retention apply proof cron was disabled after proof.
+- Final cron state after proof:
+  - active: `enval-retention-worker-dry-run-hourly`
+  - no active locked/unpaid reminder scheduler jobs
+  - no active retention apply scheduler jobs
+- This proves retention apply scheduler construction and transport.
+- It does not enable ongoing live retention apply scheduling.
+- Active retention apply remains OFF until an explicit live-retention decision.
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)
