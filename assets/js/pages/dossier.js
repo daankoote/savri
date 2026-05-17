@@ -873,19 +873,28 @@ function renderAnalysisUiEmptyState() {
       loadBtn.classList.add("hidden");
       loadBtn.disabled = true;
     }
+    clearAnalysisUi();
+    setText("analysisState", "");
     return;
   }
 
   const locked = isLocked();
   const hasCachedAnalysis = !!latestPrecheckAnalysis;
+  const shouldShowAnalysisSection = hasCachedAnalysis || locked;
 
   if (section) {
-    section.classList.remove("hidden");
+    section.classList.toggle("hidden", !shouldShowAnalysisSection);
   }
 
   if (loadBtn) {
     loadBtn.classList.add("hidden");
     loadBtn.disabled = true;
+  }
+
+  if (!shouldShowAnalysisSection) {
+    clearAnalysisUi();
+    setText("analysisState", "");
+    return;
   }
 
   if (hasCachedAnalysis) {
@@ -895,11 +904,6 @@ function renderAnalysisUiEmptyState() {
   }
 
   clearAnalysisUi();
-
-  if (!locked) {
-    setText("analysisState", "Nog geen analyse geladen. Voer eerst ‘Controleer volledigheid’ uit.");
-    return;
-  }
 
   setText("analysisState", "Analyse wordt getoond zodra deze beschikbaar is.");
 }
@@ -2281,10 +2285,9 @@ function renderDocs() {
 
   const hint = $("docsHint");
   if (hint) {
-    //hint.textContent = "Per laadpaal: minimaal 1 factuur installatie + 1 foto van het laadpunt. Een document telt pas mee na bevestigde upload.";
-    hint.textContent = canViewAnalysisDetails()
-  ? "Per laadpaal: upload minimaal 1 factuur/installatiefactuur. Foto laadpunt is alleen zichtbaar voor developer-testen. Een document telt pas mee na bevestigde upload."
-  : "Per laadpaal: upload minimaal 1 factuur/installatiefactuur. Een document telt pas mee na bevestigde upload.";
+    clearNode(hint);
+    hint.classList.add("hidden");
+    hint.textContent = "";
   }
 
   const chargers = getChargersForUi();
