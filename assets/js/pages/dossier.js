@@ -1077,6 +1077,10 @@ async function apiPost(fnName, body, options) {
   return window.ENVAL.api.apiPost(fnName, body, options || {});
 }
 
+async function apiAuthed(fnName, body, options) {
+  return apiPost(fnName, authedBody(body), options || {});
+}
+
 async function onAccessRecoverySubmit(e) {
   e.preventDefault();
 
