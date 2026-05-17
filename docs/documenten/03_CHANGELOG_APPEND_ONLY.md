@@ -2838,4 +2838,99 @@ Boundary
 - Reminder-worker scheduler/cron remains open.
 - Retention apply cron remains intentionally not built.
 
+## 2026-05-17 — Locked/unpaid reminder scheduler cron built, proven, and disabled after proof
+
+Context
+- Locked/unpaid reminder-worker was already built.
+- Day-3, day-7, day-10, and skipped_no_email branch proofs were already green.
+- Open item was scheduler/cron proof.
+- Existing retention dry-run cron pattern used pg_cron + pg_net + Vault.
+- Same pattern was reused for locked/unpaid reminder-worker.
+
+Vault
+- Added Vault secret:
+  - `locked_unpaid_reminder_worker_secret`
+- Purpose:
+  - allow Postgres cron to call the Edge Function without secrets in repo/docs/chat
+
+Dry-run cron
+- Created dry-run cron:
+  - jobname `enval-locked-unpaid-reminder-worker-dry-run-hourly`
+  - schedule `5 * * * *`
+  - body `apply=false`, `limit=10`
+- Hourly frequency was proven but judged unnecessarily frequent for reminder scheduling.
+- Replaced with daily dry-run cron:
+  - jobname `enval-locked-unpaid-reminder-worker-dry-run-daily`
+  - schedule `15 6 * * *`
+  - body `apply=false`, `limit=10`
+- Proof:
+  - pg_cron job_run_details showed `succeeded`
+  - pg_net response HTTP `200`
+  - worker response `ok=true`
+  - `apply=false`
+  - `candidate_count=8`
+
+Apply cron
+- Created apply cron:
+  - jobname `enval-locked-unpaid-reminder-worker-apply-daily`
+  - schedule `20 6 * * *`
+  - body `apply=true`, `limit=10`
+- Both dry-run and apply cron commands used only Vault references:
+  - `project_url`
+  - `anon_key`
+  - `locked_unpaid_reminder_worker_secret`
+
+Manual apply proof
+- Manual SQL `net.http_post` apply proof:
+  - request_id `437720`
+  - HTTP `200`
+  - `ok=true`
+  - `apply=true`
+  - `candidate_count=8`
+  - `queued_count=8`
+  - `skipped_count=0`
+- Created day-3 reminder events for test dossiers:
+  - outbound_email_id `29`
+  - outbound_email_id `30`
+  - outbound_email_id `31`
+  - outbound_email_id `32`
+  - outbound_email_id `33`
+  - outbound_email_id `34`
+  - outbound_email_id `35`
+  - outbound_email_id `36`
+- Reminder event rows were written with:
+  - `status=queued`
+  - `message_type=locked_unpaid_reminder_day_3`
+  - `outbound_email_id` filled
+  - `event_data.privacy.pii_included=false`
+  - `event_data.privacy.has_dossier_foreign_key=false`
+
+Replay proof
+- Manual SQL apply replay:
+  - request_id `437722`
+  - HTTP `200`
+  - `ok=true`
+  - `apply=true`
+  - `candidate_count=0`
+  - `queued_count=0`
+  - `skipped_count=0`
+  - `results=[]`
+
+Delivery proof
+- Outbound emails `29` through `36` reached `sent`.
+- Attempts:
+  - `attempts=1`
+- Provider proof:
+  - provider_id filled for all delivered rows
+- Failure proof:
+  - `error_message=null`
+
+Operational boundary
+- Scheduler jobs were disabled after proof as safety state.
+- Current cron check returned no rows for locked/unpaid reminder scheduler jobs.
+- This proves scheduler construction, Vault transport, apply behavior, idempotency replay, and mail-worker delivery.
+- Ongoing automatic reminder scheduling is not active while jobs remain disabled.
+
+Still open
+- Retention apply cron remains intentionally not built.
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)

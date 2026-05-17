@@ -135,7 +135,13 @@ Regel: alleen open items; afgerond → naar changelog.
   - Day-7 reminder apply + idempotency + audit + dev-forced mail delivery zijn live bewezen.
   - Day-10 reminder apply + idempotency + audit + dev-forced mail delivery zijn live bewezen.
   - skipped_no_email branch is live bewezen met skipped_reason `missing_customer_email` en zonder outbound email row.
-  - reminder-worker scheduler/cron blijft open.
+  - reminder-worker scheduler/cron is gebouwd en bewezen:
+    - dry-run daily cron proof groen
+    - apply daily cron proof groen
+    - manual apply `candidate_count=8`, `queued_count=8`
+    - replay `candidate_count=0`
+    - outbound emails `29` t/m `36` delivered to `sent`
+    - jobs daarna disabled als safety state
   - Privacy-hard `retention_cleanup_events` tombstone table is gebouwd.
   - Non-preserved draft target-apply success tombstone is live bewezen.
   - Failed tombstone path + recovery-success path zijn live bewezen via dev-only controlled failure.
@@ -176,7 +182,7 @@ Regel: alleen open items; afgerond → naar changelog.
   - DONE: day-7 reminder proof
   - DONE: day-10 reminder proof
   - DONE: skipped_no_email branch proof
-  - OPEN: reminder-worker scheduler/cron
+  - DONE: reminder-worker scheduler/cron proof, with jobs disabled after proof as safety state
  - DONE: access recovery UX/flow voor gebruikte/verlopen dossierlinks is gebouwd en live bewezen.
   - FK/trigger/immutability model regressievrij houden nu DB cleanup bypass bestaat
   - `dossier_audit_events` verwijderen/anonymiseren mogelijk maken voor abandoned runtime dossiers waar nog geen preserved export bestaat
@@ -189,7 +195,8 @@ Regel: alleen open items; afgerond → naar changelog.
   - DONE: failed tombstone path + recovery-success path live bewezen
   - DONE: storage-delete tombstone path live bewezen
   - DONE: preserved runtime cleanup tombstone path live bewezen
-  - apply cron nog niet bouwen tot expliciet scheduler-besluit + rollback/disable procedure is vastgelegd
+  - DONE: reminder-worker apply cron gebouwd, bewezen en daarna disabled als safety state
+  - retention apply cron nog niet bouwen tot expliciet scheduler-besluit + rollback/disable procedure is vastgelegd
   - fresh-only tests aanpassen zodra cleanup van retained-state proof naar echte retention cleanup verschuift
 
 - DoD:
@@ -209,8 +216,9 @@ Regel: alleen open items; afgerond → naar changelog.
 
 - Status: OPEN — P1 MVP cleanup/access recovery
   - dry-run scheduler is DONE
-  - apply scheduler blijft OPEN
-  - locked/unpaid reminder-worker is gebouwd; day-7/day-10/skipped_no_email zijn bewezen; scheduler blijft OPEN
+  - reminder-worker apply scheduler proof is DONE and disabled after proof
+  - locked/unpaid reminder-worker is gebouwd; day-7/day-10/skipped_no_email/scheduler zijn bewezen
+  - retention apply scheduler blijft OPEN
   - cleanup tombstone model is gebouwd
   - non-preserved draft success-path is bewezen
   - failed tombstone path + recovery-success path zijn bewezen

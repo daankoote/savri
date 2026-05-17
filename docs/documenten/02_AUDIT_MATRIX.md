@@ -347,8 +347,44 @@ Live bewezen aanvullend:
   - no outbound email row created
   - replay returned `candidate_count = 0`
 
+Scheduler/cron proof:
+- Vault secret `locked_unpaid_reminder_worker_secret` added for Postgres cron usage.
+- Dry-run cron was built and proven:
+  - jobname `enval-locked-unpaid-reminder-worker-dry-run-daily`
+  - schedule `15 6 * * *`
+  - request body `apply=false`, `limit=10`
+  - pg_cron → pg_net → Vault → Supabase Gateway → worker response HTTP 200
+- Apply cron was built and proven:
+  - jobname `enval-locked-unpaid-reminder-worker-apply-daily`
+  - schedule `20 6 * * *`
+  - request body `apply=true`, `limit=10`
+- Manual SQL apply proof:
+  - request_id `437720`
+  - `candidate_count=8`
+  - `queued_count=8`
+  - `skipped_count=0`
+- Replay proof:
+  - request_id `437722`
+  - `candidate_count=0`
+  - `queued_count=0`
+  - `skipped_count=0`
+- DB proof:
+  - reminder events written with `status=queued`
+  - `message_type=locked_unpaid_reminder_day_3`
+  - `outbound_email_id` filled
+- Delivery proof:
+  - outbound emails `29` through `36` reached `sent`
+  - attempts `1`
+  - provider_id filled
+  - error_message `null`
+
+Operational boundary:
+- Scheduler jobs were disabled after proof as safety state.
+- This proves scheduler construction, Vault transport, apply behavior, idempotency replay, and mail-worker delivery.
+- It does not enable ongoing production scheduling while jobs remain disabled.
+
 Nog bewijs-open:
-- reminder-worker scheduler/cron
+- retention apply cron
 
 Bewezen in fresh-only suite:
 - not-locked export → HTTP 409 + `dossier_export_rejected`

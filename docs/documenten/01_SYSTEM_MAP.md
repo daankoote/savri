@@ -466,8 +466,23 @@ Belangrijke grens:
     - status `skipped_no_email`
     - skipped_reason `missing_customer_email`
     - no outbound email row
+- Reminder scheduler/cron proof:
+  - Vault secret `locked_unpaid_reminder_worker_secret` added for Postgres cron usage
+  - dry-run cron built and proven:
+    - jobname `enval-locked-unpaid-reminder-worker-dry-run-daily`
+    - schedule `15 6 * * *`
+    - body `apply=false`, `limit=10`
+    - pg_cron → pg_net → Vault → Supabase Gateway → worker response HTTP 200
+  - apply cron built and proven:
+    - jobname `enval-locked-unpaid-reminder-worker-apply-daily`
+    - schedule `20 6 * * *`
+    - body `apply=true`, `limit=10`
+    - manual SQL apply proof returned `candidate_count=8`, `queued_count=8`, `skipped_count=0`
+    - replay returned `candidate_count=0`, `queued_count=0`, `skipped_count=0`
+  - outbound day-3 emails `29` through `36` reached `sent`
+  - scheduler jobs were disabled after proof as safety state
 - Nog open:
-  - reminder scheduler/cron
+  - retention apply cron
 - Permanente cleanup audit-log oplossing is gekozen als privacy-hard tombstone model:
   - tabel `public.retention_cleanup_events`
   - geen FK naar `dossiers`
