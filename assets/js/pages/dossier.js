@@ -1314,19 +1314,13 @@ function invalidatePrecheck(reason = "") {
   dirtySincePrecheck = true;
   latestPrecheckAnalysis = null;
 
-  renderReviewStatePanel({
-    tone: "warn",
-    title: "Controle opnieuw nodig",
-    intro: reason
-      ? `Er is een wijziging gedaan in het dossier (${reason}). Controleer volledigheid opnieuw.`
-      : "Er is een wijziging gedaan in het dossier. Controleer volledigheid opnieuw.",
-    items: [],
-  });
-
-  setText(
-    "analysisState",
-    "Analyse vervallen door wijziging in dossier. Controleer volledigheid opnieuw.",
-  );
+  // Bewust stil houden tijdens normale save/upload/delete acties.
+  // Review/analyse UI mag pas zichtbaar worden wanneer gebruiker expliciet
+  // "Controleer volledigheid" uitvoert, of wanneer het dossier locked is.
+  const reviewState = $("reviewState");
+  if (reviewState) {
+    clearNode(reviewState);
+  }
 
   clearAnalysisUi();
   renderAnalysisUiEmptyState();
