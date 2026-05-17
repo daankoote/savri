@@ -56,10 +56,6 @@ Doel:
 1. Defense-in-depth policies op audit tabellen
 2. OPS-runbook gateway-401 preventie
 3. Minimale abuse controls op publieke intake/contactflow
-4. Address UI: resolved straat/plaats readonly of disabled maken
-5. Document UI: factuurinput voor MVP PDF-only maken
-6. Document UI: uitlegtekst in uploadcontainer mag niet buiten container vallen
-7. Developer-only panel mag niet kort flitsen voor niet-developer users
 
 ### C) Post-MVP hardening — niet launch-blocking
 
@@ -145,7 +141,8 @@ Doel:
     - factuur is verplicht
     - foto laadpunt is optioneel / niet-blokkerend
     - foto-analysis blijft skeleton/not_checked tot representatieve laadpaalfoto-dataset bestaat
-  - E2E-run toonde enkele UI-restpunten die vóór MVP klein en gericht moeten worden opgelost.
+  - E2E-run toonde enkele UI-restpunten.
+  - Deze UI-restpunten zijn daarna opgelost en live bevestigd.
 
 - Findings:
   - Address UI:
@@ -170,7 +167,23 @@ Doel:
   - developer-only panel wordt pas zichtbaar na bevestigde developer authority
   - geen flicker van developer-only controls voor normale users
 
-- Status: SHOULD-FIX BEFORE MVP
+- Proof/fix:
+  - Address UI:
+    - straat/plaats zijn readonly en visueel grijs/disabled weergegeven
+  - Document UI:
+    - factuurinput is PDF-only voor MVP
+    - factuurupload-copy vermeldt PDF duidelijk
+    - JPG/PNG facturen worden vóór upload user-facing geweigerd of zijn niet selecteerbaar
+    - overbodige upload-uitlegtekst is verwijderd/hidden
+  - Developer/analysis UI:
+    - dev unlock/default developer controls zijn hidden by default
+    - `analysisSection` wordt niet meer automatisch getoond via access-recovery reload
+    - documentanalyse/review-panel flitst niet meer bij normale save/reload acties
+  - Live bevestigd na Netlify deploy:
+    - production `main@786b4af`
+    - follow-up fix voor echte flitsoorzaak: `setMainDossierUiHidden(false)` mag `#analysisSection` niet tonen
+
+- Status: DONE — MVP UI findings opgelost en live bevestigd
 
 ### 3) Defense-in-depth policies op audit tabellen
 - DoD:

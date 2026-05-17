@@ -3117,4 +3117,50 @@ Follow-up notes
   - confirm proof-only jobs are removed/disabled
   - review job frequency and batch limits for MVP operations
 
+## 2026-05-17 — MVP dossier UI findings fixed after production E2E
+
+Context
+- Production E2E exposed small MVP UI issues after the `apiAuthed` wrapper fix.
+- Core journey was already functional:
+  - access save
+  - address verify/save
+  - charger save
+  - PDF invoice upload
+  - consents save
+  - precheck/verify
+  - submit/lock
+  - export
+
+Changes
+- Address resolved fields:
+  - street/city remain readonly
+  - readonly inputs are visually greyed/disabled
+- Document upload:
+  - invoice upload is PDF-only for MVP
+  - JPG/PNG invoice uploads are rejected before upload or not selectable
+  - invoice upload copy explicitly states PDF requirement
+  - low-value document hint text was hidden/removed
+- Developer/analysis UI:
+  - developer-only controls remain hidden by default
+  - analysis panel visibility is controlled only by analysis render logic
+  - fixed flicker caused by `setMainDossierUiHidden(false)` temporarily showing `#analysisSection` during reload
+  - normal save/reload actions no longer flash document analysis/review UI
+
+Proof
+- Netlify production deploy published:
+  - `main@786b4af`
+- Live browser retest confirmed:
+  - address fields behave correctly
+  - PDF-only invoice UI works
+  - document hint no longer appears
+  - document analysis panel no longer flickers during normal save actions
+
+Audit impact
+- No backend lifecycle change.
+- No audit contract change.
+- UI is now better aligned with MVP requiredness:
+  - PDF invoice required
+  - charger photo optional/non-blocking
+  - analysis remains derived/supportive, not a compliance or verification engine
+
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)
