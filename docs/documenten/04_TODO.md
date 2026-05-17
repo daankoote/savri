@@ -14,8 +14,26 @@ Doel:
 ### A) Launch blockers — vóór MVP doen
 
 1. Compacte end-to-end browser regressierun
-   - aanmelden → dossier openen → access/address/chargers/docs/consents → verify/precheck → finalize → export
-   - doel: bewijzen dat de echte gebruikerflow nog werkt na alle backend/lifecycle-wijzigingen
+   - DONE: productie E2E-run 2026-05-17 groen na `apiAuthed` wrapper-fix
+   - bewezen:
+     - aanmelden → mail/link → session
+     - access save
+     - address verify/save
+     - charger save
+     - PDF factuur upload
+     - consents save
+     - verify/precheck
+     - submit/lock
+     - dev unlock in DEV
+     - opnieuw submit/lock
+     - export generated
+   - proof:
+     - dossier_id `6bd895c6-f5bd-48be-b0e7-86b1e4c2d1da`
+     - export_id `7f2765ec-077b-48d0-bd8d-a07755f92914`
+     - export_status `generated`
+     - payment_status `waived`
+     - claimed_mid_numbers `["M0987654321"]`
+   - remaining UI findings uit deze run staan als should-fix items hieronder
 
 2. Product/copy claim audit
    - geen complianceclaims
@@ -38,6 +56,10 @@ Doel:
 1. Defense-in-depth policies op audit tabellen
 2. OPS-runbook gateway-401 preventie
 3. Minimale abuse controls op publieke intake/contactflow
+4. Address UI: resolved straat/plaats readonly of disabled maken
+5. Document UI: factuurinput voor MVP PDF-only maken
+6. Document UI: uitlegtekst in uploadcontainer mag niet buiten container vallen
+7. Developer-only panel mag niet kort flitsen voor niet-developer users
 
 ### C) Post-MVP hardening — niet launch-blocking
 
@@ -46,6 +68,8 @@ Doel:
 3. Storage lifecycle split runtime-only vs preserved/source-evidence
 4. Export incomplete-doc edgecase besluit/test
 5. Fresh-only tests aanpassen richting echte retention cleanup
+6. Foto laadpunt analysis v1 zodra representatieve laadpaalfoto-dataset bestaat
+7. Image invoice lane herstellen/proven als JPG/PNG facturen later ondersteund moeten worden
 
 ### D) Phase-2 / later
 
@@ -83,7 +107,7 @@ Doel:
     - `issued` zichtbaar blijft wanneer confirm niet is afgerond
     - conflict recovery de UI direct hersynct naar server truth
     - finalize alleen zichtbaar wordt na geldige precheck
-- Status: OPEN
+- Status: DONE voor huidige MVP E2E-run 2026-05-17; opnieuw openen bij volgende dossier-UI wijziging
 
 ### 2) api-lead-submit eligibility ordering / intake proof gesloten houden
 - Context:
@@ -111,6 +135,42 @@ Doel:
   - geen nieuwe DB writes vóór eligibility reject introduceren
   - geen drift tussen endpointcode en fresh-only testsuite
 - Status: OPEN (regressiewacht, geen actieve hardening meer)
+
+### 2b) MVP E2E UI findings 2026-05-17
+
+- Context:
+  - Productie E2E-run is functioneel groen na `apiAuthed` wrapper-fix.
+  - Export is gegenereerd en preserved.
+  - MVP-besluit blijft:
+    - factuur is verplicht
+    - foto laadpunt is optioneel / niet-blokkerend
+    - foto-analysis blijft skeleton/not_checked tot representatieve laadpaalfoto-dataset bestaat
+  - E2E-run toonde enkele UI-restpunten die vóór MVP klein en gericht moeten worden opgelost.
+
+- Findings:
+  - Address UI:
+    - `address_street` en `address_city` worden correct gevuld uit PDOK/BAG
+    - deze velden ogen nog als normale bewerkbare inputvelden
+  - Document UI:
+    - upload-uitlegtekst valt buiten/over de container op smalle viewport
+    - factuurinput accepteert JPG/PNG terwijl MVP feitelijk PDF-only moet zijn
+    - PDF factuur werkt en passeert analyse
+    - dezelfde factuur als JPG uploadt wel, maar lokale factuuranalyse faalt/inconclusive
+  - Developer UI:
+    - na consents opslaan flitst kort een developer-only container voor niet-developer user
+
+- DoD:
+  - straat en plaats zijn readonly of disabled na succesvolle address verify
+  - straat en plaats krijgen visueel readonly/disabled styling, bijvoorbeeld grijze achtergrond
+  - factuurinput accepteert voor MVP alleen PDF
+  - UI-copy vermeldt duidelijk dat factuur als PDF vereist is
+  - JPG/PNG factuur geeft duidelijke user-facing reject of is niet selecteerbaar
+  - upload-uitlegtekst blijft binnen de container op desktop en small/mobile viewport
+  - developer-only panel is default hidden in HTML/CSS
+  - developer-only panel wordt pas zichtbaar na bevestigde developer authority
+  - geen flicker van developer-only controls voor normale users
+
+- Status: SHOULD-FIX BEFORE MVP
 
 ### 3) Defense-in-depth policies op audit tabellen
 - DoD:
@@ -426,7 +486,7 @@ Doel:
   - regressie compact houden na eerstvolgende dossier-UI wijziging
   - bevestigen dat PDF facturen zonder handmatige bridge nog steeds echte observed payload naar verify sturen
   - fallback naar placeholder blijft alleen bestaan bij echte missende parseroutput
-- Status: OPEN
+- Status: DONE voor MVP PDF-factuurroute; regressiewacht bij volgende dossier/document-UI wijziging
 
 ### 11b) Analysis component status als CURRENT truth in docs vastzetten
 - Context:
@@ -471,6 +531,10 @@ Doel:
 - Context:
   - de huidige runtimebewijzen zijn vooral gebaseerd op perfecte of relatief schone voorbeelden
   - de browser-PDF lane is nu weer end-to-end werkend
+  - MVP-besluit 2026-05-17:
+    - publieke factuurinput wordt PDF-only
+    - JPG/PNG facturen worden niet ondersteund vóór MVP
+    - image invoice lane blijft post-MVP totdat deze opnieuw bewezen is
   - juist daardoor ontstaat regressierisico op moeilijkere varianten:
     - mindere kwaliteit
     - minimale info
@@ -509,13 +573,16 @@ Doel:
     - `foto_laadpunt` blijft skeleton
     - verify-run log moet dit expliciet zichtbaar houden
     - geen geforceerde extractie of pseudo-zekerheid
-- Status: OPEN
+- Status: POST-MVP / PHASE-2 — niet MVP-blocking; foto laadpunt blijft optioneel en niet-blokkerend
 
 ### 12b) Multi-document support per laadpaal expliciet uitgesteld houden
 - Context:
   - CURRENT MVP ondersteunt per laadpaal slechts:
     - 1 factuur
     - 1 foto laadpunt
+  - MVP requiredness:
+    - 1 PDF-factuur per laadpaal is verplicht
+    - foto laadpunt is optioneel / niet-blokkerend
   - UI is daar nu bewust strak op aangepast
 - DoD:
   - toekomstig ontwerp vastleggen voor:
