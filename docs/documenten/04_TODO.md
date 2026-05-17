@@ -4,6 +4,62 @@ Statusdatum: 2026-05-10
 Prioriteit: audit-first.  
 Regel: alleen open items; afgerond → naar changelog.
 
+## MVP Launch Cut — CURRENT
+
+Doel:
+- Niet meer elk open hardening-item vóór MVP behandelen.
+- Alleen uitvoeren wat nodig is om een eerste echte gebruiker veilig door de kernflow te krijgen.
+- Alles wat geen launch blocker is, blijft zichtbaar maar wordt expliciet post-MVP of Phase-2.
+
+### A) Launch blockers — vóór MVP doen
+
+1. Compacte end-to-end browser regressierun
+   - aanmelden → dossier openen → access/address/chargers/docs/consents → verify/precheck → finalize → export
+   - doel: bewijzen dat de echte gebruikerflow nog werkt na alle backend/lifecycle-wijzigingen
+
+2. Product/copy claim audit
+   - geen complianceclaims
+   - geen verificatieclaims
+   - geen certificeringsclaims
+   - Enval blijft infrastructuur/dossierlaag
+
+3. Cron/job inventory eindcheck
+   - bevestigen dat alleen bedoelde lifecycle-jobs actief zijn
+   - geen proof-only jobs
+   - frequenties/batch limits bewust akkoord
+
+4. SEO/basic live checks
+   - robots.txt
+   - sitemap.xml
+   - canonical/noindex tijdelijke pagina’s
+
+### B) Should-fix before launch — alleen quick wins
+
+1. Defense-in-depth policies op audit tabellen
+2. OPS-runbook gateway-401 preventie
+3. Minimale abuse controls op publieke intake/contactflow
+
+### C) Post-MVP hardening — niet launch-blocking
+
+1. Mail-worker stuck processing recovery proof
+2. Session-auth hardening volledig afronden
+3. Storage lifecycle split runtime-only vs preserved/source-evidence
+4. Export incomplete-doc edgecase besluit/test
+5. Fresh-only tests aanpassen richting echte retention cleanup
+
+### D) Phase-2 / later
+
+1. Volledige factuur-regressiematrix
+2. Foto analysis v1
+3. Multi-document support
+4. Analysis source-model guardrail
+5. PDOK ambiguity zonder suffix
+6. Upload-confirm performance redesign
+7. Orphaned storage reconciler
+8. Invoice warning-state server persistent maken
+
+---
+
 ## P1 (must/should)
 
 ### 1) Dossier frontend-flow resterende live regressiecheck compact houden
@@ -84,7 +140,7 @@ Regel: alleen open items; afgerond → naar changelog.
   - dossier-scoped audit events bevestigd:
     - `mail_requeued` of `mail_failed`
     - met reason `stuck_processing_timeout`
-- Status: OPEN
+- Status: POST-MVP HARDENING — niet launch-blocking
 
 ### 6) Session-auth hardening afronden (`dossier_sessions`)
 - Context:
@@ -103,7 +159,7 @@ Regel: alleen open items; afgerond → naar changelog.
   - expliciet bewijs leveren voor:
     - revoked session reject
     - op meerdere endpoints (minimaal read + write)
-- Status: OPEN
+- Status: POST-MVP HARDENING — niet launch-blocking zolang geen auth-code wordt gewijzigd
 
 ### 7) Retention lifecycle + runtime cleanup na export preservation bouwen
 
@@ -544,7 +600,7 @@ Regel: alleen open items; afgerond → naar changelog.
     - één bucket met harde path/reference discipline blijft voldoende
     - of fysieke scheiding via aparte prefixes/buckets wordt later ingevoerd
 
-- Status: OPEN
+- Status: POST-MVP HARDENING — expliciet bewaren als ontwerp-/cleanup-risico, niet MVP-blocking zolang preserved path protection groen blijft
 
 ### 17) Export contract regressiewacht + resterende edge-case beslissing
 - Context:
