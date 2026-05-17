@@ -2059,7 +2059,7 @@ function createUploadSlot({ chargerId, docType, locked }) {
   const title = createEl(
     "div",
     "doc-upload-slot__title",
-    "Document vereist"
+    docType === "factuur" ? "PDF-factuur vereist" : "Foto optioneel"
   );
 
   const hint = createEl(
@@ -2067,7 +2067,9 @@ function createUploadSlot({ chargerId, docType, locked }) {
     "doc-upload-slot__hint",
     locked
       ? "Dossier is vergrendeld."
-      : "Sleep bestand hierheen of klik om te uploaden."
+      : docType === "factuur"
+        ? "Upload de factuur als PDF. Afbeeldingen worden voor facturen nog niet ondersteund."
+        : "Optioneel: upload een JPG/PNG-foto van het laadpunt."
   );
 
   slot.appendChild(title);
@@ -2081,7 +2083,9 @@ function createUploadSlot({ chargerId, docType, locked }) {
   input.type = "file";
   input.className = "hidden";
   input.accept =
-    ".pdf,.png,.jpg,.jpeg,.doc,.docx,application/pdf,image/png,image/jpeg,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    docType === "factuur"
+      ? ".pdf,application/pdf"
+      : ".png,.jpg,.jpeg,image/png,image/jpeg";
 
   input.addEventListener("change", async () => {
     const file = input.files && input.files[0];
@@ -2890,24 +2894,27 @@ async function uploadDocumentForCard({ charger_id, doc_type, file, slot }) {
       throw new Error("Bestand is te groot. Max 25MB (origineel).");
     }
 
-    const allowedExt = new Set(["pdf", "png", "jpg", "jpeg", "doc", "docx"]);
-    const allowedMime = new Set([
-      "application/pdf",
-      "image/png",
-      "image/jpeg",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    ]);
-
     const name = (file.name || "").trim();
     const ext = name.toLowerCase().split(".").pop() || "";
     const mime = (file.type || "").trim();
+    const normalizedDocType = String(doc_type || "").toLowerCase();
 
-    if (!allowedExt.has(ext)) {
-      throw new Error("Ongeldig bestandstype. Alleen: PDF, PNG, JPG/JPEG, DOC, DOCX.");
-    }
-    if (mime && !allowedMime.has(mime)) {
-      throw new Error("Ongeldig bestandstype. Alleen: PDF, PNG, JPG/JPEG, DOC, DOCX.");
+    if (normalizedDocType === "factuur") {
+      if (ext !== "pdf" || (mime && mime !== "application/pdf")) {
+        throw new Error("Upload de factuur als PDF. JPG/PNG-facturen worden voor MVP nog niet ondersteund.");
+      }
+    } else if (normalizedDocType === "foto_laadpunt") {
+      const allowedPhotoExt = new Set(["png", "jpg", "jpeg"]);
+      const allowedPhotoMime = new Set(["image/png", "image/jpeg"]);
+
+      if (!allowedPhotoExt.has(ext)) {
+        throw new Error("Ongeldig bestandstype. Upload een JPG- of PNG-foto.");
+      }
+      if (mime && !allowedPhotoMime.has(mime)) {
+        throw new Error("Ongeldig bestandstype. Upload een JPG- of PNG-foto.");
+      }
+    } else {
+      throw new Error("Ongeldig documenttype.");
     }
 
     let uploadFile = file;
