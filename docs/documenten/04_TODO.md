@@ -427,6 +427,98 @@ Doel:
 
 - Status: OPEN — finale MVP launch check
 
+### 8b) Post-export correction / support reopen flow ontwerpen
+
+- Context:
+  - Na export bestaat een immutable `dossier_exports` record met `export_json` en `export_sha256`.
+  - Runtime dossierdata blijft nog tijdelijk bestaan, maar wordt later door retention cleanup verwijderd.
+  - Dev/support unlock werkt alleen zolang runtime dossierdata nog bestaat.
+  - Na runtime cleanup kan hetzelfde dossier niet meer normaal worden heropend.
+  - Correctie na export mag niet betekenen dat een bestaande export stilzwijgend wijzigt.
+
+- MVP policy:
+  - Na export geen bestaande export muteren.
+  - Correcties na export verlopen via nieuw dossier, nieuwe export of later ontworpen revision-flow.
+  - Oude export blijft auditbaar.
+  - Nieuwe/corrigerende export moet expliciet kunnen aantonen waarop deze corrigeert.
+
+- Belangrijk MID-risico:
+  - Huidige final claim gate blokkeert duplicate `MID + claim_year`.
+  - Dat is correct voor normale dubbele claims.
+  - Maar bij support-correctie kan hetzelfde MID-nummer terecht hetzelfde blijven.
+  - Dan zou een nieuwe export in hetzelfde claimjaar nu worden geblokkeerd.
+  - Future correction-flow moet daarom één van deze modellen ondersteunen:
+    - oude export expliciet `voided`/`superseded` markeren voordat nieuwe export met hetzelfde MID mag;
+    - revision export toestaan met link naar eerdere export;
+    - correctiedossier toestaan met gecontroleerde support-reason en audit event;
+    - of correcties pas in volgend claimjaar toestaan, als productbesluit.
+
+- Future DoD:
+  - support kan zien:
+    - runtime bestaat nog ja/nee
+    - export bestaat ja/nee
+    - export_id/export_sha256
+    - claim_year
+    - claimed_mid_numbers
+    - cleanup/tombstone status
+  - support kan niet per ongeluk een geëxporteerd dossier muteren zonder revision-context.
+  - nieuwe export/revision legt vast:
+    - previous_export_id
+    - correction_reason
+    - actor_ref
+    - request_id
+    - MID conflict handling decision
+  - duplicate MID gate blijft intact voor normale dubbele claims.
+  - duplicate MID gate krijgt expliciete support/revision-uitzondering alleen als auditmodel daarvoor bestaat.
+
+- Status: POST-MVP / SUPPORT HARDENING
+
+### 8b) Post-export correction / support reopen flow ontwerpen
+
+- Context:
+  - Na export bestaat een immutable `dossier_exports` record met `export_json` en `export_sha256`.
+  - Runtime dossierdata blijft nog tijdelijk bestaan, maar wordt later door retention cleanup verwijderd.
+  - Dev/support unlock werkt alleen zolang runtime dossierdata nog bestaat.
+  - Na runtime cleanup kan hetzelfde dossier niet meer normaal worden heropend.
+  - Correctie na export mag niet betekenen dat een bestaande export stilzwijgend wijzigt.
+
+- MVP policy:
+  - Na export geen bestaande export muteren.
+  - Correcties na export verlopen via nieuw dossier, nieuwe export of later ontworpen revision-flow.
+  - Oude export blijft auditbaar.
+  - Nieuwe/corrigerende export moet expliciet kunnen aantonen waarop deze corrigeert.
+
+- Belangrijk MID-risico:
+  - Huidige final claim gate blokkeert duplicate `MID + claim_year`.
+  - Dat is correct voor normale dubbele claims.
+  - Maar bij support-correctie kan hetzelfde MID-nummer terecht hetzelfde blijven.
+  - Dan zou een nieuwe export in hetzelfde claimjaar nu worden geblokkeerd.
+  - Future correction-flow moet daarom één van deze modellen ondersteunen:
+    - oude export expliciet `voided`/`superseded` markeren voordat nieuwe export met hetzelfde MID mag;
+    - revision export toestaan met link naar eerdere export;
+    - correctiedossier toestaan met gecontroleerde support-reason en audit event;
+    - of correcties pas in volgend claimjaar toestaan, als productbesluit.
+
+- Future DoD:
+  - support kan zien:
+    - runtime bestaat nog ja/nee
+    - export bestaat ja/nee
+    - export_id/export_sha256
+    - claim_year
+    - claimed_mid_numbers
+    - cleanup/tombstone status
+  - support kan niet per ongeluk een geëxporteerd dossier muteren zonder revision-context.
+  - nieuwe export/revision legt vast:
+    - previous_export_id
+    - correction_reason
+    - actor_ref
+    - request_id
+    - MID conflict handling decision
+  - duplicate MID gate blijft intact voor normale dubbele claims.
+  - duplicate MID gate krijgt expliciete support/revision-uitzondering alleen als auditmodel daarvoor bestaat.
+
+- Status: POST-MVP / SUPPORT HARDENING
+
 ### 9) MID final-claim regressiewacht
 
 - Context:

@@ -3163,4 +3163,145 @@ Audit impact
   - charger photo optional/non-blocking
   - analysis remains derived/supportive, not a compliance or verification engine
 
+
+## 2026-05-18 — MVP public copy/UI sanity proof + post-export correction policy clarified
+
+Context
+- After public copy simplification and dossier UI fixes, a production sanity run was completed.
+- The run was not a perfectly clean first-time customer run because it included dev/support actions:
+  - dev unlocks
+  - multiple analysis runs
+  - multiple exports
+  - old JPG-test audit history
+- This is acceptable as MVP sanity proof, not as clean first-time customer proof.
+
+Runtime proof
+- Dossier:
+  - `6bd895c6-f5bd-48be-b0e7-86b1e4c2d1da`
+  - status `in_review`
+  - locked `true`
+  - email verified `true`
+  - address verified `true`
+  - declared charger count `1`
+  - charger rows `1`
+- Documents:
+  - confirmed documents `1`
+  - confirmed PDF invoices `1`
+  - active/final document is PDF invoice
+- Checks:
+  - `email_verified = pass`
+  - `address_verified = pass`
+  - `charger_exact_count = pass`
+  - `mid_per_charger = pass`
+  - `docs_per_charger = pass`
+  - `consents_required = pass`
+  - `analysis_invoice_gate = pass`
+- Analysis:
+  - latest analysis status `partial_pass`
+  - invoice checks pass
+  - photo checks remain `not_checked` and non-blocking for MVP
+  - limitations include no authenticity/compliance claim
+- Export:
+  - latest export status `generated`
+  - payment status `waived`
+  - schema version `enval-dossier-export.v5`
+  - `export_sha256` populated
+  - claim year `2026`
+  - claimed MID `M0987654321`
+- Audit events present:
+  - `dossier_export_preserved`
+  - `dossier_export_generated`
+
+Interpretation
+- This proves MVP public copy + UI sanity for the main production journey.
+- It does not prove a clean first-time customer run, because the dossier intentionally includes dev/support actions.
+- Audit history correctly preserves these actions.
+
+Post-export correction decision
+- Exported dossiers must not be silently mutated.
+- After export, correction should become a new export/revision/correction flow, not an ordinary unlock-and-edit flow.
+- Before runtime cleanup, a support unlock may technically be possible, but it is not the desired post-export correction model.
+- After runtime cleanup, the original runtime dossier cannot be normally reopened because runtime tables have been removed.
+
+MID risk discovered
+- Current final claim gate blocks duplicate `MID + claim_year`.
+- This is correct for normal duplicate claims.
+- For support corrections, the same MID may be correct and must remain claimable in a controlled revision/correction flow.
+- Future support hardening must design one of:
+  - supersede/void previous export;
+  - explicit export revision linked to previous export;
+  - controlled correction dossier with support reason;
+  - or another audit-safe exception model.
+- Until then, post-export correction remains POST-MVP and should not be improvised manually.
+
+## 2026-05-18 — MVP public copy/UI sanity proof + post-export correction policy clarified
+
+Context
+- After public copy simplification and dossier UI fixes, a production sanity run was completed.
+- The run was not a perfectly clean first-time customer run because it included dev/support actions:
+  - dev unlocks
+  - multiple analysis runs
+  - multiple exports
+  - old JPG-test audit history
+- This is acceptable as MVP sanity proof, not as clean first-time customer proof.
+
+Runtime proof
+- Dossier:
+  - `6bd895c6-f5bd-48be-b0e7-86b1e4c2d1da`
+  - status `in_review`
+  - locked `true`
+  - email verified `true`
+  - address verified `true`
+  - declared charger count `1`
+  - charger rows `1`
+- Documents:
+  - confirmed documents `1`
+  - confirmed PDF invoices `1`
+  - active/final document is PDF invoice
+- Checks:
+  - `email_verified = pass`
+  - `address_verified = pass`
+  - `charger_exact_count = pass`
+  - `mid_per_charger = pass`
+  - `docs_per_charger = pass`
+  - `consents_required = pass`
+  - `analysis_invoice_gate = pass`
+- Analysis:
+  - latest analysis status `partial_pass`
+  - invoice checks pass
+  - photo checks remain `not_checked` and non-blocking for MVP
+  - limitations include no authenticity/compliance claim
+- Export:
+  - latest export status `generated`
+  - payment status `waived`
+  - schema version `enval-dossier-export.v5`
+  - `export_sha256` populated
+  - claim year `2026`
+  - claimed MID `M0987654321`
+- Audit events present:
+  - `dossier_export_preserved`
+  - `dossier_export_generated`
+
+Interpretation
+- This proves MVP public copy + UI sanity for the main production journey.
+- It does not prove a clean first-time customer run, because the dossier intentionally includes dev/support actions.
+- Audit history correctly preserves these actions.
+
+Post-export correction decision
+- Exported dossiers must not be silently mutated.
+- After export, correction should become a new export/revision/correction flow, not an ordinary unlock-and-edit flow.
+- Before runtime cleanup, a support unlock may technically be possible, but it is not the desired post-export correction model.
+- After runtime cleanup, the original runtime dossier cannot be normally reopened because runtime tables have been removed.
+
+MID risk discovered
+- Current final claim gate blocks duplicate `MID + claim_year`.
+- This is correct for normal duplicate claims.
+- For support corrections, the same MID may be correct and must remain claimable in a controlled revision/correction flow.
+- Future support hardening must design one of:
+  - supersede/void previous export;
+  - explicit export revision linked to previous export;
+  - controlled correction dossier with support reason;
+  - or another audit-safe exception model.
+- Until then, post-export correction remains POST-MVP and should not be improvised manually.
+
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)
