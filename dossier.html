@@ -65,7 +65,7 @@
           <div class="card">
             <div class="statusbar">
               <div>
-                <h1 class="my-0">Uw Enval dossier</h1>
+                <h1 class="my-0">Uw laadpaaldossier</h1>
                 <div class="muted small">
                   Dossier: <span id="dossierId" class="mono">-</span>
                 </div>
@@ -78,11 +78,10 @@
 
             <div class="mt-14">
               <div class="muted">
-                Vul onderstaande stappen in. Na elke stap kun je het dossier laten controleren via
-                <b>Review dossier</b>.
+                Vul de stappen in. Daarna controleert u of het dossier compleet is.
               </div>
               <div id="lockedBanner" class="notice hidden mt-10">
-                <b>Dit dossier is ingediend en staat in review.</b><br />
+                <b>Dit dossier is ingediend.</b><br />
                 Wijzigingen zijn nu vergrendeld.
               </div>
             </div>
@@ -91,8 +90,7 @@
           <div id="accessRecoveryCard" class="card hidden mt-18">
             <h2 class="mt-0">Nieuwe toeganglink aanvragen</h2>
             <p class="muted">
-              Deze dossierlink is verlopen of al gebruikt. Vul het e-mailadres in waarmee u het dossier heeft gestart.
-              Als dit e-mailadres bij dit dossier hoort, sturen wij een nieuwe toeganglink.
+              Deze link werkt niet meer. Vul het e-mailadres in waarmee u het dossier heeft gestart. Als dit klopt, sturen wij een nieuwe link.
             </p>
 
             <form id="accessRecoveryForm" class="form" novalidate>
@@ -226,8 +224,7 @@
                 <div class="checkbox-row">
                   <input type="checkbox" id="cMandaat" />
                   <label for="cMandaat">
-                    Ik geef Enval toestemming om mijn dossier te beheren (opslaan/structureren/controleren op volledigheid) en mij te benaderen over ontbrekende stukken.
-                    Dit is geen garantie op inboeken of vergoeding.
+                    Ik geef Enval toestemming om mijn dossier op te slaan, te ordenen en mij te benaderen als er iets ontbreekt. Dit is geen garantie op acceptatie of vergoeding.
                     Zie <a href="/mandaat.html" target="_blank" rel="noopener">toestemming & werkwijze</a>.
                   </label>
                 </div>
@@ -239,24 +236,24 @@
             </div>
 
             <div class="card">
-              <h2 class="mt-0">6) Review</h2>
+              <h2 class="mt-0">6) Afronden</h2>
 
               <div id="statusExplain" class="muted small">laden…</div>
 
               <div class="row mt-10">
-                <button id="btnPrecheck" class="btn outline" type="button">Controleer volledigheid</button>
+                <button id="btnPrecheck" class="btn outline" type="button">Check dossier</button>
                 <button id="btnFinalize" class="btn primary" type="button">Dossier indienen</button>
               </div>
 
               <div id="reviewState" class="mt-10"></div>
 
               <div id="exportBox" class="notice hidden mt-14">
-                <b>Export dossier</b><br />
-                Zodra het dossier is ingediend, kunt u een overdraagbare export downloaden.
-                Dit is een dossier-export, geen garantie op inboeken of vergoeding.
+                <b>Dossier downloaden</b><br />
+                Zodra het dossier is ingediend, kunt u een export downloaden.
+                Enval boekt niets in en geeft geen garantie op acceptatie of vergoeding.
 
                 <div class="row mt-10">
-                  <button id="btnExportDossier" class="btn outline" type="button">Exporteer dossier</button>
+                  <button id="btnExportDossier" class="btn outline" type="button">Download dossier</button>
                 </div>
 
                 <div id="devUnlockBox" class="hidden mt-10">
@@ -272,8 +269,8 @@
           <div id="analysisSection" class="card hidden mt-18">
             <div class="statusbar">
               <div>
-                <h2 class="my-0">Documentcontrole details</h2>
-                <div class="muted small">Technische details van de laatste documentcontrole.</div>
+                <h2 class="my-0">Dossiercheck details</h2>
+                <div class="muted small">Details van de laatste controle op volledigheid en documentgegevens.</div>
               </div>
               <div class="row">
                 <button id="btnLoadAnalysis" class="btn outline" type="button">Laad analyse</button>
