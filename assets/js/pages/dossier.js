@@ -1344,22 +1344,21 @@ function isDevUnlockEnabled() {
 
 function syncReviewButtons() {
   const locked = isLocked();
+  const canFinalize = !locked && precheckOk === true && dirtySincePrecheck === false;
 
-  // Precheck knop: zichtbaar zolang niet locked
+  // Precheck knop:
+  // - zichtbaar zolang dossier niet locked is én er nog geen geldige precheck is
+  // - verborgen zodra "Dossier indienen" zichtbaar wordt
   if ($("btnPrecheck")) {
-    $("btnPrecheck").disabled = !!locked;
-    $("btnPrecheck").classList.toggle("hidden", !!locked);
+    $("btnPrecheck").disabled = !!locked || canFinalize;
+    $("btnPrecheck").classList.toggle("hidden", !!locked || canFinalize);
   }
 
   // Finalize knop:
   // - VERBERGEN tot precheckOk=true én dirtySincePrecheck=false
-  const canFinalize = !locked && precheckOk === true && dirtySincePrecheck === false;
-
   if ($("btnFinalize")) {
     $("btnFinalize").disabled = !canFinalize;
     $("btnFinalize").classList.toggle("hidden", !canFinalize);
-
-    // title alleen als hij wél bestaat maar disabled (bijv. locked wordt al hidden)
     $("btnFinalize").title = canFinalize ? "" : "Eerst ‘Controleer volledigheid’ uitvoeren.";
   }
 }
@@ -3583,6 +3582,6 @@ async function onExportClicked() {
     if (state) state.textContent = e.message || "Export mislukt.";
     showToast(e.message || "Export mislukt.", "error");
   } finally {
-    lockSubmit(btn, false, "Exporteer dossier");
+    lockSubmit(btn, false, "Download dossier");
   }
 }
