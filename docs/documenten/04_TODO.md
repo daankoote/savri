@@ -13,43 +13,34 @@ Doel:
 
 ### A) Launch blockers — vóór MVP doen
 
-1. Compacte end-to-end browser regressierun
-   - DONE: productie E2E-run 2026-05-17 groen na `apiAuthed` wrapper-fix
-   - bewezen:
-     - aanmelden → mail/link → session
-     - access save
-     - address verify/save
-     - charger save
-     - PDF factuur upload
-     - consents save
-     - verify/precheck
-     - submit/lock
-     - dev unlock in DEV
-     - opnieuw submit/lock
-     - export generated
-   - proof:
-     - dossier_id `6bd895c6-f5bd-48be-b0e7-86b1e4c2d1da`
-     - export_id `7f2765ec-077b-48d0-bd8d-a07755f92914`
-     - export_status `generated`
-     - payment_status `waived`
-     - claimed_mid_numbers `["M0987654321"]`
-   - remaining UI findings uit deze run staan als should-fix items hieronder
+Status: DONE — MVP live baseline is gezet op 2026-05-18.
 
-2. Product/copy claim audit
-   - geen complianceclaims
-   - geen verificatieclaims
-   - geen certificeringsclaims
-   - Enval blijft infrastructuur/dossierlaag
-
-3. Cron/job inventory eindcheck
-   - bevestigen dat alleen bedoelde lifecycle-jobs actief zijn
-   - geen proof-only jobs
-   - frequenties/batch limits bewust akkoord
-
-4. SEO/basic live checks
-   - robots.txt
-   - sitemap.xml
-   - canonical/noindex tijdelijke pagina’s
+Bewezen:
+- production live deploy op `main`
+- tag: `mvp-live-2026-05-18`
+- live smoke groen:
+  - `/`
+  - `/aanmelden.html`
+  - `/dossier.html`
+  - `robots.txt`
+  - `sitemap.xml`
+- SEO/indexing MVP-state:
+  - `pricing.html` niet in sitemap
+  - `/pricing.html` disallowed in `robots.txt`
+  - `/dossier.html` disallowed en `noindex`
+  - privacyverklaring tijdelijk `noindex`
+- core dossierflow bewezen met eigen MVP proof dossier:
+  - aanmelding
+  - link/session
+  - adrescontrole
+  - laadpaalgegevens
+  - PDF factuur upload
+  - consents
+  - precheck/verify
+  - submit/lock
+  - JSON export
+  - README export naast JSON
+- JSON blijft canonieke export; README is alleen menselijke samenvatting.
 
 ### B) Should-fix before launch — alleen quick wins
 
@@ -59,6 +50,17 @@ Doel:
 
 ### C) Post-MVP hardening — niet launch-blocking
 
+0. Same-dossier re-export policy
+   - Context:
+     - Eigen MVP proof dossier toont meerdere generated exports voor hetzelfde dossier.
+     - Alle exports zijn immutable en bevatten eigen `export_sha256`.
+     - Dit is auditbaar, maar kan verwarrend worden voor support of downstream gebruik.
+   - Beslissing nodig:
+     - same-dossier re-export toestaan als expliciete nieuwe immutable export, of
+     - export idempotent maken zolang dossier niet is gewijzigd, of
+     - oude export markeren als `voided`/`superseded` voordat nieuwe export leidend wordt.
+   - Niet vóór MVP oplossen.
+   - Wel vóór echte externe schaal oplossen.
 1. Mail-worker stuck processing recovery proof
 2. Session-auth hardening volledig afronden
 3. Storage lifecycle split runtime-only vs preserved/source-evidence

@@ -3328,4 +3328,42 @@ Status
 - Consent locking bevestigd:
   - toestemmingen blijven na opslaan aangevinkt en worden read-only in de UI.
 
+  ## 2026-05-18 — MVP live baseline tagged and readable export README added
+
+- MVP live baseline is tagged:
+  - tag: `mvp-live-2026-05-18`
+  - commit: `104d0b2`
+- `main`, `feature/dev`, `origin/main` en `origin/feature/dev` wijzen naar dezelfde live baseline.
+- Live smoke na deploy bevestigd:
+  - `/`
+  - `/aanmelden.html`
+  - `/dossier.html`
+  - `robots.txt`
+  - `sitemap.xml`
+  - `privacyverklaring.html`
+  - `dossier.html` export copy
+- SEO/indexing MVP-state bevestigd:
+  - `robots.txt` disallowt `/dossier.html`, `/aanmelden_real.html` en `/pricing.html`
+  - `sitemap.xml` bevat geen `pricing.html`
+  - `privacyverklaring.html` blijft `noindex`
+  - `dossier.html` blijft `noindex`
+- Client-side README-export toegevoegd naast de JSON-export:
+  - JSON blijft de canonieke/leidende export
+  - README wordt niet opgeslagen in DB of Storage
+  - README wordt afgeleid uit dezelfde exportpayload
+  - README bevat menselijke uitleg over dossier, checks, factuurverwerking, adrescontrole, SHA-256, server-side verify en auditpositie
+- Eigen MVP proof dossier:
+  - dossier_id: `f93b305d-3d97-4a60-bcb1-6c437d7dc0ae`
+  - status: `in_review`
+  - export schema: `enval-dossier-export.v5`
+  - payment_status: `waived`
+  - claimed MID: `M0987654321`
+  - analysis overall: `partial_pass`
+  - invoice checks: pass
+  - photo analysis: `not_checked` en non-blocking voor MVP
+- Post-MVP risk observed:
+  - hetzelfde dossier kan meerdere generated exports hebben wanneer export/download opnieuw wordt uitgevoerd
+  - dit is geen directe MVP-blocker zolang alle exports immutable blijven
+  - post-MVP beslissen of same-dossier re-export bewust toegestaan blijft of idempotent/superseded moet worden gemaakt
+
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)

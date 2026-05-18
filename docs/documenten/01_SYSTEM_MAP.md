@@ -44,19 +44,32 @@ De System Map moet technisch neutraal blijven zodat meerdere inboekers hierop ku
 Publiek / canoniek (sitemap-waardig):
 - index.html
 - aanmelden.html
-- dossier.html (alleen als het publiek is; als token-required → niet in sitemap)
 - hoe-het-werkt.html
-- pricing.html
 - regelgeving.html
 - voorwaarden.html
-- privacyverklaring.html
 
-Niet-canoniek / tijdelijk (noindex, niet in sitemap):
-- aanmelden_real.html (dev/overgang — later hernoemen naar aanmelden.html, daarna verwijderen)
+Bewust niet in sitemap:
+- dossier.html
+  - token/session-bound dossieromgeving
+  - `noindex`
+  - disallowed in `robots.txt`
+- pricing.html
+  - tijdelijk niet actief in MVP/pilot omdat de service eerst gratis wordt aangeboden
+  - disallowed in `robots.txt`
+- privacyverklaring.html
+  - bereikbaar via footer/consentflow
+  - tijdelijk `noindex` zolang pilot/juridische entiteit nog niet definitief is
+- aanmelden_real.html
+  - legacy/dev route
+  - disallowed in `robots.txt`
 
 Bestanden (root):
-- /robots.txt (verwijst naar sitemap, disallow tijdelijke routes)
-- /sitemap.xml (alleen canonieke pagina’s)
+- /robots.txt
+  - verwijst naar sitemap
+  - disallowt `/dossier.html`, `/aanmelden_real.html`, `/pricing.html`
+- /sitemap.xml
+  - bevat alleen actieve canonieke publieke pagina’s
+  - bevat geen `pricing.html`
 
 Assets (SEO):
 - /assets/img/og-enval.jpg (OG/Twitter image)
@@ -282,7 +295,13 @@ Invariant:
 
 UI-gedrag:
 - “Dossier indienen” blijft verborgen tot succesvolle precheck zonder latere mutaties.
-- locked dossiers tonen export; analysis kan daarna read-only worden geladen/getoond.
+- Zodra “Dossier indienen” zichtbaar is, wordt “Check dossier” verborgen om dubbele acties te voorkomen.
+- locked dossiers tonen export.
+- De exportactie downloadt:
+  - de canonieke JSON-export
+  - een client-side gegenereerde README `.txt` als menselijke samenvatting
+- De README is niet leidend, wordt niet opgeslagen in DB/Storage en wordt uitsluitend afgeleid uit dezelfde exportpayload.
+- Analysis-details blijven developer/permission-bound; normale gebruikers zien geen developer-only analysis panel.
 
 ### Uploadgedrag (CURRENT frontend)
 - Foto’s (`foto_laadpunt`) worden client-side geoptimaliseerd vóór upload.
