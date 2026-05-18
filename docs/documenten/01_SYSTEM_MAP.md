@@ -393,10 +393,22 @@ Final-retention laag:
 
 Lifecycle-principe:
 - Runtime-tabellen (`dossiers`, `dossier_chargers`, `dossier_documents`, `dossier_checks`, `dossier_consents`, analysis-tabellen, runtime sessions en runtime audit rows) zijn tijdelijk werkmateriaal totdat export preservation is afgerond.
+- Export betekent niet dat runtime direct weg is; runtime blijft bestaan totdat retention cleanup deze later verwijdert.
 - Na paid/exported preservation mag runtime data worden opgeschoond.
 - `dossier_exports` is de final audit source-of-truth.
 - Storage objects waarnaar een preserved export verwijst, mogen niet door cleanup worden verwijderd.
 - Niet-preserved storage volgt draft/locked retention.
+
+Support/correction principle:
+- Vóór export kan een locked dossier technisch worden heropend zolang runtime data nog bestaat.
+- Na export mag een bestaande export niet stilzwijgend worden gemuteerd.
+- Na runtime cleanup kan hetzelfde dossier niet meer normaal worden heropend, omdat runtime-tabellen zijn verwijderd.
+- Correcties na export moeten verlopen via een nieuwe export/revision-flow of nieuw correctiedossier.
+- Belangrijk risico: als het MID-nummer correct hetzelfde blijft, blokkeert de huidige final claim gate `MID + claim_year` een tweede export in hetzelfde claimjaar.
+- Future support-flow moet daarom expliciet kunnen omgaan met:
+  - supersede/void van oude export, of
+  - revision export gekoppeld aan eerdere export, of
+  - correctiedossier dat dezelfde MID claimt onder gecontroleerde supportreden.
 - CURRENT storage lifecycle is semantisch gescheiden, maar fysiek nog niet volledig gescheiden:
   - runtime-only storage objects vallen onder retention cleanup
   - preserved/source-evidence storage objects blijven beschermd via export references
