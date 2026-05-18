@@ -3314,4 +3314,18 @@ Status
   - unclassified: 0
   - result: `OK: classification complete + baselines satisfied.`
 
+  ## 2026-05-18 — MVP privacy and dossier finalization UI polish
+
+- Privacyverklaring vereenvoudigd voor gratis pilotfase:
+  - minimale verwerking
+  - niet-afgeronde dossiers worden periodiek opgeschoond
+  - geëxporteerde dossiers blijven bewaard voor auditdoeleinden
+  - geen automatische deling met derden
+  - geen garantieclaims
+- Dossier UI aangepast:
+  - “Check dossier” wordt verborgen zodra “Dossier indienen” beschikbaar is
+  - exportknoptekst consistent gehouden als “Download dossier”
+- Consent locking bevestigd:
+  - toestemmingen blijven na opslaan aangevinkt en worden read-only in de UI.
+
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)

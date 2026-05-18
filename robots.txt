@@ -1,5 +1,8 @@
 User-agent: *
 Allow: /
+
+Disallow: /dossier.html
 Disallow: /aanmelden_real.html
+Disallow: /pricing.html
 
 Sitemap: https://www.enval.nl/sitemap.xml
