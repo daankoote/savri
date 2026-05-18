@@ -197,6 +197,7 @@ Waarom META verplicht is:
 
 * mail-worker
 * retention-worker
+* locked-unpaid-reminder-worker
 
 Nieuwe utility?
 → expliciet toevoegen aan script + dit document.

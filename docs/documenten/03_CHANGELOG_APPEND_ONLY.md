@@ -3299,4 +3299,19 @@ Audit impact
 Status
 - DONE — defense-in-depth grants hardening proven.
 
+## 2026-05-18 — Edge uniformity classification aligned for locked/unpaid reminder worker
+
+- `locked-unpaid-reminder-worker` toegevoegd aan de UTILITY-classificatie in `scripts/tools/edge-uniformity.sh`.
+- `10_EDGE_FUNCTIONS_CONTRACT.md` bijgewerkt zodat de canonical utility lijst overeenkomt met de actuele function inventory.
+- Reden:
+  - de worker was runtime aanwezig en gescheduled,
+  - maar de repo-quality gate classificeerde hem nog niet,
+  - waardoor `./scripts/tools/edge-uniformity.sh` terecht faalde op `UNCLASSIFIED`.
+- Bewijs:
+  - `./scripts/tools/edge-uniformity.sh` opnieuw gedraaid
+  - core: 19 total, 0 failing baseline
+  - utility: 3 total, 0 failing baseline
+  - unclassified: 0
+  - result: `OK: classification complete + baselines satisfied.`
+
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)

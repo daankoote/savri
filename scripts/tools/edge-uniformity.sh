@@ -59,6 +59,7 @@ CORE_FUNCS=(
 UTILITY_FUNCS=(
   "mail-worker"
   "retention-worker"
+  "locked-unpaid-reminder-worker"
 )
 
 in_list() {
