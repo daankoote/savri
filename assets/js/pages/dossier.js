@@ -327,6 +327,207 @@ function downloadJsonFile(filename, data) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+function downloadTextFile(filename, text) {
+  const blob = new Blob([String(text || "")], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function exportReadmeFilename() {
+  const safeId = String(dossier_id || "unknown").replace(/[^a-zA-Z0-9_-]/g, "");
+  return `enval-dossier-export-${safeId}-readme.txt`;
+}
+
+function readmeValue(value, fallback = "-") {
+  const s = String(value ?? "").trim();
+  return s || fallback;
+}
+
+function readmeDate(value) {
+  const s = String(value || "").trim();
+  return s ? formatDateNL(s) : "-";
+}
+
+function readmeStatus(status) {
+  const s = String(status || "").trim().toLowerCase();
+
+  if (s === "pass") return "pass";
+  if (s === "fail") return "fail";
+  if (s === "partial_pass") return "partial_pass";
+  if (s === "not_checked") return "not_checked";
+  if (s === "completed") return "completed";
+  if (s === "inconclusive") return "inconclusive";
+
+  return readmeValue(status);
+}
+
+function readmeCheckStatus(exportData, checkCode) {
+  const checks = Array.isArray(exportData?.checks) ? exportData.checks : [];
+  const found = checks.find((c) => String(c?.check_code || "") === checkCode);
+  return readmeStatus(found?.status);
+}
+
+function readmeFirstDocument(exportData, docType) {
+  const docs = Array.isArray(exportData?.documents_confirmed)
+    ? exportData.documents_confirmed
+    : [];
+
+  return docs.find((doc) => String(doc?.doc_type || "").toLowerCase() === String(docType || "").toLowerCase()) || null;
+}
+
+function readmeAnalysisResult(exportData, analysisCode) {
+  const chargers = Array.isArray(exportData?.analysis_readable?.chargers)
+    ? exportData.analysis_readable.chargers
+    : [];
+
+  for (const charger of chargers) {
+    const results = Array.isArray(charger?.analysis_results)
+      ? charger.analysis_results
+      : [];
+
+    const found = results.find((r) => String(r?.analysis_code || "") === analysisCode);
+    if (found) return found;
+  }
+
+  return null;
+}
+
+function buildReadableExportReadme(exportData) {
+  const dossier = exportData?.dossier || {};
+  const chargers = Array.isArray(exportData?.chargers) ? exportData.chargers : [];
+  const firstCharger = chargers[0] || {};
+  const invoiceDoc = readmeFirstDocument(exportData, "factuur");
+  const analysisReadable = exportData?.analysis_readable || {};
+  const analysisSummary = exportData?.analysis_summary || {};
+
+  const invoiceAddress = readmeAnalysisResult(exportData, "invoice_address_match");
+  const invoiceBrand = readmeAnalysisResult(exportData, "invoice_brand_match");
+  const invoiceModel = readmeAnalysisResult(exportData, "invoice_model_match");
+  const invoiceSerial = readmeAnalysisResult(exportData, "invoice_serial_match");
+  const invoiceMid = readmeAnalysisResult(exportData, "invoice_mid_match");
+  const photoVisible = readmeAnalysisResult(exportData, "photo_charger_visible");
+
+  const lines = [];
+
+  lines.push("ENVAL DOSSIERSAMENVATTING");
+  lines.push("============================================================");
+  lines.push("");
+  lines.push("BELANGRIJK");
+  lines.push("Deze README is niet de leidende export.");
+  lines.push("De leidende export is het JSON-bestand met schema_version, export_sha256, dossierdata, documentdata, analysegegevens en audit-events.");
+  lines.push("Deze README is alleen een leesbare samenvatting voor snelle menselijke beoordeling.");
+  lines.push("");
+
+  lines.push("1. WAT ENVAL DOET");
+  lines.push("------------------------------------------------------------");
+  lines.push("Enval helpt bij het structureren van een laadpaaldossier.");
+  lines.push("Enval verzamelt dossiergegevens, bewijsstukken, technische controles en auditsporen in een overdraagbare JSON-export.");
+  lines.push("");
+  lines.push("Enval is geen inboeker, geen verificateur, geen certificerende partij en geeft geen garantie op acceptatie, ERE's, vergoeding of uitbetaling.");
+  lines.push("");
+
+  lines.push("2. DOSSIER");
+  lines.push("------------------------------------------------------------");
+  lines.push(`Dossier-ID: ${readmeValue(dossier.id)}`);
+  lines.push(`Status: ${readmeValue(dossier.status)}`);
+  lines.push(`Aangemaakt: ${readmeDate(dossier.created_at)}`);
+  lines.push(`Ingediend/vergrendeld: ${readmeDate(dossier.locked_at)}`);
+  lines.push(`Naam: ${readmeValue(`${readmeValue(dossier.customer_first_name, "")} ${readmeValue(dossier.customer_last_name, "")}`.trim())}`);
+  lines.push(`E-mail: ${readmeValue(dossier.customer_email)}`);
+  lines.push(`Adres: ${readmeValue(`${readmeValue(dossier.address_street, "")} ${readmeValue(dossier.address_house_number, "")}${dossier.address_suffix ? " " + dossier.address_suffix : ""}, ${readmeValue(dossier.address_postcode, "")} ${readmeValue(dossier.address_city, "")}`.trim())}`);
+  lines.push(`Aantal laadpunten: ${readmeValue(dossier.charger_count)}`);
+  lines.push("");
+
+  lines.push("3. LAADPUNT");
+  lines.push("------------------------------------------------------------");
+  lines.push(`Merk: ${readmeValue(firstCharger.brand)}`);
+  lines.push(`Model: ${readmeValue(firstCharger.model)}`);
+  lines.push(`Serienummer: ${readmeValue(firstCharger.serial_number)}`);
+  lines.push(`MID-nummer: ${readmeValue(firstCharger.mid_number)}`);
+  lines.push("");
+
+  lines.push("4. DOCUMENTEN");
+  lines.push("------------------------------------------------------------");
+  if (invoiceDoc) {
+    lines.push(`Factuur: ${readmeValue(invoiceDoc.filename)}`);
+    lines.push(`Documentstatus: ${readmeValue(invoiceDoc.status)}`);
+    lines.push(`Content type: ${readmeValue(invoiceDoc.content_type)}`);
+    lines.push(`Bestandsgrootte: ${readmeValue(invoiceDoc.size_bytes)} bytes`);
+    lines.push(`SHA-256: ${readmeValue(invoiceDoc.file_sha256)}`);
+    lines.push(`Bevestigd op: ${readmeDate(invoiceDoc.confirmed_at)}`);
+  } else {
+    lines.push("Factuur: geen confirmed factuur gevonden in deze export.");
+  }
+  lines.push("");
+
+  lines.push("5. UITKOMST CONTROLES");
+  lines.push("------------------------------------------------------------");
+  lines.push(`E-mail bevestigd: ${readmeCheckStatus(exportData, "email_verified")}`);
+  lines.push(`Adres bevestigd: ${readmeCheckStatus(exportData, "address_verified")}`);
+  lines.push(`Aantal laadpunten klopt: ${readmeCheckStatus(exportData, "charger_exact_count")}`);
+  lines.push(`MID per laadpunt aanwezig: ${readmeCheckStatus(exportData, "mid_per_charger")}`);
+  lines.push(`Documenten per laadpunt aanwezig: ${readmeCheckStatus(exportData, "docs_per_charger")}`);
+  lines.push(`Toestemmingen vastgelegd: ${readmeCheckStatus(exportData, "consents_required")}`);
+  lines.push(`Factuurcontrole gate: ${readmeCheckStatus(exportData, "analysis_invoice_gate")}`);
+  lines.push(`Analyse overall: ${readmeStatus(analysisReadable?.overall_status || analysisSummary?.overall_status)}`);
+  lines.push(`Fotoanalyse: ${readmeStatus(photoVisible?.status || "not_checked")} — fotoanalyse is in deze MVP niet leidend en blokkeert de export niet.`);
+  lines.push("");
+
+  lines.push("6. HOE DE BELANGRIJKSTE CONTROLES ZIJN UITGEVOERD");
+  lines.push("------------------------------------------------------------");
+  lines.push("Adrescontrole:");
+  lines.push("- De gebruiker voert postcode, huisnummer en eventuele toevoeging in.");
+  lines.push("- Enval normaliseert de postcode en vraagt het adres op via de adrescontrole in de dossierflow.");
+  lines.push("- Straat, plaats en adresreferentie worden pas opgeslagen nadat de adrescontrole een bruikbaar resultaat geeft.");
+  lines.push(`- Resultaat in deze export: ${readmeCheckStatus(exportData, "address_verified")}.`);
+  lines.push("");
+  lines.push("Factuurverwerking:");
+  lines.push("- De factuur moet in de MVP als PDF worden geüpload.");
+  lines.push("- Na upload berekent de browser een SHA-256 hash over het bestand.");
+  lines.push("- De server bevestigt de upload en controleert de hash server-side, zodat vastligt welk bestand onderdeel is van het dossier.");
+  lines.push("- De PDF-tekst wordt client-side uitgelezen en als observed payload aangeboden aan de server-side verify stap.");
+  lines.push("- De server-side verify stap vergelijkt de gelezen factuurvelden met de dossiergegevens en laadpaalgegevens.");
+  lines.push("");
+  lines.push("Factuurvergelijkingen:");
+  lines.push(`- Factuuradres vs dossieradres: ${readmeStatus(invoiceAddress?.status)} (${readmeValue(invoiceAddress?.reason)})`);
+  lines.push(`- Merk op factuur vs opgegeven merk: ${readmeStatus(invoiceBrand?.status)} (${readmeValue(invoiceBrand?.reason)})`);
+  lines.push(`- Model op factuur vs opgegeven model: ${readmeStatus(invoiceModel?.status)} (${readmeValue(invoiceModel?.reason)})`);
+  lines.push(`- Serienummer op factuur vs opgegeven serienummer: ${readmeStatus(invoiceSerial?.status)} (${readmeValue(invoiceSerial?.reason)})`);
+  lines.push(`- MID-nummer op factuur vs opgegeven MID-nummer: ${readmeStatus(invoiceMid?.status)} (${readmeValue(invoiceMid?.reason)})`);
+  lines.push("");
+  lines.push("Volledigheidscontrole:");
+  lines.push("- Enval controleert of verplichte onderdelen aanwezig zijn: e-mailbevestiging, adresbevestiging, laadpaalgegevens, MID-nummer, confirmed documenten en toestemmingen.");
+  lines.push("- Alleen confirmed documenten tellen mee voor de dossiercontrole.");
+  lines.push("- Bij indienen wordt het dossier vergrendeld, zodat de export een vaste toestand representeert.");
+  lines.push("");
+
+  lines.push("7. AUDITPOSITIE");
+  lines.push("------------------------------------------------------------");
+  lines.push("De JSON-export bevat de volledige audit trail met timestamps, request-id's, actor-referenties en technische metadata.");
+  lines.push("Deze README toont alleen een vereenvoudigde selectie.");
+  lines.push("Voor auditcontrole, herleidbaarheid of technische beoordeling moet altijd het JSON-bestand worden gebruikt.");
+  lines.push("");
+  lines.push(`Export-ID: ${readmeValue(exportData?.export_id)}`);
+  lines.push(`Exportstatus: ${readmeValue(exportData?.export_status)}`);
+  lines.push(`Paymentstatus: ${readmeValue(exportData?.payment_status)}`);
+  lines.push(`Schema: ${readmeValue(exportData?.schema_version)}`);
+  lines.push(`Claimjaar: ${readmeValue(exportData?.claim_year)}`);
+  lines.push(`Claimed MID-nummers: ${Array.isArray(exportData?.claimed_mid_numbers) ? exportData.claimed_mid_numbers.join(", ") : "-"}`);
+  lines.push(`Export SHA-256: ${readmeValue(exportData?.export_sha256)}`);
+  lines.push("");
+  lines.push("EINDE README");
+
+  return lines.join("\n");
+}
+
 function exportFilename() {
   const safeId = String(dossier_id || "unknown").replace(/[^a-zA-Z0-9_-]/g, "");
   return `enval-dossier-export-${safeId}.json`;
@@ -3574,10 +3775,17 @@ async function onExportClicked() {
     if (state) state.textContent = "Dossier-export wordt opgebouwd…";
 
     const data = await apiAuthed("api-dossier-export", {});
+
     downloadJsonFile(exportFilename(), data);
 
-    if (state) state.textContent = "Export gedownload.";
-    showToast("Dossier-export gedownload.", "success");
+    // Tweede download is bewust client-side en afgeleid uit dezelfde JSON-export.
+    // De JSON blijft leidend; README is alleen een menselijke samenvatting.
+    setTimeout(() => {
+      downloadTextFile(exportReadmeFilename(), buildReadableExportReadme(data));
+    }, 150);
+
+    if (state) state.textContent = "Export en README gedownload.";
+    showToast("Dossier-export en README gedownload.", "success");
   } catch (e) {
     if (state) state.textContent = e.message || "Export mislukt.";
     showToast(e.message || "Export mislukt.", "error");
