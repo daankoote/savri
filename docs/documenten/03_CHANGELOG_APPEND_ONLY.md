@@ -3234,5 +3234,69 @@ MID risk discovered
   - or another audit-safe exception model.
 - Until then, post-export correction remains POST-MVP and should not be improvised manually.
 
+## 2026-05-18 — Defense-in-depth audit/final table grants hardened
+
+Context
+- Audit/final/derived analysis tables already had RLS enabled.
+- Anon REST tests showed no public row exposure:
+  - audit/worker-event tables returned `permission denied`
+  - export/analysis tables returned no rows before grant hardening
+- However, grants inventory showed broad `anon` and `authenticated` privileges on export and derived analysis tables.
+
+Problem
+- The following tables had unnecessary client-role grants:
+  - `dossier_exports`
+  - `dossier_analysis_runs`
+  - `dossier_analysis_document`
+  - `dossier_analysis_charger`
+  - `dossier_analysis_summary`
+  - `dossier_document_observed_sources`
+- Grants included combinations of:
+  - `SELECT`
+  - `INSERT`
+  - `UPDATE`
+  - `DELETE`
+  - `TRUNCATE`
+  - `REFERENCES`
+  - `TRIGGER`
+- RLS prevented practical anon access, but audit-first defense-in-depth should not depend on RLS alone where client grants are unnecessary.
+
+Change
+- Added migration:
+  - `supabase/migrations/20260518_revoke_audit_final_table_client_grants.sql`
+- Migration revokes all privileges from `anon` and `authenticated` on:
+  - `public.dossier_exports`
+  - `public.dossier_analysis_runs`
+  - `public.dossier_analysis_document`
+  - `public.dossier_analysis_charger`
+  - `public.dossier_analysis_summary`
+  - `public.dossier_document_observed_sources`
+
+Proof
+- Post-migration grants query returned:
+  - `0 rows` for `anon` / `authenticated` grants on the hardened tables.
+- Post-migration anon REST read tests returned `permission denied` for:
+  - `dossier_exports`
+  - `dossier_analysis_runs`
+  - `dossier_analysis_summary`
+  - `dossier_analysis_charger`
+  - `dossier_analysis_document`
+  - `dossier_document_observed_sources`
+- Post-migration anon REST write test against `dossier_exports` returned:
+  - HTTP `401`
+  - PostgREST `42501`
+  - `permission denied for table dossier_exports`
+- Service-role smoke remained green:
+  - service-role read from `dossier_exports` returned export row for dossier `6bd895c6-f5bd-48be-b0e7-86b1e4c2d1da`
+  - service-role read from `dossier_analysis_runs` returned completed analysis run `ea049353-e45b-4e60-b162-b03e03cc45eb`
+
+Audit impact
+- Client access surface reduced.
+- RLS remains active.
+- Service-role Edge Function path remains operational.
+- No lifecycle, export, retention, or analysis behavior changed.
+
+Status
+- DONE — defense-in-depth grants hardening proven.
 
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)

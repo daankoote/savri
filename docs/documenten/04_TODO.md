@@ -53,7 +53,7 @@ Doel:
 
 ### B) Should-fix before launch — alleen quick wins
 
-1. Defense-in-depth policies op audit tabellen
+1. DONE — Defense-in-depth policies/grants op audit/final tabellen
 2. OPS-runbook gateway-401 preventie
 3. Minimale abuse controls op publieke intake/contactflow
 
@@ -375,6 +375,34 @@ Doel:
   - preserved runtime cleanup tombstone path is bewezen
   - tombstone proof-gates zijn groen
 
+### 8a) Defense-in-depth audit/final table grants
+
+- Context:
+  - Audit/final/derived analysis tables hadden RLS enabled.
+  - Anon REST access was al geblokkeerd of gaf geen rows terug.
+  - Grants inventory toonde toch brede client-role grants op export en derived analysis tables.
+  - Dat was geen directe lek door RLS, maar wel onnodige attack surface.
+
+- Change:
+  - Added migration:
+    - `supabase/migrations/20260518_revoke_audit_final_table_client_grants.sql`
+  - Revoked all privileges from `anon` and `authenticated` on:
+    - `dossier_exports`
+    - `dossier_analysis_runs`
+    - `dossier_analysis_document`
+    - `dossier_analysis_charger`
+    - `dossier_analysis_summary`
+    - `dossier_document_observed_sources`
+
+- Proof:
+  - Grants query for `anon` / `authenticated` returned `0 rows`.
+  - Anon REST reads now return `permission denied` for all hardened tables.
+  - Anon REST write to `dossier_exports` returns `401 / 42501 permission denied`.
+  - Service-role smoke remains green for:
+    - `dossier_exports`
+    - `dossier_analysis_runs`
+
+- Status: DONE
 
 ### 8b) Post-export correction / support reopen flow ontwerpen
 
