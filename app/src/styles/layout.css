@@ -1,0 +1,99 @@
+.site-frame {
+  min-height: 100vh;
+}
+
+.app-shell {
+  width: min(var(--container-max), calc(100% - 32px));
+  margin: 0 auto;
+  padding: var(--space-12) 0;
+}
+
+.container {
+  width: min(var(--container-max), calc(100% - 32px));
+  margin: 0 auto;
+}
+
+.section {
+  padding: var(--space-16) 0;
+}
+
+.section-compact {
+  padding: var(--space-12) 0 var(--space-16);
+}
+
+.section-muted {
+  background: var(--color-surface-muted);
+}
+
+.step-grid,
+.benefit-grid,
+.faq-list {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.step-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.benefit-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.faq-list {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+}
+
+.hero-minimal {
+  display: grid;
+  min-height: 330px;
+  align-items: center;
+}
+
+.calculator-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.75fr) minmax(320px, 1.25fr);
+  gap: var(--space-10);
+  align-items: start;
+}
+
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+@media (max-width: 960px) {
+  .benefit-grid,
+  .faq-list,
+  .calculator-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .step-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .section {
+    padding: var(--space-12) 0;
+  }
+
+  .header-inner {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .step-grid {
+    grid-template-columns: 1fr;
+  }
+}
