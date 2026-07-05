@@ -25,10 +25,15 @@
 - Later validate calculator assumptions for both kilometer-based and kWh-based calculation.
 - Later connect the calculator to a real ERE/value model if needed.
 - Signup/intake architecture is documented in `docs/07_signup_intake_architecture.md`.
-- Next implementation task: signup form skeleton only, no backend writes.
-- Then add client-side validation.
+- Signup form skeleton is implemented frontend-only in `/app/src/features/signup`.
+- Signup skeleton now includes account-type tabs, business/VVE banners, address fields, location tabs for zakelijk/VVE, charger details, document slots, and consent/signature placeholders.
+- Next: strengthen client-side validation and field-level error display.
 - Then add import parser architecture/implementation.
-- Then add document upload UI placeholders.
+- Then refine document upload UX/details.
+- Then define KVK, consent, signature, and solar exportability requirements before production.
+- Then source real charger model dropdown data from verified competitor inspection, manufacturer data, or internal rules.
+- Then integrate the address checker for postcode/huisnummer auto-fill.
+- Then verify KVK requirements, including whether document age limits apply.
 - Then review backend API contracts before wiring.
 - Then wire backend only in a separate backend task.
 
@@ -50,10 +55,16 @@
 
 - Define signup state and document requirements.
 - Planned signup form sections: persoonlijke gegevens, laadpaalgegevens, documentatie uploaden.
+- Current signup form supports particulier, zakelijk, and VVE intake paths.
 - Support dynamic unlimited chargers; do not hardcode a maximum of 4 chargers.
+- Support dynamic unlimited locations for zakelijk/VVE; do not hardcode a location maximum.
 - Validate client-side first; write to backend only at final submit later.
-- Manual entry and import must normalize into the same `chargers[]` state.
+- Manual entry and import must normalize into the same `locations[].chargers[]` state.
 - Documents must attach to stable charger client IDs.
+- Current skeleton has local-only file inputs; no storage or upload.
+- Later define exact KVK-uittreksel age requirement if required for zakelijk/VVE.
+- Later define exact consent text and signature implementation.
+- Later define upload, consent, and signature implementation details before production.
 - Define the exact year overview/dossier output customers receive after result.
 - Design upload UX before wiring backend calls.
 - Preserve audit-conscious user messaging around evidence and review.

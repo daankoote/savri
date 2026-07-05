@@ -144,11 +144,22 @@ The year overview is customer-facing output and later supports the audit-worthy 
 
 ## Signup Intake Rule
 
+- `/aanmelden` currently has a frontend-only intake skeleton.
 - Do not wire `/aanmelden` to backend until the API contract is reviewed.
-- The target signup page has three sections: personal information, charger information, and document upload.
-- Charger information has manual and import paths, both normalizing into the same `chargers[]` state.
+- The target signup page has personal information, charger information, document upload, and consent/signature placeholders.
+- Step 1 uses tabs for Particulier, Zakelijk, and VVE. Do not replace these with radio-button UI.
+- Step 1 uses account-specific banners and field labels.
+- Zakelijk and VVE use location tabs in Step 2. Particulier uses the Step 1 address as its single location.
+- Charger information has manual and import paths, both normalizing into the same `locations[].chargers[]` state.
 - The frontend architecture supports unlimited chargers; do not reintroduce the legacy max-4 UI cap.
+- The frontend architecture supports unlimited locations for zakelijk/VVE.
+- Charger fields currently capture brand, model, installation year, required MID number, serial number, back-end supplier, and solar panel status.
+- Charger model options are intentionally scaffolded and incomplete until sourced from verified data.
+- Solar panel exportability is captured for later review; the frontend must not make final eligibility claims from it.
 - Documents attach per charger client ID.
+- Current file inputs, KVK placeholders, and signature placeholders are local only.
+- Do not store files, submit drafts, or call backend APIs from `/aanmelden` yet.
+- Feature files live under `app/src/features/signup/`.
 
 ## Migration Rule
 

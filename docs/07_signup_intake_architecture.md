@@ -1,16 +1,17 @@
 # Signup Intake Architecture
 
-Status: planning only. Do not implement from this document without a separate implementation task.
+Status: frontend skeleton implemented. Backend wiring, real upload, import parsing, and final submit remain out of scope.
 
 ## Scope
 
-The new `/aanmelden` page becomes a single-page intake with three customer-facing sections:
+The new `/aanmelden` page is a single-page intake with these customer-facing sections:
 
 1. Persoonlijke informatie
 2. Laadpaal informatie
 3. Documentatie uploaden
+4. Toestemming en handtekening
 
-No backend writes happen during the draft flow. The first implementation should be a frontend skeleton only. Database writes, uploads, and dossier creation happen only after a later backend/API contract task defines the final submit boundary.
+No backend writes happen during the draft flow. Database writes, uploads, and dossier creation happen only after a later backend/API contract task defines the final submit boundary.
 
 ## Old Flow Inventory
 
@@ -147,25 +148,37 @@ This supports the new architecture principle: intake data, uploaded evidence, an
 `/aanmelden` should become one intake page with:
 
 1. Persoonlijke informatie
-   - name
+   - tabs: Particulier, Zakelijk, VVE
+   - account-specific registration banner
+   - name or bestuurder name
    - email
-   - phone
-   - address fields later if needed in the initial intake
-   - legal/commercial notices only where necessary
+   - optional phone
+   - address/location fields, including optional suffix and country/land with default Nederland
+   - street/adres, city/stad, and country/land are visible but read-only in the skeleton
+   - company/VVE name and KVK number for zakelijk/VVE
+   - local KVK-uittreksel placeholder for zakelijk/VVE
 
 2. Laadpaal informatie
    - tab: Handmatig invoeren
    - tab: Importeren
-   - both tabs normalize into the same `chargers[]` state
+   - particulier uses one implicit location from Step 1
+   - zakelijk/VVE support unlimited locations
+   - each location supports unlimited chargers
+   - both tabs normalize into the same `locations[].chargers[]` state
 
 3. Documentatie uploaden
-   - document requirements generated from `chargers[]`
+   - document requirements generated from `locations[].chargers[]`
    - each upload slot links to a stable charger client ID
+   - KVK placeholder is surfaced for zakelijk/VVE
    - no storage or backend write in the first frontend implementation
+
+4. Toestemming en handtekening
+   - short placeholder only
+   - final legal copy and signature implementation are open production decisions
 
 ## Proposed Component Architecture
 
-Do not create these files until implementation is explicitly requested.
+Current frontend skeleton files:
 
 ```text
 app/src/features/signup/
@@ -178,6 +191,7 @@ app/src/features/signup/
   ChargerCard.tsx
   ChargerForm.tsx
   ChargerDocumentsSection.tsx
+  ConsentSignatureSection.tsx
   DocumentUploadSlot.tsx
   SignupReviewPanel.tsx
   signupTypes.ts
@@ -191,12 +205,13 @@ Responsibilities:
 - `SignupPageShell`: owns draft state and section order.
 - `PersonalInfoSection`: personal/contact input and client validation display.
 - `ChargerInfoSection`: tab control and shared charger state.
-- `ChargerManualTab`: add/edit/remove charger drafts manually.
-- `ChargerImportTab`: import file selection, parse preview, row errors, and commit into `chargers[]`.
+- `ChargerManualTab`: legacy/simple manual list helper; current Step 2 renders location-aware charger lists.
+- `ChargerImportTab`: import file selection, parse preview, row errors, and commit into `locations[].chargers[]`.
 - `ChargerList`: shared list renderer for manual and imported chargers.
 - `ChargerCard`: one charger summary and edit/remove actions.
 - `ChargerForm`: fields for one charger draft.
 - `ChargerDocumentsSection`: generated document checklist per charger.
+- `ConsentSignatureSection`: local placeholder for final consent and signature UX.
 - `DocumentUploadSlot`: local file selection and validation placeholder.
 - `SignupReviewPanel`: final draft completeness overview before later backend submit.
 - `signupValidation.ts`: pure validation rules.
@@ -210,42 +225,55 @@ Proposed frontend draft shape:
 ```ts
 type SignupDraft = {
   personalInfo: PersonalInfoDraft;
-  chargers: ChargerDraft[];
+  locations: SignupLocationDraft[];
   documentsByChargerId: Record<string, ChargerDocumentDraft[]>;
   consents: ConsentDraft;
   validation: SignupValidationState;
 };
 
 type PersonalInfoDraft = {
+  accountType: "particulier" | "zakelijk" | "vve";
   firstName: string;
   lastName: string;
+  companyName?: string;
+  organizationName?: string;
+  kvkNumber: string;
   email: string;
   phone: string;
-  address?: {
-    postcode: string;
-    houseNumber: string;
-    suffix: string;
-  };
+  city: string;
+  postcode: string;
+  houseNumber: string;
+  suffix: string;
+  street: string;
+  country: string;
+  kvkDocument?: File | null;
 };
 
 type ChargerDraft = {
   clientId: string;
   source: "manual" | "import";
   brand: string;
+  manualBrand: string;
   model: string;
-  serialNumber: string;
+  manualModel: string;
+  installationYear: string;
   midNumber: string;
-  midMeterStatus: "yes" | "no" | "unknown";
-  midEvidence: EvidenceDraft[];
-  notes: string;
-  eligibilityStatus: "unvalidated" | "likely_eligible" | "needs_review" | "blocked";
-  errors: Record<string, string>;
+  serialNumber: string;
+  backendSupplier: string;
+  manualBackendSupplier: string;
+  solarPanelStatus: "" | "hourly_exportable" | "not_hourly_exportable" | "none";
+};
+
+type SignupLocationDraft = {
+  clientId: string;
+  address: AddressDraft;
+  chargers: ChargerDraft[];
 };
 
 type ChargerDocumentDraft = {
   clientId: string;
   chargerClientId: string;
-  documentType: "invoice" | "charger_photo" | "mid_evidence" | "type_plate_photo" | "other";
+  documentType: "installation_invoice" | "monthly_reimbursement";
   file: File | null;
   status: "empty" | "selected" | "invalid" | "ready";
   errors: string[];
@@ -256,13 +284,14 @@ Do not treat this as the final backend schema. It is the client-side architectur
 
 ## Charger Model
 
-Manual and imported chargers must normalize into the same `ChargerDraft[]`.
+Manual and imported chargers must normalize into the same `locations[].chargers[]` model.
 
 Rules:
 
 - Start manual entry with one charger.
 - Provide a `+` action to add another charger.
 - No hard maximum of 4 chargers.
+- No hard maximum for zakelijk/VVE locations.
 - Each charger gets a stable client-side ID at creation/import time.
 - Documents attach to `chargerClientId`, not array index.
 - Removing a charger should also mark or remove its linked document draft slots.
@@ -297,10 +326,26 @@ Fields to carry forward from old flow where relevant:
 
 - brand
 - model
-- notes for unknown/custom brand or model
+- installation year
 - serial number
-- MID number
-- MID meter status
+- MID number as a required visible field
+- back-end supplier
+- solar panel data/exportability
+
+Visible charger fields:
+
+- Merk dropdown, using the local option list supplied by the user.
+- Merk supports manual entry through `Anders`.
+- Model dropdown dependent on selected merk, with manual entry fallback until real model data is sourced.
+- Model manual fallback stores `manualModel` separately and changing brand resets model/manual model state.
+- Jaar van installatie dropdown, descending from current year to 2000.
+- MID nummer, required and placed before serienummer.
+- Serienummer.
+- Back-end leverancier dropdown, using the local option list supplied by the user.
+- Back-end leverancier supports manual entry through visible option `Anders`.
+- Zonnepanelen aanwezig dropdown.
+
+Do not put bewijs van installatie in Step 2. It belongs in Step 3 document upload.
 
 ## Import Flow
 
@@ -321,7 +366,7 @@ Import pipeline:
 5. Show preview with row errors.
 6. Let user accept valid rows.
 7. Convert accepted rows to `ChargerDraft[]`.
-8. Merge into the same `chargers[]` list used by manual entry.
+8. Merge into the same `locations[].chargers[]` list used by manual entry.
 9. Generate document slots per imported charger.
 
 Import must not write to backend. Parser code should remain module-isolated in `signupImport.ts` so it can later be tested and replaced without touching the rest of signup.
@@ -330,11 +375,14 @@ Import must not write to backend. Parser code should remain module-isolated in `
 
 Documents are tied to charger client IDs in the frontend draft.
 
+Document upload group titles must include the charger number and MID number. This keeps documents distinguishable when a user has multiple identical chargers.
+
 Initial customer-facing document slots should be generated per charger. Start with conservative slots:
 
-- invoice / factuur
-- MID evidence when MID status is unknown or needs support
-- charger photo / type plate photo as future-ready optional slots
+- Particulier, per charger: Factuur installatie.
+- Particulier, per charger when applicable: Indien zakelijk rijden, maandoverzicht thuislaadvergoeding.
+- Zakelijk/VVE, per charger: Factuur installatie.
+- Zakelijk/VVE: include the Step 1 KVK-uittreksel placeholder in the document section.
 
 Architecture must support future requirements without rewriting the flow:
 
@@ -356,12 +404,17 @@ Validation layers:
 1. Field validation
    - required names
    - valid email
+   - required address/location fields
+   - required company or VVE/organization name where relevant
+   - required KVK number for zakelijk/VVE
    - optional NL mobile format
    - required charger fields
-   - plausible MID/serial values
+   - local warnings for KVK/board documents where relevant
+   - plausible charger and evidence values
 
 2. Draft consistency
    - at least one charger
+   - at least one location for zakelijk/VVE
    - every charger has a stable ID
    - documents are linked to existing charger IDs
    - no duplicate charger client IDs
@@ -371,6 +424,7 @@ Validation layers:
    - customer is in relevant jurisdiction
    - home charging situation
    - MID status per charger
+   - solar panel data/exportability where relevant
    - evidence completeness
 
 4. Submission readiness
@@ -380,15 +434,15 @@ Validation layers:
 
 Client validation is not final truth. Backend validation still has to re-check all relevant fields during the later final submit task.
 
-## MID And Manufacturer Check Architecture
+## MID, Model, And Manufacturer Check Architecture
 
-MID meter presence is likely a critical eligibility criterion. Competitor examples show rejection risk when the charger/model does not have a MID meter.
+MID meter presence and charger model rules are likely important eligibility criteria. They must support manual review and future manufacturer/model checks.
 
 Architecture rules:
 
-- Capture explicit `midMeterStatus`: yes, no, unknown.
-- Capture MID number separately from MID status.
-- Request user evidence when MID status is unknown or weak.
+- Capture MID number as a required visible field.
+- Keep MID/model eligibility ready for manufacturer/model rules later.
+- Keep internal architecture flexible enough for future MID status and evidence review.
 - Do not assume automatic manufacturer checks exist.
 - Do not hardcode Mennekes or any other manufacturer assumptions without verified source.
 - Support manual review fallback from day one.
@@ -449,9 +503,8 @@ Later backend review must decide whether to:
 
 No Supabase functions or migrations are changed by this planning document.
 
-## Not To Implement Yet
+## Not Implemented Yet
 
-- no signup form code
 - no backend wiring
 - no Supabase changes
 - no upload implementation
@@ -461,16 +514,33 @@ No Supabase functions or migrations are changed by this planning document.
 - no final backend schema
 - no legal final terms copy
 
+## Open Compliance Decisions
+
+- KVK-uittreksel or board-document requirements may apply for zakelijk/VVE.
+- The acceptable age of any KVK document is still open; do not hardcode a maximum age yet.
+- Consent text and signature requirements are open legal/compliance decisions.
+- Solar panel data and hourly exportability may affect eligibility or evidence review.
+- MID/model eligibility must support later manufacturer/model rules and manual review.
+- Model dropdown values must be sourced later from verified competitor inspection, manufacturer data, or internal eligibility rules.
+- Brand and back-end supplier can be selected from catalog or entered manually via their explicit fallback options.
+- Address checker must later populate street/adres, city/stad, and country/land from postcode, house number, and optional suffix.
+
+## Model Catalog Source Strategy
+
+- Competitor model loading appears to use `/api/v1/users/getModel?brand_id=<brand_id>`.
+- ENVAL must not depend live on a competitor API.
+- Current model data is locally seeded from a one-time observed model endpoint response.
+- Future corrections should be made in ENVAL's local catalog or a future internal model database.
+- The model catalog must remain replaceable and modular.
+- Manual model entry remains required as fallback.
+
 ## Recommended Next Implementation Task
 
-Build only the `/aanmelden` frontend skeleton:
+Strengthen the frontend skeleton:
 
-- three visible sections
-- manual/import tabs
-- local draft state
-- one default charger
-- add/remove chargers with stable client IDs
-- document slots rendered per charger
+- field-level validation messages
+- better MID evidence prompts
+- import parser design or stub tests
+- document upload UX details
 - no backend writes
 - no real upload
-- no parser beyond an import placeholder
