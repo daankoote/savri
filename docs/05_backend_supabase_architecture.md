@@ -52,5 +52,9 @@ Future backend/API review should explicitly cover:
 - support-reducing customer messaging and status visibility
 - NL/EN language awareness where legal or product copy affects consent or claims
 - commercial source-of-truth alignment with `docs/06_fee_model_and_service_terms.md`
+- signup/intake source-of-truth alignment with `docs/07_signup_intake_architecture.md`
+- whether final signup submit creates the dossier, chargers, upload intents, consents, and audit events in one controlled contract
+- how to replace or revise legacy charger-count caps before `/app` backend wiring
+- how charger-linked documents preserve stable charger identity across manual and import intake paths
 
 No Supabase functions, migrations, storage policies, or database behavior are changed by this document update.

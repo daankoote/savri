@@ -24,7 +24,13 @@
 - Later define exact calculator assumptions before production use.
 - Later validate calculator assumptions for both kilometer-based and kWh-based calculation.
 - Later connect the calculator to a real ERE/value model if needed.
-- Next steps after routes: audit old signup/dossier/upload code, build signup page, build upload UX, define backend API contracts before wiring, and finalize legal/privacy/terms copy.
+- Signup/intake architecture is documented in `docs/07_signup_intake_architecture.md`.
+- Next implementation task: signup form skeleton only, no backend writes.
+- Then add client-side validation.
+- Then add import parser architecture/implementation.
+- Then add document upload UI placeholders.
+- Then review backend API contracts before wiring.
+- Then wire backend only in a separate backend task.
 
 ## Phase 2: Public Commercial Pages
 
@@ -46,6 +52,8 @@
 - Planned signup form sections: persoonlijke gegevens, laadpaalgegevens, documentatie uploaden.
 - Support dynamic unlimited chargers; do not hardcode a maximum of 4 chargers.
 - Validate client-side first; write to backend only at final submit later.
+- Manual entry and import must normalize into the same `chargers[]` state.
+- Documents must attach to stable charger client IDs.
 - Define the exact year overview/dossier output customers receive after result.
 - Design upload UX before wiring backend calls.
 - Preserve audit-conscious user messaging around evidence and review.

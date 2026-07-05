@@ -91,6 +91,8 @@ Rules:
 - Do not change Netlify redirects or production root behavior for these app routes yet.
 - Section targets must account for the sticky header with CSS scroll offsets.
 - Signup remains the next real route to design.
+- Signup/intake architecture lives in `docs/07_signup_intake_architecture.md`.
+- `/aanmelden` should be implemented as a frontend-first draft flow before backend wiring.
 
 ## Homepage Copy Rule
 
@@ -138,6 +140,15 @@ The year overview is customer-facing output and later supports the audit-worthy 
 - Eligibility
 - Articles
 - Lead submit
+- Signup intake
+
+## Signup Intake Rule
+
+- Do not wire `/aanmelden` to backend until the API contract is reviewed.
+- The target signup page has three sections: personal information, charger information, and document upload.
+- Charger information has manual and import paths, both normalizing into the same `chargers[]` state.
+- The frontend architecture supports unlimited chargers; do not reintroduce the legacy max-4 UI cap.
+- Documents attach per charger client ID.
 
 ## Migration Rule
 
