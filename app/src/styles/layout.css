@@ -8,6 +8,10 @@
   padding: var(--space-12) 0;
 }
 
+.page-shell {
+  min-height: calc(100vh - 72px);
+}
+
 .container {
   width: min(var(--container-max), calc(100% - 32px));
   margin: 0 auto;
@@ -15,6 +19,10 @@
 
 .section {
   padding: var(--space-16) 0;
+}
+
+.section[id] {
+  scroll-margin-top: 92px;
 }
 
 .section-compact {
@@ -69,6 +77,19 @@
   flex-wrap: wrap;
   gap: var(--space-2);
   align-items: center;
+}
+
+.section-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+.page-intro {
+  display: grid;
+  max-width: 720px;
+  gap: var(--space-5);
 }
 
 @media (max-width: 960px) {

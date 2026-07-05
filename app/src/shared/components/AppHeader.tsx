@@ -1,15 +1,41 @@
+import type { MouseEvent } from "react";
+
 const navItems = [
-  { label: "Opbrengst", href: "#opbrengst" },
-  { label: "Werkwijze", href: "#werkwijze" },
-  { label: "Waarom ENVAL", href: "#waarom" },
-  { label: "FAQ", href: "#faq" },
+  { label: "Home", href: "/" },
+  { label: "Opbrengst", href: "/#opbrengst" },
+  { label: "Aanmerking", href: "/#aanmerking" },
+  { label: "Aanmelden", href: "/aanmelden" },
+  { label: "ERE info", href: "/ere" },
+  { label: "Contact", href: "/contact" },
 ];
 
-export function AppHeader() {
+type AppHeaderProps = {
+  currentPath: string;
+  navigate: (href: string) => void;
+};
+
+function getPathname(href: string) {
+  return new URL(href, window.location.origin).pathname;
+}
+
+function isActiveNavItem(href: string, currentPath: string) {
+  if (href.includes("#")) {
+    return false;
+  }
+
+  return getPathname(href) === currentPath;
+}
+
+export function AppHeader({ currentPath, navigate }: AppHeaderProps) {
+  const handleClick = (href: string) => (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    navigate(href);
+  };
+
   return (
     <header className="app-header">
       <div className="container header-inner">
-        <a className="brand-mark" href="#" aria-label="ENVAL home">
+        <a className="brand-mark" href="/" aria-label="ENVAL home" onClick={handleClick("/")}>
           <span className="brand-symbol" aria-hidden="true">E</span>
           <span>
             <strong>ENVAL</strong>
@@ -19,7 +45,12 @@ export function AppHeader() {
 
         <nav className="header-nav" aria-label="Hoofdnavigatie">
           {navItems.map((item) => (
-            <a href={item.href} key={item.label}>
+            <a
+              aria-current={isActiveNavItem(item.href, currentPath) ? "page" : undefined}
+              href={item.href}
+              key={item.label}
+              onClick={handleClick(item.href)}
+            >
               {item.label}
             </a>
           ))}

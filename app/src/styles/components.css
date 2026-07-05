@@ -64,6 +64,11 @@
   background: var(--color-brand-soft);
 }
 
+.header-nav a[aria-current="page"] {
+  color: var(--color-brand-strong);
+  background: var(--color-brand-soft);
+}
+
 .hero-section {
   position: relative;
   overflow: hidden;
@@ -198,7 +203,9 @@
 .benefit-card p,
 .faq-item p,
 .section-copy,
-.fine-print {
+.fine-print,
+.page-intro p,
+.page-note {
   color: var(--color-muted);
 }
 

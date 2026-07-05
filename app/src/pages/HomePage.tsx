@@ -6,6 +6,7 @@ import { HeroSection } from "../shared/components/HeroSection";
 import { SectionHeader } from "../shared/components/SectionHeader";
 import { StepCard } from "../shared/components/StepCard";
 import { RevenueCalculator } from "../features/calculator/RevenueCalculator";
+import type { RoutedPageProps } from "../routes/types";
 
 const steps = [
   {
@@ -42,11 +43,26 @@ const benefits = [
   },
   {
     title: "Eenvoudig proces",
-    description: "Check, upload, inboeken.",
+    description: "Van check tot jaaroverzicht.",
   },
   {
     title: "Controleerbaar",
     description: "Je documenten en keuzes blijven herleidbaar.",
+  },
+];
+
+const eligibilityItems = [
+  {
+    title: "Ik laad thuis",
+    description: "Je laadt je elektrische auto op je eigen adres.",
+  },
+  {
+    title: "Ik heb laadpaalgegevens",
+    description: "Je kunt je laadpunt en verbruik onderbouwen.",
+  },
+  {
+    title: "Ik kan documenten aanleveren",
+    description: "Facturen en relevante gegevens zijn beschikbaar.",
   },
 ];
 
@@ -65,13 +81,36 @@ const faqs = [
   },
 ];
 
-export function HomePage() {
+export function HomePage({ currentPath, navigate }: RoutedPageProps) {
   return (
     <div className="site-frame">
-      <AppHeader />
+      <AppHeader currentPath={currentPath} navigate={navigate} />
       <main>
-        <HeroSection />
+        <HeroSection navigate={navigate} />
         <RevenueCalculator />
+
+        <section className="section" id="aanmerking" aria-labelledby="eligibility-title">
+          <div className="container">
+            <SectionHeader eyebrow="Aanmerking" title="Kom ik in aanmerking?" />
+            <div className="benefit-grid">
+              {eligibilityItems.map((item) => (
+                <BenefitCard key={item.title} title={item.title} description={item.description} />
+              ))}
+            </div>
+            <div className="section-actions">
+              <a
+                className="button button-primary"
+                href="/aanmelden"
+                onClick={(event) => {
+                  event.preventDefault();
+                  navigate("/aanmelden");
+                }}
+              >
+                Check mijn situatie
+              </a>
+            </div>
+          </div>
+        </section>
 
         <section className="section" id="werkwijze" aria-labelledby="steps-title">
           <div className="container">
@@ -113,12 +152,13 @@ export function HomePage() {
 
         <CTASection
           eyebrow="Start"
-          title="Start met de geschiktheidscheck."
+          title="Start met de check."
           description="Check eerst of je situatie past."
-          actionLabel="Check geschiktheid"
-          actionHref="#werkwijze"
+          actionLabel="Check mijn situatie"
+          actionHref="/#aanmerking"
+          navigate={navigate}
           secondaryActionLabel="Aanmelden"
-          secondaryActionHref="#aanmelden"
+          secondaryActionHref="/aanmelden"
         />
       </main>
     </div>

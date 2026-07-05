@@ -16,16 +16,15 @@
 
 ## Phase 1: Routing And Page Architecture
 
-- Next milestone: route/page architecture.
-- Define public pages: Home, Geschiktheid, Prijs/Fee, Aanmelden, Upload, ERE info, Contact, Privacy, Voorwaarden, and NL/EN.
-- Add routing after the landing-page shell and design system are stable.
+- Initial route/page architecture exists in `/app`.
+- Keep public pages concise: Home, Aanmerking as a home section, Aanmelden, Upload, ERE info, Contact, Privacy, Voorwaarden, and NL/EN.
+- Keep pricing/fee content on the homepage for now.
 - Keep customer-facing pages concise; avoid roadmap/module-dashboard copy.
 - Keep current Netlify root production untouched until migration is explicitly approved.
 - Later define exact calculator assumptions before production use.
 - Later validate calculator assumptions for both kilometer-based and kWh-based calculation.
 - Later connect the calculator to a real ERE/value model if needed.
-- Add the eligibility flow after the calculator/page shell is approved.
-- Later route the Aanmelden CTA to a real signup flow.
+- Next steps after routes: audit old signup/dossier/upload code, build signup page, build upload UX, define backend API contracts before wiring, and finalize legal/privacy/terms copy.
 
 ## Phase 2: Public Commercial Pages
 
@@ -44,6 +43,9 @@
 ## Phase 4: Signup And Document Upload Flow
 
 - Define signup state and document requirements.
+- Planned signup form sections: persoonlijke gegevens, laadpaalgegevens, documentatie uploaden.
+- Support dynamic unlimited chargers; do not hardcode a maximum of 4 chargers.
+- Validate client-side first; write to backend only at final submit later.
 - Define the exact year overview/dossier output customers receive after result.
 - Design upload UX before wiring backend calls.
 - Preserve audit-conscious user messaging around evidence and review.

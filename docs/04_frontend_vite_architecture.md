@@ -63,8 +63,34 @@ Component approach:
 - Route pages should compose shared components from `src/shared/components/`.
 - Shared components should use shared classes and tokens before adding new CSS.
 - Avoid one-off page CSS. Add reusable layout/component primitives when a pattern is likely to repeat.
-- Keep HomePage as the shell until routing is introduced.
 - The standard local dev URL remains `http://localhost:5175/`.
+
+## Routes And Pages
+
+The `/app` frontend uses lightweight client-side routing for now.
+
+Current routes:
+
+- `/`
+- `/aanmelden`
+- `/upload`
+- `/ere`
+- `/contact`
+- `/privacy`
+- `/voorwaarden`
+
+Rules:
+
+- Use the internal route map and History API for now.
+- Do not add React Router unless route complexity later justifies it.
+- Home stays the commercial landing page.
+- `Aanmerking` is currently a home section at `/#aanmerking`, not a separate page.
+- Pricing/fee content stays on the homepage for now, not in a separate route.
+- Placeholder pages are intentionally short: one clear title, one short paragraph, and one action or note.
+- Do not wire backend calls from these pages yet.
+- Do not change Netlify redirects or production root behavior for these app routes yet.
+- Section targets must account for the sticky header with CSS scroll offsets.
+- Signup remains the next real route to design.
 
 ## Homepage Copy Rule
 
