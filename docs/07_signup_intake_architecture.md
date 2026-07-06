@@ -394,6 +394,11 @@ Documents are tied to charger client IDs in the frontend draft.
 
 Document upload group titles must include the charger number and MID number. This keeps documents distinguishable when a user has multiple identical chargers.
 
+For zakelijk/VVE, document upload location groups show the resolved location address when available:
+`Locatie N — street houseNumber+suffix — postcode — city — country`.
+
+Charger document titles show the MID number. If the MID number is missing, only `MID ontbreekt` is styled with the shared warning text style.
+
 Initial customer-facing document slots should be generated per charger. Start with conservative slots:
 
 - Particulier, per charger: Factuur installatie.

@@ -290,10 +290,14 @@
   cursor: default;
 }
 
-.field-message {
+.field-message,
+.warning-text {
   color: var(--color-amber);
-  font-size: var(--text-xs);
   font-weight: 650;
+}
+
+.field-message {
+  font-size: var(--text-xs);
 }
 
 .address-lookup-status {
