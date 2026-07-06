@@ -1,4 +1,15 @@
 import { AddressFields } from "./AddressFields";
+import {
+  cleanKvkInput,
+  getEmailValidationMessage,
+  getKvkValidationMessage,
+  getNameValidationMessage,
+  getPhoneValidationMessage,
+  normalizeEmail,
+  normalizeKvkNumber,
+  normalizeName,
+  normalizePhone,
+} from "./signupFieldNormalizers";
 import type { AccountType, PersonalInfoDraft } from "./signupTypes";
 
 type PersonalInfoSectionProps = {
@@ -39,6 +50,13 @@ export function PersonalInfoSection({ value, onChange }: PersonalInfoSectionProp
     value.accountType === "vve"
       ? "Upload het KVK-uittreksel van de VVE die eigenaar is van de laadpalen. Dit document moet zijn ondertekend door de tekenbevoegde zoals vermeld op het KVK-uittreksel."
       : "Upload het KVK-uittreksel van het bedrijf dat eigenaar is van de laadpalen. Dit document moet zijn ondertekend door de tekenbevoegde zoals vermeld op het KVK-uittreksel.";
+  const firstNameMessage = getNameValidationMessage(value.firstName);
+  const lastNameMessage = getNameValidationMessage(value.lastName);
+  const organizationName = value.accountType === "vve" ? value.organizationName : value.companyName;
+  const organizationMessage = isBusiness ? getNameValidationMessage(organizationName) : "";
+  const kvkMessage = isBusiness ? getKvkValidationMessage(value.kvkNumber) : "";
+  const emailMessage = getEmailValidationMessage(value.email);
+  const phoneMessage = getPhoneValidationMessage(value.phone);
 
   return (
     <section className="signup-section" aria-label="Stap 1">
@@ -84,20 +102,24 @@ export function PersonalInfoSection({ value, onChange }: PersonalInfoSectionProp
           <span>{firstNameLabel}</span>
           <input
             autoComplete="given-name"
+            onBlur={(event) => update("firstName", normalizeName(event.target.value))}
             onChange={(event) => update("firstName", event.target.value)}
             type="text"
             value={value.firstName}
           />
+          {firstNameMessage ? <small className="field-message">{firstNameMessage}</small> : null}
         </label>
 
         <label className="field">
           <span>{lastNameLabel}</span>
           <input
             autoComplete="family-name"
+            onBlur={(event) => update("lastName", normalizeName(event.target.value))}
             onChange={(event) => update("lastName", event.target.value)}
             type="text"
             value={value.lastName}
           />
+          {lastNameMessage ? <small className="field-message">{lastNameMessage}</small> : null}
         </label>
 
         {isBusiness ? (
@@ -106,22 +128,28 @@ export function PersonalInfoSection({ value, onChange }: PersonalInfoSectionProp
               <span>{organizationLabel}</span>
               <input
                 autoComplete="organization"
+                onBlur={(event) =>
+                  update(value.accountType === "vve" ? "organizationName" : "companyName", normalizeName(event.target.value))
+                }
                 onChange={(event) =>
                   update(value.accountType === "vve" ? "organizationName" : "companyName", event.target.value)
                 }
                 type="text"
                 value={value.accountType === "vve" ? value.organizationName : value.companyName}
               />
+              {organizationMessage ? <small className="field-message">{organizationMessage}</small> : null}
             </label>
 
             <label className="field">
               <span>KVK nummer</span>
               <input
                 inputMode="numeric"
-                onChange={(event) => update("kvkNumber", event.target.value)}
+                onBlur={(event) => update("kvkNumber", normalizeKvkNumber(event.target.value))}
+                onChange={(event) => update("kvkNumber", cleanKvkInput(event.target.value))}
                 type="text"
                 value={value.kvkNumber}
               />
+              {kvkMessage ? <small className="field-message">{kvkMessage}</small> : null}
             </label>
           </>
         ) : null}
@@ -131,10 +159,12 @@ export function PersonalInfoSection({ value, onChange }: PersonalInfoSectionProp
           <input
             autoComplete="email"
             inputMode="email"
+            onBlur={(event) => update("email", normalizeEmail(event.target.value))}
             onChange={(event) => update("email", event.target.value)}
             type="email"
             value={value.email}
           />
+          {emailMessage ? <small className="field-message">{emailMessage}</small> : null}
         </label>
 
         <label className="field">
@@ -142,10 +172,12 @@ export function PersonalInfoSection({ value, onChange }: PersonalInfoSectionProp
           <input
             autoComplete="tel"
             inputMode="tel"
+            onBlur={(event) => update("phone", normalizePhone(event.target.value))}
             onChange={(event) => update("phone", event.target.value)}
             type="tel"
             value={value.phone}
           />
+          {phoneMessage ? <small className="field-message">{phoneMessage}</small> : null}
         </label>
       </div>
 

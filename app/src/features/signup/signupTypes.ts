@@ -18,6 +18,8 @@ export type AddressDraft = {
   street: string;
   city: string;
   country: string;
+  bagId: string | null;
+  resolvedLookupKey: string | null;
 };
 
 export type PersonalInfoDraft = {

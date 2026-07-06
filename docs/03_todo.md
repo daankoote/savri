@@ -32,7 +32,16 @@
 - Then refine document upload UX/details.
 - Then define KVK, consent, signature, and solar exportability requirements before production.
 - Then source real charger model dropdown data from verified competitor inspection, manufacturer data, or internal rules.
-- Then integrate the address checker for postcode/huisnummer auto-fill.
+- Address lookup is now integrated client-first in `/aanmelden` with direct PDOK lookup, local normalization, debounce, memory-only cache, and no backend save.
+- Next: browser-QA direct PDOK lookup with valid, not-found, ambiguous suffix, and network/CORS failure cases.
+- Browser-QA that Adres/Stad/Land remain visible after a successful lookup and no-op blur.
+- Browser-QA postcode, huisnummer, suffix, email, phone, name, and KVK validation messages.
+- Browser-QA suffix edge cases, including apartment/addition values seen in real customer addresses.
+- Later define future country/provider support beyond the current Dutch PDOK lookup.
+- Later test production browser/CORS behavior against PDOK before relying on it publicly.
+- Later add optional read-only `api-signup-address-lookup` fallback only if direct PDOK is unreliable.
+- Later persist verified address data only through the final signup/backend submit contract.
+- Later browser-QA address lookup loading, unavailable, success, and error states per independent address block.
 - Then verify KVK requirements, including whether document age limits apply.
 - Then review backend API contracts before wiring.
 - Then wire backend only in a separate backend task.

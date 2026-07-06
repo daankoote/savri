@@ -194,6 +194,9 @@ app/src/features/signup/
   ConsentSignatureSection.tsx
   DocumentUploadSlot.tsx
   SignupReviewPanel.tsx
+  address/addressNormalizers.ts
+  address/addressLookup.ts
+  address/useAddressLookup.ts
   signupTypes.ts
   signupValidation.ts
   signupImport.ts
@@ -214,6 +217,9 @@ Responsibilities:
 - `ConsentSignatureSection`: local placeholder for final consent and signature UX.
 - `DocumentUploadSlot`: local file selection and validation placeholder.
 - `SignupReviewPanel`: final draft completeness overview before later backend submit.
+- `address/addressNormalizers.ts`: local postcode, house-number, and suffix normalization.
+- `address/addressLookup.ts`: read-only signup address lookup adapter with direct PDOK lookup, optional fallback, memory-only cache, and request dedupe.
+- `address/useAddressLookup.ts`: debounced per-address-block lookup state.
 - `signupValidation.ts`: pure validation rules.
 - `signupImport.ts`: isolated CSV/XLSX parsing later.
 - `signupNormalizers.ts`: maps manual/import rows into canonical draft shapes.
@@ -268,6 +274,17 @@ type SignupLocationDraft = {
   clientId: string;
   address: AddressDraft;
   chargers: ChargerDraft[];
+};
+
+type AddressDraft = {
+  postcode: string;
+  houseNumber: string;
+  suffix: string;
+  street: string;
+  city: string;
+  country: string;
+  bagId: string | null;
+  resolvedLookupKey: string | null;
 };
 
 type ChargerDocumentDraft = {
@@ -523,7 +540,36 @@ No Supabase functions or migrations are changed by this planning document.
 - MID/model eligibility must support later manufacturer/model rules and manual review.
 - Model dropdown values must be sourced later from verified competitor inspection, manufacturer data, or internal eligibility rules.
 - Brand and back-end supplier can be selected from catalog or entered manually via their explicit fallback options.
-- Address checker must later populate street/adres, city/stad, and country/land from postcode, house number, and optional suffix.
+
+## Address Lookup Strategy
+
+- Address lookup in `/aanmelden` is client-first and read-only.
+- The primary lookup path is direct browser lookup against PDOK Locatieserver.
+- This lookup does not invoke Supabase, does not create dossier state, does not save address data, and does not emit audit events.
+- Postcode, house number, and optional suffix are normalized locally before lookup.
+- Postcode must be Dutch format: four digits plus two letters, normalized to `1234AB`.
+- House number accepts digits only and must be between 1 and 9999.
+- Suffix/toevoeging is optional. Current practical validation allows empty, 1-100 with up to three letters, numeric 1-100, or one to three letters. Suffix edge cases need real-world QA later.
+- Street/adres, city/stad, country/land, and `bagId` are derived fields; users do not edit them directly.
+- Derived address fields must not be cleared on a no-op blur normalization. They are cleared only when the normalized lookup key changes from the key that produced the current result.
+- Country is lookup-derived. PDOK currently resolves Dutch addresses as `Nederland`; future lookup providers may return other supported countries.
+- Each address block runs lookup independently and keeps its own loading/error/success state.
+- Lookup is debounced, cached in memory only, and dedupes identical in-flight requests to reduce latency and external calls.
+- No `localStorage`, `sessionStorage`, or hidden browser persistence is used.
+- The Vite app must not call `api-dossier-address-save`, `api-dossier-get`, or old dossier-session endpoints from this draft flow.
+- If direct PDOK lookup fails because of browser, CORS, network, or response-shape issues, an optional future read-only fallback endpoint may be used.
+- The prepared fallback endpoint is `api-signup-address-lookup`.
+- If no clean read-only fallback is configured, the UI shows that address control is temporarily unavailable and keeps validation relaxed for street/city.
+- Final backend address persistence remains a later explicit submit-contract task.
+
+## Signup Field Normalization
+
+- Email uses the pragmatic existing frontend regex: non-space local part, `@`, and a domain with a dot. On blur it is trimmed and lowercased.
+- Phone is optional. If filled, Dutch mobile and landline-style numbers are accepted with spaces, dashes, dots, parentheses, `+31`, or `0031` formatting.
+- Names, company name, and VVE name are title-cased on blur, preserving spaces, hyphens, and apostrophes.
+- Name validation is conservative for now: letters, spaces, hyphens, and apostrophes.
+- KVK number is normalized by removing spaces and must be exactly eight digits.
+- Field-level messages should stay compact; the review panel remains the main final validation summary.
 
 ## Model Catalog Source Strategy
 

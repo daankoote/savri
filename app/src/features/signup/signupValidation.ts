@@ -1,4 +1,15 @@
 import { getBrandLabel, getModelLabel } from "./chargerCatalog";
+import {
+  isValidDutchPostcode,
+  isValidHouseNumber,
+  isValidSuffix,
+} from "./address/addressNormalizers";
+import {
+  isValidEmail,
+  isValidKvkNumber,
+  isValidName,
+  isValidPhone,
+} from "./signupFieldNormalizers";
 import type {
   AddressDraft,
   ChargerDraft,
@@ -6,10 +17,6 @@ import type {
   SignupValidationResult,
   ValidationIssue,
 } from "./signupTypes";
-
-function isPlausibleEmail(value: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
-}
 
 function filled(value: string) {
   return value.trim().length > 0;
@@ -24,10 +31,26 @@ function chargerLabel(charger: ChargerDraft, index: number) {
 function validateAddress(address: AddressDraft, prefix: string, errors: ValidationIssue[]) {
   if (!filled(address.postcode)) {
     errors.push({ id: `${prefix}-postcode`, message: `${prefix}: postcode is verplicht.`, severity: "error" });
+  } else if (!isValidDutchPostcode(address.postcode)) {
+    errors.push({ id: `${prefix}-postcode-format`, message: `${prefix}: gebruik postcode zoals 1234AB.`, severity: "error" });
   }
 
   if (!filled(address.houseNumber)) {
     errors.push({ id: `${prefix}-houseNumber`, message: `${prefix}: huisnummer is verplicht.`, severity: "error" });
+  } else if (!isValidHouseNumber(address.houseNumber)) {
+    errors.push({
+      id: `${prefix}-houseNumber-format`,
+      message: `${prefix}: huisnummer moet uit cijfers tot 9999 bestaan.`,
+      severity: "error",
+    });
+  }
+
+  if (address.suffix && !isValidSuffix(address.suffix)) {
+    errors.push({
+      id: `${prefix}-suffix-format`,
+      message: `${prefix}: controleer de suffix/toevoeging.`,
+      severity: "error",
+    });
   }
 }
 
@@ -47,28 +70,50 @@ export function validateSignupDraft(draft: SignupDraft): SignupValidationResult 
 
   if (!filled(personalInfo.firstName)) {
     errors.push({ id: "firstName", message: "Voornaam is verplicht.", severity: "error" });
+  } else if (!isValidName(personalInfo.firstName)) {
+    errors.push({ id: "firstName-format", message: "Voornaam: gebruik alleen letters, spaties en streepjes.", severity: "error" });
   }
 
   if (!filled(personalInfo.lastName)) {
     errors.push({ id: "lastName", message: "Achternaam is verplicht.", severity: "error" });
+  } else if (!isValidName(personalInfo.lastName)) {
+    errors.push({ id: "lastName-format", message: "Achternaam: gebruik alleen letters, spaties en streepjes.", severity: "error" });
   }
 
   if (!filled(personalInfo.email)) {
     errors.push({ id: "email", message: "E-mailadres is verplicht.", severity: "error" });
-  } else if (!isPlausibleEmail(personalInfo.email)) {
+  } else if (!isValidEmail(personalInfo.email)) {
     errors.push({ id: "email", message: "Controleer het e-mailadres.", severity: "error" });
+  }
+
+  if (personalInfo.phone && !isValidPhone(personalInfo.phone)) {
+    errors.push({ id: "phone", message: "Controleer het telefoonnummer.", severity: "error" });
   }
 
   if (personalInfo.accountType === "zakelijk" && !filled(personalInfo.companyName)) {
     errors.push({ id: "companyName", message: "Bedrijfsnaam is verplicht.", severity: "error" });
+  } else if (personalInfo.accountType === "zakelijk" && !isValidName(personalInfo.companyName)) {
+    errors.push({
+      id: "companyName-format",
+      message: "Bedrijfsnaam: gebruik alleen letters, spaties en streepjes.",
+      severity: "error",
+    });
   }
 
   if (personalInfo.accountType === "vve" && !filled(personalInfo.organizationName)) {
     errors.push({ id: "organizationName", message: "VVE naam is verplicht.", severity: "error" });
+  } else if (personalInfo.accountType === "vve" && !isValidName(personalInfo.organizationName)) {
+    errors.push({
+      id: "organizationName-format",
+      message: "VVE naam: gebruik alleen letters, spaties en streepjes.",
+      severity: "error",
+    });
   }
 
   if (isBusiness && !filled(personalInfo.kvkNumber)) {
     errors.push({ id: "kvkNumber", message: "KVK nummer is verplicht.", severity: "error" });
+  } else if (isBusiness && !isValidKvkNumber(personalInfo.kvkNumber)) {
+    errors.push({ id: "kvkNumber-format", message: "KVK nummer moet uit 8 cijfers bestaan.", severity: "error" });
   }
 
   if (isBusiness && !personalInfo.kvkDocument) {

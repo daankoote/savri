@@ -17,6 +17,8 @@ export function createAddressDraft(): AddressDraft {
     street: "",
     city: "",
     country: "Nederland",
+    bagId: null,
+    resolvedLookupKey: null,
   };
 }
 
