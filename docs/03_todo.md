@@ -26,6 +26,9 @@
 - Later connect the calculator to a real ERE/value model if needed.
 - Signup/intake architecture is documented in `docs/07_signup_intake_architecture.md`.
 - Signup form skeleton is implemented frontend-only in `/app/src/features/signup`.
+- Dashboard/dossier lifecycle architecture is documented in `docs/08_dashboard_dossier_lifecycle_architecture.md`.
+- Signup submit and dashboard bootstrap contract is documented in `docs/09_signup_submit_and_dashboard_contract.md`.
+- Customer dashboard shell exists as mock/read-only frontend under `/dashboard`.
 - Signup skeleton now includes account-type tabs, business/VVE banners, address fields, location tabs for zakelijk/VVE, charger details, document slots, and consent/signature placeholders.
 - Next: strengthen client-side validation and field-level error display.
 - Then add import parser architecture/implementation.
@@ -45,6 +48,22 @@
 - Then verify KVK requirements, including whether document age limits apply.
 - Then review backend API contracts before wiring.
 - Then wire backend only in a separate backend task.
+- Browser-QA the dashboard sidebar at `/dashboard` on desktop and mobile.
+- Browser-QA the active private charger card, document pills, consent/download placeholders, and kWh upload placeholder.
+- Browser-QA charger row selection and inner accordion calm layout.
+- Browser-QA that dashboard charger rows and inner sections are collapsed by default and toggle closed cleanly.
+- Browser-QA that top charger rows use status pills while inner dashboard rows/cards use status dots.
+- Browser-QA the calmer active private dashboard: read-only rows, evidence cards, grouped kWh, and Aanpassingen buttons.
+- Later decide auth model before dashboard protection.
+- Later define backend dashboard read model.
+- Later wire signup submit to dashboard bootstrap only after contract review.
+- Later define business/VVE dashboard detail pages.
+- Later define Contact ENVAL AI bot/message flow.
+- Later define regulatory handling for Verhuizing and Zakelijk rijden.
+- Later define Aanpassingen flows for Verhuizing and Zakelijk rijden.
+- Later implement ENVAL release/edit mode using signup form components.
+- Later define report download backend for audit report and jaaroverzicht.
+- Later research provider/backend connection flow for kWh readout.
 
 ## Phase 2: Public Commercial Pages
 

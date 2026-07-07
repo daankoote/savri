@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactElement } from "react";
 import { ContactPage } from "./pages/ContactPage";
+import { DashboardPage } from "./pages/DashboardPage";
 import { EreInfoPage } from "./pages/EreInfoPage";
 import { HomePage } from "./pages/HomePage";
 import { NotFoundPage } from "./pages/NotFoundPage";
@@ -25,6 +26,7 @@ const routes = {
   "/contact": ContactPage,
   "/privacy": PrivacyPage,
   "/voorwaarden": TermsPage,
+  "/dashboard": DashboardPage,
 } as const;
 
 type PageComponent = (props: RoutedPageProps) => ReactElement;

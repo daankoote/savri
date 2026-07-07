@@ -1,0 +1,60 @@
+type DashboardSidebarProps = {
+  activeSection: "active" | "history" | "contact";
+  onSelectSection: (section: "active" | "history" | "contact") => void;
+};
+
+export function DashboardSidebar({ activeSection, onSelectSection }: DashboardSidebarProps) {
+  return (
+    <aside className="portal-sidebar" aria-label="Dashboard navigatie">
+      <div className="portal-sidebar-brand">
+        <span className="brand-symbol" aria-hidden="true">E</span>
+        <div>
+          <strong>ENVAL</strong>
+          <small>Klantportaal</small>
+        </div>
+      </div>
+
+      <div className="portal-user-block">
+        <strong>Daan Koote</strong>
+        <span>daankoote@gmail.com</span>
+      </div>
+
+      <nav className="portal-nav" aria-label="Portaal menu">
+        <button className="button button-primary portal-primary-action" type="button">
+          Nieuwe aanvraag
+        </button>
+        <button
+          className={activeSection === "active" ? "portal-nav-item portal-nav-item-active" : "portal-nav-item"}
+          onClick={() => onSelectSection("active")}
+          type="button"
+        >
+          Actief
+        </button>
+        <button
+          className={activeSection === "history" ? "portal-nav-item portal-nav-item-active" : "portal-nav-item"}
+          onClick={() => onSelectSection("history")}
+          type="button"
+        >
+          History
+        </button>
+      </nav>
+
+      <div className="portal-sidebar-divider" />
+
+      <button
+        className={activeSection === "contact" ? "portal-nav-item portal-nav-item-active" : "portal-nav-item"}
+        onClick={() => onSelectSection("contact")}
+        type="button"
+      >
+        Contact ENVAL
+      </button>
+
+      <div className="portal-sidebar-divider" />
+
+      <div className="portal-sidebar-bottom">
+        <button className="portal-nav-item" type="button">Settings</button>
+        <button className="portal-nav-item" type="button">Uitloggen</button>
+      </div>
+    </aside>
+  );
+}
