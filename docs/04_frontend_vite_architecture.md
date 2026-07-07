@@ -101,6 +101,8 @@ Rules:
 - Dashboard now uses a left-sidebar customer portal layout.
 - The first real dashboard content focus is the active Particulier/private charger page.
 - Business and VVE detail pages are deferred until the private active page is right.
+- Current dashboard files are `DashboardPageShell`, `DashboardSidebar`, `ActivePrivateDashboard`, `ContactChoicePanel`, and `TodoPlaceholderPanel`.
+- Older asset-overview dashboard components and mock-data files were removed during cleanup because they were not used by `/dashboard`.
 - The active private dashboard uses full-width charger rows/tabs that are collapsed by default.
 - Charger rows can be expanded/collapsed, with only one charger open at a time.
 - The expanded charger area uses an inner accordion that is also collapsed by default and can be toggled closed.

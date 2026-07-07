@@ -92,69 +92,6 @@
   gap: var(--space-5);
 }
 
-.dashboard-shell {
-  min-height: calc(100vh - 73px);
-}
-
-.dashboard-hero-inner {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-8);
-}
-
-.dashboard-content {
-  display: grid;
-  gap: var(--space-6);
-  padding: var(--space-8) 0 var(--space-16);
-}
-
-.dashboard-summary-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-4);
-}
-
-.dashboard-main-grid {
-  display: grid;
-  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.6fr);
-  gap: var(--space-5);
-  align-items: start;
-}
-
-.dashboard-side-column,
-.asset-list,
-.request-list,
-.asset-detail-grid,
-.compact-list,
-.timeline-list,
-.readable-check-list {
-  display: grid;
-  gap: var(--space-4);
-}
-
-.asset-detail-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.dashboard-section-card-wide {
-  grid-column: 1 / -1;
-}
-
-.dashboard-action-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-}
-
-.dashboard-hero-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: flex-end;
-  gap: var(--space-3);
-}
-
 .portal-shell {
   display: grid;
   min-height: 100vh;
@@ -280,10 +217,7 @@
 @media (max-width: 960px) {
   .benefit-grid,
   .faq-list,
-  .calculator-layout,
-  .dashboard-summary-grid,
-  .dashboard-main-grid,
-  .asset-detail-grid {
+  .calculator-layout {
     grid-template-columns: 1fr;
   }
 
@@ -300,15 +234,6 @@
   .header-inner {
     align-items: flex-start;
     flex-direction: column;
-  }
-
-  .dashboard-hero-inner {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .dashboard-hero-actions {
-    justify-content: flex-start;
   }
 
   .step-grid {
