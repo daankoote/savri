@@ -16,6 +16,23 @@ This document defines:
 
 The old `dossier.html` wizard and current `api-dossier-*` endpoints are source material only. They must not be wired directly into the new app without contract redesign.
 
+Product role:
+
+- ENVAL is now a customer-facing commercial ERE inboekservice.
+- ENVAL begeleidt en dient/inboekt namens klant of via een aangewezen partij binnen de voorwaarden.
+- ENVAL is geen verificateur.
+- ENVAL is geen certificeerder.
+- ENVAL gives no guarantee of ERE award, acceptance, payout, revenue, timing, certification, or document approval.
+- The result-based fee model requires a final legal definition of "result" before production use.
+
+Public copy boundary:
+
+- This product role and audit doctrine is contract, legal, internal, and auditor-facing guidance. It is not public homepage, signup, dashboard, pricing, or marketing copy.
+- Public copy must be simple, commercial, customer-oriented, and customer-safe.
+- Public copy may say: "ENVAL helpt je met het aanmeld- en inboekproces.", "Je betaalt alleen bij resultaat.", "Geen garantie op resultaat.", and "Wij zorgen dat je dossier controleerbaar en compleet wordt opgebouwd."
+- Public copy must avoid "anti-fraude-laag", "audit/evidence layer", "external-party audit reconstruction", "backend source-of-truth", and "verificateur/certificeerder" except in legal, FAQ, or terms context.
+- Legal/audit doctrine remains valid for terms, internal documentation, service descriptions, and auditor-facing documentation.
+
 ## 2. Submit Principle
 
 `Start dossier` should become one controlled submit action.
@@ -31,6 +48,10 @@ Rules:
 - Submit creates a reviewable dossier; it does not guarantee eligibility.
 - Submit does not guarantee ERE award, payout, revenue, timing, certification, or document acceptance.
 - Customer-facing errors must be safe and concise.
+- Frontend may assist; backend decides.
+- Frontend prechecks, PDOK lookup, field validation, parsing, compression, and previews are UX and cost/latency aids only.
+- Backend remains source of truth for validation, normalization, authorization, document hash confirmation, audit, and lifecycle decisions.
+- All final lifecycle decisions are backend/audit based.
 
 ## 3. Current Frontend Payload
 
@@ -57,6 +78,7 @@ Current frontend concepts:
 - Document placeholders are linked to charger client IDs, not array index.
 - Files are selected locally only; no storage upload happens yet.
 - Address lookup is client-first and read-only.
+- Client-side prechecks are not audit truth until submitted and accepted by backend.
 
 Relevant draft shape:
 
@@ -374,6 +396,8 @@ Rules:
 - Internal audit events can be detailed and technical.
 - Customer timeline events must be concise and readable.
 - Do not expose raw audit rows, actor refs, request metadata, or internal payloads in the dashboard.
+- Raw audit is not shown directly to the customer.
+- Customer timeline is a curated projection from internal events, review decisions, and customer-visible state.
 - Audit event metadata should follow the legacy CORE function standard where relevant: request ID, idempotency key, actor reference, environment, stage/status/reason.
 
 ## 11. Idempotency And Failure Handling
@@ -438,6 +462,7 @@ Rules:
 
 - No secrets client-side.
 - Server validates all fields again.
+- Frontend is never trusted as truth.
 - Auth/RLS boundary must be designed before backend wiring.
 - Customer can only see their own dossier.
 - Dashboard should not show raw audit rows.

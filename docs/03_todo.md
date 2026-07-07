@@ -5,6 +5,7 @@
 - Lock ENVAL as a commercial ERE inboekservice, not just dossier infrastructure.
 - Lock the intended 10% success fee model.
 - Treat `docs/06_fee_model_and_service_terms.md` as the working commercial source of truth.
+- Legal/result definition for result-based fee.
 - Define the exact "success" trigger for the 10% fee.
 - Define whether the 10% applies on a gross or net basis.
 - Define VAT/tax wording if relevant later.
@@ -13,6 +14,8 @@
 - Define safe public claims around eligibility, fees, documents, and ERE inboeking.
 - Explicitly avoid guarantees around approval, payout, timing, or certification.
 - Clarify legal and commercial responsibility before final terms go live.
+- Public copy pass: translate legal/audit doctrine into customer-safe website language before production.
+- Resolve legacy neutral-infrastructure wording in `docs/documenten` before production copy.
 
 ## Phase 1: Routing And Page Architecture
 
@@ -107,6 +110,7 @@
 ## Phase 5: Audit-Worthy Backend Contract Review
 
 - Review Edge Function request/response contracts before wiring `/app`.
+- Audit/evidence/anti-fraud backend doctrine must be enforced in schema and endpoints.
 - Confirm customer records, eligibility answers, documents, consents, status transitions, audit events, exports, retention, privacy, and evidence versioning needs.
 - Confirm fee-model fields: fee model/version, success percentage, accepted terms/privacy versions, payout/value realization event, fee calculation event, and fee-relevant audit events.
 - Confirm backend alignment with `docs/06_fee_model_and_service_terms.md`.

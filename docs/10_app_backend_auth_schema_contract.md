@@ -28,13 +28,83 @@ Deferred:
 - Whether old users/dossiers get migrated, bridged, or kept legacy-only.
 - Whether dashboard draft saving exists before final submit.
 
-Conflict to resolve:
+Resolved product role decision:
 
-- Historical docs in `docs/documenten/00_GLOBAL.md` and `docs/documenten/01_SYSTEM_MAP.md` say ENVAL is not an inboeker and is a neutral infrastructure layer.
-- Current `/app` product direction says ENVAL is a customer-facing commercial ERE inboekservice.
-- This must be settled explicitly before production legal copy, terms, fee terms, and backend status names go live.
+- ENVAL is now a customer-facing commercial ERE inboekservice.
+- ENVAL begeleidt en dient/inboekt namens klant of via een aangewezen partij.
+- ENVAL is geen verificateur.
+- ENVAL is geen certificeerder.
+- ENVAL gives no guarantee of ERE award, acceptance, payout, revenue, timing, certification, or document approval.
+- ENVAL keeps the internal audit/evidence layer separate from customer-facing statuses and customer timeline copy.
+- The result-based fee model remains subject to final legal definition of "result", fee base, fee moment, partial success, reversal, and clawback.
+- Historical docs in `docs/documenten/00_GLOBAL.md` and `docs/documenten/01_SYSTEM_MAP.md` still contain the old neutral-infrastructure position and need a controlled update before production copy.
 
-## 2. Auth Model
+### Public Copy Boundary
+
+The resolved product role and audit doctrine are internal, legal, terms, and auditor-facing guidance. They are not public homepage, signup, dashboard, pricing, or marketing copy.
+
+Public copy must stay simple, commercial, customer-oriented, and customer-safe.
+
+Public copy may say:
+
+- "ENVAL helpt je met het aanmeld- en inboekproces."
+- "Je betaalt alleen bij resultaat."
+- "Geen garantie op resultaat."
+- "Wij zorgen dat je dossier controleerbaar en compleet wordt opgebouwd."
+
+Public copy must avoid:
+
+- "anti-fraude-laag"
+- "audit/evidence layer"
+- "external-party audit reconstruction"
+- "backend source-of-truth"
+- "verificateur/certificeerder", except in legal, FAQ, or terms context
+
+Legal/audit doctrine remains valid for internal docs, legal terms, service descriptions, and auditor-facing documentation.
+
+## 2. Audit, Evidence & Anti-Fraud Doctrine
+
+Frontend may assist; backend decides.
+
+Doctrine:
+
+1. Frontend can optimize, guide, prefill, precheck, compress, parse, and reduce latency/cost.
+2. Frontend is never trusted as truth.
+3. Backend must validate, normalize, authorize, hash, audit, and decide.
+4. Every fraud-relevant or audit-relevant step must be server-checkable and audit-logged.
+5. Audit/evidence layer is internal and technical.
+6. Customer timeline/status is a curated projection, not raw audit.
+7. ENVAL makes no compliance, certification, verification, or guaranteed-result claims.
+8. Frontend prechecks are UX support only. They do not create final eligibility, evidence, fee, result, or acceptance truth.
+9. Final lifecycle decisions must be backend/audit based.
+
+An external-party audit must be able to reconstruct:
+
+- who acted
+- when
+- from what authenticated/session context
+- what was submitted
+- what was transformed client-side
+- what was verified server-side
+- what was accepted or rejected
+- what evidence, hash, version, and legal text were used
+- what result or fee event was later based on
+
+Fraud controls are backend concerns:
+
+- idempotency
+- rate limits and abuse controls
+- document hash confirm
+- immutable document/evidence versions
+- legal text versioning
+- fee terms versioning
+- MID/year claim discipline
+- support correction and revision flow
+- anti-enumeration for recovery
+- RLS and server-only sensitive tables
+- raw audit not exposed to customers
+
+## 3. Auth Model
 
 ### Customer Identity
 
@@ -102,7 +172,7 @@ Customer and ENVAL support/admin access are separate concerns.
 - Support/admin actions must produce internal audit events and, where relevant, customer-readable timeline events.
 - Do not expose internal ENVAL review controls in customer dashboard until role-based access is implemented.
 
-## 3. New Backend Contract Boundary
+## 4. New Backend Contract Boundary
 
 All names below are conceptual. Do not create functions until contracts and schema are accepted.
 
@@ -122,12 +192,13 @@ All names below are conceptual. Do not create functions until contracts and sche
 Contract rules:
 
 - No direct `/app` calls to old `api-dossier-*` unless a future wrapper/redesign explicitly maps old state into the new contract.
+- Frontend may assist; backend decides.
 - Writes require server-side validation and service-role execution.
 - Writes require `Idempotency-Key`.
 - Customer-facing errors must be concise and must not expose SQL, RLS, storage paths, or internal audit payloads.
 - Internal-only endpoints must be impossible to call as a customer role.
 
-## 4. Future Schema Modules
+## 5. Future Schema Modules
 
 | Module | Purpose | Customer-visible | Audit relevance | Old reuse | Risks |
 |---|---|---:|---|---|---|
@@ -158,7 +229,7 @@ Contract rules:
 | `customer_timeline_events` | Curated readable customer timeline. | Yes | Medium | Projection from audit, not raw audit. | Hiding too much or exposing too much. |
 | `retention_minimization_events` | Cleanup/minimization proof and lifecycle. | No, sometimes status | High | Adapt `retention_cleanup_events`. | PII in tombstones, premature deletion. |
 
-## 5. Signup Submit Contract
+## 6. Signup Submit Contract
 
 Target normalized payload from `/aanmelden`:
 
@@ -292,7 +363,7 @@ Must be idempotent:
 - client document slot IDs
 - dashboard access email issuance must not duplicate on retry
 
-## 6. Dashboard Read Model
+## 7. Dashboard Read Model
 
 `/dashboard` should read a customer-safe projection, not raw database tables.
 
@@ -316,9 +387,10 @@ Hard rule:
 
 - Do not expose raw internal audit events directly to customers.
 - `customer_timeline_events` must be curated/readable projection from internal events and review decisions.
+- Customer timeline copy must stay separate from internal audit/evidence truth.
 - Internal actor refs, request IDs, IP, UA, storage paths, SQL errors, and raw analysis payloads stay internal.
 
-## 7. Audit And Lifecycle
+## 8. Audit And Lifecycle
 
 ### Internal Audit Events
 
@@ -461,7 +533,7 @@ Required concepts:
 - customer-visible fee summary
 - internal audit trail for fee-relevant changes
 
-## 8. Migration / Coexistence Strategy
+## 9. Migration / Coexistence Strategy
 
 Recommendation:
 
@@ -484,9 +556,9 @@ Coexistence phases:
 6. Migration/cutover plan.
 7. Production switch only after approval.
 
-## 9. Risks / Open Decisions
+## 10. Risks / Open Decisions
 
-- Role/positioning drift: historical canonical docs say ENVAL is not an inboeker; current `/app` direction says ENVAL is a customer-facing inboekservice.
+- Legacy wording drift: historical canonical docs still say ENVAL is not an inboeker; current `/app` direction now resolves ENVAL as a customer-facing inboekservice.
 - Auth choice risk: Supabase Auth vs custom magic link affects RLS, session storage, recovery, and support access.
 - RLS risk: service-role Edge writes are safer for writes, but customer reads still need strict access boundaries.
 - Duplicate customer/dossier creation: signup retries and repeated emails need deterministic idempotency/dedupe.
@@ -500,7 +572,7 @@ Coexistence phases:
 - Backend supplier/provider risk: provider connection flow for kWh readout still needs research.
 - Direct PDOK client lookup risk: production browser/CORS behavior must be tested; backend submit still validates.
 
-## 10. Recommended Implementation Sequence
+## 11. Recommended Implementation Sequence
 
 1. Make an explicit product/legal role decision for ENVAL as `inboekservice` wording versus legacy neutral infrastructure wording.
 2. Finalize auth decision: Supabase Auth hybrid, exact magic-link UX, recovery, support/admin boundary, RLS approach.
@@ -513,4 +585,3 @@ Coexistence phases:
 9. Implement support/messages/kWh/result/fee lifecycle.
 10. Wire `/app` to backend only after the above is stable.
 11. Plan production migration/cutover separately; keep old root/static production untouched until approved.
-
