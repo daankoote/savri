@@ -141,7 +141,7 @@ export function ChargerForm({ charger, onChange }: ChargerFormProps) {
       </label>
 
       <label className="field">
-        <span>Back-end leverancier</span>
+        <span>Back-end leverancier (optioneel)</span>
         <select
           onChange={(event) => updateBackendSupplier(event.target.value)}
           value={charger.backendSupplier}

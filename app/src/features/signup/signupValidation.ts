@@ -200,14 +200,6 @@ export function validateSignupDraft(draft: SignupDraft): SignupValidationResult 
         });
       }
 
-      if (!filled(charger.backendSupplier)) {
-        errors.push({
-          id: `${charger.clientId}-backend-supplier`,
-          message: `${label}: back-end leverancier is verplicht.`,
-          severity: "error",
-        });
-      }
-
       if (charger.backendSupplier === "Custom (nieuwe toevoegen)" && !filled(charger.manualBackendSupplier)) {
         errors.push({
           id: `${charger.clientId}-manual-backend-supplier`,
