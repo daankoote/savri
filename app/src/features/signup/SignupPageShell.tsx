@@ -8,6 +8,7 @@ import { PersonalInfoSection } from "./PersonalInfoSection";
 import { SignupReviewPanel } from "./SignupReviewPanel";
 import {
   createChargerDraft,
+  createConsentDraft,
   createDocumentDraftsForCharger,
   createLocationDraft,
   createPersonalInfoDraft,
@@ -16,6 +17,7 @@ import type {
   AddressDraft,
   ChargerDocumentDraft,
   ChargerDraft,
+  ConsentDraft,
   DocumentsByChargerId,
   PersonalInfoDraft,
   SignupLocationDraft,
@@ -41,6 +43,7 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
   const [documentsByChargerId, setDocumentsByChargerId] = useState<DocumentsByChargerId>(() =>
     createInitialDocuments(),
   );
+  const [consents, setConsents] = useState<ConsentDraft>(() => createConsentDraft());
   const [activeLocationId, setActiveLocationId] = useState(firstLocation.clientId);
   const [activeTab, setActiveTab] = useState<SignupTab>("manual");
   const [review, setReview] = useState<SignupValidationResult | null>(null);
@@ -50,8 +53,9 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
       personalInfo,
       locations,
       documentsByChargerId,
+      consents,
     }),
-    [documentsByChargerId, locations, personalInfo],
+    [consents, documentsByChargerId, locations, personalInfo],
   );
 
   const setPersonalInfo = (next: PersonalInfoDraft) => {
@@ -208,7 +212,7 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
             documentsByChargerId={documentsByChargerId}
             onDocumentChange={updateDocument}
           />
-          <ConsentSignatureSection />
+          <ConsentSignatureSection value={consents} onChange={setConsents} />
 
           <section className="signup-section">
             <div className="signup-actions">

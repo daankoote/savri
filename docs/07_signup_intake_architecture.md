@@ -214,7 +214,7 @@ Responsibilities:
 - `ChargerCard`: one charger summary and edit/remove actions.
 - `ChargerForm`: fields for one charger draft.
 - `ChargerDocumentsSection`: generated document checklist per charger.
-- `ConsentSignatureSection`: local placeholder for final consent and signature UX.
+- `ConsentSignatureSection`: local consent/terms bundle checkbox with draft legal popups. Legal copy is still draft until reviewed.
 - `DocumentUploadSlot`: local file selection and validation placeholder.
 - `SignupReviewPanel`: final draft completeness overview before later backend submit.
 - `address/addressNormalizers.ts`: local postcode, house-number, and suffix normalization.
@@ -235,6 +235,10 @@ type SignupDraft = {
   documentsByChargerId: Record<string, ChargerDocumentDraft[]>;
   consents: ConsentDraft;
   validation: SignupValidationState;
+};
+
+type ConsentDraft = {
+  termsBundleAccepted: boolean;
 };
 
 type PersonalInfoDraft = {
@@ -451,10 +455,28 @@ Validation layers:
 
 4. Submission readiness
    - all required sections complete
-   - required consents checked
+   - bundled terms/privacy/fee checkbox accepted
    - document slots selected/ready where required
 
 Client validation is not final truth. Backend validation still has to re-check all relevant fields during the later final submit task.
+
+## Consent And Terms Section
+
+The current `/aanmelden` frontend uses one local consent field: `termsBundleAccepted`.
+
+The visible checkbox bundles acceptance for:
+
+- algemene voorwaarden
+- privacyverklaring
+- ENVAL fee
+
+The linked words open local draft popups in the current page. There is no route, PDF, download, backend call, or persisted acceptance.
+
+Data processing, no-guarantee language, and control/verifier permission are currently covered inside draft legal text and still need legal review. Legal review may later require separate consent records.
+
+No fixed consent duration is offered at this stage. Contract duration, profitability, and consent duration are open legal/commercial decisions.
+
+Backend later must store accepted legal versions, content hashes, language, timestamps, customer identity, dossier scope, and request metadata. It may split the bundled frontend acceptance into separate legal/consent records if legal review requires it.
 
 ## MID, Model, And Manufacturer Check Architecture
 
@@ -520,6 +542,7 @@ Later backend review must decide whether to:
 - support dynamic charger count without the old UI max 4
 - keep or replace the current backend 1-10 charger count rule
 - version fee model, terms, privacy, and consent copy
+- store accepted legal versions, content hashes, language, timestamps, customer identity, dossier scope, and request metadata
 - support document requirements by charger and by rule version
 - emit audit events for final submit and rejected final submit
 

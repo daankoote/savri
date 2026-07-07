@@ -219,8 +219,15 @@ Required acceptance types:
 - fee/success terms
 - no-guarantee acknowledgement
 - mandate/verifier/NEa/CAR-related permission
-- consent duration: "Hoe lang wilt u toestemming geven?"
 - communication permission for email/dashboard notifications
+
+Current frontend consent state is:
+
+- `termsBundleAccepted`
+
+Current frontend UI bundles terms, privacy, and ENVAL fee behind one checkbox and shows draft legal popups. Final backend design may split this into separate versioned legal acceptances after legal review.
+
+No fixed consent duration is a current frontend requirement. Consent duration remains an open legal/commercial decision if needed later.
 
 For every acceptance, store:
 
@@ -510,4 +517,3 @@ E. Submit endpoint implementation later
 
 - Implement only after the above contracts are accepted.
 - Do not wire the new app to legacy endpoints as a shortcut.
-

@@ -66,10 +66,15 @@ export type ChargerDocumentDraft = {
 
 export type DocumentsByChargerId = Record<string, ChargerDocumentDraft[]>;
 
+export type ConsentDraft = {
+  termsBundleAccepted: boolean;
+};
+
 export type SignupDraft = {
   personalInfo: PersonalInfoDraft;
   locations: SignupLocationDraft[];
   documentsByChargerId: DocumentsByChargerId;
+  consents: ConsentDraft;
 };
 
 export type ValidationIssue = {

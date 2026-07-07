@@ -29,7 +29,7 @@
 - Dashboard/dossier lifecycle architecture is documented in `docs/08_dashboard_dossier_lifecycle_architecture.md`.
 - Signup submit and dashboard bootstrap contract is documented in `docs/09_signup_submit_and_dashboard_contract.md`.
 - Customer dashboard shell exists as mock/read-only frontend under `/dashboard`.
-- Signup skeleton now includes account-type tabs, business/VVE banners, address fields, location tabs for zakelijk/VVE, charger details, document slots, and consent/signature placeholders.
+- Signup skeleton now includes account-type tabs, business/VVE banners, address fields, location tabs for zakelijk/VVE, charger details, document slots, and local-only consent/terms checklist.
 - Next: strengthen client-side validation and field-level error display.
 - Then add import parser architecture/implementation.
 - Then refine document upload UX/details.
@@ -39,6 +39,7 @@
 - Next: browser-QA direct PDOK lookup with valid, not-found, ambiguous suffix, and network/CORS failure cases.
 - Browser-QA that Adres/Stad/Land remain visible after a successful lookup and no-op blur.
 - Browser-QA postcode, huisnummer, suffix, email, phone, name, and KVK validation messages.
+- Browser-QA single consent checkbox and legal draft popups on Start dossier.
 - Browser-QA suffix edge cases, including apartment/addition values seen in real customer addresses.
 - Later define future country/provider support beyond the current Dutch PDOK lookup.
 - Later test production browser/CORS behavior against PDOK before relying on it publicly.
@@ -92,6 +93,9 @@
 - Current skeleton has local-only file inputs; no storage or upload.
 - Later define exact KVK-uittreksel age requirement if required for zakelijk/VVE.
 - Later define exact consent text and signature implementation.
+- Later finalize legal copy for terms, privacy, fee, no-guarantee, and control/mandate permission.
+- Later decide whether control permission must be separate from the bundled checkbox.
+- Later decide if and when consent duration is needed.
 - Later define upload, consent, and signature implementation details before production.
 - Define the exact year overview/dossier output customers receive after result.
 - Design upload UX before wiring backend calls.

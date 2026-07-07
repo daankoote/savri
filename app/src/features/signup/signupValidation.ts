@@ -58,6 +58,18 @@ function hasModel(charger: ChargerDraft) {
   return charger.model === "manual" ? filled(charger.manualModel) : filled(charger.model);
 }
 
+function validateConsents(draft: SignupDraft, errors: ValidationIssue[]) {
+  const { consents } = draft;
+
+  if (!consents.termsBundleAccepted) {
+    errors.push({
+      id: "consent-terms-bundle",
+      message: "Accepteer de voorwaarden voordat ENVAL uw dossier kan starten.",
+      severity: "error",
+    });
+  }
+}
+
 export function validateSignupDraft(draft: SignupDraft): SignupValidationResult {
   const errors: ValidationIssue[] = [];
   const warnings: ValidationIssue[] = [];
@@ -221,6 +233,8 @@ export function validateSignupDraft(draft: SignupDraft): SignupValidationResult 
       }
     });
   });
+
+  validateConsents(draft, errors);
 
   return {
     canStartDossier: errors.length === 0,

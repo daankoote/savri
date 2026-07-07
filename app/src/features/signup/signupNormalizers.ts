@@ -2,6 +2,7 @@ import type {
   AddressDraft,
   ChargerDocumentDraft,
   ChargerDraft,
+  ConsentDraft,
   DocumentType,
   PersonalInfoDraft,
   SignupLocationDraft,
@@ -34,6 +35,12 @@ export function createPersonalInfoDraft(): PersonalInfoDraft {
     phone: "",
     address: createAddressDraft(),
     kvkDocument: null,
+  };
+}
+
+export function createConsentDraft(): ConsentDraft {
+  return {
+    termsBundleAccepted: false,
   };
 }
 
