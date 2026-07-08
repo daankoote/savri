@@ -1,6 +1,6 @@
 // supabase/functions/api-app-signup-submit/index.ts
 //
-// DB-write v2 foundation for the future /app signup submit endpoint.
+// DB-write v3 foundation for the future /app signup submit endpoint.
 // Frontend may assist; backend decides.
 //
 // Foundation migration must be applied/tested before enabling production writes.
@@ -31,8 +31,41 @@ type SignupSubmitPayload = {
 };
 
 const ACCOUNT_TYPES = new Set(["particulier", "zakelijk", "vve"]);
-const IDEMPOTENCY_SCOPE = "api-app-signup-submit:v2";
+const IDEMPOTENCY_SCOPE = "api-app-signup-submit:v3";
 const IDEMPOTENCY_TTL_HOURS = 24;
+
+const LEGAL_ACCEPTANCE_SPECS = [
+  {
+    payloadKey: "consentBundleAcceptance",
+    acceptance_type: "consent_bundle",
+    defaultVersionRef: "signup-consent-v1",
+    required: true,
+  },
+  {
+    payloadKey: "feeTermsAcceptance",
+    acceptance_type: "fee_terms",
+    defaultVersionRef: "fee-terms-v1",
+    required: true,
+  },
+  {
+    payloadKey: "privacyTermsAcceptance",
+    acceptance_type: "privacy_terms",
+    defaultVersionRef: "privacy-terms-v1",
+    required: false,
+  },
+  {
+    payloadKey: "serviceTermsAcceptance",
+    acceptance_type: "service_terms",
+    defaultVersionRef: "service-terms-v1",
+    required: false,
+  },
+  {
+    payloadKey: "mandateAuthorizationAcceptance",
+    acceptance_type: "mandate_authorization",
+    defaultVersionRef: "mandate-authorization-v1",
+    required: false,
+  },
+] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
@@ -136,6 +169,38 @@ type NormalizedCharger = {
 type NormalizationResult =
   | { ok: true; locations: NormalizedLocation[]; location_count: number; charger_count: number }
   | { ok: false; message: string };
+
+type InsertedChargerRef = {
+  id: string;
+  location_id: string;
+  client_charger_id: string;
+};
+
+type DocumentSlotRow = {
+  dossier_id: string;
+  location_id: string | null;
+  charger_id: string | null;
+  client_slot_id: string;
+  document_type: string;
+  status: "expected";
+  required: boolean;
+  title: string;
+  metadata: Record<string, unknown>;
+};
+
+type LegalAcceptanceRow = {
+  dossier_id: string;
+  customer_id: string;
+  acceptance_type: string;
+  status: "accepted";
+  version_ref: string;
+  version_hash: string | null;
+  actor_type: "customer";
+  actor_ref: string;
+  ip_hash: string | null;
+  user_agent_hash: string | null;
+  evidence_data: Record<string, unknown>;
+};
 
 function asRecordArray(value: unknown): Record<string, unknown>[] {
   return Array.isArray(value) ? value.filter(isRecord) : [];
@@ -370,6 +435,116 @@ function normalizeLocationsAndChargers(body: SignupSubmitPayload): Normalization
     location_count: normalizedLocations.length,
     charger_count,
   };
+}
+
+function uniqueStrings(values: string[]): string[] {
+  return Array.from(new Set(values)).sort();
+}
+
+function isHexSha256(value: string): boolean {
+  return /^[a-f0-9]{64}$/i.test(value);
+}
+
+function acceptanceVersionRef(acceptance: Record<string, unknown>, fallback: string): string {
+  return pickString(acceptance, ["versionRef", "version_ref", "version"]) || fallback;
+}
+
+function acceptanceVersionHash(acceptance: Record<string, unknown>): string | null {
+  const hash = pickString(acceptance, ["versionHash", "version_hash"]);
+  return hash && isHexSha256(hash) ? hash.toLowerCase() : null;
+}
+
+function buildDocumentSlotRows(
+  dossier_id: string,
+  locations: NormalizedLocation[],
+  locationIdByClientId: Map<string, string>,
+  chargerIdByClientId: Map<string, InsertedChargerRef>,
+) {
+  const rows: DocumentSlotRow[] = [{
+    dossier_id,
+    location_id: null,
+    charger_id: null,
+    client_slot_id: "dossier-contract-or-mandate",
+    document_type: "mandate_or_authorization",
+    status: "expected",
+    required: true,
+    title: "Machtiging of akkoord voor verwerking",
+    metadata: { source: "signup_submit" },
+  }];
+
+  for (const location of locations) {
+    const location_id = locationIdByClientId.get(location.client_location_id) || null;
+
+    for (const charger of location.chargers) {
+      const insertedCharger = chargerIdByClientId.get(charger.client_charger_id);
+      if (!insertedCharger?.id || !location_id) continue;
+
+      const metadata = {
+        source: "signup_submit",
+        client_location_id: location.client_location_id,
+        client_charger_id: charger.client_charger_id,
+      };
+
+      rows.push({
+        dossier_id,
+        location_id,
+        charger_id: insertedCharger.id,
+        client_slot_id: `charger-${charger.client_charger_id}-mid-evidence`,
+        document_type: "mid_meter_evidence",
+        status: "expected",
+        required: true,
+        title: "MID bewijs laadpaal",
+        metadata,
+      });
+
+      rows.push({
+        dossier_id,
+        location_id,
+        charger_id: insertedCharger.id,
+        client_slot_id: `charger-${charger.client_charger_id}-invoice-or-ownership`,
+        document_type: "invoice_or_ownership_evidence",
+        status: "expected",
+        required: true,
+        title: "Factuur of eigendomsbewijs laadpaal",
+        metadata,
+      });
+    }
+  }
+
+  return rows;
+}
+
+function buildLegalAcceptanceRows(
+  body: SignupSubmitPayload,
+  dossier_id: string,
+  customer_id: string,
+  meta: { ip_hash: string | null; user_agent_hash: string | null },
+) {
+  const rows: LegalAcceptanceRow[] = [];
+
+  for (const spec of LEGAL_ACCEPTANCE_SPECS) {
+    const acceptance = getNestedRecord(body, spec.payloadKey);
+    if (!acceptance || acceptance.accepted !== true) continue;
+
+    rows.push({
+      dossier_id,
+      customer_id,
+      acceptance_type: spec.acceptance_type,
+      status: "accepted",
+      version_ref: acceptanceVersionRef(acceptance, spec.defaultVersionRef),
+      version_hash: acceptanceVersionHash(acceptance),
+      actor_type: "customer",
+      actor_ref: customer_id,
+      ip_hash: meta.ip_hash,
+      user_agent_hash: meta.user_agent_hash,
+      evidence_data: {
+        source: "signup_submit",
+        accepted: true,
+      },
+    });
+  }
+
+  return rows;
 }
 
 async function parseJsonBody(req: Request): Promise<{ ok: true; body: SignupSubmitPayload } | { ok: false }> {
@@ -727,11 +902,52 @@ serve(async (req) => {
     return appErrorResponse(req, 500, "Aanmelding tijdelijk niet beschikbaar.", "service_unavailable");
   }
 
-  const { error: chargerInsertError } = await SB
+  const { data: insertedChargers, error: chargerInsertError } = await SB
     .from("app_dossier_chargers")
-    .insert(chargerRows);
+    .insert(chargerRows)
+    .select("id,location_id,client_charger_id");
 
-  if (chargerInsertError) {
+  if (chargerInsertError || !Array.isArray(insertedChargers)) {
+    return appErrorResponse(req, 500, "Aanmelding tijdelijk niet beschikbaar.", "service_unavailable");
+  }
+
+  const chargerIdByClientId = new Map<string, InsertedChargerRef>();
+  for (const charger of insertedChargers) {
+    if (charger?.id && charger?.location_id && charger?.client_charger_id) {
+      chargerIdByClientId.set(String(charger.client_charger_id), {
+        id: String(charger.id),
+        location_id: String(charger.location_id),
+        client_charger_id: String(charger.client_charger_id),
+      });
+    }
+  }
+
+  if (chargerIdByClientId.size !== normalizedSubmit.charger_count) {
+    return appErrorResponse(req, 500, "Aanmelding tijdelijk niet beschikbaar.", "service_unavailable");
+  }
+
+  const documentSlotRows = buildDocumentSlotRows(
+    dossier_id,
+    normalizedSubmit.locations,
+    locationIdByClientId,
+    chargerIdByClientId,
+  );
+
+  const { error: documentSlotInsertError } = await SB
+    .from("app_dossier_document_slots")
+    .insert(documentSlotRows);
+
+  if (documentSlotInsertError) {
+    return appErrorResponse(req, 500, "Aanmelding tijdelijk niet beschikbaar.", "service_unavailable");
+  }
+
+  const legalAcceptanceRows = buildLegalAcceptanceRows(parsed.body, dossier_id, customer_id, meta);
+
+  const { error: legalAcceptanceInsertError } = await SB
+    .from("app_dossier_legal_acceptances")
+    .insert(legalAcceptanceRows);
+
+  if (legalAcceptanceInsertError) {
     return appErrorResponse(req, 500, "Aanmelding tijdelijk niet beschikbaar.", "service_unavailable");
   }
 
@@ -793,6 +1009,34 @@ serve(async (req) => {
     },
   }, meta);
 
+  await insertAppAuditFailOpen(SB, {
+    event_type: "document_slots_created",
+    scope_type: "dossier",
+    scope_id: dossier_id,
+    customer_id,
+    dossier_id,
+    actor_type: "edge_function",
+    actor_ref: "api-app-signup-submit",
+    event_data: {
+      count: documentSlotRows.length,
+      document_types: uniqueStrings(documentSlotRows.map((row) => row.document_type)),
+    },
+  }, meta);
+
+  await insertAppAuditFailOpen(SB, {
+    event_type: "legal_acceptances_created",
+    scope_type: "dossier",
+    scope_id: dossier_id,
+    customer_id,
+    dossier_id,
+    actor_type: "edge_function",
+    actor_ref: "api-app-signup-submit",
+    event_data: {
+      count: legalAcceptanceRows.length,
+      acceptance_types: uniqueStrings(legalAcceptanceRows.map((row) => row.acceptance_type)),
+    },
+  }, meta);
+
   await insertAppIntakeAuditFailOpen(SB, {
     event_type: "signup_submit_write_accepted",
     actor_type: "edge_function",
@@ -802,23 +1046,27 @@ serve(async (req) => {
       customer_id,
       dossier_id,
       scope: IDEMPOTENCY_SCOPE,
-      mode: "write_v2",
+      mode: "write_v3",
       location_count: normalizedSubmit.location_count,
       charger_count: normalizedSubmit.charger_count,
+      document_slot_count: documentSlotRows.length,
+      legal_acceptance_count: legalAcceptanceRows.length,
     },
   }, meta);
 
   const responseBody = {
     ok: true,
-    mode: "write_v2",
+    mode: "write_v3",
     request_id: meta.request_id,
     customer_id,
     dossier_id,
     location_count: normalizedSubmit.location_count,
     charger_count: normalizedSubmit.charger_count,
+    document_slot_count: documentSlotRows.length,
+    legal_acceptance_count: legalAcceptanceRows.length,
     payload_hash,
     message:
-      "Foundation submit geaccepteerd; dossier shell plus locaties en laadpalen zijn aangemaakt. Document- en juridische verwerking is nog niet geimplementeerd.",
+      "Foundation submit geaccepteerd; dossier shell, locaties, laadpalen, document-slots en juridische acceptaties zijn aangemaakt. Uploadverwerking is nog niet geimplementeerd.",
   };
 
   await completeIdempotency(SB, meta.idempotency_key, 200, responseBody);

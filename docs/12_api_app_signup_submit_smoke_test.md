@@ -8,7 +8,7 @@ Endpoint placeholder:
 
 ## Latest Proof Status
 
-Status: write v2 endpoint proven locally.
+Status: write v3 endpoint proven locally.
 
 Foundation migration proof:
 
@@ -45,12 +45,12 @@ Historical write v1 proof status:
   - `app_audit_events`: 2
 - No raw payload or secret output was included in responses or reports.
 - Frontend is still not connected.
-- Current endpoint mode write_v1 is the proven foundation state.
+- At the write v1 proof point, write v1 was the proven foundation state.
 
 Write v2 proof status:
 
 - `deno check supabase/functions/api-app-signup-submit/index.ts` passed.
-- Current endpoint response mode is `write_v2`.
+- At the write v2 proof point, endpoint response mode was `write_v2`.
 - Valid write v2 payload returned `location_count: 1` and `charger_count: 2`.
 - Valid write v2 payload created `app_dossier_locations` and `app_dossier_chargers` rows.
 - Replay with the same `Idempotency-Key` and same payload returned the same stored response.
@@ -60,39 +60,53 @@ Write v2 proof status:
   - `app_dossier_chargers` rows were present/created for the valid request.
 - Frontend is still not connected.
 
+Write v3 proof status:
+
+- `deno check supabase/functions/api-app-signup-submit/index.ts` passed.
+- Current endpoint response mode is `write_v3`.
+- Valid write v3 payload returned `location_count: 1`, `charger_count: 2`, `document_slot_count: 5`, and `legal_acceptance_count: 2`.
+- Valid write v3 payload created/presented `app_dossier_document_slots` and `app_dossier_legal_acceptances` rows.
+- Replay with the same `Idempotency-Key` and same payload returned the same stored response.
+- Reusing the same `Idempotency-Key` with a different payload returned 409 `idempotency_conflict`.
+- DB proof after the validation run showed document slot and legal acceptance rows were present/created for the valid request.
+- Frontend is still not connected.
+
 Interpretation:
 
 - Valid write v1 proved the endpoint runtime, app foundation table access, scoped idempotency, customer matching/creation, identity creation, dossier shell creation, intake audit, and app audit.
 - Write v2 adds location and charger persistence.
+- Write v3 adds expected document slots and legal acceptance records.
 - It does not prove production submit readiness.
-- It does not create document slots, document uploads, legal version records, fee terms records beyond minimal accepted flag validation, customer timeline, support/messages, or kWh/result/fee lifecycle rows.
+- It does not create document uploads, storage objects, customer timeline, support/messages, or kWh/result/fee lifecycle rows.
 - `/app` frontend wiring remains blocked until the payload mapper, full contract validation, and remaining write phases are implemented.
 - Do not paste secrets or `supabase status` output into docs, reports, or commits.
 
 Historical skeleton proof:
 
 - The earlier skeleton mode was proven before write v1.
-- Current endpoint mode is `write_v2`.
+- Current endpoint mode is `write_v3`.
 
 ## 1. Purpose
 
-This document tests the current `api-app-signup-submit` write v2 endpoint and preserves earlier skeleton/write v1 smoke history.
+This document tests the current `api-app-signup-submit` write v3 endpoint and preserves earlier skeleton/write v1/write v2 smoke history.
 
 The endpoint is not a production submit flow yet.
 
 Current boundaries:
 
-- DB-write v2 only.
+- DB-write v3 only.
 - Creates/matches a customer.
 - Creates an identity row when needed.
 - Creates a dossier shell.
 - Creates locations.
 - Creates chargers.
+- Creates expected document slots.
+- Creates legal acceptance records.
 - No email.
 - No frontend wiring.
-- No document slots, legal acceptances, customer timeline, support/messages, kWh/result/fee lifecycle, or production deployment.
+- No document upload processing, storage object writes, customer timeline, support/messages, kWh/result/fee lifecycle, or production deployment.
 - Requires the endpoint runtime to be served separately.
-- Foundation and locations/chargers migrations must be applied/tested before write v2 can run.
+- Foundation, locations/chargers, and document/legal slots migrations must be applied/tested before write v3 can run.
 
 ## 2. Local Serving Note
 
@@ -119,7 +133,7 @@ Use placeholders only:
 
 ## 3. Payload Fixture
 
-Minimal valid write v2 payload:
+Minimal valid write v3 payload:
 
 ```json
 {
@@ -239,14 +253,14 @@ Expected:
 - Body includes `ok: false`.
 - Body includes `code: "invalid_signup_contract"`.
 
-### 4.6 POST Valid Write V2 Payload
+### 4.6 POST Valid Write V3 Payload
 
 ```sh
 curl -i -X POST "$URL" \
   -H "Authorization: Bearer <LOCAL_ANON_KEY>" \
   -H "apikey: <LOCAL_ANON_KEY>" \
   -H "Content-Type: application/json" \
-  -H "Idempotency-Key: smoke-valid-write-v2-001" \
+  -H "Idempotency-Key: smoke-valid-write-v3-001" \
   --data '{
     "accountType": "particulier",
     "applicant": {
@@ -277,14 +291,16 @@ Expected:
 
 - HTTP 200.
 - Body includes `ok: true`.
-- Body includes `mode: "write_v2"`.
+- Body includes `mode: "write_v3"`.
 - Body includes `request_id`.
 - Body includes `customer_id`.
 - Body includes `dossier_id`.
 - Body includes `location_count`.
 - Body includes `charger_count`.
+- Body includes `document_slot_count`.
+- Body includes `legal_acceptance_count`.
 - Body includes `payload_hash`.
-- Body explains the foundation submit was accepted and a dossier shell plus locations/chargers were created.
+- Body explains the foundation submit was accepted and a dossier shell, locations, chargers, document slots, and legal acceptances were created.
 - Repeating the same key and same payload should return the same stored response.
 - Repeating the same key with a different payload should return 409 `idempotency_conflict`.
 
@@ -294,23 +310,23 @@ Pass:
 
 - All negative cases return safe customer-facing error bodies.
 - Invalid/missing contract cases do not return raw request payloads.
-- Valid payload returns `mode: "write_v2"`, `customer_id`, `dossier_id`, `location_count`, `charger_count`, and `payload_hash`.
-- Valid payload creates a customer/identity/dossier shell plus location and charger rows.
+- Valid payload returns `mode: "write_v3"`, `customer_id`, `dossier_id`, `location_count`, `charger_count`, `document_slot_count`, `legal_acceptance_count`, and `payload_hash`.
+- Valid payload creates a customer/identity/dossier shell plus location, charger, expected document slot, and legal acceptance rows.
 - Same idempotency key and same payload replays the same stored response.
 - Same idempotency key and different payload returns `idempotency_conflict`.
 
 Fail:
 
 - Any response exposes the raw submitted payload.
-- Valid write v2 payload creates document slots, legal version records, customer timeline, support/messages, or kWh/result/fee lifecycle rows.
-- Valid write v2 payload sends email.
+- Valid write v3 payload creates document uploads, storage objects, customer timeline, support/messages, or kWh/result/fee lifecycle rows.
+- Valid write v3 payload sends email.
 - Any smoke response is treated as production dossier creation.
 - `/app` is wired to this endpoint before payload mapper and full contract validation are ready.
 
 ## 6. Guardrails
 
 - Do not connect /app yet.
-- Do not treat write v2 response as full production dossier creation.
+- Do not treat write v3 response as full production dossier creation.
 - Do not deploy as production submit.
 - Do not expose raw payload in response.
-- Do not add document slots, legal acceptances, customer timeline, or lifecycle logic without a separate implementation task.
+- Do not add document upload processing, storage object writes, customer timeline, or lifecycle logic without a separate implementation task.

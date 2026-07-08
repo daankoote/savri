@@ -18,22 +18,24 @@ The old `dossier.html` wizard and current `api-dossier-*` endpoints are source m
 
 ## Implementation Status
 
-`api-app-signup-submit` write v2 endpoint is implemented and locally proven.
+`api-app-signup-submit` write v3 endpoint is implemented and locally proven.
 
-Current write v2 behavior:
+Current write v3 behavior:
 
 - creates or matches a customer by normalized email
 - creates an `app_customer_identities` row when needed
 - creates an `app_customer_dossiers` submitted dossier shell
 - creates `app_dossier_locations` from normalized payload locations or a fallback primary/applicant address
 - creates `app_dossier_chargers` from nested or top-level charger payloads
+- creates expected `app_dossier_document_slots`
+- creates `app_dossier_legal_acceptances` for accepted consent/fee/legal items
 - writes scoped `app_idempotency_keys`
 - writes `app_intake_audit_events` and `app_audit_events`
-- returns `mode: "write_v2"`, `request_id`, `customer_id`, `dossier_id`, `location_count`, `charger_count`, and `payload_hash`
+- returns `mode: "write_v3"`, `request_id`, `customer_id`, `dossier_id`, `location_count`, `charger_count`, `document_slot_count`, `legal_acceptance_count`, and `payload_hash`
 - replays the same stored response for the same idempotency key and same payload
 - returns `idempotency_conflict` for the same idempotency key with a different payload
 
-Current write v2 intentionally does not create document slots, document uploads, legal version records, fee terms records beyond minimal accepted flag validation, customer timeline, support/messages, or kWh/result/fee lifecycle rows.
+Current write v3 intentionally does not create document uploads, storage objects, customer timeline, support/messages, or kWh/result/fee lifecycle rows.
 
 Frontend is still not connected.
 
@@ -244,7 +246,7 @@ Conceptual records created or matched by submit:
 - internal audit events
 - retention class or retention policy assignment
 
-Current write v2 implementation creates the customer/identity/dossier shell, locations, chargers, idempotency record, intake audit, and app audit rows. The remaining conceptual records are future write phases.
+Current write v3 implementation creates the customer/identity/dossier shell, locations, chargers, expected document slots, legal acceptance records, idempotency record, intake audit, and app audit rows. Dashboard access/bootstrap records, customer-readable timeline events, upload processing, and lifecycle records are future write phases.
 
 Creation should be idempotent by:
 
