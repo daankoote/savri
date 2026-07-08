@@ -31,6 +31,7 @@
 - Signup form skeleton is implemented frontend-only in `/app/src/features/signup`.
 - Dashboard/dossier lifecycle architecture is documented in `docs/08_dashboard_dossier_lifecycle_architecture.md`.
 - Signup submit and dashboard bootstrap contract is documented in `docs/09_signup_submit_and_dashboard_contract.md`.
+- `api-app-signup-submit` skeleton exists; smoke-test doc added in `docs/12_api_app_signup_submit_smoke_test.md`; production writes remain blocked until the foundation migration is applied/tested.
 - Customer dashboard shell exists as mock/read-only frontend under `/dashboard`.
 - Dashboard cleanup/stabilization removed unused asset-overview components and old mock data.
 - Signup skeleton now includes account-type tabs, business/VVE banners, address fields, location tabs for zakelijk/VVE, charger details, document slots, and local-only consent/terms checklist.
