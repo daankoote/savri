@@ -1,6 +1,6 @@
 // supabase/functions/api-app-signup-submit/index.ts
 //
-// DB-write v1 foundation for the future /app signup submit endpoint.
+// DB-write v2 foundation for the future /app signup submit endpoint.
 // Frontend may assist; backend decides.
 //
 // Foundation migration must be applied/tested before enabling production writes.
@@ -22,6 +22,8 @@ import {
 type SignupSubmitPayload = {
   accountType?: unknown;
   applicant?: unknown;
+  primaryAddress?: unknown;
+  address?: unknown;
   consentBundleAcceptance?: unknown;
   feeTermsAcceptance?: unknown;
   locations?: unknown;
@@ -29,7 +31,7 @@ type SignupSubmitPayload = {
 };
 
 const ACCOUNT_TYPES = new Set(["particulier", "zakelijk", "vve"]);
-const IDEMPOTENCY_SCOPE = "api-app-signup-submit:v1";
+const IDEMPOTENCY_SCOPE = "api-app-signup-submit:v2";
 const IDEMPOTENCY_TTL_HOURS = 24;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -44,6 +46,35 @@ function getNestedRecord(value: unknown, key: string): Record<string, unknown> |
 
 function getString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function getNumberString(value: unknown): string {
+  if (typeof value === "number" && Number.isFinite(value)) return String(Math.trunc(value));
+  return getString(value);
+}
+
+function pickValue(source: Record<string, unknown>, keys: string[]): unknown {
+  for (const key of keys) {
+    if (source[key] !== undefined && source[key] !== null) return source[key];
+  }
+  return undefined;
+}
+
+function pickString(source: Record<string, unknown>, keys: string[]): string {
+  return getString(pickValue(source, keys));
+}
+
+function pickNumberString(source: Record<string, unknown>, keys: string[]): string {
+  return getNumberString(pickValue(source, keys));
+}
+
+function normalizePostcode(value: unknown): string {
+  return getString(value).toUpperCase().replace(/\s+/g, "");
+}
+
+function normalizeSuffix(value: unknown): string | null {
+  const normalized = getString(value).toUpperCase().replace(/\s+/g, "");
+  return normalized || null;
 }
 
 function normalizeEmail(value: unknown): string {
@@ -68,6 +99,277 @@ function appSupabaseClient() {
   return createClient(url, serviceRoleKey, {
     auth: { persistSession: false },
   });
+}
+
+type NormalizedLocation = {
+  client_location_id: string;
+  label: string | null;
+  postcode_normalized: string;
+  house_number: string;
+  suffix_normalized: string | null;
+  street: string | null;
+  city: string | null;
+  country: string;
+  lookup_provider: string | null;
+  lookup_provider_id: string | null;
+  lookup_metadata: Record<string, unknown>;
+  chargers: NormalizedCharger[];
+};
+
+type NormalizedCharger = {
+  client_charger_id: string;
+  brand_id: string | null;
+  brand_label: string | null;
+  manual_brand: string | null;
+  model_id: string | null;
+  model_label: string | null;
+  manual_model: string | null;
+  serial_number: string | null;
+  mid_number: string;
+  backend_supplier_id: string | null;
+  backend_supplier_label: string | null;
+  manual_backend_supplier: string | null;
+  installation_year: number | null;
+  solar_export_status: string | null;
+};
+
+type NormalizationResult =
+  | { ok: true; locations: NormalizedLocation[]; location_count: number; charger_count: number }
+  | { ok: false; message: string };
+
+function asRecordArray(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
+function catalogValueLabel(
+  source: Record<string, unknown>,
+  valueKeys: string[],
+  labelKeys: string[],
+): { value: string | null; label: string | null } {
+  const rawValue = pickValue(source, valueKeys);
+  if (isRecord(rawValue)) {
+    const value = pickString(rawValue, ["value", "id", "key"]);
+    const label = pickString(rawValue, ["label", "name", "title"]);
+    return { value: value || null, label: label || value || null };
+  }
+
+  const value = getString(rawValue);
+  const label = pickString(source, labelKeys);
+  return {
+    value: value || null,
+    label: label || value || null,
+  };
+}
+
+function optionalString(value: unknown): string | null {
+  const s = getString(value);
+  return s || null;
+}
+
+function parseInstallationYear(value: unknown): { ok: true; value: number | null } | { ok: false } {
+  const raw = getNumberString(value);
+  if (!raw) return { ok: true, value: null };
+  if (!/^\d{4}$/.test(raw)) return { ok: false };
+
+  const year = Number(raw);
+  if (year < 1990 || year > 2050) return { ok: false };
+  return { ok: true, value: year };
+}
+
+function minimizedLookupMetadata(address: Record<string, unknown>): Record<string, unknown> {
+  const metadata: Record<string, unknown> = {};
+  const normalizedLookupKey = pickString(address, [
+    "normalizedLookupKey",
+    "normalized_lookup_key",
+    "lookupKey",
+    "lookup_key",
+  ]);
+  const resolvedAt = pickString(address, [
+    "lookupResolvedAt",
+    "lookup_resolved_at",
+    "resolvedAt",
+    "resolved_at",
+  ]);
+
+  if (normalizedLookupKey) metadata.normalized_lookup_key = normalizedLookupKey;
+  if (resolvedAt) metadata.resolved_at = resolvedAt;
+
+  return metadata;
+}
+
+function normalizeCharger(
+  rawCharger: Record<string, unknown>,
+  locationIndex: number,
+  chargerIndex: number,
+): { ok: true; charger: NormalizedCharger } | { ok: false; message: string } {
+  const client_charger_id =
+    pickString(rawCharger, ["clientChargerId", "client_charger_id", "clientId", "client_id"]) ||
+    `charger-${locationIndex + 1}-${chargerIndex + 1}`;
+
+  const mid_number = pickString(rawCharger, ["midNumber", "mid_number", "mid"]);
+  if (!mid_number) {
+    return { ok: false, message: "Controleer het MID nummer van iedere laadpaal." };
+  }
+
+  const installationYear = parseInstallationYear(
+    pickValue(rawCharger, ["installationYear", "installation_year"]),
+  );
+  if (!installationYear.ok) {
+    return { ok: false, message: "Controleer het installatiejaar van iedere laadpaal." };
+  }
+
+  const brand = catalogValueLabel(rawCharger, ["brand_id", "brandId", "brand"], [
+    "brand_label",
+    "brandLabel",
+  ]);
+  const model = catalogValueLabel(rawCharger, ["model_id", "modelId", "model"], [
+    "model_label",
+    "modelLabel",
+  ]);
+  const backendSupplier = catalogValueLabel(
+    rawCharger,
+    ["backend_supplier_id", "backendSupplier", "backendSupplierId"],
+    ["backend_supplier_label", "backendSupplierLabel"],
+  );
+
+  return {
+    ok: true,
+    charger: {
+      client_charger_id,
+      brand_id: brand.value,
+      brand_label: brand.label,
+      manual_brand: optionalString(pickValue(rawCharger, ["manualBrand", "manual_brand"])),
+      model_id: model.value,
+      model_label: model.label,
+      manual_model: optionalString(pickValue(rawCharger, ["manualModel", "manual_model"])),
+      serial_number: optionalString(pickValue(rawCharger, ["serialNumber", "serial_number"])),
+      mid_number,
+      backend_supplier_id: backendSupplier.value,
+      backend_supplier_label: backendSupplier.label,
+      manual_backend_supplier: optionalString(
+        pickValue(rawCharger, ["manualBackendSupplier", "manual_backend_supplier"]),
+      ),
+      installation_year: installationYear.value,
+      solar_export_status: optionalString(
+        pickValue(rawCharger, ["solarPanelStatus", "solar_export_status"]),
+      ),
+    },
+  };
+}
+
+function normalizeLocation(
+  rawLocation: Record<string, unknown>,
+  rawChargers: Record<string, unknown>[],
+  locationIndex: number,
+): { ok: true; location: NormalizedLocation } | { ok: false; message: string } {
+  const address = isRecord(rawLocation.address) ? rawLocation.address : rawLocation;
+  const client_location_id =
+    pickString(rawLocation, ["clientLocationId", "client_location_id", "clientId", "client_id"]) ||
+    `location-${locationIndex + 1}`;
+
+  const postcode_normalized = normalizePostcode(pickValue(address, ["postcode", "postalCode", "postal_code"]));
+  const house_number = pickNumberString(address, ["houseNumber", "house_number", "housenumber", "number"]);
+
+  if (!postcode_normalized || !house_number) {
+    return { ok: false, message: "Controleer postcode en huisnummer van iedere locatie." };
+  }
+
+  const chargers: NormalizedCharger[] = [];
+  const chargerIds = new Set<string>();
+  for (let i = 0; i < rawChargers.length; i += 1) {
+    const normalized = normalizeCharger(rawChargers[i], locationIndex, i);
+    if (!normalized.ok) return normalized;
+    if (chargerIds.has(normalized.charger.client_charger_id)) {
+      return { ok: false, message: "Controleer dubbele laadpaalreferenties." };
+    }
+    chargerIds.add(normalized.charger.client_charger_id);
+    chargers.push(normalized.charger);
+  }
+
+  return {
+    ok: true,
+    location: {
+      client_location_id,
+      label: optionalString(pickValue(rawLocation, ["label", "name", "title"])),
+      postcode_normalized,
+      house_number,
+      suffix_normalized: normalizeSuffix(pickValue(address, ["suffix", "house_suffix", "addition"])),
+      street: optionalString(pickValue(address, ["street", "adres", "addressLine", "address_line"])),
+      city: optionalString(pickValue(address, ["city", "stad"])),
+      country: getString(pickValue(address, ["country", "land"])) || "Nederland",
+      lookup_provider: optionalString(pickValue(address, ["lookupProvider", "lookup_provider"])),
+      lookup_provider_id: optionalString(
+        pickValue(address, ["lookupProviderId", "lookup_provider_id", "bagId", "bag_id"]),
+      ),
+      lookup_metadata: minimizedLookupMetadata(address),
+      chargers,
+    },
+  };
+}
+
+function normalizeLocationsAndChargers(body: SignupSubmitPayload): NormalizationResult {
+  const rawLocations = asRecordArray(body.locations);
+  const topLevelChargers = asRecordArray(body.chargers);
+  const normalizedLocations: NormalizedLocation[] = [];
+  const locationIds = new Set<string>();
+
+  if (rawLocations.length) {
+    for (let i = 0; i < rawLocations.length; i += 1) {
+      const rawLocation = rawLocations[i];
+      const normalized = normalizeLocation(rawLocation, asRecordArray(rawLocation.chargers), i);
+      if (!normalized.ok) return normalized;
+      if (locationIds.has(normalized.location.client_location_id)) {
+        return { ok: false, message: "Controleer dubbele locatiereferenties." };
+      }
+      locationIds.add(normalized.location.client_location_id);
+      normalizedLocations.push(normalized.location);
+    }
+  } else if (topLevelChargers.length) {
+    const applicant = isRecord(body.applicant) ? body.applicant : {};
+    const defaultAddress = isRecord(body.primaryAddress)
+      ? body.primaryAddress
+      : isRecord(body.address)
+      ? body.address
+      : isRecord(applicant.address)
+      ? applicant.address
+      : null;
+
+    if (!defaultAddress) {
+      return { ok: false, message: "Controleer de locatiegegevens." };
+    }
+
+    const normalized = normalizeLocation(
+      { client_location_id: "location-1", address: defaultAddress },
+      topLevelChargers,
+      0,
+    );
+    if (!normalized.ok) return normalized;
+    normalizedLocations.push(normalized.location);
+  }
+
+  const charger_count = normalizedLocations.reduce((sum, location) => sum + location.chargers.length, 0);
+
+  if (!normalizedLocations.length || charger_count < 1) {
+    return { ok: false, message: "Controleer de laadpaal- of locatiegegevens." };
+  }
+
+  const globalChargerIds = new Set<string>();
+  for (const location of normalizedLocations) {
+    for (const charger of location.chargers) {
+      const key = charger.client_charger_id;
+      if (globalChargerIds.has(key)) {
+        return { ok: false, message: "Controleer dubbele laadpaalreferenties." };
+      }
+      globalChargerIds.add(key);
+    }
+  }
+
+  return {
+    ok: true,
+    locations: normalizedLocations,
+    location_count: normalizedLocations.length,
+    charger_count,
+  };
 }
 
 async function parseJsonBody(req: Request): Promise<{ ok: true; body: SignupSubmitPayload } | { ok: false }> {
@@ -280,6 +582,16 @@ serve(async (req) => {
     return appErrorResponse(req, 400, validationError, "invalid_signup_contract");
   }
 
+  const normalizedSubmit = normalizeLocationsAndChargers(parsed.body);
+  if (!normalizedSubmit.ok) {
+    await insertAppIntakeAuditFailOpen(SB, {
+      event_type: "signup_submit_invalid_contract",
+      actor_type: "anonymous",
+      event_data: { reason: "invalid_signup_contract", detail: "locations_chargers" },
+    }, meta);
+    return appErrorResponse(req, 400, normalizedSubmit.message, "invalid_signup_contract");
+  }
+
   const accountType = getString(parsed.body.accountType) as "particulier" | "zakelijk" | "vve";
   const applicant = parsed.body.applicant as Record<string, unknown>;
   const email_normalized = normalizeEmail(applicant.email);
@@ -353,6 +665,76 @@ serve(async (req) => {
 
   const dossier_id = dossier.id;
 
+  const locationRows = normalizedSubmit.locations.map((location) => ({
+    dossier_id,
+    client_location_id: location.client_location_id,
+    label: location.label,
+    status: "submitted",
+    postcode_normalized: location.postcode_normalized,
+    house_number: location.house_number,
+    suffix_normalized: location.suffix_normalized,
+    street: location.street,
+    city: location.city,
+    country: location.country,
+    lookup_provider: location.lookup_provider,
+    lookup_provider_id: location.lookup_provider_id,
+    lookup_metadata: location.lookup_metadata,
+  }));
+
+  const { data: insertedLocations, error: locationInsertError } = await SB
+    .from("app_dossier_locations")
+    .insert(locationRows)
+    .select("id,client_location_id");
+
+  if (locationInsertError || !Array.isArray(insertedLocations)) {
+    return appErrorResponse(req, 500, "Aanmelding tijdelijk niet beschikbaar.", "service_unavailable");
+  }
+
+  const locationIdByClientId = new Map<string, string>();
+  for (const location of insertedLocations) {
+    if (location?.client_location_id && location?.id) {
+      locationIdByClientId.set(String(location.client_location_id), String(location.id));
+    }
+  }
+
+  const chargerRows = normalizedSubmit.locations.flatMap((location) => {
+    const location_id = locationIdByClientId.get(location.client_location_id);
+    if (!location_id) return [];
+
+    return location.chargers.map((charger) => ({
+      dossier_id,
+      location_id,
+      client_charger_id: charger.client_charger_id,
+      status: "submitted",
+      brand_id: charger.brand_id,
+      brand_label: charger.brand_label,
+      manual_brand: charger.manual_brand,
+      model_id: charger.model_id,
+      model_label: charger.model_label,
+      manual_model: charger.manual_model,
+      serial_number: charger.serial_number,
+      mid_number: charger.mid_number,
+      mid_status: "submitted",
+      backend_supplier_id: charger.backend_supplier_id,
+      backend_supplier_label: charger.backend_supplier_label,
+      manual_backend_supplier: charger.manual_backend_supplier,
+      installation_year: charger.installation_year,
+      solar_export_status: charger.solar_export_status,
+    }));
+  });
+
+  if (chargerRows.length !== normalizedSubmit.charger_count) {
+    return appErrorResponse(req, 500, "Aanmelding tijdelijk niet beschikbaar.", "service_unavailable");
+  }
+
+  const { error: chargerInsertError } = await SB
+    .from("app_dossier_chargers")
+    .insert(chargerRows);
+
+  if (chargerInsertError) {
+    return appErrorResponse(req, 500, "Aanmelding tijdelijk niet beschikbaar.", "service_unavailable");
+  }
+
   await insertAppAuditFailOpen(SB, {
     event_type: customerEventType,
     scope_type: "customer",
@@ -381,6 +763,36 @@ serve(async (req) => {
     },
   }, meta);
 
+  await insertAppAuditFailOpen(SB, {
+    event_type: "locations_created",
+    scope_type: "dossier",
+    scope_id: dossier_id,
+    customer_id,
+    dossier_id,
+    actor_type: "edge_function",
+    actor_ref: "api-app-signup-submit",
+    event_data: {
+      count: normalizedSubmit.location_count,
+      client_location_ids: normalizedSubmit.locations.map((location) => location.client_location_id),
+    },
+  }, meta);
+
+  await insertAppAuditFailOpen(SB, {
+    event_type: "chargers_created",
+    scope_type: "dossier",
+    scope_id: dossier_id,
+    customer_id,
+    dossier_id,
+    actor_type: "edge_function",
+    actor_ref: "api-app-signup-submit",
+    event_data: {
+      count: normalizedSubmit.charger_count,
+      client_charger_ids: normalizedSubmit.locations.flatMap((location) =>
+        location.chargers.map((charger) => charger.client_charger_id)
+      ),
+    },
+  }, meta);
+
   await insertAppIntakeAuditFailOpen(SB, {
     event_type: "signup_submit_write_accepted",
     actor_type: "edge_function",
@@ -390,18 +802,23 @@ serve(async (req) => {
       customer_id,
       dossier_id,
       scope: IDEMPOTENCY_SCOPE,
+      mode: "write_v2",
+      location_count: normalizedSubmit.location_count,
+      charger_count: normalizedSubmit.charger_count,
     },
   }, meta);
 
   const responseBody = {
     ok: true,
-    mode: "write_v1",
+    mode: "write_v2",
     request_id: meta.request_id,
     customer_id,
     dossier_id,
+    location_count: normalizedSubmit.location_count,
+    charger_count: normalizedSubmit.charger_count,
     payload_hash,
     message:
-      "Foundation submit geaccepteerd en dossier shell aangemaakt. Document-, locatie- en laadpaalverwerking is nog niet geimplementeerd.",
+      "Foundation submit geaccepteerd; dossier shell plus locaties en laadpalen zijn aangemaakt. Document- en juridische verwerking is nog niet geimplementeerd.",
   };
 
   await completeIdempotency(SB, meta.idempotency_key, 200, responseBody);

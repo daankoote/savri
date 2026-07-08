@@ -8,7 +8,7 @@ Endpoint placeholder:
 
 ## Latest Proof Status
 
-Status: write v1 foundation endpoint proven locally.
+Status: write v2 endpoint proven locally.
 
 Foundation migration proof:
 
@@ -24,7 +24,7 @@ Edge runtime proof:
 - Edge runtime running.
 - `api-app-signup-submit` served locally.
 
-Write v1 proof status:
+Historical write v1 proof status:
 
 - `OPTIONS` returned 200.
 - Request without `Authorization` returned 401. This is the gateway auth boundary, not an application failure.
@@ -47,37 +47,52 @@ Write v1 proof status:
 - Frontend is still not connected.
 - Current endpoint mode write_v1 is the proven foundation state.
 
+Write v2 proof status:
+
+- `deno check supabase/functions/api-app-signup-submit/index.ts` passed.
+- Current endpoint response mode is `write_v2`.
+- Valid write v2 payload returned `location_count: 1` and `charger_count: 2`.
+- Valid write v2 payload created `app_dossier_locations` and `app_dossier_chargers` rows.
+- Replay with the same `Idempotency-Key` and same payload returned the same stored response.
+- Reusing the same `Idempotency-Key` with a different payload returned 409 `idempotency_conflict`.
+- DB proof after the validation run showed the write v2 request created/presented app location and charger rows:
+  - `app_dossier_locations` rows were present/created for the valid request.
+  - `app_dossier_chargers` rows were present/created for the valid request.
+- Frontend is still not connected.
+
 Interpretation:
 
-- Valid write v1 proves the endpoint runtime, app foundation table access, scoped idempotency, customer matching/creation, identity creation, dossier shell creation, intake audit, and app audit.
+- Valid write v1 proved the endpoint runtime, app foundation table access, scoped idempotency, customer matching/creation, identity creation, dossier shell creation, intake audit, and app audit.
+- Write v2 adds location and charger persistence.
 - It does not prove production submit readiness.
-- It does not create locations/chargers, document slots, document uploads, legal version records, fee terms records beyond minimal accepted flag validation, customer timeline, support/messages, or kWh/result/fee lifecycle rows.
+- It does not create document slots, document uploads, legal version records, fee terms records beyond minimal accepted flag validation, customer timeline, support/messages, or kWh/result/fee lifecycle rows.
 - `/app` frontend wiring remains blocked until the payload mapper, full contract validation, and remaining write phases are implemented.
 - Do not paste secrets or `supabase status` output into docs, reports, or commits.
 
 Historical skeleton proof:
 
 - The earlier skeleton mode was proven before write v1.
-- Current endpoint mode is `write_v1`.
+- Current endpoint mode is `write_v2`.
 
 ## 1. Purpose
 
-This document tests the current `api-app-signup-submit` write v1 foundation endpoint and preserves earlier skeleton smoke history.
+This document tests the current `api-app-signup-submit` write v2 endpoint and preserves earlier skeleton/write v1 smoke history.
 
 The endpoint is not a production submit flow yet.
 
 Current boundaries:
 
-- DB-write v1 only.
+- DB-write v2 only.
 - Creates/matches a customer.
 - Creates an identity row when needed.
 - Creates a dossier shell.
+- Creates locations.
+- Creates chargers.
 - No email.
 - No frontend wiring.
-- No locations/chargers writes yet.
 - No document slots, legal acceptances, customer timeline, support/messages, kWh/result/fee lifecycle, or production deployment.
 - Requires the endpoint runtime to be served separately.
-- Foundation migration must be applied/tested before write v1 can run.
+- Foundation and locations/chargers migrations must be applied/tested before write v2 can run.
 
 ## 2. Local Serving Note
 
@@ -104,15 +119,32 @@ Use placeholders only:
 
 ## 3. Payload Fixture
 
-Minimal valid write v1 payload:
+Minimal valid write v2 payload:
 
 ```json
 {
   "accountType": "particulier",
-  "applicant": { "email": "test@example.com" },
+  "applicant": {
+    "email": "test@example.com",
+    "address": {
+      "postcode": "2042PC",
+      "houseNumber": "65",
+      "street": "Kostverlorenstraat",
+      "city": "Zandvoort",
+      "country": "Nederland"
+    }
+  },
   "consentBundleAcceptance": { "accepted": true },
   "feeTermsAcceptance": { "accepted": true },
-  "chargers": []
+  "chargers": [
+    {
+      "clientChargerId": "charger-1",
+      "brand": "1",
+      "model": "1",
+      "serialNumber": "TEST-001",
+      "midNumber": "MID-001"
+    }
+  ]
 }
 ```
 
@@ -207,20 +239,37 @@ Expected:
 - Body includes `ok: false`.
 - Body includes `code: "invalid_signup_contract"`.
 
-### 4.6 POST Valid Write V1 Payload
+### 4.6 POST Valid Write V2 Payload
 
 ```sh
 curl -i -X POST "$URL" \
   -H "Authorization: Bearer <LOCAL_ANON_KEY>" \
   -H "apikey: <LOCAL_ANON_KEY>" \
   -H "Content-Type: application/json" \
-  -H "Idempotency-Key: smoke-valid-write-v1-001" \
+  -H "Idempotency-Key: smoke-valid-write-v2-001" \
   --data '{
     "accountType": "particulier",
-    "applicant": { "email": "test@example.com" },
+    "applicant": {
+      "email": "test@example.com",
+      "address": {
+        "postcode": "2042PC",
+        "houseNumber": "65",
+        "street": "Kostverlorenstraat",
+        "city": "Zandvoort",
+        "country": "Nederland"
+      }
+    },
     "consentBundleAcceptance": { "accepted": true },
     "feeTermsAcceptance": { "accepted": true },
-    "chargers": []
+    "chargers": [
+      {
+        "clientChargerId": "charger-1",
+        "brand": "1",
+        "model": "1",
+        "serialNumber": "TEST-001",
+        "midNumber": "MID-001"
+      }
+    ]
   }'
 ```
 
@@ -228,12 +277,14 @@ Expected:
 
 - HTTP 200.
 - Body includes `ok: true`.
-- Body includes `mode: "write_v1"`.
+- Body includes `mode: "write_v2"`.
 - Body includes `request_id`.
 - Body includes `customer_id`.
 - Body includes `dossier_id`.
+- Body includes `location_count`.
+- Body includes `charger_count`.
 - Body includes `payload_hash`.
-- Body explains the foundation submit was accepted and a dossier shell was created.
+- Body explains the foundation submit was accepted and a dossier shell plus locations/chargers were created.
 - Repeating the same key and same payload should return the same stored response.
 - Repeating the same key with a different payload should return 409 `idempotency_conflict`.
 
@@ -243,23 +294,23 @@ Pass:
 
 - All negative cases return safe customer-facing error bodies.
 - Invalid/missing contract cases do not return raw request payloads.
-- Valid payload returns `mode: "write_v1"`, `customer_id`, `dossier_id`, and `payload_hash`.
-- Valid payload creates a customer/identity/dossier shell.
+- Valid payload returns `mode: "write_v2"`, `customer_id`, `dossier_id`, `location_count`, `charger_count`, and `payload_hash`.
+- Valid payload creates a customer/identity/dossier shell plus location and charger rows.
 - Same idempotency key and same payload replays the same stored response.
 - Same idempotency key and different payload returns `idempotency_conflict`.
 
 Fail:
 
 - Any response exposes the raw submitted payload.
-- Valid write v1 payload does not create locations/chargers, document slots, legal version records, customer timeline, support/messages, or kWh/result/fee lifecycle rows.
-- Valid write v1 payload sends email.
+- Valid write v2 payload creates document slots, legal version records, customer timeline, support/messages, or kWh/result/fee lifecycle rows.
+- Valid write v2 payload sends email.
 - Any smoke response is treated as production dossier creation.
 - `/app` is wired to this endpoint before payload mapper and full contract validation are ready.
 
 ## 6. Guardrails
 
 - Do not connect /app yet.
-- Do not treat write v1 response as full production dossier creation.
+- Do not treat write v2 response as full production dossier creation.
 - Do not deploy as production submit.
 - Do not expose raw payload in response.
-- Do not add locations/chargers, document slots, legal acceptances, customer timeline, or lifecycle logic without a separate implementation task.
+- Do not add document slots, legal acceptances, customer timeline, or lifecycle logic without a separate implementation task.
