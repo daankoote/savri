@@ -12,6 +12,12 @@ The new `/app` backend should use a new application schema model alongside the c
 
 Current legacy tables and `api-dossier-*` functions remain untouched. They are source material for useful patterns, not direct targets for `/app` coupling.
 
+Proof note:
+
+- Full local reset is currently blocked by legacy non-baseline migrations for old dossier tables.
+- The app foundation migration has isolated apply proof against local Postgres.
+- All six app foundation tables were present after isolated apply, with RLS enabled.
+
 Recommended direction:
 
 - Add a new `app_` table family in the `public` schema for Supabase/RLS simplicity.

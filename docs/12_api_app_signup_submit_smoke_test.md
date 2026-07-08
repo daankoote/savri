@@ -6,6 +6,43 @@ Endpoint placeholder:
 
 `http://localhost:54321/functions/v1/api-app-signup-submit`
 
+## Latest Proof Status
+
+Status: skeleton smoke proven locally.
+
+Foundation migration proof:
+
+- Full `supabase db reset --local` is blocked by legacy non-baseline migrations for old dossier tables.
+- Isolated apply of `20260707151801_app_foundation_schema.sql` against local Postgres succeeded.
+- All six app foundation tables exist.
+- RLS is enabled on all six real app foundation tables.
+
+Edge runtime proof:
+
+- Docker daemon OK.
+- Supabase DB and Kong healthy.
+- Edge runtime running.
+- `api-app-signup-submit` served locally.
+
+Skeleton smoke proof:
+
+- `OPTIONS` returned 200.
+- Request without `Authorization` returned 401. This is the gateway auth boundary, not an application failure.
+- With local anon auth, `GET` returned 405 `method_not_allowed`.
+- With local anon auth, `POST` without `Idempotency-Key` returned 400 `missing_idempotency_key`.
+- With local anon auth, invalid JSON returned 400 `invalid_json`.
+- With local anon auth, missing consent/fee returned 400 `invalid_signup_contract`.
+- With local anon auth, valid skeleton payload returned 200 with `ok: true`, `mode: "skeleton"`, `request_id`, and `payload_hash`.
+- No DB writes.
+- No customer or dossier creation.
+- No frontend wiring.
+
+Interpretation:
+
+- Valid skeleton smoke proves the endpoint runtime and contract skeleton, not production submit readiness.
+- Production writes remain blocked until the real DB write endpoint and full contract tests are implemented.
+- Do not paste secrets or `supabase status` output into docs, reports, or commits.
+
 ## 1. Purpose
 
 This document tests the current `api-app-signup-submit` skeleton contract only.
@@ -203,4 +240,3 @@ Fail:
 - Do not expose raw payload in response.
 - Do not continue to DB writes until Foundation migration has been applied/tested.
 - Do not add business logic to this endpoint during smoke-test documentation work.
-
