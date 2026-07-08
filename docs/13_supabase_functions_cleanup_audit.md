@@ -20,6 +20,22 @@ Key findings:
 - Gateway auth must be treated separately from application-level validation, as proven in the `api-app-signup-submit` smoke test.
 - Full local reset remains blocked by legacy non-baseline migrations; app foundation schema was proven by isolated apply.
 
+## Legacy Supabase Functions Freeze Rule
+
+Legacy Supabase functions are frozen.
+
+Meaning:
+
+- `api-dossier-*` remains fallback/legacy only.
+- `api-lead-submit` remains legacy lead/contact intake only.
+- `mail-worker`, `retention-worker`, and `locked-unpaid-reminder-worker` remain legacy worker/fallback only.
+- Do not add new `/app` behavior to legacy functions.
+- Do not reuse legacy dossier sessions as app account auth.
+- Do not write app audit/idempotency to legacy `dossier_audit_events` or `idempotency_keys`.
+- New customer-facing app behavior must use `api-app-*`.
+- New app writes must target app_* tables.
+- Deletion or retirement requires separate proof and an explicit commit.
+
 ## 2. Function Inventory
 
 | Function | Category | Current likely role | Tables touched / likely touched | Endpoint contract risk | Recommendation | Notes |

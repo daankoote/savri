@@ -33,6 +33,7 @@
 - Signup submit and dashboard bootstrap contract is documented in `docs/09_signup_submit_and_dashboard_contract.md`.
 - `api-app-signup-submit` skeleton smoke proven locally; smoke-test doc exists in `docs/12_api_app_signup_submit_smoke_test.md`; production writes remain blocked until the real DB write endpoint and full contract tests are implemented.
 - Legacy local reset is blocked by missing baseline for old dossier tables; app foundation migration was tested isolated.
+- Legacy Supabase functions frozen; app backend work must use `api-app-*` and app_* tables.
 - Customer dashboard shell exists as mock/read-only frontend under `/dashboard`.
 - Dashboard cleanup/stabilization removed unused asset-overview components and old mock data.
 - Signup skeleton now includes account-type tabs, business/VVE banners, address fields, location tabs for zakelijk/VVE, charger details, document slots, and local-only consent/terms checklist.
@@ -113,6 +114,7 @@
 
 - Review Edge Function request/response contracts before wiring `/app`.
 - Audit/evidence/anti-fraud backend doctrine must be enforced in schema and endpoints.
+- Legacy Supabase functions are frozen: `api-dossier-*`, `api-lead-submit`, `mail-worker`, `retention-worker`, and `locked-unpaid-reminder-worker` remain fallback/legacy only; do not add new `/app` behavior there.
 - Confirm customer records, eligibility answers, documents, consents, status transitions, audit events, exports, retention, privacy, and evidence versioning needs.
 - Confirm fee-model fields: fee model/version, success percentage, accepted terms/privacy versions, payout/value realization event, fee calculation event, and fee-relevant audit events.
 - Confirm backend alignment with `docs/06_fee_model_and_service_terms.md`.

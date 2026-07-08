@@ -59,6 +59,20 @@ Rejected for now:
 - `app_private` / `app_public` split: clearer conceptually, but adds migration, search path, function, type-generation, and RLS complexity before contracts are proven.
 - Reusing old table names: too much risk of coupling the new dashboard/account model to legacy wizard assumptions.
 
+## Legacy Supabase Functions Freeze Rule
+
+Legacy Supabase functions are frozen.
+
+- `api-dossier-*` remains fallback/legacy only.
+- `api-lead-submit` remains legacy lead/contact intake only.
+- `mail-worker`, `retention-worker`, and `locked-unpaid-reminder-worker` remain legacy worker/fallback only.
+- Do not add new `/app` behavior to legacy functions.
+- Do not reuse legacy dossier sessions as app account auth.
+- Do not write app audit/idempotency to legacy `dossier_audit_events` or `idempotency_keys`.
+- New customer-facing app behavior must use `api-app-*`.
+- New app writes must target app_* tables.
+- Deletion or retirement requires separate proof and an explicit commit.
+
 Naming rule:
 
 - New `/app` tables use `app_` prefix.
