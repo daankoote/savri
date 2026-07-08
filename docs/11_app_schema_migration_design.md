@@ -1436,8 +1436,12 @@ C. Add read-only schema smoke tests
 D. Implement signup submit endpoint
 
 - `api-app-signup-submit`
-- Creates/matches customer, identity bootstrap state, dossier, locations, chargers, document slots, consent/fee records, timeline, and audit.
-- Uses idempotency and backend validation.
+- Write v1 foundation endpoint is implemented and locally proven.
+- Write v1 creates/matches customer, creates identity when needed, creates a submitted customer/identity/dossier shell, writes app idempotency, and writes intake/app audit rows.
+- Write v1 returns `mode: "write_v1"` with `request_id`, `customer_id`, `dossier_id`, and `payload_hash`.
+- Write v1 idempotency replay returns the same stored response; same key with different payload returns `idempotency_conflict`.
+- Write v1 intentionally does not create locations/chargers, document slots, consent/fee legal records, customer timeline, support/messages, kWh/result/fee lifecycle rows, or frontend wiring.
+- Future write v2/v3 must add locations/chargers, document slots/legal acceptances, and timeline projection after payload mapper and full contract validation are ready.
 
 E. Implement auth bootstrap
 

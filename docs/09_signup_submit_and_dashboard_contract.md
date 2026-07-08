@@ -1,8 +1,8 @@
 # Signup Submit And Dashboard Contract
 
-Status: source of truth for the future `/aanmelden` submit and dashboard bootstrap contract.
+Status: source of truth for the `/aanmelden` submit and dashboard bootstrap contract.
 
-This document defines the intended backend contract for the moment a customer clicks `Start dossier` in the new Vite `/aanmelden` flow. It is documentation only. No endpoint, schema, app route, or Supabase behavior is implemented by this document.
+This document defines the intended backend contract for the moment a customer clicks `Start dossier` in the new Vite `/aanmelden` flow. Current implementation status is tracked below; this document remains the contract source of truth, not an implementation file.
 
 ## 1. Purpose
 
@@ -15,6 +15,25 @@ This document defines:
 - the open decisions that must be resolved before implementation
 
 The old `dossier.html` wizard and current `api-dossier-*` endpoints are source material only. They must not be wired directly into the new app without contract redesign.
+
+## Implementation Status
+
+`api-app-signup-submit` write v1 foundation endpoint is implemented and locally proven.
+
+Current write v1 behavior:
+
+- creates or matches a customer by normalized email
+- creates an `app_customer_identities` row when needed
+- creates an `app_customer_dossiers` submitted dossier shell
+- writes scoped `app_idempotency_keys`
+- writes `app_intake_audit_events` and `app_audit_events`
+- returns `mode: "write_v1"`, `request_id`, `customer_id`, `dossier_id`, and `payload_hash`
+- replays the same stored response for the same idempotency key and same payload
+- returns `idempotency_conflict` for the same idempotency key with a different payload
+
+Current write v1 intentionally does not create locations/chargers, document slots, document uploads, legal version records, fee terms records beyond minimal accepted flag validation, customer timeline, support/messages, or kWh/result/fee lifecycle rows.
+
+Frontend is still not connected.
 
 Product role:
 
@@ -55,7 +74,7 @@ Rules:
 
 ## 3. Current Frontend Payload
 
-The current `/aanmelden` skeleton is local-only. It does not write to backend.
+The current `/aanmelden` skeleton is still local-only from the browser. It is not wired to `api-app-signup-submit` yet.
 
 Current local state shape:
 
@@ -223,7 +242,7 @@ Conceptual records created or matched by submit:
 - internal audit events
 - retention class or retention policy assignment
 
-No SQL implementation is defined here.
+Current write v1 implementation creates only the customer/identity/dossier shell, idempotency record, intake audit, and app audit rows. The remaining conceptual records are future write phases.
 
 Creation should be idempotent by:
 

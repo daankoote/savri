@@ -1,6 +1,6 @@
 # API App Signup Submit Smoke Test
 
-Status: manual smoke-test contract for `api-app-signup-submit`.
+Status: manual proof/smoke contract for `api-app-signup-submit`.
 
 Endpoint placeholder:
 
@@ -8,7 +8,7 @@ Endpoint placeholder:
 
 ## Latest Proof Status
 
-Status: skeleton smoke proven locally.
+Status: write v1 foundation endpoint proven locally.
 
 Foundation migration proof:
 
@@ -24,7 +24,7 @@ Edge runtime proof:
 - Edge runtime running.
 - `api-app-signup-submit` served locally.
 
-Skeleton smoke proof:
+Write v1 proof status:
 
 - `OPTIONS` returned 200.
 - Request without `Authorization` returned 401. This is the gateway auth boundary, not an application failure.
@@ -32,33 +32,52 @@ Skeleton smoke proof:
 - With local anon auth, `POST` without `Idempotency-Key` returned 400 `missing_idempotency_key`.
 - With local anon auth, invalid JSON returned 400 `invalid_json`.
 - With local anon auth, missing consent/fee returned 400 `invalid_signup_contract`.
-- With local anon auth, valid skeleton payload returned 200 with `ok: true`, `mode: "skeleton"`, `request_id`, and `payload_hash`.
-- No DB writes.
-- No customer or dossier creation.
-- No frontend wiring.
+- `deno check supabase/functions/api-app-signup-submit/index.ts` passed.
+- With local anon auth, valid payload returned 200 with `ok: true`, `mode: "write_v1"`, `request_id`, `customer_id`, `dossier_id`, and `payload_hash`.
+- Replay with the same `Idempotency-Key` and same payload returned the same stored response.
+- Reusing the same `Idempotency-Key` with a different payload returned 409 `idempotency_conflict`.
+- DB row proof after valid write:
+  - `app_customers`: 1
+  - `app_customer_identities`: 1
+  - `app_customer_dossiers`: 1
+  - `app_idempotency_keys`: 1
+  - `app_intake_audit_events`: 2
+  - `app_audit_events`: 2
+- No raw payload or secret output was included in responses or reports.
+- Frontend is still not connected.
+- Current endpoint mode write_v1 is the proven foundation state.
 
 Interpretation:
 
-- Valid skeleton smoke proves the endpoint runtime and contract skeleton, not production submit readiness.
-- Production writes remain blocked until the real DB write endpoint and full contract tests are implemented.
+- Valid write v1 proves the endpoint runtime, app foundation table access, scoped idempotency, customer matching/creation, identity creation, dossier shell creation, intake audit, and app audit.
+- It does not prove production submit readiness.
+- It does not create locations/chargers, document slots, document uploads, legal version records, fee terms records beyond minimal accepted flag validation, customer timeline, support/messages, or kWh/result/fee lifecycle rows.
+- `/app` frontend wiring remains blocked until the payload mapper, full contract validation, and remaining write phases are implemented.
 - Do not paste secrets or `supabase status` output into docs, reports, or commits.
+
+Historical skeleton proof:
+
+- The earlier skeleton mode was proven before write v1.
+- Current endpoint mode is `write_v1`.
 
 ## 1. Purpose
 
-This document tests the current `api-app-signup-submit` skeleton contract only.
+This document tests the current `api-app-signup-submit` write v1 foundation endpoint and preserves earlier skeleton smoke history.
 
-The endpoint is not a production submit flow.
+The endpoint is not a production submit flow yet.
 
 Current boundaries:
 
-- Contract/smoke only.
-- No DB writes.
-- No customer creation.
-- No dossier creation.
+- DB-write v1 only.
+- Creates/matches a customer.
+- Creates an identity row when needed.
+- Creates a dossier shell.
 - No email.
 - No frontend wiring.
+- No locations/chargers writes yet.
+- No document slots, legal acceptances, customer timeline, support/messages, kWh/result/fee lifecycle, or production deployment.
 - Requires the endpoint runtime to be served separately.
-- Foundation migration must be applied/tested before production writes are enabled.
+- Foundation migration must be applied/tested before write v1 can run.
 
 ## 2. Local Serving Note
 
@@ -85,7 +104,7 @@ Use placeholders only:
 
 ## 3. Payload Fixture
 
-Minimal valid skeleton payload:
+Minimal valid write v1 payload:
 
 ```json
 {
@@ -188,14 +207,14 @@ Expected:
 - Body includes `ok: false`.
 - Body includes `code: "invalid_signup_contract"`.
 
-### 4.6 POST Valid Skeleton Payload
+### 4.6 POST Valid Write V1 Payload
 
 ```sh
 curl -i -X POST "$URL" \
   -H "Authorization: Bearer <LOCAL_ANON_KEY>" \
   -H "apikey: <LOCAL_ANON_KEY>" \
   -H "Content-Type: application/json" \
-  -H "Idempotency-Key: smoke-valid-skeleton-001" \
+  -H "Idempotency-Key: smoke-valid-write-v1-001" \
   --data '{
     "accountType": "particulier",
     "applicant": { "email": "test@example.com" },
@@ -209,10 +228,14 @@ Expected:
 
 - HTTP 200.
 - Body includes `ok: true`.
-- Body includes `mode: "skeleton"`.
+- Body includes `mode: "write_v1"`.
 - Body includes `request_id`.
+- Body includes `customer_id`.
+- Body includes `dossier_id`.
 - Body includes `payload_hash`.
-- Body includes a smoke message explaining the backend contract is present but not wired to production submit yet.
+- Body explains the foundation submit was accepted and a dossier shell was created.
+- Repeating the same key and same payload should return the same stored response.
+- Repeating the same key with a different payload should return 409 `idempotency_conflict`.
 
 ## 5. Pass / Fail Expectations
 
@@ -220,23 +243,23 @@ Pass:
 
 - All negative cases return safe customer-facing error bodies.
 - Invalid/missing contract cases do not return raw request payloads.
-- Valid skeleton payload returns `mode: "skeleton"` and `payload_hash`.
-- No DB rows are expected or required.
-- No customer or dossier is created.
+- Valid payload returns `mode: "write_v1"`, `customer_id`, `dossier_id`, and `payload_hash`.
+- Valid payload creates a customer/identity/dossier shell.
+- Same idempotency key and same payload replays the same stored response.
+- Same idempotency key and different payload returns `idempotency_conflict`.
 
 Fail:
 
 - Any response exposes the raw submitted payload.
-- Valid skeleton payload creates database state.
-- Valid skeleton payload sends email.
+- Valid write v1 payload does not create locations/chargers, document slots, legal version records, customer timeline, support/messages, or kWh/result/fee lifecycle rows.
+- Valid write v1 payload sends email.
 - Any smoke response is treated as production dossier creation.
-- `/app` is wired to this endpoint before production-write readiness.
+- `/app` is wired to this endpoint before payload mapper and full contract validation are ready.
 
 ## 6. Guardrails
 
 - Do not connect /app yet.
-- Do not treat skeleton response as dossier creation.
+- Do not treat write v1 response as full production dossier creation.
 - Do not deploy as production submit.
 - Do not expose raw payload in response.
-- Do not continue to DB writes until Foundation migration has been applied/tested.
-- Do not add business logic to this endpoint during smoke-test documentation work.
+- Do not add locations/chargers, document slots, legal acceptances, customer timeline, or lifecycle logic without a separate implementation task.

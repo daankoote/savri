@@ -31,7 +31,9 @@
 - Signup form skeleton is implemented frontend-only in `/app/src/features/signup`.
 - Dashboard/dossier lifecycle architecture is documented in `docs/08_dashboard_dossier_lifecycle_architecture.md`.
 - Signup submit and dashboard bootstrap contract is documented in `docs/09_signup_submit_and_dashboard_contract.md`.
-- `api-app-signup-submit` skeleton smoke proven locally; smoke-test doc exists in `docs/12_api_app_signup_submit_smoke_test.md`; production writes remain blocked until the real DB write endpoint and full contract tests are implemented.
+- `api-app-signup-submit` write v1 foundation endpoint proven locally; it creates a customer/identity/dossier shell only.
+- `/app` frontend wiring remains blocked until the signup payload mapper, full contract validation, and locations/chargers/documents/legal slots are implemented.
+- Next backend items: signup payload mapper from frontend state, locations/chargers write v2, document slots/legal acceptances v3, and customer timeline projection later.
 - Legacy local reset is blocked by missing baseline for old dossier tables; app foundation migration was tested isolated.
 - Legacy Supabase functions frozen; app backend work must use `api-app-*` and app_* tables.
 - Customer dashboard shell exists as mock/read-only frontend under `/dashboard`.
