@@ -37,7 +37,7 @@ Current write v3 behavior:
 
 Current write v3 intentionally does not create document uploads, storage objects, customer timeline, support/messages, or kWh/result/fee lifecycle rows.
 
-Frontend is still not connected.
+Frontend is still not connected. A pure frontend payload mapper now exists and is locally proven, but it does not call the endpoint or navigate to the dashboard.
 
 Product role:
 
