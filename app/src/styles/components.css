@@ -553,6 +553,7 @@
 .upload-dropzone,
 .document-slot {
   display: grid;
+  min-width: 0;
   gap: var(--space-2);
   border: 1px dashed var(--color-border-strong);
   border-radius: var(--radius-md);
@@ -562,6 +563,7 @@
 
 .document-slot-picker {
   display: grid;
+  min-width: 0;
   gap: var(--space-2);
 }
 
@@ -615,6 +617,7 @@
 
 .invoice-preview-panel {
   display: grid;
+  min-width: 0;
   gap: var(--space-3);
   margin-top: var(--space-2);
   border-top: 1px solid var(--color-border);
@@ -630,6 +633,7 @@
 
 .invoice-preview-header {
   display: flex;
+  min-width: 0;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
@@ -650,13 +654,15 @@
 
 .invoice-preview-list {
   display: grid;
+  min-width: 0;
   gap: var(--space-2);
   margin: 0;
 }
 
 .invoice-preview-list div {
   display: grid;
-  grid-template-columns: minmax(90px, 0.4fr) minmax(0, 1fr);
+  min-width: 0;
+  grid-template-columns: minmax(88px, 0.38fr) minmax(0, 1fr);
   gap: var(--space-3);
 }
 
@@ -675,6 +681,29 @@
   min-width: 0;
   overflow-wrap: anywhere;
   color: var(--color-heading);
+}
+
+.invoice-preview-chip-list {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.invoice-preview-chip {
+  display: inline-flex;
+  max-width: 100%;
+  border-radius: var(--radius-sm);
+  padding: 2px var(--space-2);
+  background: var(--color-surface-muted);
+  color: var(--color-muted);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.invoice-preview-chip-warning {
+  background: var(--color-amber-soft);
+  color: var(--color-amber);
 }
 
 .signup-actions {

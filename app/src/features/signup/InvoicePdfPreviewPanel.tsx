@@ -17,19 +17,41 @@ type PreviewState =
   | { status: "parsing" }
   | { status: "parsed"; result: InvoicePdfParserAdapterResult; elapsedMs: number };
 
+export const INVOICE_PDF_ACCEPT = "application/pdf,.pdf";
+
 const PDF_INVOICE_DOCUMENT_TYPES: DocumentType[] = ["installation_invoice"];
 
-function isPdfFile(file: File) {
+export function supportsInvoicePdfPreview(documentType: DocumentType) {
+  return PDF_INVOICE_DOCUMENT_TYPES.includes(documentType);
+}
+
+export function isPdfFile(file: File) {
   return file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
 }
 
-function formatYesNo(value: boolean) {
-  return value ? "ja" : "nee";
+function formatParsedValue(value: string | null | undefined) {
+  const trimmed = String(value || "").trim();
+  return trimmed || "niet gevonden";
+}
+
+function formatAddressParts(result: InvoicePdfParserAdapterResult) {
+  if (!result.ok) return "niet gevonden";
+
+  const fields = result.observed_fields;
+  const addressParts = [
+    fields.address_line,
+    [fields.postcode_line, fields.city_line].filter(Boolean).join(" "),
+    fields.country_line,
+  ]
+    .map((part) => String(part || "").trim())
+    .filter(Boolean);
+
+  return addressParts.length ? addressParts.join(" — ") : "niet gevonden";
 }
 
 export function InvoicePdfPreviewPanel({ documentType, file }: InvoicePdfPreviewPanelProps) {
   const [previewState, setPreviewState] = useState<PreviewState>({ status: "idle" });
-  const isInvoiceSlot = PDF_INVOICE_DOCUMENT_TYPES.includes(documentType);
+  const isInvoiceSlot = supportsInvoicePdfPreview(documentType);
 
   useEffect(() => {
     let cancelled = false;
@@ -101,6 +123,8 @@ export function InvoicePdfPreviewPanel({ documentType, file }: InvoicePdfPreview
 
   const parserStatus = previewState.result.ok ? "parsed" : previewState.result.code;
   const observedFieldNames = summary?.observed_non_null_field_names ?? [];
+  const fields = previewState.result.ok ? previewState.result.observed_fields : null;
+  const limitationCodes = previewState.result.limitations;
 
   return (
     <div className="invoice-preview-panel" aria-live="polite">
@@ -117,20 +141,48 @@ export function InvoicePdfPreviewPanel({ documentType, file }: InvoicePdfPreview
           <dd>{parserStatus}</dd>
         </div>
         <div>
-          <dt>Velden</dt>
-          <dd>{observedFieldNames.length ? observedFieldNames.join(", ") : "geen"}</dd>
-        </div>
-        <div>
           <dt>MID</dt>
-          <dd>{formatYesNo(Boolean(summary?.has_mid))}</dd>
+          <dd>{formatParsedValue(fields?.mid_number)}</dd>
         </div>
         <div>
           <dt>Serienummer</dt>
-          <dd>{formatYesNo(Boolean(summary?.has_serial))}</dd>
+          <dd>{formatParsedValue(fields?.serial_number)}</dd>
         </div>
         <div>
-          <dt>Beperkingen</dt>
-          <dd>{summary?.limitations_count ?? previewState.result.limitations.length}</dd>
+          <dt>Adres</dt>
+          <dd>{formatAddressParts(previewState.result)}</dd>
+        </div>
+        <div>
+          <dt>Gevonden velden</dt>
+          <dd>
+            {observedFieldNames.length ? (
+              <span className="invoice-preview-chip-list">
+                {observedFieldNames.map((fieldName) => (
+                  <span className="invoice-preview-chip" key={fieldName}>
+                    {fieldName}
+                  </span>
+                ))}
+              </span>
+            ) : (
+              "geen"
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt>Aandachtspunten</dt>
+          <dd>
+            {limitationCodes.length ? (
+              <span className="invoice-preview-chip-list">
+                {limitationCodes.map((limitation) => (
+                  <span className="invoice-preview-chip invoice-preview-chip-warning" key={limitation}>
+                    {limitation}
+                  </span>
+                ))}
+              </span>
+            ) : (
+              "geen"
+            )}
+          </dd>
         </div>
       </dl>
     </div>

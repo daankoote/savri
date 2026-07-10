@@ -36,7 +36,7 @@
 - Local browser-QA for `/aanmelden` submit is green: validation reached `Concept klaar`, submit returned OPTIONS 200 and POST 200 to local `api-app-signup-submit`, the success panel showed `Aanmelding ontvangen` plus Dossier ID, and no dashboard redirect occurred.
 - Next backend/app items: document upload processing, legal version detail hardening, customer timeline projection, and dashboard bootstrap later.
 - PDF invoice parser adapter proof exists in `/app` for client-side text-PDF parsing only; it is not upload processing and does not call backend.
-- Local PDF invoice preview is wired into `/aanmelden` document slots for PDF facturen; it shows only safe summary fields and does not upload or verify documents.
+- Local PDF invoice preview is wired into `/aanmelden` invoice slots for PDF facturen; it shows parsed MID/serial/address summary, blocks non-PDF selection for that slot, and does not upload or verify documents.
 - Image OCR remains worker/internal later; browser image work should stay limited to precheck, compression, and hash.
 - P0 before production/deploy: treat the previously exposed runtime token/key-like value as leaked and rotate it. Do not print or preserve the value in docs, reports, commits, or chat.
 - Legacy local reset is blocked by missing baseline for old dossier tables; app foundation migration was tested isolated.

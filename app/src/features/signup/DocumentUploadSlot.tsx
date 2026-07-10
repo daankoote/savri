@@ -1,5 +1,11 @@
+import { type ChangeEvent, useState } from "react";
 import { documentLabel } from "./signupNormalizers";
-import { InvoicePdfPreviewPanel } from "./InvoicePdfPreviewPanel";
+import {
+  INVOICE_PDF_ACCEPT,
+  InvoicePdfPreviewPanel,
+  isPdfFile,
+  supportsInvoicePdfPreview,
+} from "./InvoicePdfPreviewPanel";
 import type { ChargerDocumentDraft } from "./signupTypes";
 
 type DocumentUploadSlotProps = {
@@ -8,6 +14,9 @@ type DocumentUploadSlotProps = {
 };
 
 export function DocumentUploadSlot({ document, onChange }: DocumentUploadSlotProps) {
+  const [fileMessage, setFileMessage] = useState<string | null>(null);
+  const expectsPdfInvoice = supportsInvoicePdfPreview(document.documentType);
+
   const handleFileChange = (file: File | null) => {
     onChange({
       ...document,
@@ -16,16 +25,32 @@ export function DocumentUploadSlot({ document, onChange }: DocumentUploadSlotPro
     });
   };
 
+  const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] || null;
+
+    if (file && expectsPdfInvoice && !isPdfFile(file)) {
+      event.target.value = "";
+      setFileMessage("Alleen PDF-facturen worden nu ondersteund.");
+      handleFileChange(null);
+      return;
+    }
+
+    setFileMessage(null);
+    handleFileChange(file);
+  };
+
   return (
     <div className="document-slot">
       <label className="document-slot-picker">
         <span>{documentLabel(document.documentType)}</span>
         <input
-          onChange={(event) => handleFileChange(event.target.files?.[0] || null)}
+          accept={expectsPdfInvoice ? INVOICE_PDF_ACCEPT : undefined}
+          onChange={handleInputChange}
           type="file"
         />
         <small>{document.file ? document.file.name : "Nog geen bestand gekozen"}</small>
       </label>
+      {fileMessage ? <small className="field-message">{fileMessage}</small> : null}
       <InvoicePdfPreviewPanel documentType={document.documentType} file={document.file} />
     </div>
   );
