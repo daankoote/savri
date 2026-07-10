@@ -919,21 +919,21 @@ function findSerialCandidate(lines: string[], midCandidate: string | null) {
 }
 
 function extractInvoiceObservedFieldsFromText(text: string, expectedCustomerName: string | null): InvoiceObservedFields {
-  const rawText = String(text || "").replace(/\r/g, "");
-  const lines = splitLines(rawText);
-  const inferred = pickBestAddressBlock(rawText, expectedCustomerName);
+  const sourceText = String(text || "").replace(/\r/g, "");
+  const lines = splitLines(sourceText);
+  const inferred = pickBestAddressBlock(sourceText, expectedCustomerName);
 
   const addressLine = inferred.address_line || null;
   const cityLineRaw = inferred.city_line || null;
   const cityParts = splitDutchCityLine(cityLineRaw || "");
   const houseParts = splitDutchStreetLine(addressLine || "");
-  const brand = matchLabeledValue(rawText, BRAND_LABELS) ||
+  const brand = matchLabeledValue(sourceText, BRAND_LABELS) ||
     extractNearbyValue(lines, BRAND_LABELS, (value) => /[A-Za-z]/.test(value)) ||
     null;
-  const model = matchLabeledValue(rawText, MODEL_LABELS) ||
+  const model = matchLabeledValue(sourceText, MODEL_LABELS) ||
     extractNearbyValue(lines, MODEL_LABELS, (value) => /[A-Za-z0-9]/.test(value)) ||
     null;
-  const customerName = extractCustomerName(rawText, expectedCustomerName);
+  const customerName = extractCustomerName(sourceText, expectedCustomerName);
   const midAssessment = findMidCandidate(lines);
   const midNumber = midAssessment.approved;
   const serialAssessment = findSerialCandidate(lines, midNumber);

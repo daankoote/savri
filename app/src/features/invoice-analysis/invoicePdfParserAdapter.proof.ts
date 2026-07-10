@@ -12,7 +12,7 @@ export type InvoicePdfParserAdapterProofResult = {
   hasSerial: boolean;
   limitationsCount: number;
   elapsedMs: number;
-  rawTextOmitted: true;
+  sourceTextOmitted: true;
 };
 
 type ParserResultWithUnsafeDebug = InvoicePdfParserAdapterResult & {
@@ -62,6 +62,6 @@ export async function runInvoicePdfParserAdapterProof(
     hasSerial: summary.has_serial,
     limitationsCount: summary.limitations_count,
     elapsedMs,
-    rawTextOmitted: true,
+    sourceTextOmitted: true,
   };
 }
