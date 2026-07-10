@@ -71,6 +71,18 @@ Write v3 proof status:
 - DB proof after the validation run showed document slot and legal acceptance rows were present/created for the valid request.
 - Frontend is still not connected.
 
+Local browser-QA proof status:
+
+- Controlled local browser-QA for `/aanmelden` submit is green after the Vite env resolver fix, Vite restart, and local `api-app-signup-submit` serving.
+- Local validation showed `Concept klaar`.
+- Browser Network showed OPTIONS 200 and POST 200 to local `api-app-signup-submit`.
+- The success panel showed `Aanmelding ontvangen` and displayed Dossier ID.
+- The page stayed on `/aanmelden`; no dashboard redirect/bootstrap occurred.
+- The path used frontend validation, `mapSignupDraftToSubmitPayload`, `submitSignupPayload`, `api-app-signup-submit` write_v3, and the local Edge Function.
+- This is local proof only, not production deployment proof.
+- No document upload, storage object, customer timeline, dashboard bootstrap, redirect, or kWh/result/fee lifecycle is implemented yet.
+- P0 before production/deploy: treat the previously exposed runtime token/key-like value as leaked and rotate it. Do not print or preserve the value in docs, reports, commits, or chat.
+
 Interpretation:
 
 - Valid write v1 proved the endpoint runtime, app foundation table access, scoped idempotency, customer matching/creation, identity creation, dossier shell creation, intake audit, and app audit.

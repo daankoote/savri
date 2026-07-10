@@ -39,6 +39,16 @@ Current write v3 intentionally does not create document uploads, storage objects
 
 Frontend submit wiring is implemented for `/aanmelden`: the existing button validates locally, maps the draft, calls `api-app-signup-submit` write v3 through the frontend API client, and shows loading, success, or safe error state on the same page. It does not navigate to the dashboard yet.
 
+Local browser-QA proof is green after the Vite env resolver fix and Vite restart:
+
+- Local validation showed `Concept klaar`.
+- Browser Network showed OPTIONS 200 and POST 200 to local `api-app-signup-submit`.
+- The success panel showed `Aanmelding ontvangen` and displayed Dossier ID.
+- The page stayed on `/aanmelden`; no dashboard redirect/bootstrap occurred.
+- This is local proof only, not production deployment proof.
+- No document upload, storage object, customer timeline, dashboard bootstrap, redirect, or kWh/result/fee lifecycle is implemented yet.
+- P0 before production/deploy: treat the previously exposed runtime token/key-like value as leaked and rotate it. Do not print or preserve the value in docs, reports, commits, or chat.
+
 Environment boundary:
 
 - `app/.env.local` is for the isolated Vite app submit flow.
