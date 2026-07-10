@@ -35,6 +35,8 @@
 - Signup payload mapper, local-only contract dry-run proof, frontend API client, and controlled `/app` submit wiring are implemented; submit stays on-page and does not redirect to dashboard yet.
 - Local browser-QA for `/aanmelden` submit is green: validation reached `Concept klaar`, submit returned OPTIONS 200 and POST 200 to local `api-app-signup-submit`, the success panel showed `Aanmelding ontvangen` plus Dossier ID, and no dashboard redirect occurred.
 - Next backend/app items: document upload processing, legal version detail hardening, customer timeline projection, and dashboard bootstrap later.
+- PDF invoice parser adapter proof exists in `/app` for client-side text-PDF parsing only; it is not upload processing and does not call backend.
+- Image OCR remains worker/internal later; browser image work should stay limited to precheck, compression, and hash.
 - P0 before production/deploy: treat the previously exposed runtime token/key-like value as leaked and rotate it. Do not print or preserve the value in docs, reports, commits, or chat.
 - Legacy local reset is blocked by missing baseline for old dossier tables; app foundation migration was tested isolated.
 - Legacy Supabase functions frozen; app backend work must use `api-app-*` and app_* tables.
