@@ -567,6 +567,34 @@
   gap: var(--space-2);
 }
 
+.document-file-native-frame {
+  position: relative;
+  display: block;
+  width: min(100%, 132px);
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.document-file-native-frame:focus-within {
+  border-radius: var(--radius-sm);
+  box-shadow: var(--focus-ring);
+}
+
+.document-file-input {
+  width: 260px;
+  max-width: none;
+  color: transparent;
+  cursor: pointer;
+}
+
+.document-slot .document-file-input {
+  max-width: none;
+}
+
+.document-file-input::file-selector-button {
+  color: var(--color-heading);
+}
+
 .upload-dropzone span,
 .document-slot span {
   color: var(--color-heading);
@@ -580,6 +608,13 @@
 
 .document-slot small {
   color: var(--color-muted);
+}
+
+.document-selected-file {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .document-slot-compact {
@@ -599,10 +634,18 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-4);
+  align-items: start;
 }
 
 .document-slot-grid-one {
   grid-template-columns: minmax(0, 1fr);
+}
+
+.document-slot-column {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: var(--space-3);
 }
 
 .document-location-group {
@@ -622,6 +665,18 @@
   margin-top: var(--space-2);
   border-top: 1px solid var(--color-border);
   padding-top: var(--space-3);
+}
+
+.invoice-preview-standalone {
+  margin-top: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  background: var(--color-bg);
+}
+
+.invoice-preview-panel h4 {
+  font-size: var(--text-sm);
 }
 
 .invoice-preview-panel p,
@@ -662,14 +717,17 @@
 .invoice-preview-list div {
   display: grid;
   min-width: 0;
-  grid-template-columns: minmax(88px, 0.38fr) minmax(0, 1fr);
-  gap: var(--space-3);
+  grid-template-columns: minmax(116px, 0.48fr) minmax(0, 1fr);
+  gap: var(--space-2);
+  align-items: start;
 }
 
 .invoice-preview-list dt,
 .invoice-preview-list dd {
+  min-width: 0;
   margin: 0;
   font-size: var(--text-xs);
+  overflow-wrap: anywhere;
 }
 
 .invoice-preview-list dt {
@@ -678,8 +736,6 @@
 }
 
 .invoice-preview-list dd {
-  min-width: 0;
-  overflow-wrap: anywhere;
   color: var(--color-heading);
 }
 

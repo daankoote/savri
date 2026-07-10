@@ -1,5 +1,6 @@
 import { getBrandLabel, getModelLabel } from "./chargerCatalog";
 import { DocumentUploadSlot } from "./DocumentUploadSlot";
+import { InvoicePdfPreviewPanel, supportsInvoicePdfPreview } from "./InvoicePdfPreviewPanel";
 import type {
   AccountType,
   AddressDraft,
@@ -82,6 +83,9 @@ export function ChargerDocumentsSection({
               const documents = (documentsByChargerId[charger.clientId] || []).filter(
                 (document) => !isBusiness || document.documentType === "installation_invoice",
               );
+              const invoicePreviewDocument = documents.find((document) =>
+                supportsInvoicePdfPreview(document.documentType),
+              );
               const title = chargerTitleParts(charger, chargerIndex);
 
               return (
@@ -100,11 +104,19 @@ export function ChargerDocumentsSection({
 
                   <div className={isBusiness ? "document-slot-grid document-slot-grid-one" : "document-slot-grid"}>
                     {documents.map((document) => (
-                      <DocumentUploadSlot
-                        document={document}
-                        key={document.clientId}
-                        onChange={onDocumentChange}
-                      />
+                      <div className="document-slot-column" key={document.clientId}>
+                        <DocumentUploadSlot
+                          document={document}
+                          onChange={onDocumentChange}
+                        />
+                        {invoicePreviewDocument?.clientId === document.clientId ? (
+                          <InvoicePdfPreviewPanel
+                            documentType={invoicePreviewDocument.documentType}
+                            file={invoicePreviewDocument.file}
+                            title="PDF-preview factuur installatie"
+                          />
+                        ) : null}
+                      </div>
                     ))}
                   </div>
                 </article>

@@ -9,6 +9,7 @@ import type { DocumentType } from "./signupTypes";
 type InvoicePdfPreviewPanelProps = {
   documentType: DocumentType;
   file: File | null;
+  title?: string;
 };
 
 type PreviewState =
@@ -49,7 +50,11 @@ function formatAddressParts(result: InvoicePdfParserAdapterResult) {
   return addressParts.length ? addressParts.join(" — ") : "niet gevonden";
 }
 
-export function InvoicePdfPreviewPanel({ documentType, file }: InvoicePdfPreviewPanelProps) {
+export function InvoicePdfPreviewPanel({
+  documentType,
+  file,
+  title = "PDF-preview",
+}: InvoicePdfPreviewPanelProps) {
   const [previewState, setPreviewState] = useState<PreviewState>({ status: "idle" });
   const isInvoiceSlot = supportsInvoicePdfPreview(documentType);
 
@@ -109,12 +114,13 @@ export function InvoicePdfPreviewPanel({ documentType, file }: InvoicePdfPreview
   if (previewState.status === "idle") return null;
 
   if (previewState.status === "skipped") {
-    return <p className="invoice-preview-note">{previewState.message}</p>;
+    return <p className="invoice-preview-note invoice-preview-standalone">{previewState.message}</p>;
   }
 
   if (previewState.status === "parsing") {
     return (
-      <div className="invoice-preview-panel" aria-live="polite">
+      <div className="invoice-preview-panel invoice-preview-standalone" aria-live="polite">
+        <h4>{title}</h4>
         <span className="status-pill status-pill-warning">PDF-analyse loopt</span>
         <p>Factuur wordt lokaal bekeken.</p>
       </div>
@@ -127,7 +133,8 @@ export function InvoicePdfPreviewPanel({ documentType, file }: InvoicePdfPreview
   const limitationCodes = previewState.result.limitations;
 
   return (
-    <div className="invoice-preview-panel" aria-live="polite">
+    <div className="invoice-preview-panel invoice-preview-standalone" aria-live="polite">
+      <h4>{title}</h4>
       <div className="invoice-preview-header">
         <span className={previewState.result.ok ? "status-pill status-pill-ok" : "status-pill status-pill-warning"}>
           PDF-preview

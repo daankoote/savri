@@ -2,7 +2,6 @@ import { type ChangeEvent, useState } from "react";
 import { documentLabel } from "./signupNormalizers";
 import {
   INVOICE_PDF_ACCEPT,
-  InvoicePdfPreviewPanel,
   isPdfFile,
   supportsInvoicePdfPreview,
 } from "./InvoicePdfPreviewPanel";
@@ -43,15 +42,19 @@ export function DocumentUploadSlot({ document, onChange }: DocumentUploadSlotPro
     <div className="document-slot">
       <label className="document-slot-picker">
         <span>{documentLabel(document.documentType)}</span>
-        <input
-          accept={expectsPdfInvoice ? INVOICE_PDF_ACCEPT : undefined}
-          onChange={handleInputChange}
-          type="file"
-        />
-        <small>{document.file ? document.file.name : "Nog geen bestand gekozen"}</small>
+        <span className="document-file-native-frame">
+          <input
+            accept={expectsPdfInvoice ? INVOICE_PDF_ACCEPT : undefined}
+            className="document-file-input"
+            onChange={handleInputChange}
+            type="file"
+          />
+        </span>
+        <small className="document-selected-file">
+          {document.file ? document.file.name : "Nog geen bestand gekozen"}
+        </small>
       </label>
       {fileMessage ? <small className="field-message">{fileMessage}</small> : null}
-      <InvoicePdfPreviewPanel documentType={document.documentType} file={document.file} />
     </div>
   );
 }
