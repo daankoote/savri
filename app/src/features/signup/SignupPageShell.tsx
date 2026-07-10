@@ -6,6 +6,7 @@ import { ChargerInfoSection } from "./ChargerInfoSection";
 import { ConsentSignatureSection } from "./ConsentSignatureSection";
 import { PersonalInfoSection } from "./PersonalInfoSection";
 import { SignupReviewPanel } from "./SignupReviewPanel";
+import { SignupSubmitStatusPanel, type SignupSubmitState } from "./SignupSubmitStatusPanel";
 import {
   createChargerDraft,
   createConsentDraft,
@@ -13,6 +14,9 @@ import {
   createLocationDraft,
   createPersonalInfoDraft,
 } from "./signupNormalizers";
+import { buildSignupSubmitClientConfig } from "./signupSubmitConfig";
+import { submitSignupPayload } from "./signupSubmitClient";
+import { mapSignupDraftToSubmitPayload } from "./signupSubmitMapper";
 import type {
   AddressDraft,
   ChargerDocumentDraft,
@@ -37,6 +41,14 @@ function createInitialDocuments(): DocumentsByChargerId {
   );
 }
 
+function createSignupIdempotencyKey(): string {
+  if (crypto.randomUUID) {
+    return `signup-submit-${crypto.randomUUID()}`;
+  }
+
+  return `signup-submit-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
 export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
   const [personalInfo, setPersonalInfoState] = useState<PersonalInfoDraft>(() => createPersonalInfoDraft());
   const [locations, setLocations] = useState<SignupLocationDraft[]>(() => [firstLocation]);
@@ -47,6 +59,7 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
   const [activeLocationId, setActiveLocationId] = useState(firstLocation.clientId);
   const [activeTab, setActiveTab] = useState<SignupTab>("manual");
   const [review, setReview] = useState<SignupValidationResult | null>(null);
+  const [submitState, setSubmitState] = useState<SignupSubmitState>({ status: "idle" });
 
   const draft = useMemo(
     () => ({
@@ -173,8 +186,30 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
     }));
   };
 
-  const handleStartDossier = () => {
-    setReview(validateSignupDraft(draft));
+  const handleStartDossier = async () => {
+    const nextReview = validateSignupDraft(draft);
+    setReview(nextReview);
+    setSubmitState({ status: "idle" });
+
+    if (!nextReview.canStartDossier) return;
+
+    const idempotencyKey = createSignupIdempotencyKey();
+    const config = buildSignupSubmitClientConfig(idempotencyKey);
+
+    if (!config.ok) {
+      setSubmitState({ status: "error", message: config.message });
+      return;
+    }
+
+    setSubmitState({ status: "submitting" });
+    const result = await submitSignupPayload(mapSignupDraftToSubmitPayload(draft), config.config);
+
+    if (result.ok) {
+      setSubmitState({ status: "success", result });
+      return;
+    }
+
+    setSubmitState({ status: "error", message: result.message });
   };
 
   return (
@@ -216,12 +251,18 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
 
           <section className="signup-section">
             <div className="signup-actions">
-              <button className="button button-primary" onClick={handleStartDossier} type="button">
-                Start dossier
+              <button
+                className="button button-primary"
+                disabled={submitState.status === "submitting"}
+                onClick={handleStartDossier}
+                type="button"
+              >
+                {submitState.status === "submitting" ? "Versturen..." : "Start dossier"}
               </button>
-              <p className="fine-print">Er wordt nog niets verstuurd.</p>
+              <p className="fine-print">Je blijft op deze pagina na het verzenden.</p>
             </div>
             <SignupReviewPanel result={review} />
+            <SignupSubmitStatusPanel state={submitState} />
           </section>
         </div>
       </main>

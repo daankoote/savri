@@ -32,8 +32,8 @@
 - Dashboard/dossier lifecycle architecture is documented in `docs/08_dashboard_dossier_lifecycle_architecture.md`.
 - Signup submit and dashboard bootstrap contract is documented in `docs/09_signup_submit_and_dashboard_contract.md`.
 - `api-app-signup-submit` write v3 is locally proven; it creates customer/identity/dossier shell, locations/chargers, expected document slots, and legal acceptance records from the submit payload.
-- Signup payload mapper, local-only contract dry-run proof, and unused frontend API client are implemented and locally proven, but `/app` submit wiring remains blocked until explicit UI wiring is approved.
-- Next backend/app items: document upload processing, legal version detail hardening, customer timeline projection, dashboard bootstrap, and final submit wiring later.
+- Signup payload mapper, local-only contract dry-run proof, frontend API client, and controlled `/app` submit wiring are implemented; submit stays on-page and does not redirect to dashboard yet.
+- Next backend/app items: browser-QA the live submit path, document upload processing, legal version detail hardening, customer timeline projection, and dashboard bootstrap later.
 - Legacy local reset is blocked by missing baseline for old dossier tables; app foundation migration was tested isolated.
 - Legacy Supabase functions frozen; app backend work must use `api-app-*` and app_* tables.
 - Customer dashboard shell exists as mock/read-only frontend under `/dashboard`.

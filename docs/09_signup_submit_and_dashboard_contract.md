@@ -37,7 +37,7 @@ Current write v3 behavior:
 
 Current write v3 intentionally does not create document uploads, storage objects, customer timeline, support/messages, or kWh/result/fee lifecycle rows.
 
-Frontend is still not connected. A pure frontend payload mapper, local-only contract dry-run proof, and unused frontend API client now exist and are locally proven, but production UI does not call the endpoint or navigate to the dashboard.
+Frontend submit wiring is implemented for `/aanmelden`: the existing button validates locally, maps the draft, calls `api-app-signup-submit` write v3 through the frontend API client, and shows loading, success, or safe error state on the same page. It does not navigate to the dashboard yet.
 
 Product role:
 
@@ -64,7 +64,7 @@ Rules:
 
 - The client validates first.
 - The backend validates again.
-- The backend creates the customer, dossier, locations, chargers, document slots, legal records, dashboard access, timeline events, audit events, and initial retention class in one controlled flow.
+- The current backend creates the customer, dossier, locations, chargers, document slots, legal records, idempotency records, intake audit events, and app audit events in one controlled submit flow. Dashboard access, customer-readable timeline events, upload processing, lifecycle records, and final retention handling remain future phases.
 - Submit must be idempotent.
 - Submit must be audited.
 - Double-clicks or retries must not create duplicate dossiers.
@@ -78,7 +78,7 @@ Rules:
 
 ## 3. Current Frontend Payload
 
-The current `/aanmelden` skeleton is still local-only from the browser. It is not wired to `api-app-signup-submit` yet.
+The current `/aanmelden` flow now uses the frontend mapper and API client to submit to `api-app-signup-submit` write v3 after local validation. It still stays on the same page after submit and does not bootstrap dashboard access yet.
 
 Current local state shape:
 
