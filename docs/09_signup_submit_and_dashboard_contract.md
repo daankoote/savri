@@ -39,6 +39,13 @@ Current write v3 intentionally does not create document uploads, storage objects
 
 Frontend submit wiring is implemented for `/aanmelden`: the existing button validates locally, maps the draft, calls `api-app-signup-submit` write v3 through the frontend API client, and shows loading, success, or safe error state on the same page. It does not navigate to the dashboard yet.
 
+Environment boundary:
+
+- `app/.env.local` is for the isolated Vite app submit flow.
+- Root `.env.local` is not the `/app` submit config.
+- `assets/js/config.runtime.js` is generated legacy/static runtime config and must not be printed, committed, or used by the `/app` Vite submit flow.
+- Supabase Edge Function environment variables are separate from Vite app environment variables.
+
 Product role:
 
 - ENVAL is now a customer-facing commercial ERE inboekservice.
