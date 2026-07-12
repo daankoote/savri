@@ -4,6 +4,31 @@ Statusdatum: 2026-05-10
 Prioriteit: audit-first.  
 Regel: alleen open items; afgerond → naar changelog.
 
+## New `/app` document upload backend — OPEN after local proof
+
+Completed items are recorded in `03_CHANGELOG_APPEND_ONLY.md`.
+
+CURRENT / LOCAL PROOF:
+- app document file/version schema is proven locally.
+- app customer auth foundation is proven locally.
+- `api-app-document-upload-url` backend is proven locally.
+- `api-app-document-upload-confirm` backend is proven locally.
+- atomic confirm/reject RPCs, replacement v1→v2, idempotency, audit, and concurrency behavior are proven locally.
+
+Still OPEN:
+- customer-facing Supabase Auth login/bootstrap/binding flow.
+- production storage bucket/policies/config.
+- remote migration/function deployment proof.
+- modular `/app` upload client.
+- PDF invoice slot frontend wiring.
+- browser QA for the upload flow.
+- dashboard/read projection for customer-visible document state.
+
+Boundary:
+- Overall document upload flow is not DONE.
+- Proof is local only, not production-ready, deployed, live, or remotely applied.
+- Root/static production and legacy `api-dossier-*` flow remain separate.
+
 ## MVP Launch Cut — CURRENT
 
 Doel:

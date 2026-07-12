@@ -1,8 +1,8 @@
 # App Schema Migration Design
 
-Status: design-only source document before migration implementation.
+Status: design/reference source document. Some app foundation, location/charger, document/legal slot, file/version, and upload-confirm RPC migrations are implemented and locally proven; current runtime truth is tracked in the focused contract docs.
 
-Scope: future database schema for the new `/app` customer-facing commercial ERE inboekservice backend.
+Scope: database schema direction for the new `/app` customer-facing commercial ERE inboekservice backend.
 
 This document does not create migrations, SQL, Edge Functions, Supabase behavior, auth behavior, storage buckets, RLS policies, or production wiring.
 
@@ -367,6 +367,15 @@ Old schema relationship: adapt `dossier_documents` upload-confirm/hash pattern.
 ### `app_document_versions`
 
 Purpose: immutable version history for each slot.
+
+Implemented status note:
+
+- Status: CURRENT / LOCAL PROOF for the new app upload backend.
+- The implemented table names are `app_dossier_document_slots`, `app_dossier_document_files`, and `app_dossier_document_versions`.
+- Confirmed document versions are immutable evidence history.
+- `api-app-document-upload-confirm` uses `app_confirm_document_upload_v1` to atomically confirm the file, create the version, supersede the previous current version, and update the slot current pointer.
+- `app_reject_document_upload_v1` provides scoped atomic reject/compensation behavior.
+- Runtime truth for the current upload endpoints lives in `docs/14_app_document_upload_contract.md`; this document remains design/reference.
 
 Important columns:
 

@@ -1,8 +1,8 @@
 # App Backend Auth Schema Contract
 
-Status: architecture source of truth before implementation.
+Status: architecture source of truth for `/app` backend auth and endpoint boundaries. Some foundation pieces are implemented and locally proven; open items remain marked explicitly.
 
-Scope: future `/app` signup submit and customer dashboard backend. This document does not implement endpoints, schema, migrations, auth, Supabase changes, or production wiring.
+Scope: `/app` signup submit, document upload, and customer dashboard backend boundaries. This document does not itself implement endpoints, schema, migrations, auth, Supabase changes, or production wiring.
 
 ## 1. Executive Decision
 
@@ -105,6 +105,27 @@ Fraud controls are backend concerns:
 - raw audit not exposed to customers
 
 ## 3. Auth Model
+
+### Current App Auth Foundation
+
+Status: CURRENT / LOCAL PROOF.
+
+- `supabase/functions/_shared/app_customer_auth.ts` is implemented and committed.
+- App customer JWT validation uses Supabase Auth through `serviceClient.auth.getUser`.
+- The helper resolves:
+  - auth user
+  - active `app_customer_identities`
+  - active `app_customers`
+  - customer-owned `app_customer_dossiers`
+- `api-app-document-upload-url` and `api-app-document-upload-confirm` consume this helper for customer authentication and dossier authorization.
+- The helper does not reuse legacy `dossier_sessions`, legacy dossier tokens, custom raw JWT decoding, or browser storage.
+
+Open:
+
+- Customer-facing account creation/login/bootstrap/binding flow.
+- Frontend session UX for dashboard and uploads.
+- Recovery/support flow for customer account access.
+- Production deployment and remote auth proof.
 
 ### Customer Identity
 

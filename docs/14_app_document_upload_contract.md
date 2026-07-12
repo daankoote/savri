@@ -1,28 +1,43 @@
 # App Document Upload Contract
 
-Status: source-of-truth contract draft for the future `/app` document upload flow. No endpoint or frontend upload implementation exists yet.
+Status: source-of-truth contract for the new `/app` document upload backend.
+
+Implementation status:
+
+- CURRENT: file/version schema, app customer auth helper, `api-app-document-upload-url`, and `api-app-document-upload-confirm` are committed and locally proven.
+- LOCAL PROOF: proof was completed in disposable local Supabase only.
+- OPEN: frontend upload wiring, customer-facing auth bootstrap/login, production storage bucket/policies, remote deploy, and browser QA.
 
 ## 1. Current Truth
 
 - `api-app-signup-submit` write v3 creates the dossier shell, locations, chargers, `app_dossier_document_slots`, legal acceptances, scoped idempotency, and app audit events.
 - The `/app` signup UI currently has local PDF invoice preview only. It does not upload files, create storage objects, confirm hashes, or mutate document slot state.
+- `app_dossier_document_slots` is the expected-evidence/current-version projection.
+- `app_dossier_document_files` is the server-issued physical upload target and file lifecycle table.
+- `app_dossier_document_versions` is immutable confirmed version history.
+- `api-app-document-upload-url` is CURRENT and locally gateway-proven.
+- `api-app-document-upload-confirm` is CURRENT and locally gateway-proven.
+- Immediate server hash confirmation remains CURRENT.
+- Replacement/version history is implemented through immutable versions and slot current pointers.
+- `app_customer_auth.ts` is CURRENT for Supabase Auth JWT validation, active identity/customer resolution, and dossier ownership authorization.
+- Customer-facing login/auth bootstrap and frontend upload integration remain OPEN.
+- Production bucket/policy/deploy proof remains OPEN.
 - New upload behavior must use new `api-app-*` endpoints and `app_*` tables.
 - Legacy upload endpoints are frozen/reference only:
   - `api-dossier-upload-url`
   - `api-dossier-upload-confirm`
-- legacy upload endpoints are frozen/reference only.
 - Legacy upload endpoints must not be extended with new `/app` behavior and must not be wired into the Vite app.
 - P0: any previously exposed token/key-like value must be treated as leaked and rotated before production/deploy use. Do not paste or preserve secrets in docs, reports, logs, or source.
 
-## 2. Target Flow
+## 2. Backend Flow
 
-The future app upload flow should be split into explicit steps:
+The app upload backend is split into explicit steps:
 
 1. Browser preflight
 2. `api-app-document-upload-url`
 3. Direct browser upload to storage
 4. `api-app-document-upload-confirm`
-5. Backend slot status update and audit event
+5. Atomic backend file confirmation, immutable version creation, slot current pointer update, and audit event
 6. Later review/analysis, separate from upload confirmation
 
 Browser preflight may optimize cost and latency by checking file type, size, PDF parse preview, compression, and client hash. It is not trusted as truth. Backend validation and server-side hash confirmation remain required.
@@ -48,6 +63,8 @@ Frontend must not do:
 
 ## 4. Endpoint: `api-app-document-upload-url`
 
+Status: CURRENT, committed and locally gateway-proven.
+
 Purpose: issue a short-lived, slot-scoped upload target for one document slot.
 
 Method:
@@ -58,36 +75,25 @@ Method:
 Required controls:
 
 - CORS according to the app Edge Function foundation.
-- Customer/session or scoped upload capability authentication. Final auth model must be resolved before production.
+- Supabase Auth app customer authentication through `app_customer_auth.ts`.
 - `Idempotency-Key` required.
 - Request metadata captured without storing raw IP by default.
 - Backend authorization against customer, dossier, slot, and allowed action.
 
-Draft request shape:
+Current request shape:
 
 ```json
 {
   "dossier_id": "uuid",
   "document_slot_id": "uuid",
-  "client_slot_id": "charger-1-installation-invoice",
   "file_name": "factuur.pdf",
-  "content_type": "application/pdf",
+  "mime_type": "application/pdf",
   "size_bytes": 123456,
-  "client_sha256": "optional-64-hex",
-  "client_transform": {
-    "kind": "none",
-    "version": "app-local-v1"
-  },
-  "parser_summary": {
-    "kind": "pdf_invoice_preview",
-    "version": "local-v1",
-    "observed_field_names": ["mid_number", "serial_number"],
-    "limitations": []
-  }
+  "client_sha256": "optional-64-hex"
 }
 ```
 
-Draft response shape:
+Current success response shape:
 
 ```json
 {
@@ -95,10 +101,10 @@ Draft response shape:
   "mode": "upload_url_v1",
   "request_id": "uuid",
   "document_slot_id": "uuid",
-  "upload_id": "uuid-or-intent-id",
+  "document_file_id": "uuid",
   "storage_bucket": "app-documents",
-  "storage_path": "app/dossiers/{dossier_id}/slots/{slot_id}/versions/{version_id}/file.pdf",
-  "signed_url": "short-lived-url",
+  "storage_path": "server-generated-private-path",
+  "signed_upload_url": "short-lived-url",
   "expires_at": "iso timestamp",
   "max_size_bytes": 5242880
 }
@@ -116,11 +122,15 @@ Backend validation:
 
 Writes:
 
-- Prefer an upload-intent/file-version record if schema is extended later.
-- If MVP avoids a new table, store only minimal provisional metadata in slot `metadata` and finalize slot file columns during confirm.
+- Create exactly one `app_dossier_document_files` row with status `issued`.
+- Store server-issued storage bucket/path and declared file metadata.
+- Write scoped app idempotency and fail-closed app audit.
 - Do not mark the slot `accepted` from upload-url issuance.
+- Do not create a document version from upload-url issuance.
 
 ## 5. Endpoint: `api-app-document-upload-confirm`
+
+Status: CURRENT, committed and locally gateway-proven.
 
 Purpose: confirm that the object uploaded to storage matches the expected file and update the app document slot.
 
@@ -132,37 +142,23 @@ Method:
 Required controls:
 
 - CORS according to the app Edge Function foundation.
-- Same customer/session or scoped upload capability boundary as upload-url.
+- Supabase Auth app customer authentication through `app_customer_auth.ts`.
 - `Idempotency-Key` required.
 - Backend authorization against customer, dossier, slot, and upload intent.
 - Server-side object lookup and hash verification.
 
-Draft request shape:
+Current request shape:
 
 ```json
 {
   "dossier_id": "uuid",
   "document_slot_id": "uuid",
-  "upload_id": "uuid-or-intent-id",
-  "storage_path": "server-issued-path",
-  "file_sha256": "64-hex-client-hash",
-  "file_name": "factuur.pdf",
-  "content_type": "application/pdf",
-  "size_bytes": 123456,
-  "client_transform": {
-    "kind": "none",
-    "version": "app-local-v1"
-  },
-  "parser_summary": {
-    "kind": "pdf_invoice_preview",
-    "version": "local-v1",
-    "observed_field_names": ["mid_number", "serial_number"],
-    "limitations": []
-  }
+  "document_file_id": "uuid",
+  "file_sha256": "64-hex-client-hash"
 }
 ```
 
-Draft response shape:
+Current success response shape:
 
 ```json
 {
@@ -170,10 +166,12 @@ Draft response shape:
   "mode": "upload_confirm_v1",
   "request_id": "uuid",
   "document_slot_id": "uuid",
-  "status": "uploaded",
-  "file_sha256": "server-confirmed-64-hex",
-  "uploaded_at": "iso timestamp",
-  "verified_at": "iso timestamp"
+  "document_file_id": "uuid",
+  "document_version_id": "uuid",
+  "version_number": 1,
+  "file_status": "confirmed",
+  "version_status": "current",
+  "server_sha256": "server-confirmed-64-hex"
 }
 ```
 
@@ -189,17 +187,11 @@ Backend validation:
 
 Writes:
 
-- Update `app_dossier_document_slots`:
-  - `file_object_path`
-  - `file_name`
-  - `file_mime_type`
-  - `file_size_bytes`
-  - `file_sha256`
-  - `uploaded_at`
-  - `verified_at`
-  - `status = "uploaded"` after server hash match
-  - `metadata` for safe upload/parser summary if needed
-- Write app intake/app audit events.
+- Update `app_dossier_document_files` to confirmed with server hash, stored size, detected MIME, and confirmation metadata.
+- Create one immutable `app_dossier_document_versions` row.
+- Supersede the previous current version, if present.
+- Update `app_dossier_document_slots.current_version_id` and `current_version_number`.
+- Write scoped app idempotency and fail-closed app audit.
 - Do not mark the slot `accepted`; acceptance belongs to later review.
 
 ## 6. Storage Path Contract
@@ -220,22 +212,18 @@ Rules:
 
 ## 7. `app_dossier_document_slots`
 
-Current app slot table supports the first upload MVP:
+Current app document tables support the upload backend:
 
-- slot identity: `id`, `dossier_id`, `location_id`, `charger_id`, `client_slot_id`
-- slot definition: `document_type`, `required`, `title`, `description`, `source_hint`
-- file metadata: `file_object_path`, `file_name`, `file_mime_type`, `file_size_bytes`, `file_sha256`
-- lifecycle timestamps: `uploaded_at`, `verified_at`, `rejected_at`
-- status: `expected`, `uploaded`, `processing`, `needs_review`, `accepted`, `rejected`, `not_required`
-- `metadata`
+- `app_dossier_document_slots`: expected evidence, status, current version pointer, and customer-facing slot projection.
+- `app_dossier_document_files`: physical server-issued upload target and file lifecycle.
+- `app_dossier_document_versions`: immutable confirmed version history.
 
-Schema gap to review before implementation:
+Implemented safeguards:
 
-- Upload intents are not modeled as a separate table.
-- File versions are not modeled as a separate table.
-- Replacement history may need `app_dossier_document_files` or `app_dossier_document_versions` before production.
-
-MVP can use slot columns for a single current file, but production auditability likely needs immutable file versions.
+- Parent deletion is restricted while file/version evidence exists.
+- `service_role` has no DELETE permission on evidence files/versions.
+- Current version promotion happens atomically through upload confirmation RPCs.
+- Reject/compensation behavior is atomic through `app_reject_document_upload_v1`.
 
 ## 8. Idempotency
 
@@ -353,9 +341,15 @@ Customer-facing messages should be short and safe. Internal audit events can sto
 
 ## 14. Auth And Access Assumptions
 
-Open decision:
+Current backend auth:
 
-- Final dashboard auth/customer account model is not yet implemented.
+- Upload endpoints require Supabase Auth customer JWT validation.
+- `app_customer_auth.ts` resolves auth user to active `app_customer_identities` and active `app_customers`.
+- Dossier access is authorized server-side by customer ownership.
+
+Open:
+
+- Customer-facing account creation/login/bootstrap/binding flow is not yet implemented.
 - Uploads after signup should eventually happen from authenticated dashboard sessions.
 - If pre-dashboard uploads are needed, use a short-lived slot-scoped upload capability token, not legacy dossier sessions.
 
@@ -393,7 +387,6 @@ Legacy upload endpoints are frozen/reference only.
 This contract does not implement:
 
 - frontend upload UI
-- app upload Edge Functions
 - storage bucket creation
 - image OCR
 - document review workflow
@@ -403,13 +396,21 @@ This contract does not implement:
 
 ## 17. Recommended Implementation Sequence
 
-1. Schema gap review for upload intent and document file version tables.
-2. Draft `api-app-document-upload-url` skeleton with no production wiring.
-3. Draft `api-app-document-upload-confirm` skeleton with server hash-confirm.
-4. Local smoke tests for both endpoints.
-5. Frontend upload client, not yet wired to UI.
-6. Wire one PDF invoice slot in `/app` behind existing validation.
-7. Browser QA with PDF invoice upload and hash confirm.
-8. Add document replacement/version history.
-9. Add dashboard document view.
-10. Add worker/internal analysis lane after upload confirmation.
+Completed / CURRENT:
+
+1. File/version schema implemented.
+2. App customer auth helper implemented.
+3. `api-app-document-upload-url` implemented and locally proven.
+4. `api-app-document-upload-confirm` implemented and locally proven.
+5. Replacement/version history implemented and locally proven.
+
+Next OPEN work:
+
+1. Customer-facing auth bootstrap/login/binding.
+2. Production storage bucket/policy/config proof.
+3. Remote migration/function deploy proof.
+4. Frontend upload client, not yet wired to UI.
+5. Wire one PDF invoice slot in `/app` behind existing validation.
+6. Browser QA with PDF invoice upload and hash confirm.
+7. Add dashboard document read projection.
+8. Add worker/internal analysis lane after upload confirmation.

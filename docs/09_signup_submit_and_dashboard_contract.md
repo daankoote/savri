@@ -39,6 +39,16 @@ Current write v3 intentionally does not create document uploads, storage objects
 
 Frontend submit wiring is implemented for `/aanmelden`: the existing button validates locally, maps the draft, calls `api-app-signup-submit` write v3 through the frontend API client, and shows loading, success, or safe error state on the same page. It does not navigate to the dashboard yet.
 
+Document upload backend status:
+
+- CURRENT / LOCAL PROOF: separate `api-app-document-upload-url` and `api-app-document-upload-confirm` endpoints exist for the new `/app` backend.
+- They require an authenticated app customer and server-side dossier/slot authorization.
+- They create and confirm `app_dossier_document_files` and immutable `app_dossier_document_versions`.
+- Signup submit itself still does not upload files, create storage objects, confirm document hashes, or promote document versions.
+- Frontend/dashboard upload wiring remains OPEN.
+- Customer-facing auth bootstrap/login/binding remains OPEN.
+- Production storage bucket/policy/deploy proof remains OPEN.
+
 Local browser-QA proof is green after the Vite env resolver fix and Vite restart:
 
 - Local validation showed `Concept klaar`.

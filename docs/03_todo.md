@@ -34,9 +34,11 @@
 - `api-app-signup-submit` write v3 is locally proven; it creates customer/identity/dossier shell, locations/chargers, expected document slots, and legal acceptance records from the submit payload.
 - Signup payload mapper, local-only contract dry-run proof, frontend API client, and controlled `/app` submit wiring are implemented; submit stays on-page and does not redirect to dashboard yet.
 - Local browser-QA for `/aanmelden` submit is green: validation reached `Concept klaar`, submit returned OPTIONS 200 and POST 200 to local `api-app-signup-submit`, the success panel showed `Aanmelding ontvangen` plus Dossier ID, and no dashboard redirect occurred.
-- Next backend/app items: document upload processing, legal version detail hardening, customer timeline projection, and dashboard bootstrap later.
+- App document upload backend is locally proven: file/version schema, app customer auth helper, upload-url endpoint, upload-confirm endpoint, atomic confirm/reject RPCs, replacement/version history, and idempotency/audit behavior.
+- Next backend/app items: customer-facing auth bootstrap/login/binding, production storage bucket/policies/config, remote migration/function deployment proof, modular `/app` upload client, PDF invoice slot frontend wiring, browser QA, dashboard/read projection, legal version detail hardening, customer timeline projection, and dashboard bootstrap later.
 - PDF invoice parser adapter proof exists in `/app` for client-side text-PDF parsing only; it is not upload processing and does not call backend.
 - Local PDF invoice preview is wired into `/aanmelden` invoice slots for PDF facturen; it shows parsed MID/serial/address summary, blocks non-PDF selection for that slot, and does not upload or verify documents.
+- Local PDF invoice preview remains frontend-only; the proven upload backend is not wired into `/app` yet.
 - Image OCR remains worker/internal later; browser image work should stay limited to precheck, compression, and hash.
 - P0 before production/deploy: treat the previously exposed runtime token/key-like value as leaked and rotate it. Do not print or preserve the value in docs, reports, commits, or chat.
 - Legacy local reset is blocked by missing baseline for old dossier tables; app foundation migration was tested isolated.
@@ -104,7 +106,9 @@
 - Validate client-side first; write to backend only at final submit later.
 - Manual entry and import must normalize into the same `locations[].chargers[]` state.
 - Documents must attach to stable charger client IDs.
-- Current skeleton has local-only file inputs; no storage or upload.
+- Current skeleton has local-only file inputs; no storage upload from the browser yet.
+- Backend upload-url and upload-confirm endpoints are locally proven, but frontend upload wiring remains OPEN.
+- Next upload tasks: build modular `/app` upload client, wire one PDF invoice slot, run browser QA, and add dashboard document read projection.
 - Later define exact KVK-uittreksel age requirement if required for zakelijk/VVE.
 - Later define exact consent text and signature implementation.
 - Later finalize legal copy for terms, privacy, fee, no-guarantee, and control/mandate permission.
@@ -121,6 +125,7 @@
 
 - Review Edge Function request/response contracts before wiring `/app`.
 - Audit/evidence/anti-fraud backend doctrine must be enforced in schema and endpoints.
+- App document upload backend proof is CURRENT / LOCAL PROOF only; production storage bucket/policy/deploy and remote migration/function proof remain OPEN.
 - Legacy Supabase functions are frozen: `api-dossier-*`, `api-lead-submit`, `mail-worker`, `retention-worker`, and `locked-unpaid-reminder-worker` remain fallback/legacy only; do not add new `/app` behavior there.
 - Confirm customer records, eligibility answers, documents, consents, status transitions, audit events, exports, retention, privacy, and evidence versioning needs.
 - Confirm fee-model fields: fee model/version, success percentage, accepted terms/privacy versions, payout/value realization event, fee calculation event, and fee-relevant audit events.

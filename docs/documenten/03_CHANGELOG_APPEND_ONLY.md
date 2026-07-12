@@ -3366,4 +3366,47 @@ Status
   - dit is geen directe MVP-blocker zolang alle exports immutable blijven
   - post-MVP beslissen of same-dossier re-export bewust toegestaan blijft of idempotent/superseded moet worden gemaakt
 
+## 2026-07-12 — New `/app` document upload backend lokaal bewezen en gecommit
+
+CURRENT / LOCAL PROOF:
+- App document file/version schema is gecommit:
+  - `app_dossier_document_slots` blijft de expected-evidence/current-version projection.
+  - `app_dossier_document_files` modelleert server-issued physical upload targets en file lifecycle.
+  - `app_dossier_document_versions` modelleert immutable confirmed version history.
+  - Parent deletion is restricted zolang file/version evidence bestaat.
+  - `service_role` heeft geen DELETE permission op evidence files/versions.
+- App customer auth foundation is gecommit:
+  - Supabase Auth JWT validation.
+  - auth user -> active app customer identity -> active app customer.
+  - dossier access server-side via customer ownership.
+- `api-app-document-upload-url` is gecommit en lokaal gateway-proven:
+  - app customer auth + dossier/slot authorization.
+  - `Idempotency-Key` verplicht.
+  - server-generated private bucket/path.
+  - `app_dossier_document_files` status `issued`.
+  - deterministic replay, conflict/concurrency proof.
+  - fail-closed audit.
+  - signing failure compensation naar terminal abandoned state.
+- `api-app-document-upload-confirm` is gecommit en lokaal gateway-proven:
+  - exact server-issued object wordt server-side gelezen.
+  - server-side SHA-256, size check, PDF MIME signature check.
+  - atomic confirm via `app_confirm_document_upload_v1`.
+  - immutable version creation.
+  - previous current version superseded.
+  - slot `current_version_id` / `current_version_number` updated.
+  - atomic scoped reject via `app_reject_document_upload_v1`.
+  - same-key and different-key concurrency proven without duplicate versions.
+  - replacement v1 -> v2 proven.
+
+Boundaries:
+- Local proof only in disposable local Supabase.
+- No remote deployment proof.
+- No remote database apply.
+- No production storage bucket/policy proof.
+- No frontend upload wiring.
+- No customer login/auth-binding journey.
+- No browser QA.
+- PDF invoice only for the current first upload lane.
+- No browser image OCR.
+
 # EINDE 03_CHANGELOG_APPEND_ONLY.md (append-only, updated)
