@@ -1,0 +1,1111 @@
+<!--
+LEGACY / SUPERSEDED
+This file belongs to the old root/static ENVAL product generation.
+It is not source of truth for /app, api-app-*, or app_* implementation.
+Reuse is allowed only after explicit adaptation into docs/app/.
+Current canon starts at docs/app/00_CANON.md.
+-->
+
+# 00_GLOBAL.md (current state, rewrite-ok)
+
+# ENVAL — Global Product & Phase Plan (CURRENT)
+
+Statusdatum: 2026-05-10
+Repo: /Users/daankoote/dev/enval  
+Branch context: feature/dev (main = pilot index)
+
+---
+
+# Strategische Positionering (2026-03-02)
+
+Enval is een infrastructuurlaag.
+
+Niet:
+- Inboeker
+- Verificateur
+- Certificerende partij
+- Resultaatgarant
+- ERE-bemiddelaar
+
+Wel:
+- Audit-ready dossierstructuur
+- Administratieve standaard
+- Schema-versioned export artefact (“Audit Pack Standard”)
+- Neutrale onderlaag voor meerdere inboekers
+
+Strategische keuze (bewust):
+- Geen eigen Inboeker BV
+- Geen verticale integratie
+- Geen exclusieve partner
+- Geen revenue share model
+
+Langetermijnpositie:
+- 8.000–15.000 dossiers per jaar
+- Hoge marge
+- Lage vaste kosten
+- Geen personeel
+- Infrastructuurdominantie i.p.v. ketendominantie
+
+Belangrijk:
+Enval claimt nooit compliance, verificatie of certificering.
+
+
+## 1) Wat bouwen we (in 1 zin)
+Enval is een dossier- en registratieplatform dat bewijsstukken, data en audit-trail zó structureert dat een ERE/RED3 traject niet afketst op administratie — zonder zelf de inboeker/verificateur te zijn.
+
+---
+
+## 2) Positionering & verantwoordelijkheden (niet onderhandelen)
+
+Primaire doelgroep (CURRENT focus):
+> Particuliere EV-rijder met eigen laadpaal (NL + MID) die een overdraagbaar, auditwaardig dossier wil zonder administratieve rompslomp.
+
+Secundaire doelgroep (light touch, MVP):
+> Inboekers die gebruik willen maken van de Enval dossieropbouw → via contact (geen dashboard in MVP).
+
+- **Enval**: structuur, bewijs, overdraagbaarheid, audit-trail, export.
+- **Externe verificateur**: (pre-)verificatie/audit.
+- **Inboeker**: eindverantwoordelijk (juridisch/administratief/fraude), en feitelijk inboeken.
+- **Geen garanties** op ERE’s/vergoedingen.
+- **Verbruik/metering**: aparte module, expliciet “in ontwikkeling”.
+- **Geen geldstromen via Enval** (geen escrow/fees/uitbetalingen).
+
+## 3) Prioriteiten (hard order)
+
+1) Auditwaardigheid  
+2) Correctheid & determinisme  
+3) Conversie & heldere journey (nieuw expliciet gemaakt 2026-02-19)  
+4) Usability  
+5) Performance/cost  
+6) Legal hardening  
+
+Nieuwe expliciete nuance:
+> Een technisch werkend product zonder converteerbare journey is geen verkoopbaar product.
+
+**Wedge binnen audit-first (nieuw):**
+- **Audit Pack Standard** (schema_versioned export + checks + auditstream) is het centrale productartefact.
+- Alle toekomstige modules (verbruik, partners, dashboards) pluggen hierop in.
+
+**Nieuwe derived laag (CURRENT, 2026-03-15):**
+- **Analysis v1** is geïntroduceerd als derived consistency layer bovenop het dossier.
+- Analysis leest uit:
+  - `dossiers`
+  - `dossier_chargers`
+  - `dossier_documents`
+- Analysis schrijft uitsluitend naar:
+  - `dossier_analysis_document`
+  - `dossier_analysis_charger`
+  - `dossier_analysis_summary`
+- Analysis muteert géén bestaande dossierdata en verandert de review/lock state machine niet.
+- Export bevat nu naast dossier/checks/docs ook analysis-blokken.
+- Positionering blijft strikt:
+  - geen authenticity-claim
+  - geen compliance-claim
+  - geen certificeringsclaim
+
+## 4) Frontend runtime-config model (nieuw 2026-02-19)
+
+Doel:
+- Geen secrets in repo
+- Eén bron per omgeving
+- Reproduceerbare injectie
+
+### Architectuur
+
+Frontend gebruikt:
+
+1. `assets/js/config.runtime.js`
+   - GENERATED FILE
+   - Nooit committen
+   - Bevat:
+     - SUPABASE_URL
+     - SUPABASE_ANON_KEY
+     - API_BASE
+
+2. `assets/js/config.js`
+   - Bevat géén secrets
+   - Leest uitsluitend `window.ENVAL.*`
+   - Bevat edgeHeaders helper
+
+### Script volgorde (hard requirement)
+
+In alle HTML’s:
+
+<script src="/assets/js/config.runtime.js"></script>
+<script src="/assets/js/config.js"></script>
+
+Nooit omdraaien.
+
+## Omgevingen
+
+- Lokaal:
+  - Bron: .env.local
+  - Generator: scripts/gen-runtime.sh
+  - Resultaat: config.runtime.js
+
+- Productie (Netlify):
+  - Bron: Netlify Environment Variables
+  - Injectie: netlify.toml build command
+  - Runtime file wordt bij deploy gegenereerd
+
+## Veiligheidspositie
+
+- SUPABASE_ANON_KEY is publiek en mag zichtbaar zijn in browser.
+- SUPABASE_SERVICE_ROLE_KEY mag nooit in frontend verschijnen.
+- Nooit secrets in repo, docs of chat.
+
+Status: ACTIEF EN BEWEZEN (console-check + deploy-test 2026-02-19)
+
+
+## 5) Definitie “auditwaardig” (Enval v0)
+Auditwaardig betekent hier:
+1. Alle write-acties (success én mislukking) laten sporen na in:
+   - `public.dossier_audit_events` zodra er een dossier scope is, en
+   - `public.intake_audit_events` voor pre-dossier intake rejects.
+2. Sporen zijn te correleren: `request_id`, `actor_ref`, `ip`, `ua`, `environment`, en bij rejects `stage/status/message/reason`.
+3. Documenten tellen niet mee zolang upload niet is bevestigd (**issued ≠ confirmed**).
+4. Dossier lock is afdwingbaar (hard enforcement) en zichtbaar in audit trail.
+
+## 5.1 Session Auth Model (nieuw 2026-03-03)
+
+Doel:
+- Dossierlink-token (query `t`) is niet langer een “permanent toegangstoken”.
+- We gebruiken een **server-gestructureerde sessie** met TTL + revoke.
+
+### Tokens
+
+1) Link token (dossier link)
+- Wordt gebruikt om een sessie te starten (exchange).
+- Wordt **niet** gebruikt als langdurige autorisatie voor dossier reads/writes.
+
+2) Session token
+- Wordt uitgegeven na succesvolle exchange.
+- Wordt gebruikt als canonieke runtime-auth voor dossier reads/writes.
+- CURRENT contract in de dossier-flow:
+  - frontend stuurt `session_token` mee in request body samen met `dossier_id`
+- Is short-lived (TTL) en revokeable.
+
+### Server registry
+Sessies worden geregistreerd in `public.dossier_sessions`:
+- `session_token_hash` is de server-side truth.
+- Lifecycle: `expires_at`, `last_seen_at`, `revoked_at`.
+
+### Frontend storage
+- Session token wordt client-side opgeslagen per dossier in `localStorage`:
+  - key: `enval_session_token:<dossier_id>`
+- Legacy key `enval_session_token` mag worden opgeschoond.
+
+### Invariants (hard)
+- Geen write endpoint accepteert link-token als auth.
+- Session expiry/revoke wordt server-side enforced.
+- Audit-first blijft leidend: rejects worden gelogd zodra dossier-scope bekend is.
+
+## 5.2 Login Recovery (nieuw 2026-03-05)
+
+Doel:
+- “Later verder gaan” zonder dashboard/account.
+- Link-token is one-time en expirable → recovery moet bestaan.
+
+Endpoint:
+- `api-dossier-login-request`
+
+Security posture (hard):
+- Anti-enumeration: response is altijd `{ ok: true }`.
+- Audit events zijn de bron van waarheid.
+- Rate limiting is fail-closed (throttle → géén mail).
+
+Throttle reasons (event_data.reason enum):
+- `ip_rate_limit`
+- `dossier_rate_limit`
+- `mail_rate_limit`
+
+Behavior (match):
+- dossier_id bestaat + email match → rotate link-token (nieuw token + nieuwe expires_at, consumed reset)
+- enqueue outbound_email + trigger mail-worker
+- audit: `login_request_received` + `login_link_issued`
+
+Behavior (mismatch / invalid / notfound):
+- géén mail
+- audit: `login_request_received` + `login_request_rejected` (reason: `email_mismatch` | `dossier_not_found` | `invalid_payload`)
+
+## 6) Phase model (gates)
+
+### Phase 0 — Foundations (DONE/ACTIVE)
+- Basis system map + core tables + wizard routes
+- Edge endpoints aanwezig
+- Reproduceerbare tests (`scripts/tests/run_all.sh`)
+
+### Phase 1 — Evidence-grade dossier (ACTIVE)
+Gate = “audit-contract stabiel en consistent over alle dossier write endpoints”
+- MLS (Minimum Logging Standard) consistent
+- Idempotency Standard (header-only waar verplicht) consistent
+- Reject-audit coverage aantoonbaar via tests
+- Download/export alleen op locked dossiers + confirmed docs
+- Export = schema_versioned + assumptions/not_verified expliciet (Audit Pack Standard v1)
+- Analysis v1 actief als derived consistency layer:
+  - derived analysis-tabellen
+  - session-auth `api-dossier-verify`
+  - audit events voor document/charger/summary analysis
+  - export v5 met analysis-blokken
+  - verify-run evidence script voor leesbare runtime proof
+- CURRENT uitvoeringsfocus binnen Analysis v1:
+  - eerst factuur-extractie en factuur-consistency hardenen
+  - daarbinnen nu expliciet:
+    - text-based PDF facturen hard houden
+    - client-side factuurparser als extractieruntime gebruiken
+    - `api-dossier-verify` server-side als canonieke evaluator/writer gebruiken
+  - `foto_laadpunt` blijft voorlopig skeleton / `not_checked`
+  - client-side image handling bevat CURRENT:
+    - precheck
+    - optimalisatie/compressie
+    - verify payload-opbouw
+  - belangrijke CURRENT nuance:
+    - browser-side PDF parser is operationeel
+    - browser-side image parser is verwijderd uit de actieve runtime
+    - image facturen lopen CURRENT via lokale/interne OCR worker → verify handoff
+  - Nieuwe CURRENT nuance (2026-04-19):
+    - browser-side invoice image precheck is nu functioneel gehardend en stiller gemaakt
+    - harde reject blijft beperkt tot technische onbruikbaarheid:
+      - decode/afmetingen/byte-size/extreem lage resolutie
+    - content-/ink-/zone-/sharpness-heuristiek blijft wel gemeten,
+      maar is CURRENT geen user-facing beslissende gate meer
+    - hierdoor geldt CURRENT:
+      - evidente rommel wordt afgewezen
+      - borderline of bruikbare factuurbeelden worden niet meer onnodig weggeduwd door content-ruis
+    - headless batch-run over de image-testset bevestigde:
+      - 33 totaal
+      - 23 allow
+      - 5 warn
+      - 5 reject
+      - rare fail-cases 3/3 reject
+  - lokale Python parser-/compare-scripts blijven bestaan als proof-/referentielaag
+  - geen externe OCR/vision provider
+  - geen authenticity-claim
+  - geen compliance-claim
+  - geen certificeringsclaim
+
+Nieuwe expliciete CURRENT waarheid (2026-04-15 / 2026-04-16):
+- De canonieke runtime-richting is gesplitst per factuurtype:
+  - PDF facturen:
+    - parser client-side
+    - verify server-side
+  - image facturen (`image/jpeg`, `image/png`):
+    - lokale/interne OCR worker als actieve extractielane
+    - verify server-side
+- Dat betekent:
+  - `api-dossier-verify` blijft de canonieke evaluator/writer
+  - verify doet compare + analysis writes + audit writes
+  - verify doet geen inline PDF/image parsing meer
+- Belangrijke nuance:
+  - de browser PDF-lane is CURRENT operationeel in de normale dossierflow
+  - de browser image-lane is CURRENT niet de extractieroute
+  - browser-side image parsing is verwijderd uit runtime-code
+  - image facturen lopen CURRENT via lokale/interne OCR worker → verify handoff
+- Documentupload nuance:
+  - `issued` is een echte tussenstatus:
+    - upload-url uitgegeven / documentrow aangemaakt
+    - upload nog niet bevestigd
+  - zolang een `issued` row bestaat voor hetzelfde documenttype en dezelfde laadpaal,
+    blijft nieuwe upload-url uitgifte terecht geblokkeerd
+
+Belangrijke expliciete koerscorrectie:
+- Tesseract.js / browser-side OCR voor factuurafbeeldingen is geprobeerd in de client-side route,
+  maar bleek niet robuust genoeg voor de gewenste extractiekwaliteit en operational betrouwbaarheid.
+- Daarom is de browser image-OCR route verlaten als primaire implementatieroute.
+- Voor image facturen is de CURRENT actieve extractielane:
+  - lokale/interne OCR worker
+  - met hetzelfde observed-fields contract als de overige analysis-lagen
+
+Nieuwe CURRENT proof-/extractielaag:
+- `scripts/analysis_worker/ocr_extract.py`
+- `scripts/analysis_worker/extract_invoice_image.py`
+- `scripts/analysis_worker/pdf_extract.py`
+- `scripts/analysis_worker/compare_invoice_results_image.py`
+- `scripts/analysis_worker/compare_invoice_results_pdf.py`
+- `scripts/analysis_worker/aggregate_invoice_image_multipage.py`
+
+Nieuwe CURRENT werkvolgorde binnen facturen:
+1. PDF facturen:
+   - parser client-side observed fields opbouwen
+   - verify payload naar server sturen
+2. image facturen:
+   - lokale/interne OCR worker observed fields laten bepalen
+   - output disciplineren naar hetzelfde observed contract
+   - handoff naar verify loopt via het bestaande `client_verify_payload` contract
+3. `api-dossier-verify` vergelijkt declared vs observed
+4. analysis-tabellen + audit bijwerken
+5. daarna pas verdere state-/persist-/integratiehardening
+
+Nieuwe expliciete CURRENT nuance:
+- de image worker → verify handoff is nu runtime-bewezen
+- niet alleen als losse single-lane proof, maar ook in een mixed run samen met een PDF factuur-lane
+- verify accepteert dus CURRENT:
+  - browser-PDF observed payload
+  - worker-afgeleide image observed payload
+  - binnen hetzelfde server-side compare/write model
+
+Belangrijke CURRENT grens:
+- multipage image aggregation bestaat inhoudelijk al in de lokale proof-loop
+- browser-side doorvertaling van multipage image observed payload is geen actieve prioriteit
+- browser image extractie is CURRENT niet de leidende route
+
+### Phase 2 — Sharing + performance / cost / ops (PLANNED)
+Gate = “product werkt audit-proof in real-world”
+- User-initiated sharing/export naar inboeker (read-only, revoke/expire)
+- Directory (listing) van inboekers (geen transactie/offer-matching)
+- Upload-confirm server-side download+sha256 optimaliseren (duur) → alternatief ontwerp
+- Reconciler/cleanup voor orphaned storage
+- Mail outbox/robust retries/backoff
+- Abuse controls/rate limiting
+
+### Phase 3 — Legal hardening (PLANNED)
+- Privacy/terms verantwoordelijkheden keihard
+- Consent versioning (server-driven) met hash/URL
+- Retention & data removal policy (wat mag wel/niet)
+
+### Phase 4 — Scale (PLANNED)
+- Multi-partner, monitoring, dashboards, SLA-achtige ops
+
+### Appendix — Phase-2 Besluitstuk status (2026-02-10) vs CURRENT gedrag
+- Het document **“ENVAL — Phase-2 Besluitstuk (2026-02-10)”** is besluitvormend en **niet** de CURRENT spec.
+- CURRENT waarheid blijft: 00_GLOBAL.md + 01_SYSTEM_MAP.md + 02_AUDIT_MATRIX.md + 03_CHANGELOG_APPEND_ONLY.md + 04_TODO.md.
+- Belangrijk conflict dat bewust expliciet gemaakt wordt:
+  - **CURRENT (v0/v1):** `upload-confirm` doet server-side download + sha256 verify en zet `confirmed` bij match.
+  - **Phase-2 plan (OPEN):** “deferred server-side verificatie” (verify pas bij finalize/export/download) als alternatief ontwerp/optimalisatie.
+- Documentatie-regel:
+  - Zolang deferred verify niet gebouwd is: **blijft `verified_server_side=true` de betekenis houden van verify-in-confirm**.
+  - Zodra deferred verify gebouwd wordt: **nieuwe semantics + nieuwe audit events of expliciete flags** (zie TODO “upload-confirm performance redesign”).
+
+### Branch context nuance (doc hygiene)
+- Deze Global doc kan op `feature/pricing-page` staan terwijl System Map op `feature/dev` staat.
+- Interpretatie: Global = product/phase waarheid, System Map = implementatie-inventaris op actieve dev-branch.
+- Bij twijfel: changelog entry + repo code is leidend.
+
+
+## 7) Current status snapshot (2026-05-10)
+- Repo-first workflow voor edge functions via Supabase CLI deploy scripts.
+- Lead intake via `api-lead-submit` werkt audit-proof voor self-serve flows:
+  - `installer_*` flows zijn legacy → 410 (hard kill)
+  - `ev_direct` → 200 (dossier create + mail queue + trigger)
+  - `contact` → 200 (mail queue + trigger)
+- Document lifecycle: upload-url → PUT → upload-confirm → confirmed (evidence-grade).
+- Review gating: evaluate finalize=false (ready_for_review), finalize=true (lock/in_review).
+- Export/download: alleen op locked dossier en confirmed docs.
+- Fresh-only testsuite bewijst CURRENT ook:
+  - not-locked export reject
+  - canonical lock via `api-dossier-evaluate(finalize=true)`
+  - locked export success met export artifact schema `enval-dossier-export.v5`
+  - cleanup als lock-aware retained-state check na export
+
+**Intake eligibility gates (CURRENT):**
+Voor een positieve reactie op dossier-opbouw moet gebruiker “Ja” antwoorden op:
+- **In Nederland?** → Ja
+- **Heeft de laadpaal een MID-meter?** → Ja  
+
+Belangrijk:
+- Deze gates zijn een technische systeemvoorwaarde, geen marketingpositie.
+- Intake is uitsluitend gericht op particuliere laadpalen in eigendom en op eigen terrein.
+- Er wordt geen expliciete “self-serve” terminologie meer gebruikt.
+
+
+
+
+## 8) Non-goals (nu)
+- Externe verificaties (merk/model/energiemaatschappij) → pas na eisenpakket van inboeker/verificateur.
+- Locatie-checks “verificeren” of claimen als bewijs (hoog risico; hoort bij verifier/inboeker).
+- Verifier dashboard / inboeker workflow dashboards vóórdat Audit Pack + sharing stabiel is.
+
+
+## 9) Payment & Export decoupling (CURRENT) — 2026-02-24
+
+Doel:
+- “Indienen” (lock/in_review) blijft een audit-gate en is **niet** afhankelijk van betaling.
+- “Export (betaald)” is een product-gate die later kan verschuiven zonder het dossier-schema of de wizard te breken.
+
+CURRENT behavior (v0/v1):
+- Dossier indienen = `api-dossier-evaluate(finalize=true)` → lock + status `in_review`.
+- Export/download gates blijven audit-first:
+  - export/download **alleen** op locked dossier
+  - export/download **alleen** confirmed docs
+- “Export (betaald)” is in UI een label/positionering; payment enforcement kan later worden toegevoegd zonder de review/lock flow te wijzigen.
+
+Future switch (Optie 2, later):
+- Payment gate kan verschuiven naar “Indienen” door uitsluitend:
+  - een aparte payment status (bijv. `payment_status=paid`) te controleren op evaluate(finalize=true),
+  - zonder wijziging aan upload/confirm/audit semantics.
+- Contract: payment enforcement is een **losse gate** (business rule), geen onderdeel van audit-lock.
+
+## 10) Frontend Styling & CSS Contract (CURRENT)
+
+Statusdatum: 2026-02-23
+Doel: CSS laten functioneren als een gecontroleerd systeem (component-first), zonder regressies tussen core flow en informatieve pagina’s.
+
+Frontend styling is geen verzameling pagina-specifieke fixes.
+Het is één consistent systeem met duidelijke scheiding tussen:
+
+- Core flow (index / aanmelden / dossier)
+- Informatieve/legacy pagina’s (pricing / proces / regelgeving etc.)
+
+## 10.1 CSS Architectuur (CURRENT)
+
+CURRENT waarheid:
+
+- `assets/css/style.css` is de **enige** canonical stylesheet.
+- `assets/css/legacy.css` is **OUTDATED / bestaat niet meer**.
+- Alle pagina’s (core + informatief) laden `assets/css/style.css`.
+
+`assets/css/style.css` bevat:
+- CSS Layers (`@layer base, components, pages, utilities;`)
+- Form Contract
+- Result system
+- Core componenten (`.btn`, `.form`, `.calc`, `.card`, `.table`, etc.)
+- Dossier-specifieke styling onder een duidelijke eigen sectie
+- Herbruikbare componenten voor informatieve pagina’s
+
+Belangrijk:
+- Isolatie gebeurt **niet** meer via een tweede stylesheet.
+- Isolatie gebeurt via:
+  - component-contract
+  - class discipline
+  - HTML normalisatie
+- `body.page-legacy` is geen architectuurprincipe.
+
+## 10.2 Reuse-regel (HARD)
+
+Bij nieuwe UI-elementen geldt altijd:
+
+Eerst controleren of bestaande componenten herbruikbaar zijn:
+- .form / .form--ev
+- .calc / .calc-col
+- .btn / .btn.primary / .btn.outline
+- .section / .container
+- .card
+- .result
+- .table
+
+Alleen nieuwe class introduceren als hergebruik aantoonbaar niet kan.
+- Geen inline styling.
+- Geen one-off utility classes tenzij generiek herbruikbaar.
+
+Rationale:
+- CSS groeit als systeem, niet als patch-verzameling.
+
+## 10.3 Form Contract (VERPLICHT)
+
+Alle forms volgen exact deze structuur:
+
+<form class="form form--ev"> <label> <span>Label tekst</span> <input ... /> </label> </form>
+
+Regels:
+- Geen globale input styling.
+- Styling uitsluitend binnen .form.
+- Spacing wordt geregeld via .form en varianten.
+- JS toggelt alleen classes.
+- Geen inline style-mutaties vanuit JS.
+
+## 10.4 Result System (Calculator / Eligibility / toekomstige modules)
+
+Result-weergave volgt één vast patroon:
+
+<div class="result"> <div class="result-status"></div> <ul class="result-list"></ul> <div class="result-cta"></div> </div>
+
+States uitsluitend via modifiers:
+- .result--ok
+- .result--warn
+- .result--bad
+- .result--neutral (indien nodig)
+Geen losse tekstinjectie zonder vaste containerstructuur.
+
+Doel:
+- Uniforme statuslogica
+- Consistente visuele semantiek
+- Herbruikbare JS-output
+
+## 10.5 Dossier CSS Isolatie
+
+Dossier-specifieke styling blijft in style.css maar onder een duidelijke sectie:
+/* DOSSIER (dossier-specifiek) */
+
+Regels:
+- Geen generieke tag-selectors (table, th, td) zonder class.
+- Geen selectors die andere pagina’s kunnen beïnvloeden.
+- Alles onder duidelijke class-names (.table-*, .pill, .statusbar, etc.)
+
+## 10.6 Anti-wildgroei regels (HARD)
+
+Niet toegestaan:
+- Nieuwe CSS file voor core features.
+- Page-specific selectors (#calculator input[type=number]).
+- Deep nested selectors (> 3 niveaus).
+- !important.
+- Pixel-fixes per element zonder systeemreden.
+
+Toegestaan:
+- Modifier classes.
+- Component-level overrides.
+- Tokens alleen indien door minimaal 2 componenten gebruikt.
+
+## 10.7 Technische schuld-check (verplicht)
+
+Elke nieuwe frontend feature moet expliciet beantwoorden:
+- Kan dit met bestaande componenten?
+- Introduceren we dubbele spacing-logica?
+- Is dit een modifier of nieuw component?
+- Is dit generiek herbruikbaar?
+
+Als het antwoord is:
+- “Even snel een nieuwe class” → dan is het waarschijnlijk fout.
+
+## 11) Frontend CSS Work Order (EXECUTION ORDER)
+
+Dit is de vaste volgorde bij styling-uitbreidingen:
+- CSS Single Source of Truth bewaken (style.css blijft canonical).
+- Form contract blijft leidend.
+- Component inventory eerst controleren vóór nieuwe classes.
+- Result system altijd hergebruiken.
+- Dossier styling isoleren binnen eigen sectie.
+- Duplicatie verwijderen zodra contract stabiel is.
+- Pas daarna docs updaten.
+
+Stopregel:
+- Geen nieuwe CSS toevoegen “omdat het sneller is”.
+- Eerst normaliseren wat er al is.
+- Daarna pas uitbreiden.
+
+Aanvullende CURRENT frontendwaarheid:
+- `assets/js/pages/dossier.js` heeft voor invoice image precheck geen eigen tweede humanizer-/message-laag meer
+- de uploadflow gebruikt nu de canonieke precheck-summary uit de analyse-helperlaag
+- doel:
+  - minder drift
+  - minder dubbele waarheid
+  - consistentere reject/warn messaging
+
+# 11.1) SEO & Indexing Hygiene (CURRENT)
+
+Doel:
+- Statische site zonder SEO-regressies bij duplicaatpagina’s.
+- Geen indexatie van ontwikkel-/tussenroutes.
+- Canonical/OG/Twitter consistent per page.
+
+Harde regels (site-wide):
+
+- Elke page heeft:
+  - <title>
+  - <meta name="description">
+  - <link rel="canonical" href="https://www.enval.nl/<pagina>.html">
+  - OG (og:title, og:description, og:url, og:image) en Twitter kaart.
+  - Favicons:
+    - /favicon.ico
+    - /assets/img/favicon-32.png
+    - /assets/img/favicon-16.png
+
+Duplicaten / dev-pages:
+- Dev/overgangspagina’s die niet in Google mogen komen krijgen in <head>:
+  - <meta name="robots" content="noindex, nofollow">
+- Canonical blijft altijd wijzen naar de beoogde eindpagina (niet naar een dev-alias).
+
+Route-waarheid (CURRENT):
+- aanmelden.html is productie-route.
+- aanmelden_real.html is tijdelijk in ontwikkeling en wordt later hernoemd naar aanmelden.html.
+  - Tot die tijd: aanmelden_real.html moet noindex krijgen.
+
+Robots/sitemap (CURRENT policy):
+
+- robots.txt moet expliciet:
+  - indexatie toestaan voor productiepagina’s
+  - dev/duplicate pagina’s uitsluiten (minimaal aanmelden_real.html zolang die bestaat)
+  - verwijzen naar sitemap.xml
+- sitemap.xml moet alleen canonieke, publieke pagina’s bevatten.
+
+Stopregel
+- Als een pagina duplicaatcontent heeft of slechts een tijdelijke route is → noindex.
+
+## 11.1b Export preservation & runtime retention lifecycle (CURRENT / PARTIALLY PROVEN, 2026-05-11)
+
+Lifecycle-beslissing:
+- `public.dossier_exports` is de final-retention tabel voor betaalde/geëxporteerde dossiers.
+- Alleen preserved exports zijn langdurig/immutable te bewaren.
+- Runtime-tabellen zijn tijdelijk werkmateriaal:
+  - `dossiers`
+  - `dossier_chargers`
+  - `dossier_documents`
+  - `dossier_checks`
+  - `dossier_consents`
+  - `dossier_audit_events`
+  - analysis-tabellen
+  - runtime sessions/mail rows waar passend
+
+Retention:
+- Niet-locked dossiers: 7 dagen na laatste activiteit.
+- Locked/in_review maar unpaid/unexported: 14 dagen, met reminders op dag 3, 7 en 10.
+- Paid/exported/preserved: preservation in `dossier_exports`; runtime data mag daarna worden opgeschoond na korte operationele grace-periode.
+
+MID-regel:
+- Runtime `dossier_chargers.mid_number` legt geen harde globale claim.
+- Definitieve MID-conflictcontrole gebeurt bij preserved exports, niet bij drafts of locked/unpaid runtime dossiers.
+- Final claim key:
+  - `MID + claim_year`
+- Nieuwe exports vullen CURRENT:
+  - `claim_year`
+  - `claimed_mid_numbers`
+- Legacy testexports van vóór deze patch kunnen `claim_year = null` en `claimed_mid_numbers = null` bevatten en worden niet retroactief aangepast.
+
+Storage-regel:
+- Storage objects die door een preserved export worden gereferenced, mogen niet worden verwijderd.
+- Alle overige storage volgt de 7/14 dagen cleanup-regels.
+
+CURRENT proof:
+- Export preservation schrijft een immutable `dossier_exports` row.
+- Export SHA proof is getest.
+- Yearly MID claim metadata is getest op nieuwe exports.
+- Duplicate `MID + claim_year` reject is getest.
+- Runtime cross-dossier duplicate MID is toegestaan.
+- DB runtime cleanup na preserved export is live bewezen met:
+  - `public.enval_retention_cleanup(...)`
+  - `retention_class = preserved_runtime_cleanup`
+  - runtime dossier verwijderd
+  - `dossier_exports` behouden
+  - preserved document count behouden
+  - preserved storage paths beschermd
+
+CURRENT cleanup boundary:
+- `public.enval_retention_cleanup(...)` is DB-cleanup only.
+- Storage cleanup is bewust separaat en gebeurt via tooling/API vóór DB-delete.
+- `p_apply=true` vereist expliciet `p_target_dossier_id`.
+- Non-preserved dossiers met storage worden niet DB-verwijderd zolang storage cleanup niet vooraf is uitgevoerd.
+- Guard error:
+  - `STORAGE_CLEANUP_REQUIRED_BEFORE_DB_DELETE`
+- `public.enval_retention_cleanup_apply_after_storage(...)` past DB-cleanup toe nadat exact is bevestigd welke storage paths zijn verwijderd.
+- `scripts/tools/retention-storage-cleanup.mjs` voert handmatig en target-only storage+DB cleanup uit voor één dossier.
+- Tooling beschermt preserved storage paths tegen verwijdering.
+
+CURRENT proof:
+- `scripts/tests/10_retention_cleanup.sh` bewijst preserved runtime cleanup:
+  - mass apply zonder target geweigerd
+  - dry-run candidate zichtbaar
+  - runtime DB verwijderd na preservation
+  - `dossier_exports` blijft intact
+- `scripts/tools/retention-storage-cleanup.mjs` is handmatig bewezen op een non-preserved locked/unpaid testdossier:
+  - dry-run classificeerde `locked_unpaid_expired`
+  - 8 non-preserved storage objects verwijderd
+  - runtime DB daarna verwijderd
+  - dossier/documents/chargers gaven daarna lege resultaten
+  - herhaalde dry-run gaf `NO_CANDIDATE`
+
+Retention worker (CURRENT, bewezen):
+- `supabase/functions/retention-worker/index.ts` bestaat als utility Edge Function.
+- Worker is protected via `RETENTION_WORKER_SECRET`.
+- Retention windows staan bewust bovenaan de worker in `RETENTION_CONFIG`:
+  - preserved runtime cleanup grace: 3 dagen
+  - draft retention: 7 dagen
+  - locked/unpaid retention: 14 dagen
+  - reminderdagen: 3/7/10
+- Worker geeft deze waarden door aan de DB cleanup helpers om split-brain tussen worker en SQL te voorkomen.
+- Dry-run via worker is live bewezen.
+- Target apply op één preserved export is live bewezen:
+  - `retention_class = preserved_runtime_cleanup`
+  - `storage_deleted = 0`
+  - `db_cleanup_applied = true`
+  - `deleted_runtime_dossier = true`
+  - herhaalde dry-run op hetzelfde dossier gaf `candidate_count = 0`
+  - `dossier_exports` bleef bestaan met preserved documents.
+
+Nog OPEN:
+- reminder-flow bouwen voor locked/unpaid dag 3/7/10
+- scheduler/ops-runbook voor retention lifecycle toevoegen
+- beslissen of post-export runtime cleanup automatisch direct of scheduled wordt uitgevoerd
+- permanente cleanup audit-log oplossing bepalen, omdat `dossier_audit_events` mee verdwijnt bij runtime dossier delete
+
+
+## 11.2 Fresh-only testsuite export/cleanup contract (CURRENT, 2026-05-10)
+
+De fresh-only testsuite is nu aligned op het volledige exportcontract:
+
+- `scripts/tests/08_export_contract.sh` bewijst:
+  - export reject op niet-locked dossier
+  - address save/verify
+  - consents save
+  - synthetic invoice observed payload aligned op declared dossier/charger data
+  - `api-dossier-verify`
+  - `api-dossier-evaluate(finalize=true)` naar `status=in_review`
+  - locked export success
+  - export artifact shape:
+    - `schema_version = enval-dossier-export.v5`
+    - 8 confirmed documents
+    - analysis blocks aanwezig
+    - `analysis_run.run_id` aanwezig
+
+- `scripts/tests/09_cleanup.sh` is lock-aware:
+  - na export is het dossier locked/in_review
+  - runtime mutation endpoints moeten dan mutaties weigeren
+  - cleanup probeert daarom geen `api-dossier-charger-delete` meer na lock
+  - created chargers/documents blijven bewust retained als onderdeel van het locked dossierbewijs
+
+Niet meer actief:
+
+- `scripts/tests/07_cleanup.sh` is verwijderd/vervangen door `09_cleanup.sh`.
+
+Belangrijke auditwaarheid:
+
+- Een 409 op runtime delete na lock is correct backendgedrag.
+- Cleanup na locked export is geen database-leegmaakstap meer.
+- Het retained locked testdossier is CURRENT gewenst gedrag zolang audit trail en exportbewijs bewaard moeten blijven.
+
+
+### AMENDMENT — 00_GLOBAL.md
+
+Datum: 2026-02-24  
+Type: CSS contract + Payment gate switchability (Optie C)  
+Status: APPEND-ONLY
+
+## 12) CSS Single-Source-of-Truth (HARD CONTRACT)
+
+Met ingang van 2026-02-24 geldt expliciet:
+
+* `assets/css/style.css` is de **enige** canonical stylesheet.
+* Er worden **geen extra CSS files** meer toegevoegd (geen legacy.css, geen page-specifieke sheets).
+* Informatiepagina’s worden in lijn gebracht door:
+
+  * HTML normalisatie
+  * hergebruik van bestaande component classes
+* Alleen indien aantoonbaar noodzakelijk én herbruikbaar (≥ 2 pagina’s) mag een generieke component-uitbreiding aan `style.css` worden toegevoegd.
+
+Niet toegestaan:
+
+* Inline styles (behalve tijdelijk tijdens refactor, daarna verwijderen)
+* Page-specifieke hacks in CSS
+* Nieuwe utility-varianten als bestaande utilities volstaan
+
+Doel:
+
+* Eén visueel systeem
+* Geen CSS wildgroei
+* Geen regressie tussen core- en informatiepagina’s
+
+---
+
+## 13) Payment Gate Switchability (OPTIE C — 1 uur verplaatsbaar)
+
+Architectuur-besluit:
+
+Betaling is een **business gate**, geen audit gate.
+
+Audit gates blijven altijd leidend:
+
+* Dossier lock (evaluate finalize=true)
+* Document confirmed
+
+Payment mag:
+
+* óf op export/download zitten (default)
+* óf vóór lock (submit) worden afgedwongen
+
+### Minimale technische vereisten
+
+1. Eén eenduidig veld:
+
+`payment_status` ∈ {`unpaid`, `paid`, `waived`}
+
+2. Eén environment toggle:
+
+`PAYMENT_GATE_MODE` ∈ {`export`, `submit`}
+
+### Gedrag
+
+PAYMENT_GATE_MODE=export (default)
+
+* Indienen (lock) toegestaan zonder betaling
+* Export/download geblokkeerd bij unpaid
+
+PAYMENT_GATE_MODE=submit
+
+* Lock (evaluate finalize=true) geblokkeerd bij unpaid
+* Export vereist daarnaast locked + confirmed
+
+### Invariants (mag nooit wijzigen)
+
+* Audit contract blijft identiek
+* Document lifecycle blijft identiek
+* State machine blijft identiek
+* Geen schema_version wijziging
+
+### Audit events
+
+Bij wijziging payment_status:
+
+* `payment_status_changed`
+
+Bij reject door payment gate:
+
+* `evaluate_rejected` reason=`payment_required`
+* of `export_rejected` reason=`payment_required`
+
+Doel:
+Payment-gate verplaatsen binnen ±1 uur zonder UI rewrite of DB migratie.
+
+
+
+====
+
+## UPDATE AMENDING SECTION
+
+### Update 2026-02-10 — Phase-2 uploadstrategie & DEV opschoning
+- **Client-side uploadoptimalisatie bewezen (DEV)**:
+  - Foto-uploads worden vóór upload gecomprimeerd (downscale + JPEG re-encode).
+  - Server ontvangt uitsluitend finale bytes; geen image processing op Edge.
+  - Server-side sha256 verificatie blijft verplicht bij `upload-confirm`.
+- **Scope-aanscherping particuliere dossiers**:
+  - UI is momenteel ingericht voor particuliere dossiers (meerdere laadpalen mogelijk).
+  - Er wordt géén expliciete maximumcommunicatie richting gebruiker gedaan.
+  - Backend ondersteunt technisch tot 10 laadpalen.
+  - UI-cap is een implementatiedetail en geen productbelofte.
+- **Kosten- en stressreductie gerealiseerd** zonder auditkrachtverlies:
+  - Geen dubbele downloads
+  - Lagere storage egress
+  - Audit trail blijft reproduceerbaar
+- **DEV-omgeving opgeschoond**:
+  - Alle dossiers, documenten, audit events en storage objects verwijderd.
+  - Nieuwe tests starten vanuit een schone nulmeting.
+
+### Update 2026-02-11 — Intake validatie (anti-tamper)
+- api-lead-submit valideert invoer server-side.
+- Frontend UI beperkt invoer tot realistische particuliere scenario’s.
+- Server-side validatie blijft leidend (UI is niet trustable).
+- Caps of limieten zijn systeemregels en geen marketingclaims.
+
+
+### Update 2026-02-12 — Auth/Gateway nuance + testbewijs deploy actief
+- Supabase Edge Functions gateway kan requests blokkeren vóór de function:
+  - Zonder `authorization: Bearer <jwt>` → 401 `Missing authorization header` (gateway response)
+  - In dat geval zie je ook niet de function CORS headers (vaak `allow-origin: *`).
+- Canonical rule voor curl/clients:
+  - Altijd zowel `apikey: SUPABASE_ANON_KEY` als `authorization: Bearer SUPABASE_ANON_KEY` meesturen.
+- Bewijs (curl):
+  - OPTIONS → 200 met strict allowlist CORS
+  - POST zonder Idempotency-Key → 400 uit de function
+  - installer_signup → 410 uit de function
+  - ev_direct → 200 en idempotency replay → 200 met identieke body
+  - contact zonder authorization → 401 gateway
+  - contact met authorization → 200 uit de function
+
+### Phase-2 doc hygiene (2026-02-12)
+- Het Phase-2 document is bijgewerkt naar **CURRENT** gedrag (geen “plan vs current” meer).
+- Upload-confirm is CURRENT de harde gate met server-side sha256 verify.
+- Intake eligibility gates uitgebreid met **NL + MID** (self-serve scope); implementatie loopt (zie TODO).
+
+### Update 2026-02-17 — Intake eligibility gates (NL + MID) volledig enforced (pre-dossier)
+
+Self-serve intake (`flow=ev_direct`) wordt nu hard geweigerd vóór lead/dossier creatie indien:
+
+- `in_nl != true`
+- `has_mid != true`
+
+Architectuurkeuze:
+- Rejects gebeuren **pre-dossier**
+- Audit logging gebeurt in `public.intake_audit_events`
+- Er wordt géén `lead`, géén `dossier` en géén `outbound_email` aangemaakt bij reject
+
+Auditpositie:
+- Dit is bewust “pre-dossier on-chain” via intake_audit_events
+- Geen overlap met `dossier_audit_events`
+- Idempotency replay geldt ook voor rejects
+
+Bewijs geleverd (curl + SQL):
+- 400 responses
+- intake_audit_events rows met reason `in_nl_false` en `has_mid_false`
+- Geen leads/dossiers voor reject emails
+- Idempotency_keys bevat reject response
+
+
+### Update 2026-02-17 — DB exposure hardening + intake rejects audit (pre-dossier) geïntroduceerd
+
+#### Wat is er gedaan
+- Nieuwe intake reject logging geïntroduceerd via `public.intake_audit_events` zodat intake rejects auditbaar zijn zonder dossier scope.
+- RLS + policies aangescherpt: REST reads met anon/auth zijn nu hard dicht (permission denied), zodat DB uitsluitend via Edge functions (service_role) benaderd wordt.
+- Keuze gemaakt voor audit inspectie: **Optie 1 (SQL Editor)** i.p.v. een admin-edge endpoint.
+
+#### Impact / waarheid (belangrijk)
+- Debugging en audit-inspectie gebeurt niet meer via anon REST calls maar via Supabase SQL Editor.
+- Security verschuift bewust naar: Edge function auth/validatie/idempotency/audit + locked enforcement.
+- “A vs B” intake auditpositie is expliciet geworden:
+  - **A (doel):** hard reject vóór dossier-create → log naar `intake_audit_events`.
+  - Let op: implementatie in `api-lead-submit` moet hiermee consistent gemaakt worden (TODO).
+
+#### Open risico dat expliciet blijft
+- Service_role is superuser in Edge: fout in function = potentieel data-impact.
+  → Mitigatie: strict guards, input validation, idempotency, locks, MLS logging, minimale DB privileges voor anon/auth.
+
+
+### Update 2026-02-17 — MID model: dossier-level has_mid verwijderd, mid_number per charger verplicht (CURRENT)
+
+Wat is nu definitief CURRENT:
+- Er bestaat géén dossier-level `has_mid` veld.
+- Intake gebruikt `has_mid` uitsluitend als **eligibility gate** (self-serve).
+- Per laadpaal is `dossier_chargers.mid_number` verplicht (NOT NULL).
+- `api-dossier-charger-save` reject indien `mid_number` ontbreekt.
+
+Auditpositie:
+- Charger audit events zijn completeness-gedekt:
+  - `charger_added` / `charger_updated` bevatten: `mid_number`, serial/brand/model/power_kw/notes + MLS meta.
+- Intake rejects blijven pre-dossier:
+  - log naar `public.intake_audit_events`
+  - géén lead/dossier/mail bij reject
+  - idempotency replay geldt óók voor rejects
+
+Doc impact:
+- 01_SYSTEM_MAP en 02_AUDIT_MATRIX zijn geüpdatet naar dit model.
+- 04_TODO item “Charger audit completeness” is DONE gezet (bewijs via audit query).
+
+### Update 2026-02-17 — Mail-worker gateway/auth nuance bevestigd (bewijs geleverd)
+
+Context:
+- Supabase Edge Functions kunnen requests blokkeren vóór de function code draait (gateway layer).
+
+Nieuwe expliciete ops-regel (hard):
+- Bij curl/Postman naar `.../functions/v1/<fn>` altijd beide headers meesturen:
+  - `apikey: $SUPABASE_ANON_KEY`
+  - `authorization: Bearer $SUPABASE_ANON_KEY`
+
+Symptoom (gateway, niet jouw code):
+- HTTP 401 met body: `{"code":401,"message":"Missing authorization header"}`
+- CORS headers zijn niet die van de function (vaak `allow-origin: *`).
+
+Bewijs (mail-worker):
+- Call zonder gateway headers + met `x-mail-worker-secret` → 401 `Missing authorization header` (gateway).
+- Call met gateway headers + `x-mail-worker-secret` → 200 `No queued emails` (function draaide succesvol).
+
+Impact:
+- Debugging: bij deze 401 eerst headers fixen, pas daarna code/secrets onderzoeken.
+- Dit voorkomt uurverlies door “fout in code” te debuggen terwijl request nooit bij de function komt.
+
+## APPEND-ONLY UPDATE — 2026-03-04 — CSS: single stylesheet is nu écht CURRENT
+
+Context:
+- De eerdere beschrijving met `assets/css/legacy.css` is **niet meer waar**.
+- CURRENT repo/website gebruikt **één** stylesheet: `assets/css/style.css`.
+
+Harde regel (CURRENT):
+- `assets/css/style.css` is de **enige** canonical stylesheet.
+- `assets/css/legacy.css` bestaat niet (meer) en mag nergens meer worden genoemd.
+
+Implicatie:
+- Informatiepagina’s (pricing/regelgeving/voorwaarden/privacy/etc.) moeten conform het component-systeem in `style.css` worden gestyled.
+- Isolatie gebeurt door **component contract** en **HTML normalisatie**, niet door een tweede stylesheet.
+
+Doc-hygiëne regel:
+- Eventuele historische secties die nog naar `legacy.css` verwijzen blijven staan als historie,
+  maar worden vanaf nu als **OUTDATED** beschouwd.
+
+### Update 2026-03-16 — Dev unlock + session refresh workflow bewezen
+
+Wat is bewezen:
+- `api-dossier-dev-unlock` werkt correct met geldige `session_token`.
+- Eerdere 401’s kwamen niet door unlock-logica, maar door verlopen runtime sessions.
+- CURRENT session model is operationeel bevestigd:
+  - link-token (`t`) = one-time exchange token
+  - session_token = short-lived runtime auth (CURRENT: 2 uur)
+- Nieuwe dev-routine vastgesteld:
+  1. `api-dossier-login-request`
+  2. nieuwste `dossier_link` lezen uit `outbound_emails`
+  3. link-token exchangen via `api-dossier-get`
+  4. nieuwe `session_token` gebruiken voor runtime endpoints
+- Dev helper script toegevoegd:
+  - `scripts/tools/refresh-dossier-session.sh`
+
+Belangrijke CURRENT waarheid:
+- UI accepteert géén `session_token` via query param `t`.
+- UI gebruikt:
+  - `t` uitsluitend als link-token voor initiële exchange
+  - daarna localStorage key `enval_session_token:<dossier_id>` als runtime source-of-truth
+
+Dev-operational meaning:
+- Voor browsergebruik met een reeds geminte session moet de session_token in localStorage worden gezet.
+- De URL `/dossier.html?d=<id>&t=<session_token>` is per definitie fout, omdat `t` semantisch link-token betekent.
+
+Open structurele verbetering (nog niet gebouwd):
+- dev-only session inject helper of dev-only refresh flow in UI
+- of langere session TTL in dev
+
+### Update 2026-03-23 — Dossier UI hardening: precheck/finalize discipline, analysis-weergave, export en dev-unlock
+
+Wat vandaag frontend-side is aangescherpt in `assets/js/pages/dossier.js`:
+
+- De dossierwizard gebruikt nu expliciet een **precheck → finalize** discipline:
+  - `api-dossier-evaluate(finalize=false, evaluation_mode="core")`
+  - daarna `api-dossier-verify`
+  - daarna `api-dossier-evaluate(finalize=false, evaluation_mode="full")`
+  - pas daarna mag `api-dossier-evaluate(finalize=true, evaluation_mode="full")` worden uitgevoerd
+- “Dossier indienen” blijft verborgen totdat:
+  - `precheckOk === true`
+  - `dirtySincePrecheck === false`
+- Elke mutatie in het dossier invalidate expliciet de eerdere precheck:
+  - access
+  - adres
+  - charger save/delete
+  - document upload/delete
+  - consents
+
+Nieuwe of aangescherpte frontend-waarheden:
+- `api-dossier-verify` wordt nu actief gebruikt vanuit de dossier-UI om analysis te verversen vóór full evaluate.
+- Analysis-output (`analysis_readable`) wordt in de UI leesbaar gemaakt:
+  - overall status
+  - charger-resultaten
+  - document-level observed/limitations/summary
+- Export blijft alleen beschikbaar op locked dossiers.
+- Dev unlock is nu ook als expliciete frontend dev-flow aanwezig:
+  - `api-dossier-dev-unlock`
+  - alleen zichtbaar wanneer dev unlock is toegestaan
+  - unlock zet de precheck-status client-side terug naar ongeldig
+
+Upload/UI aanscherpingen:
+- Client-side foto-optimalisatie blijft actief voor `foto_laadpunt`.
+- UI-cap blijft 4 laadpalen (`UI_MAX_CHARGERS`) voor self-serve.
+- Session runtime truth in de browser blijft:
+  - localStorage key `enval_session_token:<dossier_id>`
+  - query param `t` is uitsluitend link-token voor initiële exchange
+
+Belangrijke architectuurbetekenis:
+- Dit verandert de backend lifecycle niet.
+- Dit maakt de frontend alleen explicieter en strakker aligned met de bestaande audit-first reviewflow.
+- Analysis blijft ondersteunend en derived; geen lock- of compliance-engine.
+
+### Update 2026-03-24 — Dossier UI vereenvoudigd: upload per laadpaalkaart + stabiele nummering + MID leidend
+
+Wat vandaag functioneel is aangescherpt in de dossierflow:
+
+- Stap 4 gebruikt niet langer een centrale uploadform met:
+  - documenttype dropdown
+  - laadpaal dropdown
+  - los bestandveld
+- Upload gebeurt nu direct **per laadpaalkaart** in de documentsecties:
+  - Factuur
+  - Foto laadpunt
+
+Nieuwe CURRENT waarheid:
+- De dossier-UI toont laadpalen in een **stabiele vaste volgorde**.
+- “Laadpaal 1 / 2 / 3 / …” blijft daardoor visueel consistent tussen refreshes.
+- Nieuwe laadpalen verschijnen onderaan i.p.v. de volgorde onbedoeld om te keren.
+- Documenten horen visueel en functioneel direct bij de betreffende laadpaalkaart.
+
+MVP-bewuste beperking (expliciet):
+- CURRENT ondersteunt per laadpaal:
+  - maximaal **1 factuur**
+  - maximaal **1 foto laadpunt**
+- Zodra een document van dat type aanwezig is, verdwijnt het uploadslot voor dat type uit de UI.
+- Meerdere facturen of meerdere foto’s per laadpaal zijn bewust **geen MVP-scope**.
+
+Backend-/databetekenis:
+- Deze wijziging verandert de audit lifecycle niet:
+  - upload-url
+  - PUT
+  - upload-confirm
+  - confirmed
+  blijven identiek.
+- De UI is alleen strakker aligned gemaakt met de huidige database- en MVP-realiteit.
+
+Identifier-betekenis (CURRENT):
+- MID-nummer is in deze fase de leidende dossier-identificatie voor laadpalen.
+- Serial uniqueness is bewust losgelaten als harde systeemaanname, omdat serienummers merk-overstijgend theoretisch kunnen overlappen.
+- Analyse- en matchinglogica blijven voorlopig beide velden gebruiken waar relevant, maar productmatig is MID leidend.
+
+# EINDE 00_GLOBAL.md (current state, rewrite-ok)

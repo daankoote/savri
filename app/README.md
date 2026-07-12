@@ -4,6 +4,14 @@ This is the isolated ENVAL Vite development app.
 
 It is not connected to Netlify production yet. The existing static root website remains the current production surface and must stay untouched until a migration is explicitly approved.
 
+Current product and implementation canon starts at:
+
+```text
+../docs/app/00_CANON.md
+```
+
+`../docs/legacy/` is reference only and must not drive new `/app` implementation without explicit adaptation.
+
 ## Install
 
 ```bash

@@ -39,9 +39,17 @@ Existing Supabase Edge Functions and migrations are shared backend assets. They 
 
 ## Documentation
 
-Documentation is being normalized into concise source-of-truth files under `docs/`.
+Current implementation and product canon starts at:
 
-The existing `docs/documenten/` folder remains historical/source material until it is reviewed and migrated deliberately.
+```text
+docs/app/00_CANON.md
+```
+
+`docs/app/` is the only current canon for `/app`, `api-app-*`, and `app_*` work.
+
+`docs/legacy/` is reference only. Legacy files may not drive new implementation unless a task explicitly adapts them into `docs/app/`.
+
+Branch rule for current work: `main`.
 
 ## Production Deploy Rule
 
