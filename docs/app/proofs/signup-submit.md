@@ -44,7 +44,7 @@ Historical write v1 proof status:
   - `app_intake_audit_events`: 2
   - `app_audit_events`: 2
 - No raw payload or secret output was included in responses or reports.
-- Frontend is still not connected.
+- At the write v1 proof point, frontend was still not connected.
 - At the write v1 proof point, write v1 was the proven foundation state.
 
 Write v2 proof status:
@@ -58,7 +58,7 @@ Write v2 proof status:
 - DB proof after the validation run showed the write v2 request created/presented app location and charger rows:
   - `app_dossier_locations` rows were present/created for the valid request.
   - `app_dossier_chargers` rows were present/created for the valid request.
-- Frontend is still not connected.
+- At the write v2 proof point, frontend was still not connected.
 
 Write v3 proof status:
 
@@ -69,7 +69,7 @@ Write v3 proof status:
 - Replay with the same `Idempotency-Key` and same payload returned the same stored response.
 - Reusing the same `Idempotency-Key` with a different payload returned 409 `idempotency_conflict`.
 - DB proof after the validation run showed document slot and legal acceptance rows were present/created for the valid request.
-- Frontend is still not connected.
+- Frontend submit wiring is now connected locally through the mapper and frontend API client.
 
 Local browser-QA proof status:
 
@@ -90,7 +90,7 @@ Interpretation:
 - Write v3 adds expected document slots and legal acceptance records.
 - It does not prove production submit readiness.
 - It does not create document uploads, storage objects, customer timeline, support/messages, or kWh/result/fee lifecycle rows.
-- `/app` frontend wiring remains blocked until the payload mapper, full contract validation, and remaining write phases are implemented.
+- `/app` frontend submit wiring is implemented locally. Dashboard bootstrap, document upload wiring, customer timeline, support/messages, and kWh/result/fee lifecycle remain separate open phases.
 - Do not paste secrets or `supabase status` output into docs, reports, or commits.
 
 Historical skeleton proof:
@@ -115,7 +115,7 @@ Current boundaries:
 - Creates expected document slots.
 - Creates legal acceptance records.
 - No email.
-- No frontend wiring.
+- Frontend `/aanmelden` submit wiring exists locally.
 - No document upload processing, storage object writes, customer timeline, support/messages, kWh/result/fee lifecycle, or production deployment.
 - Requires the endpoint runtime to be served separately.
 - Foundation, locations/chargers, and document/legal slots migrations must be applied/tested before write v3 can run.

@@ -13,7 +13,7 @@ This includes:
 
 ## Current Role
 
-Supabase is the shared backend for both the current static production site and the future `/app` frontend.
+Supabase is the shared backend for both the current static production site and the active `/app` frontend.
 
 The target product is now a customer-facing commercial ERE inboekservice. The backend must therefore be treated as the audit-worthy operational system behind customer binding, eligibility, document intake, consent, customer dossier management, and ENVAL's inboeking service execution.
 
@@ -21,13 +21,15 @@ The target product is now a customer-facing commercial ERE inboekservice. The ba
 
 The Vite scaffold does not change Supabase functions, migrations, storage policies, or database behavior.
 
-Future backend work should be done through explicit tasks with contract review, migration review, and validation checks.
+Backend work must continue through explicit tasks with contract review, migration review, and validation checks.
 
 ## API Direction
 
 The new frontend should consume Supabase Edge Functions through typed, documented API boundaries rather than duplicating ad hoc legacy browser logic.
 
 ## Target Backend Capabilities
+
+Current proven foundations include app schema foundations, signup submit write v3, app customer auth helper, document file/version schema, upload URL, upload confirm, app audit, and app idempotency.
 
 Future backend/API review should explicitly cover:
 
@@ -53,8 +55,8 @@ Future backend/API review should explicitly cover:
 - NL/EN language awareness where legal or product copy affects consent or claims
 - commercial source-of-truth alignment with `docs/app/legal/fee-model-and-service-terms.md`
 - signup/intake source-of-truth alignment with `docs/app/architecture/signup-intake.md`
-- whether final signup submit creates the dossier, chargers, upload intents, consents, and audit events in one controlled contract
-- how to replace or revise legacy charger-count caps before `/app` backend wiring
+- how later document upload frontend wiring should consume the proven upload-url and upload-confirm endpoints
+- how customer-facing Auth/bootstrap/login should bind submitted dossiers to dashboard sessions
 - how charger-linked documents preserve stable charger identity across manual and import intake paths
 
 No Supabase functions, migrations, storage policies, or database behavior are changed by this document update.

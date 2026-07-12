@@ -91,12 +91,13 @@ Rules:
 - Do not wire backend calls from these pages yet.
 - Do not change Netlify redirects or production root behavior for these app routes yet.
 - Section targets must account for the sticky header with CSS scroll offsets.
-- Signup remains the next real route to design.
 - Signup/intake architecture lives in `docs/app/architecture/signup-intake.md`.
-- `/aanmelden` should be implemented as a frontend-first draft flow before backend wiring.
+- `/aanmelden` is implemented as a frontend-first draft flow with local validation, payload mapping, and controlled submit wiring to `api-app-signup-submit` write v3.
+- `/aanmelden` stays on-page after submit and does not bootstrap a customer Auth session or redirect to the dashboard yet.
+- Document upload in `/aanmelden` remains local preview/file selection only; the proven upload backend is not wired to the frontend yet.
 - `/dashboard` is a mock/read-only customer portal shell for the next phase.
 - Dashboard is person-first: one customer can have multiple assets such as private home, business, VVE, or second home.
-- Dashboard currently has no auth guard, no backend calls, no Supabase calls, no submit wiring, and no local/session storage.
+- Dashboard currently has no auth guard, no backend calls, no Supabase calls, no real read projection, and no local/session storage.
 - Dashboard uses mock data until the dashboard read model and auth decision are defined.
 - Dashboard now uses a left-sidebar customer portal layout.
 - The first real dashboard content focus is the active Particulier/private charger page.
@@ -182,9 +183,10 @@ The year overview is customer-facing output and later supports the audit-worthy 
 
 ## Signup Intake Rule
 
-- `/aanmelden` currently has a frontend-only intake skeleton.
-- Do not wire `/aanmelden` to backend until the API contract is reviewed.
-- The target signup page has personal information, charger information, document upload, and consent/signature placeholders.
+- `/aanmelden` currently has a locally proven frontend submit path: local validation, draft-to-payload mapping, frontend API client, and `api-app-signup-submit` write v3.
+- The current submit path creates the backend dossier foundation through the app submit endpoint, then stays on the page.
+- It does not create a customer Auth session, redirect/bootstrap the dashboard, or upload selected files.
+- The signup page has personal information, charger information, document upload/file-selection preview, and consent/signature sections.
 - Step 1 uses tabs for Particulier, Zakelijk, and VVE. Do not replace these with radio-button UI.
 - Step 1 uses account-specific banners and field labels.
 - Zakelijk and VVE use location tabs in Step 2. Particulier uses the Step 1 address as its single location.
@@ -195,8 +197,8 @@ The year overview is customer-facing output and later supports the audit-worthy 
 - Charger model options are intentionally scaffolded and incomplete until sourced from verified data.
 - Solar panel exportability is captured for later review; the frontend must not make final eligibility claims from it.
 - Documents attach per charger client ID.
-- Current file inputs, KVK placeholders, and signature placeholders are local only.
-- Do not store files, submit drafts, or call backend APIs from `/aanmelden` yet.
+- Current file inputs, KVK placeholders, PDF preview, and signature placeholders are local only.
+- Do not upload files or call document upload endpoints from `/aanmelden` yet.
 - Feature files live under `app/src/features/signup/`.
 
 ## Migration Rule

@@ -133,3 +133,14 @@ Commit: this documentation migration commit.
 - Moves unsafe/outdated tooling notes into `docs/legacy/tooling/`.
 - Adapts high-value legacy Edge, audit, and ops lessons into app-specific docs.
 - Keeps old neutral-infrastructure, external-inboeker, max-4, and fixed export-fee assumptions as historical only.
+
+## 2026-07-12 — Normalize current app implementation status
+
+Commit: this documentation-only status normalization commit.
+
+- Normalizes current implementation-status statements inside `docs/app/**` after the canon migration.
+- Confirms current local proof boundaries for signup submit write v3, frontend submit wiring, app auth helper, document upload URL, and document upload confirm.
+- Keeps open boundaries explicit: customer Auth/bootstrap, dashboard read projection, frontend upload wiring, production storage/policy/deploy proof, and full inboeking/result/fee lifecycle.
+- No runtime changes.
+- No new proof.
+- Legacy docs remained untouched.

@@ -1,6 +1,6 @@
 # Signup Intake Architecture
 
-Status: current signup intake architecture. Frontend skeleton, local validation, payload mapper, and controlled submit wiring exist. Real document upload, import parsing, dashboard bootstrap, and production deployment remain out of scope.
+Status: current signup intake architecture. Frontend draft flow, local validation, payload mapper, controlled submit wiring, and `api-app-signup-submit` write v3 are implemented and locally proven. Real document upload, import parsing, customer Auth/dashboard bootstrap, and production deployment remain out of scope.
 
 ## Scope
 
@@ -154,7 +154,7 @@ This supports the new architecture principle: intake data, uploaded evidence, an
    - email
    - optional phone
    - address/location fields, including optional suffix and country/land with default Nederland
-   - street/adres, city/stad, and country/land are visible but read-only in the skeleton
+   - street/adres, city/stad, and country/land are visible but read-only in the current UI
    - company/VVE name and KVK number for zakelijk/VVE
    - local KVK-uittreksel placeholder for zakelijk/VVE
 
@@ -178,7 +178,7 @@ This supports the new architecture principle: intake data, uploaded evidence, an
 
 ## Proposed Component Architecture
 
-Current frontend skeleton files:
+Current frontend feature files:
 
 ```text
 app/src/features/signup/
@@ -502,17 +502,26 @@ Future extension points:
 
 ## Final Submit Model
 
-Final submit is not part of the next implementation.
+Final submit foundation is implemented locally through `api-app-signup-submit` write v3.
 
-Target later behavior:
+Current behavior:
 
 - User completes local draft.
 - Client validates complete draft.
-- User clicks final action, probably "Start dossier".
-- Only then the frontend calls a future backend contract.
-- Backend creates customer/dossier/chargers/document upload intents/audit events in one controlled flow or a clearly staged transaction model.
-- Backend stores legal/commercial versions accepted by the customer.
-- Backend returns a dossier/session state that upload UI can continue from.
+- User clicks `Start dossier`.
+- Frontend maps the draft to the submit payload.
+- Frontend calls the `api-app-signup-submit` write v3 endpoint.
+- Backend creates or matches customer/identity, creates the dossier shell, locations, chargers, document slots, legal acceptances, idempotency, intake audit, and app audit rows.
+- Frontend shows loading, success, or safe error state on the same page.
+
+Still open:
+
+- customer Auth session creation
+- dashboard bootstrap/redirect
+- document upload to storage
+- customer-readable timeline
+- support/messages
+- kWh/result/fee lifecycle
 
 Final submit must be idempotent and audit-worthy. It must not depend on hidden browser-only state.
 
@@ -533,14 +542,18 @@ Client draft state is useful for UX but is not audit truth until submitted and a
 
 ## Backend/API Contract Implications
 
-Later backend review must decide whether to:
+Current backend contract status:
 
-- extend `api-lead-submit`
-- add a new signup/intake endpoint
-- create dossier and all initial chargers in one final submit
-- create upload intents only after dossier creation
-- support dynamic charger count without the old UI max 4
-- keep or replace the current backend 1-10 charger count rule
+- New app signup uses `api-app-signup-submit`, not `api-lead-submit`.
+- The current write v3 submit creates the customer/dossier foundation, locations, chargers, document slots, legal acceptances, and app audit/idempotency rows.
+- The proven upload backend is separate: `api-app-document-upload-url` and `api-app-document-upload-confirm`.
+- Frontend document upload wiring remains open.
+- Customer-facing Auth/dashboard bootstrap remains open.
+
+Later backend review must still decide how to:
+
+- create upload intents only after dossier creation or from dashboard/document slots
+- keep account-specific document rules aligned for particulier, zakelijk, and VVE
 - version fee model, terms, privacy, and consent copy
 - store accepted legal versions, content hashes, language, timestamps, customer identity, dossier scope, and request metadata
 - support document requirements by charger and by rule version
@@ -550,13 +563,13 @@ No Supabase functions or migrations are changed by this planning document.
 
 ## Not Implemented Yet
 
-- no backend wiring
-- no Supabase changes
-- no upload implementation
+- no frontend upload wiring
+- no customer Auth/login/bootstrap
+- no dashboard backend read projection
 - no CSV/XLSX parser
 - no manufacturer database
 - no external manufacturer/API lookup
-- no final backend schema
+- no production deployment
 - no legal final terms copy
 
 ## Open Compliance Decisions
@@ -610,11 +623,11 @@ No Supabase functions or migrations are changed by this planning document.
 
 ## Recommended Next Implementation Task
 
-Strengthen the frontend skeleton:
+Strengthen the remaining signup/upload boundary:
 
-- field-level validation messages
-- better MID evidence prompts
+- frontend upload client for document slots
+- PDF invoice slot upload wiring
+- customer Auth/dashboard bootstrap decision
 - import parser design or stub tests
-- document upload UX details
-- no backend writes
-- no real upload
+- account-specific document requirements for zakelijk/VVE
+- no production deploy until remote migrations, functions, storage bucket, and browser QA are proven

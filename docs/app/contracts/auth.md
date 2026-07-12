@@ -587,7 +587,7 @@ Coexistence phases:
 2. New schema design.
 3. New migrations in isolated tables.
 4. New `api-app-*` endpoints.
-5. `/app` backend wiring in dev only.
+5. `/app` backend integration in local/dev only.
 6. Migration/cutover plan.
 7. Production switch only after approval.
 

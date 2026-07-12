@@ -8,11 +8,11 @@ This document defines the intended backend contract for the moment a customer cl
 
 This document defines:
 
-- the future submit contract for the current `/aanmelden` frontend skeleton
+- the current submit contract for the `/aanmelden` frontend submit flow
 - how submit creates or starts the customer dashboard/dossier lifecycle
 - the records the backend should create conceptually
-- the dashboard bootstrap behavior after submit
-- the open decisions that must be resolved before implementation
+- the still-open dashboard bootstrap behavior after submit
+- the open decisions that must be resolved before production use
 
 The old `dossier.html` wizard and current `api-dossier-*` endpoints are source material only. They must not be wired directly into the new app without contract redesign.
 
@@ -163,9 +163,9 @@ This shape is frontend draft state, not final database schema.
 
 ## 4. Normalized Submit Payload
 
-The future submit request should normalize local draft state into one backend-facing payload.
+The current frontend mapper normalizes local draft state into one backend-facing payload for `api-app-signup-submit` write v3.
 
-Target shape:
+Current contract shape:
 
 ```ts
 type SignupSubmitPayload = {
@@ -513,7 +513,7 @@ Rules:
 - No secrets client-side.
 - Server validates all fields again.
 - Frontend is never trusted as truth.
-- Auth/RLS boundary must be designed before backend wiring.
+- Customer Auth/RLS boundary must be completed before dashboard read projection and frontend upload wiring.
 - Customer can only see their own dossier.
 - Dashboard should not show raw audit rows.
 - Uploaded evidence must use signed upload URL and server-side hash confirmation later.
@@ -565,30 +565,32 @@ Unresolved before implementation:
 - How to handle duplicate customer email with multiple dossiers.
 - Whether selected local files are uploaded before or after dashboard bootstrap.
 
-## 16. Recommended Next Implementation After This Doc
+## 16. Recommended Next Implementation After Current Proof
 
-A. Consent/terms content architecture document or draft placeholders
+A. Customer Auth signup/login/bootstrap/binding
 
-- Define legal text kinds, versioning, language, content hash, and acceptance UI placeholders.
-- Keep final legal copy marked draft until reviewed.
+- Bind submitted dossiers to a customer-facing Auth session.
+- Keep legacy `dossier_sessions` out of app auth.
+- Preserve safe recovery and anti-enumeration rules.
 
-B. Dashboard shell with mock/read-only state
+B. Dashboard backend read model
 
-- Build `/dashboard` and `/dashboard/dossiers/:dossierId` shell in `/app`.
-- Use mock/read-only state only.
-- No backend writes.
+- Implement `api-app-dashboard-get` after auth bootstrap.
+- Return customer-safe status, requests, documents, timeline, consents, and settings.
+- Do not expose raw audit rows.
 
-C. Signup submit backend contract refinement
+C. Frontend document upload wiring
 
-- Turn this document into endpoint request/response contracts.
-- Define validation, idempotency, audit, response, and error contracts.
+- Add a frontend upload client for document slots.
+- Wire PDF invoice slot upload to `api-app-document-upload-url` and `api-app-document-upload-confirm`.
+- Keep parser preview as UX support only.
 
-D. Auth decision
+D. Account-specific document requirements
 
-- Choose Supabase Auth or custom magic-link sessions.
-- Define customer identity and dashboard access scope.
+- Harden particulier, zakelijk, and VVE upload requirements.
+- Define KVK, signing-authority, VVE mandate, and business-driving evidence details.
 
-E. Submit endpoint implementation later
+E. Production deployment proof
 
-- Implement only after the above contracts are accepted.
-- Do not wire the new app to legacy endpoints as a shortcut.
+- Apply and prove remote migrations/functions/storage policies only in an explicit deployment task.
+- Do not mark the full app live from local proof.

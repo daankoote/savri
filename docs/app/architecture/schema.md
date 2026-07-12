@@ -1445,12 +1445,12 @@ C. Add read-only schema smoke tests
 D. Implement signup submit endpoint
 
 - `api-app-signup-submit`
-- Write v1 foundation endpoint is implemented and locally proven.
-- Write v1 creates/matches customer, creates identity when needed, creates a submitted customer/identity/dossier shell, writes app idempotency, and writes intake/app audit rows.
-- Write v1 returns `mode: "write_v1"` with `request_id`, `customer_id`, `dossier_id`, and `payload_hash`.
-- Write v1 idempotency replay returns the same stored response; same key with different payload returns `idempotency_conflict`.
-- Write v1 intentionally does not create locations/chargers, document slots, consent/fee legal records, customer timeline, support/messages, kWh/result/fee lifecycle rows, or frontend wiring.
-- Future write v2/v3 must add locations/chargers, document slots/legal acceptances, and timeline projection after payload mapper and full contract validation are ready.
+- Write v3 endpoint is implemented and locally proven.
+- Write v3 creates/matches customer, creates identity when needed, creates a submitted customer/identity/dossier shell, writes locations, chargers, expected document slots, legal acceptances, app idempotency, intake audit, and app audit rows.
+- Write v3 returns `mode: "write_v3"` with `request_id`, `customer_id`, `dossier_id`, `location_count`, `charger_count`, `document_slot_count`, `legal_acceptance_count`, and `payload_hash`.
+- Write v3 idempotency replay returns the same stored response; same key with different payload returns `idempotency_conflict`.
+- Frontend `/aanmelden` submit wiring exists locally and stays on-page after success.
+- Write v3 intentionally does not create document uploads, storage objects, customer Auth sessions, customer timeline, support/messages, kWh/result/fee lifecycle rows, or dashboard bootstrap.
 
 E. Implement auth bootstrap
 
@@ -1467,6 +1467,8 @@ G. Implement document upload issue/confirm
 - Signed URL issue.
 - Server-side SHA-256 confirm.
 - Slot/version updates.
+- Current local proof exists for `api-app-document-upload-url`, `api-app-document-upload-confirm`, atomic confirm/reject RPCs, replacement, and concurrency.
+- Frontend upload client/wiring, production bucket policies, remote deployment, and browser QA remain open.
 
 H. Implement customer requests
 
