@@ -526,7 +526,9 @@ Rules:
 - No secrets client-side.
 - Server validates all fields again.
 - Frontend is never trusted as truth.
-- Customer Auth/RLS boundary must be completed before dashboard read projection and frontend upload wiring.
+- Customer Auth/bootstrap and route protection are CURRENT / LOCAL PROOF.
+- Customer-safe dashboard read projection must be implemented before mock dashboard data is replaced.
+- Frontend upload wiring remains a separate OPEN phase.
 - Customer can only see their own dossier.
 - Dashboard should not show raw audit rows.
 - Uploaded evidence must use signed upload URL and server-side hash confirmation later.

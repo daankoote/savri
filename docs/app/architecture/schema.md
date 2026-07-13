@@ -1468,7 +1468,8 @@ E. Implement auth bootstrap
 
 - CURRENT / LOCAL PROOF: backend `api-app-auth-bootstrap` and `app_bootstrap_customer_auth_v1` bind an existing pre-auth identity to a verified Supabase Auth user.
 - CURRENT / LOCAL PROOF: bootstrap returns accessible dossier summaries and preserves account-type-neutral auth across particulier, zakelijk, and VVE.
-- OPEN: customer-facing Auth UX, session restore, route guard, dashboard read endpoint, production deployment, and browser QA.
+- CURRENT / LOCAL PROOF: customer-facing Auth UX, session restoration, logout, frontend bootstrap wiring, and dashboard route guard.
+- OPEN: dashboard read endpoint, real dashboard projection, production deployment, and production browser proof.
 - Continue to avoid old `dossier_sessions` as durable identity.
 
 F. Implement dashboard read endpoint

@@ -169,3 +169,11 @@ Commit: `e500835 Add lean frontend auth session flow`
 - Lazy-loaded Auth/Supabase code for authenticated routes; public pages do not eagerly load it.
 - Browser proof is local-only; no production deploy proof is claimed.
 - Dashboard data remains mock/read-only; real dashboard read projection remains OPEN.
+
+## 2026-07-13 — Remaining frontend Auth documentation drift closed
+
+Commit: this documentation-only drift correction commit.
+
+- Corrected stale schema and contract wording around frontend Auth/session proof.
+- No runtime changes.
+- Next step remains `api-app-dashboard-get`.
