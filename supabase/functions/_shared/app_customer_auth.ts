@@ -7,11 +7,18 @@
 export type AppCustomerAuthErrorCode =
   | "missing_authorization"
   | "invalid_authorization"
+  | "auth_email_missing"
+  | "auth_email_not_verified"
   | "auth_user_not_found"
   | "app_identity_not_linked"
   | "app_identity_inactive"
   | "app_customer_inactive"
   | "dossier_not_found_or_forbidden";
+
+export type AppVerifiedAuthUserContext = {
+  authUserId: string;
+  emailNormalized: string;
+};
 
 export type AppCustomerAuthContext = {
   authUserId: string;
@@ -44,7 +51,14 @@ export type AppDossierAccessResult =
 type SupabaseLikeClient = {
   auth: {
     getUser: (token: string) => Promise<{
-      data?: { user?: { id?: string } | null } | null;
+      data?: {
+        user?: {
+          id?: string;
+          email?: string | null;
+          email_confirmed_at?: string | null;
+          confirmed_at?: string | null;
+        } | null;
+      } | null;
       error?: unknown;
     }>;
   };
@@ -82,6 +96,10 @@ function actorRefForIdentity(identityId: string): string {
   return `app_customer_identity:${identityId}`;
 }
 
+function normalizeEmail(value: unknown): string {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
 export function appAuthErrorResponseBody(error: AppCustomerAuthFail) {
   return {
     ok: false,
@@ -90,10 +108,13 @@ export function appAuthErrorResponseBody(error: AppCustomerAuthFail) {
   };
 }
 
-export async function requireAppCustomer(
+export async function requireVerifiedSupabaseAuthUser(
   req: Request,
   serviceClient: SupabaseLikeClient,
-): Promise<AppCustomerAuthResult> {
+): Promise<
+  | { ok: true; context: AppVerifiedAuthUserContext }
+  | AppCustomerAuthFail
+> {
   const bearer = bearerFromRequest(req);
   if (!bearer) {
     return authFail(401, "missing_authorization");
@@ -111,6 +132,38 @@ export async function requireAppCustomer(
   if (!authUserId || !isUuid(authUserId)) {
     return authFail(401, "auth_user_not_found");
   }
+
+  const emailNormalized = normalizeEmail(authResult.data?.user?.email);
+  if (!emailNormalized) {
+    return authFail(401, "auth_email_missing");
+  }
+
+  const emailVerifiedAt = String(
+    authResult.data?.user?.email_confirmed_at ||
+      authResult.data?.user?.confirmed_at ||
+      "",
+  ).trim();
+  if (!emailVerifiedAt) {
+    return authFail(403, "auth_email_not_verified", "E-mailadres is nog niet bevestigd.");
+  }
+
+  return {
+    ok: true,
+    context: {
+      authUserId,
+      emailNormalized,
+    },
+  };
+}
+
+export async function requireAppCustomer(
+  req: Request,
+  serviceClient: SupabaseLikeClient,
+): Promise<AppCustomerAuthResult> {
+  const verifiedAuth = await requireVerifiedSupabaseAuthUser(req, serviceClient);
+  if (!verifiedAuth.ok) return verifiedAuth;
+
+  const authUserId = verifiedAuth.context.authUserId;
 
   const identityQuery = serviceClient
     .from("app_customer_identities") as {
