@@ -70,6 +70,14 @@ The recent app backend is retained as valid foundation:
 - `api-app-document-upload-confirm`
 - no legacy dossier dependency in app endpoints
 
+The recent app frontend Auth/session flow is retained as local proof:
+
+- `/account` supports customer account creation and sign-in.
+- Supabase Auth session restoration and logout are wired locally.
+- `/dashboard` is protected by the current frontend session flow.
+- Auth/Supabase frontend code is route-lazy for `/account` and `/dashboard`.
+- Dashboard content is still mock/read-only; no dashboard read model is implemented yet.
+
 ## Source-Of-Truth Order
 
 When sources conflict, use this order:

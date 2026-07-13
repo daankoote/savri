@@ -126,24 +126,30 @@ CURRENT / LOCAL PROOF:
 - Bootstrap does not create a customer, identity, dossier, or Auth session.
 - Bootstrap does not automatically merge customers or identities.
 - Ambiguous identity state and identities bound to another Auth user fail safely.
+- `/account` is implemented for customer account creation and sign-in.
+- The frontend uses one shared Supabase browser client singleton.
+- Frontend session initialization, Auth state subscription, session restoration, and logout are implemented locally.
+- The frontend calls `api-app-auth-bootstrap` after a verified Auth session and deduplicates bootstrap calls for the same session.
+- `/dashboard` is protected by the frontend route guard.
+- Auth error mapping is customer-safe for the current local flow.
+- Auth code remains account-type neutral across particulier, zakelijk, and VVE.
+- Auth/Supabase frontend code is lazy-loaded only for `/account` and `/dashboard`.
+- Public pages do not need live Auth state and do not eagerly initialize Supabase Auth.
+- The frontend does not use polling, custom refresh loops, or manual access-token/refresh-token persistence.
 
 OPEN:
 
-- Browser account activation UX.
-- Signup/sign-in form.
-- Session state/module.
-- Logout.
 - Password recovery.
-- Email verification UX.
-- Auth error UX.
-- Dashboard route guard.
+- Resend verification UX.
 - Dashboard bootstrap/read endpoint.
+- Real dashboard projection replacing mock data.
+- Production Auth configuration and proof.
 - Support flow for:
   - identity not found
   - already bound to another user
   - ambiguous identity
   - inactive customer
-- Production deployment and remote auth proof.
+- Remote deployment and remote auth proof.
 
 ### Customer Identity
 
@@ -613,7 +619,7 @@ Coexistence phases:
 ## 10. Risks / Open Decisions
 
 - Legacy wording drift is isolated under `docs/legacy/**`; current `/app` direction resolves ENVAL as a customer-facing inboekservice.
-- Auth choice risk: Supabase Auth vs custom magic link affects RLS, session storage, recovery, and support access.
+- Auth production risk: Supabase Auth configuration, recovery, redirects, RLS, and support access still need production proof.
 - RLS risk: service-role Edge writes are safer for writes, but customer reads still need strict access boundaries.
 - Duplicate customer/dossier creation: signup retries and repeated emails need deterministic idempotency/dedupe.
 - Legal versioning risk: bundled frontend acceptance may later need split consent records.
@@ -628,9 +634,10 @@ Coexistence phases:
 
 ## 11. Recommended Implementation Sequence
 
-1. Finalize auth decision details: Supabase Auth hybrid, exact magic-link UX, recovery, support/admin boundary, and RLS approach.
-2. Implement customer-facing auth bootstrap/login/binding.
-3. Implement `api-app-dashboard-get` read model after auth bootstrap.
-4. Wire the document upload client after dashboard/auth contracts are proven.
-5. Implement support/messages/kWh/result/fee lifecycle.
-6. Plan production migration/cutover separately; keep old root/static production untouched until approved.
+1. Implement `api-app-dashboard-get` as a customer-safe read model after Auth bootstrap.
+2. Replace dashboard mock data with the real read projection.
+3. Add password recovery and resend-verification UX.
+4. Prove production Auth URL/redirect configuration.
+5. Wire the document upload client after dashboard/auth contracts are proven.
+6. Implement support/messages/kWh/result/fee lifecycle.
+7. Plan production migration/cutover separately; keep old root/static production untouched until approved.

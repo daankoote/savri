@@ -157,3 +157,15 @@ Commit: `5926759 Add app customer auth bootstrap`
 - Existing upload-url and upload-confirm Auth regressions were locally proven after binding.
 - Proof is local-only; no production deploy or remote migration apply is claimed.
 - Frontend Auth/session/dashboard route guard and dashboard read wiring remain OPEN.
+
+## 2026-07-13 — Lean frontend Auth/session flow locally proven and committed
+
+Commit: `e500835 Add lean frontend auth session flow`
+
+- Added local `/account` account creation and login flow.
+- Wired frontend bootstrap to `api-app-auth-bootstrap`.
+- Locally proved session restoration, logout, dashboard guard, and safe Auth error behavior.
+- Kept Auth account-type neutral for particulier, zakelijk, and VVE.
+- Lazy-loaded Auth/Supabase code for authenticated routes; public pages do not eagerly load it.
+- Browser proof is local-only; no production deploy proof is claimed.
+- Dashboard data remains mock/read-only; real dashboard read projection remains OPEN.

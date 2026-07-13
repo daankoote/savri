@@ -20,6 +20,12 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
 - `api-app-document-upload-confirm` is locally proven.
 - Atomic confirm/reject RPCs are locally proven.
 - PDF invoice parser adapter and local PDF preview exist for frontend-only preview.
+- Modular frontend Auth/session layer is locally proven.
+- `/account` supports account creation and login locally.
+- Frontend session restoration and logout are locally proven.
+- Frontend bootstrap API wiring to `api-app-auth-bootstrap` is locally proven.
+- Dashboard route guard is locally proven.
+- Auth/Supabase frontend code is lazy-loaded for `/account` and `/dashboard`.
 
 Local proof is not production proof. Remote migration/function deploy, production bucket/policy proof, and production browser QA remain open.
 
@@ -33,8 +39,10 @@ Local proof is not production proof. Remote migration/function deploy, productio
   - VAT/tax wording
   - partial success
   - reversal, audit correction, and clawback
-- Frontend Auth module, customer account activation/sign-in, session restoration, logout, recovery, verification UX, dashboard route guard, and bootstrap API client.
-- Dashboard bootstrap/read endpoint.
+- Password recovery UX.
+- Resend verification UX.
+- Customer-safe dashboard read endpoint.
+- Real dashboard projection replacing mock data.
 - Production secrets, storage, function, and migration deployment proof.
 - Production Auth configuration and remote auth proof.
 - Account-specific document contracts:
@@ -48,11 +56,10 @@ Local proof is not production proof. Remote migration/function deploy, productio
 
 ## P1
 
-- Build the modular frontend Auth/session layer and call `api-app-auth-bootstrap` after a verified Supabase Auth session exists.
+- Build `api-app-dashboard-get` as a customer-safe, account-type-neutral read projection before replacing dashboard mock data.
 - Modular `/app` upload client.
 - PDF invoice slot frontend upload wiring.
 - Business and VVE upload slots.
-- Dashboard read model.
 - Business and VVE dashboard detail pages.
 - Result/inboeking lifecycle.
 - Fee/payout lifecycle.

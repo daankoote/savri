@@ -40,15 +40,19 @@ Current write v3 intentionally does not create document uploads, storage objects
 Current customer Auth bootstrap sequence:
 
 1. Signup write v3 creates the pre-auth customer, identity, dossier, location, charger, document-slot, and legal-acceptance structure.
-2. A separately authenticated Supabase Auth user later calls `api-app-auth-bootstrap`.
-3. `api-app-auth-bootstrap` derives the verified Auth user ID and verified email server-side.
-4. Bootstrap binds the existing eligible `app_customer_identity`.
-5. Bootstrap returns customer-visible accessible dossier summaries.
-6. Dashboard session/read wiring remains OPEN.
+2. The customer creates an account or signs in through `/account`.
+3. The frontend gets a verified Supabase Auth session and calls `api-app-auth-bootstrap`.
+4. `api-app-auth-bootstrap` derives the verified Auth user ID and verified email server-side.
+5. Bootstrap binds or resolves the existing eligible `app_customer_identity`.
+6. Bootstrap returns customer-visible accessible dossier summaries.
+7. The protected `/dashboard` route opens after a valid Auth/bootstrap state.
+8. Dashboard content remains mock/read-only; the real dashboard read projection remains OPEN.
 
 Backend bootstrap is CURRENT / LOCAL PROOF.
 
-Customer-facing Auth UI, session module, dashboard route guard, and dashboard read endpoint remain OPEN.
+Customer-facing Auth UI, session module, and dashboard route guard are CURRENT / LOCAL PROOF.
+
+Dashboard read endpoint and real dashboard projection remain OPEN.
 
 Frontend submit wiring is implemented for `/aanmelden`: the existing button validates locally, maps the draft, calls `api-app-signup-submit` write v3 through the frontend API client, and shows loading, success, or safe error state on the same page. It does not navigate to the dashboard yet.
 
@@ -60,7 +64,7 @@ Document upload backend status:
 - Signup submit itself still does not upload files, create storage objects, confirm document hashes, or promote document versions.
 - Frontend/dashboard upload wiring remains OPEN.
 - Backend identity binding/bootstrap is CURRENT / LOCAL PROOF.
-- Customer-facing Auth UI/session/bootstrap call wiring remains OPEN.
+- Customer-facing Auth UI/session/bootstrap call wiring is CURRENT / LOCAL PROOF.
 - Production storage bucket/policy/deploy proof remains OPEN.
 
 Local browser-QA proof is green after the Vite env resolver fix and Vite restart:
@@ -395,18 +399,13 @@ ENVAL sees internally:
 - review queue item or review task
 - internal audit trail
 
-Open auth decision:
+Current Auth/session direction:
 
-- Supabase Auth:
-  - stronger standard account/session model
-  - built-in auth lifecycle
-  - requires product decisions around magic links, email verification, and account UX
-- Custom magic-link session:
-  - closer to current legacy low-friction model
-  - more control over dashboard bootstrap
-  - requires careful session, revocation, expiry, and RLS design
-
-Do not decide implementation in this document.
+- Supabase Auth is the current customer session layer.
+- `/account` provides account creation and login.
+- Frontend bootstrap calls `api-app-auth-bootstrap` after a verified session.
+- Dashboard route protection is locally proven.
+- Password recovery, resend verification, production Auth configuration, and the real dashboard read endpoint remain OPEN.
 
 ## 9. Dossier Status After Submit
 
@@ -531,7 +530,7 @@ Rules:
 - Customer can only see their own dossier.
 - Dashboard should not show raw audit rows.
 - Uploaded evidence must use signed upload URL and server-side hash confirmation later.
-- Avoid localStorage unless the auth decision explicitly allows it.
+- Avoid custom localStorage/sessionStorage token persistence; rely on the official Auth client session model unless a future security review changes that.
 - Do not store unnecessary draft data longer than needed.
 - Do not put raw email or PII into public actor references.
 - Readable timeline must be privacy-safe.
@@ -562,9 +561,10 @@ Do not directly reuse without redesign:
 
 ## 15. Open Decisions
 
-Unresolved before implementation:
+Unresolved before production:
 
-- Auth model: Supabase Auth or custom magic-link session.
+- Password recovery and resend verification UX.
+- Production Auth configuration and browser proof.
 - Whether submit requires all files immediately or creates open document slots.
 - Exact legal copy and versions.
 - Consent duration options.
@@ -581,30 +581,27 @@ Unresolved before implementation:
 
 ## 16. Recommended Next Implementation After Current Proof
 
-A. Customer Auth signup/login/bootstrap/binding
-
-- Bind submitted dossiers to a customer-facing Auth session.
-- Keep legacy `dossier_sessions` out of app auth.
-- Preserve safe recovery and anti-enumeration rules.
-
-B. Dashboard backend read model
+A. Dashboard backend read model
 
 - Implement `api-app-dashboard-get` after auth bootstrap.
 - Return customer-safe status, requests, documents, timeline, consents, and settings.
 - Do not expose raw audit rows.
 
-C. Frontend document upload wiring
+B. Frontend document upload wiring
 
 - Add a frontend upload client for document slots.
 - Wire PDF invoice slot upload to `api-app-document-upload-url` and `api-app-document-upload-confirm`.
 - Keep parser preview as UX support only.
 
-D. Account-specific document requirements
+C. Account-specific document requirements
 
 - Harden particulier, zakelijk, and VVE upload requirements.
 - Define KVK, signing-authority, VVE mandate, and business-driving evidence details.
 
-E. Production deployment proof
+D. Production Auth and deployment proof
+
+- Configure password recovery and resend-verification UX.
+- Prove production Auth URL/redirect settings.
 
 - Apply and prove remote migrations/functions/storage policies only in an explicit deployment task.
 - Do not mark the full app live from local proof.

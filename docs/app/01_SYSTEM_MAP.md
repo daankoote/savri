@@ -38,17 +38,18 @@ Backend integration should happen through explicit API contracts rather than cop
 
 ## Current Auth Flow
 
-Status: CURRENT / LOCAL PROOF for backend bootstrap; OPEN for customer-facing frontend Auth UI and dashboard route guards.
+Status: CURRENT / LOCAL PROOF for lean frontend Auth/session flow and backend bootstrap. Dashboard read projection remains OPEN.
 
-Current backend sequence:
+Current customer sequence:
 
 ```text
-Supabase Auth user
-→ verified server-side Auth context
+/account
+→ Supabase Auth signup/sign-in
+→ verified Auth session
 → api-app-auth-bootstrap
-→ app_customer_identity.auth_user_id binding
-→ app_customer
-→ accessible app_customer_dossiers
+→ app_customer_identity binding/resolution
+→ accessible dossier summary
+→ protected /dashboard route
 ```
 
 Rules:
@@ -57,6 +58,10 @@ Rules:
 - Dossiers may have different account types: particulier, zakelijk, or VVE.
 - Auth logic is not split per account type.
 - Legacy dossier sessions are not used for app customer auth.
+- Auth module and Supabase browser client are route-lazy.
+- Public routes do not initialize Supabase Auth.
+- Dashboard content remains mock/read-only.
+- Real dashboard projection remains OPEN.
 
 ## Backend Data Expectations
 

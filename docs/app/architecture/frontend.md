@@ -73,6 +73,7 @@ Current routes:
 
 - `/`
 - `/aanmelden`
+- `/account`
 - `/upload`
 - `/ere`
 - `/contact`
@@ -95,10 +96,10 @@ Rules:
 - `/aanmelden` is implemented as a frontend-first draft flow with local validation, payload mapping, and controlled submit wiring to `api-app-signup-submit` write v3.
 - `/aanmelden` stays on-page after submit and does not bootstrap a customer Auth session or redirect to the dashboard yet.
 - Document upload in `/aanmelden` remains local preview/file selection only; the proven upload backend is not wired to the frontend yet.
-- `/dashboard` is a mock/read-only customer portal shell for the next phase.
+- `/dashboard` is a protected mock/read-only customer portal shell for the next phase.
 - Dashboard is person-first: one customer can have multiple assets such as private home, business, VVE, or second home.
-- Dashboard currently has no auth guard, no backend calls, no Supabase calls, no real read projection, and no local/session storage.
-- Dashboard uses mock data until the dashboard read model and auth decision are defined.
+- Dashboard currently has a frontend Auth/session guard, but no dashboard read endpoint, no real read projection, and no local/session storage.
+- Dashboard uses mock data until the dashboard read model is implemented.
 - Dashboard now uses a left-sidebar customer portal layout.
 - The first real dashboard content focus is the active Particulier/private charger page.
 - Business and VVE detail pages are deferred until the private active page is right.
@@ -121,28 +122,39 @@ Rules:
 
 ## Auth And Session Rule
 
-Status: OPEN for frontend implementation.
+Status: CURRENT / LOCAL PROOF for lean frontend implementation.
 
-The backend Auth bootstrap is CURRENT / LOCAL PROOF, but the customer-facing frontend Auth/session layer is not built yet.
+The backend Auth bootstrap and the customer-facing frontend Auth/session layer are CURRENT / LOCAL PROOF.
 
-Next frontend phase:
+Current frontend flow:
 
 - shared Supabase browser client
-- Auth state/session provider
-- account activation/sign-in surface
-- email verification state
+- Auth state/session provider with session initialization and Auth state subscription
+- `/account` account creation and sign-in surface
 - bootstrap API client for `api-app-auth-bootstrap`
 - logout
 - session restore
 - safe Auth error mapping
 - dashboard route guard
+- route-level lazy loading for Auth/Supabase code on `/account` and `/dashboard`
+
+Still OPEN:
+
+- password recovery UX
+- resend verification UX
+- customer-safe dashboard read endpoint
+- real dashboard projection replacing mock data
+- production Auth configuration and production browser proof
 
 Rules:
 
 - Do not create separate Auth implementations for particulier, zakelijk, and VVE.
 - Auth state is account/customer-level; dossier account types come from backend dossier summaries.
 - Do not use legacy dossier sessions for the `/app` dashboard.
-- Do not claim dashboard Auth is complete until the route guard and dashboard read flow are implemented and browser-QA proven.
+- Public pages must not eagerly initialize Supabase Auth or require live Auth state.
+- Do not use polling or custom token refresh loops.
+- Do not manually persist access or refresh tokens.
+- Do not claim dashboard data is real until `api-app-dashboard-get` exists and the mock data is replaced.
 
 ## Homepage Copy Rule
 
