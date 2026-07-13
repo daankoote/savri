@@ -141,8 +141,7 @@ OPEN:
 
 - Password recovery.
 - Resend verification UX.
-- Dashboard bootstrap/read endpoint.
-- Real dashboard projection replacing mock data.
+- Frontend dashboard API client and real dashboard projection replacing mock data.
 - Production Auth configuration and proof.
 - Support flow for:
   - identity not found
@@ -239,7 +238,7 @@ All names below are conceptual. Do not create functions until contracts and sche
 |---|---|---|---|---|---|---|
 | `api-app-signup-submit` | Accept normalized `/aanmelden` payload and create/match pre-auth customer, identity, dossier, locations, chargers, document slots, and legal/fee acceptance. | Public pre-auth with abuse controls; creates pre-auth app customer/identity/dossier state. It does not create Auth users or Auth sessions. | Required. | Required for rejects and writes; pre-dossier rejects go to intake audit. | Customer-facing submit. | Adapt `api-lead-submit` idempotency, audit, mail queue; replace old payload and `/dossier.html` link. |
 | `api-app-auth-bootstrap` | Authenticated CORE endpoint that validates a verified Supabase Auth user, derives verified email server-side, binds an existing pre-auth app identity, and returns accessible customer dossier summaries. It does not create customers, dossiers, or Auth sessions. | Supabase Auth customer session plus service-role RPC binding. | Required. | Required. | Customer-visible account activation/bootstrap. | New app endpoint. Does not reuse legacy dossier sessions. |
-| `api-app-dashboard-get` | Return customer-safe dashboard read model: dossiers, active charger/location rows, requests, documents, timeline, settings summary. | Supabase Auth customer session. | Not required for pure read. | Read audit optional/report-only; reject audit required. | Customer-visible. | Adapt `api-dossier-get` read aggregation, but not token exchange or raw audit exposure. |
+| `api-app-dashboard-get` | CURRENT / LOCAL PROOF. Pure authenticated read endpoint for customer-safe dossier summaries, selected dossier, locations, chargers, document slots/current document state, and legal acceptance summaries. | Supabase Auth customer session through `requireAppCustomer` and `requireAppDossierAccess`. | Not required for pure read. | No successful-read audit write; scoped rejects may use safe fail-open audit. | Customer-visible. | New app endpoint. Does not use legacy dossier sessions or legacy read endpoints. |
 | `api-app-document-upload-url` | Issue signed upload URL for a document slot/request response. | Supabase Auth customer session and dossier access. | Required. | Required. | Customer-visible action. | Adapt `api-dossier-upload-url`; replace old doc type rules. |
 | `api-app-document-upload-confirm` | Confirm uploaded file with server-side SHA-256 and create document version/file record. | Supabase Auth customer session and dossier access. | Required. | Required. | Customer-visible action. | Keep/adapt `api-dossier-upload-confirm` hash-confirm pattern. |
 | `api-app-customer-request-create` | ENVAL creates a request for missing information, correction, document, consent, or kWh. | Internal/support/admin only. | Required. | Required. | Internal action; customer sees resulting request. | Adapt audit/mail queue pattern. |
@@ -634,8 +633,8 @@ Coexistence phases:
 
 ## 11. Recommended Implementation Sequence
 
-1. Implement `api-app-dashboard-get` as a customer-safe read model after Auth bootstrap.
-2. Replace dashboard mock data with the real read projection.
+1. Build one lean frontend dashboard client for `api-app-dashboard-get`.
+2. Replace only dashboard mock fields backed by the real read projection.
 3. Add password recovery and resend-verification UX.
 4. Prove production Auth URL/redirect configuration.
 5. Wire the document upload client after dashboard/auth contracts are proven.

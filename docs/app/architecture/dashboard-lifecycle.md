@@ -82,6 +82,10 @@ Initial dossier page sections or tabs:
 Implementation sequence:
 
 - Start with a route shell and mock/read-only data.
+- Backend `api-app-dashboard-get` now exists as a locally proven customer-safe read endpoint.
+- Frontend dashboard data still uses mock/read-only data until the read endpoint is wired.
+- First frontend wiring must replace only fields backed by real app sources.
+- Mock-only future sections must not be sent as fabricated API values.
 - Keep customer copy short and action-oriented.
 - Do not wire backend writes until backend contracts are reviewed.
 - Keep internal ENVAL review tooling out of the customer dashboard until roles and auth boundaries are defined.
@@ -407,4 +411,3 @@ Phase 7: internal review workflow
 Phase 8: yearly kWh/result/fee lifecycle
 
 - Add yearly kWh input/readout, result events, fee calculation, and customer year overview.
-

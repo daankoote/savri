@@ -38,7 +38,7 @@ Backend integration should happen through explicit API contracts rather than cop
 
 ## Current Auth Flow
 
-Status: CURRENT / LOCAL PROOF for lean frontend Auth/session flow and backend bootstrap. Dashboard read projection remains OPEN.
+Status: CURRENT / LOCAL PROOF for lean frontend Auth/session flow, backend bootstrap, and the customer-safe dashboard read endpoint. Frontend dashboard projection remains OPEN.
 
 Current customer sequence:
 
@@ -50,6 +50,8 @@ Current customer sequence:
 → app_customer_identity binding/resolution
 → accessible dossier summary
 → protected /dashboard route
+→ api-app-dashboard-get
+→ customer-safe dossier projection
 ```
 
 Rules:
@@ -60,8 +62,11 @@ Rules:
 - Legacy dossier sessions are not used for app customer auth.
 - Auth module and Supabase browser client are route-lazy.
 - Public routes do not initialize Supabase Auth.
+- `api-app-dashboard-get` is CURRENT / LOCAL PROOF and reads through the authenticated Edge boundary.
+- The browser does not directly read app tables.
+- The app does not call legacy dossier sessions or legacy dashboard/read endpoints.
 - Dashboard content remains mock/read-only.
-- Real dashboard projection remains OPEN.
+- Frontend wiring from `/dashboard` to the real read projection remains OPEN.
 
 ## Backend Data Expectations
 

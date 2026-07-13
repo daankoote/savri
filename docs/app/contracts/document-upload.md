@@ -7,7 +7,7 @@ Implementation status:
 - CURRENT: file/version schema, app customer auth helper, `api-app-document-upload-url`, and `api-app-document-upload-confirm` are committed and locally proven.
 - LOCAL PROOF: proof was completed in disposable local Supabase only.
 - CURRENT / LOCAL PROOF: backend identity binding/bootstrap through `api-app-auth-bootstrap`.
-- OPEN: frontend upload wiring, customer-facing Auth UI/session/bootstrap call wiring, production storage bucket/policies, remote deploy, and browser QA.
+- OPEN: frontend upload wiring, production storage bucket/policies, remote deploy, and upload browser QA.
 
 ## 1. Current Truth
 
@@ -22,7 +22,8 @@ Implementation status:
 - Replacement/version history is implemented through immutable versions and slot current pointers.
 - `app_customer_auth.ts` is CURRENT for Supabase Auth JWT validation, active identity/customer resolution, and dossier ownership authorization.
 - Backend identity binding/bootstrap is CURRENT / LOCAL PROOF through `api-app-auth-bootstrap`.
-- Customer-facing Auth UI/session/bootstrap call wiring and frontend upload integration remain OPEN.
+- Customer-facing Auth UI/session/bootstrap call wiring is CURRENT / LOCAL PROOF.
+- Frontend upload integration remains OPEN.
 - Production bucket/policy/deploy proof remains OPEN.
 - New upload behavior must use new `api-app-*` endpoints and `app_*` tables.
 - Legacy upload endpoints are frozen/reference only:
@@ -408,11 +409,10 @@ Completed / CURRENT:
 
 Next OPEN work:
 
-1. Customer-facing Auth UI/session/bootstrap call wiring.
-2. Production storage bucket/policy/config proof.
-3. Remote migration/function deploy proof.
-4. Frontend upload client, not yet wired to UI.
-5. Wire one PDF invoice slot in `/app` behind existing validation.
-6. Browser QA with PDF invoice upload and hash confirm.
-7. Add dashboard document read projection.
-8. Add worker/internal analysis lane after upload confirmation.
+1. Production storage bucket/policy/config proof.
+2. Remote migration/function deploy proof.
+3. Frontend upload client, not yet wired to UI.
+4. Wire one PDF invoice slot in `/app` behind existing validation.
+5. Browser QA with PDF invoice upload and hash confirm.
+6. Wire dashboard frontend to the current document-slot projection where useful.
+7. Add worker/internal analysis lane after upload confirmation.

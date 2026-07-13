@@ -26,6 +26,10 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
 - Frontend bootstrap API wiring to `api-app-auth-bootstrap` is locally proven.
 - Dashboard route guard is locally proven.
 - Auth/Supabase frontend code is lazy-loaded for `/account` and `/dashboard`.
+- `api-app-dashboard-get` is locally proven.
+- Dashboard read is account-neutral and supports multiple dossiers, locations, and chargers.
+- Dashboard read returns customer-safe dossier, document-slot/current-document, and legal-acceptance projections.
+- Successful dashboard reads perform zero database writes.
 
 Local proof is not production proof. Remote migration/function deploy, production bucket/policy proof, and production browser QA remain open.
 
@@ -41,7 +45,6 @@ Local proof is not production proof. Remote migration/function deploy, productio
   - reversal, audit correction, and clawback
 - Password recovery UX.
 - Resend verification UX.
-- Customer-safe dashboard read endpoint.
 - Real dashboard projection replacing mock data.
 - Production secrets, storage, function, and migration deployment proof.
 - Production Auth configuration and remote auth proof.
@@ -56,7 +59,9 @@ Local proof is not production proof. Remote migration/function deploy, productio
 
 ## P1
 
-- Build `api-app-dashboard-get` as a customer-safe, account-type-neutral read projection before replacing dashboard mock data.
+- Build one lean frontend dashboard client and replace only the mock fields backed by `api-app-dashboard-get`.
+- Selected dossier UX.
+- Dashboard loading, error, and empty states.
 - Modular `/app` upload client.
 - PDF invoice slot frontend upload wiring.
 - Business and VVE upload slots.

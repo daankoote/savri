@@ -98,8 +98,8 @@ Rules:
 - Document upload in `/aanmelden` remains local preview/file selection only; the proven upload backend is not wired to the frontend yet.
 - `/dashboard` is a protected mock/read-only customer portal shell for the next phase.
 - Dashboard is person-first: one customer can have multiple assets such as private home, business, VVE, or second home.
-- Dashboard currently has a frontend Auth/session guard, but no dashboard read endpoint, no real read projection, and no local/session storage.
-- Dashboard uses mock data until the dashboard read model is implemented.
+- Dashboard currently has a frontend Auth/session guard and a locally proven backend read endpoint, but no real frontend read projection and no local/session storage.
+- Dashboard uses mock data until frontend wiring replaces factual mock fields with `api-app-dashboard-get`.
 - Dashboard now uses a left-sidebar customer portal layout.
 - The first real dashboard content focus is the active Particulier/private charger page.
 - Business and VVE detail pages are deferred until the private active page is right.
@@ -142,7 +142,7 @@ Still OPEN:
 
 - password recovery UX
 - resend verification UX
-- customer-safe dashboard read endpoint
+- frontend dashboard API client
 - real dashboard projection replacing mock data
 - production Auth configuration and production browser proof
 
@@ -154,7 +154,7 @@ Rules:
 - Public pages must not eagerly initialize Supabase Auth or require live Auth state.
 - Do not use polling or custom token refresh loops.
 - Do not manually persist access or refresh tokens.
-- Do not claim dashboard data is real until `api-app-dashboard-get` exists and the mock data is replaced.
+- Do not claim dashboard data is real until `api-app-dashboard-get` is wired and the mock data is replaced.
 
 ## Homepage Copy Rule
 

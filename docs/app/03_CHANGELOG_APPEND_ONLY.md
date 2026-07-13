@@ -177,3 +177,16 @@ Commit: this documentation-only drift correction commit.
 - Corrected stale schema and contract wording around frontend Auth/session proof.
 - No runtime changes.
 - Next step remains `api-app-dashboard-get`.
+
+## 2026-07-13 — Customer-safe dashboard read locally proven and committed
+
+Commit: `5cce922 Add customer-safe app dashboard read`
+
+- Added `api-app-dashboard-get` as the locally proven authenticated dashboard read endpoint.
+- Enforces customer auth and independent dossier ownership checks.
+- Supports particulier, zakelijk, VVE, multiple dossiers, and multiple locations.
+- Uses bounded no-N+1 reads.
+- Performs zero successful-read database writes.
+- Returns a customer-safe projection and excludes sensitive data, storage data, hashes, raw audit, and idempotency rows.
+- Frontend dashboard data remains mock/read-only until a frontend client wires the endpoint.
+- Proof is local-only; no production deploy proof is claimed.
