@@ -87,3 +87,10 @@ export async function signOutWithSupabase(): Promise<void> {
 
   await client.auth.signOut();
 }
+
+export async function signOutLocalSupabaseSession(): Promise<void> {
+  const client = getSupabaseBrowserClient();
+  if (!client) return;
+
+  await client.auth.signOut({ scope: "local" });
+}

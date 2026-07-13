@@ -144,6 +144,43 @@
     background 160ms ease;
 }
 
+.button:not(:disabled),
+.mode-tab:not(:disabled),
+.portal-nav-item:not(:disabled),
+.portal-nav-subitem:not(:disabled),
+.charger-tab-row:not(:disabled),
+.charger-accordion-header:not(:disabled),
+.button-link:not(:disabled),
+.document-file-input:not(:disabled),
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+.button:disabled,
+.mode-tab:disabled,
+.portal-nav-item:disabled,
+.portal-nav-subitem:disabled,
+.charger-tab-row:disabled,
+.charger-accordion-header:disabled,
+.button-link:disabled,
+.document-file-input:disabled,
+button:disabled {
+  cursor: not-allowed;
+}
+
+.button:not(:disabled):active,
+.mode-tab:not(:disabled):active,
+.portal-nav-item:not(:disabled):active,
+.portal-nav-subitem:not(:disabled):active,
+.charger-tab-row:not(:disabled):active,
+.charger-accordion-header:not(:disabled):active,
+.button-link:not(:disabled):active,
+button:not(:disabled):active {
+  filter: brightness(0.94);
+  transform: translateY(0);
+  box-shadow: none;
+}
+
 .button:hover {
   transform: translateY(-1px);
 }

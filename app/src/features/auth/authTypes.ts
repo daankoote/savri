@@ -38,6 +38,7 @@ export type AuthSafeErrorCode =
   | "customer_identity_already_bound"
   | "customer_identity_binding_ambiguous"
   | "customer_inactive"
+  | "customer_dossier_not_found"
   | "service_unavailable"
   | "invalid_response"
   | "unknown";

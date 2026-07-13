@@ -10,6 +10,7 @@ const errorMessages: Record<AuthSafeErrorCode, string> = {
   customer_identity_already_bound: "Dit account vraagt om ondersteuning. Neem contact op met ENVAL.",
   customer_identity_binding_ambiguous: "Deze koppeling vraagt om handmatige controle. Neem contact op met ENVAL.",
   customer_inactive: "Dit account is niet beschikbaar. Neem contact op met ENVAL.",
+  customer_dossier_not_found: "We konden geen gekoppeld ENVAL-dossier vinden. Neem contact op met ENVAL.",
   service_unavailable: "Inloggen is tijdelijk niet beschikbaar. Probeer het opnieuw.",
   invalid_response: "Inloggen is tijdelijk niet beschikbaar. Probeer het opnieuw.",
   unknown: "Inloggen is tijdelijk niet beschikbaar. Probeer het opnieuw.",
@@ -39,7 +40,18 @@ export function mapBootstrapErrorCode(code: string): AuthSafeError {
   if (code === "customer_identity_already_bound") return safeAuthError("customer_identity_already_bound");
   if (code === "customer_identity_binding_ambiguous") return safeAuthError("customer_identity_binding_ambiguous");
   if (code === "customer_inactive") return safeAuthError("customer_inactive");
+  if (code === "customer_dossier_not_found") return safeAuthError("customer_dossier_not_found");
   if (code === "service_unavailable") return safeAuthError("service_unavailable");
 
   return safeAuthError("invalid_response");
+}
+
+export function isTerminalBootstrapBindingError(code: AuthSafeErrorCode): boolean {
+  return (
+    code === "customer_identity_not_found" ||
+    code === "customer_identity_already_bound" ||
+    code === "customer_identity_binding_ambiguous" ||
+    code === "customer_inactive" ||
+    code === "customer_dossier_not_found"
+  );
 }

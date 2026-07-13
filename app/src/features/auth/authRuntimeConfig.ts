@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 
 export type AuthRuntimeConfig =
-  | { ok: true; supabaseUrl: string; anonKey: string; bootstrapEndpointUrl: string }
+  | { ok: true; supabaseUrl: string; anonKey: string; bootstrapEndpointUrl: string; dashboardEndpointUrl: string }
   | { ok: false; message: string };
 
 function trimTrailingSlash(value: string): string {
@@ -23,13 +23,18 @@ export function resolveAuthRuntimeConfig(): AuthRuntimeConfig {
     : supabaseUrl
       ? `${supabaseUrl}/functions/v1/api-app-auth-bootstrap`
       : "";
+  const dashboardEndpointUrl = apiBaseUrl
+    ? `${apiBaseUrl}/api-app-dashboard-get`
+    : supabaseUrl
+      ? `${supabaseUrl}/functions/v1/api-app-dashboard-get`
+      : "";
 
-  if (!supabaseUrl || !anonKey || !bootstrapEndpointUrl) {
+  if (!supabaseUrl || !anonKey || !bootstrapEndpointUrl || !dashboardEndpointUrl) {
     return {
       ok: false,
       message: "Inloggen is lokaal nog niet geconfigureerd.",
     };
   }
 
-  return { ok: true, supabaseUrl, anonKey, bootstrapEndpointUrl };
+  return { ok: true, supabaseUrl, anonKey, bootstrapEndpointUrl, dashboardEndpointUrl };
 }

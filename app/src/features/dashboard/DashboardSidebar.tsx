@@ -1,5 +1,6 @@
 import { useAuth } from "../auth/AuthProvider";
 import type { AppNavigate } from "../../routes/types";
+import { clearDashboardReadCache } from "./dashboardReadCache";
 
 type DashboardSidebarProps = {
   activeSection: "active" | "history" | "contact";
@@ -11,6 +12,7 @@ export function DashboardSidebar({ activeSection, navigate, onSelectSection }: D
   const auth = useAuth();
 
   function handleLogout() {
+    clearDashboardReadCache();
     void auth.signOut().then(() => navigate("/account"));
   }
 
@@ -26,7 +28,7 @@ export function DashboardSidebar({ activeSection, navigate, onSelectSection }: D
 
       <div className="portal-user-block">
         <strong>Klantportaal</strong>
-        <span>Mockgegevens</span>
+        <span>{auth.summary ? `${auth.summary.dossiers.length} dossier${auth.summary.dossiers.length === 1 ? "" : "s"}` : "Account"}</span>
       </div>
 
       <nav className="portal-nav" aria-label="Portaal menu">
@@ -62,6 +64,7 @@ export function DashboardSidebar({ activeSection, navigate, onSelectSection }: D
       <div className="portal-sidebar-divider" />
 
       <div className="portal-sidebar-bottom">
+        <button className="portal-nav-item" onClick={() => navigate("/")} type="button">Naar website</button>
         <button className="portal-nav-item" type="button">Settings</button>
         <button className="portal-nav-item" onClick={handleLogout} type="button">Uitloggen</button>
       </div>

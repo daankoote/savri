@@ -3,12 +3,13 @@ import type { Session } from "@supabase/supabase-js";
 import {
   getCurrentAuthSession,
   signInWithSupabasePassword,
+  signOutLocalSupabaseSession,
   signOutWithSupabase,
   signUpWithSupabasePassword,
   subscribeToAuthState,
 } from "./authClient";
 import { bootstrapAppCustomerAuth } from "./authBootstrapClient";
-import { safeAuthError } from "./authErrorMapping";
+import { isTerminalBootstrapBindingError, safeAuthError } from "./authErrorMapping";
 import type { AuthActionResult, AuthBootstrapSummary, AuthContextValue, AuthSafeError, AuthStatus } from "./authTypes";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -98,10 +99,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const promise = bootstrapAppCustomerAuth({
       accessToken: nextSession.access_token,
       idempotencyKey,
-    }).then((result): AuthActionResult => {
+    }).then(async (result): Promise<AuthActionResult> => {
       bootstrapAttemptRef.current = null;
 
       if (!result.ok) {
+        if (isTerminalBootstrapBindingError(result.error.code)) {
+          clearBoundState();
+          setSession(null);
+          setStatus("signed_out");
+          await signOutLocalSupabaseSession().catch(() => undefined);
+          return { ok: false, error: result.error };
+        }
+
         setSummary(null);
         setError(result.error);
         setStatus("error");

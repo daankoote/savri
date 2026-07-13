@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import type { AppNavigate } from "../../routes/types";
 import { useAuth } from "./AuthProvider";
 import type { AuthMode, AuthSafeError } from "./authTypes";
@@ -37,6 +37,12 @@ export function AccountPageContent({ navigate }: AccountPageContentProps) {
   const [submitting, setSubmitting] = useState(false);
   const copy = modeCopy(mode);
 
+  useEffect(() => {
+    if (auth.status === "ready") {
+      navigate("/dashboard");
+    }
+  }, [auth.status, navigate]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFeedback(null);
@@ -60,6 +66,21 @@ export function AccountPageContent({ navigate }: AccountPageContentProps) {
     }
 
     navigate("/dashboard");
+  }
+
+  if (auth.status === "ready") {
+    return (
+      <main className="page-shell">
+        <section className="section">
+          <div className="container">
+            <div className="review-panel" role="status" aria-live="polite">
+              <h3>Klantportaal openen</h3>
+              <p>We openen uw dashboard.</p>
+            </div>
+          </div>
+        </section>
+      </main>
+    );
   }
 
   return (
