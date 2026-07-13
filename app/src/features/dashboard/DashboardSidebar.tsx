@@ -1,9 +1,19 @@
+import { useAuth } from "../auth/AuthProvider";
+import type { AppNavigate } from "../../routes/types";
+
 type DashboardSidebarProps = {
   activeSection: "active" | "history" | "contact";
+  navigate: AppNavigate;
   onSelectSection: (section: "active" | "history" | "contact") => void;
 };
 
-export function DashboardSidebar({ activeSection, onSelectSection }: DashboardSidebarProps) {
+export function DashboardSidebar({ activeSection, navigate, onSelectSection }: DashboardSidebarProps) {
+  const auth = useAuth();
+
+  function handleLogout() {
+    void auth.signOut().then(() => navigate("/account"));
+  }
+
   return (
     <aside className="portal-sidebar" aria-label="Dashboard navigatie">
       <div className="portal-sidebar-brand">
@@ -15,8 +25,8 @@ export function DashboardSidebar({ activeSection, onSelectSection }: DashboardSi
       </div>
 
       <div className="portal-user-block">
-        <strong>Daan Koote</strong>
-        <span>daankoote@gmail.com</span>
+        <strong>Klantportaal</strong>
+        <span>Mockgegevens</span>
       </div>
 
       <nav className="portal-nav" aria-label="Portaal menu">
@@ -53,7 +63,7 @@ export function DashboardSidebar({ activeSection, onSelectSection }: DashboardSi
 
       <div className="portal-sidebar-bottom">
         <button className="portal-nav-item" type="button">Settings</button>
-        <button className="portal-nav-item" type="button">Uitloggen</button>
+        <button className="portal-nav-item" onClick={handleLogout} type="button">Uitloggen</button>
       </div>
     </aside>
   );

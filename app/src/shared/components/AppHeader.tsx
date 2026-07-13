@@ -8,6 +8,7 @@ const navItems = [
   { label: "ERE info", href: "/ere" },
   { label: "Contact", href: "/contact" },
   { label: "Dashboard", href: "/dashboard" },
+  { label: "Inloggen", href: "/account" },
 ];
 
 type AppHeaderProps = {

@@ -215,6 +215,23 @@
   padding: var(--space-6);
 }
 
+.account-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(320px, 0.8fr);
+  gap: var(--space-8);
+  align-items: start;
+}
+
+.account-card {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.account-form {
+  display: grid;
+  gap: var(--space-4);
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1428,6 +1445,7 @@
   }
 
   .form-grid,
+  .account-layout,
   .document-slot-grid,
   .result-grid,
   .consent-signature-grid {

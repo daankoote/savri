@@ -1,9 +1,13 @@
 import { DashboardPageShell } from "../features/dashboard/DashboardPageShell";
+import { DashboardRouteGuard } from "../features/auth/DashboardRouteGuard";
+import type { RoutedPageProps } from "../routes/types";
 
-export function DashboardPage() {
+export function DashboardPage({ navigate }: RoutedPageProps) {
   return (
     <div className="site-frame">
-      <DashboardPageShell />
+      <DashboardRouteGuard navigate={navigate}>
+        <DashboardPageShell navigate={navigate} />
+      </DashboardRouteGuard>
     </div>
   );
 }
