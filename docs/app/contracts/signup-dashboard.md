@@ -37,6 +37,19 @@ Current write v3 behavior:
 
 Current write v3 intentionally does not create document uploads, storage objects, customer timeline, support/messages, or kWh/result/fee lifecycle rows.
 
+Current customer Auth bootstrap sequence:
+
+1. Signup write v3 creates the pre-auth customer, identity, dossier, location, charger, document-slot, and legal-acceptance structure.
+2. A separately authenticated Supabase Auth user later calls `api-app-auth-bootstrap`.
+3. `api-app-auth-bootstrap` derives the verified Auth user ID and verified email server-side.
+4. Bootstrap binds the existing eligible `app_customer_identity`.
+5. Bootstrap returns customer-visible accessible dossier summaries.
+6. Dashboard session/read wiring remains OPEN.
+
+Backend bootstrap is CURRENT / LOCAL PROOF.
+
+Customer-facing Auth UI, session module, dashboard route guard, and dashboard read endpoint remain OPEN.
+
 Frontend submit wiring is implemented for `/aanmelden`: the existing button validates locally, maps the draft, calls `api-app-signup-submit` write v3 through the frontend API client, and shows loading, success, or safe error state on the same page. It does not navigate to the dashboard yet.
 
 Document upload backend status:
@@ -46,7 +59,8 @@ Document upload backend status:
 - They create and confirm `app_dossier_document_files` and immutable `app_dossier_document_versions`.
 - Signup submit itself still does not upload files, create storage objects, confirm document hashes, or promote document versions.
 - Frontend/dashboard upload wiring remains OPEN.
-- Customer-facing auth bootstrap/login/binding remains OPEN.
+- Backend identity binding/bootstrap is CURRENT / LOCAL PROOF.
+- Customer-facing Auth UI/session/bootstrap call wiring remains OPEN.
 - Production storage bucket/policy/deploy proof remains OPEN.
 
 Local browser-QA proof is green after the Vite env resolver fix and Vite restart:

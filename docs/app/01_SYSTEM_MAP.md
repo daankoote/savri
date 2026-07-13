@@ -36,6 +36,28 @@ The rebuild should support ENVAL as a customer-facing commercial ERE inboekservi
 
 Backend integration should happen through explicit API contracts rather than copied assumptions from legacy browser scripts.
 
+## Current Auth Flow
+
+Status: CURRENT / LOCAL PROOF for backend bootstrap; OPEN for customer-facing frontend Auth UI and dashboard route guards.
+
+Current backend sequence:
+
+```text
+Supabase Auth user
+→ verified server-side Auth context
+→ api-app-auth-bootstrap
+→ app_customer_identity.auth_user_id binding
+→ app_customer
+→ accessible app_customer_dossiers
+```
+
+Rules:
+
+- One customer may have multiple dossiers.
+- Dossiers may have different account types: particulier, zakelijk, or VVE.
+- Auth logic is not split per account type.
+- Legacy dossier sessions are not used for app customer auth.
+
 ## Backend Data Expectations
 
 The backend must support audit-worthy commercial service operations:

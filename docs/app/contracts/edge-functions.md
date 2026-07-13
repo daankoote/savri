@@ -9,6 +9,7 @@ This document adapts useful legacy Edge discipline into the new app backend. It 
 Current app endpoints:
 
 - `api-app-signup-submit`
+- `api-app-auth-bootstrap`
 - `api-app-document-upload-url`
 - `api-app-document-upload-confirm`
 
@@ -35,8 +36,29 @@ Current customer-auth foundation:
 - Active `app_customer_identities` row.
 - Active `app_customers` row.
 - Dossier ownership through `app_customer_dossiers`.
+- `api-app-auth-bootstrap` binds an existing pre-auth identity to a verified Supabase Auth user before normal customer-auth helper resolution is possible.
 
 Do not use legacy `dossier_sessions` as app account auth.
+
+## Current CORE Endpoints
+
+| Endpoint | Status | Discipline | Notes |
+|---|---|---|---|
+| `api-app-signup-submit` | CURRENT / LOCAL PROOF | CORS / META / IDEM / AUD / SRV | Public pre-auth submit. Does not create Auth users or Auth sessions. |
+| `api-app-auth-bootstrap` | CURRENT / LOCAL PROOF | CORS / META / IDEM / AUD / AUTH / SRV | Authenticated CORE endpoint. Requires verified Supabase Auth user, derives verified email server-side, binds an existing app identity, and returns accessible dossier summaries. |
+| `api-app-document-upload-url` | CURRENT / LOCAL PROOF | CORS / META / IDEM / AUD / AUTH / SRV | Issues server-generated upload target. |
+| `api-app-document-upload-confirm` | CURRENT / LOCAL PROOF | CORS / META / IDEM / AUD / AUTH / SRV | Confirms stored object and creates immutable document version. |
+
+`api-app-auth-bootstrap` uses an exceptional but proven database boundary:
+
+- Edge Function calls a service-role-only RPC.
+- RPC is `SECURITY DEFINER`.
+- RPC uses an empty search path.
+- RPC uses fully qualified relations.
+- RPC execute is revoked from public, anon, and authenticated.
+- RPC execute is granted only to service_role.
+
+Do not generalize `SECURITY DEFINER` as the default for other functions. Use it only when a concrete, reviewed database privilege boundary requires it.
 
 ## Tables
 
@@ -82,7 +104,7 @@ Customer-facing errors must be safe:
 
 Current app classification:
 
-- CORE: `api-app-signup-submit`, `api-app-document-upload-url`, `api-app-document-upload-confirm`
+- CORE: `api-app-signup-submit`, `api-app-auth-bootstrap`, `api-app-document-upload-url`, `api-app-document-upload-confirm`
 - UTILITY: none currently in the app namespace
 
 Do not claim a future endpoint is CURRENT before it exists and is proven.

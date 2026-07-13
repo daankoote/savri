@@ -65,6 +65,7 @@ The recent app backend is retained as valid foundation:
 - app audit/idempotency
 - app customer auth foundation
 - app document slots/files/versions
+- `api-app-auth-bootstrap`
 - `api-app-document-upload-url`
 - `api-app-document-upload-confirm`
 - no legacy dossier dependency in app endpoints

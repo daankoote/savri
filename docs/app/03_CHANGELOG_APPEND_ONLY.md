@@ -144,3 +144,16 @@ Commit: this documentation-only status normalization commit.
 - No runtime changes.
 - No new proof.
 - Legacy docs remained untouched.
+
+## 2026-07-13 — App customer Auth bootstrap locally proven and committed
+
+Commit: `5926759 Add app customer auth bootstrap`
+
+- Added verified Supabase Auth helper support for app customer bootstrap.
+- Added `api-app-auth-bootstrap`.
+- Added atomic identity binding RPC for existing pre-auth app customer identities.
+- Bootstrap returns account-neutral accessible dossier summaries for particulier, zakelijk, and VVE.
+- Idempotency replay/conflict and same-key/different-key concurrency were locally proven.
+- Existing upload-url and upload-confirm Auth regressions were locally proven after binding.
+- Proof is local-only; no production deploy or remote migration apply is claimed.
+- Frontend Auth/session/dashboard route guard and dashboard read wiring remain OPEN.

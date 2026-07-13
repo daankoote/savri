@@ -119,6 +119,31 @@ Rules:
 - kWh, document, consent, and backend-koppeling controls are mock/read-only placeholders.
 - Backend koppeling is mock-only; exact provider connection flow still needs research.
 
+## Auth And Session Rule
+
+Status: OPEN for frontend implementation.
+
+The backend Auth bootstrap is CURRENT / LOCAL PROOF, but the customer-facing frontend Auth/session layer is not built yet.
+
+Next frontend phase:
+
+- shared Supabase browser client
+- Auth state/session provider
+- account activation/sign-in surface
+- email verification state
+- bootstrap API client for `api-app-auth-bootstrap`
+- logout
+- session restore
+- safe Auth error mapping
+- dashboard route guard
+
+Rules:
+
+- Do not create separate Auth implementations for particulier, zakelijk, and VVE.
+- Auth state is account/customer-level; dossier account types come from backend dossier summaries.
+- Do not use legacy dossier sessions for the `/app` dashboard.
+- Do not claim dashboard Auth is complete until the route guard and dashboard read flow are implemented and browser-QA proven.
+
 ## Homepage Copy Rule
 
 - The homepage is a customer-facing commercial landing page.

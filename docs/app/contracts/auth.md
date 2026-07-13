@@ -110,21 +110,39 @@ Fraud controls are backend concerns:
 
 Status: CURRENT / LOCAL PROOF.
 
-- `supabase/functions/_shared/app_customer_auth.ts` is implemented and committed.
-- App customer JWT validation uses Supabase Auth through `serviceClient.auth.getUser`.
-- The helper resolves:
-  - auth user
-  - active `app_customer_identities`
-  - active `app_customers`
-  - customer-owned `app_customer_dossiers`
-- `api-app-document-upload-url` and `api-app-document-upload-confirm` consume this helper for customer authentication and dossier authorization.
-- The helper does not reuse legacy `dossier_sessions`, legacy dossier tokens, custom raw JWT decoding, or browser storage.
+CURRENT / LOCAL PROOF:
 
-Open:
+- `requireVerifiedSupabaseAuthUser` validates a Supabase Auth bearer token through `serviceClient.auth.getUser`.
+- `requireVerifiedSupabaseAuthUser` returns only a verified Auth user ID and normalized verified email for backend use.
+- `requireAppCustomer` resolves an already-bound active `app_customer_identities` row, active `app_customers` row, and customer actor reference.
+- `requireAppDossierAccess` authorizes dossier ownership through `app_customer_dossiers`.
+- `api-app-auth-bootstrap` is implemented and locally gateway-proven.
+- `api-app-auth-bootstrap` binds one existing eligible pre-auth `app_customer_identity` to the verified Supabase Auth user.
+- `app_bootstrap_customer_auth_v1` is the atomic binding RPC.
+- The bootstrap response returns account-neutral accessible dossier summaries.
+- The flow is account-type neutral across particulier, zakelijk, and VVE.
+- `api-app-document-upload-url` and `api-app-document-upload-confirm` auth regressions are locally proven after bootstrap binding.
+- The helper and bootstrap flow do not reuse legacy `dossier_sessions`, legacy dossier tokens, custom raw JWT decoding, or browser storage.
+- Bootstrap does not create a customer, identity, dossier, or Auth session.
+- Bootstrap does not automatically merge customers or identities.
+- Ambiguous identity state and identities bound to another Auth user fail safely.
 
-- Customer-facing account creation/login/bootstrap/binding flow.
-- Frontend session UX for dashboard and uploads.
-- Recovery/support flow for customer account access.
+OPEN:
+
+- Browser account activation UX.
+- Signup/sign-in form.
+- Session state/module.
+- Logout.
+- Password recovery.
+- Email verification UX.
+- Auth error UX.
+- Dashboard route guard.
+- Dashboard bootstrap/read endpoint.
+- Support flow for:
+  - identity not found
+  - already bound to another user
+  - ambiguous identity
+  - inactive customer
 - Production deployment and remote auth proof.
 
 ### Customer Identity
@@ -213,7 +231,8 @@ All names below are conceptual. Do not create functions until contracts and sche
 
 | Endpoint | Purpose | Auth | Idempotency | Audit | Visibility | Old pattern reuse |
 |---|---|---|---|---|---|---|
-| `api-app-signup-submit` | Accept normalized `/aanmelden` payload and create/match customer, dossier, locations, chargers, document slots, legal/fee acceptance, timeline, and dashboard access bootstrap. | Public pre-auth with abuse controls; creates auth/bootstrap state. | Required. | Required for rejects and writes; pre-dossier rejects go to intake audit. | Customer-facing submit. | Adapt `api-lead-submit` idempotency, audit, mail queue; replace old payload and `/dossier.html` link. |
+| `api-app-signup-submit` | Accept normalized `/aanmelden` payload and create/match pre-auth customer, identity, dossier, locations, chargers, document slots, and legal/fee acceptance. | Public pre-auth with abuse controls; creates pre-auth app customer/identity/dossier state. It does not create Auth users or Auth sessions. | Required. | Required for rejects and writes; pre-dossier rejects go to intake audit. | Customer-facing submit. | Adapt `api-lead-submit` idempotency, audit, mail queue; replace old payload and `/dossier.html` link. |
+| `api-app-auth-bootstrap` | Authenticated CORE endpoint that validates a verified Supabase Auth user, derives verified email server-side, binds an existing pre-auth app identity, and returns accessible customer dossier summaries. It does not create customers, dossiers, or Auth sessions. | Supabase Auth customer session plus service-role RPC binding. | Required. | Required. | Customer-visible account activation/bootstrap. | New app endpoint. Does not reuse legacy dossier sessions. |
 | `api-app-dashboard-get` | Return customer-safe dashboard read model: dossiers, active charger/location rows, requests, documents, timeline, settings summary. | Supabase Auth customer session. | Not required for pure read. | Read audit optional/report-only; reject audit required. | Customer-visible. | Adapt `api-dossier-get` read aggregation, but not token exchange or raw audit exposure. |
 | `api-app-document-upload-url` | Issue signed upload URL for a document slot/request response. | Supabase Auth customer session and dossier access. | Required. | Required. | Customer-visible action. | Adapt `api-dossier-upload-url`; replace old doc type rules. |
 | `api-app-document-upload-confirm` | Confirm uploaded file with server-side SHA-256 and create document version/file record. | Supabase Auth customer session and dossier access. | Required. | Required. | Customer-visible action. | Keep/adapt `api-dossier-upload-confirm` hash-confirm pattern. |

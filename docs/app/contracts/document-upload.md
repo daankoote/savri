@@ -6,7 +6,8 @@ Implementation status:
 
 - CURRENT: file/version schema, app customer auth helper, `api-app-document-upload-url`, and `api-app-document-upload-confirm` are committed and locally proven.
 - LOCAL PROOF: proof was completed in disposable local Supabase only.
-- OPEN: frontend upload wiring, customer-facing auth bootstrap/login, production storage bucket/policies, remote deploy, and browser QA.
+- CURRENT / LOCAL PROOF: backend identity binding/bootstrap through `api-app-auth-bootstrap`.
+- OPEN: frontend upload wiring, customer-facing Auth UI/session/bootstrap call wiring, production storage bucket/policies, remote deploy, and browser QA.
 
 ## 1. Current Truth
 
@@ -20,7 +21,8 @@ Implementation status:
 - Immediate server hash confirmation remains CURRENT.
 - Replacement/version history is implemented through immutable versions and slot current pointers.
 - `app_customer_auth.ts` is CURRENT for Supabase Auth JWT validation, active identity/customer resolution, and dossier ownership authorization.
-- Customer-facing login/auth bootstrap and frontend upload integration remain OPEN.
+- Backend identity binding/bootstrap is CURRENT / LOCAL PROOF through `api-app-auth-bootstrap`.
+- Customer-facing Auth UI/session/bootstrap call wiring and frontend upload integration remain OPEN.
 - Production bucket/policy/deploy proof remains OPEN.
 - New upload behavior must use new `api-app-*` endpoints and `app_*` tables.
 - Legacy upload endpoints are frozen/reference only:
@@ -406,7 +408,7 @@ Completed / CURRENT:
 
 Next OPEN work:
 
-1. Customer-facing auth bootstrap/login/binding.
+1. Customer-facing Auth UI/session/bootstrap call wiring.
 2. Production storage bucket/policy/config proof.
 3. Remote migration/function deploy proof.
 4. Frontend upload client, not yet wired to UI.

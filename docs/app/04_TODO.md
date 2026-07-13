@@ -14,6 +14,7 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
 - Locations/chargers schema is locally proven.
 - Document/legal slot schema is locally proven.
 - App customer auth helper is locally proven.
+- `api-app-auth-bootstrap` backend identity binding is locally proven.
 - Document file/version schema is locally proven.
 - `api-app-document-upload-url` is locally proven.
 - `api-app-document-upload-confirm` is locally proven.
@@ -32,8 +33,10 @@ Local proof is not production proof. Remote migration/function deploy, productio
   - VAT/tax wording
   - partial success
   - reversal, audit correction, and clawback
-- Customer Auth signup/login/bootstrap/binding.
+- Frontend Auth module, customer account activation/sign-in, session restoration, logout, recovery, verification UX, dashboard route guard, and bootstrap API client.
+- Dashboard bootstrap/read endpoint.
 - Production secrets, storage, function, and migration deployment proof.
+- Production Auth configuration and remote auth proof.
 - Account-specific document contracts:
   - particulier
   - zakelijk
@@ -45,6 +48,7 @@ Local proof is not production proof. Remote migration/function deploy, productio
 
 ## P1
 
+- Build the modular frontend Auth/session layer and call `api-app-auth-bootstrap` after a verified Supabase Auth session exists.
 - Modular `/app` upload client.
 - PDF invoice slot frontend upload wiring.
 - Business and VVE upload slots.

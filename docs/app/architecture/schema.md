@@ -126,7 +126,7 @@ Important columns:
 
 - `id uuid`
 - `customer_id uuid`
-- `auth_user_id uuid`
+- `auth_user_id uuid` nullable before Auth bootstrap
 - `email_normalized text`
 - `email_verified_at timestamptz`
 - `phone_normalized text`
@@ -156,6 +156,18 @@ RLS stance: internal/service-role-only; customers should not query arbitrary ide
 Audit/fraud relevance: high. Auth binding, recovery, and anti-enumeration depend on it.
 
 Old schema relationship: replace conceptual role of `dossier_sessions` as durable identity. Do not reuse `dossier_sessions`.
+
+Current implementation status: CURRENT / LOCAL PROOF.
+
+- Signup submit creates pre-auth identity rows with nullable `auth_user_id`.
+- `api-app-auth-bootstrap` later binds `auth_user_id` atomically after Supabase Auth verification.
+- Matching uses server-derived verified email.
+- The bootstrap RPC does not create a customer, identity, or dossier.
+- Ambiguous matching rejects safely; there is no automatic merge.
+- An identity already bound to another Auth user rejects safely.
+- Binding to the same Auth user is deterministic.
+- `app_bootstrap_customer_auth_v1` is service-role-only, `SECURITY DEFINER`, uses an empty search path, and references relations with explicit schemas.
+- The bootstrap response includes accessible dossier summaries for the authenticated customer.
 
 ### `app_customer_dossiers`
 
@@ -1454,8 +1466,10 @@ D. Implement signup submit endpoint
 
 E. Implement auth bootstrap
 
-- Decide exact Supabase Auth/magic-link UX.
-- Create dashboard access without reusing old `dossier_sessions` as durable identity.
+- CURRENT / LOCAL PROOF: backend `api-app-auth-bootstrap` and `app_bootstrap_customer_auth_v1` bind an existing pre-auth identity to a verified Supabase Auth user.
+- CURRENT / LOCAL PROOF: bootstrap returns accessible dossier summaries and preserves account-type-neutral auth across particulier, zakelijk, and VVE.
+- OPEN: customer-facing Auth UX, session restore, route guard, dashboard read endpoint, production deployment, and browser QA.
+- Continue to avoid old `dossier_sessions` as durable identity.
 
 F. Implement dashboard read endpoint
 
@@ -1496,7 +1510,7 @@ J. Connect frontend submit/dashboard to real backend
 - Exact legal text, privacy text, mandate/control permission, and version hashes.
 - Whether consent duration is required and how withdrawal works.
 - Supabase Auth UX: magic link, email OTP, passwordless, password later, or hybrid.
-- Auth bootstrap implementation details.
+- Customer-facing Auth UX and dashboard route/read wiring after proven backend bootstrap.
 - Admin/support role model and route/app boundary.
 - Storage bucket separation and path convention.
 - Whether document uploads are required at signup or can be requested later.
