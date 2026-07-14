@@ -96,13 +96,17 @@ Rules:
 - `/aanmelden` is implemented as a frontend-first draft flow with local validation, payload mapping, and controlled submit wiring to `api-app-signup-submit` write v3.
 - `/aanmelden` stays on-page after submit and does not bootstrap a customer Auth session or redirect to the dashboard yet.
 - Document upload in `/aanmelden` remains local preview/file selection only; the proven upload backend is not wired to the frontend yet.
-- `/dashboard` is a protected mock/read-only customer portal shell for the next phase.
+- `/dashboard` is a protected customer portal using the real customer-safe dashboard projection for factual app-backed fields.
 - Dashboard is person-first: one customer can have multiple assets such as private home, business, VVE, or second home.
-- Dashboard currently has a frontend Auth/session guard and a locally proven backend read endpoint, but no real frontend read projection and no local/session storage.
-- Dashboard uses mock data until frontend wiring replaces factual mock fields with `api-app-dashboard-get`.
+- Dashboard currently has a frontend Auth/session guard, locally proven backend read endpoint, and real frontend read projection.
+- Dashboard selected dossier state and endpoint response cache are in memory only.
+- Dashboard cache is scoped by Auth user, customer, and dossier.
+- Shared pending dashboard requests are deduplicated.
+- The first dashboard request is not aborted by React effect cleanup.
+- Dashboard has loading, empty, error, and retry states.
 - Dashboard now uses a left-sidebar customer portal layout.
-- The first real dashboard content focus is the active Particulier/private charger page.
-- Business and VVE detail pages are deferred until the private active page is right.
+- One shared dashboard renderer is used across particulier, zakelijk, and VVE.
+- Business and VVE detail expansion remains deferred, but account-type-specific auth/dashboard clients are not created.
 - Current dashboard files are `DashboardPageShell`, `DashboardSidebar`, `ActivePrivateDashboard`, `ContactChoicePanel`, and `TodoPlaceholderPanel`.
 - Older asset-overview dashboard components and mock-data files were removed during cleanup because they were not used by `/dashboard`.
 - The active private dashboard uses full-width charger rows/tabs that are collapsed by default.
@@ -119,6 +123,9 @@ Rules:
 - The kWh section is split into Handmatig and Automatisch groups.
 - kWh, document, consent, and backend-koppeling controls are mock/read-only placeholders.
 - Backend koppeling is mock-only; exact provider connection flow still needs research.
+- Unsupported future domains such as kWh, results, fees, payouts, support, timeline, requests, reports, and exports remain unavailable/open rather than fabricated.
+- Public navigation uses `Inloggen` as portal entry; protected portal navigation includes `Naar website`.
+- Shared global button interactions provide pointer cursor, disabled cursor, and restrained pressed-state feedback.
 
 ## Auth And Session Rule
 
@@ -142,8 +149,9 @@ Still OPEN:
 
 - password recovery UX
 - resend verification UX
-- frontend dashboard API client
-- real dashboard projection replacing mock data
+- unsupported future dashboard domains
+- document upload controls
+- dashboard write actions
 - production Auth configuration and production browser proof
 
 Rules:
@@ -154,7 +162,7 @@ Rules:
 - Public pages must not eagerly initialize Supabase Auth or require live Auth state.
 - Do not use polling or custom token refresh loops.
 - Do not manually persist access or refresh tokens.
-- Do not claim dashboard data is real until `api-app-dashboard-get` is wired and the mock data is replaced.
+- Do not claim unsupported dashboard domains are real until backed by implemented app sources.
 
 ## Homepage Copy Rule
 
@@ -207,7 +215,7 @@ The year overview is customer-facing output and later supports the audit-worthy 
 
 ## Dashboard Rule
 
-- The dashboard shell is frontend-only and read-only until backend contracts exist.
+- The dashboard factual read projection is CURRENT / LOCAL PROOF and uses `api-app-dashboard-get`.
 - Dashboard modules live under `app/src/features/dashboard/`.
 - Dashboard copy should be customer-readable: status, open actions, documents, support, timeline, consents, kWh/value, and downloads.
 - Do not expose raw audit rows or internal technical payloads in customer-facing views.
@@ -216,7 +224,7 @@ The year overview is customer-facing output and later supports the audit-worthy 
 - ENVAL release/edit mode should later reuse signup form components when a read-only field needs customer correction.
 - Contact ENVAL is mock-only and currently shows AI bot and message placeholders.
 - ENVAL/internal view is deferred until role-based access and internal review architecture are defined.
-- Do not add backend calls, auth guards, Supabase access, localStorage, or sessionStorage from the dashboard shell.
+- Do not add direct Supabase table reads, localStorage, sessionStorage, polling, or realtime subscriptions from the dashboard.
 
 ## Signup Intake Rule
 

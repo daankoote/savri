@@ -81,11 +81,11 @@ Initial dossier page sections or tabs:
 
 Implementation sequence:
 
-- Start with a route shell and mock/read-only data.
+- The route shell, Auth guard, backend read endpoint, and real factual frontend projection are CURRENT / LOCAL PROOF.
 - Backend `api-app-dashboard-get` now exists as a locally proven customer-safe read endpoint.
-- Frontend dashboard data still uses mock/read-only data until the read endpoint is wired.
-- First frontend wiring must replace only fields backed by real app sources.
+- Frontend dashboard data now uses the read endpoint for factual app-backed fields.
 - Mock-only future sections must not be sent as fabricated API values.
+- Unsupported sections remain explicitly unavailable/open.
 - Keep customer copy short and action-oriented.
 - Do not wire backend writes until backend contracts are reviewed.
 - Keep internal ENVAL review tooling out of the customer dashboard until roles and auth boundaries are defined.
@@ -385,9 +385,9 @@ Phase 2: auth/customer account decision
 - Decide Supabase Auth versus custom magic-link account sessions.
 - Define customer identity, session, and dossier access scope.
 
-Phase 3: dashboard frontend shell with mock/read-only data
+Phase 3: dashboard frontend shell with read-only data
 
-- Build route shell and customer dashboard layout.
+- Build route shell and customer dashboard layout. CURRENT / LOCAL PROOF.
 - No backend writes.
 
 Phase 4: signup submit backend MVP
@@ -397,7 +397,8 @@ Phase 4: signup submit backend MVP
 
 Phase 5: dashboard read-only MVP
 
-- Customer can log in and see status, requests, documents, consents, and timeline.
+- Customer can log in and see factual app-backed dossier, location, charger, document-slot, and legal-acceptance data. CURRENT / LOCAL PROOF.
+- Requests, support, timeline, kWh, results, fees, payouts, reports, and exports remain OPEN.
 
 Phase 6: request/respond + uploads
 

@@ -141,7 +141,6 @@ OPEN:
 
 - Password recovery.
 - Resend verification UX.
-- Frontend dashboard API client and real dashboard projection replacing mock data.
 - Production Auth configuration and proof.
 - Support flow for:
   - identity not found
@@ -149,6 +148,29 @@ OPEN:
   - ambiguous identity
   - inactive customer
 - Remote deployment and remote auth proof.
+
+### Terminal Bootstrap Cleanup
+
+Status: CURRENT / LOCAL PROOF.
+
+Terminal ENVAL binding errors:
+
+- `customer_identity_not_found`
+- `customer_identity_already_bound`
+- `customer_identity_binding_ambiguous`
+- `customer_inactive`
+- `customer_dossier_not_found`
+
+Behavior:
+
+- The current account attempt receives one safe customer-facing error.
+- The unusable local Supabase Auth session is ended through the official Supabase Auth client.
+- Page remount or refresh starts from a clean signed-out account form.
+- Retryable service failures preserve the session and retry path.
+- Explicit logout clears the in-memory dashboard cache.
+- Valid linked sessions remain persistent and restore normally.
+
+Not all Auth errors sign the user out. Only terminal ENVAL bootstrap binding failures use this cleanup path.
 
 ### Customer Identity
 

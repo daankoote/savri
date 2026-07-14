@@ -190,3 +190,18 @@ Commit: `5cce922 Add customer-safe app dashboard read`
 - Returns a customer-safe projection and excludes sensitive data, storage data, hashes, raw audit, and idempotency rows.
 - Frontend dashboard data remains mock/read-only until a frontend client wires the endpoint.
 - Proof is local-only; no production deploy proof is claimed.
+
+## 2026-07-14 — Real customer dashboard projection and Auth cleanup locally proven
+
+Commit: `8ea8086 Wire real customer dashboard projection`
+
+- Wired the real endpoint-backed dashboard frontend projection.
+- Removed hardcoded mock charger rows from the active dashboard path.
+- Added terminal Auth session cleanup for unusable ENVAL binding failures.
+- Fixed the first dashboard request abort behavior.
+- Kept dashboard cache memory-only and scoped by Auth user, customer, and dossier.
+- Clears dashboard cache on explicit logout.
+- Split public and portal navigation: public entry is `Inloggen`, portal includes `Naar website`.
+- Added shared global button pointer, disabled, and pressed-state interaction.
+- Proof is local-only; no production deploy proof is claimed.
+- Next step is the shared document upload client.

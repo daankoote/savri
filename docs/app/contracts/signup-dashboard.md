@@ -47,15 +47,14 @@ Current customer Auth bootstrap sequence:
 6. Bootstrap returns customer-visible accessible dossier summaries.
 7. The protected `/dashboard` route opens after a valid Auth/bootstrap state.
 8. `api-app-dashboard-get` returns the customer-safe dossier projection.
-9. Dashboard content remains mock/read-only until the frontend client replaces factual mock fields with the read projection.
+9. The dashboard frontend renders the real factual app-backed projection.
+10. Unsupported domains remain unavailable rather than mocked.
 
 Backend bootstrap is CURRENT / LOCAL PROOF.
 
 Customer-facing Auth UI, session module, and dashboard route guard are CURRENT / LOCAL PROOF.
 
-Dashboard read endpoint is CURRENT / LOCAL PROOF.
-
-Frontend dashboard projection remains OPEN.
+Dashboard read endpoint and frontend factual projection are CURRENT / LOCAL PROOF.
 
 Frontend submit wiring is implemented for `/aanmelden`: the existing button validates locally, maps the draft, calls `api-app-signup-submit` write v3 through the frontend API client, and shows loading, success, or safe error state on the same page. It does not navigate to the dashboard yet.
 
@@ -408,7 +407,9 @@ Current Auth/session direction:
 - `/account` provides account creation and login.
 - Frontend bootstrap calls `api-app-auth-bootstrap` after a verified session.
 - Dashboard route protection is locally proven.
-- Password recovery, resend verification, production Auth configuration, and the real frontend dashboard projection remain OPEN.
+- The real factual dashboard projection is locally proven.
+- Password recovery, resend verification, and production Auth configuration remain OPEN.
+- Future `Nieuwe aanvraag` behavior must reuse the existing signup modules instead of creating a second intake implementation.
 
 ## 9. Dossier Status After Submit
 
@@ -531,7 +532,8 @@ Rules:
 - Frontend is never trusted as truth.
 - Customer Auth/bootstrap and route protection are CURRENT / LOCAL PROOF.
 - Customer-safe dashboard read projection is CURRENT / LOCAL PROOF.
-- Frontend dashboard wiring must be implemented before mock dashboard data is replaced.
+- Frontend dashboard projection is CURRENT / LOCAL PROOF for factual app-backed fields.
+- Unsupported dashboard domains remain unavailable/open rather than fabricated.
 - Frontend upload wiring remains a separate OPEN phase.
 - Customer can only see their own dossier.
 - Dashboard should not show raw audit rows.
@@ -587,24 +589,18 @@ Unresolved before production:
 
 ## 16. Recommended Next Implementation After Current Proof
 
-A. Dashboard frontend read wiring
-
-- Build one lean frontend dashboard client for `api-app-dashboard-get`.
-- Replace only mock fields backed by current app data.
-- Keep unsupported future domains visibly open/unavailable, not fabricated.
-
-B. Frontend document upload wiring
+A. Frontend document upload wiring
 
 - Add a frontend upload client for document slots.
 - Wire PDF invoice slot upload to `api-app-document-upload-url` and `api-app-document-upload-confirm`.
 - Keep parser preview as UX support only.
 
-C. Account-specific document requirements
+B. Account-specific document requirements
 
 - Harden particulier, zakelijk, and VVE upload requirements.
 - Define KVK, signing-authority, VVE mandate, and business-driving evidence details.
 
-D. Production Auth and deployment proof
+C. Production Auth and deployment proof
 
 - Configure password recovery and resend-verification UX.
 - Prove production Auth URL/redirect settings.

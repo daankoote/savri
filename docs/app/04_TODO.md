@@ -30,6 +30,13 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
 - Dashboard read is account-neutral and supports multiple dossiers, locations, and chargers.
 - Dashboard read returns customer-safe dossier, document-slot/current-document, and legal-acceptance projections.
 - Successful dashboard reads perform zero database writes.
+- Real dashboard frontend projection is locally proven.
+- Selected dossier support is locally proven.
+- Scoped memory cache and shared request deduplication are locally proven.
+- First dashboard request race/abort behavior is fixed locally.
+- Terminal bootstrap cleanup is locally proven.
+- Portal navigation split is locally proven.
+- Shared button pointer/disabled/pressed interaction is locally proven.
 
 Local proof is not production proof. Remote migration/function deploy, production bucket/policy proof, and production browser QA remain open.
 
@@ -45,7 +52,6 @@ Local proof is not production proof. Remote migration/function deploy, productio
   - reversal, audit correction, and clawback
 - Password recovery UX.
 - Resend verification UX.
-- Real dashboard projection replacing mock data.
 - Production secrets, storage, function, and migration deployment proof.
 - Production Auth configuration and remote auth proof.
 - Account-specific document contracts:
@@ -59,13 +65,15 @@ Local proof is not production proof. Remote migration/function deploy, productio
 
 ## P1
 
-- Build one lean frontend dashboard client and replace only the mock fields backed by `api-app-dashboard-get`.
-- Selected dossier UX.
-- Dashboard loading, error, and empty states.
-- Modular `/app` upload client.
-- PDF invoice slot frontend upload wiring.
+- Build one lean shared document upload client for the proven upload-url → signed PUT → upload-confirm flow, without wiring UI yet.
+- First PDF invoice slot wiring.
+- Dashboard refresh after upload.
+- Modular document upload client.
+- Zakelijke/VvE document requirements.
 - Business and VVE upload slots.
 - Business and VVE dashboard detail pages.
+- Password recovery and resend verification.
+- Unsupported dashboard domains.
 - Result/inboeking lifecycle.
 - Fee/payout lifecycle.
 - Customer-readable timeline projection.
