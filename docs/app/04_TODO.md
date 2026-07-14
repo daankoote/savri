@@ -37,6 +37,11 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
 - Terminal bootstrap cleanup is locally proven.
 - Portal navigation split is locally proven.
 - Shared button pointer/disabled/pressed interaction is locally proven.
+- Shared frontend document-upload transport is locally proven.
+- Document upload hash-once issue/upload/confirm flow is locally proven.
+- Explicit upload-url and upload-confirm idempotency attempt keys are locally proven.
+- Official signed upload through Supabase Storage is locally proven in the frontend proof.
+- Document upload UI wiring is not implemented yet.
 
 Local proof is not production proof. Remote migration/function deploy, production bucket/policy proof, and production browser QA remain open.
 
@@ -65,10 +70,12 @@ Local proof is not production proof. Remote migration/function deploy, productio
 
 ## P1
 
-- Build one lean shared document upload client for the proven upload-url → signed PUT → upload-confirm flow, without wiring UI yet.
-- First PDF invoice slot wiring.
+- Wire one authenticated PDF installation-invoice document slot in the dashboard to the shared upload client, then refresh only the selected dashboard dossier after confirm.
+- Slot upload UI.
+- Upload progress, error, and retry UX.
+- Signup upload wiring.
+- Other document types.
 - Dashboard refresh after upload.
-- Modular document upload client.
 - Zakelijke/VvE document requirements.
 - Business and VVE upload slots.
 - Business and VVE dashboard detail pages.

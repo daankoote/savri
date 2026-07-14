@@ -79,6 +79,8 @@ The recent app frontend Auth/session flow is retained as local proof:
 - Auth/Supabase frontend code is route-lazy for `/account` and `/dashboard`.
 - `api-app-dashboard-get` provides an authenticated, customer-safe, account-type-neutral dashboard read projection.
 - The real customer-safe dashboard frontend projection is CURRENT / LOCAL PROOF and uses `api-app-dashboard-get`.
+- Shared document-upload frontend transport is CURRENT / LOCAL PROOF.
+- Document-slot UI wiring remains OPEN.
 - Unsupported future dashboard domains are not fabricated.
 - Production deployment and production browser proof remain OPEN.
 

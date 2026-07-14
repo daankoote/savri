@@ -205,3 +205,15 @@ Commit: `8ea8086 Wire real customer dashboard projection`
 - Added shared global button pointer, disabled, and pressed-state interaction.
 - Proof is local-only; no production deploy proof is claimed.
 - Next step is the shared document upload client.
+
+## 2026-07-14 — Shared document upload client locally proven and committed
+
+Commit: `97dc1a8 Add shared document upload client`
+
+- Added shared account-neutral frontend document upload transport.
+- Uses one hash per logical run.
+- Implements upload-url -> signed upload -> confirm.
+- Uses explicit logical-attempt idempotency keys for issue and confirm.
+- Returns safe stage-specific errors.
+- Does not automatically retry, persist upload state, or wire UI.
+- Next step is the authenticated PDF installation-invoice slot.

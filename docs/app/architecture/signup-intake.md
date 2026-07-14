@@ -13,6 +13,10 @@ The new `/aanmelden` page is a single-page intake with these customer-facing sec
 
 No backend writes happen while the customer edits the draft. The final `Start dossier` action now maps the draft and calls the locally proven `api-app-signup-submit` write v3 endpoint. Document upload, storage mutation, dashboard bootstrap, and production deployment remain separate later tasks.
 
+The shared document upload transport exists under `app/src/features/documents/`, but `/aanmelden` does not use it. The signup page retains local PDF preview and file selection only.
+
+Pre-auth signup must not call authenticated upload endpoints. The first real upload UI is planned behind authenticated dashboard access. Any later public/signup upload would need an explicit Auth and journey decision, not a bypass around the app auth boundary.
+
 ## Old Flow Inventory
 
 ### Old `aanmelden.html`

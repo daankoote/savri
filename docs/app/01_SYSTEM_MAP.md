@@ -71,6 +71,27 @@ Rules:
 - The dashboard uses no polling or realtime subscription.
 - Unsupported future domains remain unavailable/open instead of fabricated.
 
+## Current Document Upload Path
+
+Status: CURRENT / LOCAL PROOF for backend upload endpoints and shared frontend transport. UI consumer remains OPEN.
+
+```text
+authenticated customer
+→ shared document-upload client
+→ api-app-document-upload-url
+→ private signed Storage upload
+→ api-app-document-upload-confirm
+→ immutable current document version
+```
+
+Rules:
+
+- One shared transport applies to particulier, zakelijk, and VVE.
+- Account type determines which document slots exist, not how files are transported.
+- The browser does not directly read app tables.
+- The client does not poll or automatically retry.
+- No route, page, or UI component imports the upload client yet.
+
 ## Backend Data Expectations
 
 The backend must support audit-worthy commercial service operations:

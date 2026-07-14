@@ -126,6 +126,11 @@ Rules:
 - Unsupported future domains such as kWh, results, fees, payouts, support, timeline, requests, reports, and exports remain unavailable/open rather than fabricated.
 - Public navigation uses `Inloggen` as portal entry; protected portal navigation includes `Naar website`.
 - Shared global button interactions provide pointer cursor, disabled cursor, and restrained pressed-state feedback.
+- Shared document upload transport exists under `app/src/features/documents/`.
+- The upload transport is not globally loaded or route-wired yet.
+- Future signup or dashboard slot UI must reuse the shared upload transport.
+- Do not create separate upload implementations for signup, dashboard, account type, or document type.
+- A successful upload confirm should later refresh only the selected dashboard dossier projection.
 
 ## Auth And Session Rule
 

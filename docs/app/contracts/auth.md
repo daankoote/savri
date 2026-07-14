@@ -655,10 +655,9 @@ Coexistence phases:
 
 ## 11. Recommended Implementation Sequence
 
-1. Build one lean frontend dashboard client for `api-app-dashboard-get`.
-2. Replace only dashboard mock fields backed by the real read projection.
+1. Wire one authenticated PDF installation-invoice document slot to the shared upload client.
+2. Refresh only the selected dashboard dossier after upload confirm.
 3. Add password recovery and resend-verification UX.
 4. Prove production Auth URL/redirect configuration.
-5. Wire the document upload client after dashboard/auth contracts are proven.
-6. Implement support/messages/kWh/result/fee lifecycle.
-7. Plan production migration/cutover separately; keep old root/static production untouched until approved.
+5. Implement support/messages/kWh/result/fee lifecycle.
+6. Plan production migration/cutover separately; keep old root/static production untouched until approved.

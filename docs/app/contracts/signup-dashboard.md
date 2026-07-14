@@ -534,7 +534,8 @@ Rules:
 - Customer-safe dashboard read projection is CURRENT / LOCAL PROOF.
 - Frontend dashboard projection is CURRENT / LOCAL PROOF for factual app-backed fields.
 - Unsupported dashboard domains remain unavailable/open rather than fabricated.
-- Frontend upload wiring remains a separate OPEN phase.
+- Shared frontend upload transport is CURRENT / LOCAL PROOF.
+- Frontend document-slot UI wiring remains a separate OPEN phase.
 - Customer can only see their own dossier.
 - Dashboard should not show raw audit rows.
 - Uploaded evidence must use signed upload URL and server-side hash confirmation later.
@@ -591,8 +592,12 @@ Unresolved before production:
 
 A. Frontend document upload wiring
 
-- Add a frontend upload client for document slots.
-- Wire PDF invoice slot upload to `api-app-document-upload-url` and `api-app-document-upload-confirm`.
+- Wire one authenticated PDF installation-invoice dashboard slot to the shared upload client.
+- The dashboard slot supplies dossier ID, document slot ID, current access token, selected file, and logical-attempt idempotency keys.
+- The shared upload client performs issue, signed upload, and confirm.
+- Successful confirm should refresh only the selected dashboard dossier read projection.
+- Do not poll and do not reload the full app.
+- Keep public `/aanmelden` upload wiring OPEN.
 - Keep parser preview as UX support only.
 
 B. Account-specific document requirements

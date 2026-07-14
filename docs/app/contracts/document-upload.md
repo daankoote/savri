@@ -7,7 +7,8 @@ Implementation status:
 - CURRENT: file/version schema, app customer auth helper, `api-app-document-upload-url`, and `api-app-document-upload-confirm` are committed and locally proven.
 - LOCAL PROOF: proof was completed in disposable local Supabase only.
 - CURRENT / LOCAL PROOF: backend identity binding/bootstrap through `api-app-auth-bootstrap`.
-- OPEN: frontend upload wiring, production storage bucket/policies, remote deploy, and upload browser QA.
+- CURRENT / LOCAL PROOF: shared frontend upload transport.
+- OPEN: document-slot UI wiring, production storage bucket/policies, remote deploy, and upload browser QA.
 
 ## 1. Current Truth
 
@@ -23,7 +24,8 @@ Implementation status:
 - `app_customer_auth.ts` is CURRENT for Supabase Auth JWT validation, active identity/customer resolution, and dossier ownership authorization.
 - Backend identity binding/bootstrap is CURRENT / LOCAL PROOF through `api-app-auth-bootstrap`.
 - Customer-facing Auth UI/session/bootstrap call wiring is CURRENT / LOCAL PROOF.
-- Frontend upload integration remains OPEN.
+- Shared frontend upload transport is CURRENT / LOCAL PROOF.
+- Frontend document-slot UI wiring remains OPEN.
 - Production bucket/policy/deploy proof remains OPEN.
 - New upload behavior must use new `api-app-*` endpoints and `app_*` tables.
 - Legacy upload endpoints are frozen/reference only:
@@ -64,7 +66,51 @@ Frontend must not do:
 - No final document acceptance/rejection decisions.
 - No direct mutation of `app_dossier_document_slots`.
 
-## 4. Endpoint: `api-app-document-upload-url`
+## 4. Frontend Shared Upload Transport
+
+Status: CURRENT / LOCAL PROOF.
+
+Location:
+
+```text
+app/src/features/documents/
+```
+
+The shared transport implements the current upload sequence:
+
+1. validate local file metadata
+2. compute one client SHA-256 for the logical run
+3. call `api-app-document-upload-url`
+4. upload through the official Supabase `uploadToSignedUrl` method
+5. call `api-app-document-upload-confirm`
+6. return a safe stage-specific result or error
+
+Rules:
+
+- The same transport is used for particulier, zakelijk, and VVE.
+- The same transport is used across document types; account type and document type determine slot requiredness, not byte transport mechanics.
+- The caller supplies dossier ID, document slot ID, current access token, selected file, and two explicit idempotency keys.
+- One idempotency key is for upload-url issuance.
+- One idempotency key is for upload confirmation.
+- The client computes the hash once and reuses it for issue and confirm.
+- Storage bucket, path, and upload token come only from the server response.
+- The client does not handcraft a Storage URL.
+- The client does not automatically retry.
+- The client does not poll.
+- The client does not persist upload state, tokens, hashes, or storage targets.
+- The client does not access app tables directly.
+- The client is not imported by a route, page, or UI component yet.
+- Raw signed targets, upload tokens, storage paths, hashes, and backend details are not returned in the final safe result.
+
+Retry boundary:
+
+- Future UI may retry the same logical attempt using the same two idempotency keys.
+- An issue-stage failure means no storage upload and no confirm call occurred.
+- An upload-stage failure means no confirm call occurred.
+- A confirm-stage failure may mean an object exists in storage; it must not automatically issue and upload a second file.
+- The shared client itself performs no retry loop.
+
+## 5. Endpoint: `api-app-document-upload-url`
 
 Status: CURRENT, committed and locally gateway-proven.
 
@@ -108,6 +154,7 @@ Current success response shape:
   "storage_bucket": "app-documents",
   "storage_path": "server-generated-private-path",
   "signed_upload_url": "short-lived-url",
+  "upload_token": "short-lived-token",
   "expires_at": "iso timestamp",
   "max_size_bytes": 5242880
 }
@@ -131,7 +178,7 @@ Writes:
 - Do not mark the slot `accepted` from upload-url issuance.
 - Do not create a document version from upload-url issuance.
 
-## 5. Endpoint: `api-app-document-upload-confirm`
+## 6. Endpoint: `api-app-document-upload-confirm`
 
 Status: CURRENT, committed and locally gateway-proven.
 
@@ -197,7 +244,7 @@ Writes:
 - Write scoped app idempotency and fail-closed app audit.
 - Do not mark the slot `accepted`; acceptance belongs to later review.
 
-## 6. Storage Path Contract
+## 7. Storage Path Contract
 
 Recommended path shape:
 
@@ -213,7 +260,7 @@ Rules:
 - `safe_file_name` is optional and must be sanitized if included.
 - Versioning must support replacement history before a document is accepted.
 
-## 7. `app_dossier_document_slots`
+## 8. `app_dossier_document_slots`
 
 Current app document tables support the upload backend:
 
@@ -228,7 +275,7 @@ Implemented safeguards:
 - Current version promotion happens atomically through upload confirmation RPCs.
 - Reject/compensation behavior is atomic through `app_reject_document_upload_v1`.
 
-## 8. Idempotency
+## 9. Idempotency
 
 Both endpoints require idempotency.
 
@@ -240,7 +287,7 @@ Rules:
 - Upload-url replay should return the same upload target while it is valid, or a safe expired-target response if no longer valid.
 - Confirm replay should return the same confirmed slot response when file hash and upload reference match.
 
-## 9. Hash Strategy
+## 10. Hash Strategy
 
 Recommended MVP:
 
@@ -257,7 +304,7 @@ Future optimization:
 - Deferred worker hash verification may reduce latency/cost, but then slot status must remain `processing` until server verification completes.
 - Client hash can reduce retries and improve UX, but backend remains source-of-truth.
 
-## 10. Cost And Latency Rules
+## 11. Cost And Latency Rules
 
 Frontend may reduce cost and latency by:
 
@@ -277,7 +324,7 @@ Backend must still:
 
 OCR and heavy analysis should not run in the browser as the primary truth path. Image OCR belongs in a later worker/internal analysis lane after upload confirmation.
 
-## 11. Slot Status Model
+## 12. Slot Status Model
 
 Recommended upload status flow:
 
@@ -293,7 +340,7 @@ expected
 
 Customer-facing labels must be curated. Raw internal upload/audit states should not be exposed directly.
 
-## 12. Audit Events
+## 13. Audit Events
 
 Audit events should capture:
 
@@ -322,7 +369,7 @@ Audit metadata should include:
 
 Audit metadata must not include raw PDF text, raw OCR text, secrets, tokens, or unneeded PII.
 
-## 13. Failure Cases
+## 14. Failure Cases
 
 Expected safe errors:
 
@@ -342,7 +389,7 @@ Expected safe errors:
 
 Customer-facing messages should be short and safe. Internal audit events can store more diagnostic detail without exposing raw evidence content.
 
-## 14. Auth And Access Assumptions
+## 15. Auth And Access Assumptions
 
 Current backend auth:
 
@@ -350,9 +397,12 @@ Current backend auth:
 - `app_customer_auth.ts` resolves auth user to active `app_customer_identities` and active `app_customers`.
 - Dossier access is authorized server-side by customer ownership.
 
+Current:
+
+- Customer-facing account creation, login, bootstrap, and identity binding are locally proven.
+
 Open:
 
-- Customer-facing account creation/login/bootstrap/binding flow is not yet implemented.
 - Uploads after signup should eventually happen from authenticated dashboard sessions.
 - If pre-dashboard uploads are needed, use a short-lived slot-scoped upload capability token, not legacy dossier sessions.
 
@@ -362,7 +412,7 @@ Rules:
 - Do not write app audit/idempotency to legacy `dossier_audit_events` or `idempotency_keys`.
 - New customer-facing upload behavior must use `api-app-*` and app tables.
 
-## 15. Relationship To Legacy Upload Endpoints
+## 16. Relationship To Legacy Upload Endpoints
 
 Legacy endpoint concepts worth reusing:
 
@@ -385,7 +435,7 @@ Legacy endpoint assumptions not to reuse directly:
 
 Legacy upload endpoints are frozen/reference only.
 
-## 16. Non-Goals
+## 17. Non-Goals
 
 This contract does not implement:
 
@@ -397,7 +447,7 @@ This contract does not implement:
 - customer timeline projection
 - production deployment
 
-## 17. Recommended Implementation Sequence
+## 18. Recommended Implementation Sequence
 
 Completed / CURRENT:
 
@@ -406,13 +456,13 @@ Completed / CURRENT:
 3. `api-app-document-upload-url` implemented and locally proven.
 4. `api-app-document-upload-confirm` implemented and locally proven.
 5. Replacement/version history implemented and locally proven.
+6. Shared frontend upload transport implemented and locally proven.
 
 Next OPEN work:
 
 1. Production storage bucket/policy/config proof.
 2. Remote migration/function deploy proof.
-3. Frontend upload client, not yet wired to UI.
-4. Wire one PDF invoice slot in `/app` behind existing validation.
-5. Browser QA with PDF invoice upload and hash confirm.
-6. Wire dashboard frontend to the current document-slot projection where useful.
-7. Add worker/internal analysis lane after upload confirmation.
+3. Wire one authenticated PDF installation-invoice document slot to the shared upload client.
+4. Browser QA with PDF invoice upload and hash confirm.
+5. Wire dashboard frontend to the current document-slot projection where useful.
+6. Add worker/internal analysis lane after upload confirmation.
