@@ -652,7 +652,6 @@ async function main() {
     assert(confirmConflict.status === 409 && responseCode(confirmConflict) === "idempotency_conflict", "confirm idempotency conflict failed");
     passed.push("confirm same-key different payload returns idempotency_conflict");
 
-    await ctx.service.from("app_dossier_document_slots").update({ status: "needs_review" }).eq("id", validCase.slotId);
     const replaceBytes = pdfBytes("valid-two");
     const replace = await issueUploadUrl(ctx, validCase.dossierId, validCase.slotId, replaceBytes, `issue-replace-${proofId()}`);
     await uploadSigned(ctx, replace.issued, replaceBytes);

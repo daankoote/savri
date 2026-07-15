@@ -33,6 +33,7 @@ type DossierRow = {
   dossier_number?: string | null;
   account_type?: string | null;
   status?: string | null;
+  locked_at?: string | null;
   created_at?: string | null;
 };
 
@@ -113,6 +114,7 @@ type SafeDossier = {
   dossier_number: string | null;
   account_type: "particulier" | "zakelijk" | "vve";
   status: string;
+  document_changes_allowed: boolean;
 };
 
 type SafeSelectedDossier = SafeDossier;
@@ -191,6 +193,7 @@ type NormalizationError = {
 const MODE = "dashboard_read_v1";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ACCOUNT_TYPES = new Set(["particulier", "zakelijk", "vve"]);
+const DOCUMENT_CHANGE_ALLOWED_DOSSIER_STATUSES = new Set(["draft", "submitted", "needs_customer_action"]);
 
 function appSupabaseClient() {
   const url = Deno.env.get("SUPABASE_URL");
@@ -222,6 +225,11 @@ function isUuid(value: unknown): value is string {
 function safeDossierNumber(value: unknown): string | null {
   const dossierNumber = getString(value);
   return dossierNumber || null;
+}
+
+function documentChangesAllowed(row: DossierRow): boolean {
+  const status = getString(row.status);
+  return !getString(row.locked_at) && DOCUMENT_CHANGE_ALLOWED_DOSSIER_STATUSES.has(status);
 }
 
 async function parseJsonBody(
@@ -296,6 +304,7 @@ function mapDossier(row: DossierRow): SafeDossier | null {
     dossier_number: safeDossierNumber(row.dossier_number),
     account_type: accountType as SafeDossier["account_type"],
     status,
+    document_changes_allowed: documentChangesAllowed(row),
   };
 }
 
@@ -449,7 +458,7 @@ async function loadDashboardReadModel(
   customerId: string,
   dossierId: string,
 ): Promise<Omit<DashboardResponse, "ok" | "mode" | "request_id">> {
-  const dossierSelect = "id,dossier_number,account_type,status,created_at";
+  const dossierSelect = "id,dossier_number,account_type,status,locked_at,created_at";
 
   const allDossiersPromise = SB
     .from("app_customer_dossiers")

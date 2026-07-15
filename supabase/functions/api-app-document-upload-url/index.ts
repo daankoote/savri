@@ -111,11 +111,19 @@ const IDEMPOTENCY_TTL_HOURS = 24;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SHA256_RE = /^[0-9a-f]{64}$/i;
 const UPLOADABLE_SLOT_STATUSES = new Set(["expected", "needs_review", "rejected"]);
+const REPLACEABLE_SLOT_STATUSES = new Set(["uploaded"]);
 const ACTIVE_FILE_STATUSES = ["issued", "uploaded"];
 
 const DOCUMENT_TYPE_POLICIES = new Map<string, { allowedMimeTypes: Set<string>; requiresPdfExtension: boolean }>([
   [
     "invoice_or_ownership_evidence",
+    {
+      allowedMimeTypes: new Set(["application/pdf"]),
+      requiresPdfExtension: true,
+    },
+  ],
+  [
+    "mid_meter_evidence",
     {
       allowedMimeTypes: new Set(["application/pdf"]),
       requiresPdfExtension: true,
@@ -286,7 +294,10 @@ function validatePayloadAgainstSlot(
     };
   }
 
-  if (!UPLOADABLE_SLOT_STATUSES.has(slot.status)) {
+  const canReplaceCurrentDocument = REPLACEABLE_SLOT_STATUSES.has(slot.status) &&
+    !!slot.current_version_id &&
+    !!slot.current_version_number;
+  if (!UPLOADABLE_SLOT_STATUSES.has(slot.status) && !canReplaceCurrentDocument) {
     return {
       ok: false,
       status: 409,
