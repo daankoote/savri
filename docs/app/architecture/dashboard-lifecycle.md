@@ -84,6 +84,13 @@ Implementation sequence:
 - The route shell, Auth guard, backend read endpoint, and real factual frontend projection are CURRENT / LOCAL PROOF.
 - Backend `api-app-dashboard-get` now exists as a locally proven customer-safe read endpoint.
 - Frontend dashboard data now uses the read endpoint for factual app-backed fields.
+- The reusable document cards are CURRENT / LOCAL PROOF for authenticated MID and installation/acquisition invoice PDF upload, replacement, download, and audit-preserving withdrawal.
+- Document section status is centralized:
+  - red when required evidence is missing
+  - orange while evidence is uploaded/in review or action is needed
+  - green only after explicit accepted/approved/checked backend state
+- Document changes are controlled by the server-derived `document_changes_allowed` projection.
+- Withdrawal is hidden or blocked when document changes are not allowed.
 - Mock-only future sections must not be sent as fabricated API values.
 - Unsupported sections remain explicitly unavailable/open.
 - Keep customer copy short and action-oriented.
@@ -400,15 +407,21 @@ Phase 5: dashboard read-only MVP
 - Customer can log in and see factual app-backed dossier, location, charger, document-slot, and legal-acceptance data. CURRENT / LOCAL PROOF.
 - Requests, support, timeline, kWh, results, fees, payouts, reports, and exports remain OPEN.
 
-Phase 6: request/respond + uploads
+Phase 6: customer document module
+
+- Authenticated dashboard upload, replacement, download, and withdrawal for current MID and invoice PDF slots are CURRENT / LOCAL PROOF.
+- No hard delete is used for customer withdrawal.
+- Full dossier draft/submit/lock/targeted-unlock lifecycle remains OPEN.
+
+Phase 7: request/respond + uploads
 
 - ENVAL can request information.
 - Customer responds and uploads through dashboard.
 
-Phase 7: internal review workflow
+Phase 8: internal review workflow
 
 - Add ENVAL review tasks, findings, human review decisions, and customer follow-up requests.
 
-Phase 8: yearly kWh/result/fee lifecycle
+Phase 9: yearly kWh/result/fee lifecycle
 
 - Add yearly kWh input/readout, result events, fee calculation, and customer year overview.

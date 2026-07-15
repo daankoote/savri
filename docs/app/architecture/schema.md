@@ -1,6 +1,6 @@
 # App Schema Migration Design
 
-Status: design/reference source document. Some app foundation, location/charger, document/legal slot, file/version, and upload-confirm RPC migrations are implemented and locally proven; current runtime truth is tracked in the focused contract docs.
+Status: design/reference source document. Some app foundation, location/charger, document/legal slot, file/version, upload-confirm RPC, and current-document withdrawal RPC migrations are implemented and locally proven; current runtime truth is tracked in the focused contract docs.
 
 Scope: database schema direction for the new `/app` customer-facing commercial ERE inboekservice backend.
 
@@ -387,6 +387,9 @@ Implemented status note:
 - Confirmed document versions are immutable evidence history.
 - `api-app-document-upload-confirm` uses `app_confirm_document_upload_v1` to atomically confirm the file, create the version, supersede the previous current version, and update the slot current pointer.
 - `app_reject_document_upload_v1` provides scoped atomic reject/compensation behavior.
+- `app_withdraw_current_document_v1` is present in a tracked canonical migration and atomically transitions the current version to `withdrawn`, clears slot current pointers, and returns the slot to expected/missing state.
+- `app_withdraw_current_document_v1` is service-role-only for execute access.
+- `api-app-dashboard-get` exposes `document_changes_allowed` as a derived customer-safe projection field. It is not a stored customer-controlled flag.
 - Runtime truth for the current upload endpoints lives in `docs/app/contracts/document-upload.md`; this document remains design/reference.
 
 Important columns:
@@ -1469,21 +1472,25 @@ E. Implement auth bootstrap
 - CURRENT / LOCAL PROOF: backend `api-app-auth-bootstrap` and `app_bootstrap_customer_auth_v1` bind an existing pre-auth identity to a verified Supabase Auth user.
 - CURRENT / LOCAL PROOF: bootstrap returns accessible dossier summaries and preserves account-type-neutral auth across particulier, zakelijk, and VVE.
 - CURRENT / LOCAL PROOF: customer-facing Auth UX, session restoration, logout, frontend bootstrap wiring, and dashboard route guard.
-- OPEN: dashboard read endpoint, real dashboard projection, production deployment, and production browser proof.
+- CURRENT / LOCAL PROOF: dashboard read endpoint and real dashboard projection.
+- OPEN: production deployment and production browser proof.
 - Continue to avoid old `dossier_sessions` as durable identity.
 
 F. Implement dashboard read endpoint
 
 - Return customer-safe read model.
 - Do not expose raw audit or internal review state.
+- CURRENT / LOCAL PROOF: `api-app-dashboard-get` returns `document_changes_allowed` as a derived projection for document mutation capability.
 
 G. Implement document upload issue/confirm
 
 - Signed URL issue.
 - Server-side SHA-256 confirm.
 - Slot/version updates.
-- Current local proof exists for `api-app-document-upload-url`, `api-app-document-upload-confirm`, atomic confirm/reject RPCs, replacement, and concurrency.
-- Frontend upload client/wiring, production bucket policies, remote deployment, and browser QA remain open.
+- CURRENT / LOCAL PROOF: `api-app-document-upload-url`, `api-app-document-upload-confirm`, atomic confirm/reject RPCs, replacement, and concurrency.
+- CURRENT / LOCAL PROOF: `api-app-document-download-url`, `api-app-document-withdraw-current`, and `app_withdraw_current_document_v1`.
+- CURRENT / LOCAL PROOF: authenticated dashboard document UI for current MID and invoice PDF slots.
+- OPEN: production bucket policies, remote deployment, parser/precheck wiring, and production proof.
 
 H. Implement customer requests
 

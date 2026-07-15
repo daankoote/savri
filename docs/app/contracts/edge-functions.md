@@ -13,6 +13,8 @@ Current app endpoints:
 - `api-app-dashboard-get`
 - `api-app-document-upload-url`
 - `api-app-document-upload-confirm`
+- `api-app-document-download-url`
+- `api-app-document-withdraw-current`
 
 Future app endpoints must be documented before implementation.
 
@@ -48,8 +50,10 @@ Do not use legacy `dossier_sessions` as app account auth.
 | `api-app-signup-submit` | CURRENT / LOCAL PROOF | CORS / META / IDEM / AUD / SRV | Public pre-auth submit. Does not create Auth users or Auth sessions. |
 | `api-app-auth-bootstrap` | CURRENT / LOCAL PROOF | CORS / META / IDEM / AUD / AUTH / SRV | Authenticated CORE endpoint. Requires verified Supabase Auth user, derives verified email server-side, binds an existing app identity, and returns accessible dossier summaries. |
 | `api-app-dashboard-get` | CURRENT / LOCAL PROOF | CORS / META / AUTH / SRV | Pure authenticated read. No `Idempotency-Key`; successful reads do not create recurring audit writes. Scoped rejects may use safe fail-open audit according to current doctrine. |
-| `api-app-document-upload-url` | CURRENT / LOCAL PROOF | CORS / META / IDEM / AUD / AUTH / SRV | Issues server-generated upload target. |
-| `api-app-document-upload-confirm` | CURRENT / LOCAL PROOF | CORS / META / IDEM / AUD / AUTH / SRV | Confirms stored object and creates immutable document version. |
+| `api-app-document-upload-url` | CURRENT / LOCAL PROOF | CORS / META / IDEM / AUD / AUTH / SRV | Issues server-generated upload target. Supports current PDF policies for invoice/ownership evidence and MID evidence. |
+| `api-app-document-upload-confirm` | CURRENT / LOCAL PROOF | CORS / META / IDEM / AUD / AUTH / SRV | Confirms stored object and creates immutable document version. Supports immutable replacement. |
+| `api-app-document-download-url` | CURRENT / LOCAL PROOF | CORS / META / AUTH / SRV | Pure authenticated read. Resolves current document server-side and returns a short-lived signed download URL. No `Idempotency-Key`; successful reads do not write recurring audit events. |
+| `api-app-document-withdraw-current` | CURRENT / LOCAL PROOF | CORS / META / IDEM / AUD / AUTH / SRV | Authenticated service-role mutation. Atomically withdraws current version, clears slot current pointers, preserves evidence, and does not hard-delete storage. |
 
 `api-app-auth-bootstrap` uses an exceptional but proven database boundary:
 
@@ -106,7 +110,7 @@ Customer-facing errors must be safe:
 
 Current app classification:
 
-- CORE: `api-app-signup-submit`, `api-app-auth-bootstrap`, `api-app-dashboard-get`, `api-app-document-upload-url`, `api-app-document-upload-confirm`
+- CORE: `api-app-signup-submit`, `api-app-auth-bootstrap`, `api-app-dashboard-get`, `api-app-document-upload-url`, `api-app-document-upload-confirm`, `api-app-document-download-url`, `api-app-document-withdraw-current`
 - UTILITY: none currently in the app namespace
 
 Do not claim a future endpoint is CURRENT before it exists and is proven.

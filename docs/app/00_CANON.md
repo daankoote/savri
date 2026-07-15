@@ -68,6 +68,8 @@ The recent app backend is retained as valid foundation:
 - `api-app-auth-bootstrap`
 - `api-app-document-upload-url`
 - `api-app-document-upload-confirm`
+- `api-app-document-download-url`
+- `api-app-document-withdraw-current`
 - `api-app-dashboard-get`
 - no legacy dossier dependency in app endpoints
 
@@ -79,8 +81,9 @@ The recent app frontend Auth/session flow is retained as local proof:
 - Auth/Supabase frontend code is route-lazy for `/account` and `/dashboard`.
 - `api-app-dashboard-get` provides an authenticated, customer-safe, account-type-neutral dashboard read projection.
 - The real customer-safe dashboard frontend projection is CURRENT / LOCAL PROOF and uses `api-app-dashboard-get`.
-- Shared document-upload frontend transport is CURRENT / LOCAL PROOF.
-- Document-slot UI wiring remains OPEN.
+- The reusable customer document module is CURRENT / LOCAL PROOF.
+- MID evidence and installation/acquisition invoice PDF upload are supported from the authenticated dashboard.
+- Current document download and audit-preserving withdrawal are supported locally.
 - Unsupported future dashboard domains are not fabricated.
 - Production deployment and production browser proof remain OPEN.
 

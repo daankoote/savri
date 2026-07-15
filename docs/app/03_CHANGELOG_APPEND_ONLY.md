@@ -217,3 +217,19 @@ Commit: `97dc1a8 Add shared document upload client`
 - Returns safe stage-specific errors.
 - Does not automatically retry, persist upload state, or wire UI.
 - Next step is the authenticated PDF installation-invoice slot.
+
+## 2026-07-16 — Customer document lifecycle and reusable cards locally proven
+
+Backend commit: `5f824e8 Add customer document lifecycle endpoints`
+Frontend commit: `2ea1f7c Add reusable customer document cards`
+
+- Added the current customer document lifecycle endpoints for download and audit-preserving withdrawal.
+- Proved MID and installation/acquisition invoice PDF upload through the authenticated dashboard module.
+- Proved immutable replacement: a new current version supersedes the prior version without deleting evidence.
+- Proved current-document download with short-lived signed URLs and browser-reachable local origin handling.
+- Proved withdrawal: current version becomes withdrawn, slot pointers clear, immutable file/version evidence remains, and locked dossiers reject safely.
+- Replaced inline dashboard document cards with a reusable account-neutral document card.
+- Centralized document status aggregation so uploaded/in-review evidence stays orange and all required evidence must be explicitly accepted before aggregate green.
+- Browser QA was green for card layout, auto-upload, aggregate status, download, withdrawal, duplicate heading removal, and divider removal.
+- Proof remains local-only; no production deploy, remote migration apply, or production storage proof is claimed.
+- Next step is the customer dossier draft -> submit -> lock -> targeted unlock contract.

@@ -71,26 +71,44 @@ Rules:
 - The dashboard uses no polling or realtime subscription.
 - Unsupported future domains remain unavailable/open instead of fabricated.
 
-## Current Document Upload Path
+## Current Document Lifecycle Path
 
-Status: CURRENT / LOCAL PROOF for backend upload endpoints and shared frontend transport. UI consumer remains OPEN.
+Status: CURRENT / LOCAL PROOF for backend upload/download/withdrawal endpoints and the authenticated reusable dashboard document card.
 
 ```text
 authenticated customer
-→ shared document-upload client
+→ reusable DocumentUploadCard
 → api-app-document-upload-url
 → private signed Storage upload
 → api-app-document-upload-confirm
 → immutable current document version
+→ targeted dashboard refresh
+```
+
+```text
+filename action
+→ api-app-document-download-url
+→ short-lived signed download URL
+```
+
+```text
+pre-lock withdrawal
+→ api-app-document-withdraw-current
+→ atomic RPC
+→ audit-preserved missing slot
+→ targeted dashboard refresh
 ```
 
 Rules:
 
 - One shared transport applies to particulier, zakelijk, and VVE.
 - Account type determines which document slots exist, not how files are transported.
+- MID evidence and installation/acquisition invoice slots use the same reusable card and PDF-only transport.
 - The browser does not directly read app tables.
-- The client does not poll or automatically retry.
-- No route, page, or UI component imports the upload client yet.
+- The browser does not choose storage bucket/path/file/version internals.
+- Current document withdrawal does not hard-delete storage or immutable evidence.
+- The client does not poll, reload the page, or automatically retry blindly.
+- No account-type-specific upload transport exists.
 
 ## Backend Data Expectations
 

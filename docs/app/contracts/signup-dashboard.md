@@ -63,8 +63,11 @@ Document upload backend status:
 - CURRENT / LOCAL PROOF: separate `api-app-document-upload-url` and `api-app-document-upload-confirm` endpoints exist for the new `/app` backend.
 - They require an authenticated app customer and server-side dossier/slot authorization.
 - They create and confirm `app_dossier_document_files` and immutable `app_dossier_document_versions`.
+- CURRENT / LOCAL PROOF: `api-app-document-download-url` resolves current documents server-side and returns short-lived signed download URLs.
+- CURRENT / LOCAL PROOF: `api-app-document-withdraw-current` withdraws current documents without hard delete, preserves immutable evidence, and audits the action.
+- CURRENT / LOCAL PROOF: dashboard document mutation uses authenticated customer context; the customer cannot provide file/version/storage internals.
+- CURRENT / LOCAL PROOF: `document_changes_allowed` comes from the server dashboard projection and controls whether withdrawal is available.
 - Signup submit itself still does not upload files, create storage objects, confirm document hashes, or promote document versions.
-- Frontend/dashboard upload wiring remains OPEN.
 - Backend identity binding/bootstrap is CURRENT / LOCAL PROOF.
 - Customer-facing Auth UI/session/bootstrap call wiring is CURRENT / LOCAL PROOF.
 - Production storage bucket/policy/deploy proof remains OPEN.
@@ -535,7 +538,8 @@ Rules:
 - Frontend dashboard projection is CURRENT / LOCAL PROOF for factual app-backed fields.
 - Unsupported dashboard domains remain unavailable/open rather than fabricated.
 - Shared frontend upload transport is CURRENT / LOCAL PROOF.
-- Frontend document-slot UI wiring remains a separate OPEN phase.
+- Authenticated dashboard document-slot upload/download/withdrawal wiring is CURRENT / LOCAL PROOF for MID and installation/acquisition invoice PDFs.
+- Public `/aanmelden` authenticated upload remains OPEN.
 - Customer can only see their own dossier.
 - Dashboard should not show raw audit rows.
 - Uploaded evidence must use signed upload URL and server-side hash confirmation later.
@@ -590,15 +594,12 @@ Unresolved before production:
 
 ## 16. Recommended Next Implementation After Current Proof
 
-A. Frontend document upload wiring
+A. Draft / submit / lock / targeted unlock contract
 
-- Wire one authenticated PDF installation-invoice dashboard slot to the shared upload client.
-- The dashboard slot supplies dossier ID, document slot ID, current access token, selected file, and logical-attempt idempotency keys.
-- The shared upload client performs issue, signed upload, and confirm.
-- Successful confirm should refresh only the selected dashboard dossier read projection.
-- Do not poll and do not reload the full app.
+- Define the customer dossier draft -> submit -> lock -> targeted unlock contract before building charger and location edit flows.
+- Define when document changes are allowed and how targeted customer-action revisions reopen specific fields/slots.
 - Keep public `/aanmelden` upload wiring OPEN.
-- Keep parser preview as UX support only.
+- Keep parser preview/precheck as UX support only until integrated into the authenticated card.
 
 B. Account-specific document requirements
 

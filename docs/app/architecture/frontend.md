@@ -95,7 +95,7 @@ Rules:
 - Signup/intake architecture lives in `docs/app/architecture/signup-intake.md`.
 - `/aanmelden` is implemented as a frontend-first draft flow with local validation, payload mapping, and controlled submit wiring to `api-app-signup-submit` write v3.
 - `/aanmelden` stays on-page after submit and does not bootstrap a customer Auth session or redirect to the dashboard yet.
-- Document upload in `/aanmelden` remains local preview/file selection only; the proven upload backend is not wired to the frontend yet.
+- Document upload in `/aanmelden` remains local preview/file selection only; authenticated dashboard document upload uses the committed document module.
 - `/dashboard` is a protected customer portal using the real customer-safe dashboard projection for factual app-backed fields.
 - Dashboard is person-first: one customer can have multiple assets such as private home, business, VVE, or second home.
 - Dashboard currently has a frontend Auth/session guard, locally proven backend read endpoint, and real frontend read projection.
@@ -121,16 +121,21 @@ Rules:
 - Laadpaal and Locatie sections use read-only table-style summaries after submit.
 - Evidence documents are shown in the section they belong to: Installatie factuur and MID bewijs under Laadpaal, Adres bevestiging under Locatie, and legal documents under Toestemmingen.
 - The kWh section is split into Handmatig and Automatisch groups.
-- kWh, document, consent, and backend-koppeling controls are mock/read-only placeholders.
+- kWh, consent, and backend-koppeling controls are mock/read-only placeholders.
+- Dashboard document cards are real and actionable for the current MID and installation/acquisition invoice PDF slots.
 - Backend koppeling is mock-only; exact provider connection flow still needs research.
 - Unsupported future domains such as kWh, results, fees, payouts, support, timeline, requests, reports, and exports remain unavailable/open rather than fabricated.
 - Public navigation uses `Inloggen` as portal entry; protected portal navigation includes `Naar website`.
 - Shared global button interactions provide pointer cursor, disabled cursor, and restrained pressed-state feedback.
-- Shared document upload transport exists under `app/src/features/documents/`.
-- The upload transport is not globally loaded or route-wired yet.
-- Future signup or dashboard slot UI must reuse the shared upload transport.
+- Shared document upload transport, download client, withdrawal client, slot presentation mapping, and `DocumentUploadCard` live under `app/src/features/documents/`.
+- MID evidence and installation/acquisition invoice evidence reuse the same document card and transport.
+- Dashboard no longer has inline document-card upload markup.
+- Selecting a valid PDF starts upload automatically and refreshes only the selected dashboard dossier after confirm.
+- Current document filename actions request fresh short-lived download URLs.
+- Withdrawal uses the backend withdrawal endpoint and waits for refreshed backend state before clearing the customer UI.
+- Document aggregate status uses the same presentation source as the individual cards.
 - Do not create separate upload implementations for signup, dashboard, account type, or document type.
-- A successful upload confirm should later refresh only the selected dashboard dossier projection.
+- Public signup upload wiring remains open and must not call authenticated upload endpoints without a reviewed journey decision.
 
 ## Auth And Session Rule
 

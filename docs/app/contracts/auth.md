@@ -263,6 +263,8 @@ All names below are conceptual. Do not create functions until contracts and sche
 | `api-app-dashboard-get` | CURRENT / LOCAL PROOF. Pure authenticated read endpoint for customer-safe dossier summaries, selected dossier, locations, chargers, document slots/current document state, and legal acceptance summaries. | Supabase Auth customer session through `requireAppCustomer` and `requireAppDossierAccess`. | Not required for pure read. | No successful-read audit write; scoped rejects may use safe fail-open audit. | Customer-visible. | New app endpoint. Does not use legacy dossier sessions or legacy read endpoints. |
 | `api-app-document-upload-url` | Issue signed upload URL for a document slot/request response. | Supabase Auth customer session and dossier access. | Required. | Required. | Customer-visible action. | Adapt `api-dossier-upload-url`; replace old doc type rules. |
 | `api-app-document-upload-confirm` | Confirm uploaded file with server-side SHA-256 and create document version/file record. | Supabase Auth customer session and dossier access. | Required. | Required. | Customer-visible action. | Keep/adapt `api-dossier-upload-confirm` hash-confirm pattern. |
+| `api-app-document-download-url` | Resolve the current document server-side and issue a short-lived signed download URL. | Supabase Auth customer session and dossier access. | Not required for pure read. | No successful-read audit write. | Customer-visible action. | New app endpoint. Does not expose legacy sessions or storage internals. |
+| `api-app-document-withdraw-current` | Withdraw the current document before lock/finalization while preserving immutable evidence. | Supabase Auth customer session and dossier access. | Required. | Required. | Customer-visible action. | New app endpoint. No hard delete and no customer-supplied file/version/storage internals. |
 | `api-app-customer-request-create` | ENVAL creates a request for missing information, correction, document, consent, or kWh. | Internal/support/admin only. | Required. | Required. | Internal action; customer sees resulting request. | Adapt audit/mail queue pattern. |
 | `api-app-customer-request-respond` | Customer responds to a request with text, upload link, data correction, or kWh value. | Supabase Auth customer session and dossier access. | Required. | Required. | Customer-visible action. | Adapt session-scoped idempotency and status transition audit. |
 | `api-app-support-message-create` | Create a customer/support message in a support thread. | Customer session or support/admin role depending actor. | Required for sends. | Required. | Customer-visible thread; internal metadata hidden. | Adapt outbound email notification, not old raw mail body as source of truth. |
@@ -554,8 +556,16 @@ Document lifecycle:
 5. server computes SHA-256
 6. document file/version confirmed
 7. ENVAL review accepts, rejects, or asks for replacement
+8. customer download and withdrawal actions stay behind authenticated app endpoints
 
 `issued` is not the same as `confirmed`.
+
+Current document mutation boundary:
+
+- Customer document upload/download/withdrawal is authenticated.
+- Customer cannot provide file IDs, version IDs, storage bucket/path, or customer identity values.
+- `document_changes_allowed` is derived server-side and controls document mutation availability.
+- Withdrawal marks the current version withdrawn, clears current slot pointers, preserves file/version evidence, and writes audit.
 
 ### Retention / Minimization
 

@@ -27,6 +27,8 @@ Current locally proven app flows include:
 - document upload confirm accepted/rejected events
 - app idempotency replay and conflict behavior
 - document file/version replacement behavior
+- customer current-document withdrawal audit
+- immutable file/version evidence retention after withdrawal
 
 Exact runtime event names live in the current endpoint and RPC code. This document defines doctrine and table ownership, not a substitute for code inspection.
 
@@ -61,3 +63,18 @@ Future app work must define app-specific events for:
 - retention/minimization
 
 Do not copy legacy `dossier_*` event names as CURRENT app truth without adaptation.
+
+## Document Withdrawal Boundary
+
+Customer withdrawal of a current document is a product lifecycle action, not proof cleanup.
+
+Current locally proven behavior:
+
+- withdrawal is audited;
+- immutable file/version rows remain;
+- storage is not hard-deleted immediately;
+- the current slot pointer may be cleared atomically;
+- the customer-facing slot returns to expected/missing state;
+- locked/finalized dossiers reject withdrawal safely.
+
+Proof cleanup of disposable local fixtures is separate and must not be described as normal product deletion.

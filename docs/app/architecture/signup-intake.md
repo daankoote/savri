@@ -1,6 +1,6 @@
 # Signup Intake Architecture
 
-Status: current signup intake architecture. Frontend draft flow, local validation, payload mapper, controlled submit wiring, and `api-app-signup-submit` write v3 are implemented and locally proven. Real document upload, import parsing, customer Auth/dashboard bootstrap, and production deployment remain out of scope.
+Status: current signup intake architecture. Frontend draft flow, local validation, payload mapper, controlled submit wiring, and `api-app-signup-submit` write v3 are implemented and locally proven. Authenticated dashboard document upload is implemented separately; public signup upload, import parsing, and production deployment remain out of scope.
 
 ## Scope
 
@@ -13,9 +13,9 @@ The new `/aanmelden` page is a single-page intake with these customer-facing sec
 
 No backend writes happen while the customer edits the draft. The final `Start dossier` action now maps the draft and calls the locally proven `api-app-signup-submit` write v3 endpoint. Document upload, storage mutation, dashboard bootstrap, and production deployment remain separate later tasks.
 
-The shared document upload transport exists under `app/src/features/documents/`, but `/aanmelden` does not use it. The signup page retains local PDF preview and file selection only.
+The shared document upload module exists under `app/src/features/documents/`, but `/aanmelden` does not use it. The signup page retains local PDF preview and file selection only.
 
-Pre-auth signup must not call authenticated upload endpoints. The first real upload UI is planned behind authenticated dashboard access. Any later public/signup upload would need an explicit Auth and journey decision, not a bypass around the app auth boundary.
+Pre-auth signup must not call authenticated upload endpoints. The first real upload UI is the authenticated dashboard document module. Parser/precheck reuse inside `DocumentUploadCard` remains OPEN. Any later public/signup upload would need an explicit Auth and journey decision, not a bypass around the app auth boundary.
 
 ## Old Flow Inventory
 
@@ -520,9 +520,8 @@ Current behavior:
 
 Still open:
 
-- customer Auth session creation
-- dashboard bootstrap/redirect
-- document upload to storage
+- dashboard bootstrap/redirect directly from signup success
+- public signup document upload to storage
 - customer-readable timeline
 - support/messages
 - kWh/result/fee lifecycle
@@ -551,8 +550,9 @@ Current backend contract status:
 - New app signup uses `api-app-signup-submit`, not `api-lead-submit`.
 - The current write v3 submit creates the customer/dossier foundation, locations, chargers, document slots, legal acceptances, and app audit/idempotency rows.
 - The proven upload backend is separate: `api-app-document-upload-url` and `api-app-document-upload-confirm`.
-- Frontend document upload wiring remains open.
-- Customer-facing Auth/dashboard bootstrap remains open.
+- Authenticated dashboard document upload/download/withdrawal wiring is implemented through the reusable document module.
+- Public `/aanmelden` upload wiring remains open.
+- Customer-facing Auth/dashboard bootstrap is implemented through `/account` and the protected dashboard, but `/aanmelden` does not redirect/bootstrap directly after submit.
 
 Later backend review must still decide how to:
 
@@ -627,11 +627,11 @@ No Supabase functions or migrations are changed by this planning document.
 
 ## Recommended Next Implementation Task
 
-Strengthen the remaining signup/upload boundary:
+Strengthen the remaining signup/dashboard boundary:
 
-- frontend upload client for document slots
-- PDF invoice slot upload wiring
-- customer Auth/dashboard bootstrap decision
+- formal draft/submit/lock/targeted-unlock contract
+- parser/precheck reuse in authenticated document cards
+- public signup upload journey decision, if needed
 - import parser design or stub tests
 - account-specific document requirements for zakelijk/VVE
 - no production deploy until remote migrations, functions, storage bucket, and browser QA are proven
