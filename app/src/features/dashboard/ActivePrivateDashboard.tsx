@@ -1,5 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import type { AuthDossierSummary } from "../auth/authTypes";
+import { DocumentUploadCard } from "../documents/DocumentUploadCard";
+import { getDocumentSectionStatusPresentation, getDocumentSlotCustomerTitle } from "../documents/documentSlotPresentation";
 import type {
   DashboardCharger,
   DashboardDocumentSlot,
@@ -26,16 +28,20 @@ type PortalCharger = {
 };
 
 type ActivePrivateDashboardProps = {
+  accessToken: string | null;
   dashboardRead: DashboardReadState;
   dossierOptions: AuthDossierSummary[];
   onSelectDossier: (dossierId: string) => void;
+  onRefreshSelectedDossier: () => Promise<boolean>;
   selectedDossierId: string | null;
 };
 
 export function ActivePrivateDashboard({
+  accessToken,
   dashboardRead,
   dossierOptions,
   onSelectDossier,
+  onRefreshSelectedDossier,
   selectedDossierId,
 }: ActivePrivateDashboardProps) {
   const [selectedChargerId, setSelectedChargerId] = useState<string | null>(null);
@@ -139,10 +145,14 @@ export function ActivePrivateDashboard({
 
                     {isSelected ? (
                       <ChargerInformation
+                        accessToken={accessToken}
+                        documentChangesAllowed={model.selected_dossier.document_changes_allowed}
                         expandedSection={expandedSection}
                         legalAcceptances={model.legal_acceptances}
                         onToggleSection={toggleSection}
+                        onRefreshSelectedDossier={onRefreshSelectedDossier}
                         row={row}
+                        selectedDossierId={selectedDossierId}
                       />
                     ) : null}
                   </div>
@@ -169,19 +179,27 @@ function DashboardNotice({ action, title, note }: { action?: ReactNode; title: s
 }
 
 function ChargerInformation({
+  accessToken,
+  documentChangesAllowed,
   expandedSection,
   legalAcceptances,
   onToggleSection,
+  onRefreshSelectedDossier,
   row,
+  selectedDossierId,
 }: {
+  accessToken: string | null;
+  documentChangesAllowed: boolean;
   expandedSection: AccordionSection | null;
   legalAcceptances: DashboardLegalAcceptance[];
   onToggleSection: (section: AccordionSection) => void;
+  onRefreshSelectedDossier: () => Promise<boolean>;
   row: PortalCharger;
+  selectedDossierId: string | null;
 }) {
   const chargerStatus = statusLabel(row.charger.status);
   const locationStatus = row.location ? statusLabel(row.location.status) : "Ontbreekt";
-  const documentStatus = aggregateDocumentStatus(row.documentSlots);
+  const documentStatus = getDocumentSectionStatusPresentation(row.documentSlots).label;
   const consentStatus = aggregateLegalStatus(legalAcceptances);
 
   return (
@@ -213,7 +231,13 @@ function ChargerInformation({
         status={documentStatus}
         title="Documenten"
       >
-        <DocumentsSection slots={row.documentSlots} />
+        <DocumentsSection
+          accessToken={accessToken}
+          documentChangesAllowed={documentChangesAllowed}
+          onRefreshSelectedDossier={onRefreshSelectedDossier}
+          selectedDossierId={selectedDossierId}
+          slots={row.documentSlots}
+        />
       </AccordionRow>
 
       <AccordionRow
@@ -315,24 +339,37 @@ function LocationSection({ location }: { location: DashboardLocation | null }) {
   );
 }
 
-function DocumentsSection({ slots }: { slots: DashboardDocumentSlot[] }) {
+function DocumentsSection({
+  accessToken,
+  documentChangesAllowed,
+  onRefreshSelectedDossier,
+  selectedDossierId,
+  slots,
+}: {
+  accessToken: string | null;
+  documentChangesAllowed: boolean;
+  onRefreshSelectedDossier: () => Promise<boolean>;
+  selectedDossierId: string | null;
+  slots: DashboardDocumentSlot[];
+}) {
   if (!slots.length) {
     return <UnavailableSection label="Documenten" note="Er zijn nog geen document-slots voor deze laadpaal." />;
   }
 
   return (
-    <SectionGroup title="Documenten">
+    <div className="portal-evidence-grid">
       {slots.map((slot) => (
-        <EvidenceCard
-          fileName={slot.current_file_name}
+        <DocumentUploadCard
+          accessToken={accessToken}
+          documentChangesAllowed={documentChangesAllowed}
           key={slot.document_slot_id}
-          label={slot.title}
-          required={slot.required}
-          status={statusLabel(slot.status)}
-          versionNumber={slot.current_version_number}
+          onRefreshSelectedDossier={onRefreshSelectedDossier}
+          selectedDossierId={selectedDossierId}
+          slot={slot}
+          title={getDocumentSlotCustomerTitle(slot)}
         />
       ))}
-    </SectionGroup>
+    </div>
   );
 }
 
@@ -342,7 +379,7 @@ function ConsentsSection({ acceptances }: { acceptances: DashboardLegalAcceptanc
   }
 
   return (
-    <SectionGroup title="Toestemmingen">
+    <div className="portal-evidence-grid">
       {acceptances.map((acceptance) => (
         <DownloadCard
           key={`${acceptance.acceptance_type}-${acceptance.version}`}
@@ -351,18 +388,16 @@ function ConsentsSection({ acceptances }: { acceptances: DashboardLegalAcceptanc
           status={acceptance.active ? "Akkoord" : statusLabel(acceptance.status)}
         />
       ))}
-    </SectionGroup>
+    </div>
   );
 }
 
 function UnavailableSection({ label, note }: { label: string; note: string }) {
   return (
-    <SectionGroup>
-      <div className="portal-evidence-card">
-        <CardHeader label={label} status="Ontbreekt" />
-        <p>{note}</p>
-      </div>
-    </SectionGroup>
+    <div className="portal-evidence-card">
+      <CardHeader label={label} status="Ontbreekt" />
+      <p>{note}</p>
+    </div>
   );
 }
 
@@ -397,29 +432,6 @@ function SectionGroup({ title, children }: { title?: string; children: ReactNode
       {title ? <h3>{title}</h3> : null}
       <div className="portal-evidence-grid">{children}</div>
     </section>
-  );
-}
-
-function EvidenceCard({
-  label,
-  fileName,
-  required,
-  status,
-  versionNumber,
-}: {
-  label: string;
-  fileName: string | null;
-  required: boolean;
-  status: string;
-  versionNumber: number | null;
-}) {
-  return (
-    <div className="portal-evidence-card">
-      <CardHeader label={label} status={status} />
-      {fileName ? <a href="#" onClick={(event) => event.preventDefault()}>{fileName}</a> : <small>Nog niet ontvangen</small>}
-      {versionNumber ? <small>Versie {versionNumber}</small> : null}
-      <small>{required ? "Verplicht" : "Optioneel"}</small>
-    </div>
   );
 }
 
@@ -465,7 +477,7 @@ function statusClassName(status: string, prefix: "status-pill" | "status-dot") {
     return `${prefix}-ok`;
   }
 
-  if (["Afgewezen", "Niet actief"].includes(status)) {
+  if (["Afgewezen", "Niet actief", "Nog doen", "Ontbreekt"].includes(status)) {
     return `${prefix}-danger`;
   }
 
@@ -517,14 +529,6 @@ function formatLocationLine(location: DashboardLocation | null): string {
   const houseNumber = `${location.address.house_number}${location.address.suffix || ""}`;
   const address = [location.address.street, houseNumber].filter(Boolean).join(" ");
   return [address, location.address.postcode, location.address.city, location.address.country].filter(Boolean).join(", ");
-}
-
-function aggregateDocumentStatus(slots: DashboardDocumentSlot[]): string {
-  if (!slots.length) return "Ontbreekt";
-  if (slots.some((slot) => statusLabel(slot.status) === "Afgewezen")) return "Afgewezen";
-  if (slots.some((slot) => !slot.current_file_name || statusLabel(slot.status) === "Ontbreekt")) return "Ontbreekt";
-  if (slots.some((slot) => statusLabel(slot.status) === "In review")) return "In review";
-  return "Akkoord";
 }
 
 function aggregateLegalStatus(acceptances: DashboardLegalAcceptance[]): string {

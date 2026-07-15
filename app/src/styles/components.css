@@ -641,6 +641,30 @@ button:not(:disabled):active {
   cursor: pointer;
 }
 
+.document-file-input-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.document-file-input-hidden:focus-visible + .document-file-trigger {
+  box-shadow: var(--focus-ring);
+}
+
+.document-file-trigger {
+  width: fit-content;
+}
+
+.document-file-trigger[aria-disabled="true"] {
+  opacity: 0.66;
+  pointer-events: none;
+}
+
 .document-slot .document-file-input {
   max-width: none;
 }
@@ -1041,6 +1065,19 @@ button:not(:disabled):active {
   background: #b42318;
 }
 
+.status-dot-missing {
+  width: 18px;
+  height: 18px;
+  flex-basis: 18px;
+  align-items: center;
+  justify-content: center;
+  background: #fbe3df;
+  color: #b42318;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1;
+}
+
 .portal-shell {
   font-size: var(--text-sm);
 }
@@ -1329,6 +1366,168 @@ button:not(:disabled):active {
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
+}
+
+.document-upload-card {
+  display: flex;
+  min-width: 0;
+  min-height: 190px;
+  flex-direction: column;
+  gap: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  background: var(--color-surface);
+}
+
+.document-upload-card-header {
+  display: grid;
+  min-width: 0;
+  align-items: start;
+  grid-template-columns: 24px minmax(0, 1fr) 24px;
+  gap: var(--space-2);
+}
+
+.document-upload-card-title {
+  grid-column: 2;
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-align: center;
+  font-size: var(--text-sm);
+}
+
+.document-upload-card-status {
+  grid-column: 3;
+  justify-self: end;
+  width: 12px;
+  height: 12px;
+  margin-top: 4px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 14%, transparent);
+}
+
+.document-upload-card-status-danger {
+  background: #b42318;
+  color: #b42318;
+}
+
+.document-upload-card-status-warning {
+  background: var(--color-amber);
+  color: var(--color-amber);
+}
+
+.document-upload-card-status-success {
+  background: var(--color-brand);
+  color: var(--color-brand);
+}
+
+.document-upload-card-status-neutral {
+  background: var(--color-muted);
+  color: var(--color-muted);
+}
+
+.document-upload-card-body {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.document-file-input-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.document-upload-card-trigger-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+.document-file-input-hidden:focus-visible + .document-upload-card-trigger {
+  box-shadow: var(--focus-ring);
+}
+
+.document-upload-card-trigger {
+  cursor: pointer;
+}
+
+.document-upload-card-trigger[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.document-upload-card-note {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+
+.document-upload-card-footer {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-2);
+  margin-top: auto;
+}
+
+.document-upload-card-file-row {
+  display: grid;
+  min-width: 0;
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+}
+
+.document-upload-card-file-link {
+  min-width: 0;
+  overflow: hidden;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--color-brand-strong);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 750;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-overflow: ellipsis;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+
+.document-upload-card-remove {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, #b42318 45%, var(--color-border));
+  border-radius: 999px;
+  background: color-mix(in srgb, #b42318 10%, var(--color-surface));
+  color: #b42318;
+  cursor: pointer;
+  font-size: var(--text-base);
+  font-weight: 850;
+  line-height: 1;
+}
+
+.document-upload-card-remove:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.document-upload-card-confirm {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-2);
+  color: var(--color-muted);
 }
 
 .portal-evidence-card p,

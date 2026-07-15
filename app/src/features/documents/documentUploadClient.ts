@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getSupabaseBrowserClient } from "../auth/authClient";
-import { resolveAuthRuntimeConfig } from "../auth/authRuntimeConfig";
+import { getSupabaseBrowserClient } from "../auth/authClient.ts";
+import { resolveAuthRuntimeConfig } from "../auth/authRuntimeConfig.ts";
 import type {
   DocumentUploadAttempt,
   DocumentUploadErrorCode,
@@ -8,7 +8,7 @@ import type {
   DocumentUploadStage,
   UploadDocumentInput,
   UploadDocumentResult,
-} from "./documentUploadTypes";
+} from "./documentUploadTypes.ts";
 
 type RuntimeConfig = {
   anonKey: string;
@@ -187,8 +187,8 @@ function validateConfirmResponse(body: unknown): UploadDocumentResult {
   const documentFileId = stringField(body, "document_file_id");
   const documentSlotId = stringField(body, "document_slot_id");
   const requestId = stringField(body, "request_id");
-  const fileStatus = stringField(body, "file_status");
-  const versionStatus = stringField(body, "version_status");
+  const fileStatus = stringField(body, "file_status") || stringField(body, "status");
+  const versionStatus = stringField(body, "version_status") || (fileStatus === "confirmed" ? "current" : "");
   const currentVersionNumber = numberField(body, "version_number");
 
   if (

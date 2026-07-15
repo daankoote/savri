@@ -5,6 +5,7 @@ export type DashboardDossierSummary = {
   dossier_number: string | null;
   account_type: DashboardAccountType;
   status: string;
+  document_changes_allowed: boolean;
 };
 
 export type DashboardLocation = {

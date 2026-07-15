@@ -1,4 +1,4 @@
-import type { AuthSafeError, AuthSafeErrorCode } from "./authTypes";
+import type { AuthSafeError, AuthSafeErrorCode } from "./authTypes.ts";
 
 const errorMessages: Record<AuthSafeErrorCode, string> = {
   not_configured: "Inloggen is lokaal nog niet geconfigureerd.",

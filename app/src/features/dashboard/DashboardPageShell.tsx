@@ -33,9 +33,11 @@ export function DashboardPageShell({ navigate }: { navigate: AppNavigate }) {
       <section className="portal-main" aria-live="polite">
         {activeSection === "active" ? (
           <ActivePrivateDashboard
+            accessToken={auth.session?.access_token ?? null}
             dashboardRead={dashboardRead}
             dossierOptions={dossierOptions}
             onSelectDossier={setSelectedDossierId}
+            onRefreshSelectedDossier={dashboardRead.refreshSelectedDossier}
             selectedDossierId={effectiveDossierId}
           />
         ) : null}

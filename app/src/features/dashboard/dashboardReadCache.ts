@@ -1,5 +1,5 @@
-import { fetchDashboardReadModel, type DashboardReadResult } from "./dashboardReadClient";
-import type { DashboardReadModel } from "./dashboardTypes";
+import { fetchDashboardReadModel, type DashboardReadResult } from "./dashboardReadClient.ts";
+import type { DashboardReadModel } from "./dashboardTypes.ts";
 
 type DashboardReadFetcher = (config: {
   accessToken: string;

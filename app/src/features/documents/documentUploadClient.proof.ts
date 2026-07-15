@@ -1,11 +1,13 @@
-import { createDocumentUploadAttempt, uploadDocument } from "./documentUploadClient";
-import type { UploadDocumentResult } from "./documentUploadTypes";
+import { createDocumentUploadAttempt, uploadDocument } from "./documentUploadClient.ts";
+import type { UploadDocumentResult } from "./documentUploadTypes.ts";
 
 export type DocumentUploadClientProofResult = {
   ok: true;
   hashOnceVerified: true;
   hashShapeVerified: true;
   issueContractVerified: true;
+  issueValidatorRejectsMissingFields: true;
+  safeIssueErrorVerified: true;
   signedUploadVerified: true;
   confirmContractVerified: true;
   failureBoundariesVerified: true;
@@ -89,8 +91,7 @@ function confirmBody() {
     document_file_id: FILE_ID,
     document_version_id: VERSION_ID,
     version_number: 1,
-    file_status: "confirmed",
-    version_status: "current",
+    status: "confirmed",
     server_sha256: "not-returned-to-ui",
   };
 }
@@ -230,6 +231,24 @@ export async function runDocumentUploadClientProof(): Promise<DocumentUploadClie
   assert(issueFailureStorage.uploads.length === 0, "issue failure must not upload");
   assert(issueFailureFetch.calls.length === 1, "issue failure must not confirm");
   assert(!issueFailure.error.message.includes("raw backend"), "raw backend error body must not be exposed");
+  assert(issueFailure.error.backendCode === "document_slot_not_uploadable", "safe backend error code must be retained");
+
+  const invalidIssueShapeFetch = createMockFetch([jsonResponse({
+    ...issueBody(),
+    upload_token: undefined,
+  })]);
+  const invalidIssueShapeStorage = createStorageMock();
+  const invalidIssueShape = await uploadDocument(input(), {
+    digestImpl: makeDigest({ count: 0 }),
+    fetchImpl: invalidIssueShapeFetch.fetchImpl,
+    runtimeConfig: runtimeConfig(),
+    supabaseClient: invalidIssueShapeStorage.client as never,
+  });
+  assert(invalidIssueShape.ok === false && invalidIssueShape.error.stage === "issue", "missing upload_token must reject at issue stage");
+  assert(invalidIssueShape.error.code === "invalid_response", "missing upload_token must map to invalid_response");
+  assert(invalidIssueShapeStorage.uploads.length === 0, "invalid issue shape must not upload");
+  assert(invalidIssueShapeFetch.calls.length === 1, "invalid issue shape must not confirm");
+  assert(!JSON.stringify(invalidIssueShape).includes("server-issued/proof.pdf"), "safe invalid-response error must not expose storage path");
 
   const uploadFailureFetch = createMockFetch([jsonResponse(issueBody())]);
   const uploadFailureStorage = createStorageMock({ error: { message: "raw storage error" } });
@@ -295,12 +314,14 @@ export async function runDocumentUploadClientProof(): Promise<DocumentUploadClie
     hashOnceVerified: true,
     hashShapeVerified: true,
     issueContractVerified: true,
+    issueValidatorRejectsMissingFields: true,
     logicalAttemptVerified: true,
     noAccountTypeBranchRequired: true,
     noDocumentTypeBranchRequired: true,
     noUiImportRequired: true,
     precheckVerified: true,
     safeResultVerified: true,
+    safeIssueErrorVerified: true,
     signedUploadVerified: true,
   };
 }

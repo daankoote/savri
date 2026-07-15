@@ -1,4 +1,4 @@
-import { resolveAuthRuntimeConfig } from "../auth/authRuntimeConfig";
+import { resolveAuthRuntimeConfig } from "../auth/authRuntimeConfig.ts";
 import type {
   DashboardAccountType,
   DashboardCharger,
@@ -7,7 +7,7 @@ import type {
   DashboardLegalAcceptance,
   DashboardLocation,
   DashboardReadModel,
-} from "./dashboardTypes";
+} from "./dashboardTypes.ts";
 
 export type DashboardReadErrorCode =
   | "not_configured"
@@ -94,6 +94,7 @@ function parseDossier(value: unknown): DashboardDossierSummary | null {
     dossier_number: nullableStringField(value, "dossier_number"),
     account_type: accountType,
     status,
+    document_changes_allowed: booleanField(value, "document_changes_allowed"),
   };
 }
 

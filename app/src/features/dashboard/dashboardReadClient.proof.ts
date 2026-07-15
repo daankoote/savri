@@ -1,6 +1,6 @@
-import { clearDashboardReadCache, loadDashboardReadOnce } from "./dashboardReadCache";
-import { fetchDashboardReadModel, type DashboardReadSafeError } from "./dashboardReadClient";
-import type { DashboardReadModel } from "./dashboardTypes";
+import { clearDashboardReadCache, loadDashboardReadOnce } from "./dashboardReadCache.ts";
+import { fetchDashboardReadModel, type DashboardReadSafeError } from "./dashboardReadClient.ts";
+import type { DashboardDossierSummary, DashboardReadModel } from "./dashboardTypes.ts";
 
 export type DashboardReadClientProofResult = {
   ok: true;
@@ -64,11 +64,11 @@ function dashboardBody(selectedDossierId = "dossier-proof-a") {
     mode: "dashboard_read_v1",
     request_id: "request-proof",
     dossiers: [
-      { dossier_id: "dossier-proof-a", dossier_number: "D-001", account_type: "particulier", status: "submitted" },
-      { dossier_id: "dossier-proof-b", dossier_number: "D-002", account_type: "zakelijk", status: "submitted" },
-      { dossier_id: "dossier-proof-c", dossier_number: "D-003", account_type: "vve", status: "submitted" },
+      { dossier_id: "dossier-proof-a", dossier_number: "D-001", account_type: "particulier", status: "submitted", document_changes_allowed: true },
+      { dossier_id: "dossier-proof-b", dossier_number: "D-002", account_type: "zakelijk", status: "submitted", document_changes_allowed: true },
+      { dossier_id: "dossier-proof-c", dossier_number: "D-003", account_type: "vve", status: "submitted", document_changes_allowed: true },
     ],
-    selected_dossier: { dossier_id: selectedDossierId, dossier_number: "D-001", account_type: "particulier", status: "submitted" },
+    selected_dossier: { dossier_id: selectedDossierId, dossier_number: "D-001", account_type: "particulier", status: "submitted", document_changes_allowed: true },
     locations: [
       {
         location_id: "location-proof-1",
@@ -227,7 +227,7 @@ export async function runDashboardReadClientProof(): Promise<DashboardReadClient
   assert(getHeader(calls[0].init, "apikey") === anonKey, "apikey header missing");
   assert(getHeader(calls[0].init, "Idempotency-Key") === "", "dashboard read must not send Idempotency-Key");
   assert(JSON.stringify(JSON.parse(String(calls[0].init?.body))) === JSON.stringify({ dossier_id: "dossier-proof-a" }), "body must contain only dossier_id");
-  assert(success.model.dossiers.map((dossier) => dossier.account_type).join(",") === "particulier,zakelijk,vve", "all account types must parse in order");
+  assert(success.model.dossiers.map((dossier: DashboardDossierSummary) => dossier.account_type).join(",") === "particulier,zakelijk,vve", "all account types must parse in order");
   assert(success.model.locations.length === 2 && success.model.chargers.length === 2, "locations and chargers must parse");
   assert(success.model.chargers[1].location_id === "location-proof-2", "charger-location link must be preserved");
   assert(success.model.document_slots[0].charger_id === "charger-proof-1", "slot-charger link must be preserved");
@@ -254,6 +254,7 @@ export async function runDashboardReadClientProof(): Promise<DashboardReadClient
       dossier_number: dossierId,
       account_type: dossierId.endsWith("b") ? "zakelijk" : "particulier",
       status: "submitted",
+      document_changes_allowed: true,
     },
   });
   const cacheFetcher = async ({ dossierId }: { dossierId: string }): Promise<{ ok: true; model: DashboardReadModel }> => {

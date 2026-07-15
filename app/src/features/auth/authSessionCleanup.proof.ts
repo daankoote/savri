@@ -1,7 +1,7 @@
-import { isTerminalBootstrapBindingError, safeAuthError } from "./authErrorMapping";
-import type { AuthSafeErrorCode } from "./authTypes";
-import { clearDashboardReadCache, loadDashboardReadOnce } from "../dashboard/dashboardReadCache";
-import type { DashboardReadModel } from "../dashboard/dashboardTypes";
+import { isTerminalBootstrapBindingError, safeAuthError } from "./authErrorMapping.ts";
+import type { AuthSafeErrorCode } from "./authTypes.ts";
+import { clearDashboardReadCache, loadDashboardReadOnce } from "../dashboard/dashboardReadCache.ts";
+import type { DashboardReadModel } from "../dashboard/dashboardTypes.ts";
 
 export type AuthSessionCleanupProofResult = {
   ok: true;
@@ -21,11 +21,11 @@ function makeModel(dossierId: string): DashboardReadModel {
   return {
     chargers: [],
     document_slots: [],
-    dossiers: [{ account_type: "particulier", dossier_id: dossierId, dossier_number: "proof", status: "submitted" }],
+    dossiers: [{ account_type: "particulier", dossier_id: dossierId, dossier_number: "proof", status: "submitted", document_changes_allowed: true }],
     legal_acceptances: [],
     locations: [],
     request_id: "proof-request",
-    selected_dossier: { account_type: "particulier", dossier_id: dossierId, dossier_number: "proof", status: "submitted" },
+    selected_dossier: { account_type: "particulier", dossier_id: dossierId, dossier_number: "proof", status: "submitted", document_changes_allowed: true },
   };
 }
 

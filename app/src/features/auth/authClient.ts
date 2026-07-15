@@ -1,7 +1,7 @@
 import { createClient, type AuthChangeEvent, type Session, type SupabaseClient } from "@supabase/supabase-js";
-import { resolveAuthRuntimeConfig } from "./authRuntimeConfig";
-import { mapSupabaseAuthError, safeAuthError } from "./authErrorMapping";
-import type { AuthActionResult } from "./authTypes";
+import { resolveAuthRuntimeConfig } from "./authRuntimeConfig.ts";
+import { mapSupabaseAuthError, safeAuthError } from "./authErrorMapping.ts";
+import type { AuthActionResult } from "./authTypes.ts";
 
 let supabaseClient: SupabaseClient | null = null;
 
