@@ -53,6 +53,15 @@ Do not store raw IP or raw user agent by default. Store hashed request metadata 
 Future app work must define app-specific events for:
 
 - auth bootstrap/login/recovery
+- intake finalization / `Start dossier`
+- legal acceptance during public intake
+- verification-link consumption
+- pre-auth intake promotion
+- immutable initial intake/submission snapshot creation
+- quarantine evidence promotion
+- targeted section unlock
+- targeted correction submission / `Correcties indienen`
+- promotion reject/failure
 - customer dashboard reads if audit-required
 - customer request/response
 - support messages
@@ -63,6 +72,32 @@ Future app work must define app-specific events for:
 - retention/minimization
 
 Do not copy legacy `dossier_*` event names as CURRENT app truth without adaptation.
+
+## Target Intake Promotion Audit Boundary
+
+Status: TARGET / NOT IMPLEMENTED. Detailed contract: `docs/app/contracts/intake-verification-promotion.md`.
+
+Audit-required target events include:
+
+- `Start dossier` / intake finalization;
+- accepted legal versions;
+- verification-link consumption;
+- atomic promotion;
+- customer/dossier creation from promotion;
+- initial immutable intake/submission snapshot;
+- document/evidence promotion from quarantine;
+- targeted unlock;
+- replacement evidence;
+- `Correcties indienen`;
+- ENVAL lifecycle changes.
+
+Not every browser-side action is an immutable compliance revision. These are not immutable audit revisions by default:
+
+- local client validation attempts;
+- unsubmitted public form edits;
+- ordinary field edits before the customer clicks `Correcties indienen`.
+
+The target flow must preserve enough server-side evidence to reconstruct promotion and correction decisions without exposing raw audit rows, storage paths, raw parser text, raw hashes, or internal payloads to customers.
 
 ## Document Withdrawal Boundary
 

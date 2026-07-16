@@ -10,11 +10,14 @@ Implementation status:
 - CURRENT / LOCAL PROOF: shared frontend upload transport.
 - CURRENT / LOCAL PROOF: reusable authenticated dashboard document card for MID and invoice evidence, download, replacement, and withdrawal.
 - OPEN: parser/precheck integration, production storage bucket/policies, remote deploy, and production browser QA.
+- TARGET / NOT IMPLEMENTED: public pre-auth quarantine upload and verification promotion are defined in `docs/app/contracts/intake-verification-promotion.md`.
 
 ## 1. Current Truth
 
 - `api-app-signup-submit` write v3 creates the dossier shell, locations, chargers, `app_dossier_document_slots`, legal acceptances, scoped idempotency, and app audit events.
 - The `/app` signup UI currently has local PDF invoice preview only. It does not upload files, create storage objects, confirm hashes, or mutate document slot state.
+- Public signup must not call the authenticated `api-app-document-*` upload/download/withdrawal endpoints until an explicit Auth/journey decision changes that boundary.
+- Target public intake document upload requires a separate private pre-auth quarantine lane.
 - `app_dossier_document_slots` is the expected-evidence/current-version projection.
 - `app_dossier_document_files` is the server-issued physical upload target and file lifecycle table.
 - `app_dossier_document_versions` is immutable confirmed version history.
@@ -29,6 +32,7 @@ Implementation status:
 - Reusable authenticated dashboard document UI is CURRENT / LOCAL PROOF for MID evidence and installation/acquisition invoice evidence.
 - Production bucket/policy/deploy proof remains OPEN.
 - New upload behavior must use new `api-app-*` endpoints and `app_*` tables.
+- Promoted pre-auth quarantine documents must enter the immutable app document lifecycle server-side after accepted promotion; the browser must not choose storage paths, file IDs, version IDs, or final evidence status.
 - Legacy upload endpoints are frozen/reference only:
   - `api-dossier-upload-url`
   - `api-dossier-upload-confirm`
@@ -66,6 +70,12 @@ Frontend must not do:
 - No upload status truth claims.
 - No final document acceptance/rejection decisions.
 - No direct mutation of `app_dossier_document_slots`.
+
+Target parser/precheck reuse remains OPEN:
+
+- public intake parser/precheck may warn, block locally, and prefill before `Start dossier`;
+- authenticated correction cards may later reuse safe parser/precheck summaries;
+- parser/precheck output must not approve evidence or replace backend validation in either lane.
 
 ## 4. Frontend Shared Upload Transport And Card
 

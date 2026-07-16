@@ -87,6 +87,11 @@ The recent app frontend Auth/session flow is retained as local proof:
 - Unsupported future dashboard domains are not fabricated.
 - Production deployment and production browser proof remain OPEN.
 
+Target-only lifecycle definition:
+
+- Pre-auth quarantine, email verification, and intake promotion are documented as TARGET / NOT IMPLEMENTED in `docs/app/contracts/intake-verification-promotion.md`.
+- Current runtime remains the committed signup write v3 flow and authenticated dashboard document lifecycle until future schema, endpoints, and proofs implement that target.
+
 ## Source-Of-Truth Order
 
 When sources conflict, use this order:
@@ -145,6 +150,7 @@ Public copy must not expose internal legal/audit/anti-fraud doctrine except in l
 - Product model: `docs/app/02_PRODUCT_MODEL.md`
 - App TODO: `docs/app/04_TODO.md`
 - Signup/dashboard contract: `docs/app/contracts/signup-dashboard.md`
+- Target intake verification/promotion contract: `docs/app/contracts/intake-verification-promotion.md`
 - Auth contract: `docs/app/contracts/auth.md`
 - Document upload contract: `docs/app/contracts/document-upload.md`
 - Edge contract: `docs/app/contracts/edge-functions.md`

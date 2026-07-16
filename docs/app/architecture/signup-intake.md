@@ -17,6 +17,8 @@ The shared document upload module exists under `app/src/features/documents/`, bu
 
 Pre-auth signup must not call authenticated upload endpoints. The first real upload UI is the authenticated dashboard document module. Parser/precheck reuse inside `DocumentUploadCard` remains OPEN. Any later public/signup upload would need an explicit Auth and journey decision, not a bypass around the app auth boundary.
 
+Target intake quarantine and email-verification promotion are documented in `docs/app/contracts/intake-verification-promotion.md` as TARGET / NOT IMPLEMENTED. That target replaces a second full dashboard submit with one public `Start dossier` action plus server-side promotion after email verification.
+
 ## Old Flow Inventory
 
 ### Old `aanmelden.html`
@@ -527,6 +529,22 @@ Still open:
 - kWh/result/fee lifecycle
 
 Final submit must be idempotent and audit-worthy. It must not depend on hidden browser-only state.
+
+## Target Verification Promotion Model
+
+Status: TARGET / NOT IMPLEMENTED.
+
+Future public intake should move toward:
+
+1. Customer completes public form, local parser/prechecks, documents, and consents.
+2. Customer clicks `Start dossier` as the one normal full submission.
+3. Backend creates a pre-dossier intake in `pending_verification` and stores explicit confirmation/legal-version acceptance.
+4. Documents use a separate private pre-auth quarantine lane, not authenticated dashboard upload endpoints.
+5. Email verification validates identity/email control and triggers atomic server-side promotion.
+6. Complete intake promotes into a submitted or under-review dossier.
+7. Correctable server-side issues promote into `needs_customer_action` with only affected sections editable.
+
+Parser/precheck may warn, block locally, or prefill. It may not approve evidence, lock lifecycle state, or replace backend validation.
 
 ## Audit Implications
 

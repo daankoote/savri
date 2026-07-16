@@ -16,6 +16,8 @@ This document defines:
 
 The old `dossier.html` wizard and current `api-dossier-*` endpoints are source material only. They must not be wired directly into the new app without contract redesign.
 
+Target intake quarantine, email verification, and promotion are defined separately in `docs/app/contracts/intake-verification-promotion.md` as TARGET / NOT IMPLEMENTED. That target contract supersedes any future design that would require every customer to submit the full dossier again in the dashboard.
+
 ## Implementation Status
 
 `api-app-signup-submit` write v3 endpoint is implemented and locally proven.
@@ -125,6 +127,8 @@ Rules:
 - Frontend prechecks, PDOK lookup, field validation, parsing, compression, and previews are UX and cost/latency aids only.
 - Backend remains source of truth for validation, normalization, authorization, document hash confirmation, audit, and lifecycle decisions.
 - All final lifecycle decisions are backend/audit based.
+- TARGET / NOT IMPLEMENTED: `Start dossier` is the one normal full customer submission. Email verification should trigger server-side promotion, not a second manual full-dossier confirmation.
+- TARGET / NOT IMPLEMENTED: dashboard correction flow should use `Correcties indienen` only for targeted reopened sections.
 
 ## 3. Current Frontend Payload
 
@@ -414,6 +418,14 @@ Current Auth/session direction:
 - Password recovery, resend verification, and production Auth configuration remain OPEN.
 - Future `Nieuwe aanvraag` behavior must reuse the existing signup modules instead of creating a second intake implementation.
 
+Target promotion boundary:
+
+- A complete verified intake opens dashboard with the dossier already submitted or under review.
+- A correctable promotion result opens dashboard in `needs_customer_action`.
+- Valid unaffected sections remain fixed.
+- Only affected sections/records become editable.
+- Dashboard must not show a permanent generic `Dossier indienen` button after successful promotion.
+
 ## 9. Dossier Status After Submit
 
 Recommended initial statuses:
@@ -594,10 +606,10 @@ Unresolved before production:
 
 ## 16. Recommended Next Implementation After Current Proof
 
-A. Draft / submit / lock / targeted unlock contract
+A. Intake quarantine / verification promotion contract
 
-- Define the customer dossier draft -> submit -> lock -> targeted unlock contract before building charger and location edit flows.
-- Define when document changes are allowed and how targeted customer-action revisions reopen specific fields/slots.
+- Implement the TARGET / NOT IMPLEMENTED contract in `docs/app/contracts/intake-verification-promotion.md` only after schema, endpoint, and proof tasks are accepted.
+- Define intake/quarantine schema, pre-auth capability, atomic email-verification promotion, immutable snapshot, and server-derived section capabilities before charger/location edit flows.
 - Keep public `/aanmelden` upload wiring OPEN.
 - Keep parser preview/precheck as UX support only until integrated into the authenticated card.
 

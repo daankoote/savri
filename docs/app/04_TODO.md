@@ -49,6 +49,7 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
 - Document aggregate status semantics are locally and browser-proven.
 - Browser-reachable local download origin correction is locally and browser-proven.
 - Shared dashboard document card UI is locally and browser-proven.
+- Target intake verification/promotion contract is documented as TARGET / NOT IMPLEMENTED.
 
 Local proof is not production proof. Remote migration/function deploy, production bucket/policy proof, and production browser QA remain open.
 
@@ -77,14 +78,19 @@ Local proof is not production proof. Remote migration/function deploy, productio
 
 ## P1
 
-- Define the customer dossier draft → submit → lock → targeted unlock contract before building charger and location edit flows.
-- Charger edit flow.
-- Location edit flow.
-- PDF parser/precheck wiring into the authenticated document card.
-- Atomic submission snapshot.
-- Targeted customer-action/unlock revisions.
-- Signup upload wiring, if a public pre-auth upload journey is explicitly accepted.
-- Other document types.
+- Define intake/quarantine schema and expiry boundary.
+- Define pre-auth capability and anti-abuse contract.
+- Define atomic email-verification promotion RPC/endpoint.
+- Define initial intake/submission snapshot schema.
+- Define server-derived section capabilities.
+- Build public Start dossier quarantine flow.
+- Build verification-link promotion flow.
+- Build targeted charger/location correction forms using shared signup form modules.
+- Reuse parser/precheck for authenticated document corrections.
+- Build Correcties indienen revision flow.
+- Define review email notification contract.
+- Define kWh periodic lifecycle.
+- Define consent renewal/version-expiry lifecycle.
 - Zakelijke/VvE document requirements.
 - Business and VVE upload slots.
 - Business and VVE dashboard detail pages.

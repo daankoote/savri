@@ -218,6 +218,30 @@ Rules:
 - Status changes must be auditable.
 - Status copy must avoid guarantees around award, payout, timing, certification, or document acceptance.
 
+## 7A. Target Intake Promotion And Correction Model
+
+Status: TARGET / NOT IMPLEMENTED. Detailed contract: `docs/app/contracts/intake-verification-promotion.md`.
+
+Target rules:
+
+- `Start dossier` is the one normal full customer submission from public intake.
+- Email verification validates identity/email control and triggers server-side promotion; it is not a second full customer confirmation.
+- A complete verified intake opens the dashboard with the dossier already `submitted` or `under_review`.
+- A correctable server-side promotion result opens the dashboard in `needs_customer_action`.
+- Valid unaffected sections remain fixed.
+- Only affected sections or records become editable.
+- The correction action is `Correcties indienen`.
+- The dashboard must not show a permanent generic `Dossier indienen` button after successful promotion.
+
+Status and editability are separate server-derived concepts:
+
+- fixed does not always mean green;
+- green does not mean the browser may edit;
+- uploaded evidence can remain orange while fixed and under review;
+- rejected or insufficient evidence can be action-needed and targeted editable.
+
+The frontend must use backend-derived capabilities for mutation. It must not infer lock/edit rights from stoplight labels, filenames, version numbers, titles, or hidden UI.
+
 ## 8. Customer Request/Response Model
 
 Flow:

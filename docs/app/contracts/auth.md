@@ -172,6 +172,24 @@ Behavior:
 
 Not all Auth errors sign the user out. Only terminal ENVAL bootstrap binding failures use this cleanup path.
 
+### Target Email Verification Promotion Boundary
+
+Status: TARGET / NOT IMPLEMENTED. Detailed contract: `docs/app/contracts/intake-verification-promotion.md`.
+
+Email verification in the target public intake flow:
+
+- validates control of the submitted email identity;
+- triggers server-side promotion of a finalized pre-auth intake;
+- does not approve documents, evidence, eligibility, ERE result, or fees;
+- does not replace backend validation, audit, idempotency, or server-side promotion checks.
+
+Pre-auth intake and quarantine boundaries:
+
+- public intake upload must use a separate private quarantine capability, not the authenticated `api-app-document-*` endpoints;
+- email address alone must not authorize document upload, document read, dashboard access, or mutation;
+- frontend hiding is never an authorization boundary;
+- authenticated dashboard document upload remains separate and requires the current Supabase Auth/app customer boundary.
+
 ### Customer Identity
 
 Target customer identity:

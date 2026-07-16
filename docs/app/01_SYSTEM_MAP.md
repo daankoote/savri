@@ -110,6 +110,38 @@ Rules:
 - The client does not poll, reload the page, or automatically retry blindly.
 - No account-type-specific upload transport exists.
 
+## Target Intake Verification Path
+
+Status: TARGET / NOT IMPLEMENTED. See `docs/app/contracts/intake-verification-promotion.md`.
+
+```text
+public form and local parser
+→ pre-auth pending intake
+→ private quarantine upload
+→ Start dossier/finalize intake
+→ email verification
+→ atomic promotion
+→ submitted/under-review dossier
+```
+
+Alternative promotion result:
+
+```text
+atomic promotion
+→ needs_customer_action
+→ targeted editable section
+→ Correcties indienen
+→ immutable correction revision
+```
+
+Rules:
+
+- `Start dossier` is the one normal full customer submission.
+- Email verification validates identity/email control and triggers server-side promotion.
+- Pre-auth quarantine upload must use a separate private capability lane, not authenticated `api-app-document-*`.
+- Parser/precheck may warn or prefill but may not approve evidence.
+- A successful promoted dashboard must not show a generic `Dossier indienen` button.
+
 ## Backend Data Expectations
 
 The backend must support audit-worthy commercial service operations:

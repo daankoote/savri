@@ -233,3 +233,17 @@ Frontend commit: `2ea1f7c Add reusable customer document cards`
 - Browser QA was green for card layout, auto-upload, aggregate status, download, withdrawal, duplicate heading removal, and divider removal.
 - Proof remains local-only; no production deploy, remote migration apply, or production storage proof is claimed.
 - Next step is the customer dossier draft -> submit -> lock -> targeted unlock contract.
+
+## 2026-07-16 — Pre-auth quarantine and verification-promotion target defined
+
+Commit: this documentation-only contract commit.
+
+- Defined `Start dossier` as the one normal full customer submission.
+- Documented that documents may be client-parsed before verification.
+- Documented that client parser/precheck may warn, block locally, and prefill, but may not approve evidence.
+- Defined a target private pre-auth quarantine lane separate from authenticated `api-app-document-*` endpoints.
+- Documented email verification as identity/email control plus server-side promotion, not a second full customer confirmation.
+- Defined complete-intake promotion to submitted/under-review dashboard state.
+- Defined customer-action promotion with only targeted sections editable and `Correcties indienen` as the correction action.
+- Clarified that valid sections remain fixed and status lights are separate from mutation capability.
+- Status: TARGET / NOT IMPLEMENTED; no runtime, schema, migration, or production behavior is claimed.
