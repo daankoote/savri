@@ -1,8 +1,12 @@
 # NEa MVP Plan
 
-Status: PRELIMINARY DRAFT — AWAITING DAAN APPROVAL
+Status: GO — BOUNDED INTERNAL FOUNDATION ONLY; EXCLUDED SCOPES REMAIN NO-GO
 
-This document is a PRELIMINARY DRAFT and must not be used as implementation permission or a final implementation order.
+DAAN DECISION: GO — BOUNDED INTERNAL FOUNDATION PHASE
+
+This normative gate plan permits only the bounded internal foundation scope recorded in `docs/app/decisions/architecture-and-environment-decisions.md`, `docs/app/10_ARCHITECTURE_GO_NO_GO_AUDIT.md`, and `docs/app/operations/nea-implementation-roadmap.md`. It does not authorize remote schema apply, remote migration, deployment, production, push, external provider adapters, REV integration, official verifier decisions, final retention/legal/mandate execution, booking, or settlement execution.
+
+Baseline evidence: commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805` (`Establish NEa documentation baseline`).
 
 Regulatory status remains: PARTIAL — ELECTRICITY TKV ACCESS AND CLAUSE COVERAGE PASS; CONSOLIDATED LAW, DEADLINE, RETENTION, REV, LEGAL, AND EXTERNAL-VERIFIER GAPS REMAIN.
 
@@ -16,7 +20,7 @@ This plan now sequences architecture and implementation as controlled batches. I
 
 | batch | goal | primary docs | deletion/retirement gate | proof requirement | blocked by |
 |---|---|---|---|---|---|
-| 1. target foundation | Review or amend the proposed target contexts, table model, and rebuild recommendation. | `07_NEA_TARGET_ARCHITECTURE`, `architecture/database-target-model`, `decisions/architecture-and-environment-decisions`, `operations/remote-baseline-and-retirement`, `08_NEA_TRACEABILITY_MATRIX` | no drops; disposition only | explicit Daan architecture decision | explicit Daan approval; remaining legal/external decisions |
+| 1. target foundation | Execute only the bounded internal foundation contexts approved by Daan; broader target remains unapproved. | `07_NEA_TARGET_ARCHITECTURE`, `architecture/database-target-model`, `decisions/architecture-and-environment-decisions`, `operations/nea-implementation-roadmap`, `08_NEA_TRACEABILITY_MATRIX` | no drops; disposition only | bounded package contract and local proof | remaining legal/external decisions for excluded scopes |
 | 2. schema foundation | Create target schema for customer/case/audit/idempotency/role foundations only after approval. | schema docs and future migration plan | old app tables remain until migration proof | local reset, RLS, grants, schema proof | approved schema design |
 | 3. migration/retirement | Remove locally safe dependency-free legacy objects and obsolete migrations in controlled phases. | `operations/remote-baseline-and-retirement` | data/export, caller, Storage, remote, reset gates | reset proof, diff proof, remote confirmation where needed | unknown remote/data presence |
 | 4. identity/EAN/mandate | Build identity, legal entity, representative, EAN, ownership period, and signed mandate foundation. | requirements, target model | legacy sessions not removed until app auth + traffic proof | auth, role, mandate, EAN proofs | legal mandate wording, CAR/manual source |
@@ -83,8 +87,8 @@ It does not prove CAR access, REV field compatibility, legal mandate wording, cu
 
 ## Current Next Batch
 
-Next local execution batch:
+Next local execution work package:
 
-Gate 1 Connection Read Projection And Operations Review Contract.
+Customer, person, organization, representation and case foundation.
 
-Daan approved the internal phase on 2026-07-21 and permitted the documentation baseline commit. The baseline commit is the next executable action and is not performed in this documentation batch. After that baseline, this local/internal Gate 1 batch remains the next implementation candidate under the accepted package contract and proof gates. It must stay local until separately widened and does not authorize remote deployment, CAR integration, REV submission, verifier automation, or Wave 1 execution.
+The documentation baseline is committed as `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`. This work package is `READY`, not implemented or complete. It must begin with a bounded design/contract and remain local under its proof gates. Gate 1 Connection Read Projection And Operations Review Contract remains the following in-progress foundation package. Neither package authorizes remote deployment, CAR/EAN/KvK/MID/CPO/energy-provider adapters, REV submission, official verifier automation, booking/settlement execution, production, or push.

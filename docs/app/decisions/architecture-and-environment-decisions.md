@@ -1,12 +1,12 @@
 # Architecture And Environment Decisions
 
-Status: DECISION RECORD — STRATEGY SELECTED, EXECUTION NOT APPROVED
+Status: DECISION RECORD — BOUNDED INTERNAL FOUNDATION GO; REMOTE, DEPLOYMENT, EXTERNAL ADAPTERS, REV, OFFICIAL VERIFICATION AND PRODUCTION NOT APPROVED
 
-This record consolidates architecture, rebuild, environment, and app-baseline strategy decisions. It records selected strategy and historical alternatives; it does not authorize implementation, deployment, SQL, migration apply, retirement, Auth/Storage/cron changes, commit, or push.
+This record consolidates architecture, rebuild, environment, and app-baseline strategy decisions. It records Daan's bounded internal foundation implementation GO and historical alternatives. It does not authorize remote schema apply, remote migration, deployment, production, push, external provider adapters, REV execution, official verifier decisions, or destructive legacy retirement.
 
 Regulatory status: PARTIAL — ELECTRICITY TKV ACCESS AND CLAUSE MAPPING PASS; OTHER LEGAL, DEADLINE, RETENTION, REV, AND EXTERNAL-VERIFIER GAPS REMAIN
 
-Verification detail is mapped from the official electricity TKV. Target architecture remains `DRAFT — AWAITING DAAN APPROVAL`; implementation remains `NO-GO`.
+Verification detail is mapped from the official electricity TKV. The architecture is approved only for the bounded internal foundation scope recorded below. Broader target architecture, remote execution, external adapters, REV, official verification, booking/settlement execution, and production remain no-go or subject to their named decisions.
 
 Overall recommendation: HYBRID PARALLEL REBUILD.
 
@@ -21,6 +21,8 @@ Reason: existing app primitives for auth, customer-safe projections, evidence tr
 | 2026-07-19 | Daan rejected a separate Supabase app project for now because of project quota | strategy selected: in-place parallel rebuild in the existing project; no execution permission |
 | 2026-07-20 | local recovery control passed | does not change the remote execution no-go while PostgREST platform health remains unresolved |
 | 2026-07-21 | Daan designated the verified official electricity TKV snapshot as ENVAL's primary operational verification-architecture source | no competing ENVAL verification framework; professional verifier authority stays external; internal support capabilities may be designed only as subordinate target modules after GO |
+| 2026-07-21 | documentation, official-source, and architecture baseline committed as `e2943d746d9bc9f1aa0992b16a83b51dcd10d805` | stable evidence baseline for the bounded decision; no runtime or remote action |
+| 2026-07-21 | `DAAN DECISION: GO — BOUNDED INTERNAL FOUNDATION PHASE` | internal foundation scope may proceed under local proof gates; every excluded scope remains no-go |
 
 | field | value |
 |---|---|
@@ -32,6 +34,53 @@ Reason: existing app primitives for auth, customer-safe projections, evidence tr
 | selected strategy | `IN-PLACE PARALLEL REBUILD` |
 
 The selected strategy requires isolated `app_*`, `api-app-*`, `app-documents`, and app identity/cohort boundaries. Current legacy schema, functions, Storage, cron, Auth users, and registered migrations remain protected until replacement and retirement gates pass.
+
+## Bounded Internal Foundation GO
+
+DAAN DECISION: GO — BOUNDED INTERNAL FOUNDATION PHASE
+
+Baseline evidence: commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805` (`Establish NEa documentation baseline`).
+
+Architecture implementation scope:
+
+- customer/person/organization;
+- representation foundation;
+- case foundation;
+- locations;
+- connections and EAN structure;
+- chargers;
+- charge points;
+- meters and MID evidence structure;
+- documents and evidence;
+- parser inventory and modular parser adapters;
+- internal reviews;
+- support controls;
+- corrections and supersede history;
+- raw and normalized kWh foundations;
+- audit and provenance;
+- provider-independent external ports.
+
+Not approved:
+
+- remote schema apply;
+- remote migration;
+- deployment;
+- production;
+- push;
+- CAR adapter;
+- EAN/register adapter;
+- KvK adapter;
+- MID-registeradapter;
+- CPO/provideradapter;
+- energieleverancieradapter;
+- REV-integratie;
+- betaalprovider;
+- officiële verifierbeslissingen;
+- definitieve retentionuitvoering;
+- definitieve legal/mandate-tekst;
+- booking- of settlementuitvoering.
+
+This decision authorizes internal foundation work only. Every implementation batch still requires its bounded design/contract, local tests and proof, honest status update, and separate acceptance. It does not make any work package implementation-complete.
 
 ## Context Decisions
 
@@ -115,7 +164,7 @@ The following are not target architecture:
 ## Remaining Conditions And Decisions
 
 - The official electricity TKV repository snapshot and all 19 present clauses are verified and mapped; future official versions require a hard-stop source diff and supersede review.
-- Daan's source, verifier-boundary, support-control, internal/external capability, and ports/adapters decisions above are recorded. They do not constitute implementation GO.
+- Daan's source, verifier-boundary, support-control, internal/external capability, and ports/adapters decisions above are recorded. They constitute implementation GO only for the bounded internal foundation scope listed above.
 - Remote Wave 1 remains blocked until PostgREST platform health is closed or Daan explicitly accepts a separately documented support-risk gate.
 - Any remote mutation requires a separately authorized exact batch, fresh collision check, recovery evidence, reviewer, owner, abort criteria, and rollback plan.
 - Decide whether any legacy data is imported into the app baseline or retained externally until retirement.
@@ -126,4 +175,4 @@ The following are not target architecture:
 
 ## Confirmation
 
-This decision record grants no execution permission. No implementation-GO is recorded.
+This decision record grants implementation permission only for `DAAN DECISION: GO — BOUNDED INTERNAL FOUNDATION PHASE`. All listed excluded scopes remain no-go and require separate explicit approval.

@@ -4,7 +4,11 @@ Status: CURRENT source of truth for ENVAL documentation authority, source order,
 
 Audit evidence status: PROOF ONLY.
 
-Proposed canon and architecture status: DRAFT — AWAITING DAAN APPROVAL where documents describe future target architecture, MVP order, or regulatory/TKV-dependent controls.
+Proposed canon and architecture status: APPROVED BY DAAN FOR BOUNDED INTERNAL FOUNDATION IMPLEMENTATION; broader target architecture, external/professional domains, remote execution and production remain draft or no-go.
+
+DAAN DECISION: GO — BOUNDED INTERNAL FOUNDATION PHASE
+
+Decision evidence: documentation baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; exact approved and excluded scopes are owned by `docs/app/decisions/architecture-and-environment-decisions.md`, recorded in `docs/app/10_ARCHITECTURE_GO_NO_GO_AUDIT.md`, and tracked in `docs/app/operations/nea-implementation-roadmap.md`.
 
 This file is the only primary navigation and status index for active app documentation. It overrides every legacy document for new app work. If a legacy file conflicts with this document, this document wins.
 
@@ -19,7 +23,7 @@ NEa compliance hierarchy:
 - `docs/app/08_NEA_TRACEABILITY_MATRIX.md` connects source, requirement, component, data, test, and evidence.
 - `docs/app/06A_NEA_REGULATORY_COMPLETENESS_AUDIT.md` is mandatory proof before any NEa target architecture or MVP plan may be approved.
 - Current code, schema, migrations, tests, and proof output remain the technical truth for what is actually implemented.
-- `docs/app/07_NEA_TARGET_ARCHITECTURE.md` is the derived target architecture; it and `docs/app/09_NEA_MVP_PLAN.md` remain drafts awaiting explicit Daan approval.
+- `docs/app/07_NEA_TARGET_ARCHITECTURE.md` remains the derived primary target architecture. Its bounded internal foundation subset is approved by Daan; broader target, external adapter, REV, official-verifier, remote, deployment and production scope remains draft or no-go. `docs/app/09_NEA_MVP_PLAN.md` remains the normative gate plan within that boundary.
 - No derived ENVAL document may contradict the official PDF. A conflict or new official version is a hard stop and requires a new source diff before affected requirements, architecture, or implementation work can continue.
 
 ### Official Electricity TKV Source Snapshot
@@ -108,9 +112,9 @@ Primary canon documents:
 | `docs/app/02_PRODUCT_MODEL.md` | ENVAL product role, doelgroep, commercial direction, and public claim boundaries | CURRENT / PARTIAL |
 | `docs/app/05_NEA_COMPLIANCE_DIRECTIVE.md` | norm hierarchy, compliance principles, stopgates | CURRENT |
 | `docs/app/06_NEA_REQUIREMENTS.md` | single primary requirement set | CURRENT / PARTIAL — ELECTRICITY TKV MAPPED; OTHER LEGAL/EXTERNAL GAPS OPEN |
-| `docs/app/07_NEA_TARGET_ARCHITECTURE.md` | single primary target architecture: contexts, truth ownership, module/adapter/security boundaries, requirement families, principles | DRAFT — AWAITING DAAN APPROVAL / PARTIAL — ELECTRICITY TKV MAPPED; OTHER GAPS OPEN |
+| `docs/app/07_NEA_TARGET_ARCHITECTURE.md` | single primary target architecture: contexts, truth ownership, module/adapter/security boundaries, requirement families, principles | APPROVED FOR BOUNDED INTERNAL FOUNDATION IMPLEMENTATION; BROADER TARGET DRAFT / REGULATORY PARTIAL |
 | `docs/app/08_NEA_TRACEABILITY_MATRIX.md` | single primary source-to-requirement-to-control traceability matrix | PROVISIONAL |
-| `docs/app/09_NEA_MVP_PLAN.md` | single primary execution order after GO | PRELIMINARY - NOT APPROVED |
+| `docs/app/09_NEA_MVP_PLAN.md` | single primary execution order and normative gates | BOUNDED INTERNAL FOUNDATION GO; EXCLUDED SCOPES NO-GO |
 
 Supporting documents have one responsibility each and do not compete with the primary canon:
 
@@ -120,7 +124,7 @@ Supporting documents have one responsibility each and do not compete with the pr
 | `docs/app/06A_NEA_REGULATORY_COMPLETENESS_AUDIT.md` | official source coverage and source blockers | PROOF ONLY |
 | `docs/app/06B_CURRENT_IMPLEMENTATION_ASSESSMENT.md` | current code/database/function/proof assessment | PROOF ONLY |
 | `docs/app/architecture/database-target-model.md` | technical data entities, relations, history, constraints, RLS intent, object dispositions | DRAFT — AWAITING DAAN APPROVAL; APPENDIX, NOT PRIMARY ARCHITECTURE |
-| `docs/app/decisions/architecture-and-environment-decisions.md` | historical/current architecture and environment strategy decisions | DECISION RECORD — STRATEGY SELECTED, EXECUTION NOT APPROVED |
+| `docs/app/decisions/architecture-and-environment-decisions.md` | historical/current architecture and environment strategy decisions | DECISION RECORD — BOUNDED INTERNAL FOUNDATION GO; EXCLUDED SCOPES NO-GO |
 | `docs/app/operations/remote-baseline-and-retirement.md` | legacy freeze, baseline waves, cutover, rollback, retirement conditions, execution prerequisites, abort criteria | TARGET — EXECUTION NOT APPROVED |
 | `docs/app/operations/nea-implementation-roadmap.md` | compact daily sequence, progress, evidence, blockers, and internal/external work tracks; subordinate to requirements, traceability, target architecture, and MVP gates | TARGET — LIVE EXECUTION TRACKER |
 | `docs/app/proofs/remote-baseline-and-recovery-gate.md` | dated remote inventory, Phase 0, recovery/PostgREST evidence, remote gate | PROOF ONLY — NO IMPLEMENTATION APPROVAL |

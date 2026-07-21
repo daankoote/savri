@@ -519,3 +519,12 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Added target-only internal support-control, internal/external capability, provider-independent port/adapter, provenance, and database-extensibility rules.
 - Architecture remains DRAFT and implementation remains NO-GO pending explicit Daan approval.
 - No runtime, SQL, migration, Function, Auth, Storage, cron, package/config, database, remote, commit, push, or deploy action was performed.
+
+## 2026-07-21 - Record bounded internal foundation implementation GO
+
+- DAAN DECISION: GO — BOUNDED INTERNAL FOUNDATION PHASE
+- Established the documentation, official-source, and architecture baseline in commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805` with message `Establish NEa documentation baseline`.
+- Approved architecture implementation scope: customer/person/organization; representation foundation; case foundation; locations; connections and EAN structure; chargers; charge points; meters and MID evidence structure; documents and evidence; parser inventory and modular parser adapters; internal reviews; support controls; corrections and supersede history; raw and normalized kWh foundations; audit and provenance; provider-independent external ports.
+- Explicitly not approved: remote schema apply; remote migration; deployment; production; push; CAR adapter; EAN/register adapter; KvK adapter; MID-registeradapter; CPO/provideradapter; energieleverancieradapter; REV-integratie; betaalprovider; officiële verifierbeslissingen; definitieve retentionuitvoering; definitieve legal/mandate-tekst; booking- of settlementuitvoering.
+- The GO records permission to begin bounded internal foundation work under package-specific local contracts, tests, and proof gates; it records no implementation-complete status.
+- No runtime, SQL, migration, Function, Auth, Storage, cron, package/config, database, remote, deploy, or push action was performed in this decision-recording batch.

@@ -4,6 +4,10 @@ Status: TARGET — LIVE EXECUTION TRACKER
 
 Authority: operational tracker only; it does not override the official TKV source, requirements, traceability matrix, target architecture, or MVP gates.
 
+DAAN DECISION: GO — BOUNDED INTERNAL FOUNDATION PHASE
+
+Baseline commit: `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`.
+
 This is the compact daily view of sequence, progress, evidence, and blockers. `docs/app/09_NEA_MVP_PLAN.md` remains the normative gate plan; this roadmap does not create implementation, remote, deploy, or provider authority.
 
 ## Source Hierarchy
@@ -35,34 +39,75 @@ The tracker never removes a blocker itself. A status changes only when the appli
 
 | field | value |
 |---|---|
-| Current phase | `0 — Canon, official source and architecture baseline` |
-| Current work package | Documentation baseline closure inside work package `0` |
-| Last completed work package | `1 — Current implementation to target reconciliation` — `COMPLETE — UNCOMMITTED` |
-| Next executable work package | Documentation baseline commit inside work package `0` — `READY`; explicitly not executed in this documentation batch |
-| Current blockers | No blocker for the documentation baseline commit; work package `3` resumes afterward under the Gate 1 read/review contract in `09`, while work package `2` remains `TODO` until its own contract is start-ready |
+| Current phase | Bounded internal foundation implementation |
+| Current work package | Customer, person, organization, representation and case foundation |
+| Last completed work package | Current implementation to target reconciliation |
+| Next executable work package | Customer, person, organization, representation and case foundation |
+| Current blockers | No blocker to start the bounded internal work package; package proof gates remain mandatory and excluded scopes remain no-go |
 | External research running in parallel | CAR, EAN/aangeslotene, DSO, KvK, MID/certificate sources, CPO/backoffice, energy supplier, kWh exchange, REV, verifier, and payment provider where relevant |
 | Last updated | 2026-07-21 |
-| Evidence reference | Working tree at `f24b90263c3e22b8fdebd8c3fa016594ddfa7333`; official TKV snapshot; `06A`, `06B`, `08`, `09`, and `10` |
+| Evidence reference | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; official TKV snapshot; `06A`, `06B`, `08`, `09`, and `10` |
 
-Decision boundary: Daan approved the internal phase and the documentation baseline commit. This batch adds documentation only. It performs neither implementation nor the commit, and it grants no remote or deploy permission.
+## Bounded Internal Foundation Decision
+
+Architecture implementation scope:
+
+- customer/person/organization;
+- representation foundation;
+- case foundation;
+- locations;
+- connections and EAN structure;
+- chargers;
+- charge points;
+- meters and MID evidence structure;
+- documents and evidence;
+- parser inventory and modular parser adapters;
+- internal reviews;
+- support controls;
+- corrections and supersede history;
+- raw and normalized kWh foundations;
+- audit and provenance;
+- provider-independent external ports.
+
+Not approved:
+
+- remote schema apply;
+- remote migration;
+- deployment;
+- production;
+- push;
+- CAR adapter;
+- EAN/register adapter;
+- KvK adapter;
+- MID-registeradapter;
+- CPO/provideradapter;
+- energieleverancieradapter;
+- REV-integratie;
+- betaalprovider;
+- officiële verifierbeslissingen;
+- definitieve retentionuitvoering;
+- definitieve legal/mandate-tekst;
+- booking- of settlementuitvoering.
+
+The bounded GO authorizes only internal foundation implementation within the listed architecture scope. It creates no implementation-complete claim and no remote, external-provider, REV, official-verification, production, deploy, or push authority.
 
 ## Initial Validated Baseline
 
 | item | status | evidence reference |
 |---|---|---|
-| Official TKV source and 19/19 present-clause mapping | COMPLETE — UNCOMMITTED | Working tree at `f24b90263c3e22b8fdebd8c3fa016594ddfa7333`; official PDF SHA-256 `f08ae9cc56d7145f8962e9e0930f0e9b8676a55e73437aba4f0193b3edcc55cf`; `06A` |
-| Legacy documentation removed | COMPLETE — UNCOMMITTED | Working tree at the same HEAD; `00_DOCUMENT_MIGRATION_AUDIT` and `10` |
-| Documentation structure and target architecture review package | COMPLETE — UNCOMMITTED | Working tree at the same HEAD; `07`, database target appendix, decisions, operations, proofs, and `10` |
-| Current implementation assessment | COMPLETE — UNCOMMITTED | Working tree at the same HEAD; `06B` and traceability overlay in `08` |
-| Documentation baseline commit | READY | Daan decision recorded for this roadmap batch; commit remains intentionally unexecuted |
+| Official TKV source and 19/19 present-clause mapping | COMPLETE — CURRENT PROVEN | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; official PDF SHA-256 `f08ae9cc56d7145f8962e9e0930f0e9b8676a55e73437aba4f0193b3edcc55cf`; `06A` |
+| Legacy documentation removed | COMPLETE — CURRENT PROVEN | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; `00_DOCUMENT_MIGRATION_AUDIT` and `10` |
+| Documentation structure and target architecture review package | COMPLETE — CURRENT PROVEN | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; `07`, database target appendix, decisions, operations, proofs, and `10` |
+| Current implementation assessment | COMPLETE — CURRENT PROVEN | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; `06B` and traceability overlay in `08` |
+| Documentation baseline commit | COMPLETE — CURRENT PROVEN | Commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805` with message `Establish NEa documentation baseline` |
 
 ## Chronological Roadmap
 
 | sequence | work_package | purpose | status | NEa/TKV_requirements | architecture_boundary | internal_or_external | dependencies | expected_modules | database_impact | test_and_proof_gate | last_evidence | next_action |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 0 | Canon, official source and architecture baseline | Lock source hierarchy, 19-clause mapping, review package, and documentation baseline. | IN PROGRESS | NEA-OPS-002/004; all mapped requirement families | Documentation and source governance only. | Internal documentation plus official source | Green validation; baseline commit | Canon, source registry, audits, architecture package | None | Source hash/pages/clauses, reference checks, `git diff --check` | Official source, mapping, structure, and assessment are green in the uncommitted working tree. | Execute the separately permitted documentation baseline commit after accepting this batch. |
-| 1 | Current implementation to target reconciliation | Inventory current frontend, functions, database, proofs, and dispositions against target requirements. | COMPLETE — UNCOMMITTED | All 73 requirement rows | Proof-only assessment; no target approval by inventory alone. | Internal documentation/proof | Work package 0 source and architecture inputs | Current implementation assessment; traceability overlay | None | Complete inventory and disposition evidence | `06B` and `08` at working tree HEAD `f24b90263c3e22b8fdebd8c3fa016594ddfa7333` | Preserve assessment as baseline evidence; update only when implementation proof changes. |
-| 2 | Customer, person, organization, representation and case foundation | Establish provider-independent party, authority, identity, and case contracts. | TODO | NEA-ORG; NEA-MAND-003; NEA-SEC | Internal core truth; legal authority remains evidence-bound. | Internal | Documentation baseline commit; accepted design/contract | Customer, identity, legal entity, representative, case, roles | Target entities and history; no SQL from this roadmap | Contract, role, RLS, audit, negative-boundary, and local proof gates | Existing customer/auth/case primitives inventoried in `06B`; target in `07` and database appendix | Define the bounded contract and exact reuse/rebuild disposition. |
+| 0 | Canon, official source and architecture baseline | Lock source hierarchy, 19-clause mapping, review package, and documentation baseline. | COMPLETE — CURRENT PROVEN | NEA-OPS-002/004; all mapped requirement families | Documentation and source governance only. | Internal documentation plus official source | Green validation; baseline commit | Canon, source registry, audits, architecture package | None | Source hash/pages/clauses, reference checks, `git diff --check` | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805` | Maintain source-change and supersede hard stops. |
+| 1 | Current implementation to target reconciliation | Inventory current frontend, functions, database, proofs, and dispositions against target requirements. | COMPLETE — CURRENT PROVEN | All 73 requirement rows | Proof-only assessment; no implementation-complete claim by inventory alone. | Internal documentation/proof | Work package 0 source and architecture inputs | Current implementation assessment; traceability overlay | None | Complete inventory and disposition evidence | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; `06B` and `08` | Preserve assessment as baseline evidence; update only when implementation proof changes. |
+| 2 | Customer, person, organization, representation and case foundation | Establish provider-independent party, authority, identity, and case contracts. | READY | NEA-ORG; NEA-MAND-003; NEA-SEC | Internal core truth; legal authority remains evidence-bound. | Internal | Baseline commit; Daan bounded internal foundation GO | Customer, identity, legal entity, representative, case, roles | Target entities and history; no SQL from this roadmap | Contract, role, RLS, audit, negative-boundary, and local proof gates | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; current primitives inventoried in `06B`; target in `07` and database appendix | Start with the bounded design/contract and exact reuse/rebuild disposition; do not claim implementation complete. |
 | 3 | Location, connection/EAN and validity periods | Complete location/connection truth, temporal facts, ownership claims, and safe review/read boundaries. | IN PROGRESS | NEA-EAN; NEA-AUD-002; NEA-SEC-001/002 | Declared and reviewed internal truth; CAR/DSO truth remains external. | Hybrid | Documentation baseline commit; existing Gate 1 foundation; accepted read/review contract; CAR/manual evidence contract | Locations, connections, connection periods, ownership periods, read projection, ops review | Existing local foundation requires later approved migration handling | Existing local schema/write proof plus future read/review, boundary, history, and negative proofs | Gate 1 local schema and service-side write RPC proofs documented in `08` and `09` | Resume the Gate 1 read projection and operations review contract after the documentation baseline commit. |
 | 4 | Charger, charge point, meter/MID and asset relationships | Split assets, measured points, meter identity, conformity evidence, and validity. | TODO | NEA-CHG; NEA-MID | Internal asset truth; conformity conclusion and external evidence stay separate. | Hybrid | Work package 3; evidence and external source contracts | Chargers, charge points, meters/MID, evidence links | Target entity split and historization | Asset/location/EAN/period linkage, conformity boundary, history, and negative proofs | Current charger snapshot and document-slot primitives inventoried in `06B` | Define asset model and accepted-evidence review contract. |
 | 5 | Mandates, permissions and representation evidence | Build signed versioned mandates with exact actors, clauses, EANs, dates, validity, withdrawal, and renewal. | TODO | NEA-MAND-001-005 | Legal acceptance is not a complete mandate; legal/verifier acceptance remains external. | Hybrid | Work packages 2-4; final wording/e-sign evidence decision | Mandates, mandate versions, signing, authority evidence | Dedicated target mandate/version entities | Exact-field, signer, authority, permission, calendar-year, withdrawal, and supersede proofs | Requirement and TKV clause mapping in `06`, `06A`, and `08` | Resolve final Dutch wording and evidence standard before build. |
@@ -123,33 +168,33 @@ External research may run in parallel, but it may not introduce provider-specifi
 | External research | verificateur | BLOCKED — EXTERNAL | Engagement, protocol, requests, plan, visits, findings, result, and access boundaries. |
 | External research | betaalprovider wanneer relevant | DEFERRED | Provider choice follows the approved finance and settlement model. |
 
-## Detailed Tracking — Current Work Package 0
+## Detailed Tracking — Current Work Package 2
 
 | checklist item | status | evidence / gate |
 |---|---|---|
-| design/contract | COMPLETE — UNCOMMITTED | Canon, source hierarchy, requirements, traceability, target review package, and tracker are aligned in the working tree. |
-| existing module inventory | COMPLETE — UNCOMMITTED | `06B` inventories frontend, functions, database, migrations, tests, and proofs. |
-| existing CSS inventory indien UI relevant | COMPLETE — UNCOMMITTED | `06B` and `10` record the CSS inventory; this batch makes no CSS change. |
-| database | NOT APPLICABLE | Documentation baseline only. |
-| Edge Function/service | NOT APPLICABLE | Documentation baseline only. |
-| frontend/UI | NOT APPLICABLE | Documentation baseline only. |
-| tests | COMPLETE — UNCOMMITTED | Documentation/reference validation is required before acceptance. |
-| SQL proof | NOT APPLICABLE | No SQL or database action belongs to this package. |
-| browser proof | NOT APPLICABLE | Documentation-only change has no browser-visible runtime behavior. |
-| documentation update | COMPLETE — UNCOMMITTED | Roadmap and subordinate canon, docs-index, MVP, and audit-inventory references are present and validated in this working tree. |
-| accepted by Daan | COMPLETE — UNCOMMITTED | Daan selected internal phase GO and permission for the documentation baseline commit. |
-| commit | READY | Explicitly allowed after acceptance, but not executed in this batch. |
-| remote/deploy separately approved | NOT APPLICABLE | This documentation baseline has no remote/deploy action. |
+| design/contract | READY | Define customer, identity, legal entity, representation, case, role, history, and authority boundaries within the bounded GO. |
+| existing module inventory | COMPLETE — CURRENT PROVEN | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; `06B` inventories current customer/auth/case modules and dispositions. |
+| existing CSS inventory indien UI relevant | COMPLETE — CURRENT PROVEN | Baseline commit records the existing UI/CSS inventory; no styling implementation is authorized by this status. |
+| database | TODO | Design target entities and exact reuse/rebuild disposition before a separately scoped implementation batch. |
+| Edge Function/service | TODO | Define service-side write/read contracts and role checks. |
+| frontend/UI | TODO | Define customer-safe identity, organization, representation, and case projections. |
+| tests | TODO | Contract, validation, role, audit, idempotency, history, and negative-boundary coverage. |
+| SQL proof | TODO | Only within a separately scoped local implementation batch; this decision commit contains no SQL. |
+| browser proof | TODO | Required when approved customer-visible behavior is implemented. |
+| documentation update | COMPLETE — UNCOMMITTED | Bounded GO, exclusions, baseline evidence, roadmap status, decisions, audit, canon, MVP, and changelog are aligned for the decision commit. |
+| accepted by Daan | COMPLETE — CURRENT PROVEN | `DAAN DECISION: GO — BOUNDED INTERNAL FOUNDATION PHASE` recorded after baseline commit. |
+| commit | TODO | Only after implemented behavior and required proof are accepted. |
+| remote/deploy separately approved | BLOCKED — DECISION | Bounded internal GO grants no remote mutation, deployment, production, or push authority. |
 
 ## Detailed Tracking — Directly Following Work Package 3
 
-Work package 3 is already `IN PROGRESS` from existing local Gate 1 proof, and `09` names its connection read projection and operations review contract as the next local execution batch after the documentation baseline commit. Work package 2 remains earlier in the complete chronology but is not yet `READY`; no implementation-complete status is inferred from this sequencing.
+Work package 3 is already `IN PROGRESS` from existing local Gate 1 proof, and `09` keeps its connection read projection and operations review contract as the in-progress foundation package directly following work package 2. Work package 2 is `READY` and remains the current/next executable work package; no implementation-complete status is inferred from either status.
 
 | checklist item | status | evidence / gate |
 |---|---|---|
 | design/contract | TODO | Define the customer-safe connection read projection and operations review contract without creating CAR, REV, eligibility, or verifier authority. |
-| existing module inventory | COMPLETE — UNCOMMITTED | Connection tables, service-side write RPCs, callers, current projections, and proof references are inventoried in `06B`, `08`, and `09`. |
-| existing CSS inventory indien UI relevant | COMPLETE — UNCOMMITTED | Existing UI/CSS inventory is recorded; no styling decision is implied by this contract package. |
+| existing module inventory | COMPLETE — CURRENT PROVEN | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; connection tables, service-side write RPCs, callers, current projections, and proof references are inventoried in `06B`, `08`, and `09`. |
+| existing CSS inventory indien UI relevant | COMPLETE — CURRENT PROVEN | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; existing UI/CSS inventory is recorded and no styling decision is implied by this contract package. |
 | database | IN PROGRESS | Local connection, period, and ownership foundations have green proof; read/review objects and final target disposition remain open. |
 | Edge Function/service | TODO | Define authenticated customer-safe reads and authorized operations review transitions. |
 | frontend/UI | TODO | Define customer-safe connection status and operations review surfaces only after the response contract. |
@@ -157,7 +202,7 @@ Work package 3 is already `IN PROGRESS` from existing local Gate 1 proof, and `0
 | SQL proof | IN PROGRESS | Existing local schema/write proofs are evidence only; the read/review contract requires its own separately accepted proof. |
 | browser proof | TODO | Required only when approved customer-visible behavior is implemented. |
 | documentation update | TODO | Update contracts, traceability, roadmap, TODO, MVP evidence reference, and changelog after an accepted batch. |
-| accepted by Daan | COMPLETE — UNCOMMITTED | Internal phase GO is recorded; the package remains bound to the accepted local contract and proof gates. |
+| accepted by Daan | COMPLETE — CURRENT PROVEN | Internal phase GO is recorded; the package remains bound to the accepted local contract and proof gates. |
 | commit | TODO | Only after implementation and required proof are accepted. |
 | remote/deploy separately approved | BLOCKED — DECISION | Internal GO grants no remote mutation, deployment, or production authority. |
 
