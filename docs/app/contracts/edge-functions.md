@@ -28,6 +28,7 @@ Business-write `api-app-*` endpoints must include:
 - AUD: app audit or intake audit
 - AUTH: explicit app auth boundary where required
 - SRV: service-role server writes only
+- DEP: explicit runtime dependencies; no hidden bucket, RPC, role, secret, migration, or fallback assumptions
 
 Frontend may assist; backend decides.
 
@@ -114,3 +115,5 @@ Current app classification:
 - UTILITY: none currently in the app namespace
 
 Do not claim a future endpoint is CURRENT before it exists and is proven.
+
+Legacy endpoint inventories and uniformity checks may be used as migration source material only. They do not make `api-dossier-*`, legacy token/session contracts, or legacy table writes current for `/app`.

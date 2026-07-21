@@ -1523,7 +1523,7 @@ J. Connect frontend submit/dashboard to real backend
 - Storage bucket separation and path convention.
 - Whether document uploads are required at signup or can be requested later.
 - Old dossier migration/bridge policy.
-- Legacy neutral-infrastructure wording is isolated under `docs/legacy/**`; do not use it as app canon.
+- Legacy neutral-infrastructure wording has been removed from the repo; do not use old external copies as app canon.
 - Public copy/legal copy finalization.
 - Provider/backend supplier connection flow for kWh readout.
 - MID existence and charger/person/company verification sources.

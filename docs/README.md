@@ -1,49 +1,23 @@
 # ENVAL Documentation
 
-Current implementation and product canon starts in `docs/app/`.
+The only primary documentation navigation and status index is `docs/app/00_CANON.md`.
 
-Legacy root/static documentation is preserved under `docs/legacy/` and is not current for new app work.
+The former in-repo legacy documentation tree has been removed after external copy by Daan. Historical copies outside the repo are not source of truth.
 
-## Current App Canon
+## Primary Entry
 
 - `docs/app/00_CANON.md`
-- `docs/app/01_SYSTEM_MAP.md`
-- `docs/app/02_PRODUCT_MODEL.md`
-- `docs/app/03_CHANGELOG_APPEND_ONLY.md`
-- `docs/app/04_TODO.md`
+- `docs/app/07_NEA_TARGET_ARCHITECTURE.md` is the only primary proposed target architecture.
 
-## Current App Contracts
+Use that file for canonical status, source order, and active document navigation. This README is only a repository-level pointer.
 
-- `docs/app/contracts/auth.md`
-- `docs/app/contracts/signup-dashboard.md`
-- `docs/app/contracts/document-upload.md`
-- `docs/app/contracts/edge-functions.md`
-- `docs/app/contracts/audit.md`
+Supporting structure:
 
-## Current App Architecture
-
-- `docs/app/architecture/frontend.md`
-- `docs/app/architecture/backend.md`
-- `docs/app/architecture/signup-intake.md`
-- `docs/app/architecture/dashboard-lifecycle.md`
-- `docs/app/architecture/schema.md`
-
-## Current App Operations
-
-- `docs/app/operations/git-workflow.md`
-- `docs/app/operations/run-debug.md`
-- `docs/app/operations/legacy-function-migration-audit.md`
-
-## Legal And Proofs
-
-- `docs/app/legal/fee-model-and-service-terms.md`
-- `docs/app/proofs/signup-submit.md`
-
-## Legacy
-
-- `docs/legacy/README.md`
-- `docs/legacy/root-static/README.md`
-- `docs/legacy/root-static/`
-- `docs/legacy/tooling/`
-
-Legacy files may be reused only after explicit review and adaptation into `docs/app/`.
+- `docs/app/sources/official/nea/2026-07-09_toetsingskader-verificatieprotocol_inboekverificatie_elektriciteit.pdf`: immutable official NEa source snapshot; primary operational verification-architecture source, not ENVAL-authored documentation or implementation proof;
+- `docs/app/architecture/database-target-model.md`: technical target-data appendix, not competing architecture;
+- `docs/app/decisions/architecture-and-environment-decisions.md`: strategy and decision history, not execution permission;
+- `docs/app/operations/remote-baseline-and-retirement.md`: execution plan with status `TARGET — EXECUTION NOT APPROVED`;
+- `docs/app/operations/nea-implementation-roadmap.md`: compact daily sequence, progress, evidence, and blockers; an operational tracker subordinate to the official TKV source, requirements, traceability matrix, target architecture, and MVP gates;
+- `docs/app/proofs/remote-baseline-and-recovery-gate.md`: dated proof with status `PROOF ONLY — NO IMPLEMENTATION APPROVAL`;
+- `docs/app/09_NEA_MVP_PLAN.md`: preliminary execution plan;
+- `docs/app/10_ARCHITECTURE_GO_NO_GO_AUDIT.md`: go/no-go decision audit.

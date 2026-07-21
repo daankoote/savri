@@ -1,12 +1,48 @@
 # ENVAL App Canon
 
-Status: CURRENT source of truth for the new ENVAL `/app` product and implementation.
+Status: CURRENT source of truth for ENVAL documentation authority, source order, and navigation.
 
-This file overrides every legacy document for new app work. If a legacy file conflicts with this document, this document wins.
+Audit evidence status: PROOF ONLY.
+
+Proposed canon and architecture status: DRAFT — AWAITING DAAN APPROVAL where documents describe future target architecture, MVP order, or regulatory/TKV-dependent controls.
+
+This file is the only primary navigation and status index for active app documentation. It overrides every legacy document for new app work. If a legacy file conflicts with this document, this document wins.
+
+NEa compliance hierarchy:
+
+- The Wet milieubeheer, Besluit energie vervoer, and Regeling energie vervoer are the higher legal authorities.
+- De versioned officiële TKV-PDF is de primaire operationele verificatiearchitectuurbron voor ENVAL.
+- Canonical repository path: `docs/app/sources/official/nea/2026-07-09_toetsingskader-verificatieprotocol_inboekverificatie_elektriciteit.pdf`.
+- Source status: OFFICIAL SOURCE SNAPSHOT.
+- `docs/app/05_NEA_COMPLIANCE_DIRECTIVE.md` is the highest internal NEa compliance directive.
+- `docs/app/06_NEA_REQUIREMENTS.md` is the normalized requirement set derived from the legal and official sources.
+- `docs/app/08_NEA_TRACEABILITY_MATRIX.md` connects source, requirement, component, data, test, and evidence.
+- `docs/app/06A_NEA_REGULATORY_COMPLETENESS_AUDIT.md` is mandatory proof before any NEa target architecture or MVP plan may be approved.
+- Current code, schema, migrations, tests, and proof output remain the technical truth for what is actually implemented.
+- `docs/app/07_NEA_TARGET_ARCHITECTURE.md` is the derived target architecture; it and `docs/app/09_NEA_MVP_PLAN.md` remain drafts awaiting explicit Daan approval.
+- No derived ENVAL document may contradict the official PDF. A conflict or new official version is a hard stop and requires a new source diff before affected requirements, architecture, or implementation work can continue.
+
+### Official Electricity TKV Source Snapshot
+
+| field | value |
+| --- | --- |
+| title | `Toetsingskader verificatieprotocol: Inboekverificatie elektriciteit` |
+| publisher | Nederlandse Emissieautoriteit |
+| publication date | 2026-07-09 |
+| official URL | `https://www.emissieautoriteit.nl/site/binaries/site-content/collections/documents/2026/07/09/toetsingskader-verificatieprotocol-inboekverificatie-elektriciteit/toetsingskader-verificatieprotocol-inboekverificatie-elektriciteit.pdf` |
+| repository path | `docs/app/sources/official/nea/2026-07-09_toetsingskader-verificatieprotocol_inboekverificatie_elektriciteit.pdf` |
+| page count | 10 |
+| file size | 832788 bytes |
+| SHA-256 | `f08ae9cc56d7145f8962e9e0930f0e9b8676a55e73437aba4f0193b3edcc55cf` |
+| retrieval date | 2026-07-21 |
+| mapping status | PASS — all 19 present numbered clauses mapped; the source contains no 3.3.5 |
+| source status | OFFICIAL SOURCE SNAPSHOT; not an ENVAL-authored document and not CURRENT PROVEN implementation |
+
+Supersede procedure: retain the current snapshot immutably, download any new official version outside the repository, verify its metadata, store it under a new versioned name, run a clause/source diff, assess impacted requirement IDs, traceability, architecture, tests and evidence, and only then designate the newer snapshot as primary. Until that review is complete, the affected path is hard-stopped.
 
 ## Product Canon
 
-ENVAL is a customer-facing commercial ERE inboeker.
+ENVAL is being built as a customer-facing commercial ERE-E inboekdienstverlener.
 
 The current `/app` product scope includes:
 
@@ -14,7 +50,18 @@ The current `/app` product scope includes:
 - zakelijk
 - VVE
 
-ENVAL is responsible for customer intake, dossier construction, evidence lifecycle, audit trail, and the ERE inboeking service within the final legal/commercial terms.
+CURRENT PROVEN scope is customer intake, dossier construction, evidence lifecycle, audit trail, and app document handling foundations where current code, schema, and proof output show that behavior.
+
+TARGET scope is the ERE-E inboekdienstverlener service within final legal, regulatory, operational, and commercial terms.
+
+UNKNOWN until separately proven:
+
+- REV account status
+- NEa list publication status
+- mandate and contract execution model
+- exact inboeking execution process
+- verifier interaction model
+- final legal/commercial responsibility split
 
 Commercial direction:
 
@@ -40,6 +87,49 @@ ENVAL does not guarantee:
 - certification outcome
 - approval of every document
 
+## Regulatory Status Rule
+
+Official law, NEa publications, current app code/schema/tests, and green proof output lead over every document.
+
+The ENVAL role direction is ERE-E inboekdienstverlener. That does not by itself prove NEa approval, accreditation, REV account access, list publication, mandate volume, verifier readiness, or production eligibility. Those claims require current regulatory and implementation evidence.
+
+Removed legacy documentation is never regulatory source of truth. Old claims about neutral infrastructure, external inboekers, fixed export fees, private-only scope, maximum document counts, old endpoints, old session models, or old dossier states are historical unless this document or a focused app contract explicitly re-adopts the principle.
+
+Detailed NEa requirements belong in `docs/app/06_NEA_REQUIREMENTS.md`. Traceability belongs in `docs/app/08_NEA_TRACEABILITY_MATRIX.md`. Target architecture belongs in `docs/app/07_NEA_TARGET_ARCHITECTURE.md`. They must not be scattered as implementation claims across unrelated docs.
+
+## Canon Navigation And Status Index
+
+Primary canon documents:
+
+| document | responsibility | current status |
+| --- | --- | --- |
+| `docs/app/00_CANON.md` | navigation, status, source order, and governance | CURRENT |
+| `docs/app/01_SYSTEM_MAP.md` | CURRENT PROVEN implementation and runtime context only | CURRENT / PARTIAL |
+| `docs/app/02_PRODUCT_MODEL.md` | ENVAL product role, doelgroep, commercial direction, and public claim boundaries | CURRENT / PARTIAL |
+| `docs/app/05_NEA_COMPLIANCE_DIRECTIVE.md` | norm hierarchy, compliance principles, stopgates | CURRENT |
+| `docs/app/06_NEA_REQUIREMENTS.md` | single primary requirement set | CURRENT / PARTIAL — ELECTRICITY TKV MAPPED; OTHER LEGAL/EXTERNAL GAPS OPEN |
+| `docs/app/07_NEA_TARGET_ARCHITECTURE.md` | single primary target architecture: contexts, truth ownership, module/adapter/security boundaries, requirement families, principles | DRAFT — AWAITING DAAN APPROVAL / PARTIAL — ELECTRICITY TKV MAPPED; OTHER GAPS OPEN |
+| `docs/app/08_NEA_TRACEABILITY_MATRIX.md` | single primary source-to-requirement-to-control traceability matrix | PROVISIONAL |
+| `docs/app/09_NEA_MVP_PLAN.md` | single primary execution order after GO | PRELIMINARY - NOT APPROVED |
+
+Supporting documents have one responsibility each and do not compete with the primary canon:
+
+| document family | responsibility | status |
+| --- | --- | --- |
+| `docs/app/00_DOCUMENT_MIGRATION_AUDIT.md` | legacy/document migration proof | PROOF ONLY / DRAFT |
+| `docs/app/06A_NEA_REGULATORY_COMPLETENESS_AUDIT.md` | official source coverage and source blockers | PROOF ONLY |
+| `docs/app/06B_CURRENT_IMPLEMENTATION_ASSESSMENT.md` | current code/database/function/proof assessment | PROOF ONLY |
+| `docs/app/architecture/database-target-model.md` | technical data entities, relations, history, constraints, RLS intent, object dispositions | DRAFT — AWAITING DAAN APPROVAL; APPENDIX, NOT PRIMARY ARCHITECTURE |
+| `docs/app/decisions/architecture-and-environment-decisions.md` | historical/current architecture and environment strategy decisions | DECISION RECORD — STRATEGY SELECTED, EXECUTION NOT APPROVED |
+| `docs/app/operations/remote-baseline-and-retirement.md` | legacy freeze, baseline waves, cutover, rollback, retirement conditions, execution prerequisites, abort criteria | TARGET — EXECUTION NOT APPROVED |
+| `docs/app/operations/nea-implementation-roadmap.md` | compact daily sequence, progress, evidence, blockers, and internal/external work tracks; subordinate to requirements, traceability, target architecture, and MVP gates | TARGET — LIVE EXECUTION TRACKER |
+| `docs/app/proofs/remote-baseline-and-recovery-gate.md` | dated remote inventory, Phase 0, recovery/PostgREST evidence, remote gate | PROOF ONLY — NO IMPLEMENTATION APPROVAL |
+| `docs/app/contracts/**` | durable technical contracts | CURRENT/TARGET as stated inside each file |
+| `docs/app/operations/**` | workflow, runtime freeze, debug, and execution planning without execution permission | OPERATIONS |
+| `docs/app/proofs/**` | evidence only; never architecture or execution permission | PROOF ONLY |
+| `docs/app/legal/**` | legal/commercial draft terms | DRAFT / LEGAL REVIEW |
+| `artikelen/**/artikel.md` | publication content | NOT ARCHITECTURE CANON |
+
 ## Architecture Canon
 
 Current implementation direction:
@@ -56,12 +146,33 @@ Legacy/fallback surface:
 - Legacy `dossier_*` tables remain legacy/fallback only.
 - New app work must not write app audit/idempotency to legacy tables.
 
-The recent app backend is retained as valid foundation:
+The recent app backend has reusable proof evidence, but it is not architecture-approved merely because local proof exists.
+
+Technical primitives that may remain valid when proof is green and interfaces stay modular:
+
+- app audit/idempotency primitives
+- app customer auth boundary helpers
+- document transport primitives for upload URL, byte confirmation, version history, download URL, and withdrawal
+- RLS deny-by-default and server-side service-role write boundaries
+
+Regulatory-semantics foundations are only:
+
+`PROVISIONALLY REUSABLE — FINAL DISPOSITION AFTER REGULATORY CANON`
+
+This applies at least to:
 
 - `app_customers`, `app_customer_identities`, and `app_customer_dossiers`
 - account types: `particulier`, `zakelijk`, `vve`
 - multiple locations
 - multiple chargers
+- EAN/connection foundations: `app_connections`, `app_connection_periods`, `app_connection_ownership_periods`
+- signup intake/quarantine: `app_signup_intakes`, `app_signup_intake_files`, `app_signup_intake_capabilities`
+- legal acceptances where they are compared to signed mandates
+
+Current local proof does not approve CAR access, REV compatibility, verifier process, AO/IB detail, CAPA detail, mandate wording, production compliance, remote deployment, or Wave 1 execution.
+
+Current technical primitives retained as proven or partially proven where code/proof supports them:
+
 - app audit/idempotency
 - app customer auth foundation
 - app document slots/files/versions
@@ -96,28 +207,37 @@ Target-only lifecycle definition:
 
 When sources conflict, use this order:
 
-1. Current code, migrations, and proof output.
-2. `docs/app/00_CANON.md`.
-3. `docs/app/01_SYSTEM_MAP.md`.
-4. `docs/app/02_PRODUCT_MODEL.md`.
-5. `docs/app/03_CHANGELOG_APPEND_ONLY.md`.
-6. `docs/app/04_TODO.md`.
-7. Focused contracts under `docs/app/contracts/`.
-8. Architecture, operations, legal, and proof documents under `docs/app/`.
-9. Legacy files under `docs/legacy/**` only when explicitly referenced as legacy source material.
+1. Wet milieubeheer, Besluit energie vervoer, and Regeling energie vervoer.
+2. The versioned official electricity-TKV PDF for operational verification-architecture interpretation, subordinate to those legal sources.
+3. `docs/app/06_NEA_REQUIREMENTS.md` as the normalized requirement set.
+4. `docs/app/08_NEA_TRACEABILITY_MATRIX.md` as the source-to-component/data/test/evidence link.
+5. `docs/app/07_NEA_TARGET_ARCHITECTURE.md` as the derived, unapproved target architecture.
+6. `docs/app/05_NEA_COMPLIANCE_DIRECTIVE.md` for internal compliance direction consistent with items 1-5.
+7. `docs/app/06A_NEA_REGULATORY_COMPLETENESS_AUDIT.md` for source-coverage proof and remaining blockers.
+8. Current code, schema, migrations, tests, and proof output for implemented behavior.
+9. CURRENT PROVEN docs, explicit project decisions, and then TARGET/DRAFT docs under `docs/app/**`.
 
-## Legacy Rule
+## Daan Decisions — Verification Architecture
 
-`docs/legacy/**` is never CURRENT for new app implementation.
+- ENVAL follows the official electricity TKV as its primary operational verification-architecture source and implements no competing proprietary verification framework.
+- Professional verifier work remains external: risk judgment, materiality judgment, official sample selection, official location control, issuance of the verification statement, official fraud reporting, and REV management of the verification result.
+- ENVAL may perform preparatory internal support checks selected manually, randomly, risk-based, or at verifier request. Those checks must be audit-worthy, historized, and may never replace official verification.
+- Internal capabilities are built only after explicit GO. External APIs and registers are researched in parallel and connected later through provider-independent ports and adapters.
+- External provider data is observed/external provenance, not automatic core truth.
 
-No legacy file may override:
+## Removed Legacy Documentation Rule
 
+The former in-repo legacy documentation tree has been removed after external copy by Daan.
+
+The external copy is not source of truth for new app implementation. It may not override:
+
+- valid law and official NEa publications
 - current app code
-- current app migrations
+- current app schema, migrations, tests
 - current proof output
 - `docs/app/**`
 
-Legacy reuse requires explicit adaptation. Old neutral-infrastructure, external-inboeker, max-4, private-only, and fixed export-fee assumptions are historical only.
+Any old external material requires explicit adaptation into `docs/app/**` before it can influence work. Old neutral-infrastructure, external-inboeker, max-4, private-only, and fixed export-fee assumptions are historical only.
 
 ## Account-Type Rule
 
@@ -146,8 +266,14 @@ Public copy must not expose internal legal/audit/anti-fraud doctrine except in l
 
 ## Active Entry Points
 
-- Current system map: `docs/app/01_SYSTEM_MAP.md`
-- Product model: `docs/app/02_PRODUCT_MODEL.md`
+- Architecture go/no-go audit: `docs/app/10_ARCHITECTURE_GO_NO_GO_AUDIT.md`
+- Primary proposed architecture: `docs/app/07_NEA_TARGET_ARCHITECTURE.md`
+- Technical database appendix: `docs/app/architecture/database-target-model.md`
+- Architecture/environment decisions: `docs/app/decisions/architecture-and-environment-decisions.md`
+- Remote baseline/retirement operations: `docs/app/operations/remote-baseline-and-retirement.md`
+- Daily NEa execution tracker: `docs/app/operations/nea-implementation-roadmap.md` — operational progress only; never overrides the official TKV source, requirements, traceability, target architecture, or MVP gates.
+- Remote baseline/recovery proof: `docs/app/proofs/remote-baseline-and-recovery-gate.md`
+- Preliminary execution plan: `docs/app/09_NEA_MVP_PLAN.md`
 - App TODO: `docs/app/04_TODO.md`
 - Signup/dashboard contract: `docs/app/contracts/signup-dashboard.md`
 - Target intake verification/promotion contract: `docs/app/contracts/intake-verification-promotion.md`
@@ -155,4 +281,3 @@ Public copy must not expose internal legal/audit/anti-fraud doctrine except in l
 - Document upload contract: `docs/app/contracts/document-upload.md`
 - Edge contract: `docs/app/contracts/edge-functions.md`
 - Audit contract: `docs/app/contracts/audit.md`
-- Legacy reuse matrix: `docs/app/LEGACY_REUSE_MATRIX.md`

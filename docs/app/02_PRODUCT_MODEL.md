@@ -2,7 +2,7 @@
 
 ## Product Position
 
-ENVAL is a customer-facing commercial ERE inboekservice for eligible home-charging users.
+ENVAL is a customer-facing commercial ERE-E inboekdienstverlener service for eligible home-charging users.
 
 ENVAL:
 
@@ -10,14 +10,21 @@ ENVAL:
 - binds customers directly
 - collects charger, address, consent, invoice, and evidence information
 - builds and manages an audit-worthy customer dossier for the inboeking
-- begeleidt en dient/inboekt namens klant of via een aangewezen partij binnen de voorwaarden
+- guides the customer-facing process toward inboeking within final regulatory, operational, and commercial terms
 
 The product is no longer positioned primarily as neutral dossier infrastructure. Dossier structure and audit trail remain critical, but they support a direct commercial service.
+
+Status split:
+
+- CURRENT PROVEN: intake capture, app dossier foundation, app audit/idempotency, authenticated dashboard document lifecycle, immutable document versions, and customer-safe dashboard projection where current code/schema/proofs show them.
+- TARGET: ENVAL's ERE-E inboekdienstverlener service, including final mandate, contract, verifier, REV, and inboeking operations.
+- UNKNOWN: REV account/list publication, threshold/mandate readiness, production inboeking execution, final verifier process, and final fee trigger until proven from current sources.
 
 Role boundaries:
 
 - ENVAL is geen verificateur.
 - ENVAL is geen certificeerder.
+- ENVAL must not claim NEa approval, accreditation, REV access, list publication, mandate volume, verifier readiness, or production eligibility until current evidence proves it.
 - ENVAL does not make compliance, certification, verification, acceptance, payout, revenue, timing, or document-approval guarantees.
 - ENVAL keeps internal audit/evidence truth separate from customer-facing status and customer timeline copy.
 - Frontend may assist; backend decides.
@@ -93,6 +100,8 @@ Legal/audit doctrine remains valid for internal docs, legal terms, service descr
 
 - Do not promise that EREs will always be granted.
 - Do not imply that uploaded documents are automatically accepted by all parties.
+- Do not imply that confirmed upload equals accepted evidence.
+- Do not imply that ENVAL is NEa-approved, accredited, listed, REV-ready, or production-ready until separately proven.
 - Avoid careless guarantee language around revenue, approval, timing, or certification.
 - Do not guarantee payout, value realization, certification, or acceptance of every uploaded document.
 - ENVAL may pause, reject, or request more information when evidence is insufficient.

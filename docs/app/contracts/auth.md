@@ -30,14 +30,14 @@ Deferred:
 
 Resolved product role decision:
 
-- ENVAL is now a customer-facing commercial ERE inboekservice.
-- ENVAL begeleidt en dient/inboekt namens klant of via een aangewezen partij.
+- ENVAL is now a customer-facing commercial ERE-E inboekdienstverlener service.
+- ENVAL guides the customer-facing process toward inboeking within final regulatory, operational, and commercial terms.
 - ENVAL is geen verificateur.
 - ENVAL is geen certificeerder.
 - ENVAL gives no guarantee of ERE award, acceptance, payout, revenue, timing, certification, or document approval.
 - ENVAL keeps the internal audit/evidence layer separate from customer-facing statuses and customer timeline copy.
 - The result-based fee model remains subject to final legal definition of "result", fee base, fee moment, partial success, reversal, and clawback.
-- Legacy docs in `docs/legacy/root-static/00_GLOBAL.md` and `docs/legacy/root-static/01_SYSTEM_MAP.md` contain the old neutral-infrastructure position. They are no longer current for `/app` implementation.
+- The former legacy documentation tree contained the old neutral-infrastructure position. It has been removed from the repo and is not current for `/app` implementation.
 
 ### Public Copy Boundary
 
@@ -667,7 +667,7 @@ Coexistence phases:
 
 ## 10. Risks / Open Decisions
 
-- Legacy wording drift is isolated under `docs/legacy/**`; current `/app` direction resolves ENVAL as a customer-facing inboekservice.
+- Legacy wording drift has been removed from the repo; current `/app` direction resolves ENVAL as a customer-facing ERE-E inboekdienstverlener service.
 - Auth production risk: Supabase Auth configuration, recovery, redirects, RLS, and support access still need production proof.
 - RLS risk: service-role Edge writes are safer for writes, but customer reads still need strict access boundaries.
 - Duplicate customer/dossier creation: signup retries and repeated emails need deterministic idempotency/dedupe.

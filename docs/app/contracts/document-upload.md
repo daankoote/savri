@@ -24,6 +24,7 @@ Implementation status:
 - `api-app-document-upload-url` is CURRENT and locally gateway-proven.
 - `api-app-document-upload-confirm` is CURRENT and locally gateway-proven.
 - Immediate server hash confirmation remains CURRENT.
+- Server hash confirmation proves the uploaded object matches the upload intent; it does not prove evidence acceptance.
 - Replacement/version history is implemented through immutable versions and slot current pointers.
 - `app_customer_auth.ts` is CURRENT for Supabase Auth JWT validation, active identity/customer resolution, and dossier ownership authorization.
 - Backend identity binding/bootstrap is CURRENT / LOCAL PROOF through `api-app-auth-bootstrap`.
@@ -33,6 +34,7 @@ Implementation status:
 - Production bucket/policy/deploy proof remains OPEN.
 - New upload behavior must use new `api-app-*` endpoints and `app_*` tables.
 - Promoted pre-auth quarantine documents must enter the immutable app document lifecycle server-side after accepted promotion; the browser must not choose storage paths, file IDs, version IDs, or final evidence status.
+- Raw capability values such as signed upload URLs, upload tokens, storage paths, and storage internals must not be persisted by the browser, copied into docs, exposed in customer-safe results, or treated as durable authority.
 - Legacy upload endpoints are frozen/reference only:
   - `api-dossier-upload-url`
   - `api-dossier-upload-confirm`
@@ -51,6 +53,8 @@ The app upload backend is split into explicit steps:
 6. Later review/analysis, separate from upload confirmation
 
 Browser preflight may optimize cost and latency by checking file type, size, PDF parse preview, compression, and client hash. It is not trusted as truth. Backend validation and server-side hash confirmation remain required.
+
+Issued upload target, uploaded object, confirmed object, and accepted evidence are separate states. Documentation and UI copy must not collapse them into one status.
 
 ## 3. Browser Preflight
 

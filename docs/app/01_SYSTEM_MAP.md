@@ -5,7 +5,7 @@
 1. Production frontend: static HTML/CSS/JS in the repository root.
 2. Rebuild frontend: isolated Vite app in `/app`.
 3. Backend: Supabase Edge Functions, migrations, storage, and database logic in `/supabase`.
-4. Documentation: current app source-of-truth docs in `docs/app/`, with legacy material in `docs/legacy/`.
+4. Documentation: current app source-of-truth docs in `docs/app/`; the former legacy documentation tree has been removed from the repo after external copy.
 
 ## Current Boundary
 

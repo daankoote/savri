@@ -10,6 +10,20 @@ Audit-relevant and fraud-relevant steps must be server-checkable and audit-logge
 
 Customer timeline is a curated projection. Raw audit rows are internal and must not be shown directly to customers.
 
+## Consolidated Legacy Principles
+
+The following principles are retained from legacy material only as app doctrine. Old endpoint names, table names, session models, event names, and dossier states are not retained as current truth.
+
+- Audit-first: every fraud-relevant or audit-relevant write must be reconstructable from server-side evidence.
+- Historical truth must not be overwritten. Corrections and replacements add history, versions, or explicit transitions.
+- Confirmed upload is not automatically accepted evidence.
+- Derived analysis, parser output, OCR output, and customer-facing projections must not mutate core truth unless a future app contract explicitly defines a reviewed write path.
+- Writes that can be retried must use scoped idempotency where current code proves it or where a new target contract requires it.
+- Request and actor traceability are required for meaningful app writes.
+- RLS and minimum privileges remain mandatory boundaries; service-role writes stay server-side.
+- Retention and expiry rules must be policy decisions. Do not import arbitrary legacy TTLs as app truth.
+- No hidden dependencies: a claim that depends on a function, RPC, storage policy, role, secret, bucket, or migration must identify that dependency or remain UNKNOWN.
+
 ## Current App Audit Tables
 
 - `app_intake_audit_events`: pre-customer or intake-level events.

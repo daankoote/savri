@@ -47,7 +47,7 @@ docs/app/00_CANON.md
 
 `docs/app/` is the only current canon for `/app`, `api-app-*`, and `app_*` work.
 
-`docs/legacy/` is reference only. Legacy files may not drive new implementation unless a task explicitly adapts them into `docs/app/`.
+The former in-repo legacy documentation tree has been removed after external copy by Daan. Historical copies outside the repo are not source of truth and may not drive implementation.
 
 Branch rule for current work: `main`.
 

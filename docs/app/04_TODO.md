@@ -2,7 +2,7 @@
 
 Status: CURRENT app-only TODO.
 
-This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. Legacy root/static operational backlog lives under `docs/legacy/**` and does not drive new app implementation.
+This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. Removed legacy documentation and external historical copies do not drive new app implementation.
 
 ## Current / Locally Proven
 
@@ -50,12 +50,65 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
 - Browser-reachable local download origin correction is locally and browser-proven.
 - Shared dashboard document card UI is locally and browser-proven.
 - Target intake verification/promotion contract is documented as TARGET / NOT IMPLEMENTED.
+- Gate 1 EAN and electricity connection domain schema is locally proven:
+  - `app_connections`
+  - `app_connection_periods`
+  - `app_connection_ownership_periods`
+  - proof marker: `app-ean-connection-domain-foundation-proof-ok`.
+- Gate 1 connection write RPC boundary is locally proven:
+  - `app_declare_connection_v1`
+  - `app_declare_connection_ownership_v1`
+  - `app_decide_connection_ownership_v1`
+  - `app_supersede_connection_ownership_v1`
+  - proof marker: `app-connection-write-rpcs-proof-ok`.
 
 Local proof is not production proof. Remote migration/function deploy, production bucket/policy proof, and production browser QA remain open.
 
 ## P0
 
-- Exact legal/regulatory requirements for ENVAL acting as inboeker.
+- Current code/database/Edge Function assessment against validated NEa requirements:
+  - DONE on 2026-07-19 as PROOF ONLY in `docs/app/06B_CURRENT_IMPLEMENTATION_ASSESSMENT.md`.
+  - Treat `docs/app/07_NEA_TARGET_ARCHITECTURE.md` and `docs/app/09_NEA_MVP_PLAN.md` as PRELIMINARY DRAFT / NOT APPROVED after this assessment.
+  - `SRC-NEA-TKV` access and clause mapping are DONE: the verified official repository snapshot contains 10 pages, 832788 bytes, SHA-256 `f08ae9cc56d7145f8962e9e0930f0e9b8676a55e73437aba4f0193b3edcc55cf`, and all 19 present clauses are mapped; there is no 3.3.5.
+  - Remaining PARTIAL status concerns separate consolidated-law, deadline, retention, REV, legal, architecture-approval, and external-verifier gaps.
+- Target architecture and rebuild/migration decision:
+  - DONE on 2026-07-19 and consolidated on 2026-07-21 into `docs/app/07_NEA_TARGET_ARCHITECTURE.md`, `docs/app/architecture/database-target-model.md`, `docs/app/decisions/architecture-and-environment-decisions.md`, and `docs/app/operations/remote-baseline-and-retirement.md`.
+  - Overall recommendation: HYBRID PARALLEL REBUILD.
+  - Electricity-TKV verifier detail is mapped and no longer source-blocked. The architecture remains DRAFT — AWAITING DAAN APPROVAL and implementation remains NO-GO.
+  - Target-only internal support controls are separated from external verifier location visits; neither is implementation permission.
+- Database Retirement Phase 1A - Evidence Completion:
+  - DONE on 2026-07-19; unique operational content is consolidated in `docs/app/operations/remote-baseline-and-retirement.md`.
+  - Local DB contains 15 `app_*` public tables, zero local legacy tables, substantial app data, and 7 `app-documents` Storage objects.
+  - Local migration history is incomplete: `supabase_migrations.schema_migrations` exists but has zero rows.
+  - Legacy runtime/repository objects remain present and remote status remains UNKNOWN.
+- Remote Schema and Deployment Inventory:
+  - DONE on 2026-07-19; dated evidence is consolidated as PROOF ONLY in `docs/app/proofs/remote-baseline-and-recovery-gate.md`.
+  - Linked remote `yzngrurkpfuqgexbhzgl` contains legacy schema, legacy Storage, active cron jobs, and deployed legacy/fallback Edge Functions.
+  - Linked remote does not contain the local app schema, `app-documents` bucket, app SQL RPCs, or deployed `api-app-*` functions.
+  - No deletion candidate is safe from this batch.
+- Environment / Deployment Baseline Decision:
+  - Strategy selected on 2026-07-19 and recorded in `docs/app/decisions/architecture-and-environment-decisions.md`; execution remains not permitted.
+  - Daan selected in-place parallel rebuild in the existing `enval` project because a separate Supabase app project is not feasible under the current project quota.
+  - `docs/app/operations/remote-baseline-and-retirement.md` records the same-project baseline execution plan without execution permission.
+  - Phase 0 proof DONE on 2026-07-19 and consolidated in `docs/app/proofs/remote-baseline-and-recovery-gate.md`.
+  - Remote app collision count is 0; clean and legacy-shape shadow apply proofs are green.
+  - Recovery gate DONE on 2026-07-19 and consolidated in `docs/app/proofs/remote-baseline-and-recovery-gate.md`.
+  - Wave 1 proposals are reviewed and approved as migration candidates after minor grant revision, but remote execution is not approved.
+  - Terminal-first blocker follow-up DONE on 2026-07-20: CLI backup metadata shows `backups=[]` and `pitr_enabled=false`; Daan accepted no Pro upgrade, no managed scheduled backups, no PITR, and no restore-to-new-project as an operational risk.
+  - PostgREST functional request path is PARTIAL PROVEN: current remote public keys reach table routes and receive expected access denial or app-table route-not-found.
+  - PostgREST dashboard/platform health remains UNHEALTHY / UNRESOLVED from current dashboard evidence; classification is `B. POSTGREST DEGRADED BUT REQUEST PATH AVAILABLE`.
+  - Phase 0 regression rerun is green after local Docker availability was restored.
+  - Encrypted backup and restoreproof DONE on 2026-07-20:
+    - age recipient and identity are configured outside the repo;
+    - encrypted public logical DB backup exists outside the repo;
+    - Storage/Auth/Edge Function/cron recovery manifests exist outside the repo;
+    - isolated local restore dry-run passed;
+    - plaintext temp files and restore database were cleaned up.
+  - Remote Wave 1 remains blocked on PostgREST dashboard/platform health.
+  - Gate 1 Local EAN And Connection Domain Foundation DONE locally on 2026-07-20.
+  - Gate 1 Connection Service Contract And Local Server-Side Write RPC DONE locally on 2026-07-20.
+  - NEXT: Gate 1 Connection Read Projection And Operations Review Contract.
+  - Do not start deployment, database drops, migration squash/baseline, runtime removals, function deletion, cron changes, Storage cleanup, Auth mutation, or remote SQL until recovery readiness is proven and Daan approves the exact mutation batch.
 - Exact 10% result/fee contract:
   - result definition
   - fee trigger
@@ -108,7 +161,7 @@ Local proof is not production proof. Remote migration/function deploy, productio
 
 - Content/article migration into the new app content model.
 - NL/EN language structure.
-- Legacy root/static retirement plan.
+- Legacy documentation removal: DONE on 2026-07-19 after external copy by Daan.
 - Legacy function retirement plan after `/app` production replacement is proven.
 - Internal ENVAL review/admin tooling.
 - Image OCR worker/internal analysis lane.

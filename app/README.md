@@ -10,7 +10,7 @@ Current product and implementation canon starts at:
 ../docs/app/00_CANON.md
 ```
 
-`../docs/legacy/` is reference only and must not drive new `/app` implementation without explicit adaptation.
+The former in-repo legacy documentation tree has been removed after external copy by Daan. It must not drive new `/app` implementation.
 
 ## Install
 
