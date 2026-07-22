@@ -4,11 +4,13 @@ Status: CURRENT source of truth for ENVAL documentation authority, source order,
 
 Audit evidence status: PROOF ONLY.
 
-Proposed canon and architecture status: APPROVED BY DAAN FOR BOUNDED INTERNAL FOUNDATION IMPLEMENTATION; broader target architecture, external/professional domains, remote execution and production remain draft or no-go.
+Canon and target architecture approval: GO — APPROVED BY DAAN ON 2026-07-22
 
-DAAN DECISION: GO — BOUNDED INTERNAL FOUNDATION PHASE
+Blanket implementation authorization: NO
 
-Decision evidence: documentation baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; exact approved and excluded scopes are owned by `docs/app/decisions/architecture-and-environment-decisions.md`, recorded in `docs/app/10_ARCHITECTURE_GO_NO_GO_AUDIT.md`, and tracked in `docs/app/operations/nea-implementation-roadmap.md`.
+Approval applies to the ENVAL canon and target architecture direction. It is not CURRENT PROVEN implementation or built compliance, does not expand existing bounded foundations, and grants no code, schema, UI, Edge Function, remote, deployment, or general implementation authority. CURRENT PROVEN remains reserved exclusively for built behavior with green proof; `READY`, `IN PROGRESS`, `TODO`, and `BLOCKED — EXTERNAL` remain independently controlling per work package.
+
+Decision evidence: Daan's explicit 2026-07-22 decision, recorded in `docs/app/10_ARCHITECTURE_GO_NO_GO_AUDIT.md` and the append-only changelog. The documentation baseline remains commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; bounded execution state is tracked only in `docs/app/operations/nea-implementation-roadmap.md`.
 
 This file is the only primary navigation and status index for active app documentation. It overrides every legacy document for new app work. If a legacy file conflicts with this document, this document wins.
 
@@ -23,7 +25,7 @@ NEa compliance hierarchy:
 - `docs/app/08_NEA_TRACEABILITY_MATRIX.md` connects source, requirement, component, data, test, and evidence.
 - `docs/app/06A_NEA_REGULATORY_COMPLETENESS_AUDIT.md` is mandatory proof before any NEa target architecture or MVP plan may be approved.
 - Current code, schema, migrations, tests, and proof output remain the technical truth for what is actually implemented.
-- `docs/app/07_NEA_TARGET_ARCHITECTURE.md` remains the derived primary target architecture. Its bounded internal foundation subset is approved by Daan; broader target, external adapter, REV, official-verifier, remote, deployment and production scope remains draft or no-go. `docs/app/09_NEA_MVP_PLAN.md` remains the normative gate plan within that boundary.
+- `docs/app/07_NEA_TARGET_ARCHITECTURE.md` is the approved TARGET direction, not CURRENT PROVEN implementation. Every implementation work package still requires its own bounded scope; external adapters, REV, official-verifier, remote, deployment and production work remain separately blocked or unapproved. `docs/app/09_NEA_MVP_PLAN.md` remains the normative gate plan within that boundary.
 - No derived ENVAL document may contradict the official PDF. A conflict or new official version is a hard stop and requires a new source diff before affected requirements, architecture, or implementation work can continue.
 
 ### Official Electricity TKV Source Snapshot
@@ -112,9 +114,9 @@ Primary canon documents:
 | `docs/app/02_PRODUCT_MODEL.md` | ENVAL product role, doelgroep, commercial direction, and public claim boundaries | CURRENT / PARTIAL |
 | `docs/app/05_NEA_COMPLIANCE_DIRECTIVE.md` | norm hierarchy, compliance principles, stopgates | CURRENT |
 | `docs/app/06_NEA_REQUIREMENTS.md` | single primary requirement set | CURRENT / PARTIAL — ELECTRICITY TKV MAPPED; OTHER LEGAL/EXTERNAL GAPS OPEN |
-| `docs/app/07_NEA_TARGET_ARCHITECTURE.md` | single primary target architecture: contexts, truth ownership, module/adapter/security boundaries, requirement families, principles | APPROVED FOR BOUNDED INTERNAL FOUNDATION IMPLEMENTATION; BROADER TARGET DRAFT / REGULATORY PARTIAL |
+| `docs/app/07_NEA_TARGET_ARCHITECTURE.md` | single primary target architecture: contexts, truth ownership, module/adapter/security boundaries, requirement families, principles | TARGET — APPROVED, NOT CURRENT PROVEN / REGULATORY PARTIAL |
 | `docs/app/08_NEA_TRACEABILITY_MATRIX.md` | single primary source-to-requirement-to-control traceability matrix | PROVISIONAL |
-| `docs/app/09_NEA_MVP_PLAN.md` | single primary execution order and normative gates | BOUNDED INTERNAL FOUNDATION GO; EXCLUDED SCOPES NO-GO |
+| `docs/app/09_NEA_MVP_PLAN.md` | single primary execution order and normative gates | PACKAGE-SPECIFIC GATES; NO BLANKET IMPLEMENTATION AUTHORIZATION |
 
 Supporting documents have one responsibility each and do not compete with the primary canon:
 
@@ -215,7 +217,7 @@ When sources conflict, use this order:
 2. The versioned official electricity-TKV PDF for operational verification-architecture interpretation, subordinate to those legal sources.
 3. `docs/app/06_NEA_REQUIREMENTS.md` as the normalized requirement set.
 4. `docs/app/08_NEA_TRACEABILITY_MATRIX.md` as the source-to-component/data/test/evidence link.
-5. `docs/app/07_NEA_TARGET_ARCHITECTURE.md` as the derived, unapproved target architecture.
+5. `docs/app/07_NEA_TARGET_ARCHITECTURE.md` as the derived, approved TARGET direction that is not CURRENT PROVEN implementation.
 6. `docs/app/05_NEA_COMPLIANCE_DIRECTIVE.md` for internal compliance direction consistent with items 1-5.
 7. `docs/app/06A_NEA_REGULATORY_COMPLETENESS_AUDIT.md` for source-coverage proof and remaining blockers.
 8. Current code, schema, migrations, tests, and proof output for implemented behavior.
@@ -226,8 +228,20 @@ When sources conflict, use this order:
 - ENVAL follows the official electricity TKV as its primary operational verification-architecture source and implements no competing proprietary verification framework.
 - Professional verifier work remains external: risk judgment, materiality judgment, official sample selection, official location control, issuance of the verification statement, official fraud reporting, and REV management of the verification result.
 - ENVAL may perform preparatory internal support checks selected manually, randomly, risk-based, or at verifier request. Those checks must be audit-worthy, historized, and may never replace official verification.
-- Internal capabilities are built only after explicit GO. External APIs and registers are researched in parallel and connected later through provider-independent ports and adapters.
+- Internal capabilities are built only in separately approved bounded work packages. External APIs and registers are researched in parallel and connected later through provider-independent ports and adapters.
 - External provider data is observed/external provenance, not automatic core truth.
+
+## Codex Execution Batch Discipline
+
+Every execution batch must have one explicit bounded scope and must:
+
+- verify repository, branch, and HEAD; then read the applicable official NEa source, this canon, the target architecture, and requirements;
+- inspect existing frontend, backend, database, module, service, helper, component, CSS, token, and layout patterns, and compare CURRENT with TARGET before proposing change;
+- maximize reuse and build modularly with one responsibility per module; resolve small differences through props, configuration, composition, tokens, and modifier classes instead of duplicate or near-duplicate logic, modules, or CSS;
+- never use inline CSS;
+- remove nothing without dependency, caller, data, migration, rollback, and audit evidence;
+- make database, Auth, RLS, UI, runtime, remote, or deployment changes only in their own explicitly approved batches; and
+- never commit, push, merge, or deploy without explicit permission.
 
 ## Removed Legacy Documentation Rule
 
@@ -271,7 +285,7 @@ Public copy must not expose internal legal/audit/anti-fraud doctrine except in l
 ## Active Entry Points
 
 - Architecture go/no-go audit: `docs/app/10_ARCHITECTURE_GO_NO_GO_AUDIT.md`
-- Primary proposed architecture: `docs/app/07_NEA_TARGET_ARCHITECTURE.md`
+- Primary target architecture: `docs/app/07_NEA_TARGET_ARCHITECTURE.md`
 - Technical database appendix: `docs/app/architecture/database-target-model.md`
 - Architecture/environment decisions: `docs/app/decisions/architecture-and-environment-decisions.md`
 - Remote baseline/retirement operations: `docs/app/operations/remote-baseline-and-retirement.md`

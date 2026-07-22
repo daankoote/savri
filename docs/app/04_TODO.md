@@ -66,16 +66,20 @@ Local proof is not production proof. Remote migration/function deploy, productio
 
 ## P0
 
+- WP2 customer/person/organization/representation/case — DESIGN/CONTRACT ONLY:
+  - READY under the approved TARGET direction; no implementation is authorized in this batch.
+  - First compare current modules, services, helpers, data and boundaries with TARGET, then record the exact contract and reuse/rebuild disposition.
+  - Database, Auth, RLS, UI, Edge Function, service and runtime changes require their own separately approved bounded batches.
 - Current code/database/Edge Function assessment against validated NEa requirements:
   - DONE on 2026-07-19 as PROOF ONLY in `docs/app/06B_CURRENT_IMPLEMENTATION_ASSESSMENT.md`.
-  - Treat `docs/app/07_NEA_TARGET_ARCHITECTURE.md` and `docs/app/09_NEA_MVP_PLAN.md` as PRELIMINARY DRAFT / NOT APPROVED after this assessment.
+  - The 2026-07-19 assessment treated `docs/app/07_NEA_TARGET_ARCHITECTURE.md` and `docs/app/09_NEA_MVP_PLAN.md` as PRELIMINARY DRAFT / NOT APPROVED; the 2026-07-22 decision supersedes only the architecture-direction status, not implementation evidence or MVP execution gates.
   - `SRC-NEA-TKV` access and clause mapping are DONE: the verified official repository snapshot contains 10 pages, 832788 bytes, SHA-256 `f08ae9cc56d7145f8962e9e0930f0e9b8676a55e73437aba4f0193b3edcc55cf`, and all 19 present clauses are mapped; there is no 3.3.5.
-  - Remaining PARTIAL status concerns separate consolidated-law, deadline, retention, REV, legal, architecture-approval, and external-verifier gaps.
+  - Remaining PARTIAL status concerns separate consolidated-law, deadline, retention, REV, legal, implementation, and external-verifier gaps.
 - Target architecture and rebuild/migration decision:
   - DONE on 2026-07-19 and consolidated on 2026-07-21 into `docs/app/07_NEA_TARGET_ARCHITECTURE.md`, `docs/app/architecture/database-target-model.md`, `docs/app/decisions/architecture-and-environment-decisions.md`, and `docs/app/operations/remote-baseline-and-retirement.md`.
   - Overall recommendation: HYBRID PARALLEL REBUILD.
-  - Electricity-TKV verifier detail is mapped and no longer source-blocked. The architecture remains DRAFT — AWAITING DAAN APPROVAL and implementation remains NO-GO.
-  - Target-only internal support controls are separated from external verifier location visits; neither is implementation permission.
+  - Electricity-TKV verifier detail is mapped and no longer source-blocked. The architecture is TARGET — APPROVED, NOT CURRENT PROVEN; blanket implementation authorization remains NO.
+  - Target-only internal support controls are separated from external verifier location visits; approval of the direction gives neither implementation permission nor external professional authority.
 - Database Retirement Phase 1A - Evidence Completion:
   - DONE on 2026-07-19; unique operational content is consolidated in `docs/app/operations/remote-baseline-and-retirement.md`.
   - Local DB contains 15 `app_*` public tables, zero local legacy tables, substantial app data, and 7 `app-documents` Storage objects.
@@ -107,7 +111,7 @@ Local proof is not production proof. Remote migration/function deploy, productio
   - Remote Wave 1 remains blocked on PostgREST dashboard/platform health.
   - Gate 1 Local EAN And Connection Domain Foundation DONE locally on 2026-07-20.
   - Gate 1 Connection Service Contract And Local Server-Side Write RPC DONE locally on 2026-07-20.
-  - NEXT: Gate 1 Connection Read Projection And Operations Review Contract.
+  - WP3 remains IN PROGRESS; its next bounded contract is Gate 1 Connection Read Projection And Operations Review, after the separately ordered WP2 design/contract package.
   - Do not start deployment, database drops, migration squash/baseline, runtime removals, function deletion, cron changes, Storage cleanup, Auth mutation, or remote SQL until recovery readiness is proven and Daan approves the exact mutation batch.
 - Exact 10% result/fee contract:
   - result definition
@@ -168,6 +172,7 @@ Local proof is not production proof. Remote migration/function deploy, productio
 
 ## Boundaries
 
+- Future execution batches follow the canonical discipline in `docs/app/00_CANON.md`; do not duplicate it here.
 - Do not mark the complete inboekservice live or finished.
 - Do not use legacy `api-dossier-*` for new app behavior.
 - Do not use legacy `dossier_sessions` as app auth.

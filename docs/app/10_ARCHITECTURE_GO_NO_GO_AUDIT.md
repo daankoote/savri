@@ -4,9 +4,9 @@ Status: PROOF ONLY - DECISION AUDIT.
 
 Audit evidence status: PROOF ONLY
 
-Proposed canon and architecture status: APPROVED BY DAAN FOR BOUNDED INTERNAL FOUNDATION IMPLEMENTATION; BROADER TARGET SCOPE REMAINS DRAFT
+Canon and target architecture decision status: TARGET — APPROVED BY DAAN ON 2026-07-22; NOT CURRENT PROVEN.
 
-Audit date: 2026-07-20; source-governance, documentation-baseline, and bounded-GO update: 2026-07-21.
+Audit date: 2026-07-20; source-governance, documentation-baseline, bounded-foundation, and TARGET-approval updates through 2026-07-22.
 
 Repository: `/Users/daankoote/dev/enval`.
 
@@ -20,6 +20,12 @@ The original go/no-go audit batch created this document only. This consolidation
 
 The 2026-07-21 consolidation batch physically consolidated the former top-level 07A-07I supporting documents into architecture, decisions, operations, and proofs ownership paths. It did not approve the proposed architecture as implementation basis.
 
+## 2026-07-22 Daan Decision
+
+Daan approved the ENVAL canon and target architecture direction as TARGET. This is not CURRENT PROVEN implementation or built compliance and is not blanket implementation authorization. Work-package statuses remain separately controlling, existing bounded foundations are not automatically expanded, and external professional and external system boundaries remain external.
+
+WP2 is the next bounded work package and is limited to current-to-target contract design and exact reuse/rebuild disposition for customer, person, organization, representation and case foundation. This batch authorizes no WP2 implementation and no code, schema, database, Auth, RLS, UI, Edge Function, service, runtime, remote, or deployment change. Future execution batches follow the canonical discipline in `docs/app/00_CANON.md`.
+
 ## Control Rule
 
 The decision order is:
@@ -30,13 +36,13 @@ The decision order is:
 4. Compare against current code, database, migrations, Edge Functions, and proofs.
 5. Only then approve target architecture and MVP plan.
 
-Current gate result after the 2026-07-21 baseline and decision batches: steps 1 through 4 have a committed documentation/evidence baseline. Daan approved only the bounded internal foundation scope below. Remaining consolidated-law, deadline, retention, REV, legal and external-verifier gaps keep regulatory conformance PARTIAL, and every excluded scope remains NO-GO.
+Current gate result after the 2026-07-22 decision: steps 1 through 4 have a committed documentation/evidence baseline and the canon/architecture direction is approved as TARGET. Implementation remains package-specific with no blanket authorization. Remaining consolidated-law, deadline, retention, REV, legal and external-verifier gaps keep regulatory conformance PARTIAL, and every excluded or external scope remains separately gated.
 
-## Bounded Internal Foundation Decision Update
+## Prior Bounded Internal Foundation Decision Context
 
 DAAN DECISION: GO — BOUNDED INTERNAL FOUNDATION PHASE
 
-Baseline evidence: commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805` (`Establish NEa documentation baseline`). This proof-only audit records Daan's decision; the document does not expand that decision.
+Baseline evidence: commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805` (`Establish NEa documentation baseline`). This historical bounded decision is not expanded by TARGET approval; every future implementation package still requires an explicit bounded scope.
 
 Architecture implementation scope:
 
@@ -356,7 +362,7 @@ Regulatory blockers:
 
 | blocker | effect |
 | --- | --- |
-| electricity TKV source access/coverage | closed on 2026-07-21; mapping PASS does not approve architecture or implementation |
+| electricity TKV source access/coverage | closed on 2026-07-21; mapping PASS did not by itself approve architecture or implementation, and TARGET approval was recorded separately on 2026-07-22 |
 | consolidated Wm/Besluit/Regeling article-level reading incomplete in this batch | requirements remain PARTIAL for exact legal anchors |
 | REV/year-end implementation details partly source-blocked | no final REV data model or operations calendar |
 
@@ -366,7 +372,7 @@ Electricity toetsingskader correction:
 - The intended source URL remains: `https://www.emissieautoriteit.nl/documenten/2026/07/09/toetsingskader-verificatieprotocol-inboekverificatie-elektriciteit`.
 - The official PDF was freshly retrieved outside the repository, verified, and then stored as the single immutable repository snapshot at `docs/app/sources/official/nea/2026-07-09_toetsingskader-verificatieprotocol_inboekverificatie_elektriciteit.pdf`; all ten pages were read and all nineteen present numbered clauses were mapped.
 - A search result for a toetsingskader for gasvormige biobrandstof may not be used as electricity source.
-- No TKV-dependent architecture may be marked CURRENT PROVEN or APPROVED.
+- TKV mapping alone may not mark architecture or implementation CURRENT PROVEN; Daan's separate TARGET approval is a direction decision, not implementation or compliance proof.
 - Verifier, sampling, AO/IB, plan, visit, evidence-pack, CAPA, statement, retention and fraud-notification requirements are mapped; implementation and professional/external decisions remain open.
 - The PDF proceeds from 3.3.4 to 3.3.6. No 3.3.5 is present or invented.
 
@@ -476,7 +482,7 @@ Source hierarchy:
 2. The versioned official repository TKV PDF is ENVAL's primary operational verification-architecture source.
 3. `docs/app/06_NEA_REQUIREMENTS.md` is the normalized requirement set.
 4. `docs/app/08_NEA_TRACEABILITY_MATRIX.md` connects source, component, data, test, and evidence.
-5. `docs/app/07_NEA_TARGET_ARCHITECTURE.md` is the derived, unapproved target architecture.
+5. `docs/app/07_NEA_TARGET_ARCHITECTURE.md` is the derived, approved TARGET direction and is not CURRENT PROVEN implementation.
 
 No derived ENVAL document may contradict the PDF. A conflict or new official version is a hard stop requiring a fresh source diff, impacted-requirement and trace review, architecture/test/evidence impact review, and explicit supersede decision.
 
@@ -517,7 +523,7 @@ The target registration includes `control_id`, case/dossier, location, selection
 | check | result | reason | decision |
 | --- | --- | --- | --- |
 | ENVAL role | PASS | directive states ENVAL is inboekdienstverlener for ERE-E | keep |
-| final target architecture decision | FAIL | TKV boundaries are mapped, but `07_NEA_TARGET_ARCHITECTURE.md` still awaits Daan and other regulatory/external decisions | do not implement |
+| final target architecture direction | PASS — TARGET ONLY | Daan approved `07_NEA_TARGET_ARCHITECTURE.md` as TARGET on 2026-07-22; regulatory completeness and implementation remain separate | require bounded work-package approval before implementation |
 | final MVP plan decision | FAIL | `09_NEA_MVP_PLAN.md` is preliminary and lacks source-complete Daan approval | do not execute |
 | app namespace separation | PARTIAL | local app objects use `app_*`/`api-app-*`; old runtime still exists | keep boundary |
 | legacy runtime freeze | PARTIAL | docs say freeze, but retirement not complete and legacy functions remain | freeze only |
@@ -525,7 +531,7 @@ The target registration includes `control_id`, case/dossier, location, selection
 | EAN/connection foundation | PARTIAL | local Gate 1 app tables/functions/proofs exist; CAR/REV/read projection/ops decisions open | no final approval |
 | kWh/renewability model | MISSING | no final import/calculation/period/batch architecture | design later |
 | mandate model | PARTIAL | legal acceptances and draft target exist; signed mandate model incomplete | design later |
-| verifier/AO/IB model | PARTIAL TARGET | TKV content mapped; detailed target modules exist but no implementation, verifier or approved architecture | do not implement |
+| verifier/AO/IB model | PARTIAL TARGET | TKV content and target direction are approved; implementation and external verifier capability remain absent | keep external/professional authority blocked |
 | finance/settlement model | PARTIAL | service terms draft, no ledger/clawback/payment approval | decision required |
 | recovery/remote gate | PARTIAL | docs indicate recovery gate work; Wave 1 remains execution-not-started | explicit approval required |
 
@@ -536,7 +542,7 @@ Major harmonization risks:
 | document volume hides authority | proof docs, target drafts, and contracts repeat facts | use 00/05/06/08 as primary canon; proof docs support only |
 | local proof overclaim | local foundations can be mistaken for final architecture | label as PARTIAL PROVEN / local only |
 | legacy runtime overclaim | `api-dossier-*` references can be misread as app architecture | keep frozen-runtime language |
-| regulatory incompleteness | TKV complete; consolidated law/deadline/retention/REV/external dependencies remain | no GO until remaining decisions and explicit approval |
+| regulatory incompleteness | TKV complete; consolidated law/deadline/retention/REV/external dependencies remain | TARGET approval is not compliance proof; retain separate gates |
 
 ## E. Read-Only Implementation Inventory And Disposition
 
@@ -845,14 +851,14 @@ Capability counts:
 | decision | why required | blocker if absent |
 | --- | --- | --- |
 | approve final requirement classification after remaining legal review | internal controls must not be mislabeled as law and TKV clauses are verification framework | compliance ambiguity |
-| approve architecture outside the bounded internal foundation scope | the bounded scope is approved; broader target and external/professional domains remain open | broader implementation remains NO-GO |
+| approve each bounded implementation work package | TARGET direction is approved without blanket implementation authority | implementation remains blocked outside an explicit package scope |
 | approve final disposition of local Gate 1 foundations after each bounded proof batch | local proof is not implementation-complete status | no completion or remote claim allowed |
 | approve concrete external providers/contracts and manual-fallback operations | the provider-independent strategy is recorded, while CAR/DSO/KvK/REV/verifier/provider/payment choices remain open | adapters cannot be implemented |
 | approve Wave 1 baseline execution separately | same-project legacy production risk | no remote mutation allowed |
 
 ## I. Compact Final Canon Structure
 
-Executed compact active structure. Documentation placement is complete; target architecture and implementation decisions remain open.
+Executed compact active structure. Documentation placement and TARGET architecture direction are approved; implementation decisions remain work-package-specific.
 
 | proposed path | responsibility | brings together | why separate | what does not belong |
 | --- | --- | --- | --- | --- |
@@ -896,14 +902,14 @@ Structure acceptance checks:
 | one dated remote/recovery proof owner | PASS |
 | active references to removed paths | 0 |
 | missing concrete `docs/app/*.md` references | 0 |
-| forbidden implementation-GO formulations | 0 |
+| forbidden blanket implementation-GO formulations | 0 active; the prior bounded decision remains historical context |
 | information-loss matrix | GREEN |
 
-The structure verdict concerns documentation ownership only. It does not change regulatory completeness, target architecture readiness, implementation permission, or the remote execution gate.
+The structure verdict concerns documentation ownership only. It does not change regulatory completeness, implementation permission, or the remote execution gate; TARGET approval is recorded separately by the 2026-07-22 decision.
 
 ## J. Implementation-GO Preconditions
 
-Implementation-GO is possible only when all of the following are true:
+Implementation may start only for a separately approved bounded work package when all applicable controls below are true:
 
 | criterion | current result |
 |---|---|
@@ -916,9 +922,9 @@ Implementation-GO is possible only when all of the following are true:
 | internal and external capabilities are separated | PASS |
 | internal support control and external verifier boundary are clear | PASS |
 | modular provider-independent port/adapter design is clear | PASS |
-| Daan gives explicit implementation GO | PASS — BOUNDED INTERNAL FOUNDATION ONLY |
+| Daan gives explicit bounded work-package authorization | REQUIRED PER PACKAGE — WP2 IS DESIGN/CONTRACT ONLY |
 
-The first nine documentation/readiness controls do not themselves grant implementation permission. Daan's separate explicit decision grants only the bounded internal foundation scope and leaves every listed excluded scope no-go.
+The first nine documentation/readiness controls and TARGET approval do not themselves grant implementation permission. WP2 is limited to design/contract work; every implementation package and excluded scope remains separately gated.
 
 ## K. Final Decision Package
 
@@ -931,9 +937,9 @@ Go/no-go findings:
 | official source completeness | electricity TKV access and 19-clause coverage PASS; full consolidated legal anchoring and other external source details remain partial | PARTIAL |
 | requirement coverage | electricity TKV has 19/19 present clauses mapped and 0 missing mappings; broader matrix remains 6 aligned, 20 partial, 4 implementation/source-detail missing, 0 source-blocked | PARTIAL |
 | documentation canon | 07 support consolidation executed; architecture, appendix, decisions, operations, proofs and official source snapshot have distinct owners | PASS |
-| current implementation | local app foundations useful but incomplete; bounded GO creates no implementation-complete claim and broader target scope is not approved | PARTIAL |
-| architecture | source governance, TKV alignment, support-control and provider-independent port boundaries are approved only for the bounded internal foundation scope | APPROVED BY DAAN FOR BOUNDED INTERNAL FOUNDATION IMPLEMENTATION |
-| implementation | internal foundation work may start under package contracts and proof gates; excluded scopes remain prohibited | GO — BOUNDED INTERNAL FOUNDATION ONLY |
+| current implementation | local app foundations are useful but incomplete; TARGET approval creates no implementation-complete claim and expands no existing foundation | PARTIAL |
+| architecture | source governance, TKV alignment, support-control and provider-independent port boundaries define the approved direction | TARGET — APPROVED, NOT CURRENT PROVEN |
+| implementation | no blanket authorization; WP2 is limited to current-to-target contract and reuse/rebuild disposition | NO BLANKET GO — WP2 DESIGN/CONTRACT ONLY |
 
 Unresolved Daan decisions:
 
@@ -941,7 +947,7 @@ Unresolved Daan decisions:
 | --- | --- |
 | accept or request correction of official TKV source package | mapping is complete; acceptance does not grant implementation GO |
 | approve final requirement classes and internal-control labels | TKV classification mapped; remaining consolidated-law/legal review open |
-| approve architecture beyond the bounded internal foundation | regulatory, external, professional-verifier, booking, settlement and production decisions remain open |
+| approve bounded implementation packages | TARGET direction is approved, but every implementation package requires its own scope and decision |
 | approve Wave 1 baseline execution | architecture approval and explicit remote approval absent |
 | approve external capability strategy | CAR/DSO/REV/verifier/payment research open |
 | approve commercial/payment model | legal/finance model incomplete |
@@ -967,13 +973,13 @@ Information that must not enter new canon as current truth:
 | old static site as `/app` target stack | fallback only |
 | old parser/OCR as acceptance decision | evidence decision requires review/verifier logic |
 | fixed price/export fee guarantees | legal/finance risk |
-| local app tables as final target beyond the bounded approved scope | broader architecture is not approved |
+| local app tables as final target merely because TARGET direction is approved | target approval does not adopt current tables or prove their final disposition |
 
 Recommended exact next documentation/decision batch:
 
 `Resolve Consolidated Law Anchors, Deadline Interpretation, Retention Legal Basis, REV Details, And External Verifier Readiness`
 
-The completed TKV mapping and baseline support the bounded internal foundation decision. They do not authorize any excluded scope or create an implementation-complete claim.
+The completed TKV mapping and baseline support the approved TARGET direction. They do not authorize implementation, expand existing bounded foundations, authorize any excluded scope, or create an implementation-complete claim.
 
 LEGACY DOCUMENTATION VERDICT: PASS
 
@@ -991,6 +997,6 @@ DOCUMENTATION STRUCTURE VERDICT: PASS
 
 REGULATORY CONFORMANCE VERDICT: PARTIAL — ELECTRICITY TKV COMPLETE; CONSOLIDATED LAW, DEADLINE, RETENTION, REV, LEGAL, AND EXTERNAL-VERIFIER GAPS REMAIN
 
-ARCHITECTURE VERDICT: APPROVED BY DAAN FOR BOUNDED INTERNAL FOUNDATION IMPLEMENTATION
+ARCHITECTURE VERDICT: TARGET — APPROVED BY DAAN ON 2026-07-22; NOT CURRENT PROVEN
 
-IMPLEMENTATION VERDICT: GO — BOUNDED INTERNAL FOUNDATION ONLY; REMOTE, DEPLOYMENT, EXTERNAL ADAPTERS, REV, OFFICIAL VERIFICATION AND PRODUCTION REMAIN NO-GO
+IMPLEMENTATION VERDICT: NO BLANKET AUTHORIZATION; WP2 DESIGN/CONTRACT ONLY; DATABASE, AUTH, RLS, UI, RUNTIME, REMOTE, DEPLOYMENT, EXTERNAL ADAPTERS, REV, OFFICIAL VERIFICATION AND PRODUCTION REMAIN SEPARATELY GATED

@@ -1,12 +1,12 @@
 # NEa Target Architecture
 
-Proposed architecture status: DRAFT — AWAITING DAAN APPROVAL
+Architecture status: TARGET — APPROVED, NOT CURRENT PROVEN
 
 Regulatory status: PARTIAL — ELECTRICITY TKV CLAUSES MAPPED; CONSOLIDATED LAW, DEADLINE, RETENTION, REV, AND EXTERNAL-VERIFIER GAPS REMAIN
 
-This is the only primary target architecture. It defines bounded contexts, truth ownership, module and adapter boundaries, security boundaries, requirement families, and architecture principles. It is proposed documentation and must not be used as permission to implement.
+This is the only primary target architecture. It defines bounded contexts, truth ownership, module and adapter boundaries, security boundaries, requirement families, and architecture principles. Daan approved this TARGET direction on 2026-07-22; the approval is not built compliance or permission to implement any work package.
 
-The ten-page `Toetsingskader verificatieprotocol inboekverificatie elektriciteit` of 2026-07-09 was fully read and mapped on 2026-07-21. Its nineteen present numbered clauses define the target verification boundaries below. This closes the source-access blocker only; it does not approve this architecture or any implementation.
+The ten-page `Toetsingskader verificatieprotocol inboekverificatie elektriciteit` of 2026-07-09 was fully read and mapped on 2026-07-21. Its nineteen present numbered clauses define the target verification boundaries below. This closes the source-access blocker only; it does not prove implementation or regulatory compliance.
 
 Supporting documents have non-competing responsibilities:
 
@@ -21,15 +21,15 @@ Architecture source order:
 2. the versioned official electricity-TKV PDF in `docs/app/sources/official/nea/` as the primary operational verification-architecture source, subordinate to those legal sources;
 3. `docs/app/06_NEA_REQUIREMENTS.md` as the normalized requirement set;
 4. `docs/app/08_NEA_TRACEABILITY_MATRIX.md` as the source-to-component/data/test/evidence link;
-5. this document as the derived and unapproved target architecture;
+5. this document as the derived and approved TARGET direction, not CURRENT PROVEN implementation;
 6. `docs/app/06B_CURRENT_IMPLEMENTATION_ASSESSMENT.md` and factual code, migrations, Edge Functions, proofs, and Supabase config for current implementation truth;
 7. Daan's explicit project decisions.
 
 No derived ENVAL document may contradict the official PDF. A conflict or a new official version is a hard stop requiring a source diff, impacted-requirement/trace review, architecture impact review, and explicit supersede decision.
 
-This document designs the provisional core architecture for ENVAL as inboekdienstverlener for ERE-E. It does not drop database objects, rewrite runtime code, approve production use, or claim compliance completeness.
+This document defines the approved TARGET direction for ENVAL as inboekdienstverlener for ERE-E. It does not drop database objects, rewrite runtime code, approve production use, or claim compliance completeness.
 
-Local app foundations that depend on regulatory semantics are not approved target architecture. Their disposition is:
+Local app foundations that depend on regulatory semantics are not automatically approved for reuse or implementation. Their disposition remains:
 
 `PROVISIONALLY REUSABLE — FINAL DISPOSITION AFTER REGULATORY CANON`
 
@@ -270,7 +270,7 @@ An internal support control may never automatically create or advance `officiall
 
 | boundary | capabilities | architecture rule |
 |---|---|---|
-| INTERNAL — BUILDABLE ONLY AFTER EXPLICIT GO | customer/person/organization; representation; locations; connections; chargers; charge points; meters/MID; documents/evidence; mandates; kWh raw/normalized; internal reviews; support controls; corrections; audit/provenance; evidence packs; verifier request/response records | ENVAL owns modular domain truth and support workflows, but no module may perform professional verifier decisions. |
+| INTERNAL — BUILDABLE ONLY IN AN EXPLICITLY APPROVED BOUNDED PACKAGE | customer/person/organization; representation; locations; connections; chargers; charge points; meters/MID; documents/evidence; mandates; kWh raw/normalized; internal reviews; support controls; corrections; audit/provenance; evidence packs; verifier request/response records | ENVAL owns modular domain truth and support workflows, but no module may perform professional verifier decisions. |
 | EXTERNAL — RESEARCH AND CONNECT LATER | CAR; EAN/aangeslotene; distribution-system operator; KvK; MID/certificate source; charger provider/CPO/backoffice; energy supplier; kWh API/export; REV; verifier; payment provider where relevant | Each capability is reached through a provider-independent port, zero or more adapters, and a manual fallback where allowed. |
 
 Every external capability contract carries: raw response/evidence reference, source system, external reference, retrieval time, valid-from/valid-to, payload/content hash, transformation provenance, internal review status, decision reference, and failure/retry state.
@@ -282,8 +282,10 @@ External data is an immutable observation/import/reference with provenance. It d
 - The official electricity TKV is ENVAL's primary operational verification-architecture source; ENVAL implements no competing verification framework.
 - External professionals retain risk judgment, materiality judgment, official sample selection, official location control, verification-statement issuance, official fraud reporting, and REV management of the verification result.
 - Preparatory internal support checks are allowed under the module and hard boundaries above, may be manual/random/risk-based/verifier-request selected, and must be audit-worthy and historized.
-- Internal capabilities are built only after explicit GO; external APIs/registers are researched in parallel and later connected through ports/adapters.
+- Internal capabilities are built only in separately approved bounded work packages; external APIs/registers are researched in parallel and later connected through ports/adapters.
 - External provider data remains observed/external provenance and not automatic core truth.
+
+Execution batches follow the canonical discipline in `docs/app/00_CANON.md`; target approval itself authorizes no code, schema, UI, Edge Function, remote, deployment, commit, or push action.
 
 ## Overall Architecture Verdict
 
@@ -295,4 +297,4 @@ Rationale:
 - Core IDV domains are absent or only partially represented: signed mandates, EAN/CAR ownership periods, kWh provenance, eligibility, booking, REV, verification, CAPA, finance, and year-end controls.
 - Existing `app_customer_dossiers` mixes lifecycle meanings and should not become the final state source for all NEa domains.
 - Legacy `dossier_*`, `dossier_sessions`, `api-dossier-*`, lead/contact/mail, legacy analysis, and legacy retention should be treated as migration/fallback/export source material only.
-- Electricity TKV verification detail is mapped into modular boundaries, but the architecture remains a proposal awaiting Daan approval and external/legal dependencies.
+- Electricity TKV verification detail is mapped into modular boundaries. The architecture direction is approved as TARGET, while implementation, regulatory completeness, and external/legal dependencies remain separately gated.

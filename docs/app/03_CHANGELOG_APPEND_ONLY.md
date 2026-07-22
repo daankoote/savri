@@ -528,3 +528,12 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Explicitly not approved: remote schema apply; remote migration; deployment; production; push; CAR adapter; EAN/register adapter; KvK adapter; MID-registeradapter; CPO/provideradapter; energieleverancieradapter; REV-integratie; betaalprovider; officiële verifierbeslissingen; definitieve retentionuitvoering; definitieve legal/mandate-tekst; booking- of settlementuitvoering.
 - The GO records permission to begin bounded internal foundation work under package-specific local contracts, tests, and proof gates; it records no implementation-complete status.
 - No runtime, SQL, migration, Function, Auth, Storage, cron, package/config, database, remote, deploy, or push action was performed in this decision-recording batch.
+
+## 2026-07-22 - Approve canon and target architecture direction
+
+- Recorded Daan's approval of the ENVAL canon and target architecture as TARGET, not CURRENT PROVEN implementation or built compliance.
+- Recorded that there is no blanket implementation authorization; `READY`, `IN PROGRESS`, `TODO`, and `BLOCKED — EXTERNAL` remain independently controlling and every work package requires its own bounded scope.
+- Kept existing bounded foundations unchanged and kept external professional and external system authority external.
+- Set WP2 as the next bounded work package for customer, person, organization, representation and case foundation, limited to current-to-target contract design and exact reuse/rebuild disposition.
+- Explicitly excluded WP2 implementation and all code, schema, database, Auth, RLS, UI, Edge Function, service, runtime, remote, deployment, commit, push, and merge actions from this decision batch.
+- Registered the reusable Codex execution-batch discipline once in `docs/app/00_CANON.md`; other documents reference that canonical rule instead of duplicating it.

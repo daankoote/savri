@@ -4,11 +4,13 @@ Status: TARGET — LIVE EXECUTION TRACKER
 
 Authority: operational tracker only; it does not override the official TKV source, requirements, traceability matrix, target architecture, or MVP gates.
 
-DAAN DECISION: GO — BOUNDED INTERNAL FOUNDATION PHASE
+Architecture decision: TARGET — approved by Daan on 2026-07-22; not CURRENT PROVEN.
+
+Next bounded work package: WP2 — customer, person, organization, representation and case foundation — DESIGN/CONTRACT ONLY
 
 Baseline commit: `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`.
 
-This is the compact daily view of sequence, progress, evidence, and blockers. `docs/app/09_NEA_MVP_PLAN.md` remains the normative gate plan; this roadmap does not create implementation, remote, deploy, or provider authority.
+This is the compact daily view of sequence, progress, evidence, and blockers. `docs/app/09_NEA_MVP_PLAN.md` remains the normative gate plan; this roadmap does not create implementation, remote, deploy, or provider authority. TARGET approval leaves `READY`, `IN PROGRESS`, `TODO`, and `BLOCKED — EXTERNAL` independently controlling.
 
 ## Source Hierarchy
 
@@ -39,18 +41,18 @@ The tracker never removes a blocker itself. A status changes only when the appli
 
 | field | value |
 |---|---|
-| Current phase | Bounded internal foundation implementation |
-| Current work package | Customer, person, organization, representation and case foundation |
+| Current phase | Approved TARGET direction; bounded work-package authorization only |
+| Current work package | WP2 design/contract only — customer, person, organization, representation and case foundation |
 | Last completed work package | Current implementation to target reconciliation |
-| Next executable work package | Customer, person, organization, representation and case foundation |
-| Current blockers | No blocker to start the bounded internal work package; package proof gates remain mandatory and excluded scopes remain no-go |
+| Next executable work package | WP2 current-to-target contract and reuse/rebuild disposition only |
+| Current blockers | WP2 implementation is not authorized; database, Auth, RLS, UI, runtime and every external capability require separately approved batches |
 | External research running in parallel | CAR, EAN/aangeslotene, DSO, KvK, MID/certificate sources, CPO/backoffice, energy supplier, kWh exchange, REV, verifier, and payment provider where relevant |
-| Last updated | 2026-07-21 |
+| Last updated | 2026-07-22 |
 | Evidence reference | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; official TKV snapshot; `06A`, `06B`, `08`, `09`, and `10` |
 
-## Bounded Internal Foundation Decision
+## Target Approval And Bounded Work-Package Rule
 
-Architecture implementation scope:
+Approved TARGET architecture domains:
 
 - customer/person/organization;
 - representation foundation;
@@ -89,7 +91,7 @@ Not approved:
 - definitieve legal/mandate-tekst;
 - booking- of settlementuitvoering.
 
-The bounded GO authorizes only internal foundation implementation within the listed architecture scope. It creates no implementation-complete claim and no remote, external-provider, REV, official-verification, production, deploy, or push authority.
+TARGET approval authorizes none of these domains for blanket implementation. Each work package requires its own bounded scope and decision; existing bounded foundations are not automatically expanded. External professional and external system capabilities remain external and, where tracked, `BLOCKED — EXTERNAL`.
 
 ## Initial Validated Baseline
 
@@ -107,7 +109,7 @@ The bounded GO authorizes only internal foundation implementation within the lis
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | Canon, official source and architecture baseline | Lock source hierarchy, 19-clause mapping, review package, and documentation baseline. | COMPLETE — CURRENT PROVEN | NEA-OPS-002/004; all mapped requirement families | Documentation and source governance only. | Internal documentation plus official source | Green validation; baseline commit | Canon, source registry, audits, architecture package | None | Source hash/pages/clauses, reference checks, `git diff --check` | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805` | Maintain source-change and supersede hard stops. |
 | 1 | Current implementation to target reconciliation | Inventory current frontend, functions, database, proofs, and dispositions against target requirements. | COMPLETE — CURRENT PROVEN | All 73 requirement rows | Proof-only assessment; no implementation-complete claim by inventory alone. | Internal documentation/proof | Work package 0 source and architecture inputs | Current implementation assessment; traceability overlay | None | Complete inventory and disposition evidence | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; `06B` and `08` | Preserve assessment as baseline evidence; update only when implementation proof changes. |
-| 2 | Customer, person, organization, representation and case foundation | Establish provider-independent party, authority, identity, and case contracts. | READY | NEA-ORG; NEA-MAND-003; NEA-SEC | Internal core truth; legal authority remains evidence-bound. | Internal | Baseline commit; Daan bounded internal foundation GO | Customer, identity, legal entity, representative, case, roles | Target entities and history; no SQL from this roadmap | Contract, role, RLS, audit, negative-boundary, and local proof gates | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; current primitives inventoried in `06B`; target in `07` and database appendix | Start with the bounded design/contract and exact reuse/rebuild disposition; do not claim implementation complete. |
+| 2 | Customer, person, organization, representation and case foundation | Establish provider-independent party, authority, identity, and case contracts. | READY | NEA-ORG; NEA-MAND-003; NEA-SEC | Internal core truth; legal authority remains evidence-bound. | Internal | Baseline commit; TARGET architecture approval; WP2 design/contract-only boundary | Customer, identity, legal entity, representative, case, roles | None in this batch; target entities and history are design inputs only | Current-to-target contract, exact reuse/rebuild disposition, role and boundary review | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; current primitives inventoried in `06B`; target in `07` and database appendix | Produce the bounded current-to-target contract and reuse/rebuild disposition only; do not implement. |
 | 3 | Location, connection/EAN and validity periods | Complete location/connection truth, temporal facts, ownership claims, and safe review/read boundaries. | IN PROGRESS | NEA-EAN; NEA-AUD-002; NEA-SEC-001/002 | Declared and reviewed internal truth; CAR/DSO truth remains external. | Hybrid | Documentation baseline commit; existing Gate 1 foundation; accepted read/review contract; CAR/manual evidence contract | Locations, connections, connection periods, ownership periods, read projection, ops review | Existing local foundation requires later approved migration handling | Existing local schema/write proof plus future read/review, boundary, history, and negative proofs | Gate 1 local schema and service-side write RPC proofs documented in `08` and `09` | Resume the Gate 1 read projection and operations review contract after the documentation baseline commit. |
 | 4 | Charger, charge point, meter/MID and asset relationships | Split assets, measured points, meter identity, conformity evidence, and validity. | TODO | NEA-CHG; NEA-MID | Internal asset truth; conformity conclusion and external evidence stay separate. | Hybrid | Work package 3; evidence and external source contracts | Chargers, charge points, meters/MID, evidence links | Target entity split and historization | Asset/location/EAN/period linkage, conformity boundary, history, and negative proofs | Current charger snapshot and document-slot primitives inventoried in `06B` | Define asset model and accepted-evidence review contract. |
 | 5 | Mandates, permissions and representation evidence | Build signed versioned mandates with exact actors, clauses, EANs, dates, validity, withdrawal, and renewal. | TODO | NEA-MAND-001-005 | Legal acceptance is not a complete mandate; legal/verifier acceptance remains external. | Hybrid | Work packages 2-4; final wording/e-sign evidence decision | Mandates, mandate versions, signing, authority evidence | Dedicated target mandate/version entities | Exact-field, signer, authority, permission, calendar-year, withdrawal, and supersede proofs | Requirement and TKV clause mapping in `06`, `06A`, and `08` | Resolve final Dutch wording and evidence standard before build. |
@@ -130,11 +132,12 @@ The bounded GO authorizes only internal foundation implementation within the lis
 - Do not build a second PDF parser when modular improvement is possible.
 - An image parser is a separate adapter/capability.
 - Parser output is observed/derived data.
-- Parser output is never automatically accepted evidence.
-- Parser output does not mutate declared or core truth.
-- Parser output requires human review before it can contribute to an internal evidence decision.
-- Parseroutput vereist menselijke of bevoegde interne review voordat deze kan bijdragen aan een interne evidencebeslissing.
-- Official verifier judgment remains external.
+- Parser output is never independently accepted as evidence and never becomes core truth.
+
+Parser output requires human review before any evidence decision.
+
+- The human reviewer must be authorized.
+- Human review does not replace the verifier boundary; official verifier judgment remains external.
 
 ## Internal And External Tracks
 
@@ -170,9 +173,11 @@ External research may run in parallel, but it may not introduce provider-specifi
 
 ## Detailed Tracking — Current Work Package 2
 
+WP2 is limited in this batch to current-to-target contract design and exact reuse/rebuild disposition for customer, person, organization, representation, case, roles, history, and authority boundaries. No database, Auth, RLS, UI, Edge Function, service, runtime, remote, or deployment change is included.
+
 | checklist item | status | evidence / gate |
 |---|---|---|
-| design/contract | READY | Define customer, identity, legal entity, representation, case, role, history, and authority boundaries within the bounded GO. |
+| design/contract | READY | Compare current modules and data with TARGET, then define customer, identity, legal entity, representation, case, role, history, authority, and exact reuse/rebuild boundaries. |
 | existing module inventory | COMPLETE — CURRENT PROVEN | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; `06B` inventories current customer/auth/case modules and dispositions. |
 | existing CSS inventory indien UI relevant | COMPLETE — CURRENT PROVEN | Baseline commit records the existing UI/CSS inventory; no styling implementation is authorized by this status. |
 | database | TODO | Design target entities and exact reuse/rebuild disposition before a separately scoped implementation batch. |
@@ -181,10 +186,10 @@ External research may run in parallel, but it may not introduce provider-specifi
 | tests | TODO | Contract, validation, role, audit, idempotency, history, and negative-boundary coverage. |
 | SQL proof | TODO | Only within a separately scoped local implementation batch; this decision commit contains no SQL. |
 | browser proof | TODO | Required when approved customer-visible behavior is implemented. |
-| documentation update | COMPLETE — UNCOMMITTED | Bounded GO, exclusions, baseline evidence, roadmap status, decisions, audit, canon, MVP, and changelog are aligned for the decision commit. |
-| accepted by Daan | COMPLETE — CURRENT PROVEN | `DAAN DECISION: GO — BOUNDED INTERNAL FOUNDATION PHASE` recorded after baseline commit. |
+| documentation update | COMPLETE — UNCOMMITTED | TARGET approval, blanket-authorization boundary, WP2 design-only scope, audit, canon, TODO, roadmap, and changelog are aligned. |
+| accepted by Daan | READY | TARGET direction is approved; WP2 is authorized only to begin design/contract work, not implementation. |
 | commit | TODO | Only after implemented behavior and required proof are accepted. |
-| remote/deploy separately approved | BLOCKED — DECISION | Bounded internal GO grants no remote mutation, deployment, production, or push authority. |
+| remote/deploy separately approved | BLOCKED — DECISION | TARGET approval and WP2 design/contract scope grant no remote mutation, deployment, production, or push authority. |
 
 ## Detailed Tracking — Directly Following Work Package 3
 
@@ -202,7 +207,7 @@ Work package 3 is already `IN PROGRESS` from existing local Gate 1 proof, and `0
 | SQL proof | IN PROGRESS | Existing local schema/write proofs are evidence only; the read/review contract requires its own separately accepted proof. |
 | browser proof | TODO | Required only when approved customer-visible behavior is implemented. |
 | documentation update | TODO | Update contracts, traceability, roadmap, TODO, MVP evidence reference, and changelog after an accepted batch. |
-| accepted by Daan | COMPLETE — CURRENT PROVEN | Internal phase GO is recorded; the package remains bound to the accepted local contract and proof gates. |
+| accepted by Daan | READY | The existing bounded foundation decision does not expand WP3; its next contract and any implementation remain separately gated. |
 | commit | TODO | Only after implementation and required proof are accepted. |
 | remote/deploy separately approved | BLOCKED — DECISION | Internal GO grants no remote mutation, deployment, or production authority. |
 
@@ -215,4 +220,5 @@ Work package 3 is already `IN PROGRESS` from existing local Gate 1 proof, and `0
 - `docs/app/04_TODO.md` remains the complete backlog.
 - This roadmap remains the compact daily overview.
 - `docs/app/09_NEA_MVP_PLAN.md` remains the normative gate plan.
+- Every execution batch follows `docs/app/00_CANON.md#codex-execution-batch-discipline`; this tracker does not duplicate that governance.
 - Remote action and deploy always require separate explicit approval.
