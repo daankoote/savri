@@ -549,3 +549,13 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Recorded that the migration was applied locally but is absent from the empty local Supabase migration history, is repository-ignored, and requires a later conscious `git add -f` before any commit.
 - This is local proof only. No remote, production, endpoint, Auth, UI, regulatory, NEa, or verifier acceptance is claimed; full WP2 implementation is not claimed.
 - Set the next bounded step to `WP2B — representation-authority and case-role contract-to-schema readiness audit.` This is research/design only and authorizes no tables, migration, or implementation.
+
+## 2026-07-23 - Define Settlement and Payouts TARGET contract
+
+- Added `docs/app/contracts/settlement-and-payouts.md` as the single provider-independent TARGET contract for settlement and payouts; no implementation was authorized.
+- Kept ERE sale, sale proceeds, allocation, legal-party gross entitlement, 10% ENVAL TARGET fee, net entitlement, settlement, payout instruction, payment execution, reconciliation, correction, reversal, and clawback as separate concepts.
+- Reused the existing party/case, finance, audit, retention, security, correction, projection, port/adapter, and manual-fallback boundaries and the `NEA-FIN`, `NEA-AUD`, `NEA-RET`, `NEA-SEC`, and `NEA-COR` families.
+- Recorded a late pilot option with append-only ledger, monthly statements, manual payout, and manual reconciliation; bank/PSP adapters remain a later separately approved variant.
+- Classified the 90/10 split as an ENVAL TARGET commercial assumption, not an official requirement.
+- Kept legal money flow, tax/VAT/withholding, bank/PSP route, beneficiary verification, account structure, safeguarding, licensing, retention, and payment-data privacy `UNKNOWN` or separately decision-blocked.
+- Made no code, SQL, migration, database, Auth, Storage, Edge Function, frontend, CSS, provider, remote, commit, push, merge, or deploy change.

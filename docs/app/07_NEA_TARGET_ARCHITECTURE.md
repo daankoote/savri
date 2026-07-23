@@ -11,6 +11,7 @@ The ten-page `Toetsingskader verificatieprotocol inboekverificatie elektriciteit
 Supporting documents have non-competing responsibilities:
 
 - `docs/app/architecture/database-target-model.md`: technical data-model appendix;
+- `docs/app/contracts/settlement-and-payouts.md`: provider-independent TARGET contract from ERE sale proceeds through entitlement, payout, reconciliation, and correction;
 - `docs/app/decisions/architecture-and-environment-decisions.md`: architecture and environment decision record;
 - `docs/app/operations/remote-baseline-and-retirement.md`: execution planning without execution permission;
 - `docs/app/proofs/remote-baseline-and-recovery-gate.md`: dated proof only, not architecture canon.
@@ -75,7 +76,7 @@ Target bounded-context count: 24.
 | REV submission/reconciliation | Track REV account, role gates, submission, response, and reconciliation. | REV submissions/responses | no current implementation | FULL REBUILD |
 | verification | Support external verifier engagement, scope, risk-input exchange, plans, visits, samples, packs, results and timing without replacing professional judgment. | engagements, scopes, risk assessments, plans, visits, samples, packs, statements | no current implementation | FULL REBUILD — REQUIREMENTS MAPPED, IMPLEMENTATION NOT APPROVED |
 | findings/CAPA | Track externally issued findings, ENVAL responses, corrections/CAPA, closure, statement blockers and re-verification provenance. | findings, CAPA actions, corrections | no current implementation | FULL REBUILD — REQUIREMENTS MAPPED, IMPLEMENTATION NOT APPROVED |
-| finance/settlement | Reconcile ERE sale, customer entitlement, fee, corrections, reversals, clawbacks. | settlement ledger, entitlements | no current implementation; public no-guarantee copy | FULL REBUILD |
+| finance/settlement | Keep ERE sale, proceeds, allocation, gross/net entitlement, fee, settlement, payout instruction, payment execution, reconciliation, correction, reversal, and clawback distinct. | settlement ledger, entitlements, provider-independent payout/reconciliation boundaries | fee-model terms and no-guarantee copy only; `contracts/settlement-and-payouts.md` is TARGET, not implementation | FULL REBUILD |
 | audit | Immutable event stream with actor, request, source, evidence, decision, time, and correlation. | audit events | `app_audit_events`, `app_intake_audit_events` | EXTEND CURRENT |
 | retention | Apply policy-driven preservation, export, minimization, and deletion proof. | retention actions | `retention-worker` concept, app minimized markers | PARALLEL REBUILD |
 | incident/operations | Log incidents affecting evidence, kWh, REV, verifier, settlement, or deadlines. | incidents | run-debug doctrine, safe errors | FULL REBUILD |
@@ -130,8 +131,8 @@ Target entity count: 53. Table-level details are in `docs/app/architecture/datab
 | fraud suspicion notification | Restricted verifier-origin NEa notification reference and lawful support provenance. | External verifier/NEa | notification_ref, engagement/scope | notification time | immutable reference | verifier-origin source | restricted evidence refs | access audit | correction reference only | highest restriction; never customer-visible | VER, SEC | no | suspicion/reporting remains verifier/NEa-only |
 | verifier finding | External finding, material/non-material classification, ENVAL response and statement-block relation. | External verifier/Compliance/Ops | finding_id, engagement/scope | finding period | immutable finding with append-only responses | verifier report refs | workpaper/evidence refs | finding audit | CAPA/correction | restricted | VER, COR | status only | verifier decides finding/materiality/sufficiency |
 | CAPA action | ENVAL corrective/preventive response linked to finding/incident/correction. | Compliance/Ops | capa_id, finding/correction | due/closure period | mutable workflow with history | finding/internal incident | closure evidence | CAPA audit | reopen/new CAPA | restricted | COR, AUD | status only | verifier decides requested/sufficient follow-up where applicable |
-| settlement ledger entry | Money/entitlement/fee/correction entry. | Finance | ledger_id, customer/batch/ref | accounting period | append-only | sale/fee/contract/correction | finance evidence | finance audit | reversing entry | finance role | FIN | summary only | yes |
-| customer entitlement | Customer-safe result/settlement entitlement. | Finance/Product | entitlement_id, customer/case/year | period | derived/projection | ledger/batch | supporting evidence | projection event | recalculated from ledger | customer-safe | FIN | yes | yes |
+| settlement ledger entry | Append-only sale-proceeds, allocation, entitlement, fee, correction, reversal, clawback, payout, and reconciliation effect. | Finance | ledger_id, legal party/batch/source ref | settlement period | append-only | sale/fee/contract/payment/correction source | finance evidence | finance audit | compensating/reversing entry | finance role | FIN, AUD, COR, RET, SEC | summary only | yes |
+| customer entitlement | Customer-safe gross, fee, correction, net, payout, and reconciliation projection for the legal party. | Finance/Product | entitlement_id, party/case/EAN/year/period | settlement period | derived/projection | ledger/batch/sale proceeds | supporting evidence | projection event | recalculated from append-only ledger | customer-safe | FIN, AUD, COR | yes | yes |
 | audit event | Material event stream. | Engineering/Compliance | event_id, correlation/request/idempotency | event time | append-only | callers/RPCs/workers | entity refs | self | compensating event | internal; projected safely | AUD, SEC, RET | no raw | yes |
 | idempotency key | Replay/conflict control for writes. | Engineering | scope/key | expiry period | immutable payload hash, mutable response | request | target action | idempotency audit | expire/cleanup | server-only | AUD, SEC | no | no |
 | incident | Compliance/ops incident. | Ops/Engineering | incident_id, severity, scope | incident period | mutable workflow with event history | system/manual | affected refs | incident audit | CAPA/correction | restricted | OPS, AUD | limited | yes |
@@ -176,7 +177,7 @@ No target status may combine different meanings. Each lifecycle below is provisi
 | verification plan | received -> acknowledged -> active -> change_requested -> superseded -> completed | risk/materiality/sample/visit choices remain verifier-owned and every plan change keeps reason/provenance |
 | verifier finding/CAPA | external_finding_received -> response_due -> correction_or_capa_in_progress -> submitted_for_external_review -> externally_closed_or_statement_blocked | ENVAL may manage response/CAPA; only verifier closes professional finding/outcome |
 | CAPA | finding_open -> action_planned -> owner_assigned -> due -> evidence_uploaded -> reviewed -> closed -> overdue/reopened | CAPA is not a correction unless linked |
-| settlement | entitlement_pending -> sale_recorded -> fee_calculated -> payable -> paid_or_settled -> reversed/clawed_back -> closed | public estimate is not entitlement |
+| settlement | sale_recorded -> proceeds_recorded -> allocated -> gross_entitlement_calculated -> fee_calculated -> net_entitlement_calculated -> payable_approved -> payout_instructed -> exported -> submitted -> paid -> reconciled -> corrected/reversed/clawed_back -> closed | public estimate is not entitlement; exported is not submitted, submitted is not paid, and paid is not reconciled |
 
 ## F. Security Architecture
 
@@ -186,7 +187,7 @@ No target status may combine different meanings. Each lifecycle below is provisi
 | customer identity binding | Auth user is bound server-side to an active customer identity and customer/case scope. | `app_bootstrap_customer_auth_v1`. | PARTIAL PROVEN |
 | operations roles | Ops, compliance, finance, support, engineering/admin roles must be explicit and least-privilege. | none. | TARGET |
 | compliance role | Compliance can approve requirements, source reviews, verifier records, CAPA policy, and final blockers. | none. | TARGET |
-| finance role | Finance can read settlement ledgers and create append-only/reversing entries, not mutate evidence truth. | none. | TARGET |
+| finance role | Finance has minimum-privilege access to settlement records and sensitive payout data, with four-eyes before payable execution; it creates append-only/reversing entries and never mutates kWh, ERE, party, case, or evidence truth. | none. | TARGET |
 | service_role | Service-role remains server-side only; no browser direct writes to sensitive tables. | app Edge service clients and grants. | PARTIAL PROVEN |
 | customer-safe read models | Customers read projections through Edge/API, not raw tables or raw audit. | `api-app-dashboard-get`. | PARTIAL PROVEN |
 | deny-by-default internal tables | All sensitive tables use RLS deny/default and service-role or role-scoped server access. | app migrations. | PARTIAL PROVEN |
@@ -274,6 +275,8 @@ An internal support control may never automatically create or advance `officiall
 | EXTERNAL — RESEARCH AND CONNECT LATER | CAR; EAN/aangeslotene; distribution-system operator; KvK; MID/certificate source; charger provider/CPO/backoffice; energy supplier; kWh API/export; REV; verifier; payment provider where relevant | Each capability is reached through a provider-independent port, zero or more adapters, and a manual fallback where allowed. |
 
 Every external capability contract carries: raw response/evidence reference, source system, external reference, retrieval time, valid-from/valid-to, payload/content hash, transformation provenance, internal review status, decision reference, and failure/retry state.
+
+Finance follows the same boundary: the settlement core and manual pilot controls remain provider-independent TARGET design; payout, bank-export, PSP, and bank-statement/import capabilities sit behind ports/adapters. Bank, PSP, legal money-flow, safeguarding, tax, and account-structure decisions remain `UNKNOWN`, and no settlement implementation is authorized by this contract.
 
 External data is an immutable observation/import/reference with provenance. It does not directly mutate core truth and does not become a decision without the appropriate internal or external authority. Provider-specific response fields are forbidden in core domain entities. A new provider normally adds an adapter, mapping and contract tests; it must not require a destructive core migration.
 

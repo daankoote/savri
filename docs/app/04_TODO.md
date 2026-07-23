@@ -123,13 +123,16 @@ Local proof is not production proof. Remote migration/function deploy, productio
   - Gate 1 Connection Service Contract And Local Server-Side Write RPC DONE locally on 2026-07-20.
   - WP3 remains IN PROGRESS; its next bounded contract is Gate 1 Connection Read Projection And Operations Review, after the separately ordered WP2 design/contract package.
   - Do not start deployment, database drops, migration squash/baseline, runtime removals, function deletion, cron changes, Storage cleanup, Auth mutation, or remote SQL until recovery readiness is proven and Daan approves the exact mutation batch.
-- Exact 10% result/fee contract:
-  - result definition
-  - fee trigger
-  - gross/net basis
-  - VAT/tax wording
-  - partial success
-  - reversal, audit correction, and clawback
+- Settlement & Payouts TARGET contract:
+  - DONE documentair: provider-independent boundary from ERE sale proceeds through legal-party allocation, gross/net entitlement, 10% ENVAL TARGET fee, settlement, payout, reconciliation, correction, reversal, and clawback;
+  - implementation remains late, separately bounded, and not approved;
+  - legal analysis of the money flow remains open;
+  - bank versus PSP and account structure/safeguarding remain open;
+  - beneficiary/IBAN verification and payout export formats remain open;
+  - tax, VAT, withholding, invoicing, and final fee-trigger/base wording remain open;
+  - payout approval, reconciliation, reversals, and clawbacks remain open;
+  - retention, legal basis, access, and privacy for payment data remain open;
+  - pilot candidate: ledger, statements, manual payout, and manual reconciliation; bank/PSP automation later only after a separate decision and batch.
 - Password recovery UX.
 - Resend verification UX.
 - Production secrets, storage, function, and migration deployment proof.
