@@ -6,7 +6,7 @@ Authority: operational tracker only; it does not override the official TKV sourc
 
 Architecture decision: TARGET — approved by Daan on 2026-07-22; not CURRENT PROVEN.
 
-Next bounded work package: WP2 — customer, person, organization, representation and case foundation — DESIGN/CONTRACT ONLY
+Next bounded work package: WP2B — representation-authority and case-role contract-to-schema readiness audit.
 
 Baseline commit: `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`.
 
@@ -25,6 +25,8 @@ This is the compact daily view of sequence, progress, evidence, and blockers. `d
 
 Only these status values may be used in this tracker:
 
+- `TARGET`: approved contract or direction; not built and not `CURRENT PROVEN`.
+- `CURRENT PROVEN — LOCAL`: only the explicitly bounded local build plus cited green local proof; no remote, production, regulatory, NEa, or verifier claim.
 - `COMPLETE — CURRENT PROVEN`: built behavior plus green proof exists.
 - `COMPLETE — UNCOMMITTED`: only the current green-validated documentation or source work that is not committed yet.
 - `READY`: dependencies and decisions are sufficient to start.
@@ -42,10 +44,10 @@ The tracker never removes a blocker itself. A status changes only when the appli
 | field | value |
 |---|---|
 | Current phase | Approved TARGET direction; bounded work-package authorization only |
-| Current work package | WP2 design/contract only — customer, person, organization, representation and case foundation |
-| Last completed work package | Current implementation to target reconciliation |
-| Next executable work package | WP2 current-to-target contract and reuse/rebuild disposition only |
-| Current blockers | WP2 implementation is not authorized; database, Auth, RLS, UI, runtime and every external capability require separately approved batches |
+| Current work package | WP2 contract/design remains TARGET; WP2A party directory and customer-party binding is CURRENT PROVEN — LOCAL |
+| Last completed work package | WP2A — additive party directory and customer-party binding — LOCAL SCHEMA AND PROOF ONLY |
+| Next executable work package | WP2B — representation-authority and case-role contract-to-schema readiness audit; research/design only |
+| Current blockers | Remote migration registration/apply, endpoints, Auth, projection and data migration remain open; representation authority and cases are TARGET / NOT IMPLEMENTED; every implementation or external capability requires a separately approved batch |
 | External research running in parallel | CAR, EAN/aangeslotene, DSO, KvK, MID/certificate sources, CPO/backoffice, energy supplier, kWh exchange, REV, verifier, and payment provider where relevant |
 | Last updated | 2026-07-22 |
 | Evidence reference | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; official TKV snapshot; `06A`, `06B`, `08`, `09`, and `10` |
@@ -109,7 +111,7 @@ TARGET approval authorizes none of these domains for blanket implementation. Eac
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | Canon, official source and architecture baseline | Lock source hierarchy, 19-clause mapping, review package, and documentation baseline. | COMPLETE — CURRENT PROVEN | NEA-OPS-002/004; all mapped requirement families | Documentation and source governance only. | Internal documentation plus official source | Green validation; baseline commit | Canon, source registry, audits, architecture package | None | Source hash/pages/clauses, reference checks, `git diff --check` | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805` | Maintain source-change and supersede hard stops. |
 | 1 | Current implementation to target reconciliation | Inventory current frontend, functions, database, proofs, and dispositions against target requirements. | COMPLETE — CURRENT PROVEN | All 73 requirement rows | Proof-only assessment; no implementation-complete claim by inventory alone. | Internal documentation/proof | Work package 0 source and architecture inputs | Current implementation assessment; traceability overlay | None | Complete inventory and disposition evidence | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; `06B` and `08` | Preserve assessment as baseline evidence; update only when implementation proof changes. |
-| 2 | Customer, person, organization, representation and case foundation | Establish provider-independent party, authority, identity, and case contracts. | READY | NEA-ORG; NEA-MAND-003; NEA-SEC | Internal core truth; legal authority remains evidence-bound. | Internal | Baseline commit; TARGET architecture approval; WP2 design/contract-only boundary | Customer, identity, legal entity, representative, case, roles | None in this batch; target entities and history are design inputs only | Current-to-target contract, exact reuse/rebuild disposition, role and boundary review | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; current primitives inventoried in `06B`; target in `07` and database appendix | Produce the bounded current-to-target contract and reuse/rebuild disposition only; do not implement. |
+| 2 | Customer, person, organization, representation and case foundation | Establish provider-independent party, authority, identity, and case contracts. | IN PROGRESS | NEA-ORG; NEA-MAND-003; NEA-SEC | Internal core truth; legal authority remains evidence-bound. | Internal | Baseline commit; TARGET architecture approval; bounded WP2 subpackages | Party directory and customer-party binding locally; authority, representative, case and roles remain target-only | WP2A four-table local foundation only; remote registration/apply and every later WP2 schema remain open | WP2A schema, constraints, guards, deny-all RLS, grants and Q01-Q24 are green locally; later boundaries need separate gates | Contract evidence section; migration and proof hashes cited there; no remote or production evidence | Perform `WP2B — representation-authority and case-role contract-to-schema readiness audit.` Research/design only; approve no tables, migration, or implementation. |
 | 3 | Location, connection/EAN and validity periods | Complete location/connection truth, temporal facts, ownership claims, and safe review/read boundaries. | IN PROGRESS | NEA-EAN; NEA-AUD-002; NEA-SEC-001/002 | Declared and reviewed internal truth; CAR/DSO truth remains external. | Hybrid | Documentation baseline commit; existing Gate 1 foundation; accepted read/review contract; CAR/manual evidence contract | Locations, connections, connection periods, ownership periods, read projection, ops review | Existing local foundation requires later approved migration handling | Existing local schema/write proof plus future read/review, boundary, history, and negative proofs | Gate 1 local schema and service-side write RPC proofs documented in `08` and `09` | Resume the Gate 1 read projection and operations review contract after the documentation baseline commit. |
 | 4 | Charger, charge point, meter/MID and asset relationships | Split assets, measured points, meter identity, conformity evidence, and validity. | TODO | NEA-CHG; NEA-MID | Internal asset truth; conformity conclusion and external evidence stay separate. | Hybrid | Work package 3; evidence and external source contracts | Chargers, charge points, meters/MID, evidence links | Target entity split and historization | Asset/location/EAN/period linkage, conformity boundary, history, and negative proofs | Current charger snapshot and document-slot primitives inventoried in `06B` | Define asset model and accepted-evidence review contract. |
 | 5 | Mandates, permissions and representation evidence | Build signed versioned mandates with exact actors, clauses, EANs, dates, validity, withdrawal, and renewal. | TODO | NEA-MAND-001-005 | Legal acceptance is not a complete mandate; legal/verifier acceptance remains external. | Hybrid | Work packages 2-4; final wording/e-sign evidence decision | Mandates, mandate versions, signing, authority evidence | Dedicated target mandate/version entities | Exact-field, signer, authority, permission, calendar-year, withdrawal, and supersede proofs | Requirement and TKV clause mapping in `06`, `06A`, and `08` | Resolve final Dutch wording and evidence standard before build. |
@@ -173,27 +175,33 @@ External research may run in parallel, but it may not introduce provider-specifi
 
 ## Detailed Tracking — Current Work Package 2
 
-WP2 is limited in this batch to current-to-target contract design and exact reuse/rebuild disposition for customer, person, organization, representation, case, roles, history, and authority boundaries. No database, Auth, RLS, UI, Edge Function, service, runtime, remote, or deployment change is included.
+WP2 contract/design remains TARGET. WP2A party directory and customer-party binding is `CURRENT PROVEN — LOCAL` only for its four tables, constraints, guards, RLS, grants, and cited local proof. Representation, authority, cases, case roles, Auth, endpoints, projection, intake/promotion, data migration, remote, production, and deployment remain outside that status.
 
 | checklist item | status | evidence / gate |
 |---|---|---|
-| design/contract | READY | Compare current modules and data with TARGET, then define customer, identity, legal entity, representation, case, role, history, authority, and exact reuse/rebuild boundaries. |
+| design/contract | TARGET | `docs/app/contracts/customer-party-representation-case.md` defines the current-to-target contract, exact dispositions, authority boundary, retirement prerequisites, and bounded WP2A evidence. TARGET grants no further implementation authority. |
 | existing module inventory | COMPLETE — CURRENT PROVEN | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; `06B` inventories current customer/auth/case modules and dispositions. |
 | existing CSS inventory indien UI relevant | COMPLETE — CURRENT PROVEN | Baseline commit records the existing UI/CSS inventory; no styling implementation is authorized by this status. |
-| database | TODO | Design target entities and exact reuse/rebuild disposition before a separately scoped implementation batch. |
+| database | CURRENT PROVEN — LOCAL | Only `app_parties`, `app_party_person_versions`, `app_party_organization_versions`, and `app_customer_party_relationships`, including bounded constraints, guards, deny-all RLS, and stated grants. Local migration registration is absent; remote registration/apply is open. |
 | Edge Function/service | TODO | Define service-side write/read contracts and role checks. |
 | frontend/UI | TODO | Define customer-safe identity, organization, representation, and case projections. |
-| tests | TODO | Contract, validation, role, audit, idempotency, history, and negative-boundary coverage. |
-| SQL proof | TODO | Only within a separately scoped local implementation batch; this decision commit contains no SQL. |
+| tests | CURRENT PROVEN — LOCAL | WP2A Deno check is green; Q01-Q24 are green with zero `FAIL` and marker `app-party-foundation-proof-ok`. Later WP2 tests remain TODO. |
+| SQL proof | CURRENT PROVEN — LOCAL | Transactional local proof leaves all four WP2A party tables with zero rows and protected existing app-table counts unchanged. No remote, production, NEa, or verifier proof. |
 | browser proof | TODO | Required when approved customer-visible behavior is implemented. |
-| documentation update | COMPLETE — UNCOMMITTED | TARGET approval, blanket-authorization boundary, WP2 design-only scope, audit, canon, TODO, roadmap, and changelog are aligned. |
-| accepted by Daan | READY | TARGET direction is approved; WP2 is authorized only to begin design/contract work, not implementation. |
+| documentation update | COMPLETE — UNCOMMITTED | Contract, roadmap, changelog, and TODO distinguish the TARGET WP2 contract from bounded WP2A local evidence. |
+| accepted by Daan | READY | TARGET direction is approved. WP2A has bounded local evidence; no further WP2 implementation is authorized by that evidence. |
 | commit | TODO | Only after implemented behavior and required proof are accepted. |
-| remote/deploy separately approved | BLOCKED — DECISION | TARGET approval and WP2 design/contract scope grant no remote mutation, deployment, production, or push authority. |
+| remote/deploy separately approved | BLOCKED — DECISION | TARGET approval and WP2A local evidence grant no remote mutation, deployment, production, or push authority. |
+
+## Next Bounded Step
+
+WP2B — representation-authority and case-role contract-to-schema readiness audit.
+
+WP2B is research/design only. It authorizes no table, migration, schema, Auth, RLS, endpoint, UI, runtime, database, remote, or deployment implementation.
 
 ## Detailed Tracking — Directly Following Work Package 3
 
-Work package 3 is already `IN PROGRESS` from existing local Gate 1 proof, and `09` keeps its connection read projection and operations review contract as the in-progress foundation package directly following work package 2. Work package 2 is `READY` and remains the current/next executable work package; no implementation-complete status is inferred from either status.
+Work package 3 remains independently `IN PROGRESS` from existing local Gate 1 proof, and `09` keeps its connection read projection and operations review contract as an open foundation package. WP2 is `IN PROGRESS`: only WP2A is `CURRENT PROVEN — LOCAL`, while WP2B is the next bounded readiness audit. No full-WP2 or WP3 implementation-complete status is inferred.
 
 | checklist item | status | evidence / gate |
 |---|---|---|

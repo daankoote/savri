@@ -61,15 +61,25 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - `app_decide_connection_ownership_v1`
   - `app_supersede_connection_ownership_v1`
   - proof marker: `app-connection-write-rpcs-proof-ok`.
+- WP2A party directory and customer-party binding is CURRENT PROVEN — LOCAL:
+  - `app_parties`
+  - `app_party_person_versions`
+  - `app_party_organization_versions`
+  - `app_customer_party_relationships`
+  - party directory, versioned person/organization profiles, temporal customer-party binding, and local schema/RLS/proof are complete locally;
+  - constraints, guards, deny-all RLS, and `service_role` `SELECT`/`INSERT` grants are locally proven;
+  - Deno check and Q01-Q24 are green with zero `FAIL` and marker `app-party-foundation-proof-ok`;
+  - transactional rollback left all four WP2A party tables with zero rows and protected existing app-table counts unchanged.
 
 Local proof is not production proof. Remote migration/function deploy, production bucket/policy proof, and production browser QA remain open.
 
 ## P0
 
-- WP2 customer/person/organization/representation/case — DESIGN/CONTRACT ONLY:
-  - READY under the approved TARGET direction; no implementation is authorized in this batch.
-  - First compare current modules, services, helpers, data and boundaries with TARGET, then record the exact contract and reuse/rebuild disposition.
-  - Database, Auth, RLS, UI, Edge Function, service and runtime changes require their own separately approved bounded batches.
+- WP2 customer/person/organization/representation/case:
+  - The WP2 contract/design remains TARGET; only the bounded WP2A four-table local foundation is CURRENT PROVEN — LOCAL.
+  - Inclusion in a controlled Git and migration flow, conscious later force-add of the ignored migration, and remote apply remain open.
+  - Representation authority, authority evidence, cases, case-party roles, Auth/customer-safe projection, intake/backfill/cutover, and external KvK, DSO/CAR, and verifier boundaries remain open; applicable items remain TARGET, TODO, UNKNOWN, or BLOCKED — EXTERNAL.
+  - Next: `WP2B — representation-authority and case-role contract-to-schema readiness audit.` Research/design only; no tables, migration, schema, Auth, RLS, endpoint, UI, runtime, database, remote, or deployment implementation is authorized.
 - Current code/database/Edge Function assessment against validated NEa requirements:
   - DONE on 2026-07-19 as PROOF ONLY in `docs/app/06B_CURRENT_IMPLEMENTATION_ASSESSMENT.md`.
   - The 2026-07-19 assessment treated `docs/app/07_NEA_TARGET_ARCHITECTURE.md` and `docs/app/09_NEA_MVP_PLAN.md` as PRELIMINARY DRAFT / NOT APPROVED; the 2026-07-22 decision supersedes only the architecture-direction status, not implementation evidence or MVP execution gates.

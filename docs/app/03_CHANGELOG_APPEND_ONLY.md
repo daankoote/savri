@@ -537,3 +537,15 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Set WP2 as the next bounded work package for customer, person, organization, representation and case foundation, limited to current-to-target contract design and exact reuse/rebuild disposition.
 - Explicitly excluded WP2 implementation and all code, schema, database, Auth, RLS, UI, Edge Function, service, runtime, remote, deployment, commit, push, and merge actions from this decision batch.
 - Registered the reusable Codex execution-batch discipline once in `docs/app/00_CANON.md`; other documents reference that canonical rule instead of duplicating it.
+
+## 2026-07-22 - Prove bounded WP2A party foundation locally
+
+- Recorded `WP2A — additive party directory and customer-party binding — LOCAL SCHEMA AND PROOF ONLY` as `CURRENT PROVEN — LOCAL` for exactly `app_parties`, `app_party_person_versions`, `app_party_organization_versions`, and `app_customer_party_relationships`.
+- Built immutable/versioned natural-person and organization profiles locally, kept VvE as an organization classification, and added temporal customer-party relationships.
+- Proved subtype, period-overlap, supersession, and immutability guards within the bounded four-table foundation.
+- Recorded migration `supabase/migrations/20260722100000_app_party_foundation.sql` at SHA-256 `0356a978ed20b208ca8e3a350b5e80579e0cd186b9f909a761600d1bebf6a9a4` and proof `scripts/proofs/app-party-foundation.proof.ts` at SHA-256 `f2e36b8c68178fe911547277fcd9686211dd65a8d0f6eb95c5355e182ef9c086`.
+- Deno check and Q01-Q24 were green with zero `FAIL` and marker `app-party-foundation-proof-ok`; transactional rollback left all four party tables with zero rows and protected existing app-table counts unchanged.
+- Proved deny-all RLS on all four tables, `service_role` `SELECT`/`INSERT` only, and no `anon` or `authenticated` table grants.
+- Recorded that the migration was applied locally but is absent from the empty local Supabase migration history, is repository-ignored, and requires a later conscious `git add -f` before any commit.
+- This is local proof only. No remote, production, endpoint, Auth, UI, regulatory, NEa, or verifier acceptance is claimed; full WP2 implementation is not claimed.
+- Set the next bounded step to `WP2B — representation-authority and case-role contract-to-schema readiness audit.` This is research/design only and authorizes no tables, migration, or implementation.
