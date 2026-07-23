@@ -388,6 +388,20 @@ Proposed later modules, not created by this contract:
 
 No account-type-specific duplicate module is allowed.
 
+## WP2B Readiness Audit Result
+
+`docs/app/operations/wp2b-representation-authority-case-role-readiness-audit.md` is the PROOF ONLY repository-readiness assessment for representation authority and case roles.
+
+Its bounded result is:
+
+- WP2A remains `CURRENT PROVEN — LOCAL` only for the four existing party tables and their cited constraints, guards, RLS, grants, and proof.
+- Representation authority, authority evidence/review, cases, case-party roles, mandates, Auth/case projection, backfill, cutover, remote, and production remain outside WP2A and are not implemented.
+- The older database appendix names `app_legal_entities` and `app_representatives`; those shapes conflict with this later focused party/authority contract and must not be implemented before a separate documentation-governance decision resolves the target vocabulary.
+- Exactly one next additive batch is recommended, not authorized: `WP2B-I — additive case shell and case-party-role history — LOCAL SCHEMA AND PROOF ONLY`.
+- WP2B-I is limited to `app_cases` and `app_case_party_roles`, leaves WP2A unchanged, creates no representation authority or mandate, and preserves account ownership, party role, authority, mandate, EAN, beneficiary, and finance as separate truths.
+
+Open authority risks remain the acceptable organization/VvE evidence standard, self-representation semantics, conflicting claims, withdrawal/historical reliance, qualified review roles, four-eyes, fail-closed audit, and customer-safe projection vocabulary.
+
 ## Test And Proof Gates
 
 Before any later WP2 implementation beyond the bounded WP2A result can be accepted:

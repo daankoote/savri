@@ -559,3 +559,14 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Classified the 90/10 split as an ENVAL TARGET commercial assumption, not an official requirement.
 - Kept legal money flow, tax/VAT/withholding, bank/PSP route, beneficiary verification, account structure, safeguarding, licensing, retention, and payment-data privacy `UNKNOWN` or separately decision-blocked.
 - Made no code, SQL, migration, database, Auth, Storage, Edge Function, frontend, CSS, provider, remote, commit, push, merge, or deploy change.
+
+## 2026-07-23 - Complete WP2B representation-authority and case-role readiness audit
+
+- Added `docs/app/operations/wp2b-representation-authority-case-role-readiness-audit.md` with exact status `PROOF ONLY — WP2B READINESS AUDIT`.
+- Confirmed WP2A remains `CURRENT PROVEN — LOCAL` only for `app_parties`, `app_party_person_versions`, `app_party_organization_versions`, and `app_customer_party_relationships` within the cited local proof boundary.
+- Confirmed representation authority, authority evidence/review, `app_cases`, `app_case_party_roles`, mandates, and party/authority/case customer projections are not implemented.
+- Recorded that Supabase Auth and `app_customer_identities` prove credential/verified-email control and account binding only, never natural-person identity, legal-party identity, representation authority, signing authority, or mandate.
+- Recorded the older appendix names `app_legal_entities` and `app_representatives` as a target-design conflict with the later focused WP2 party/authority contract; no conflicting schema shape was approved.
+- Recommended exactly one next additive batch without authorizing it: `WP2B-I — additive case shell and case-party-role history — LOCAL SCHEMA AND PROOF ONLY`, limited to `app_cases`, `app_case_party_roles`, and one transactional local proof.
+- Kept representation authority outside WP2B-I until the authority evidence, review/four-eyes, conflict/withdrawal, safe projection, and target-vocabulary decisions are resolved.
+- Made no code, SQL, migration, schema, database, Auth, RLS, Edge Function, frontend, CSS, inline CSS, proof, runtime, provider, remote, staging, commit, push, merge, or deploy change.
