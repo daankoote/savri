@@ -68,16 +68,25 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - direct customer/dossier ownership, absent party/profile/case links, incomplete evidence/history/concurrency and status-based EAN uniqueness block target acceptance;
   - existing proof files cannot be reused unchanged;
   - no DDL or connection/EAN implementation is authorized.
-- WP3B connection/EAN contract reconciliation and object disposition is COMPLETE — UNCOMMITTED:
+- WP3B connection/EAN contract reconciliation and object disposition is committed in `ee3f6b59c937f0c39a67ba09936e9ef688bcea59`:
   - `docs/app/contracts/connection-ean-and-aangeslotene.md`;
   - `docs/app/operations/wp3b-connection-ean-object-disposition.md`;
-  - contract verdict: `PARTIAL — DOMAIN OR EXTERNAL DECISIONS REQUIRED`;
-  - proposed TARGET separates physical connection, EAN-dragend allocation point, immutable metadata, party/profile-pinned aangesloteneclaims, case links, evidence acceptance and calendar-year controls;
-  - all candidate object names and decisions remain unapproved and not DDL ready;
+  - its historical draft verdict was `PARTIAL — DOMAIN OR EXTERNAL DECISIONS REQUIRED`;
+  - it proposed separate physical connection, EAN-dragend allocation point, immutable metadata, party/profile-pinned aangesloteneclaims, case links, evidence acceptance and calendar-year controls;
   - three current tables, eight guards, one audithelper, four RPCs and nine triggers are dispositioned `REPLACE`; both proofs are `PROVE AGAIN`; both ignored migrations are `RETIRE AFTER REPLACEMENT PROOF`;
-  - DDL remains blocked pending Daan's explicit contract decisions and the applicable location, DSO/CAR/register, MLOEA/secondary, evidence/freshness, verifier and calendar-year duplicate-control answers;
+  - DDL remained blocked pending Daan's explicit internal decisions and the applicable location, DSO/CAR/register, MLOEA/secondary, evidence/freshness, verifier and calendar-year duplicate-control answers;
   - the old proofs were not rerun and no current object or source was modified or removed;
   - authority legal/verifier validation continues independently and representation authority remains `NOT SCHEMA READY`.
+- WP3C connection/EAN internal domain decisions are COMPLETE — UNCOMMITTED:
+  - `docs/app/operations/wp3c-connection-ean-internal-domain-decisions.md`;
+  - Daan explicitly approved internal packages A–E as TARGET: connection/allocation/EAN separation, accepted-EAN immutability and observations; stable location root/versions; party/profile-pinned claim semantics; administrative case/evidence/year-control boundaries; immutable security, concurrency and forward-replacement discipline;
+  - contract status is exactly `TARGET — WP3C INTERNAL DOMAIN DECISIONS APPROVED — EXTERNAL BLOCKERS OPEN / NOT DDL READY`;
+  - this approves no candidate schema, DDL, implementation, proof, retirement, cleanup or execution;
+  - existing connection tables, functions, triggers, policies, grants, migrations and proofs remain intact; old migrations are conflicting source material and old proofs remain `PROVE AGAIN`;
+  - first next bounded context: locationfoundation readiness;
+  - only after separate location approval and proof: limited connection-root/claim DDL-readiness assessment, still without automatic implementation authority;
+  - external blockers remain CAR/DSO/register semantics, evidence categories/acceptance/freshness/conflicts, secondary/MLOEA, year duplicate/fallback, verifier acceptance, representation authority and mandate validation;
+  - representation authority continues independently and remains `NOT SCHEMA READY`.
 - WP2A party directory and customer-party binding is CURRENT PROVEN — LOCAL:
   - `app_parties`
   - `app_party_person_versions`
@@ -168,7 +177,7 @@ Local proof is not production proof. Remote migration/function deploy, productio
     - plaintext temp files and restore database were cleaned up.
   - Remote Wave 1 remains blocked on PostgREST dashboard/platform health.
   - Gate 1 connection/EAN and write-RPC objects are observed locally; historical proof runs are documented but are not CURRENT PROVEN under WP3A.
-  - WP3 is BLOCKED — DECISION; its next bounded batch is the WP3B docs-only contract reconciliation and object disposition, not read-projection implementation.
+  - WP3C internal A–E TARGET direction is approved without DDL authority; the next bounded context is locationfoundation readiness, not connection schema or read-projection implementation.
   - Do not start deployment, database drops, migration squash/baseline, runtime removals, function deletion, cron changes, Storage cleanup, Auth mutation, or remote SQL until recovery readiness is proven and Daan approves the exact mutation batch.
 - Settlement & Payouts TARGET contract:
   - DONE documentair: provider-independent boundary from ERE sale proceeds through legal-party allocation, gross/net entitlement, 10% ENVAL TARGET fee, settlement, payout, reconciliation, correction, reversal, and clawback;

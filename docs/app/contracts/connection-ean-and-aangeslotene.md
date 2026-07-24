@@ -1,8 +1,8 @@
 # Connection, EAN And Aangeslotene Contract
 
-DRAFT — WP3B DOMAIN RECONCILIATION — NOT APPROVED / NOT DDL READY
+TARGET — WP3C INTERNAL DOMAIN DECISIONS APPROVED — EXTERNAL BLOCKERS OPEN / NOT DDL READY
 
-Dit document is het docs-only WP3B-besluitvoorstel voor connection-, allocatiepunt-, EAN- en aangeslotene-truth. Het is geen juridische interpretatie, contractgoedkeuring, DDL-specificatie, implementatiebewijs of toestemming voor schema-, runtime-, provider-, remote- of deploywerk.
+Dit document is het connection-, allocatiepunt-, EAN- en aangeslotenecontract. Daan heeft via `operations/wp3c-connection-ean-internal-domain-decisions.md` uitsluitend internal decision package A-E als TARGET goedgekeurd. Die goedkeuring is geen juridische interpretatie, externe validatie, DDL-specificatie, implementatiebewijs of toestemming voor schema-, runtime-, provider-, remote- of deploywerk.
 
 De bronvolgorde uit `00_CANON.md` blijft leidend. Dit voorstel gebruikt uitsluitend de aantoonbare mappings `NEA-ORG-006`, `NEA-EAN-001` tot en met `NEA-EAN-004`, `NEA-MAND-002` tot en met `NEA-MAND-005`, `NEA-AUD-002`, `NEA-COR-001`, `NEA-RET-001` en `NEA-SEC-001/002`. De officiële TKV-snapshot is lokaal aanwezig met SHA-256 `f08ae9cc56d7145f8962e9e0930f0e9b8676a55e73437aba4f0193b3edcc55cf`. Dit contract voegt geen juridische uitleg toe aan die bronnen.
 
@@ -21,9 +21,9 @@ De bronvolgorde uit `00_CANON.md` blijft leidend. Dit voorstel gebruikt uitsluit
 - Settlement entitlement volgt nooit automatisch uit connection truth.
 - Een case link, adresmatch, handtekening, Auth-account, contactrol, customerrelatie, legal acceptance of vrij tekstveld creëert geen van deze truths.
 
-## B. Voorgestelde TARGET-verantwoordelijkheden
+## B. Approved TARGET-verantwoordelijkheden en niet-goedgekeurde namen
 
-De volgende namen zijn uitsluitend niet-goedgekeurde voorstellen. Zij zijn geen schema-authorisatie en definiëren geen kolommen of constraints.
+De gescheiden verantwoordelijkheden voor physical connection, allocation point, metadata/history, aangesloteneclaim en administratieve case link zijn approved TARGET onder package A-D. De volgende fysieke namen blijven uitsluitend niet-goedgekeurde voorstellen. Zij zijn geen schema-authorisatie en definiëren geen kolommen of constraints.
 
 | voorgestelde verantwoordelijkheid | niet-goedgekeurde kandidaatnaam | begrensde TARGET-verantwoordelijkheid |
 |---|---|---|
@@ -36,28 +36,22 @@ De volgende namen zijn uitsluitend niet-goedgekeurde voorstellen. Zij zijn geen 
 
 External/manual source observations blijven een afzonderlijke observation/provenance-verantwoordelijkheid. Evidence artifacts, reviews en accepted/rejected evidence decisions blijven een afzonderlijke toekomstige evidence-module. Kalenderjaarexclusiviteitscontrole blijft een afzonderlijke toekomstige mandate/controlmodule. Er komt geen generieke ownership-, role-, evidence- of EAV-engine.
 
-## C. EAN-semantiek
+## C. Approved TARGET EAN-semantiek
 
-Aanbevolen TARGET-besluiten, allemaal onder voorbehoud van Daan-goedkeuring:
+De volgende interne regels zijn door Daan als TARGET goedgekeurd:
 
-1. EAN-syntax is exact 18 numerieke tekens. Dit contract doet geen checksumclaim en leidt geen registergeldigheid uit syntax af.
-2. Een `declared EAN` is door een actor aangeleverde, nog niet geaccepteerde data.
-3. Een `observed EAN` is uit een artifact, parser of handmatige observatie afkomstige data.
-4. Een `externally returned EAN` is een immutable, provenanced resultaat van een externe of gecontroleerde handmatige bron, inclusief bronversie, retrieval time en freshness.
-5. Een `accepted EAN` ontstaat uitsluitend door een expliciete acceptancebeslissing op gekende bronnen en conflicten. Declared, parsed of merely observed EAN creëert geen core allocation-pointroot.
-6. De geaccepteerde EAN is voorgesteld als immutable externe identiteit op de stabiele allocation-pointroot.
-7. Correctie van een foutief gedeclareerde EAN vóór acceptance corrigeert de claim/observation history en creëert nog geen root.
-8. Correctie van een reeds geaccepteerde EAN naar een andere EAN creëert een nieuwe allocation-pointroot en een expliciete replacement/relationship; de historische root wordt niet herschreven.
-9. Duplicate detection controleert syntactische normalisatie, bestaande accepted roots, actieve acceptancebesluiten en externe/manual conflictresultaten. Alleen syntactische gelijkheid is geen bewijs dat twee fysieke situaties gelijk zijn.
-10. EAN-reuse, externe heruitgifte of een echte EAN-wijziging wordt niet verondersteld. Een dergelijke situatie blijft conflict/manual review totdat de gezaghebbende bron en relatie schriftelijk zijn vastgesteld.
-11. Afwijkende bronnen worden als conflict gekoppeld; een actuele externe response overschrijft geen eerdere observation, decision of historical reliance.
-12. Historische reconstructie bewaart declared, observed, externally returned en accepted waarden met hun eigen tijd, bron, artifact/version/hash en besluit.
+1. Een fysieke electricity connection en een EAN-dragend allocation point zijn afzonderlijke roots.
+2. De geaccepteerde EAN is immutable op de stabiele allocation-pointroot.
+3. Core EAN-syntax is exact 18 numerieke tekens. Dit contract doet geen checksumclaim zonder officiële, aantoonbaar toepasselijke bron.
+4. Declared, parsed/observed en externally returned EAN-waarden zijn observations.
+5. Een observation creëert niet zelfstandig een geaccepteerde allocation-pointroot of accepted EAN.
+6. Correctie van een accepted EAN naar een andere EAN herschrijft de bestaande root niet; zij vereist een nieuwe root of expliciete historische relatie volgens een later goedgekeurd correctiecontract.
 
-Dit is een besluitvoorstel, geen goedgekeurde waarheid.
+De interne identity- en observationgrenzen zijn approved TARGET. External register truth, accepted-evidencecategorieën, freshness, conflictafhandeling, EAN-reuse en het correctiecontract blijven open en niet geïmplementeerd.
 
-## D. Connection en location
+## D. Approved TARGET connection- en locationgrens
 
-Aanbevolen TARGET-relatie:
+Approved TARGET:
 
 - de fysieke connection is een afzonderlijke stabiele root;
 - een stabiele locationroot vertegenwoordigt de fysieke locatie, niet een adresstring;
@@ -68,11 +62,11 @@ Aanbevolen TARGET-relatie:
 
 `app_dossier_locations` is niet automatisch het target-locationmodel. Het blijft een dossiergebonden snapshot met bruikbare normalizationvelden, maar niet de goedgekeurde stabiele fysieke locationroot.
 
-De locationdependency blokkeert WP3B-DDL voor `app_electricity_connections` en iedere allocation-pointversion die een fysieke location/version moet vastleggen. Een afzonderlijk goedgekeurde locationfoundation, inclusief stabiele root, versionsemantiek en correctierelaties, is eerst nodig. Een uitsluitend EAN-dragende allocation-pointroot zou technisch apart kunnen worden ontworpen, maar wordt in deze batch niet los geautoriseerd omdat acceptance-, duplicate- en replacementbesluiten eveneens openstaan.
+De locationdependency blokkeert connection-DDL voor `app_electricity_connections` en iedere allocation-pointversion die een juridische/fysieke locationversion moet vastleggen. De eerstvolgende bounded context is de locationfoundation. Die foundation moet afzonderlijk worden gecontracteerd, goedgekeurd en bewezen. Pas daarna volgt een beperkte connection root/claim DDL-readinesscheck; WP3C autoriseert die DDL niet.
 
-## E. Aangesloteneclaim
+## E. Approved TARGET aangesloteneclaim
 
-Aanbevolen TARGET-besluiten:
+Approved TARGET:
 
 - de claim verwijst naar de represented legal party uit WP2A, nooit rechtstreeks naar een Auth identity, account, customer, dossier of case role;
 - iedere claimversie pint exact één passende person- of organization-profileversion van die party;
@@ -80,12 +74,11 @@ Aanbevolen TARGET-besluiten:
 - claimversies zijn immutable en append-only;
 - business validity gebruikt `valid_from` en optioneel `valid_to`;
 - `recorded_at` is afzonderlijke recorded time;
-- source class/reference, request ID, actor en decisionmetadata zijn verplicht waar van toepassing;
 - supersession is expliciet en lineair;
 - dispute en rejection blijven zichtbaar en kunnen geen operationele truth leveren;
 - correctie naar een andere party sluit of betwist de oude claim en start een nieuwe claimroot; de party wordt nooit binnen dezelfde chain vervangen.
 
-Voorgestelde gesloten statusvocabulary ter beoordeling:
+Goedgekeurde gesloten statusvocabulary:
 
 - `asserted`
 - `connection_confirmed`
@@ -96,25 +89,25 @@ Alleen een terminale, niet-gesupersede `connection_confirmed`-versie mag operati
 
 `connection_confirmed` bewijst uitsluitend de party-to-allocation-point-relatie voor de vastgelegde periode. Het bewijst geen authority, mandate, kalenderjaarexclusiviteit, charger/MID, kWh, booking eligibility, settlement entitlement of verifier approval.
 
-## F. Tijd, overlap en concurrency
+Concrete provenancevelden, actorclassificaties, reviewbevoegdheid, decisionmetadata, kolommen en constraints blijven open voor een latere DDL-readinessbeslissing.
 
-Aanbevolen TARGET-regels:
+## F. Approved TARGET tijd, overlap en concurrency
+
+Approved TARGET:
 
 - business validity is half-open: `[valid_from, valid_to)`;
 - null `valid_to` is onbegrensd;
 - touching boundaries zijn toegestaan;
-- retroactieve registratie is toegestaan wanneer oorspronkelijke business validity, actuele `recorded_at`, bron, actor, request, reden en decision time bewaard blijven;
 - per allocation point bestaat per moment maximaal één operationele `connection_confirmed` aangeslotene;
 - meerdere historische aangeslotenen over niet-overlappende perioden zijn toegestaan;
-- competing `asserted` en `disputed` claims mogen naast elkaar bestaan wanneer zij expliciet als conflict zijn gekoppeld en geen operationele truth leveren;
-- een inhoudelijk gelijke same-party duplicate claim voor hetzelfde point en interval wordt idempotent herkend of afgewezen; een nieuwe bronobservatie hoort niet via duplicatie van core claim truth te worden opgeslagen;
+- competing `asserted` en `disputed` claims mogen naast elkaar bestaan voor review wanneer zij geen operationele truth leveren;
 - iedere versionchain heeft exact één root, maximaal één directe successor, geen cycles, toenemende `recorded_at` en ongewijzigde root/scope-identiteit;
 - wrong-party correction gebruikt een nieuwe claimroot;
 - operationele overlap en chainvaliditeit worden aan het einde van de transactie gecontroleerd;
 - writes op dezelfde allocation-pointbusinesskey gebruiken een deterministic advisory transaction lock om write-skew te voorkomen;
 - een latere proof bevat echte gelijktijdige transacties, niet alleen sequentiële overlaptests.
 
-De tijdsdimensies blijven afzonderlijk:
+Business validity en recorded time blijven approved afzonderlijk. Evidence validity, decision time en calendar-year controls blijven eveneens afzonderlijke concerns, maar hun precieze external/evidencecontracten zijn open:
 
 | tijd | betekenis |
 |---|---|
@@ -124,18 +117,18 @@ De tijdsdimensies blijven afzonderlijk:
 | decision time | wanneer een bevoegde reviewer een expliciet besluit nam |
 | calendar-year controls | mandate- en inboekdienstverlenerexclusiviteit per volledig kalenderjaar |
 
-## G. Primary en secondary allocation points
+## G. Approved TARGET primary en secondary allocation points
 
 - `secondary_allocation_point` als los label is onvoldoende.
 - Een secondary point moet bewust, historiseerbaar en period-bound aan een primary physical connection en/of primary allocation point worden gekoppeld.
 - Relationship type en geldigheidsperiode zijn afzonderlijke historische metadata.
 - Eligibility volgt nooit automatisch uit deze relatie.
-- Exacte evidence en een expliciet reviewerbesluit blijven noodzakelijk.
+- Evidence acceptance blijft een afzonderlijke expliciete menselijke beslissing; de exacte evidencecategorieën zijn open.
 - De exacte MLOEA-/secondary-acceptatieregels blijven `BLOCKED — EXTERNAL` zolang de gemapte bronnen de toegestane constructen, relatie en evidence niet volledig bepalen.
 
 Conservatieve MVP-default: ieder onduidelijk secondary-allocationgeval is blocked/manual review. Het krijgt geen automatische promotion of booking eligibility.
 
-## H. Kalenderjaarexclusiviteit
+## H. Approved TARGET kalenderjaarexclusiviteitsgrens
 
 - `NEA-EAN-004` is geen globale active-EAN uniqueness.
 - Connection/allocation-point identity en inboekdienstverlenerexclusiviteit zijn verschillende concerns.
@@ -145,7 +138,7 @@ Conservatieve MVP-default: ieder onduidelijk secondary-allocationgeval is blocke
 - Een unresolved duplicatecontrole blokkeert promotion/booking voor het betrokken kalenderjaar, maar hoeft historische connectionregistratie niet te blokkeren.
 - Connection truth creëert geen mandate en een mandate creëert geen connection truth.
 
-## I. Evidence en provenance
+## I. Approved evidencegrens en open provenancebesluiten
 
 De volgende lagen blijven afzonderlijk:
 
@@ -157,7 +150,7 @@ De volgende lagen blijven afzonderlijk:
 6. accepted/rejected evidence decision;
 7. operational connection/party truth.
 
-Het aanbevolen contract vereist waar relevant:
+De afzonderlijke evidence-acceptancecontext en de menselijke beslisgrens zijn approved TARGET. De precieze categorieën, freshness, conflictregels en onderstaande provenancevelden blijven een later contractbesluit:
 
 - source type/class en source reference;
 - retrieval time en issue time;
@@ -170,19 +163,16 @@ Het aanbevolen contract vereist waar relevant:
 
 Raw providerpayload hoort niet in core connection-, allocation-point- of claimrows. Het blijft in een afzonderlijk afgeschermd source/evidence-object onder een eigen retention- en toegangscontract.
 
-## J. Casekoppeling
+## J. Approved administratieve casegrens
 
 - Cases mogen allocation points gebruiken zonder ze te bezitten.
-- Eén allocation point mag historisch of gelijktijdig in meerdere administratieve cases voorkomen wanneer de caseproductregels dat toestaan.
 - Een case link creëert geen aangeslotene, authority, mandate of kalenderjaarexclusiviteit.
-- Een case link verwijst naar stabiele IDs en, wanneer een beslissing historische metadata gebruikt, naar de exact gebruikte versions.
-- Removal of beëindiging van een case link verwijdert geen connection-, allocation-point- of aangeslotenehistorie.
 
-Aanbevolen MVP-cardinaliteit: many-to-many tussen case en allocation point, met maximaal één niet-gesupersede overlappende link voor dezelfde case/point/link-purpose-combinatie. Open productbesluiten zijn: of een case precies één primary point moet hebben, welke link purposes zijn toegestaan, of dezelfde point tegelijk in meerdere actieve cases mag voorkomen en welke exact gepinde metadata/evidence een casebesluit vereist.
+Exacte casecardinaliteit, link purposes, simultane actieve cases, versionpinning, lifecycle en verwijdergedrag zijn niet onderdeel van package A-E en blijven open productbesluiten.
 
-## K. Security
+## K. Approved TARGET securitygrens
 
-Aanbevolen contractgrens:
+Approved TARGET:
 
 - RLS enabled op iedere core tabel;
 - deny-all policies;
@@ -190,58 +180,44 @@ Aanbevolen contractgrens:
 - immutable truth krijgt voor `service_role` uitsluitend `SELECT` en `INSERT`;
 - geen `UPDATE` of `DELETE` op immutable roots/versions tenzij een later afzonderlijk mutable projectionobject aantoonbaar nodig is;
 - geen browserwrites;
-- een customer-safe projection is later werk en geeft geen raw evidence, reviewmetadata of interne conflictinformatie vrij;
-- `SECURITY DEFINER` wordt alleen gebruikt wanneer een bewezen transactionele invariant dit vereist;
-- iedere definerfunctie heeft een veilige expliciete `search_path` en minimale executegrants;
-- directe service-role writes mogen een transactionele invariant niet omzeilen.
+- transaction-end-validatie en deterministic advisory locking bewaken cross-row invarianten en write-skew;
+- latere proofs bevatten echte concurrerende transacties.
 
-## L. Daan-besluitmatrix
+Customer-safe projection, concrete RPC-vorm, `SECURITY DEFINER`-gebruik, search path en executegrants blijven latere implementatiebesluiten binnen de approved least-privilegegrens.
 
-Geen rij in deze matrix is al goedgekeurd.
+## L. WP3C-besluitmatrix
 
-| besluit-ID | onderwerp | CURRENT truth | aanbevolen TARGET-besluit | alternatief | risico | externe validatie nodig | Daan-goedkeuring nodig | blokkeert contract | blokkeert DDL | voorgestelde proof |
-|---|---|---|---|---|---|---|---|---|---|---|
-| WP3B-D01 | connection versus allocation-pointroot | één `app_connections`-row mengt EAN, type, account/dossier/location en status | fysieke connection en EAN-dragend allocation point zijn gescheiden roots | één gecombineerde root | constructen en historie blijven ambigu | ja, DSO/verifier | ja | ja | ja | root-/relationshipinventaris en negatieve cross-contexttests |
-| WP3B-D02 | accepted-EAN-immutability | status-based mutable connectionrow | accepted EAN is immutable op allocation-pointroot | versioned EAN op dezelfde root | historische identiteit kan worden herschreven | ja, DSO/register | ja | ja | ja | accepted-root correction/replacement/historyproof |
-| WP3B-D03 | EAN syntax/checksum | exact 18 digits; geen checksumbron | exact 18 digits, expliciet geen checksumclaim | later bewezen checksum | ongefundeerde registry claim | ja | ja | nee | ja | syntax en no-auto-accept tests |
-| WP3B-D04 | locationdependency | dossier-location FK | afzonderlijke stable locationroot en exact historical version; dependency blokkeert fysieke connection-DDL | dossier snapshot behouden | relocation/adrescorrectie herschrijft truth | mogelijk adresbron | ja | ja | ja | relocation/correction/reliance proof |
-| WP3B-D05 | claimstatusvocabulary | declared/under_review/verified/rejected/superseded | asserted/connection_confirmed/disputed/rejected | andere gesloten vocabulary | operationele truth blijft onduidelijk | verifier | ja | ja | ja | closed-vocabulary en operational-state tests |
-| WP3B-D06 | profile-versionpinning | customer/dossier, geen party profile | exact één passende WP2A profileversion per claimversie | alleen partyroot | latere profielwijziging herschrijft historische reliance | nee | ja | ja | ja | later-profile-stability proof |
-| WP3B-D07 | operationele truth | non-rejected ownershipclaim | alleen terminale niet-gesupersede connection_confirmed version | actuele pointer/status | asserted data kan operationeel worden | verifier | ja | ja | ja | state filtering en supersessionproof |
-| WP3B-D08 | maximaal één aangeslotene per point/time | nonterminal overlapguard op accountclaim | maximaal één operationele confirmed party per allocation point per moment | meerdere confirmed claims | conflicterende juridische truth | ja | ja | ja | ja | temporal en concurrent overlap proof |
-| WP3B-D09 | competing claims | overlap grotendeels geweigerd | asserted/disputed conflicts toegestaan maar niet operationeel en expliciet gekoppeld | alle overlap weigeren | conflictgeschiedenis verdwijnt of blokkeert intake | verifier | ja | ja | ja | competing-claim/conflict/no-operation tests |
-| WP3B-D10 | wrong-party correction | ambigu supersede-row | oude claim sluiten/betwisten; nieuwe party krijgt nieuwe claimroot | party binnen chain wijzigen | chain identity en audit worden vals | nee | ja | ja | ja | atomic close/new-root en scope-preservation proof |
-| WP3B-D11 | primary/secondary relationship | los enumlabel | expliciete historiseerbare relation met manual-review default | label behouden | `NEA-EAN-003` wordt onterecht voldaan verklaard | ja, MLOEA/verifier | ja | ja | ja | relation/evidence/negative eligibility proof |
-| WP3B-D12 | case cardinaliteit | geen case link | many-to-many historische link; geen ownership/inference | één point per case | toekomstige dossiers worden kunstmatig beperkt | product | ja | ja | ja | cardinality, version pin en no-inference proof |
-| WP3B-D13 | external evidence acceptance | vrije source refs | externe result, artifact/version, review en acceptance afzonderlijk | bronlabel als truth | stale/conflicting evidence wordt core truth | ja, DSO/verifier | ja | ja | ja | freshness/conflict/no-parser-promotion proof |
-| WP3B-D14 | kalenderjaarexclusiviteit | globale active-EAN unique index | afzonderlijke party+point/EAN+mandate+IDV+year control met external/manual check | lokale index | externe dubbele machtiging blijft onzichtbaar | ja | ja | ja | ja | year boundary, duplicate source en fail-closed proof |
-| WP3B-D15 | security/grants | RLS deny-all; service role SELECT/INSERT/UPDATE | immutable core: RLS deny-all en service role SELECT/INSERT only | mutable rows/RPC-only discipline | silent overwrite of bypass via direct service writes | nee | ja | nee | ja | exact grants, immutability en bypass tests |
-| WP3B-D16 | supersession/concurrency | mutable rows, nonlocking direct triggers, ambiguous successors | immutable linear chain, one successor, deferred checks en deterministic point lock | application-only locking | race/write-skew en meerdere current truths | nee | ja | ja | ja | two-transaction race, cycle en successor proof |
-| WP3B-D17 | oude objectdispositie | drie lege lokale tabellen en oude RPCs buiten migration history | forward-only replacement; niets verwijderen vóór alle replacementgates | in-place repair of directe drop | audit/rollback/source provenance verloren | nee | ja | ja | ja | rowcount/caller/rollback/catalog parity/cleanup proof |
+De interne TARGET-richting van pakketten A tot en met E is op 2026-07-24 expliciet door Daan goedgekeurd. Dat besluit autoriseert geen DDL, implementatie, retirement of proofclaim.
+
+| besluit-ID | onderwerp | WP3C-pakket | besluitstatus | goedgekeurde TARGET-richting | externe/open blocker | DDL-status | latere proofverplichting |
+|---|---|---|---|---|---|---|---|
+| WP3B-D01 | connection versus allocation-pointroot | A | APPROVED TARGET | separate fysieke connection- en EAN-dragende allocation-pointroots | register-/verifieraansluiting | NOT AUTHORIZED | objectinventaris en negatieve cross-contexttests |
+| WP3B-D02 | accepted-EAN-immutability | A | APPROVED TARGET | accepted EAN is immutable op de stabiele allocation-pointroot; correctie herschrijft niet | officiële correctie-/reuserules | NOT AUTHORIZED | correction/replacement/historyproof |
+| WP3B-D03 | EAN syntax/checksum | A | APPROVED TARGET | exact 18 numerieke tekens; geen checksumclaim zonder officiële toepasselijke bron | officiële toepasselijke bron | NOT AUTHORIZED | syntax en no-auto-accept tests |
+| WP3B-D04 | locationdependency | B | APPROVED TARGET | separate stabiele locationroot, immutable versions en address observations; eerst locationfoundation | locationcontract en implementatie | NOT AUTHORIZED | relocation/correction/reliance proof |
+| WP3B-D05 | claimstatusvocabulary | C | APPROVED TARGET | `asserted`, `connection_confirmed`, `disputed`, `rejected` | verifieracceptatie | NOT AUTHORIZED | closed-vocabulary en operational-state tests |
+| WP3B-D06 | profile-versionpinning | C | APPROVED TARGET | claimversie pint exact de passende person- of organization-profileversie | geen intern besluit meer; concrete DDL nog open | NOT AUTHORIZED | later-profile-stability proof |
+| WP3B-D07 | operationele truth | C | APPROVED TARGET | alleen terminale, niet-gesupersede `connection_confirmed` truth is operationeel | verifieracceptatie | NOT AUTHORIZED | state filtering en supersessionproof |
+| WP3B-D08 | maximaal één aangeslotene per point/time | C | APPROVED TARGET | maximaal één operationele confirmed party per allocation point per moment | verifieracceptatie | NOT AUTHORIZED | temporal en concurrent overlap proof |
+| WP3B-D09 | competing claims | C | APPROVED TARGET | asserted/disputed claims mogen naast elkaar bestaan maar zijn niet operationeel | conflicterende-bronafhandeling | NOT AUTHORIZED | competing-claim/conflict/no-operation tests |
+| WP3B-D10 | wrong-party correction | C | APPROVED TARGET | nieuwe party krijgt een nieuwe claimroot; historische claim wordt niet herschreven | concrete correction contract | NOT AUTHORIZED | atomic close/new-root en scope-preservation proof |
+| WP3B-D11 | primary/secondary relationship | D | APPROVED TARGET | expliciete historiseerbare typed relation; onduidelijk secondary/MLOEA blokkeert en gaat naar manual review | MLOEA-/secondarybron en verifier | NOT AUTHORIZED | relation/evidence/negative eligibility proof |
+| WP3B-D12 | casecardinaliteit | buiten A–E | OPEN | een case-link is administratief en creëert geen connection, allocation point, aangeslotene, authority, mandate of evidence acceptance | exacte productcardinaliteit en linkpurpose | NOT AUTHORIZED | cardinality, version-pin en no-inference proof |
+| WP3B-D13 | external evidence acceptance | D | APPROVED TARGET BOUNDARY | external result, artifact/version, review en acceptance blijven gescheiden; upload/parser/result is nooit automatisch accepted | evidencecategorieën, freshness en conflicting sources | NOT AUTHORIZED | freshness/conflict/no-parser-promotion proof |
+| WP3B-D14 | kalenderjaarexclusiviteit | D | APPROVED TARGET BOUNDARY | afzonderlijke party+point/EAN+mandate+IDV+year-control; niet een globale EAN-index | externe duplicatebron of manual fallback | NOT AUTHORIZED | year boundary, duplicate source en fail-closed proof |
+| WP3B-D15 | security/grants | E | APPROVED TARGET | RLS deny-all, geen browserwrites, immutable core voor `service_role` alleen `SELECT`/`INSERT` | concrete object- en RPC-authorisatie | NOT AUTHORIZED | exact grants, immutability en bypass tests |
+| WP3B-D16 | supersession/concurrency | E | APPROVED TARGET | immutable lineaire chain, één successor, transaction-end-checks en deterministic advisory locking | concrete transactionele DDL | NOT AUTHORIZED | echte two-transaction race-, cycle- en successorproof |
+| WP3B-D17 | oude objectdispositie | E | APPROVED TARGET DIRECTION | forward-only replacement; niets verwijderen vóór alle retirementgates en expliciete execution approval | replacementcontract, bewijs, callers, data en remote inventory | NOT AUTHORIZED | rowcount/caller/rollback/catalog parity/cleanup proof |
 
 ## M. Contractverdict
 
-PARTIAL — DOMAIN OR EXTERNAL DECISIONS REQUIRED
+TARGET — WP3C INTERNAL DOMAIN DECISIONS APPROVED — EXTERNAL BLOCKERS OPEN / NOT DDL READY
 
-### Exacte besluiten die Daan moet nemen
+### Goedgekeurde interne grens
 
-1. WP3B-D01: separate fysieke connection- en allocation-pointroots.
-2. WP3B-D02: accepted-EAN-immutability en new-root correction.
-3. WP3B-D03: 18-digit syntax zonder checksumclaim.
-4. WP3B-D04: locationfoundation als dependency en historische versionpinning.
-5. WP3B-D05: de vier claimstatuswaarden.
-6. WP3B-D06: verplichte party profile-versionpinning.
-7. WP3B-D07: uitsluitend terminale niet-gesupersede `connection_confirmed` operationele truth.
-8. WP3B-D08: maximaal één operationele aangeslotene per allocation point per moment.
-9. WP3B-D09: competing asserted/disputed claims zonder operationele werking.
-10. WP3B-D10: wrong-party correction via een nieuwe claimroot.
-11. WP3B-D11: expliciete primary/secondaryrelatie en fail-closed MVP-default.
-12. WP3B-D12: many-to-many casecardinaliteit en de nog open productkeuzes.
-13. WP3B-D13: afzonderlijke external result, artifact/version, review en acceptance.
-14. WP3B-D14: afzonderlijke kalenderjaarexclusiviteitscontrol.
-15. WP3B-D15: immutable grants en geen directe mutable history.
-16. WP3B-D16: lineaire supersession, transaction-end checks en deterministic locking.
-17. WP3B-D17: forward-only replacement van de huidige objecten.
+De letterlijke beslispakketten A tot en met E staan in `operations/wp3c-connection-ean-internal-domain-decisions.md`. Voor die interne TARGET-richting staat geen nieuw Daan-besluit meer open. Dit contract autoriseert echter geen kandidaattabel, kolom, constraint, migration, proofrun, bestaande-objectmutatie of retirement.
+
+Nog open buiten A tot en met E zijn onder meer de exacte casecardinaliteit en linkpurpose, concrete tabel-/kolom-/constraintnamen, het afzonderlijke locationcontract en zijn implementatie, concrete correction flows, concrete RPC/projectievormen en alle hieronder genoemde externe beslissingen.
 
 ### Externe blockers
 
@@ -255,17 +231,17 @@ PARTIAL — DOMAIN OR EXTERNAL DECISIONS REQUIRED
 
 ### Implementation dependencies
 
-- expliciete Daan-goedkeuring van de bovenstaande contractbesluiten;
-- een afzonderlijk goedgekeurde locationfoundation voor fysieke connection/location truth;
+- het WP3C-besluitrecord voor de goedgekeurde interne A–E-richting;
+- een afzonderlijk goedgekeurde én bewezen locationfoundation voor fysieke connection/location truth;
 - WP2A party/profileversiontruth blijft de partybasis;
 - een afzonderlijk evidence acceptance contract;
 - een afzonderlijk mandate/calendar-year control contract;
 - provider-independent external/manual source contracts;
 - goedgekeurde forward-only replacement-, data-, caller-, rollback- en auditstrategie.
 
-### Kleinste latere DDL-batch
+### Eerstvolgende bounded context
 
-Pas na alle voor die scope relevante besluiten is de kleinste kandidaat een additive, immutable allocation-point- en aangesloteneclaimfoundation met uitsluitend de niet-goedgekeurde kandidaten `app_allocation_points`, `app_allocation_point_versions`, `app_allocation_point_party_claims` en `app_allocation_point_party_claim_versions`, plus één geïsoleerde lokale proof. `app_electricity_connections` blijft buiten die batch zolang de locationfoundation niet is goedgekeurd. `app_case_allocation_points` blijft buiten die batch totdat de casecardinaliteit en versionpinning expliciet zijn goedgekeurd. Dit voorstel is geen DDL-authorisatie.
+De eerstvolgende bounded context is uitsluitend de locationfoundation-readiness. Pas nadat die foundation afzonderlijk is goedgekeurd en bewezen, mag een beperkte connection-root/claim-DDL-readinessbeoordeling plaatsvinden. Ook die latere beoordeling is geen implementatie- of DDL-authorisatie.
 
 ### Hard exclusions
 

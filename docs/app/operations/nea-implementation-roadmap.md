@@ -6,7 +6,7 @@ Authority: operational tracker only; it does not override the official TKV sourc
 
 Architecture decision: TARGET — approved by Daan on 2026-07-22; not CURRENT PROVEN.
 
-Next bounded gates: obtain written Dutch corporate-law and external-verifier validation of the simple-majority representation-authority pilot brief; independently obtain Daan's explicit decisions on the unapproved WP3B connection/EAN contract and its external/location dependencies. Neither gate authorizes schema work.
+Next bounded gates: develop the locationfoundation as the first separate readiness context; independently obtain written Dutch corporate-law and external-verifier validation of the representation-authority pilot brief and resolve the connection/EAN external blockers. None of these gates authorizes schema work.
 
 Baseline commit: `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`.
 
@@ -44,13 +44,13 @@ The tracker never removes a blocker itself. A status changes only when the appli
 | field | value |
 |---|---|
 | Current phase | Approved TARGET direction; bounded work-package authorization only |
-| Current work package | WP3B connection/EAN contract reconciliation and object disposition is COMPLETE — UNCOMMITTED; no DDL is approved; authority validation continues externally |
-| Last completed work package | WP3B — connection/EAN domain contract reconciliation and object disposition — DOCS ONLY |
-| Next executable work package | Record Daan's explicit WP3B domain decisions and resolve the applicable location/external evidence blockers; this is a decision gate, not a schema batch |
-| Current blockers | WP3B is `PARTIAL — DOMAIN OR EXTERNAL DECISIONS REQUIRED`: connection/allocation roots, accepted-EAN identity, location dependency, claim semantics, secondary constructs, evidence acceptance, calendar-year duplicate control, concurrency and forward replacement remain unapproved. Authority legal/verifier answers remain independently pending and representation authority is NOT SCHEMA READY |
+| Current work package | WP3C records Daan's approved internal connection/EAN A–E TARGET direction; documentation is COMPLETE — UNCOMMITTED; implementation, proof, DDL and retirement remain unauthorized |
+| Last completed work package | WP3C — connection/EAN internal domain decisions — DOCS ONLY |
+| Next executable work package | Locationfoundation readiness only; after separate approval and proof, perform a limited connection-root/claim DDL-readiness assessment |
+| Current blockers | Locationfoundation is not implemented/proven; CAR/DSO/register, evidence categories/acceptance/freshness/conflicts, secondary/MLOEA, year duplicate/fallback, verifier acceptance, representation authority and mandate validation remain open. Authority validation is independent and representation authority is NOT SCHEMA READY |
 | External research running in parallel | CAR, EAN/aangeslotene, DSO, KvK, MID/certificate sources, CPO/backoffice, energy supplier, kWh exchange, REV, verifier, and payment provider where relevant |
 | Last updated | 2026-07-24 |
-| Evidence reference | WP2B-I commit `5a5265adc516e8198cc25757654920d4aa3316bd`; authority brief commit `d44379f52125370eb91b0de52098a1df69bd2f92`; WP3A commit `f3b39aafb2e6817e64401ccb2c47eed285552869`; `contracts/connection-ean-and-aangeslotene.md`; `operations/wp3b-connection-ean-object-disposition.md`; official TKV snapshot and mapped requirements |
+| Evidence reference | WP2B-I commit `5a5265adc516e8198cc25757654920d4aa3316bd`; authority brief commit `d44379f52125370eb91b0de52098a1df69bd2f92`; WP3A commit `f3b39aafb2e6817e64401ccb2c47eed285552869`; WP3B commit `ee3f6b59c937f0c39a67ba09936e9ef688bcea59`; `operations/wp3c-connection-ean-internal-domain-decisions.md`; official TKV snapshot and mapped requirements |
 
 ## Target Approval And Bounded Work-Package Rule
 
@@ -149,8 +149,8 @@ External research may run in parallel, but it may not introduce provider-specifi
 |---|---|---|---|
 | Internal after GO | identity/customer/organization | TODO | Provider-independent party, identity, legal-entity, and case contract. |
 | Internal after GO | representation | TODO | Time-bound authority and evidence; no inferred signing authority. |
-| Internal after GO | locations | IN PROGRESS | Existing location facts are reusable only within the accepted target boundary. |
-| Internal after GO | connections | IN PROGRESS | Local EAN/period/write foundation exists; external truth and safe review remain open. |
+| Internal after GO | locations | IN PROGRESS | WP3C approves the stable-root/version/observation direction only; a separate locationfoundation is the first next readiness context and is not implemented/proven. |
+| Internal after GO | connections | IN PROGRESS | WP3C approves internal A–E TARGET semantics only; old local objects conflict, proofs remain `PROVE AGAIN`, and DDL/external truth remain open. |
 | Internal after GO | chargers/charge points/meters | IN PROGRESS | Existing charger/MID fields are partial inputs, not accepted asset/conformity truth. |
 | Internal after GO | documents/evidence | IN PROGRESS | Transport/version primitives exist; evidence decision remains separate. |
 | Internal after GO | mandates | TODO | Dedicated signed, versioned mandate and exact permissions. |
@@ -205,21 +205,21 @@ The migration and proof are committed in `5a5265adc516e8198cc25757654920d4aa3316
 
 ## Detailed Tracking — Directly Following Work Package 3
 
-Work package 3 is `BLOCKED — DECISION`. WP3A is committed proof-only current-truth evidence. WP3B now supplies an unapproved draft contract and exact object disposition, but its verdict is `PARTIAL — DOMAIN OR EXTERNAL DECISIONS REQUIRED`. DDL remains blocked until Daan approves the relevant decisions and the applicable location/external evidence dependencies are resolved. Authority validation continues externally and remains separate.
+Work package 3 is `IN PROGRESS`. WP3A is committed proof-only current-truth evidence and WP3B is committed reconciliation/source disposition. WP3C records Daan's approval of internal TARGET packages A–E, but this is not implementation, proof or DDL authorization. Locationfoundation and the applicable external/evidence dependencies remain blocking. Authority validation continues externally and independently.
 
 | checklist item | status | evidence / gate |
 |---|---|---|
-| design/contract | COMPLETE — UNCOMMITTED | `contracts/connection-ean-and-aangeslotene.md` records the proposed bounded TARGET decisions and verdict `PARTIAL — DOMAIN OR EXTERNAL DECISIONS REQUIRED`; it is not approved or DDL ready. |
+| design/contract | COMPLETE — UNCOMMITTED | `operations/wp3c-connection-ean-internal-domain-decisions.md` records Daan's exact A–E approval and the contract status is `TARGET — WP3C INTERNAL DOMAIN DECISIONS APPROVED — EXTERNAL BLOCKERS OPEN / NOT DDL READY`. |
 | existing module inventory | COMPLETE — CURRENT PROVEN | Committed WP3A inventories ignored migrations, untracked proofs, local catalog, migration history, functions, grants and absence of runtime callers. WP3B adds exact per-object disposition without mutation. |
 | existing CSS inventory indien UI relevant | NOT APPLICABLE | Read-only module/component/token/layout inspection found no runtime or visual responsibility for this audit. |
-| database | BLOCKED — DECISION | Three empty local tables plus thirteen connection-named functions exist. WP3B dispositions the tables, guards, audithelper, RPCs and triggers as `REPLACE`, proofs as `PROVE AGAIN` and ignored migrations as `RETIRE AFTER REPLACEMENT PROOF`; no object was changed. |
+| database | BLOCKED — DECISION | The internal `REPLACE` direction is approved, but no DDL or retirement execution is authorized. Three empty local tables plus thirteen connection-named functions remain intact; old proofs remain `PROVE AGAIN` and ignored migrations remain conflicting source material pending every replacementgate. |
 | Edge Function/service | NOT IMPLEMENTED | Exact-name search found no current service or Edge caller for the tables or write RPCs. |
 | frontend/UI | NOT IMPLEMENTED | No customer projection exists; UI/CSS is outside WP3A. |
-| tests | BLOCKED — DECISION | Existing untracked Q1-Q34/Q1-Q36 sources encode the conflicting model, are dispositioned `PROVE AGAIN` and were not rerun in WP3B. |
+| tests | BLOCKED — DECISION | Existing untracked Q1-Q34/Q1-Q36 sources encode the conflicting model, remain `PROVE AGAIN` and were not rerun in WP3B or WP3C. |
 | SQL proof | PROOF ONLY | Historical PASS claims exist, but there is no committed proof/migration pair, raw output, source hashes tied to the run or evidence page. Proofs were not run in WP3A or WP3B. |
 | browser proof | TODO | Required only when approved customer-visible behavior is implemented. |
-| documentation update | COMPLETE — UNCOMMITTED | Exactly one WP3B contract, one dispositiondocument and minimal roadmap/TODO/changelog updates; WP3A, central contracts, requirements, traceability, MVP and architecture remain unchanged. |
-| accepted by Daan | BLOCKED — DECISION | The WP3B recommendations and object disposition require Daan's later explicit decisions; this docs batch is not contract approval. |
+| documentation update | COMPLETE — UNCOMMITTED | One WP3C decision record plus bounded updates to the WP3B contract/disposition, architecture, traceability, roadmap, TODO and changelog; no readiness audit, requirement, MVP plan, code or schema changed. |
+| accepted by Daan | TARGET | Internal connection/EAN packages A–E are explicitly approved as TARGET. External/legal/verifier answers, DDL, implementation, proof, retirement and execution are not approved. |
 | commit | TODO | Documentation only may be committed separately; implementation remains unauthorized. |
 | remote/deploy separately approved | BLOCKED — DECISION | Internal GO grants no remote mutation, deployment, or production authority. |
 

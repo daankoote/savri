@@ -11,6 +11,7 @@ Dit document legt uitsluitend de docs-only disposition vast van de bestaande lok
 - Exact-name source search vindt geen actuele app-, Edge Function-, service- of frontendcaller van de vier RPCs of drie tabellen. Alleen proofs, docs en inactieve baselinevoorstellen refereren eraan.
 - Remote aanwezigheid is niet onderzocht en blijft UNKNOWN.
 - De twee migrations zijn ignored/untracked; de twee proofs zijn untracked. Geen ervan is CURRENT canon.
+- WP3C keurt uitsluitend de interne TARGET-richting `REPLACE` uit pakket E goed. Retirementuitvoering, DDL en cleanup zijn niet goedgekeurd; alle bestaande objecten en sourcebestanden blijven intact.
 
 Toegestane dispositionwaarden in dit document zijn uitsluitend `KEEP`, `EXTEND`, `REPAIR`, `REPLACE`, `PROVE AGAIN`, `BLOCKED`, `RETIRE AFTER REPLACEMENT PROOF`.
 
@@ -82,9 +83,9 @@ Alle acht functies bestaan lokaal als security-invoker PL/pgSQL met `search_path
 
 ## Forward-only replacementgate
 
-Geen bestaande tabel, functie, trigger, index, policy, grant, migration of proofbron wordt in WP3B verwijderd of gewijzigd. Retirement of cleanup vereist cumulatief:
+Geen bestaande tabel, functie, trigger, index, policy, grant, migration of proofbron wordt in WP3B of WP3C verwijderd of gewijzigd. WP3C keurt de `REPLACE`-richting goed, maar geen retirementuitvoering. Retirement of cleanup vereist cumulatief:
 
-1. expliciet goedgekeurd WP3B-contract;
+1. de WP3C-goedgekeurde interne TARGET-richting én een later expliciet DDL-ready replacementcontract;
 2. approved location/evidence/external-source dependencies voor de gekozen batch;
 3. committed additive replacement migration;
 4. actuele local en, in een afzonderlijk goedgekeurde batch, remote object/data/migration-historyinventaris;
@@ -95,7 +96,7 @@ Geen bestaande tabel, functie, trigger, index, policy, grant, migration of proof
 9. groene lokale replacementproof, inclusief echte concurrency en protected truth;
 10. afzonderlijke expliciete cleanupgoedkeuring.
 
-Forward-only replacement en cleanup worden afzonderlijk ontworpen. Lege lokale tabellen zijn geen drop-authorisatie. Afwezige migration history is geen bewijs van afwezigheid elders. Remote aanwezigheid blijft UNKNOWN. Bestaande source wordt in deze batch niet verwijderd.
+Forward-only replacement en cleanup worden afzonderlijk ontworpen. Lege lokale tabellen zijn geen drop-authorisatie. Afwezige migration history is geen bewijs van afwezigheid elders. Remote aanwezigheid blijft UNKNOWN. De oude migrations blijven conflicterend source material en de oude proofs blijven `PROVE AGAIN`; geen bestaand bestand wordt in deze batch verwijderd of gewijzigd.
 
 ## Eindstatus
 
@@ -106,4 +107,5 @@ Forward-only replacement en cleanup worden afzonderlijk ontworpen. Lege lokale t
 - Acht guards, audithelper, vier RPCs en negen triggers: object-level `REPLACE`; alleen benoemde predicates/vormen zijn logic-only input.
 - Twee proofs: `PROVE AGAIN`.
 - Twee ignored migrations: `RETIRE AFTER REPLACEMENT PROOF`.
-- DDL blijft geblokkeerd tot expliciete contractgoedkeuring en de toepasselijke externe/location/evidencebesluiten.
+- De TARGET-richting `REPLACE` is door Daan goedgekeurd; retirementuitvoering is niet goedgekeurd.
+- DDL blijft ongeautoriseerd totdat de locationfoundation bewezen is, toepasselijke externe/evidenceblockers zijn opgelost en een afzonderlijk DDL-ready besluit is genomen.

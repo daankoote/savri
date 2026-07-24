@@ -649,3 +649,15 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Did not rerun either old proof and did not change or remove any existing connection object, migration, proof or protected untracked artifact.
 - Authority validation continues independently and representation authority remains `NOT SCHEMA READY`.
 - This docs-only batch changed no WP3A audit, central party/case contract, requirement, traceability matrix, MVP plan, target architecture, migration, proof script, SQL, schema, database, migration history, code, Auth, RPC, Edge Function, runtime, frontend, UI, CSS, configuration, staging, commit, push, merge, deploy or remote state.
+
+## 2026-07-24 — Approve WP3C internal connection/EAN domain package
+
+- Added `docs/app/operations/wp3c-connection-ean-internal-domain-decisions.md` with exact status `DECISION RECORD — WP3C INTERNAL DOMAIN PACKAGE APPROVED — NO DDL AUTHORIZATION`.
+- Recorded Daan's explicit approval of internal TARGET packages A–E: separate connection/allocation/EAN identity and observations; immutable accepted EAN; stable location root/versions; party/profile-pinned claim history; administrative case, evidence and calendar-year-control boundaries; immutable security, transaction-end concurrency and forward replacement.
+- Updated the connection/EAN contract to exact status `TARGET — WP3C INTERNAL DOMAIN DECISIONS APPROVED — EXTERNAL BLOCKERS OPEN / NOT DDL READY`.
+- Preserved hard separation between Auth, account, party, case role, connection claim, representation authority, mandate, evidence acceptance, year exclusivity, charger/MID, kWh, booking, settlement and verifier truth.
+- Approved `REPLACE` only as the future TARGET direction. Retirement execution, cleanup, DDL, migration and proof changes remain unauthorized; all existing database objects and source files remain intact, both old proofs remain `PROVE AGAIN` and both old migrations remain conflicting source material.
+- Kept open: location implementation; CAR/DSO/register semantics; evidence categories, acceptance, freshness and conflicts; secondary/MLOEA; year duplicate source/fallback; verifier acceptance; representation authority; mandate validation; and booking eligibility.
+- Set locationfoundation readiness as the first next bounded context. A limited connection-root/claim DDL-readiness assessment may follow only after separate location approval and proof, and still does not automatically authorize implementation.
+- Representation-authority legal/verifier validation continues independently and representation authority remains `NOT SCHEMA READY`.
+- This docs-only batch changed no WP3A audit, party/case contract, directive, requirements, completeness audit, MVP plan, migration, proof script, SQL, database, RPC, Edge Function, runtime, frontend, UI, CSS, configuration, staging, commit, push, deploy or remote state.

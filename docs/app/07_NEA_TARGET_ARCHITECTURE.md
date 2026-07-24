@@ -61,8 +61,8 @@ Target bounded-context count: 24.
 | identity and representation | Bind Supabase Auth identity, legal entity, representative authority, and customer actor. | identities, legal entities, representatives | `app_customer_identities`, auth helper | PARALLEL REBUILD |
 | customer/account | Maintain customer account shell and customer-safe portal scope. | customers, customer cases, projections | `app_customers`, dashboard projection | EXTEND CURRENT |
 | mandate | Store signed mandate, version, period, clauses, withdrawal, and renewal. | mandates and mandate versions | legal acceptance pattern only | FULL REBUILD |
-| connection/EAN | Prove EAN, aangeslotene, distributor, address, and ownership period. | connections, ownership periods | address normalizers/location rows | FULL REBUILD |
-| location | Keep physical charging locations distinct from EAN and ownership. | locations | `app_dossier_locations` pattern | PROVISIONALLY REUSABLE — FINAL DISPOSITION AFTER REGULATORY CANON |
+| connection/EAN | Keep the physical connection, EAN-bearing allocation point, observations and party/profile-pinned claim separate; only terminal non-superseded confirmed claims are operational. | connection roots, allocation-point roots, EAN observations, party claim versions | predicates and security patterns only; existing objects conflict with TARGET | TARGET — WP3C INTERNAL DOMAIN APPROVED; NOT IMPLEMENTED |
+| location | Keep a stable physical-location root, immutable location versions and address observations distinct from connection, EAN and party claims. | location roots, versions, address observations | `app_dossier_locations` is source material, not automatically TARGET | TARGET — WP3C INTERNAL DOMAIN APPROVED; FOUNDATION NOT IMPLEMENTED |
 | charger/charge point | Model charger asset and individual charge points with history. | chargers, charge points | `app_dossier_chargers` fields | PROVISIONALLY REUSABLE — FINAL DISPOSITION AFTER REGULATORY CANON |
 | MID/conformity | Decide MID applicability and evidence validity for concrete assets. | MID meters, conformity evidence via evidence tables | MID field, document slots | FULL REBUILD |
 | evidence/document lifecycle | Issue uploads, confirm bytes, version evidence, and separate acceptance decisions. | evidence slots/files/versions/decisions | document upload/confirm/download/withdraw primitives | EXTEND CURRENT |
@@ -83,7 +83,7 @@ Target bounded-context count: 24.
 
 ## C. Core-Truth Entities
 
-Target entity count: 53. Table-level details are in `docs/app/architecture/database-target-model.md`.
+Target entity count: 54. Table-level details are in `docs/app/architecture/database-target-model.md`.
 
 | entity | purpose | owner | identifiers | valid-from/valid-to | mutable/immutable | source/provenance | evidence relation | audit relation | correction model | RLS/access | requirements | customer_visible | TKV dependency |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -92,9 +92,10 @@ Target entity count: 53. Table-level details are in `docs/app/architecture/datab
 | legal entity | Company/VvE legal person. | Legal/Ops | KvK, legal name | period-valid | versioned | KvK/customer evidence | representation evidence | legal review | supersede | internal summary | MAND, ORG | limited | no |
 | representative | Natural person or role authorized to sign. | Legal/Ops | representative_id, identity refs | authority period | versioned | mandate/KvK/board proof | authority documents | representation review | supersede | internal/customer own | MAND, SEC | limited | no |
 | case/dossier | Operational container for one onboarding/booking relationship. | Ops | case_id, case_number | lifecycle period | mutable state only | promotion | all domain rows | lifecycle audit | correction/revision | customer projection | AUD, RET | yes | yes |
-| location | Physical charging location. | Product/Ops | location_id, normalized address | occupancy/evidence period | versioned facts | customer/address lookup/manual review | address evidence | location review | supersede | customer-safe summary | EAN, CHG | yes | yes |
-| connection/EAN | Electricity connection and distributor data. | Ops/Compliance | EAN, distributor, address | required | versioned | CAR/netbeheerder/customer proof | connection evidence | EAN review | supersede | internal + customer summary | EAN | limited | yes |
-| connection ownership period | Aangeslotene proof for a period. | Ops/Compliance | connection_id + period | required | immutable decision version | CAR/invoice/manual proof | evidence decision | ownership review | supersede | internal | EAN, MAND | status only | yes |
+| location | Stable physical charging-location identity, versions and separate address observations. | Product/Ops | stable location ID; exact schema open | occupancy/evidence period | immutable versions and observations | customer/address source/manual observation | separately accepted location evidence | location review | new version or explicit relation; no rewrite | customer-safe summary | EAN, CHG | yes | yes |
+| electricity connection | Physical electricity connection distinct from location and EAN-bearing allocation point. | Ops/Compliance | stable connection ID; exact schema open | required where applicable | immutable material history | declared/observed/external sources remain observations | accepted evidence decision separate | connection review | append/supersede; no silent overwrite | internal + safe summary | EAN | limited | yes |
+| allocation point/EAN | Stable allocation-point identity with an immutable accepted EAN; exact 18-digit syntax without an unsupported checksum claim. | Ops/Compliance | stable allocation-point ID and accepted EAN; exact schema open | required | accepted EAN immutable; observations append-only | declared/parser/external values are observations, not accepted roots | separate accepted evidence decision | EAN review | new root or explicit later-approved historical relation; no rewrite | internal + safe summary | EAN | limited | yes |
+| allocation-point party claim/version | Period-bound aangeslotene claim linking the exact point, party and matching immutable party-profile version. | Ops/Compliance | claim root, point, party, person/organization profile version; exact schema open | required, half-open | immutable versions; explicit linear supersession | asserted source plus separate review/acceptance | evidence acceptance remains separate | claim decision/review | wrong party creates new claim root | internal; safe status only | EAN, MAND | status only | yes |
 | mandate | Customer authorization for ENVAL IDV activity. | Legal/Ops | mandate_id, customer_id | calendar-year validity | current pointer mutable, versions immutable | e-sign/manual signed artifact | mandate evidence | mandate events | revoke/supersede | internal + customer copy | MAND | yes | yes |
 | mandate version | Immutable signed mandate clause set. | Legal/Ops | mandate_version_id | issue/validity period | immutable | signed artifact/hash | mandate file/version | mandate captured/revoked | supersede | internal/customer copy | MAND, RET | yes | yes |
 | charger | Customer charger asset. | Ops | charger_id, serial/model/provider | asset period | versioned | customer/provider/evidence | charger evidence | charger review | supersede | customer summary | CHG | yes | yes |
@@ -165,7 +166,8 @@ No target status may combine different meanings. Each lifecycle below is provisi
 | dossier/case | opened -> intake_review -> evidence_collection -> ops_review -> booking_candidate -> booked -> verification_pending -> settled -> closed -> paused/rejected | case status is not mandate, evidence, kWh, REV, or settlement status |
 | mandate | drafted -> signed -> active_for_calendar_year -> expiring -> withdrawn -> superseded -> expired | consent checkbox is not signed mandate |
 | evidence | slot_expected -> upload_issued -> file_confirmed -> review_needed -> accepted -> rejected -> withdrawn -> superseded | confirmed upload is not accepted evidence |
-| EAN verification | missing -> submitted -> CAR/manual_check_needed -> accepted -> rejected -> expired/superseded | address match is not aangeslotene proof |
+| allocation-point/EAN acceptance | missing -> observation_recorded -> review_pending -> accepted -> rejected -> superseded_by_explicit_history | a declared, parsed or external-returned value is not an accepted root or accepted EAN; address match is not aangeslotene proof |
+| allocation-point party claim | asserted -> connection_confirmed/disputed/rejected -> superseded by a new immutable version | only terminal non-superseded `connection_confirmed` is operational; a claim is not authority, mandate, evidence acceptance or year exclusivity |
 | MID decision | missing -> applicability_pending -> conformity_pending -> accepted -> rejected -> expired/superseded | MID number is not conformity proof |
 | kWh import | source_configured -> import_received -> raw_locked -> normalized -> reconciled -> excluded/corrected | normalized is not eligible |
 | review | task_open -> in_review -> approved -> rejected -> escalated -> reopened | reviewer action is not four-eyes unless distinct approval exists |
@@ -321,7 +323,19 @@ Future regulatory versions are immutable, hashed and effective-period-bound. The
 
 Extensions remain additive bounded modules with stable IDs, their own root/history where needed, no cross-module core mutation, derived-only projections and no EAV/generic-JSON future-proofing. Representation authority remains `NOT SCHEMA READY`; authority, mandates, connection/EAN, location, MID/meter, evidence decisions, kWh, regulatory applicability, risk, verification, findings/CAPA, REV/batches, verification statements and settlement remain future modules outside WP2B-I.
 
-After a separately approved commit, the next gate is a choice and readiness analysis for the next NEa-driven bounded context. Representation authority is not selected or authorized automatically while it remains `NOT SCHEMA READY`.
+The next bounded context is the locationfoundation-readiness described below. Representation authority remains on its independent external-validation path and is not selected or authorized automatically while it remains `NOT SCHEMA READY`.
+
+## M. WP3C Approved Internal Connection/EAN Overlay
+
+TARGET — WP3C INTERNAL DOMAIN DECISIONS APPROVED — NOT IMPLEMENTED / NOT DDL READY
+
+Daan approved the internal A–E direction recorded in `operations/wp3c-connection-ean-internal-domain-decisions.md`. The approval separates physical connection, EAN-bearing allocation point, stable location, observations, party/profile-pinned claim, evidence acceptance, mandate, authority and case administration. An accepted EAN is immutable; observations never create an accepted root; only a terminal non-superseded `connection_confirmed` claim can be operational; wrong-party correction creates a new claim root.
+
+The target uses business validity separately from recorded time, half-open periods with touching boundaries allowed, explicit immutable supersession, transaction-end validation, deterministic advisory locking, deny-all RLS, no browserwrites and minimal `service_role` `SELECT`/`INSERT` on immutable truth. Existing connection objects are conflicting source material and remain intact pending a separately authorized forward replacement and retirement process.
+
+Future implementation proof must cover exact object inventory; immutable-EAN correction history; wrong-party new-root behavior; profile-version historical stability; at most one operational party per point and moment; touching versus overlapping periods; real concurrent transactions; linear supersession; no inference from Auth, account, case role, upload, parser, authority or mandate; exact RLS/grants; protected rows; and complete fixture cleanup. These are future acceptance targets, not claims about existing schema or proof results.
+
+External CAR/DSO/register semantics, evidence categories and acceptance, freshness, conflicting sources, secondary/MLOEA, year-duplicate/fallback, verifier acceptance, representation authority and mandate validation remain open. The locationfoundation is the first next bounded context. Only after it is separately approved and proven may a limited connection-root/claim DDL-readiness assessment occur; neither this overlay nor that assessment authorizes DDL.
 
 ## Overall Architecture Verdict
 
