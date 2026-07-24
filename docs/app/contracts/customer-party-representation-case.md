@@ -392,10 +392,10 @@ No account-type-specific duplicate module is allowed.
 
 `docs/app/operations/wp2b-representation-authority-case-role-readiness-audit.md` is the PROOF ONLY repository-readiness assessment for representation authority and case roles.
 
-Its bounded result is:
+At its audit date, its bounded result was:
 
 - WP2A remains `CURRENT PROVEN — LOCAL` only for the four existing party tables and their cited constraints, guards, RLS, grants, and proof.
-- Representation authority, authority evidence/review, cases, case-party roles, mandates, Auth/case projection, backfill, cutover, remote, and production remain outside WP2A and are not implemented.
+- Representation authority, authority evidence/review, cases, case-party roles, mandates, Auth/case projection, backfill, cutover, remote, and production were outside WP2A and not implemented at that audit point. The later WP2B-I local proof changes only the current status of cases and case-party roles.
 - The older database appendix names `app_legal_entities` and `app_representatives`; those shapes conflict with this later focused party/authority contract and must not be implemented before a separate documentation-governance decision resolves the target vocabulary.
 - Exactly one next additive batch is recommended, not authorized: `WP2B-I — additive case shell and case-party-role history — LOCAL SCHEMA AND PROOF ONLY`.
 - WP2B-I is limited to `app_cases` and `app_case_party_roles`, leaves WP2A unchanged, creates no representation authority or mandate, and preserves account ownership, party role, authority, mandate, EAN, beneficiary, and finance as separate truths.
@@ -404,13 +404,30 @@ Open authority risks remain the acceptable organization/VvE evidence standard, s
 
 ## WP2B-I DDL-Ready Target Contract
 
-TARGET — APPROVED / DDL READY
+DOMAIN CONTRACT — APPROVED
 
-SCHEMA — NOT IMPLEMENTED
+`app_cases`: CURRENT PROVEN — LOCAL
+
+`app_case_party_roles`: CURRENT PROVEN — LOCAL
+
+API/runtime/customer projection: NOT IMPLEMENTED
+
+Remote/production: NOT PROVEN
+
+NEa/verifier acceptance: NOT PROVEN
 
 Decision date: 2026-07-24.
 
-The earlier `BLOCKED — DECISION` result was correct for the then-underspecified recommendation. The decisions below close only the `WP2B-I — additive case shell and case-party-role history — LOCAL SCHEMA AND PROOF ONLY` contract blockers. They do not make representation authority schema-ready and do not implement schema or runtime.
+The earlier `BLOCKED — DECISION` result was correct for the then-underspecified recommendation. The decisions below closed only the `WP2B-I — additive case shell and case-party-role history — LOCAL SCHEMA AND PROOF ONLY` contract blockers. The two-table schema is now locally implemented and independently proven; this does not make representation authority schema-ready and does not implement an API, runtime write path, customer projection, remote apply or production behavior.
+
+Implementation basis:
+
+- basis commit: `1e4fe26781796c9f624eb42d186c39fb98271218`;
+- migration: `supabase/migrations/20260724110000_app_case_party_role_foundation.sql`; SHA-256 `fb3f9b5d0705d47a5f1be9f934684a25ad474000874daf2ef9e071ab3ddb56a1`;
+- proof: `scripts/proofs/app-case-party-role-foundation.proof.ts`; SHA-256 `12e4fdc5587fed04f75d3dda039c56e72fcd144cf1ecd8b943f1db7e32ef52bb`;
+- proof result: Deno check green; Q01-Q34 green; marker `app-case-party-role-foundation-proof-ok`;
+- evidence record: `docs/app/proofs/wp2b-i-case-party-role-foundation.md`;
+- source state: migration and proof are not committed by this documentation batch.
 
 ### Regulatory And Internal-Control Basis
 
@@ -427,20 +444,19 @@ The earlier `BLOCKED — DECISION` result was correct for the then-underspecifie
 
 The table contains exactly:
 
-| column | target type / rule |
+| column | proven local type / rule |
 |---|---|
-| `id` | `uuid`, primary key, server-generated |
+| `id` | `uuid`, primary key, default `gen_random_uuid()` |
 | `customer_id` | `uuid`, required FK to `app_customers(id)`, `ON DELETE RESTRICT` |
 | `case_reference` | `text`, required and globally unique |
-| `source_type` | `text`, required; same open, nonblank WP2A provenance field |
-| `source_reference_type` | `text`, required; same open, nonblank WP2A provenance field |
-| `source_reference_id` | `text`, required; same open, nonblank WP2A provenance field |
+| `created_at` | `timestamptz`, required; caller-supplied recording time because the schema defines no default |
+| `created_by_actor_type` | `text`, required; exact WP2A vocabulary: `customer`, `system`, `support`, `admin`, `edge_function`, `worker`, `provider`, `unknown` |
+| `created_by_actor_ref` | `text`, required and nonblank; no PII or secret |
+| `source_class` | `text`, required and nonblank; open provenance classification |
+| `source_ref` | `text`, required and nonblank; open minimized source reference |
 | `request_id` | `text`, required and nonblank |
-| `actor_type` | `text`, required; exact WP2A vocabulary: `customer`, `system`, `support`, `admin`, `edge_function`, `worker`, `provider`, `unknown` |
-| `actor_ref` | `text`, required and nonblank; no PII or secret |
-| `created_at` | `timestamptz`, required, server-recorded; this is the root recording time |
 
-`case_reference` is opaque and server-issued, is stored already trimmed, is 8–64 characters long, and contains no PII or domain semantics. The schema enforces global uniqueness, trimmed storage and length; the later server write contract and proof enforce server issuance and the no-PII/no-domain-semantics boundary.
+`case_reference` is intended to be opaque and server-issued, is stored already trimmed, is 8–64 characters long, and contains no PII or domain semantics. The proven schema enforces global uniqueness, trimmed storage and length. Server issuance and the no-PII/no-domain-semantics write boundary remain API/runtime responsibilities and are not implemented or proven by WP2B-I.
 
 `app_cases` has no `status`, `case_type`, `EAN`, mandate, authority, evidence-decision, kWh, settlement, generic JSON, `updated_at`, or other lifecycle/domain fields. It is append-only and has no normal UPDATE or DELETE path.
 
@@ -450,47 +466,62 @@ The table contains exactly:
 
 Every role version contains exactly:
 
-| column | target type / rule |
+| column | proven local type / rule |
 |---|---|
-| `id` | `uuid`, primary key, server-generated immutable version ID |
-| `role_claim_id` | `uuid`, required stable chain ID |
+| `id` | `uuid`, primary key, default `gen_random_uuid()`, immutable version ID |
+| `role_claim_id` | `uuid`, required stable chain ID, default `gen_random_uuid()` |
 | `case_id` | `uuid`, required FK to `app_cases(id)`, `ON DELETE RESTRICT` |
 | `party_id` | `uuid`, required FK to `app_parties(id)`, `ON DELETE RESTRICT` |
+| `person_profile_version_id` | nullable `uuid`; restrictive FK to `app_party_person_versions(id)` |
+| `organization_profile_version_id` | nullable `uuid`; restrictive FK to `app_party_organization_versions(id)` |
 | `role_type` | `text`, required; exactly `service_recipient` or `case_contact` |
-| `person_profile_version_id` | nullable `uuid`; composite FK with `party_id` to `app_party_person_versions(party_id,id)` |
-| `organization_profile_version_id` | nullable `uuid`; composite FK with `party_id` to `app_party_organization_versions(party_id,id)` |
 | `claim_status` | `text`, required; exactly `asserted`, `case_confirmed`, `disputed`, `rejected` |
-| `valid_from` | `date`, required |
-| `valid_to` | nullable `date`; exclusive upper bound |
-| `source_type` | `text`, required; exact WP2A open, nonblank provenance field |
-| `source_reference_type` | `text`, required; exact WP2A open, nonblank provenance field |
-| `source_reference_id` | `text`, required; exact WP2A open, nonblank provenance field |
+| `valid_from` | `timestamptz`, required |
+| `valid_to` | nullable `timestamptz`; exclusive upper bound |
+| `recorded_at` | `timestamptz`, required and separate from business validity; the schema defines no default |
+| `recorded_by_actor_type` | `text`, required; exact WP2A actor vocabulary |
+| `recorded_by_actor_ref` | `text`, required and nonblank; no PII or secret |
+| `source_class` | `text`, required and nonblank; open provenance classification |
+| `source_ref` | `text`, required and nonblank; open minimized source reference |
 | `request_id` | `text`, required and nonblank |
-| `actor_type` | `text`, required; exact WP2A actor vocabulary |
-| `actor_ref` | `text`, required and nonblank; no PII or secret |
-| `recorded_at` | `timestamptz`, required, server-recorded separately from business validity |
-| `decision_actor_type` | nullable `text`; exact WP2A actor vocabulary when present |
-| `decision_actor_ref` | nullable `text`, nonblank when required; no PII or secret |
-| `decision_request_id` | nullable `text`, nonblank when required |
+| `decision_at` | nullable `timestamptz` |
+| `decided_by_actor_type` | nullable `text`; exact WP2A actor vocabulary when present |
+| `decided_by_actor_ref` | nullable `text`, nonblank when required; no PII or secret |
 | `decision_reason` | nullable `text`, nonblank when required |
-| `decided_at` | nullable `timestamptz` |
-| `supersedes_role_version_id` | nullable `uuid`, restrictive self-reference within the same claim/scope |
+| `supersedes_id` | nullable `uuid`, restrictive self-reference within the same claim/scope |
 | `supersession_reason` | nullable `text`, required and nonblank when superseding |
 
 Exactly one profile-version reference is present on every role version:
 
 - `service_recipient` accepts either a natural-person profile version or an organization profile version;
 - `case_contact` requires a natural-person profile version and forbids an organization profile version;
-- both composite FKs prove that the referenced immutable profile version belongs to `party_id`;
+- direct restrictive profile-version FKs prove that the referenced versions exist, while the focused `app_case_party_roles_insert_guard()` proves that the selected profile version belongs to exactly `party_id` and matches its natural-person/organization subtype;
 - a later party-profile version never changes the stored reference or historical case truth;
 - the profile reference is a historical display/truth anchor, not identity verification, authority evidence, mandate evidence or evidence acceptance.
 
 Business validity is half-open: `[valid_from, valid_to)`. A null `valid_to` is unbounded. A non-null `valid_to` must be strictly later than `valid_from`.
 
+### Contract-To-Implementation Reconciliation
+
+The approved domain semantics are unchanged. The following earlier TARGET physical details are explicitly replaced by the proven migration; this is not silent drift:
+
+| earlier TARGET detail | proven local implementation | semantic effect |
+|---|---|---|
+| `source_type`, `source_reference_type`, `source_reference_id` | `source_class`, `source_ref` | Open, nonblank, minimized provenance remains required; the physical provenance shape is compressed from three fields to two. |
+| case `actor_type`, `actor_ref` | `created_by_actor_type`, `created_by_actor_ref` | The exact WP2A actor vocabulary and nonblank reference rule remain unchanged; names now express case creation responsibility. |
+| role `actor_type`, `actor_ref` | `recorded_by_actor_type`, `recorded_by_actor_ref` | The exact WP2A actor vocabulary and nonblank reference rule remain unchanged; names now express version recording responsibility. |
+| role `valid_from`/`valid_to` as `date` | `timestamptz` | Half-open business validity is unchanged and now supports sub-day instants. |
+| composite profile FK including `party_id` | direct restrictive profile-version FK plus the transaction-locking insert guard | Same-party and subtype binding remain enforced; the mechanism changed from declarative composite FK to FK plus focused trigger validation. |
+| `decision_actor_type`, `decision_actor_ref`, `decision_request_id`, `decision_reason`, `decided_at` | `decision_at`, `decided_by_actor_type`, `decided_by_actor_ref`, `decision_reason`, with mandatory row `request_id` | Complete decision metadata remains required for decided states; no separate decision-request column is stored. |
+| `supersedes_role_version_id` | `supersedes_id` | Append-only linear supersession semantics are unchanged. |
+| server-recorded `created_at` and `recorded_at` wording | required caller-supplied `timestamptz` columns without schema defaults | Recording time remains distinct from business validity; trustworthy server population remains a future API/runtime responsibility. |
+
+These implementation details introduce no authority, mandate, EAN/`aangeslotene`, evidence-acceptance, verifier-approval, booking-eligibility or payout-entitlement truth.
+
 ### Decision And Operational-Truth Semantics
 
 - `asserted` is an undecided case-participation claim and carries no decision metadata.
-- `case_confirmed`, `disputed`, and `rejected` require all five decision fields: `decision_actor_type`, `decision_actor_ref`, `decision_request_id`, nonblank `decision_reason`, and `decided_at`.
+- `case_confirmed`, `disputed`, and `rejected` require all four physical decision fields: `decision_at`, `decided_by_actor_type`, `decided_by_actor_ref`, and nonblank `decision_reason`; the mandatory row-level `request_id` remains the request provenance and no separate `decision_request_id` column exists.
 - `case_confirmed` confirms only participation in this ENVAL case. It never proves representation authority, signing authority, mandate, `aangeslotene`/EAN truth, evidence acceptance, verifier approval, booking eligibility or payout entitlement.
 - Only a non-superseded terminal `case_confirmed` version is operational role truth.
 - Auth, `app_customer_identities`, customer ownership, `app_customer_party_relationships`, account-owner/contact/service-recipient labels, `app_dossier_legal_acceptances`, parser output and derived observations cannot create or substitute a confirmed role, representation authority or mandate.
@@ -520,7 +551,7 @@ These checks depend on terminal chain state and must run at the end of the trans
 
 ### Provenance, Security And Retention
 
-- Provenance reuses exactly the WP2A fields, actor vocabulary, nonblank rules and separation of business validity from recording time. No new source enum is introduced without a separate decision.
+- Provenance reuses the exact WP2A actor vocabulary, open/nonblank source pattern and separation of business validity from recording time. The proven physical fields are `source_class`, `source_ref`, `request_id` and the creation/recording actor fields; no source enum is introduced.
 - Implementation reuses the existing WP2A constraint, locking, immutability, RLS, grant and proof patterns; it may not add near-duplicate helper functions, trigger families, overlap engines, actor vocabularies or provenance vocabularies.
 - Source and actor references contain no raw secrets and no PII.
 - Both tables start with RLS enabled and deny-all policies.
@@ -529,6 +560,21 @@ These checks depend on terminal chain state and must run at the end of the trans
 - There are no browser writes, customer-read policies, SECURITY DEFINER RPCs or customer projections in WP2B-I.
 - There is no normal hard delete. A future central retention module owns category, legal basis, holds, expiry review and action history.
 - Retention design must support at least five years after the end of the relevant verification calendar year where the data falls within TKV 3.0.5, while allowing longer future terms through additive configuration. WP2B-I does not assign that period indiscriminately to unrelated customer data.
+
+Locally proven implementation inventory:
+
+- exactly two tables, three focused trigger functions and four triggers;
+- restrictive foreign keys, thirteen checks and the targeted root, successor, FK/query and operational-overlap indexes;
+- deterministic per-case `pg_advisory_xact_lock` in the BEFORE INSERT guard;
+- a DEFERRABLE, INITIALLY DEFERRED AFTER INSERT constraint trigger for terminal-chain, linearness/cycle, service-recipient-cardinality and same-party/same-role overlap checks;
+- RLS enabled with one `deny_all` policy per table;
+- no `PUBLIC`, `anon` or `authenticated` table privileges;
+- `service_role` has exactly `SELECT` and `INSERT`, never UPDATE or DELETE;
+- all three trigger functions are invoker mode and have no direct client- or service-role execute grant.
+
+Q29 and Q30 proved that two simultaneous overlapping service-recipient writes for one case are serialized by the deterministic advisory lock and that at most one transaction commits. Q31-Q33 proved that all existing `app_*` counts and protected hashes remained unchanged, the disposable proof database was removed, and both new local tables ended at zero rows.
+
+The migration was applied directly to the local proof database state, but version `20260724110000` is absent from `supabase_migrations.schema_migrations`. This is not normal migration-tooling proof, remote apply proof or production parity. No manual history registration is claimed or recommended; a future deployment batch must prove a controlled forward-only apply and remote parity separately.
 
 ### Regulatory Versioning And Modular Extension Boundary
 
@@ -540,11 +586,13 @@ The following remain future modules and are neither schema-ready nor implemented
 
 ### Next Bounded Implementation Step
 
-The only next implementation candidate is one additive local migration plus one transactional local proof for exactly `app_cases` and `app_case_party_roles`. It may proceed only in its own explicitly approved execution batch. It contains no documentation update, authority, mandate, EAN, kWh, verification, settlement, frontend, backfill, cutover, remote apply or deployment.
+WP2B-I schema/proof is locally complete, while its migration and proof remain uncommitted. After a separately approved commit, the next gate is a choice and readiness analysis for the next NEa-driven bounded context. That choice does not automatically select or authorize representation authority while it remains `NOT SCHEMA READY`.
 
 ## Test And Proof Gates
 
-Before any later WP2 implementation beyond the bounded WP2A result can be accepted:
+The bounded WP2B-I schema gate is `CURRENT PROVEN — LOCAL` through the cited migration, Deno check and Q01-Q34 proof. Exact evidence and non-claims are recorded in `docs/app/proofs/wp2b-i-case-party-role-foundation.md`.
+
+Before any runtime/customer projection or later WP2 implementation can be accepted:
 
 - schema/source checks for exact tables, constraints, indexes, comments, RLS, grants, functions, and triggers;
 - positive and negative subtype, role, period, overlap, correction, withdrawal, expiry, supersession, provenance, and idempotency tests;

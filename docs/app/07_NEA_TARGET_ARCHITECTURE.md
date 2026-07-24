@@ -292,11 +292,17 @@ Execution batches follow the canonical discipline in `docs/app/00_CANON.md`; tar
 
 ## L. WP2B-I DDL-Ready Case Foundation
 
-TARGET — APPROVED / DDL READY
+DOMAIN CONTRACT — APPROVED
 
-SCHEMA — NOT IMPLEMENTED
+`app_cases`: CURRENT PROVEN — LOCAL
 
-The exact schema contract is owned by `docs/app/contracts/customer-party-representation-case.md#wp2b-i-ddl-ready-target-contract`; no second database contract is created here. The earlier WP2B `BLOCKED — DECISION` outcome was correct, and its missing decisions are now resolved for WP2B-I only.
+`app_case_party_roles`: CURRENT PROVEN — LOCAL
+
+API/runtime/customer projection: NOT IMPLEMENTED
+
+Remote/production and NEa/verifier acceptance: NOT PROVEN
+
+The exact schema/domain contract is owned by `docs/app/contracts/customer-party-representation-case.md#wp2b-i-ddl-ready-target-contract`; no second database contract is created here. The evidence record is `docs/app/proofs/wp2b-i-case-party-role-foundation.md`. The earlier WP2B `BLOCKED — DECISION` outcome was correct, and its missing decisions were resolved for WP2B-I only.
 
 WP2B-I is limited to immutable `app_cases` roots and immutable/versioned `app_case_party_roles`. It establishes one customer-owned case, a globally unique opaque case reference, exactly the `service_recipient` and `case_contact` roles, typed immutable party-profile references, asserted/confirmed/disputed/rejected claim history, half-open validity, explicit decision/provenance/supersession metadata, transaction-end service-recipient cardinality and deny-all RLS with service-role `SELECT`/`INSERT` only.
 
@@ -309,11 +315,13 @@ The regulatory basis is bounded:
 
 The concrete database controls are ENVAL internal controls, not literal NEa column requirements. Only a terminal, non-superseded `case_confirmed` role version is operational participation truth, and that truth proves none of representation authority, mandate, EAN ownership, evidence acceptance, verifier approval, eligibility or payout entitlement.
 
+Local evidence is bounded to migration `20260724110000_app_case_party_role_foundation.sql` and the green Q01-Q34 proof. It establishes two tables, three focused functions, four triggers, restrictive FKs, checks/indexes, deterministic per-case advisory locking, deferred transaction-end invariant checking, deny-all RLS and `service_role` `SELECT`/`INSERT` only. The migration is directly applied locally but absent from local migration history; the migration and proof remain uncommitted, and no normal tooling apply, remote parity or production behavior is proven.
+
 Future regulatory versions are immutable, hashed and effective-period-bound. They link to versioned requirements, clause traceability, applicability and impact decisions. A new source causes impact analysis and possible re-review, never an overwrite or automatic core mutation.
 
 Extensions remain additive bounded modules with stable IDs, their own root/history where needed, no cross-module core mutation, derived-only projections and no EAV/generic-JSON future-proofing. Representation authority remains `NOT SCHEMA READY`; authority, mandates, connection/EAN, location, MID/meter, evidence decisions, kWh, regulatory applicability, risk, verification, findings/CAPA, REV/batches, verification statements and settlement remain future modules outside WP2B-I.
 
-The next bounded candidate is exclusively one local additive migration and one transactional proof for `app_cases` and `app_case_party_roles`, under a separate execution authorization.
+After a separately approved commit, the next gate is a choice and readiness analysis for the next NEa-driven bounded context. Representation authority is not selected or authorized automatically while it remains `NOT SCHEMA READY`.
 
 ## Overall Architecture Verdict
 

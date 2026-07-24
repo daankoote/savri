@@ -136,7 +136,7 @@ Status: PROVISIONAL TARGET MAPPING.
 
 Source: `docs/app/07_NEA_TARGET_ARCHITECTURE.md`, `docs/app/architecture/database-target-model.md`, and `docs/app/decisions/architecture-and-environment-decisions.md`.
 
-No entry below changes a current implementation status to CURRENT PROVEN. Target components and target tables are architecture intent until implemented and proven in a later code/schema/test batch.
+Only the explicitly cited WP2B-I row adds `CURRENT PROVEN — LOCAL` schema/proof status from a completed migration/proof batch. Every other target component and target table remains architecture intent until implemented and proven in its own later code/schema/test batch.
 
 | requirement_family | target_component | target_tables | implementation_status | TKV_status | notes |
 |---|---|---|---|---|---|
@@ -155,14 +155,14 @@ No entry below changes a current implementation status to CURRENT PROVEN. Target
 | NEA-FIN | Finance/settlement core, legal-party entitlements, payout and reconciliation ports | `app_settlement_ledger_entries`, `app_customer_entitlements`, `app_booking_batches` | TARGET | partial | `contracts/settlement-and-payouts.md` reuses `NEA-AUD`, `NEA-RET`, `NEA-SEC`, and `NEA-COR` controls. The 90/10 model is ENVAL TARGET, not regulatory truth; bank/PSP/legal/tax routes remain UNKNOWN. |
 | NEA-OPS | Incident/operations, year-end, source review | `app_incidents`, `app_review_tasks`, `app_rev_submissions`, `app_rev_responses`, `app_audit_events` | TARGET | TKV MAPPED; DEADLINE INTERPRETATION PARTIAL | `REG-CONFLICT-001` remains open. |
 | NEA-SEC | Security architecture, role model, service boundaries | `app_customer_identities`, `app_approvals`, `app_idempotency_keys`, `app_audit_events` | PARTIAL PROVEN + TARGET | partial | Gate 1 proves RLS deny-by-default and no browser grants for new EAN tables plus service-role-only RPC execution; ops/compliance/finance roles and customer-safe read/review projections are target. |
-| NEA-ORG / NEA-AUD / NEA-RET / NEA-OPS | WP2B-I customer-owned case and case-participation history | `app_cases`, `app_case_party_roles` | TARGET — APPROVED / DDL READY; SCHEMA — NOT IMPLEMENTED | TKV 3.0.4, 3.0.5, 3.1.3–3.1.5 MAPPED | Exact contract is in `contracts/customer-party-representation-case.md`. Immutable participation history, decision reasoning, retention readiness and source-impact handling support the mapped requirements as ENVAL internal controls. A case role never proves authority, mandate, EAN/aangeslotene, evidence acceptance, verifier approval, eligibility or payout. Representation authority remains NOT SCHEMA READY. |
+| NEA-ORG / NEA-AUD / NEA-RET / NEA-OPS | WP2B-I customer-owned case and case-participation history | `app_cases`, `app_case_party_roles` | CURRENT PROVEN — LOCAL SCHEMA/PROOF; API/RUNTIME NOT IMPLEMENTED; REMOTE/PRODUCTION NOT PROVEN | TKV 3.0.4, 3.0.5, 3.1.3–3.1.5 MAPPED | Exact contract is in `contracts/customer-party-representation-case.md`; evidence is in `proofs/wp2b-i-case-party-role-foundation.md`. Q01-Q34 prove immutable participation history, profile-version pinning, decision/provenance/supersession, half-open temporal rules, deterministic case locking, deferred concurrency-safe cardinality, RLS/grants and protected cleanup as ENVAL internal controls. A case role never proves authority, mandate, EAN/aangeslotene, evidence acceptance, verifier approval, eligibility or payout. Representation authority remains NOT SCHEMA READY; NEa/verifier acceptance is NOT PROVEN. |
 
 ## Target Mapping Counts
 
 - Target bounded contexts mapped: 24.
 - Target tables mapped: 56.
 - Requirement families mapped: 15.
-- CURRENT PROVEN added by this overlay: 0.
-- WP2B-I DDL-ready tables: 2; implemented tables: 0.
+- CURRENT PROVEN added by this overlay: 2 local schema tables.
+- WP2B-I approved tables: 2; implemented tables: 2 CURRENT PROVEN — LOCAL.
 - TKV source-blocked mapping families: none.
 - TKV-affected implementation families remaining target/not implemented: NEA-VER, NEA-RET and parts of NEA-OPS/NEA-COR.

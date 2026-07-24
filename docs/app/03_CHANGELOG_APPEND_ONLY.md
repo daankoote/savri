@@ -580,3 +580,19 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Kept representation authority `NOT SCHEMA READY` and kept mandates, EAN, kWh, verification, settlement and all other future modules outside WP2B-I.
 - Left the historical `operations/wp2b-representation-authority-case-role-readiness-audit.md` unchanged as PROOF ONLY evidence.
 - Created no new contract file and changed no code, SQL, migration, schema, proof, frontend, CSS, staging, commit, push, deploy or remote state.
+
+## 2026-07-24 — Register WP2B-I CURRENT PROVEN LOCAL proof and reconcile contract drift
+
+- Registered `app_cases` and `app_case_party_roles` as `CURRENT PROVEN — LOCAL` for schema/proof only; API/runtime/customer projection remains `NOT IMPLEMENTED`, and remote/production plus NEa/verifier acceptance remain `NOT PROVEN`.
+- Recorded basis commit `1e4fe26781796c9f624eb42d186c39fb98271218`, migration `supabase/migrations/20260724110000_app_case_party_role_foundation.sql` at SHA-256 `fb3f9b5d0705d47a5f1be9f934684a25ad474000874daf2ef9e071ab3ddb56a1`, and proof `scripts/proofs/app-case-party-role-foundation.proof.ts` at SHA-256 `12e4fdc5587fed04f75d3dda039c56e72fcd144cf1ecd8b943f1db7e32ef52bb`.
+- Recorded Deno check and Q01-Q34 as green with marker `app-case-party-role-foundation-proof-ok`.
+- Recorded exactly two tables, three focused functions, four triggers, restrictive FKs, checks/indexes, deny-all RLS, no client table privileges, and `service_role` `SELECT`/`INSERT` only.
+- Recorded immutable profile-pinned claim chains, append-only linear supersession, half-open `timestamptz` validity and terminal non-superseded `case_confirmed` operational truth.
+- Recorded Q29-Q30 concurrency evidence: deterministic per-case advisory locking plus deferred transaction-end checks allowed at most one simultaneous overlapping service-recipient commit.
+- Recorded Q31-Q33 protected-truth evidence: existing `app_*` counts and protected hashes stayed unchanged, proofdata was removed, and both new tables ended at zero rows.
+- Reconciled the approved contract to the proven physical migration without changing domain semantics: provenance and actor field names, `timestamptz` validity, direct profile FKs plus focused same-party guard, four-field decision metadata plus row request ID, `supersedes_id`, and required timestamps without schema defaults replace the earlier TARGET physical details.
+- Added `docs/app/proofs/wp2b-i-case-party-role-foundation.md` as the single bounded evidence record; no second contract was created and the historical WP2B readiness audit remained unchanged.
+- Recorded that version `20260724110000` is directly applied locally but absent from `supabase_migrations.schema_migrations`; this is no normal migration-tooling or remote-parity proof, and no manual history registration is claimed or advised.
+- Kept representation authority `NOT SCHEMA READY`; mandates, connection/EAN, regulatory versioning, verification and settlement remain separate.
+- Recorded migration and proof as uncommitted. After a separately approved commit, the next gate is a choice/readiness analysis for the next NEa-driven bounded context, without automatically implementing representation authority.
+- This governance batch changed documentation only: no migration, proof, SQL, migration history, code, Auth, Edge Function, frontend, CSS, configuration, database, remote, staging, commit, push or deploy action occurred.
