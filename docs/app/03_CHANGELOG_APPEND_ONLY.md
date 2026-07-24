@@ -596,3 +596,15 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Kept representation authority `NOT SCHEMA READY`; mandates, connection/EAN, regulatory versioning, verification and settlement remain separate.
 - Recorded migration and proof as uncommitted. After a separately approved commit, the next gate is a choice/readiness analysis for the next NEa-driven bounded context, without automatically implementing representation authority.
 - This governance batch changed documentation only: no migration, proof, SQL, migration history, code, Auth, Edge Function, frontend, CSS, configuration, database, remote, staging, commit, push or deploy action occurred.
+
+## 2026-07-24 — Complete WP2B-II representation-authority readiness audit
+
+- Recorded that WP2B-I migration, proof, and governance evidence are committed in `5a5265adc516e8198cc25757654920d4aa3316bd` and remain `CURRENT PROVEN — LOCAL` only; their local migration-history version remains absent.
+- Added `docs/app/operations/wp2b-ii-representation-authority-readiness-audit.md` with exact status `PROOF ONLY — WP2B-II REPRESENTATION AUTHORITY READINESS AUDIT`.
+- Kept representation authority `NOT SCHEMA READY` and recorded verdict `BLOCKED — SOURCE OR LEGAL DECISION REQUIRED`.
+- Identified the exact unresolved decisions for authority bases and evidence, natural-person/organization/VvE representation, acting-person chains, self-action, scope, joint authority, temporal/revocation reliance, separate status categories, maker-checker/four-eyes, conflict, stable references, privacy, and future context links.
+- Recorded that Auth, verified email, customer/account ownership, customer-party relationships, service recipient, case contact, legal acceptance, upload, parser/signature detection, case role, and mandate evidence cannot create representation authority.
+- Kept authority, mandate, case role, connection/EAN, evidence acceptance, verifier workflow, findings/CAPA, and settlement as separate bounded contexts.
+- Named only four unapproved future candidate responsibilities and approved no table, column, constraint, vocabulary, contract, DDL, or proof.
+- Set the next step to an explicit bounded contract/legal decision, not automatic schema work.
+- This docs-only batch changed no contract, historical WP2B audit, WP2B-I proof page, migration, proof script, SQL, database, migration history, code, Auth, RPC, Edge Function, frontend, UI, CSS, configuration, remote state, staging, commit, push, merge, or deploy state.
