@@ -75,6 +75,11 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - confirms representation authority, authority evidence/review, `app_cases`, and `app_case_party_roles` are NOT IMPLEMENTED;
   - records the older `app_legal_entities`/`app_representatives` appendix naming as CONFLICT with the later focused WP2 party/authority contract;
   - recommends exactly one next additive batch, without authorizing it: `WP2B-I — additive case shell and case-party-role history — LOCAL SCHEMA AND PROOF ONLY`.
+- WP2B-I target contract finalized on 2026-07-24:
+  - earlier `BLOCKED — DECISION` was correct; its case/case-role schema-precision blockers are resolved;
+  - status is `TARGET — APPROVED / DDL READY`; `SCHEMA — NOT IMPLEMENTED`;
+  - exact authority is the existing `contracts/customer-party-representation-case.md`; no duplicate contract and no change to the historical PROOF ONLY audit;
+  - representation authority remains `NOT SCHEMA READY`; mandates, EAN, kWh, verification and settlement remain outside WP2B-I.
 
 Local proof is not production proof. Remote migration/function deploy, production bucket/policy proof, and production browser QA remain open.
 
@@ -85,8 +90,8 @@ Local proof is not production proof. Remote migration/function deploy, productio
   - Inclusion in a controlled Git and migration flow, conscious later force-add of the ignored migration, and remote apply remain open.
   - Representation authority, authority evidence, cases, case-party roles, Auth/customer-safe projection, intake/backfill/cutover, and external KvK, DSO/CAR, and verifier boundaries remain open; applicable items remain TARGET, TODO, UNKNOWN, or BLOCKED — EXTERNAL.
   - WP2B audit result: representation authority is not schema-ready because target vocabulary, external authority evidence, qualified review/four-eyes, conflict/withdrawal history, and safe projection remain unresolved.
-  - Next recommendation, BLOCKED — DECISION: explicitly approve or reject `WP2B-I — additive case shell and case-party-role history — LOCAL SCHEMA AND PROOF ONLY`.
-  - WP2B-I is limited to additive `app_cases` and `app_case_party_roles` plus one transactional local proof. It leaves WP2A unchanged and contains no representation authority, mandate, EAN, kWh, settlement, frontend, Auth, browser writes, backfill, cutover, remote, or deployment.
+  - Next bounded implementation candidate, requiring a separate execution batch: `WP2B-I — additive case shell and case-party-role history — LOCAL SCHEMA AND PROOF ONLY`.
+  - WP2B-I is limited to additive `app_cases` and `app_case_party_roles` plus one transactional local proof. The contract is DDL-ready; schema/runtime are not implemented. It leaves WP2A unchanged and contains no representation authority, mandate, EAN, kWh, verification, settlement, frontend, Auth, browser writes, backfill, cutover, remote, or deployment.
 - Current code/database/Edge Function assessment against validated NEa requirements:
   - DONE on 2026-07-19 as PROOF ONLY in `docs/app/06B_CURRENT_IMPLEMENTATION_ASSESSMENT.md`.
   - The 2026-07-19 assessment treated `docs/app/07_NEA_TARGET_ARCHITECTURE.md` and `docs/app/09_NEA_MVP_PLAN.md` as PRELIMINARY DRAFT / NOT APPROVED; the 2026-07-22 decision supersedes only the architecture-direction status, not implementation evidence or MVP execution gates.

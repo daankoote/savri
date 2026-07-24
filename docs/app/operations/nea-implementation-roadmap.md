@@ -44,12 +44,12 @@ The tracker never removes a blocker itself. A status changes only when the appli
 | field | value |
 |---|---|
 | Current phase | Approved TARGET direction; bounded work-package authorization only |
-| Current work package | WP2 contract/design remains TARGET; WP2A party directory and customer-party binding is CURRENT PROVEN — LOCAL; the WP2B readiness audit is COMPLETE — UNCOMMITTED with artifact status PROOF ONLY |
+| Current work package | WP2B-I case/case-role target contract is TARGET — APPROVED / DDL READY; SCHEMA — NOT IMPLEMENTED. WP2A remains CURRENT PROVEN — LOCAL; the historical WP2B audit remains PROOF ONLY |
 | Last completed work package | WP2A — additive party directory and customer-party binding — LOCAL SCHEMA AND PROOF ONLY |
-| Next executable work package | None yet. Recommended `WP2B-I — additive case shell and case-party-role history — LOCAL SCHEMA AND PROOF ONLY` is BLOCKED — DECISION pending explicit approval |
-| Current blockers | Representation authority remains not schema-ready: target-name conflict, external authority evidence, review/four-eyes, conflict/withdrawal states and safe projection remain open; every implementation or external capability requires a separately approved batch |
+| Next executable work package | After separate execution approval: exactly one local additive migration and one transactional proof for `app_cases` and `app_case_party_roles` |
+| Current blockers | WP2B-I contract blockers are resolved. Schema/runtime remain NOT IMPLEMENTED. Representation authority remains NOT SCHEMA READY; every implementation or external capability requires a separately approved batch |
 | External research running in parallel | CAR, EAN/aangeslotene, DSO, KvK, MID/certificate sources, CPO/backoffice, energy supplier, kWh exchange, REV, verifier, and payment provider where relevant |
-| Last updated | 2026-07-23 |
+| Last updated | 2026-07-24 |
 | Evidence reference | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; official TKV snapshot; `06A`, `06B`, `08`, `09`, and `10` |
 
 ## Target Approval And Bounded Work-Package Rule
@@ -175,31 +175,33 @@ External research may run in parallel, but it may not introduce provider-specifi
 
 ## Detailed Tracking — Current Work Package 2
 
-WP2 contract/design remains TARGET. WP2A party directory and customer-party binding is `CURRENT PROVEN — LOCAL` only for its four tables, constraints, guards, RLS, grants, and cited local proof. The WP2B readiness audit is `COMPLETE — UNCOMMITTED` with artifact status `PROOF ONLY`; it implements nothing. Representation, authority, cases, case roles, Auth, endpoints, projection, intake/promotion, data migration, remote, production, and deployment remain outside WP2A status.
+WP2 contract/design remains TARGET. WP2A party directory and customer-party binding is `CURRENT PROVEN — LOCAL` only for its four tables, constraints, guards, RLS, grants, and cited local proof. The historical WP2B readiness audit remains `PROOF ONLY`. Its earlier blocked outcome was correct; explicit decisions now make WP2B-I `TARGET — APPROVED / DDL READY`, while `SCHEMA — NOT IMPLEMENTED`. Representation authority and every runtime, remote, production, and deployment concern remain outside this approval.
 
 | checklist item | status | evidence / gate |
 |---|---|---|
-| design/contract | TARGET | `docs/app/contracts/customer-party-representation-case.md` defines the current-to-target contract. The WP2B readiness result is in `docs/app/operations/wp2b-representation-authority-case-role-readiness-audit.md`; it records a conflict in older target names and recommends only the two-table WP2B-I batch. TARGET grants no implementation authority. |
+| design/contract | TARGET | `docs/app/contracts/customer-party-representation-case.md#wp2b-i-ddl-ready-target-contract` is TARGET — APPROVED / DDL READY for only `app_cases` and `app_case_party_roles`. The historical audit remains PROOF ONLY. Representation authority remains NOT SCHEMA READY. |
 | existing module inventory | COMPLETE — CURRENT PROVEN | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; `06B` inventories current customer/auth/case modules and dispositions. |
 | existing CSS inventory indien UI relevant | COMPLETE — CURRENT PROVEN | Baseline commit records the existing UI/CSS inventory; no styling implementation is authorized by this status. |
-| database | CURRENT PROVEN — LOCAL | Only `app_parties`, `app_party_person_versions`, `app_party_organization_versions`, and `app_customer_party_relationships`, including bounded constraints, guards, deny-all RLS, and stated grants. Local migration registration is absent; remote registration/apply is open. |
+| database | CURRENT PROVEN — LOCAL | Only WP2A's `app_parties`, profile versions and customer-party relationships are locally proven. WP2B-I schema is NOT IMPLEMENTED; no migration or database object exists from this documentation batch. |
 | Edge Function/service | TODO | Define service-side write/read contracts and role checks. |
 | frontend/UI | TODO | Define customer-safe identity, organization, representation, and case projections. |
 | tests | CURRENT PROVEN — LOCAL | WP2A Deno check is green; Q01-Q24 are green with zero `FAIL` and marker `app-party-foundation-proof-ok`. Later WP2 tests remain TODO. |
 | SQL proof | CURRENT PROVEN — LOCAL | Transactional local proof leaves all four WP2A party tables with zero rows and protected existing app-table counts unchanged. No remote, production, NEa, or verifier proof. |
 | browser proof | TODO | Required when approved customer-visible behavior is implemented. |
-| documentation update | COMPLETE — UNCOMMITTED | WP2B audit, contract, roadmap, changelog, and TODO distinguish bounded WP2A evidence, absent authority/case implementation, the older target-name conflict, and the one recommended WP2B-I batch. |
-| accepted by Daan | READY | TARGET direction is approved. WP2A has bounded local evidence; no further WP2 implementation is authorized by that evidence. |
+| documentation update | COMPLETE — UNCOMMITTED | Existing contract, target architecture, traceability, roadmap, TODO and changelog record WP2B-I as DDL-ready without changing the historical audit. |
+| accepted by Daan | READY | WP2B-I target contract is approved and DDL-ready. Schema implementation still requires its own bounded execution batch. |
 | commit | TODO | Only after implemented behavior and required proof are accepted. |
 | remote/deploy separately approved | BLOCKED — DECISION | TARGET approval and WP2A local evidence grant no remote mutation, deployment, production, or push authority. |
 
 ## Next Bounded Step
 
-Recommended, not authorized:
+TARGET — APPROVED / DDL READY
+
+SCHEMA — NOT IMPLEMENTED
 
 `WP2B-I — additive case shell and case-party-role history — LOCAL SCHEMA AND PROOF ONLY`
 
-WP2B-I is limited to `app_cases` and `app_case_party_roles`, with temporal/profile-version-bound role history, provenance, supersession, deny-all RLS, minimal service-role grants, and one transactional local proof. It contains no representation authority, authority evidence, mandate, EAN, kWh, settlement, frontend, Auth, browser write, backfill, cutover, remote, or deployment work. It is `BLOCKED — DECISION` until Daan explicitly approves the exact batch.
+The earlier `BLOCKED — DECISION` result was correct and its WP2B-I contract blockers are resolved by the 2026-07-24 decisions. The exact contract is in `contracts/customer-party-representation-case.md`. The only next implementation candidate is a separately authorized local additive migration plus transactional proof for `app_cases` and `app_case_party_roles`. It contains no representation authority, authority evidence, mandate, EAN, kWh, verification, settlement, frontend, Auth, browser write, backfill, cutover, remote, or deployment work.
 
 ## Detailed Tracking — Directly Following Work Package 3
 

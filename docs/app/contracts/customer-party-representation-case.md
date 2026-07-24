@@ -149,7 +149,7 @@ All listed active `app_*` tables enable RLS, deny `anon` and `authenticated`, re
 | representative | A natural-person party acting in a case/authority relationship; not a duplicate person entity. |
 | representation authority | Principal party, representative party, allowed acts/scope, validity, status, provenance, decision, and supersession. |
 | case | One ENVAL service engagement, owned by a customer account, with its own lifecycle and party-role links. |
-| case-party role | Time-bound role such as applicant, service recipient, aangeslotene, representative, signer, contact, or billing party. Roles do not imply authority unless linked to an active reviewed authority. |
+| case-party role | Time-bound case participation. Broader future contexts may later define separately approved roles, but WP2B-I permits exactly `service_recipient` and `case_contact`. No case role implies authority. |
 | mandate/version | Later WP5 entity containing immutable signed clauses and signer/party/EAN/location/calendar-year scope. It references, but does not replace, representation authority. |
 
 ## Relationship Model
@@ -401,6 +401,146 @@ Its bounded result is:
 - WP2B-I is limited to `app_cases` and `app_case_party_roles`, leaves WP2A unchanged, creates no representation authority or mandate, and preserves account ownership, party role, authority, mandate, EAN, beneficiary, and finance as separate truths.
 
 Open authority risks remain the acceptable organization/VvE evidence standard, self-representation semantics, conflicting claims, withdrawal/historical reliance, qualified review roles, four-eyes, fail-closed audit, and customer-safe projection vocabulary.
+
+## WP2B-I DDL-Ready Target Contract
+
+TARGET — APPROVED / DDL READY
+
+SCHEMA — NOT IMPLEMENTED
+
+Decision date: 2026-07-24.
+
+The earlier `BLOCKED — DECISION` result was correct for the then-underspecified recommendation. The decisions below close only the `WP2B-I — additive case shell and case-party-role history — LOCAL SCHEMA AND PROOF ONLY` contract blockers. They do not make representation authority schema-ready and do not implement schema or runtime.
+
+### Regulatory And Internal-Control Basis
+
+- TKV 3.0.4 requires a complete, ordered and reconstructable verification dossier with the relevant steps, relationships and reasoning. WP2B-I supports later reconstruction through immutable role versions, provenance, decision metadata and supersession.
+- TKV 3.0.5 requires verification data/documentation and relevant supplied information to remain available for at least five years after the end of the verification calendar year. WP2B-I therefore has no normal hard-delete path and delegates eventual expiry to a future central retention module.
+- TKV 3.1.3 makes changes an input to dynamic verifier risk analysis. ENVAL preserves source/requirement versions and impact decisions, but never performs or stores an ENVAL-authored professional risk conclusion as case-role truth.
+- TKV 3.1.4 distinguishes the inboeker, an enterprise or natural person served by an inboekdienstverlener, location facts, and `aangeslotene` checks. A case participant is therefore not automatically `aangeslotene`, EAN owner or verified party.
+- TKV 3.1.5 requires the verifier to check the enterprises and natural persons that mandated an inboekdienstverlener and separately prescribes signed mandate, authorized-representative, EAN and permission facts. A WP2B-I case role is therefore neither representation authority nor a mandate.
+- The exact identifiers, history model, overlap controls, RLS, grants and modular-extension rules below are `ENVAL INTERNAL CONTROL` choices supporting `NEA-AUD-002`, `NEA-RET-001`, `NEA-RET-003` and `NEA-OPS-004`; they are not presented as literal NEa-prescribed database columns.
+
+### `app_cases`
+
+`app_cases` is an immutable service-engagement root owned by one customer account. One customer account may own multiple cases. A case has at most one operational service recipient at any validity instant; multiple legal service recipients require separate cases.
+
+The table contains exactly:
+
+| column | target type / rule |
+|---|---|
+| `id` | `uuid`, primary key, server-generated |
+| `customer_id` | `uuid`, required FK to `app_customers(id)`, `ON DELETE RESTRICT` |
+| `case_reference` | `text`, required and globally unique |
+| `source_type` | `text`, required; same open, nonblank WP2A provenance field |
+| `source_reference_type` | `text`, required; same open, nonblank WP2A provenance field |
+| `source_reference_id` | `text`, required; same open, nonblank WP2A provenance field |
+| `request_id` | `text`, required and nonblank |
+| `actor_type` | `text`, required; exact WP2A vocabulary: `customer`, `system`, `support`, `admin`, `edge_function`, `worker`, `provider`, `unknown` |
+| `actor_ref` | `text`, required and nonblank; no PII or secret |
+| `created_at` | `timestamptz`, required, server-recorded; this is the root recording time |
+
+`case_reference` is opaque and server-issued, is stored already trimmed, is 8–64 characters long, and contains no PII or domain semantics. The schema enforces global uniqueness, trimmed storage and length; the later server write contract and proof enforce server issuance and the no-PII/no-domain-semantics boundary.
+
+`app_cases` has no `status`, `case_type`, `EAN`, mandate, authority, evidence-decision, kWh, settlement, generic JSON, `updated_at`, or other lifecycle/domain fields. It is append-only and has no normal UPDATE or DELETE path.
+
+### `app_case_party_roles`
+
+`id` identifies one immutable role version. `role_claim_id` identifies the stable claim chain across versions. No separate generic claim table is introduced.
+
+Every role version contains exactly:
+
+| column | target type / rule |
+|---|---|
+| `id` | `uuid`, primary key, server-generated immutable version ID |
+| `role_claim_id` | `uuid`, required stable chain ID |
+| `case_id` | `uuid`, required FK to `app_cases(id)`, `ON DELETE RESTRICT` |
+| `party_id` | `uuid`, required FK to `app_parties(id)`, `ON DELETE RESTRICT` |
+| `role_type` | `text`, required; exactly `service_recipient` or `case_contact` |
+| `person_profile_version_id` | nullable `uuid`; composite FK with `party_id` to `app_party_person_versions(party_id,id)` |
+| `organization_profile_version_id` | nullable `uuid`; composite FK with `party_id` to `app_party_organization_versions(party_id,id)` |
+| `claim_status` | `text`, required; exactly `asserted`, `case_confirmed`, `disputed`, `rejected` |
+| `valid_from` | `date`, required |
+| `valid_to` | nullable `date`; exclusive upper bound |
+| `source_type` | `text`, required; exact WP2A open, nonblank provenance field |
+| `source_reference_type` | `text`, required; exact WP2A open, nonblank provenance field |
+| `source_reference_id` | `text`, required; exact WP2A open, nonblank provenance field |
+| `request_id` | `text`, required and nonblank |
+| `actor_type` | `text`, required; exact WP2A actor vocabulary |
+| `actor_ref` | `text`, required and nonblank; no PII or secret |
+| `recorded_at` | `timestamptz`, required, server-recorded separately from business validity |
+| `decision_actor_type` | nullable `text`; exact WP2A actor vocabulary when present |
+| `decision_actor_ref` | nullable `text`, nonblank when required; no PII or secret |
+| `decision_request_id` | nullable `text`, nonblank when required |
+| `decision_reason` | nullable `text`, nonblank when required |
+| `decided_at` | nullable `timestamptz` |
+| `supersedes_role_version_id` | nullable `uuid`, restrictive self-reference within the same claim/scope |
+| `supersession_reason` | nullable `text`, required and nonblank when superseding |
+
+Exactly one profile-version reference is present on every role version:
+
+- `service_recipient` accepts either a natural-person profile version or an organization profile version;
+- `case_contact` requires a natural-person profile version and forbids an organization profile version;
+- both composite FKs prove that the referenced immutable profile version belongs to `party_id`;
+- a later party-profile version never changes the stored reference or historical case truth;
+- the profile reference is a historical display/truth anchor, not identity verification, authority evidence, mandate evidence or evidence acceptance.
+
+Business validity is half-open: `[valid_from, valid_to)`. A null `valid_to` is unbounded. A non-null `valid_to` must be strictly later than `valid_from`.
+
+### Decision And Operational-Truth Semantics
+
+- `asserted` is an undecided case-participation claim and carries no decision metadata.
+- `case_confirmed`, `disputed`, and `rejected` require all five decision fields: `decision_actor_type`, `decision_actor_ref`, `decision_request_id`, nonblank `decision_reason`, and `decided_at`.
+- `case_confirmed` confirms only participation in this ENVAL case. It never proves representation authority, signing authority, mandate, `aangeslotene`/EAN truth, evidence acceptance, verifier approval, booking eligibility or payout entitlement.
+- Only a non-superseded terminal `case_confirmed` version is operational role truth.
+- Auth, `app_customer_identities`, customer ownership, `app_customer_party_relationships`, account-owner/contact/service-recipient labels, `app_dossier_legal_acceptances`, parser output and derived observations cannot create or substitute a confirmed role, representation authority or mandate.
+
+### Supersession, Overlap And Cardinality
+
+Supersession is append-only and must enforce:
+
+- at most one direct successor per version;
+- no self-reference and no cycle;
+- the same `role_claim_id`, `case_id`, `party_id`, and `role_type`;
+- `recorded_at` strictly later than the predecessor;
+- required nonblank `supersession_reason`;
+- the predecessor remains immutable and reconstructable.
+
+An incorrect party is never replaced inside the same claim chain. The old chain is ended through a later `disputed` or `rejected` version and a new `role_claim_id` is started for the correct party. The later write path must perform both actions atomically.
+
+At transaction end, among non-superseded terminal chain versions:
+
+- at most one `case_confirmed` `service_recipient` may cover any instant in one case;
+- multiple `case_confirmed` `case_contact` claims may overlap;
+- the same party may not have duplicate overlapping confirmed intervals for the same case and role;
+- the same natural person may simultaneously be `service_recipient` and `case_contact`;
+- none of these combinations creates representation authority.
+
+These checks depend on terminal chain state and must run at the end of the transaction. A historical unique or exclusion index alone is insufficient. The implementation requires a focused deferrable constraint trigger, or an equivalent transactionally proven pattern, covering terminal-chain overlap, service-recipient cardinality, supersession scope and cycle prevention. It must reuse the proven WP2A half-open interval, locking and append-only semantics without creating a generic authority/mandate/role engine.
+
+### Provenance, Security And Retention
+
+- Provenance reuses exactly the WP2A fields, actor vocabulary, nonblank rules and separation of business validity from recording time. No new source enum is introduced without a separate decision.
+- Implementation reuses the existing WP2A constraint, locking, immutability, RLS, grant and proof patterns; it may not add near-duplicate helper functions, trigger families, overlap engines, actor vocabularies or provenance vocabularies.
+- Source and actor references contain no raw secrets and no PII.
+- Both tables start with RLS enabled and deny-all policies.
+- `PUBLIC`, `anon`, and `authenticated` receive no privileges.
+- `service_role` receives exactly `SELECT` and `INSERT`, never UPDATE or DELETE.
+- There are no browser writes, customer-read policies, SECURITY DEFINER RPCs or customer projections in WP2B-I.
+- There is no normal hard delete. A future central retention module owns category, legal basis, holds, expiry review and action history.
+- Retention design must support at least five years after the end of the relevant verification calendar year where the data falls within TKV 3.0.5, while allowing longer future terms through additive configuration. WP2B-I does not assign that period indiscriminately to unrelated customer data.
+
+### Regulatory Versioning And Modular Extension Boundary
+
+Future regulatory source handling has its own additive module with immutable source versions, content hashes, effective periods, requirement versions, clause traceability, applicability records and regulatory-impact decisions. A new NEa or legal-source version never overwrites historical requirements, cases, role claims or decisions. It triggers a source diff, impact analysis and, where required, re-review; it never automatically mutates core truth.
+
+Future modules use stable IDs and additive bounded roots/history where needed. They do not mutate another module's core truth; derived projections remain derived. EAV and generic-JSON “future-proofing” are forbidden. Every module owns its contract, migration, RLS, tests, proof and traceability.
+
+The following remain future modules and are neither schema-ready nor implemented by WP2B-I: representation authority, mandates, connection/EAN, location, MID/meter, evidence decisions, kWh, regulatory applicability, risk analysis, verification planning/execution, findings/CAPA, REV/batches, verification statements and settlement. Representation authority specifically remains `NOT SCHEMA READY`.
+
+### Next Bounded Implementation Step
+
+The only next implementation candidate is one additive local migration plus one transactional local proof for exactly `app_cases` and `app_case_party_roles`. It may proceed only in its own explicitly approved execution batch. It contains no documentation update, authority, mandate, EAN, kWh, verification, settlement, frontend, backfill, cutover, remote apply or deployment.
 
 ## Test And Proof Gates
 

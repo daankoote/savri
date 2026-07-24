@@ -570,3 +570,13 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Recommended exactly one next additive batch without authorizing it: `WP2B-I — additive case shell and case-party-role history — LOCAL SCHEMA AND PROOF ONLY`, limited to `app_cases`, `app_case_party_roles`, and one transactional local proof.
 - Kept representation authority outside WP2B-I until the authority evidence, review/four-eyes, conflict/withdrawal, safe projection, and target-vocabulary decisions are resolved.
 - Made no code, SQL, migration, schema, database, Auth, RLS, Edge Function, frontend, CSS, inline CSS, proof, runtime, provider, remote, staging, commit, push, merge, or deploy change.
+
+## 2026-07-24 — Finalize WP2B-I DDL-ready target contract
+
+- Recorded that the earlier WP2B `BLOCKED — DECISION` result was correct and resolved its case/case-role precision blockers through explicit decisions.
+- Marked WP2B-I `TARGET — APPROVED / DDL READY` and `SCHEMA — NOT IMPLEMENTED`.
+- Finalized the existing WP2 contract for immutable `app_cases` and versioned `app_case_party_roles`, including exact columns, two-role vocabulary, typed profile-version references, claim states, half-open validity, decision metadata, supersession, transaction-end cardinality, WP2A provenance reuse, RLS/grants, retention and regulatory versioning.
+- Mapped the target to TKV 3.0.4, 3.0.5 and 3.1.3–3.1.5 while classifying the concrete database safeguards as ENVAL internal controls.
+- Kept representation authority `NOT SCHEMA READY` and kept mandates, EAN, kWh, verification, settlement and all other future modules outside WP2B-I.
+- Left the historical `operations/wp2b-representation-authority-case-role-readiness-audit.md` unchanged as PROOF ONLY evidence.
+- Created no new contract file and changed no code, SQL, migration, schema, proof, frontend, CSS, staging, commit, push, deploy or remote state.

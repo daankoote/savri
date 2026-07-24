@@ -155,12 +155,14 @@ No entry below changes a current implementation status to CURRENT PROVEN. Target
 | NEA-FIN | Finance/settlement core, legal-party entitlements, payout and reconciliation ports | `app_settlement_ledger_entries`, `app_customer_entitlements`, `app_booking_batches` | TARGET | partial | `contracts/settlement-and-payouts.md` reuses `NEA-AUD`, `NEA-RET`, `NEA-SEC`, and `NEA-COR` controls. The 90/10 model is ENVAL TARGET, not regulatory truth; bank/PSP/legal/tax routes remain UNKNOWN. |
 | NEA-OPS | Incident/operations, year-end, source review | `app_incidents`, `app_review_tasks`, `app_rev_submissions`, `app_rev_responses`, `app_audit_events` | TARGET | TKV MAPPED; DEADLINE INTERPRETATION PARTIAL | `REG-CONFLICT-001` remains open. |
 | NEA-SEC | Security architecture, role model, service boundaries | `app_customer_identities`, `app_approvals`, `app_idempotency_keys`, `app_audit_events` | PARTIAL PROVEN + TARGET | partial | Gate 1 proves RLS deny-by-default and no browser grants for new EAN tables plus service-role-only RPC execution; ops/compliance/finance roles and customer-safe read/review projections are target. |
+| NEA-ORG / NEA-AUD / NEA-RET / NEA-OPS | WP2B-I customer-owned case and case-participation history | `app_cases`, `app_case_party_roles` | TARGET — APPROVED / DDL READY; SCHEMA — NOT IMPLEMENTED | TKV 3.0.4, 3.0.5, 3.1.3–3.1.5 MAPPED | Exact contract is in `contracts/customer-party-representation-case.md`. Immutable participation history, decision reasoning, retention readiness and source-impact handling support the mapped requirements as ENVAL internal controls. A case role never proves authority, mandate, EAN/aangeslotene, evidence acceptance, verifier approval, eligibility or payout. Representation authority remains NOT SCHEMA READY. |
 
 ## Target Mapping Counts
 
 - Target bounded contexts mapped: 24.
-- Target tables mapped: 55.
+- Target tables mapped: 56.
 - Requirement families mapped: 15.
 - CURRENT PROVEN added by this overlay: 0.
+- WP2B-I DDL-ready tables: 2; implemented tables: 0.
 - TKV source-blocked mapping families: none.
 - TKV-affected implementation families remaining target/not implemented: NEA-VER, NEA-RET and parts of NEA-OPS/NEA-COR.

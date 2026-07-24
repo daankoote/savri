@@ -290,6 +290,31 @@ External data is an immutable observation/import/reference with provenance. It d
 
 Execution batches follow the canonical discipline in `docs/app/00_CANON.md`; target approval itself authorizes no code, schema, UI, Edge Function, remote, deployment, commit, or push action.
 
+## L. WP2B-I DDL-Ready Case Foundation
+
+TARGET — APPROVED / DDL READY
+
+SCHEMA — NOT IMPLEMENTED
+
+The exact schema contract is owned by `docs/app/contracts/customer-party-representation-case.md#wp2b-i-ddl-ready-target-contract`; no second database contract is created here. The earlier WP2B `BLOCKED — DECISION` outcome was correct, and its missing decisions are now resolved for WP2B-I only.
+
+WP2B-I is limited to immutable `app_cases` roots and immutable/versioned `app_case_party_roles`. It establishes one customer-owned case, a globally unique opaque case reference, exactly the `service_recipient` and `case_contact` roles, typed immutable party-profile references, asserted/confirmed/disputed/rejected claim history, half-open validity, explicit decision/provenance/supersession metadata, transaction-end service-recipient cardinality and deny-all RLS with service-role `SELECT`/`INSERT` only.
+
+The regulatory basis is bounded:
+
+- TKV 3.0.4 supports reconstructable, reasoned history;
+- TKV 3.0.5 supports the verification-retention boundary;
+- TKV 3.1.3 supports change-trigger and impact inputs while verifier risk judgment remains external;
+- TKV 3.1.4–3.1.5 require separation of customer/case participation from `aangeslotene`, authority, signed mandate, EAN, evidence and verifier controls.
+
+The concrete database controls are ENVAL internal controls, not literal NEa column requirements. Only a terminal, non-superseded `case_confirmed` role version is operational participation truth, and that truth proves none of representation authority, mandate, EAN ownership, evidence acceptance, verifier approval, eligibility or payout entitlement.
+
+Future regulatory versions are immutable, hashed and effective-period-bound. They link to versioned requirements, clause traceability, applicability and impact decisions. A new source causes impact analysis and possible re-review, never an overwrite or automatic core mutation.
+
+Extensions remain additive bounded modules with stable IDs, their own root/history where needed, no cross-module core mutation, derived-only projections and no EAV/generic-JSON future-proofing. Representation authority remains `NOT SCHEMA READY`; authority, mandates, connection/EAN, location, MID/meter, evidence decisions, kWh, regulatory applicability, risk, verification, findings/CAPA, REV/batches, verification statements and settlement remain future modules outside WP2B-I.
+
+The next bounded candidate is exclusively one local additive migration and one transactional proof for `app_cases` and `app_case_party_roles`, under a separate execution authorization.
+
 ## Overall Architecture Verdict
 
 Recommendation: HYBRID PARALLEL REBUILD.
