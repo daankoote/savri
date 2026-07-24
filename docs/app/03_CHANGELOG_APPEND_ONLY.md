@@ -620,3 +620,16 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Preserved the hard Auth/account/party/case-role/authority/mandate/evidence/decision boundaries and made no assumption that a KVK extract or signature proves authority.
 - Kept representation authority `NOT SCHEMA READY`; written external answers and Daan's later explicit bounded contract approval remain required before contract or DDL work.
 - This docs-only batch changed no readiness audit, central contract, WP2B-I proof, requirement, traceability matrix, migration, proof script, SQL, schema, database, code, Auth, RPC, Edge Function, frontend, UI, CSS, configuration, remote state, staging, commit, push, merge or deploy state.
+
+## 2026-07-24 — Audit WP3A connection/EAN current truth and readiness
+
+- Added `docs/app/operations/wp3a-connection-ean-current-truth-readiness-audit.md` with exact status `PROOF ONLY — WP3A CONNECTION/EAN CURRENT-TRUTH READINESS AUDIT`.
+- Read-only local catalog inspection found three empty connection tables, eight connection guard functions, nine triggers, fifteen indexes, three deny-all policies, one audit helper and four service-role-only write RPCs.
+- Recorded that both connection migrations are ignored/untracked, both proof sources are untracked, `supabase_migrations.schema_migrations` has zero rows, no committed connection evidence page or raw proof output exists, and no current Edge/app/runtime caller exists.
+- Preserved the historical Q1-Q34 and Q1-Q36 PASS reports as narrative evidence only; no proof was run and no connection object was promoted to `CURRENT PROVEN — LOCAL`.
+- Recorded the exact conflicts with the approved canon: direct account/dossier ownership instead of legal-party/profile truth, no case linkage, no historical profile pinning, incomplete evidence/freshness/conflict decisions, ambiguous supersession, mutable pre-terminal rows, unproven direct-write concurrency and status-based rather than calendar-year EAN exclusivity.
+- Set verdict `BLOCKED — CURRENT OBJECTS CONFLICT WITH CANON`.
+- Set the smallest next bounded batch to `WP3B — connection/EAN domain contract reconciliation and object disposition — DOCS ONLY`.
+- Recorded that existing connection proofs cannot be reused unchanged; only their local safety, isolation, negative-test, protected-count and cleanup patterns deserve reuse.
+- Authority validation continues externally and representation authority remains `NOT SCHEMA READY`.
+- This audit changed no contract, requirement, traceability matrix, MVP plan, proof, migration, SQL, schema, database, migration history, runtime, Edge Function, frontend, CSS, configuration, staging, commit, push, deploy or remote state.

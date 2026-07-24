@@ -50,17 +50,24 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
 - Browser-reachable local download origin correction is locally and browser-proven.
 - Shared dashboard document card UI is locally and browser-proven.
 - Target intake verification/promotion contract is documented as TARGET / NOT IMPLEMENTED.
-- Gate 1 EAN and electricity connection domain schema is locally proven:
+- Gate 1 EAN and electricity connection domain objects are observed locally, not CURRENT PROVEN:
   - `app_connections`
   - `app_connection_periods`
   - `app_connection_ownership_periods`
-  - proof marker: `app-ean-connection-domain-foundation-proof-ok`.
-- Gate 1 connection write RPC boundary is locally proven:
+  - ignored migration and untracked proof source exist; historical marker `app-ean-connection-domain-foundation-proof-ok` is documented but not reproducible from committed evidence.
+- Gate 1 connection write RPC objects are observed locally, not CURRENT PROVEN:
   - `app_declare_connection_v1`
   - `app_declare_connection_ownership_v1`
   - `app_decide_connection_ownership_v1`
   - `app_supersede_connection_ownership_v1`
-  - proof marker: `app-connection-write-rpcs-proof-ok`.
+  - ignored migration and untracked proof source exist; historical marker `app-connection-write-rpcs-proof-ok` is documented but not reproducible from committed evidence.
+- WP3A connection/EAN current-truth readiness audit is COMPLETE — UNCOMMITTED:
+  - `docs/app/operations/wp3a-connection-ean-current-truth-readiness-audit.md`;
+  - verdict: `BLOCKED — CURRENT OBJECTS CONFLICT WITH CANON`;
+  - local catalog has three empty tables, eight guards, one audit helper and four write RPCs, while migration history has zero rows and no current runtime caller exists;
+  - direct customer/dossier ownership, absent party/profile/case links, incomplete evidence/history/concurrency and status-based EAN uniqueness block target acceptance;
+  - existing proof files cannot be reused unchanged;
+  - next step is `WP3B — connection/EAN domain contract reconciliation and object disposition — DOCS ONLY`; no DDL or connection/EAN implementation is authorized.
 - WP2A party directory and customer-party binding is CURRENT PROVEN — LOCAL:
   - `app_parties`
   - `app_party_person_versions`
@@ -91,7 +98,7 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - exact blockers are accepted authority bases/evidence, organization/VvE and acting-person chains, self-action, joint authority, scope, retroactivity/revocation reliance, split status vocabularies, and qualified maker-checker/four-eyes rules;
   - the audit approves no contract and builds no schema, migration, proof, runtime, frontend, or CSS;
   - the audit remains unchanged and its source/legal blockers remain controlling.
-- WP2B-II simple-majority MVP authority validation brief is COMPLETE — UNCOMMITTED as a documentation draft:
+- WP2B-II simple-majority MVP authority validation brief is committed as a documentation draft:
   - `docs/app/legal/representation-authority-pilot-validation-brief.md`;
   - status: `DRAFT — PENDING LEGAL AND VERIFIER VALIDATION`;
   - Daan's product direction is common simple MVP cases first and complex exceptions through later bounded modules;
@@ -150,9 +157,8 @@ Local proof is not production proof. Remote migration/function deploy, productio
     - isolated local restore dry-run passed;
     - plaintext temp files and restore database were cleaned up.
   - Remote Wave 1 remains blocked on PostgREST dashboard/platform health.
-  - Gate 1 Local EAN And Connection Domain Foundation DONE locally on 2026-07-20.
-  - Gate 1 Connection Service Contract And Local Server-Side Write RPC DONE locally on 2026-07-20.
-  - WP3 remains IN PROGRESS; its next bounded contract is Gate 1 Connection Read Projection And Operations Review, after the separately ordered WP2 design/contract package.
+  - Gate 1 connection/EAN and write-RPC objects are observed locally; historical proof runs are documented but are not CURRENT PROVEN under WP3A.
+  - WP3 is BLOCKED — DECISION; its next bounded batch is the WP3B docs-only contract reconciliation and object disposition, not read-projection implementation.
   - Do not start deployment, database drops, migration squash/baseline, runtime removals, function deletion, cron changes, Storage cleanup, Auth mutation, or remote SQL until recovery readiness is proven and Daan approves the exact mutation batch.
 - Settlement & Payouts TARGET contract:
   - DONE documentair: provider-independent boundary from ERE sale proceeds through legal-party allocation, gross/net entitlement, 10% ENVAL TARGET fee, settlement, payout, reconciliation, correction, reversal, and clawback;
