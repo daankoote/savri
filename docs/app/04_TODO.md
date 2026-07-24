@@ -61,13 +61,23 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - `app_decide_connection_ownership_v1`
   - `app_supersede_connection_ownership_v1`
   - ignored migration and untracked proof source exist; historical marker `app-connection-write-rpcs-proof-ok` is documented but not reproducible from committed evidence.
-- WP3A connection/EAN current-truth readiness audit is COMPLETE — UNCOMMITTED:
+- WP3A connection/EAN current-truth readiness audit is committed proof-only evidence in `f3b39aafb2e6817e64401ccb2c47eed285552869`:
   - `docs/app/operations/wp3a-connection-ean-current-truth-readiness-audit.md`;
   - verdict: `BLOCKED — CURRENT OBJECTS CONFLICT WITH CANON`;
   - local catalog has three empty tables, eight guards, one audit helper and four write RPCs, while migration history has zero rows and no current runtime caller exists;
   - direct customer/dossier ownership, absent party/profile/case links, incomplete evidence/history/concurrency and status-based EAN uniqueness block target acceptance;
   - existing proof files cannot be reused unchanged;
-  - next step is `WP3B — connection/EAN domain contract reconciliation and object disposition — DOCS ONLY`; no DDL or connection/EAN implementation is authorized.
+  - no DDL or connection/EAN implementation is authorized.
+- WP3B connection/EAN contract reconciliation and object disposition is COMPLETE — UNCOMMITTED:
+  - `docs/app/contracts/connection-ean-and-aangeslotene.md`;
+  - `docs/app/operations/wp3b-connection-ean-object-disposition.md`;
+  - contract verdict: `PARTIAL — DOMAIN OR EXTERNAL DECISIONS REQUIRED`;
+  - proposed TARGET separates physical connection, EAN-dragend allocation point, immutable metadata, party/profile-pinned aangesloteneclaims, case links, evidence acceptance and calendar-year controls;
+  - all candidate object names and decisions remain unapproved and not DDL ready;
+  - three current tables, eight guards, one audithelper, four RPCs and nine triggers are dispositioned `REPLACE`; both proofs are `PROVE AGAIN`; both ignored migrations are `RETIRE AFTER REPLACEMENT PROOF`;
+  - DDL remains blocked pending Daan's explicit contract decisions and the applicable location, DSO/CAR/register, MLOEA/secondary, evidence/freshness, verifier and calendar-year duplicate-control answers;
+  - the old proofs were not rerun and no current object or source was modified or removed;
+  - authority legal/verifier validation continues independently and representation authority remains `NOT SCHEMA READY`.
 - WP2A party directory and customer-party binding is CURRENT PROVEN — LOCAL:
   - `app_parties`
   - `app_party_person_versions`

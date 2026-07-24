@@ -633,3 +633,19 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Recorded that existing connection proofs cannot be reused unchanged; only their local safety, isolation, negative-test, protected-count and cleanup patterns deserve reuse.
 - Authority validation continues externally and representation authority remains `NOT SCHEMA READY`.
 - This audit changed no contract, requirement, traceability matrix, MVP plan, proof, migration, SQL, schema, database, migration history, runtime, Edge Function, frontend, CSS, configuration, staging, commit, push, deploy or remote state.
+
+## 2026-07-24 — Reconcile WP3B connection/EAN contract and object disposition
+
+- Recorded that the WP3A readiness audit is committed in `f3b39aafb2e6817e64401ccb2c47eed285552869` and retains verdict `BLOCKED — CURRENT OBJECTS CONFLICT WITH CANON`.
+- Added `docs/app/contracts/connection-ean-and-aangeslotene.md` with exact status `DRAFT — WP3B DOMAIN RECONCILIATION — NOT APPROVED / NOT DDL READY`.
+- Proposed, without approval, separate bounded responsibilities for physical connection, EAN-dragend allocation point, immutable allocation metadata, party/profile-pinned aangesloteneclaims and case links; evidence acceptance and calendar-year controls remain separate future modules.
+- Recorded exact 18-digit EAN syntax without checksumclaim, declared/observed/external/accepted separation, proposed accepted-EAN immutability, new-root correction and preserved source conflicts/historical reliance.
+- Recorded proposed immutable claimversions with `asserted`, `connection_confirmed`, `disputed` and `rejected`, half-open validity, linear supersession, deterministic point locking and deferred end-of-transaction checks; only terminal non-superseded `connection_confirmed` may be operational.
+- Kept connection, location, case role, authority, mandate, evidence, charger/MID, kWh, booking, verifier and settlement truths separate.
+- Added a seventeen-row Daan decision matrix and verdict `PARTIAL — DOMAIN OR EXTERNAL DECISIONS REQUIRED`; DDL remains blocked pending explicit approval and applicable location/external decisions.
+- Added `docs/app/operations/wp3b-connection-ean-object-disposition.md` with exact status `PROOF ONLY — WP3B CURRENT OBJECT DISPOSITION`.
+- Dispositioned the three current tables, eight guards, audithelper, four RPCs and nine triggers as `REPLACE`, both connection proofs as `PROVE AGAIN`, and both ignored migrations as `RETIRE AFTER REPLACEMENT PROOF`; only named predicates, audit/idempotency forms and proof discipline are reusable.
+- Recorded that empty tables do not authorize a drop, local migration history remains absent, remote presence remains UNKNOWN, and forward-only replacement and cleanup require separate later design and approval.
+- Did not rerun either old proof and did not change or remove any existing connection object, migration, proof or protected untracked artifact.
+- Authority validation continues independently and representation authority remains `NOT SCHEMA READY`.
+- This docs-only batch changed no WP3A audit, central party/case contract, requirement, traceability matrix, MVP plan, target architecture, migration, proof script, SQL, schema, database, migration history, code, Auth, RPC, Edge Function, runtime, frontend, UI, CSS, configuration, staging, commit, push, merge, deploy or remote state.
