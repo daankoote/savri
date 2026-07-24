@@ -608,3 +608,15 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Named only four unapproved future candidate responsibilities and approved no table, column, constraint, vocabulary, contract, DDL, or proof.
 - Set the next step to an explicit bounded contract/legal decision, not automatic schema work.
 - This docs-only batch changed no contract, historical WP2B audit, WP2B-I proof page, migration, proof script, SQL, database, migration history, code, Auth, RPC, Edge Function, frontend, UI, CSS, configuration, remote state, staging, commit, push, merge, or deploy state.
+
+## 2026-07-24 — Draft simple-majority MVP authority validation brief
+
+- Recorded Daan's product direction to support common simple representation-authority cases in the MVP and add complex exceptions later through bounded modules.
+- Recorded that the approximately-10%-or-less outlier estimate is an unproven product assumption, not measured evidence or a release criterion.
+- Added `docs/app/legal/representation-authority-pilot-validation-brief.md` with exact status `DRAFT — PENDING LEGAL AND VERIFIER VALIDATION`.
+- Proposed only natural-person self-action, one directly and individually authorized natural person for an organization, one simple direct individual VvE route, and an optional one-step direct power-of-attorney candidate without subdelegation for external validation.
+- Kept joint signing, K-of-N, representative organizations, authority chains, subdelegation, unclear VvE authority, retroactivity, emergency paths, conflicting evidence and every unclear case outside the pilot as blocked/manual escalation.
+- Added a fillable 20-question validation record for a Dutch corporate-law lawyer, external inbooking verifier and, where required, a KVK/register specialist.
+- Preserved the hard Auth/account/party/case-role/authority/mandate/evidence/decision boundaries and made no assumption that a KVK extract or signature proves authority.
+- Kept representation authority `NOT SCHEMA READY`; written external answers and Daan's later explicit bounded contract approval remain required before contract or DDL work.
+- This docs-only batch changed no readiness audit, central contract, WP2B-I proof, requirement, traceability matrix, migration, proof script, SQL, schema, database, code, Auth, RPC, Edge Function, frontend, UI, CSS, configuration, remote state, staging, commit, push, merge or deploy state.

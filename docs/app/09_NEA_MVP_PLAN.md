@@ -62,6 +62,16 @@ The MVP is not the old dossier wizard with new labels. The MVP is the smallest i
 - a controlled finance pilot may use ledger/statements plus manual payout and reconciliation; provider automation is not an MVP prerequisite and requires a later bounded batch;
 - customer projections are safe and do not expose raw audit or internal workpapers.
 
+## Representation-Authority Simple-Majority MVP Decision
+
+Daan has approved a product direction to support common simple representation-authority cases in the MVP and add complex exceptions later through bounded modules. “Simple-majority” describes the intended product perimeter, not a corporate voting or signing rule. The estimate that unsupported outliers are approximately 10% or less is an unproven product assumption.
+
+The proposed pilot perimeter is natural-person self-action, one directly and individually authorized natural person for an organization, one simple directly and individually authorized natural person for a VvE, and an optional one-step direct power-of-attorney candidate without subdelegation. These cases are not legally accepted by this decision. They require the written legal, verifier and, where needed, register validation in `docs/app/legal/representation-authority-pilot-validation-brief.md`, followed by Daan's approval.
+
+Joint signing, K-of-N, representative organizations, chains, subdelegation, unclear VvE authority, retroactivity, emergency paths, conflicting evidence and every unclear case are outside the pilot. They fail closed to blocked/manual escalation and may be added only through later additive bounded modules. Auth, account/contact roles, uploads, parser output, signatures and free text never simplify a case into authority.
+
+Representation authority remains `NOT SCHEMA READY`. The next gate is written legal/verifier validation, not a contract, schema or runtime batch.
+
 ## Non-MVP Until Proven
 
 - Keeping `dossier_*` or `api-dossier-*` for convenience.
@@ -90,6 +100,6 @@ It does not prove CAR access, REV field compatibility, legal mandate wording, cu
 
 Next local execution work package:
 
-Customer, person, organization, representation and case foundation.
+Written legal and external-verifier validation of the simple-majority representation-authority pilot brief.
 
-The documentation baseline is committed as `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`. This work package is `READY`, not implemented or complete. It must begin with a bounded design/contract and remain local under its proof gates. Gate 1 Connection Read Projection And Operations Review Contract remains the following in-progress foundation package. Neither package authorizes remote deployment, CAR/EAN/KvK/MID/CPO/energy-provider adapters, REV submission, official verifier automation, booking/settlement execution, production, or push.
+The brief is `DRAFT — PENDING LEGAL AND VERIFIER VALIDATION`. It records a product proposal and fillable questions, not legal advice, contract approval or schema authorization. Representation authority remains `NOT SCHEMA READY`; no contract or DDL follows until written answers are recorded and Daan explicitly approves the bounded contract. This work package authorizes no remote deployment, CAR/EAN/KvK/MID/CPO/energy-provider adapter, REV submission, official verifier automation, booking/settlement execution, production, or push.
