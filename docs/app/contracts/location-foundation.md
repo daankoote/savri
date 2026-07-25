@@ -1,12 +1,17 @@
 # Location Foundation Contract
 
-Status: DRAFT — WP3D LOCATION FOUNDATION — NOT APPROVED / NOT DDL READY
+TARGET — WP3E INTERNAL LOCATION DOMAIN DECISIONS APPROVED — EXTERNAL BLOCKERS OPEN / NOT DDL READY
 
 ## 1. Contract Boundary
 
-This document is a bounded TARGET proposal for discussion and explicit decision. It is not CURRENT truth, legal advice, external-source acceptance, an approved schema, a column contract, DDL authorization, implementation proof, backfill/cutover approval, or retirement approval.
+This document is the bounded TARGET locationfoundation contract. Daan approved
+only `WP3E-LOC-01` through `WP3E-LOC-16` in
+`operations/wp3e-location-internal-domain-decisions.md`. It is not CURRENT
+truth, legal advice, external-source acceptance, an approved schema, a column
+contract, DDL authorization, implementation proof, backfill/cutover approval,
+data-migration authorization, or retirement approval.
 
-The proposal follows WP3C package B:
+The approved TARGET direction follows WP3C package B:
 
 - location is a separate bounded foundation;
 - a stable location root, immutable versions, and address observations are separate responsibilities;
@@ -14,7 +19,11 @@ The proposal follows WP3C package B:
 - the current `app_dossier_locations` row is not automatically the TARGET location object;
 - correction, administrative change, and physical relocation must remain reconstructable.
 
-The CURRENT evidence and conflict verdict are in `operations/wp3d-location-current-truth-readiness-audit.md`.
+The CURRENT evidence and conflict verdict remain in the unchanged
+`operations/wp3d-location-current-truth-readiness-audit.md`. WP3E changes the
+internal package from candidate direction to approved TARGET only; implementation remains
+`NOT IMPLEMENTED`, proof remains `NOT PROVEN`, and the external blockers remain
+`OPEN`.
 
 ## 2. Hard Separation Of Truth
 
@@ -36,9 +45,11 @@ The CURRENT evidence and conflict verdict are in `operations/wp3d-location-curre
 
 Location truth creates no settlement or payout entitlement.
 
-## 3. Unapproved Candidate Responsibilities
+## 3. Approved Responsibilities And Unapproved Candidate Names
 
-Names in this section are candidate names only. They approve no table, column, constraint, vocabulary, FK, index, trigger, policy, grant, or migration.
+The responsibilities in this section follow the approved package. Names remain
+candidate names only. They approve no table, column, constraint, vocabulary,
+FK, index, trigger, policy, grant, RPC, or migration.
 
 | candidate | one responsibility |
 |---|---|
@@ -49,7 +60,7 @@ Names in this section are candidate names only. They approve no table, column, c
 | `app_allocation_point_locations` | typed, time-bound allocation-point-to-location relationship |
 | `app_charge_point_locations` | future typed, time-bound charge-point-to-location relationship |
 
-External location identifiers are a separate semantic responsibility inside the immutable observation/source boundary: namespaced, provenance-bound, time-aware, and never root identity by default. This draft intentionally names no extra candidate table for them.
+External location identifiers are a separate semantic responsibility inside the immutable observation/source boundary: namespaced, provenance-bound, time-aware, and never root identity by default. This contract intentionally names no extra candidate table for them.
 
 Not proposed:
 
@@ -63,7 +74,7 @@ Evidence acceptance and customer-safe projection remain separate responsibilitie
 
 ## 4. Stable Root Rules
 
-Proposed TARGET:
+Approved TARGET under `WP3E-LOC-01` and `WP3E-LOC-02`:
 
 1. `location_id` is an opaque, server-assigned stable identifier. It is never derived from address, postcode, house number, BAG/PDOK/provider ID, coordinates, customer, party, case, connection, allocation point, or charger.
 2. A root represents continuity of one physical site, not one address string, dossier, customer, party, case, connection, allocation point, charger, or provider record.
@@ -76,25 +87,39 @@ Proposed TARGET:
 
 ### 4.1 Same-Site Correction
 
-Proposed default: a typographical, formatting, postcode, street-name, municipality, or provider-ID correction that does not change the accepted physical site creates a new immutable version on the same root. The earlier version remains historically addressable.
+Approved TARGET under `WP3E-LOC-07`: a typographical, formatting, postcode,
+street-name, municipality, or provider-ID correction that does not change the
+accepted physical site creates a new immutable version on the same root. The
+earlier version remains historically addressable.
 
 This default is not self-executing. The correction must cite exact observations/evidence, actor, request, reason, decision, and predecessor.
 
 ### 4.2 Administrative Registration Change
 
-Proposed default: a registry or addressing-authority change for the same physical site creates a new version on the same root with explicit business validity and source provenance. A changed external identifier is preserved as a new observation; it does not overwrite the earlier identifier.
+Approved TARGET under `WP3E-LOC-07`: a registry or addressing-authority change
+for the same physical site creates a new version on the same root with explicit
+business validity and source provenance. A changed external identifier is
+preserved as a new observation; it does not overwrite the earlier identifier.
 
 ### 4.3 Physical Relocation
 
-Proposed default: a move to a different physical site creates a new location root. It must not be modeled as a new address version of the old physical site. A case, party, allocation point, or charge point can receive a separately historized relationship to the new root.
+Approved TARGET under `WP3E-LOC-07`: a move to a different physical site
+creates a new location root. It must not be modeled as a new address version of
+the old physical site. A case, allocation point, or charge point receives a
+separately historized relationship to the new root where the applicable
+relationship contract requires it.
 
 ### 4.4 Split, Merge, And Boundary Change
 
-Proposed default: split, merge, parcel/building restructuring, campus subdivision, or uncertain physical-boundary change is blocked/manual review. It requires an explicit later relationship/correction contract. No root is silently reused, merged, or deleted.
+Approved TARGET under `WP3E-LOC-08`: split and merge are explicit historical
+relations and never silently rewrite, combine, reuse, or delete historical
+roots. Uncertain physical-boundary changes remain blocked/manual review until
+evidence and an explicit decision classify the event.
 
 ## 5. Immutable Version Rules
 
-Proposed TARGET:
+Approved TARGET under `WP3E-LOC-03` through `WP3E-LOC-05` and
+`WP3E-LOC-09` through `WP3E-LOC-11`:
 
 - every accepted description has a stable version ID and exactly one stable root;
 - a version is an immutable snapshot of the accepted location description;
@@ -113,9 +138,12 @@ Proposed TARGET:
 - a later version never updates or deletes its predecessor;
 - historical consumers can remain pinned to the exact version on which they relied.
 
-Open internal decision: whether there must be at most one operational accepted version per root at every business-time moment, and which exact state or decision makes a version operational. The conservative default is yes: ambiguous or overlapping accepted versions do not become operational until resolved. This default is not DDL-approved.
-
-Versions should be statusless if acceptance is represented entirely by a separate immutable decision. If product workflows require a closed version-status vocabulary, that vocabulary must be explicitly approved and may not combine declaration, observation, review, evidence, or verifier outcomes.
+At most one explicitly accepted, non-superseded operational version may exist
+per root at every business-time moment. Ambiguous or overlapping candidates do
+not become operational until resolved. Acceptance requires traceable actor,
+request, source, evidence, decision and time metadata; an observation alone is
+insufficient. The exact physical decision representation remains a later
+DDL-ready contract detail.
 
 ## 6. Address Observation Rules
 
@@ -129,7 +157,7 @@ The following remain distinct observation classes:
 - physical-visit observation;
 - address embodied in an already accepted location version.
 
-Proposed TARGET:
+Approved TARGET under `WP3E-LOC-06`:
 
 1. Observations are immutable and never self-accept.
 2. Each observation records source class, source/reference namespace, exact external identifier where supplied, retrieval/observation time, request and actor provenance, transformation method/version, and a raw-reference plus content hash where applicable.
@@ -144,15 +172,19 @@ Proposed TARGET:
 
 ### 7.1 Case To Location
 
+Approved TARGET under `WP3E-LOC-12`:
+
 - The relationship is administrative and typed.
 - It has its own half-open business validity and recorded time.
 - It should pin the exact location version used by the case when historical reliance matters.
 - Multiple cases may use the same location when the approved cardinality permits it; a case may use a location without owning it.
 - Removing or closing a case-location link never deletes or rewrites the location root, versions, observations, evidence, decisions, or other historical links.
-- Exact link purposes, maximum active links, simultaneous cases, required version pinning, and delete behavior remain Daan decisions.
+- Exact link purposes, maximum active links, simultaneous cases, required version pinning, and delete behavior remain later replacement-contract details and are not approved here.
 - The link creates no party relationship, ownership, occupancy, control, connection, aangeslotene, authority, mandate, evidence acceptance, eligibility, verifier outcome, or settlement entitlement.
 
 ### 7.2 Allocation Point To Location
+
+Approved TARGET under `WP3E-LOC-12`:
 
 - The relationship is typed, immutable/versioned, and time-bound.
 - It links a separately approved allocation-point root to a location root and, where required, an exact location version.
@@ -161,6 +193,8 @@ Proposed TARGET:
 
 ### 7.3 Charge Point To Location
 
+Approved TARGET under `WP3E-LOC-12`:
+
 - This is a future typed, immutable/versioned, time-bound relationship.
 - It links a separately approved charge-point root, not the current mutable charger snapshot.
 - It does not create charger identity, MID conformity, meter identity, kWh truth, transport-use eligibility, booking, or verifier approval.
@@ -168,9 +202,16 @@ Proposed TARGET:
 
 ### 7.4 Party To Location
 
-No generic party-location relationship is proposed. If a later bounded need exists, every relationship type—such as declared contact, occupant, owner, operator, user, lessor, or establishment—must have separate semantics, provenance, validity, evidence and decision rules. A party link can never be used as shorthand for a different type or for representation authority.
+Approved TARGET under `WP3E-LOC-13`: the location foundation contains no
+generic owner, occupant, resident, operator, or party-role engine. A
+party-location relationship may be added later only for a separately approved
+business meaning with its own semantics, provenance, validity, evidence, and
+decision rules. A party link can never be used as shorthand for another type
+or for representation authority.
 
 ## 8. Evidence, Decision, And Projection Separation
+
+Approved no-inference boundary under `WP3E-LOC-14`:
 
 - A location version is core historical truth, not its evidence pack.
 - Evidence files/versions, source observations, review tasks, and acceptance decisions remain separate and exact-version referenced.
@@ -182,42 +223,54 @@ No generic party-location relationship is proposed. If a later bounded need exis
 
 ## 9. Security Target
 
+Approved TARGET under `WP3E-LOC-15`.
+
 Every future location-foundation table must:
 
-- be in `public` with an additive `app_*` name only after explicit approval;
 - have RLS enabled;
-- have deny-all policies for `anon` and `authenticated`;
-- revoke all privileges from `public`, `anon`, and `authenticated`;
-- expose no browser write;
-- expose no direct customer table read;
-- grant `service_role` only the minimum explicit privileges;
-- allow `SELECT` and `INSERT` only for immutable roots, versions, observations, and immutable relationships unless a separately justified mutable operational object is approved;
+- be deny-all;
+- expose no `PUBLIC`, `anon`, or `authenticated` browser write;
+- allow `service_role` only `SELECT` and `INSERT` for immutable roots and versions;
 - deny UPDATE and DELETE on immutable history;
-- keep transaction functions server-only with exact execute grants;
-- use an empty or explicitly safe search path where `SECURITY DEFINER` is later justified;
-- return customer data only through a separately proven customer-safe projection;
-- preserve raw external payloads and internal conflict/review data behind stricter separate access boundaries.
+- model corrections append-only;
+- return customer data only through a later customer-safe projection.
 
 No frontend hiding, Auth claim, customer ID, dossier ID, or service-role possession substitutes for domain authorization.
 
-## 10. Transaction, Supersession, And Concurrency Target
+Exact schemas, policies, grants, functions, execution privileges, projection
+fields, and any additional protected-source boundary remain later
+replacement-contract details and are not approved here.
 
-Proposed TARGET:
+These controls are internal ENVAL architecture. They are not literal NEa
+database requirements and do not prove TKV acceptance.
 
-1. Writes for the same location-root business key take a deterministic transaction-scoped advisory lock or an equally proven serialization mechanism.
-2. Root creation, version insertion, predecessor/successor validation, business-validity checks, decision linkage, and audit/idempotency complete atomically.
-3. Deferred end-of-transaction checks validate one-successor, no-cycle, root/scope preservation, increasing recorded time, and any approved maximum-one-operational-version invariant.
-4. Direct table writes cannot bypass the same invariants.
-5. Idempotent replay returns the same accepted result; a changed payload under the same key conflicts safely.
-6. Concurrent competing versions are tested with true separate transactions. Sequential overlap tests are insufficient.
-7. A failed competing transaction leaves no partial root, version, observation, relationship, decision, or audit claim.
+## 10. Transaction, Supersession, And Concurrency Requirements
 
-The WP2B-I advisory-lock and deferred-constraint pattern is a reusable proof/design pattern. Its case-role vocabulary and object shape are not reusable location semantics. The old connection overlap functions are predicate input only and remain `REPLACE`.
+The business-validity, recording-time, half-open-period, maximum-one-
+operational-version and linear-supersession invariants are approved under
+`WP3E-LOC-05` and `WP3E-LOC-09` through `WP3E-LOC-11`. A later exact
+replacement contract must choose and prove a concurrency mechanism without
+changing those invariants:
+
+1. Competing writes for the same location root serialize or conflict safely.
+2. The committed transaction state satisfies one-successor, no-cycle,
+   root/scope preservation, increasing recorded time, and the approved
+   maximum-one-operational-version invariant.
+3. Concurrent creation and correction are tested with true separate
+   transactions; sequential overlap tests are insufficient.
+4. A failed competing transaction leaves none of the approved invariants
+   violated.
+
+Advisory locks, deferred constraints, serializable transactions, or another
+mechanism are not selected by WP3E. The WP2B-I temporal/concurrency proof
+discipline is reusable input, not an approved location mechanism or vocabulary.
 
 ## 11. Required Future Proof
 
 Before any implementation can be called `CURRENT PROVEN — LOCAL`, prove at minimum:
 
+- a root contains no mutable address fields;
+- an observation cannot create an accepted version;
 - Deno/type checking for the proof and any changed runtime source;
 - exact object, function, trigger, constraint, index, policy, and grant inventory;
 - exact additive file/object scope;
@@ -233,92 +286,105 @@ Before any implementation can be called `CURRENT PROVEN — LOCAL`, prove at min
 - linear supersession, one successor, no cycles, and increasing record time;
 - same-site correction preserves root and predecessor;
 - relocation uses a new root;
-- split/merge/uncertainty does not auto-merge;
+- split and merge preserve history and uncertainty does not auto-merge;
 - customer declaration, parser, upload, PDOK/BAG result, Auth, account, party, case, charger, and document slot cannot simulate acceptance;
 - exact historical version remains stable after later address, provider, party-profile, case, and relationship changes;
 - case, allocation-point, charge-point, party, authority, mandate, evidence, eligibility, verifier, and settlement boundaries remain technically separate;
 - true concurrent competing writes permit only the contract-allowed outcome;
 - customer-safe projection hides raw observations, internal reasons, hashes, provenance, and audit rows;
+- no location fact infers ownership, mandate, or eligibility;
+- an explicit mapping covers all 44 current location rows and proves protected history remains unchanged;
 - signup/dashboard/document compatibility or explicitly approved cutover behavior;
 - protected source hashes and all existing `app_*` row counts unchanged;
 - isolated proof records fully cleaned up;
 - no remote action.
 
-## 12. Current Object Disposition Direction
+## 12. Approved Current Object Disposition Direction
 
-This contract does not authorize execution.
+Approved TARGET under `WP3E-LOC-16`. This contract does not authorize
+execution.
 
-| item | proposed disposition |
-|---|---|
-| current `app_dossier_locations` object | REPLACE |
-| current update trigger and mutable status/overwrite model | REPLACE |
-| current client/dossier mapping and aggregate data | BLOCKED pending mapping/retention/cutover decision |
-| current deny-all/no-browser pattern | KEEP |
-| current server-side safe projection boundary | EXTEND |
-| current signup writer | REPAIR |
-| current dashboard frontend/backend ID and status contract | REPAIR |
-| current charger location FK | REPLACE in later charger/charge-point work |
-| current document-slot location FK | REPAIR under exact historical evidence/version linkage |
-| old connection location dependencies | REPLACE under WP3C |
-| existing location-dependent proofs | PROVE AGAIN |
-| Wave 1 mutable `app_locations` proposal | BLOCKED |
-| legacy address endpoints | RETIRE AFTER REPLACEMENT PROOF |
+The current location layer is replaced additively and forward-only. No
+retirement, drop, destructive remap, or caller switch occurs before:
 
-No object is dropped, altered, backfilled, cut over, or retired before additive replacement, data/caller proof, rollback/audit planning, remote inventory in a separately authorized batch, and explicit retirement approval.
+- an approved replacement contract;
+- a replacement migration;
+- green local proof;
+- source-to-catalog provenance;
+- explicit mapping of all 44 current location rows;
+- charger, document, connection, and caller impact analysis;
+- a conflict/merge/split queue;
+- row-count and data-integrity proof;
+- a rollback plan;
+- remote inventory;
+- a privacy and retention decision;
+- explicit execution approval.
 
-## 13. Daan Decision Matrix
+The WP3D object-level candidate dispositions remain audit/design input. WP3E
+does not separately approve a table, trigger, FK, caller, endpoint, projection,
+proposal, proof, or retirement action.
 
-Every row is `OPEN`. `Daan approval needed` is `YES` for every row. Proposed defaults are conservative discussion inputs, not decisions.
+## 13. WP3E Approved Decision Package
 
-| ID | topic | CURRENT truth | recommended TARGET | alternative requiring an explicit decision | risk | external validation needed | Daan approval needed | blocks contract | blocks DDL | proposed proof |
-|---|---|---|---|---|---|---|---|---|---|---|
-| LOC-D01 | root identity | dossier row/client ID; address/provider fields mixed | opaque server ID after explicit continuity decision; never address equality | approved deterministic external-root rule | duplicate or incorrectly merged sites | YES — BAG/PDOK and verifier | YES | YES | YES | same/different-site, no-derived-ID, merge-block tests |
-| LOC-D02 | accepted version semantics | mutable `status` on snapshot | separate attributable decision on exact immutable version and purpose | approved closed version state with equivalent separation | observation mistaken for truth | YES — verifier/evidence | YES | YES | YES | no-observation-promotion and decision-version pinning |
-| LOC-D03 | same-site correction versus relocation | UPDATE can overwrite either | same-site administrative correction stays on root; physical move creates root | approved narrower/wider continuity rule | rewritten history or false continuity | YES — verifier/register | YES | YES | YES | correction preserves root; relocation creates root |
-| LOC-D04 | version status | mixed mutable processing vocabulary | statusless immutable version plus separate decision | approved closed version-only vocabulary | review and acceptance collapse | NO, if D02 externally resolved | YES | YES | YES | closed-vocabulary/no-state-inference tests |
-| LOC-D05 | operational version | dashboard returns dossier snapshot | only accepted, non-superseded exact version selected by server projection | no operational concept; consumers always pin decisions | ambiguous current truth | YES — evidence/verifier | YES | YES | YES | projection selection and historical-pin tests |
-| LOC-D06 | maximum one version per root/time | no temporal rule | at most one operational version per root/business-time; conflicts blocked | multiple operational versions with explicit purpose partitions | contradictory operational truth | NO | YES | YES | YES | interval, touching, overlap and concurrent race tests |
-| LOC-D07 | external identifiers | free-text provider and ID on mutable row | immutable namespaced observations; no root identity/uniqueness until validated | approved authoritative external identity mapping | provider re-use/change corrupts identity | YES — BAG/PDOK | YES | YES | YES | namespace, reuse/change and historical-reliance tests |
-| LOC-D08 | PDOK/BAG observation | client PDOK result enters snapshot | immutable observation with retrieval/freshness/transformation/raw reference; no auto-accept | approved server-only lookup source contract | stale or ambiguous lookup promoted | YES — BAG/PDOK/privacy | YES | YES | YES | no-auto-accept, conflict and freshness tests |
-| LOC-D09 | case cardinality | no case link | multiple typed links when allowed; pin exact relied-on version | approved single active location or root-only link | case ownership inference or stale context | NO | YES | YES | YES | cardinality, link-delete, pinning and no-inference tests |
-| LOC-D10 | allocation-point relation | old zero-row objects reference dossier location | typed immutable time-bound relation; pin version when relied upon | root-only or version-only relationship | connection bound to wrong site/time | YES — DSO/CAR/MLOEA/verifier | YES | YES | YES | temporal, relocation and no-EAN-inference tests |
-| LOC-D11 | charge-point relation | current charger FK cascades to snapshot | defer to future charge-point root and typed time-bound relation | approved bounded bridge from current charger | MID/kWh/eligibility inference | YES — verifier/evidence | YES | NO | YES | no-MID/kWh/eligibility inference and history tests |
-| LOC-D12 | party-location relation | none | none in foundation | separately typed, evidenced, time-bound relationship | generic ownership/occupancy engine | YES if a relation is requested | YES | NO | YES for such object | no-ownership/authority inference tests |
-| LOC-D13 | supersession | none | linear predecessor chain, one successor, no cycles, root preserved | approved DAG with explicit branch semantics | forked or rewritten history | NO | YES | YES | YES | successor, cycle, record-time and scope tests |
-| LOC-D14 | split/merge/uncertainty | not representable | blocked/manual review; no merge/delete in foundation | separately approved root-relationship contract | irreversible identity corruption | YES — BAG/verifier | YES | YES | YES | no-auto-merge and preserved-candidate tests |
-| LOC-D15 | concurrency | no location lock/deferred invariant | deterministic root lock plus deferred transaction-end checks | serializable-only design with equivalent proof | write-skew and dual operational versions | NO | YES | YES | YES | true two-transaction create/correct races |
-| LOC-D16 | security/grants | deny-all; service-role CRUD | deny-all; immutable service-role `SELECT`/`INSERT`; exact execute only | narrowly approved mutable operational table | silent overwrite or browser access | NO | YES | YES | YES | catalog grants, RLS, client denial, UPDATE/DELETE denial |
-| LOC-D17 | current-object disposition | 44 rows plus live FKs/callers | forward additive `REPLACE`; preserve all data until separate cutover/retirement | keep/repair current table under a proven equivalent design | data loss and caller breakage | YES — retention/privacy | YES | YES | YES | protected counts/hashes, caller inventory and rollback |
-| LOC-D18 | data migration strategy | no mapping/bridge/cutover plan | decide after DDL-ready contract/proof; no in-place rewrite | approved dual-write, event bridge, or offline mapping variant | mixed truth or irreversible cutover | YES — retention/legal hold | YES | YES | YES | mapping reconciliation, retry, rollback and zero-loss proof |
-| LOC-D19 | safe projection | server projects mutable snapshot | accepted/current server projection only; no raw observation/provenance | approved purpose-specific projections | privacy leak or false acceptance signal | YES — privacy | YES | YES | YES | authorization, redaction, stable-ID and stale-version tests |
-| LOC-D20 | evidence reliance | no exact evidence/decision pin | exact evidence/source/decision versions linked separately | approved decision-manifest indirection | unreconstructable acceptance | YES — verifier/evidence | YES | YES | YES | later-source-change and historical-reconstruction tests |
+The authoritative full wording is in
+`operations/wp3e-location-internal-domain-decisions.md`.
 
-Written approval must identify every accepted row and any amended wording. Silence, document creation, or approval of WP3C package B is not approval of this matrix.
+| IDs | status | implementation | proof | DDL | data migration | retirement | external blockers |
+|---|---|---|---|---|---|---|---|
+| `WP3E-LOC-01` through `WP3E-LOC-16` | APPROVED TARGET by Daan | NOT IMPLEMENTED | NOT PROVEN | NOT AUTHORIZED | NOT AUTHORIZED | NOT AUTHORIZED | OPEN |
 
-## 14. External Blockers
+## 14. TKV Alignment Guard
 
-| blocker | written answer needed | blocked decision |
-|---|---|---|
-| PDOK/BAG authority | source namespace, returned-object meaning, change/re-use behavior, retrieval time, freshness, availability, and permissible retention | LOC-D01, D07, D08 |
-| verifier location evidence | accepted evidence categories for site identity, change, charger/site link, substantial change, and visit preparation | LOC-D02, D03, D20 |
-| DSO/CAR location | meaning of supplied address/location fields and relationship to connection/allocation point | LOC-D10 |
-| secondary/MLOEA | exact primary/secondary physical-location relationship and evidence | LOC-D10, D14 |
-| physical visit | whether/how visit observations support identity/change and who may accept them internally | LOC-D02, D08, D20 |
-| evidence acceptance | categories, exact versions, freshness, conflicts, insufficiency, reviewer qualification, and four-eyes where needed | LOC-D02, D20 |
-| retention/legal hold | period anchors and preservation/minimization rules for roots, versions, observations, raw payloads, decisions, and links | LOC-D17, D18 |
-| privacy/minimization | legal basis, purpose, access, customer projection, address/provider-ID minimization, raw payload storage | LOC-D08, D19 |
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-External answers do not automatically approve internal DDL. Daan must record the bounded internal decision after those answers are attributable and written.
+- Stable roots, immutable versions, RLS and grants are internal ENVAL controls.
+- They support reconstruction but do not prove TKV acceptance.
+- Location acceptance does not replace checks of connection, allocation point,
+  metered delivery point, meter, aangeslotene, direct line, on-site generation,
+  or an Article 10 construct.
+- Visited locations, changes, sources, and decisions remain separately
+  reconstructable.
+- Data forming part of verification evidence remains available for the
+  applicable period.
+- The TKV requires verification data to be retained for at least five years
+  after the end of the calendar year in which verification occurred.
+- Exact ENVAL retention and privacy minimization remain a separately approved
+  contract.
 
-## 15. Release Gate
+This alignment concerns TKV 3.0.4–3.0.5, 3.1.3–3.1.5, and 3.3.2–3.3.4. It
+does not make the internal model a literal NEa database requirement or a
+verifier-accepted implementation.
+
+## 15. External Blockers
+
+- PDOK/BAG source contract and freshness;
+- reliable physical-site matching;
+- verifier acceptance of location evidence;
+- DSO/CAR semantics;
+- primary/secondary/MLOEA;
+- location-visit procedure and evidence;
+- evidence categories and acceptance;
+- privacy/minimization;
+- retention beyond the explicit TKV minimum;
+- mapping of all 44 current rows;
+- remote catalog and caller truth.
+
+External answers do not automatically authorize internal DDL or establish
+regulatory acceptance.
+
+## 16. Release Gate
 
 Location foundation remains `NOT DDL READY` until:
 
-1. the WP3D current-truth conflict is accepted as the migration starting point;
-2. Daan resolves the applicable decision matrix in writing;
-3. external blockers needed by the chosen scope are resolved in writing;
-4. an exact DDL-ready contract defines columns, types, constraints, functions, policies, grants, caller/cutover behavior, data handling, rollback, and proof;
+1. the approved package is translated into an exact replacement contract;
+2. the applicable external blockers are resolved in attributable writing;
+3. all 44 current rows and protected history have an explicit mapping;
+4. exact columns, types, constraints, functions, policies, grants,
+   caller/cutover behavior, data handling, rollback, and proof are approved;
 5. a later explicitly authorized additive local migration/proof batch succeeds;
 6. no retirement or remote action occurs without its own approval.
 
-Connection/EAN remains location-dependent. Completion or approval of this draft would still not authorize connection DDL, evidence acceptance, charger/MID, mandate, authority, kWh, booking, verifier, settlement, remote, or deployment work.
+Connection/EAN remains location-dependent. Approval of the WP3E internal
+package does not authorize location or connection DDL, evidence acceptance,
+charger/MID, mandate, authority, kWh, booking, verifier, settlement, remote,
+or deployment work.

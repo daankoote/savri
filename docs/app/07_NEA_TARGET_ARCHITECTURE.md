@@ -62,7 +62,7 @@ Target bounded-context count: 24.
 | customer/account | Maintain customer account shell and customer-safe portal scope. | customers, customer cases, projections | `app_customers`, dashboard projection | EXTEND CURRENT |
 | mandate | Store signed mandate, version, period, clauses, withdrawal, and renewal. | mandates and mandate versions | legal acceptance pattern only | FULL REBUILD |
 | connection/EAN | Keep the physical connection, EAN-bearing allocation point, observations and party/profile-pinned claim separate; only terminal non-superseded confirmed claims are operational. | connection roots, allocation-point roots, EAN observations, party claim versions | predicates and security patterns only; existing objects conflict with TARGET | TARGET — WP3C INTERNAL DOMAIN APPROVED; NOT IMPLEMENTED |
-| location | Keep a stable physical-location root, immutable location versions and address observations distinct from connection, EAN and party claims. | location roots, versions, address observations | `app_dossier_locations` is source material, not automatically TARGET | TARGET — WP3C INTERNAL DOMAIN APPROVED; FOUNDATION NOT IMPLEMENTED |
+| location | Keep a stable statusless physical-location root, immutable accepted location versions and non-accepting address observations distinct from connection, EAN and party claims. Same-site corrections retain the root; physical relocation creates a new root; split/merge is explicit history. | location roots, accepted versions, address observations, and separate typed case/allocation-point/future charge-point links | `app_dossier_locations` is conflicting source material, not automatically TARGET | TARGET — WP3E INTERNAL DOMAIN APPROVED; NOT IMPLEMENTED / NOT PROVEN / NOT DDL READY |
 | charger/charge point | Model charger asset and individual charge points with history. | chargers, charge points | `app_dossier_chargers` fields | PROVISIONALLY REUSABLE — FINAL DISPOSITION AFTER REGULATORY CANON |
 | MID/conformity | Decide MID applicability and evidence validity for concrete assets. | MID meters, conformity evidence via evidence tables | MID field, document slots | FULL REBUILD |
 | evidence/document lifecycle | Issue uploads, confirm bytes, version evidence, and separate acceptance decisions. | evidence slots/files/versions/decisions | document upload/confirm/download/withdraw primitives | EXTEND CURRENT |
@@ -92,7 +92,7 @@ Target entity count: 54. Table-level details are in `docs/app/architecture/datab
 | legal entity | Company/VvE legal person. | Legal/Ops | KvK, legal name | period-valid | versioned | KvK/customer evidence | representation evidence | legal review | supersede | internal summary | MAND, ORG | limited | no |
 | representative | Natural person or role authorized to sign. | Legal/Ops | representative_id, identity refs | authority period | versioned | mandate/KvK/board proof | authority documents | representation review | supersede | internal/customer own | MAND, SEC | limited | no |
 | case/dossier | Operational container for one onboarding/booking relationship. | Ops | case_id, case_number | lifecycle period | mutable state only | promotion | all domain rows | lifecycle audit | correction/revision | customer projection | AUD, RET | yes | yes |
-| location | Stable physical charging-location identity, versions and separate address observations. | Product/Ops | stable location ID; exact schema open | occupancy/evidence period | immutable versions and observations | customer/address source/manual observation | separately accepted location evidence | location review | new version or explicit relation; no rewrite | customer-safe summary | EAN, CHG | yes | yes |
+| location | Stable statusless physical charging-location root, immutable accepted versions, and separate non-accepting address observations. | Product/Ops | opaque server-assigned location ID; exact schema open | business validity separate from recorded time | root append-only; versions and observations immutable | customer/address source/manual observation with attributable provenance | separately accepted exact-version location evidence and decision | location review | same-site correction creates a version; relocation creates a root; split/merge is explicit history | customer-safe summary only; deny-all core | EAN, CHG | yes | supports reconstruction; no TKV acceptance claim |
 | electricity connection | Physical electricity connection distinct from location and EAN-bearing allocation point. | Ops/Compliance | stable connection ID; exact schema open | required where applicable | immutable material history | declared/observed/external sources remain observations | accepted evidence decision separate | connection review | append/supersede; no silent overwrite | internal + safe summary | EAN | limited | yes |
 | allocation point/EAN | Stable allocation-point identity with an immutable accepted EAN; exact 18-digit syntax without an unsupported checksum claim. | Ops/Compliance | stable allocation-point ID and accepted EAN; exact schema open | required | accepted EAN immutable; observations append-only | declared/parser/external values are observations, not accepted roots | separate accepted evidence decision | EAN review | new root or explicit later-approved historical relation; no rewrite | internal + safe summary | EAN | limited | yes |
 | allocation-point party claim/version | Period-bound aangeslotene claim linking the exact point, party and matching immutable party-profile version. | Ops/Compliance | claim root, point, party, person/organization profile version; exact schema open | required, half-open | immutable versions; explicit linear supersession | asserted source plus separate review/acceptance | evidence acceptance remains separate | claim decision/review | wrong party creates new claim root | internal; safe status only | EAN, MAND | status only | yes |
@@ -335,7 +335,59 @@ The target uses business validity separately from recorded time, half-open perio
 
 Future implementation proof must cover exact object inventory; immutable-EAN correction history; wrong-party new-root behavior; profile-version historical stability; at most one operational party per point and moment; touching versus overlapping periods; real concurrent transactions; linear supersession; no inference from Auth, account, case role, upload, parser, authority or mandate; exact RLS/grants; protected rows; and complete fixture cleanup. These are future acceptance targets, not claims about existing schema or proof results.
 
-External CAR/DSO/register semantics, evidence categories and acceptance, freshness, conflicting sources, secondary/MLOEA, year-duplicate/fallback, verifier acceptance, representation authority and mandate validation remain open. The locationfoundation is the first next bounded context. Only after it is separately approved and proven may a limited connection-root/claim DDL-readiness assessment occur; neither this overlay nor that assessment authorizes DDL.
+External CAR/DSO/register semantics, evidence categories and acceptance, freshness, conflicting sources, secondary/MLOEA, year-duplicate/fallback, verifier acceptance, representation authority and mandate validation remain open. The WP3E internal location package is now separately approved as TARGET but remains unimplemented, unproven and not DDL-ready. Only after the locationfoundation is implemented and proven may a limited connection-root/claim DDL-readiness assessment occur; neither overlay nor that assessment authorizes DDL.
+
+## N. WP3E Approved Internal Location Overlay
+
+TARGET — WP3E INTERNAL LOCATION DOMAIN DECISIONS APPROVED — EXTERNAL BLOCKERS OPEN / NOT DDL READY
+
+Daan approved `WP3E-LOC-01` through `WP3E-LOC-16` in
+`operations/wp3e-location-internal-domain-decisions.md`. The approved TARGET
+uses an opaque server-assigned, statusless location root; immutable accepted
+versions; immutable observations that never self-accept; separate business
+validity and recording time; half-open intervals; and at most one operational
+version per root and business-time moment. Same-site administrative correction
+keeps the root, physical relocation creates a new root, and split/merge is
+explicit historical relation data.
+
+Case-to-location, allocation-point-to-location, and future
+charge-point-to-location links are separate explicit and where needed
+time-bound objects. Location truth never proves ownership, occupancy,
+aangeslotene, authority, mandate, accepted EAN, Article 10 construct, MID, kWh,
+booking eligibility, settlement entitlement, or verifier approval. The core
+security TARGET reuses deny-all RLS, no browserwrites, append-only correction,
+minimal immutable-core `service_role` `SELECT`/`INSERT`, and later
+customer-safe projection patterns.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+Stable roots, immutable versions, RLS, and grants are internal ENVAL controls.
+They support a reconstructable dossier but do not prove TKV acceptance and do
+not replace checks of connection, allocation point, metered delivery point,
+meter, aangeslotene, direct line, same-address generation, or Article 10
+construct. Visited locations, changes, sources, and decisions remain separately
+reconstructable. TKV verification data must remain available for at least five
+years after the end of the verification calendar year; exact ENVAL retention
+and privacy minimization remain a separate contract.
+
+Open blockers remain the PDOK/BAG source contract and freshness, reliable
+physical-site matching, verifier acceptance of location evidence, DSO/CAR
+semantics, primary/secondary/MLOEA, location-visit procedure and evidence,
+evidence categories and acceptance, privacy/minimization, retention beyond the
+explicit TKV minimum, mapping of all 44 current rows, and remote catalog/caller
+truth.
+
+Future proof must cover a root without mutable address fields; no observation
+auto-acceptance; same-site correction; relocation to a new root; history-safe
+split/merge; one operational version per root/time; touching intervals and
+overlap rejection; linear supersession and cycle rejection; concurrent
+creation/correction; no browser grants; no ownership/mandate/eligibility
+inference; and 44-row mapping with protected-history proof.
+
+This overlay is `NOT IMPLEMENTED`, `NOT PROVEN`, and authorizes no DDL, data
+migration, caller cutover, retirement, proof execution, remote action, or
+regulatory/verifier acceptance. Connection DDL remains dependent on a proven
+locationfoundation.
 
 ## Overall Architecture Verdict
 

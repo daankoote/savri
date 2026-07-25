@@ -87,7 +87,7 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - only after separate location approval and proof: limited connection-root/claim DDL-readiness assessment, still without automatic implementation authority;
   - external blockers remain CAR/DSO/register semantics, evidence categories/acceptance/freshness/conflicts, secondary/MLOEA, year duplicate/fallback, verifier acceptance, representation authority and mandate validation;
   - representation authority continues independently and remains `NOT SCHEMA READY`.
-- WP3D location current-truth audit and bounded draft contract are COMPLETE — UNCOMMITTED:
+- WP3D location current-truth audit and bounded draft contract are committed in HEAD `88e8c0b754c7d44e769f89037676d9732e6fe63c`:
   - `docs/app/operations/wp3d-location-current-truth-readiness-audit.md`;
   - exact audit status is `PROOF ONLY — WP3D LOCATION CURRENT-TRUTH READINESS AUDIT`;
   - audit verdict is `BLOCKED — CURRENT LOCATION OBJECTS CONFLICT WITH TARGET`;
@@ -99,6 +99,16 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - candidate responsibilities are names only: stable root, immutable versions, address observations, case links, allocation-point links and future charge-point links;
   - DDL is blocked on Daan's exact root/version/correction/link/supersession/concurrency/grant/migration decisions and written PDOK/BAG, verifier, DSO/CAR, secondary/MLOEA, evidence, retention and privacy answers;
   - connection remains location-dependent; no migration, proof, SQL, database write, runtime, frontend, CSS, remote action or retirement occurred.
+- WP3E location internal domain decisions 1–16 are APPROVED TARGET — DOCS ONLY:
+  - `docs/app/operations/wp3e-location-internal-domain-decisions.md`;
+  - decision status is exactly `DECISION RECORD — WP3E INTERNAL LOCATION DOMAIN PACKAGE APPROVED — NO DDL AUTHORIZATION`;
+  - location contract status is exactly `TARGET — WP3E INTERNAL LOCATION DOMAIN DECISIONS APPROVED — EXTERNAL BLOCKERS OPEN / NOT DDL READY`;
+  - Daan approved `WP3E-LOC-01` through `WP3E-LOC-16`: opaque statusless root; immutable accepted versions; non-accepting observations; same-site correction versus relocation; explicit split/merge history; separate temporal links; linear supersession; no-inference security and additive forward-only replacement;
+  - `TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE` records that roots, immutable versions, RLS and grants are internal ENVAL controls supporting reconstruction, not literal NEa database requirements or verifier acceptance;
+  - OPEN remain PDOK/BAG source/freshness, reliable physical-site matching, verifier location-evidence acceptance, DSO/CAR, primary/secondary/MLOEA, visit procedure/evidence, evidence categories/acceptance, privacy/minimization, retention beyond the explicit TKV minimum, 44-row mapping and remote catalog/caller truth;
+  - implementation is `NOT IMPLEMENTED`, proof `NOT PROVEN`, and DDL, data migration and retirement are `NOT AUTHORIZED`;
+  - next: attributable blocker resolution, an exact separately approved replacement contract and later bounded proof; connection DDL remains dependent on a proven locationfoundation;
+  - no migration, proof, proof execution, SQL, database write, runtime, Edge Function, frontend, CSS, inline CSS, remote action, staging, commit, push, deploy or retirement occurred.
 - WP2A party directory and customer-party binding is CURRENT PROVEN — LOCAL:
   - `app_parties`
   - `app_party_person_versions`
@@ -189,7 +199,7 @@ Local proof is not production proof. Remote migration/function deploy, productio
     - plaintext temp files and restore database were cleaned up.
   - Remote Wave 1 remains blocked on PostgREST dashboard/platform health.
   - Gate 1 connection/EAN and write-RPC objects are observed locally; historical proof runs are documented but are not CURRENT PROVEN under WP3A.
-  - WP3C internal A–E TARGET direction is approved without DDL authority; WP3D location readiness is documented but blocked on current-object conflict, explicit domain decisions and external answers, not ready for location or connection schema/read-projection implementation.
+  - WP3C connection and WP3E location internal TARGET directions are approved without DDL authority; WP3D current-object conflict remains evidence, and open external/source/mapping blockers plus exact replacement contract and proof keep location and dependent connection schema/read-projection implementation unauthorized.
   - Do not start deployment, database drops, migration squash/baseline, runtime removals, function deletion, cron changes, Storage cleanup, Auth mutation, or remote SQL until recovery readiness is proven and Daan approves the exact mutation batch.
 - Settlement & Payouts TARGET contract:
   - DONE documentair: provider-independent boundary from ERE sale proceeds through legal-party allocation, gross/net entitlement, 10% ENVAL TARGET fee, settlement, payout, reconciliation, correction, reversal, and clawback;
