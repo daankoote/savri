@@ -77,16 +77,28 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - DDL remained blocked pending Daan's explicit internal decisions and the applicable location, DSO/CAR/register, MLOEA/secondary, evidence/freshness, verifier and calendar-year duplicate-control answers;
   - the old proofs were not rerun and no current object or source was modified or removed;
   - authority legal/verifier validation continues independently and representation authority remains `NOT SCHEMA READY`.
-- WP3C connection/EAN internal domain decisions are COMPLETE — UNCOMMITTED:
+- WP3C connection/EAN internal domain decisions are committed in `da961fa84da73ecc320b55b2cb83881a12d658f3`:
   - `docs/app/operations/wp3c-connection-ean-internal-domain-decisions.md`;
   - Daan explicitly approved internal packages A–E as TARGET: connection/allocation/EAN separation, accepted-EAN immutability and observations; stable location root/versions; party/profile-pinned claim semantics; administrative case/evidence/year-control boundaries; immutable security, concurrency and forward-replacement discipline;
   - contract status is exactly `TARGET — WP3C INTERNAL DOMAIN DECISIONS APPROVED — EXTERNAL BLOCKERS OPEN / NOT DDL READY`;
   - this approves no candidate schema, DDL, implementation, proof, retirement, cleanup or execution;
   - existing connection tables, functions, triggers, policies, grants, migrations and proofs remain intact; old migrations are conflicting source material and old proofs remain `PROVE AGAIN`;
-  - first next bounded context: locationfoundation readiness;
+  - first next bounded context was locationfoundation readiness;
   - only after separate location approval and proof: limited connection-root/claim DDL-readiness assessment, still without automatic implementation authority;
   - external blockers remain CAR/DSO/register semantics, evidence categories/acceptance/freshness/conflicts, secondary/MLOEA, year duplicate/fallback, verifier acceptance, representation authority and mandate validation;
   - representation authority continues independently and remains `NOT SCHEMA READY`.
+- WP3D location current-truth audit and bounded draft contract are COMPLETE — UNCOMMITTED:
+  - `docs/app/operations/wp3d-location-current-truth-readiness-audit.md`;
+  - exact audit status is `PROOF ONLY — WP3D LOCATION CURRENT-TRUTH READINESS AUDIT`;
+  - audit verdict is `BLOCKED — CURRENT LOCATION OBJECTS CONFLICT WITH TARGET`;
+  - `docs/app/contracts/location-foundation.md`;
+  - exact contract status is `DRAFT — WP3D LOCATION FOUNDATION — NOT APPROVED / NOT DDL READY`;
+  - read-only local catalog evidence records 44 mutable dossier-bound location rows, 68/68 linked chargers, 73/429 location-linked document slots, zero connection rows, RLS deny-all and `service_role` CRUD;
+  - signup writes and dashboard reads the current object; Auth/bootstrap does not establish location truth; browser PDOK lookup is an external observation;
+  - the current table, update trigger, mutable grants and old connection dependencies are `REPLACE`; relevant proofs are `PROVE AGAIN`; current data is `BLOCKED` pending mapping/retention/cutover decisions;
+  - candidate responsibilities are names only: stable root, immutable versions, address observations, case links, allocation-point links and future charge-point links;
+  - DDL is blocked on Daan's exact root/version/correction/link/supersession/concurrency/grant/migration decisions and written PDOK/BAG, verifier, DSO/CAR, secondary/MLOEA, evidence, retention and privacy answers;
+  - connection remains location-dependent; no migration, proof, SQL, database write, runtime, frontend, CSS, remote action or retirement occurred.
 - WP2A party directory and customer-party binding is CURRENT PROVEN — LOCAL:
   - `app_parties`
   - `app_party_person_versions`
@@ -149,7 +161,7 @@ Local proof is not production proof. Remote migration/function deploy, productio
   - Target-only internal support controls are separated from external verifier location visits; approval of the direction gives neither implementation permission nor external professional authority.
 - Database Retirement Phase 1A - Evidence Completion:
   - DONE on 2026-07-19; unique operational content is consolidated in `docs/app/operations/remote-baseline-and-retirement.md`.
-  - Local DB contains 15 `app_*` public tables, zero local legacy tables, substantial app data, and 7 `app-documents` Storage objects.
+  - The WP3D read-only catalog inventory observes 24 `app_*` public tables and substantial app data; the earlier retirement evidence recorded zero local legacy tables and 7 `app-documents` Storage objects.
   - Local migration history is incomplete: `supabase_migrations.schema_migrations` exists but has zero rows.
   - Legacy runtime/repository objects remain present and remote status remains UNKNOWN.
 - Remote Schema and Deployment Inventory:
@@ -177,7 +189,7 @@ Local proof is not production proof. Remote migration/function deploy, productio
     - plaintext temp files and restore database were cleaned up.
   - Remote Wave 1 remains blocked on PostgREST dashboard/platform health.
   - Gate 1 connection/EAN and write-RPC objects are observed locally; historical proof runs are documented but are not CURRENT PROVEN under WP3A.
-  - WP3C internal A–E TARGET direction is approved without DDL authority; the next bounded context is locationfoundation readiness, not connection schema or read-projection implementation.
+  - WP3C internal A–E TARGET direction is approved without DDL authority; WP3D location readiness is documented but blocked on current-object conflict, explicit domain decisions and external answers, not ready for location or connection schema/read-projection implementation.
   - Do not start deployment, database drops, migration squash/baseline, runtime removals, function deletion, cron changes, Storage cleanup, Auth mutation, or remote SQL until recovery readiness is proven and Daan approves the exact mutation batch.
 - Settlement & Payouts TARGET contract:
   - DONE documentair: provider-independent boundary from ERE sale proceeds through legal-party allocation, gross/net entitlement, 10% ENVAL TARGET fee, settlement, payout, reconciliation, correction, reversal, and clawback;

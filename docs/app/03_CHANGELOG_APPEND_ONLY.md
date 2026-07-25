@@ -661,3 +661,19 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Set locationfoundation readiness as the first next bounded context. A limited connection-root/claim DDL-readiness assessment may follow only after separate location approval and proof, and still does not automatically authorize implementation.
 - Representation-authority legal/verifier validation continues independently and representation authority remains `NOT SCHEMA READY`.
 - This docs-only batch changed no WP3A audit, party/case contract, directive, requirements, completeness audit, MVP plan, migration, proof script, SQL, database, RPC, Edge Function, runtime, frontend, UI, CSS, configuration, staging, commit, push, deploy or remote state.
+
+## 2026-07-25 — Audit WP3D location current truth and draft bounded contract
+
+- Recorded WP3C as committed in `da961fa84da73ecc320b55b2cb83881a12d658f3`; its stable-root/version/observation direction remains TARGET only and authorizes no location schema.
+- Added `docs/app/operations/wp3d-location-current-truth-readiness-audit.md` with exact status `PROOF ONLY — WP3D LOCATION CURRENT-TRUTH READINESS AUDIT`.
+- Used repository/source inspection and explicit read-only local PostgreSQL transactions only; selected catalog metadata and aggregates, no address or other PII row values.
+- Recorded 44 mutable `app_dossier_locations` rows, 68/68 linked chargers, 73/429 location-linked document slots, zero connection rows, empty migration history, RLS deny-all, `service_role` CRUD, the update trigger, four inbound FKs and three location-dependent old connection functions.
+- Inventoried the live signup writer, dashboard reader/projection, Auth/dossier access boundary, charger and document dependencies, signup/dashboard frontend, direct PDOK observation, missing configured fallback implementation, legacy address source material and existing proofs.
+- Set the audit verdict to `BLOCKED — CURRENT LOCATION OBJECTS CONFLICT WITH TARGET`: the current object is a populated mutable dossier snapshot without stable root, immutable versions, business validity, recorded-time separation, observations, decision provenance or supersession.
+- Added `docs/app/contracts/location-foundation.md` with exact status `DRAFT — WP3D LOCATION FOUNDATION — NOT APPROVED / NOT DDL READY`.
+- Named only the unapproved candidate responsibilities `app_locations`, `app_location_versions`, `app_location_address_observations`, `app_case_locations`, `app_allocation_point_locations` and `app_charge_point_locations`; no columns, constraints or schema were approved.
+- Proposed conservative root/version/observation/relationship/security/concurrency/proof boundaries and a twenty-row Daan decision matrix without turning any proposal into CURRENT truth.
+- Kept PDOK/BAG semantics/freshness, verifier location evidence, DSO/CAR location meaning, secondary/MLOEA, physical-visit evidence, acceptance categories, retention and privacy/minimization externally blocked.
+- Dispositioned the current mutable location object, update model and old connection dependencies `REPLACE`; safe projection/RLS patterns are bounded reuse input, existing proofs are `PROVE AGAIN`, data/cutover remain `BLOCKED`, and no retirement is approved.
+- Confirmed connection/EAN remains location-dependent and representation-authority validation remains independent.
+- This docs-only batch changed no prior audit/contract, directive, requirement, completeness audit, target architecture, traceability matrix, MVP plan, migration, proof script, SQL, database data, migration history, Auth, RPC, Edge Function, runtime, frontend, UI, CSS, configuration, staging, commit, push, deploy or remote state.
