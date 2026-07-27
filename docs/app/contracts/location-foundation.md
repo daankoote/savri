@@ -1,20 +1,25 @@
 # Location Foundation Contract
 
-TARGET — WP3F-B BOUNDED LOCATION DDL DECISIONS APPROVED — DATA MIGRATION AND CALLER CUTOVER BLOCKED / NOT IMPLEMENTED
+TARGET — WP3G-B EXACT PHYSICAL LOCATION SCHEMA APPROVED — MIGRATION AND PROOF NOT AUTHORIZED / DATA MIGRATION AND CALLER CUTOVER BLOCKED
 
 ## 1. Contract Boundary
 
 This document is the bounded TARGET locationfoundation contract. Daan first
 approved `WP3E-LOC-01` through `WP3E-LOC-16` in
-`operations/wp3e-location-internal-domain-decisions.md` and now approved the
-physical bounded package `WP3F-B-01` through `WP3F-B-18` in
-`operations/wp3fb-location-bounded-ddl-decisions.md`.
+`operations/wp3e-location-internal-domain-decisions.md`, the bounded package
+`WP3F-B-01` through `WP3F-B-18` in
+`operations/wp3fb-location-bounded-ddl-decisions.md`, and the exact physical
+schema package 1–8 in
+`operations/wp3gb-location-physical-schema-decisions.md`.
 
-WP3F-B approves the exact three-table foundation shape and its internal
-database invariants as TARGET. It is not CURRENT truth, legal advice,
-external-source acceptance, migration authorization, implementation proof,
-proof authorization, backfill/cutover approval, data-migration authorization,
-write-RPC authorization or retirement approval.
+WP3G-B closes the six physical-catalog gaps identified by the historical WP3G
+readiness audit: exact observation actor/request fields, hash/freshness shape,
+normalized descriptor columns, version-to-observation cardinality, acceptance
+provenance and timestamp defaults. Package 1–8 is APPROVED TARGET. It is not
+CURRENT truth, legal advice, external-source acceptance, migration
+authorization, implementation proof, proof authorization, backfill/cutover
+approval, data-migration authorization, write-RPC authorization or retirement
+approval.
 
 The approved TARGET direction follows WP3C package B:
 
@@ -26,11 +31,14 @@ The approved TARGET direction follows WP3C package B:
 
 The CURRENT evidence and conflict verdict remain in the unchanged
 `operations/wp3d-location-current-truth-readiness-audit.md`. The historical
-WP3F audit and classification also remain unchanged. WP3F remains the proof
-that DDL was unsafe before the WP3F-B decisions. Implementation remains
-`NOT IMPLEMENTED`, proof remains `NOT PROVEN`, migration and data population
-remain `NOT AUTHORIZED`, caller cutover remains `BLOCKED`, and external
-blockers remain `OPEN`.
+WP3F audit and classification and both WP3G documents also remain unchanged.
+WP3F remains the proof that DDL was unsafe before the WP3F-B decisions, and
+WP3G remains the proof that implementation was unsafe before package 1–8.
+Implementation remains `NOT IMPLEMENTED`, proof remains `NOT PROVEN`,
+migration and database writes remain `NOT AUTHORIZED`, data population and
+caller cutover remain `BLOCKED`, retirement remains `NOT AUTHORIZED`, and
+external blockers remain `OPEN`. A new readiness reconciliation is required
+before any separately authorized migration/proof batch.
 
 ## 2. Hard Separation Of Truth
 
@@ -55,7 +63,8 @@ Location truth creates no settlement or payout entitlement.
 ## 3. Approved Bounded Table Responsibilities
 
 WP3F-B approves exactly these physical table names and bounded
-responsibilities. It does not authorize their migration or implementation.
+responsibilities; WP3G-B approves their exact physical TARGET schema. Neither
+authorizes migration, proof or implementation.
 
 | approved table | one bounded responsibility |
 |---|---|
@@ -66,21 +75,75 @@ responsibilities. It does not authorize their migration or implementation.
 The first later-authorized migration must create an empty additive foundation.
 None of the 44 current rows may be copied, accepted or changed.
 
-The root contains only `id`, `created_at`, `created_by_actor_ref`,
-`created_from_request_id` and `creation_basis`. `creation_basis` is restricted
-to `customer_declaration`, `source_observation` and
-`manual_migration_review`.
+The root contains exactly:
 
-Observations carry `id`, `location_id`, `observation_kind`,
-`descriptor_kind`, `observed_at`, `recorded_at`, actor/request references,
-optional lowercase SHA-256 source hashes, freshness and normalized postal-
-address or site-reference fields. Raw source payloads and provider IDs remain
-outside the foundation.
+- `id uuid PRIMARY KEY DEFAULT gen_random_uuid()`;
+- `created_at timestamptz NOT NULL DEFAULT clock_timestamp()`;
+- `created_by_actor_ref text NOT NULL`;
+- `created_from_request_id text NOT NULL`;
+- `creation_basis text NOT NULL`.
 
-Versions are accepted-only immutable truth with business validity,
-`recorded_at`, acceptance provenance, exactly one descriptor shape and
-optional correction supersession. There is no draft, pending or rejected
-lifecycle column.
+`creation_basis` is restricted to `customer_declaration`,
+`source_observation` and `manual_migration_review`. Its three text provenance
+fields are trimmed and nonblank.
+
+Observations contain exactly:
+
+- `id uuid PRIMARY KEY DEFAULT gen_random_uuid()`;
+- `location_id uuid NOT NULL`;
+- `observation_kind text NOT NULL`;
+- `descriptor_kind text NOT NULL`;
+- `observed_at timestamptz NOT NULL`;
+- `recorded_at timestamptz NOT NULL DEFAULT clock_timestamp()`;
+- `recorded_by_actor_ref text NOT NULL`;
+- `recorded_from_request_id text NOT NULL`;
+- `source_ref_sha256 text NULL`;
+- `source_payload_sha256 text NULL`;
+- `source_retrieved_at timestamptz NULL`;
+- `fresh_until timestamptz NULL`;
+- `country_code text NOT NULL`;
+- `postal_code text NULL`;
+- `house_number integer NULL`;
+- `house_number_addition text NULL`;
+- `street text NULL`;
+- `city text NULL`;
+- `site_reference text NULL`.
+
+`location_id` has a foreign key to `app_locations(id) ON DELETE RESTRICT`.
+Observations have no document, provider, case or generic-evidence foreign key.
+Raw source payloads and raw external/provider IDs remain outside the
+foundation.
+
+Versions contain exactly:
+
+- `id uuid PRIMARY KEY DEFAULT gen_random_uuid()`;
+- `location_id uuid NOT NULL`;
+- `accepted_from_observation_id uuid NOT NULL`;
+- `descriptor_kind text NOT NULL`;
+- `valid_from timestamptz NOT NULL`;
+- `valid_to timestamptz NULL`;
+- `recorded_at timestamptz NOT NULL DEFAULT clock_timestamp()`;
+- `accepted_at timestamptz NOT NULL`;
+- `accepted_by_actor_ref text NOT NULL`;
+- `accepted_from_request_id text NOT NULL`;
+- `acceptance_decision_ref text NOT NULL`;
+- `country_code text NOT NULL`;
+- `postal_code text NULL`;
+- `house_number integer NULL`;
+- `house_number_addition text NULL`;
+- `street text NULL`;
+- `city text NULL`;
+- `site_reference text NULL`;
+- `supersedes_version_id uuid NULL`;
+- `correction_reason text NULL`.
+
+Versions are accepted-only immutable truth. There is no draft, pending or
+rejected lifecycle column and none of the three tables has `updated_at`.
+Only `app_locations.created_at`,
+`app_location_address_observations.recorded_at`, and
+`app_location_versions.recorded_at` default to `clock_timestamp()`. There is
+no default on `observed_at`, `source_retrieved_at`, `fresh_until`,
+`valid_from`, `valid_to`, or `accepted_at`.
 
 The following responsibilities remain outside this bounded foundation and
 their earlier candidate names remain unapproved:
@@ -150,7 +213,8 @@ evidence and an explicit decision classify the event.
 
 Approved TARGET under `WP3E-LOC-03` through `WP3E-LOC-05` and
 `WP3E-LOC-09` through `WP3E-LOC-11`, physically bounded by
-`WP3F-B-09` through `WP3F-B-14`:
+`WP3F-B-09` through `WP3F-B-14`, reconciled by the WP3G-B exact physical
+package:
 
 - every accepted description has a stable version ID and exactly one stable root;
 - a version is an immutable snapshot of the accepted location description;
@@ -162,7 +226,12 @@ Approved TARGET under `WP3E-LOC-03` through `WP3E-LOC-05` and
 - `valid_to` must be later than `valid_from`;
 - touching boundaries are allowed;
 - `recorded_at` states when ENVAL immutably recorded the version;
-- acceptance provenance, request and actor references, acceptance time/reason and an optional superseded-version reference are required;
+- every version has exactly one `accepted_from_observation_id`;
+- `accepted_at`, `accepted_by_actor_ref`, `accepted_from_request_id`, and
+  `acceptance_decision_ref` are required, have no defaults, and the text
+  references are trimmed and nonblank;
+- `acceptance_decision_ref` is unique and opaque;
+- `accepted_at` is not later than `recorded_at`;
 - `postal_address` requires country, postal code, house number, street and city;
 - `site_reference` requires `site_reference`;
 - a successor names exactly one predecessor;
@@ -178,8 +247,11 @@ At most one explicitly accepted, non-superseded operational version may exist
 per root at every business-time moment. Ambiguous or overlapping candidates do
 not become operational until resolved. Acceptance requires traceable actor,
 request, source, evidence, decision and time metadata; an observation alone is
-insufficient. The exact physical decision representation remains a later
-DDL-ready contract detail.
+insufficient. The exact primary accepted input is the same-root observation
+identified by `accepted_from_observation_id`. Additional evidence is
+referenced through the opaque `acceptance_decision_ref` under a separately
+approved evidence/decision contract; the foundation adds no fourth table or
+generic evidence foreign key.
 
 ## 6. Address Observation Rules
 
@@ -199,16 +271,37 @@ The approved `descriptor_kind` vocabulary is:
 - `site_reference`.
 
 Approved TARGET under `WP3E-LOC-06`, physically bounded by
-`WP3F-B-05` through `WP3F-B-08`:
+`WP3F-B-05` through `WP3F-B-08`, reconciled by the WP3G-B exact physical
+package:
 
 1. Observations are immutable and never self-accept.
-2. Each observation records `id`, `location_id`, the two closed vocabularies, `observed_at`, `recorded_at`, actor/request references, optional source hashes, freshness and the normalized fields belonging to exactly one descriptor kind.
+2. Each observation records the exact columns approved in section 3;
+   `recorded_by_actor_ref` and `recorded_from_request_id` are trimmed and
+   nonblank.
 3. A PDOK result does not rewrite a customer declaration, an existing observation, a location version, or a stable root.
 4. A BAG/PDOK/provider identifier is not stored raw in the foundation and is never an ENVAL stable root ID.
 5. Conflicting observations are preserved side by side and explicitly related as supporting, contradicting, insufficient, superseding, or revoking only under a separately approved evidence/decision contract.
 6. Freshness/expiry and acceptance are separate. A recent result is not automatically accepted; an older relied-on result is not silently erased.
-7. Raw payload, provider ID, storage path, document content, secret, e-mail and phone are forbidden in observations. Source references and payload references are stored only as lowercase SHA-256 hashes.
+7. Raw payload, provider ID, storage path, document content, secret, e-mail and phone are forbidden in observations. `source_ref_sha256` and `source_payload_sha256` are null or exactly 64 lowercase hexadecimal characters.
 8. Parser output is derived. Upload confirmation proves bytes/hash transport only. Client lookup is a UX observation. None creates root or accepted version truth.
+
+`document_parsed`, `pdok_observed`, `bag_observed`, and `provider_observed`
+require `source_payload_sha256`. `pdok_observed`, `bag_observed`, and
+`provider_observed` also require `source_retrieved_at`.
+`source_retrieved_at` is not later than `recorded_at`. `fresh_until` is
+permitted only with `source_retrieved_at` and must be later than it.
+`customer_declared`, `manual_observed`, and `migration_snapshot` prohibit
+`fresh_until`.
+
+For both observations and versions, `country_code` is server-normalized,
+exactly two uppercase characters and database-enforced as `^[A-Z]{2}$`. A
+`postal_address` requires
+`country_code`, uppercase-trimmed `postal_code`, positive `house_number`,
+trimmed nonblank `street` and `city`, a null-or-trimmed-nonblank
+`house_number_addition`, and null `site_reference`. A `site_reference`
+requires `country_code` and a trimmed nonblank `site_reference`; all postal
+fields are null. Normalization creates no identity, deduplication, merge,
+acceptance or matching inference.
 
 ## 7. Relationship Rules
 
@@ -279,9 +372,10 @@ All three bounded location-foundation tables must:
 
 No frontend hiding, Auth claim, customer ID, dossier ID, or service-role possession substitutes for domain authorization.
 
-Exact schemas, policies, grants, functions, execution privileges, projection
-fields, and any additional protected-source boundary remain later
-replacement-contract details and are not approved here.
+The exact physical schema is approved by WP3G-B. Policies, functions,
+execution privileges, projection fields, operational authorization and any
+additional protected-source boundary remain later replacement-contract
+details and are not approved here.
 
 These controls are internal ENVAL architecture. They are not literal NEa
 database requirements and do not prove TKV acceptance.
@@ -301,6 +395,13 @@ operational-version and linear-supersession invariants are approved under
    transactions; sequential overlap tests are insufficient.
 4. A failed competing transaction leaves none of the approved invariants
    violated.
+
+Observations and versions each have `UNIQUE (location_id, id)`. Versions use
+the composite foreign key `(location_id, accepted_from_observation_id)` to
+observations and the composite self-foreign key
+`(location_id, supersedes_version_id)` to versions.
+`accepted_from_observation_id` is unique across versions. Cross-root
+acceptance and correction supersession are prohibited.
 
 Allowed database enforcement is CHECK constraints, composite FKs, partial
 unique indexes, immutable guards and deferrable transaction-end constraint
@@ -371,13 +472,15 @@ proposal, proof, or retirement action.
 ## 13. Approved Decision Packages
 
 The authoritative full wording is in
-`operations/wp3e-location-internal-domain-decisions.md` and
-`operations/wp3fb-location-bounded-ddl-decisions.md`.
+`operations/wp3e-location-internal-domain-decisions.md`,
+`operations/wp3fb-location-bounded-ddl-decisions.md`, and
+`operations/wp3gb-location-physical-schema-decisions.md`.
 
 | IDs | status | implementation | proof | migration | data population | caller cutover | retirement | external blockers |
 |---|---|---|---|---|---|---|---|---|
 | `WP3E-LOC-01` through `WP3E-LOC-16` | APPROVED TARGET by Daan | NOT IMPLEMENTED | NOT PROVEN | NOT AUTHORIZED | NOT AUTHORIZED | BLOCKED | NOT AUTHORIZED | OPEN |
 | `WP3F-B-01` through `WP3F-B-18` | APPROVED TARGET by Daan | NOT IMPLEMENTED | NOT PROVEN | NOT AUTHORIZED | NOT AUTHORIZED | BLOCKED | NOT AUTHORIZED | OPEN |
+| WP3G-B package 1–8 | APPROVED TARGET by Daan | NOT IMPLEMENTED | NOT PROVEN | NOT AUTHORIZED | BLOCKED | BLOCKED | NOT AUTHORIZED | OPEN |
 
 ## 14. TKV Alignment Guard
 
@@ -404,6 +507,10 @@ verifier-accepted implementation.
 ## 15. External Blockers
 
 - 44-row migrationmapping;
+- operational write-RPC;
+- advisory-lock concurrency;
+- two-transaction concurrency proof;
+- data population;
 - physical-site matching;
 - PDOK/BAG broncontract;
 - verifieracceptatie;
@@ -412,7 +519,6 @@ verifier-accepted implementation.
 - charge-point-locationlinks;
 - split/merge-relaties;
 - customer-safe projection;
-- write-RPC;
 - caller-cutover;
 - current-table retirement;
 - privacy en definitieve retention.
@@ -422,16 +528,18 @@ regulatory acceptance.
 
 ## 16. Implementation And Release Gate
 
-The bounded three-table TARGET shape is approved. Location foundation remains
-`NOT IMPLEMENTED` and `NOT PROVEN`; migration, proof execution, data
-population, caller cutover and retirement remain unauthorized or blocked.
+The exact bounded three-table physical TARGET schema is approved. Location
+foundation remains `NOT IMPLEMENTED` and `NOT PROVEN`; migration, proof
+execution and database writes remain `NOT AUTHORIZED`; data population and
+caller cutover remain `BLOCKED`; retirement remains `NOT AUTHORIZED`.
 
-1. A later migration/proof batch requires separate explicit authorization.
+1. A new readiness reconciliation is required after WP3G-B; a later
+   migration/proof batch still requires separate explicit authorization.
 2. Its first migration is empty and additive and is limited to
    `app_locations`, `app_location_address_observations` and
    `app_location_versions`.
 3. No current row may be copied, accepted or changed.
-4. The exact approved constraints, guards, policies, grants, temporal and
+4. The exact approved columns, constraints, guards, policies, grants, temporal and
    supersession invariants require green local proof before any population.
 5. All 44 current rows and protected history require an explicit manual
    mapping before a separately authorized population batch.
@@ -440,6 +548,7 @@ population, caller cutover and retirement remain unauthorized or blocked.
 7. No retirement or remote action occurs without its own approval.
 
 Connection/EAN remains location-dependent. Approval of the WP3E internal
-package and WP3F-B bounded shape does not authorize location or connection
+package, WP3F-B bounded shape and WP3G-B exact physical schema does not
+authorize location or connection
 implementation, evidence acceptance, charger/MID, mandate, authority, kWh,
 booking, verifier, settlement, remote, or deployment work.

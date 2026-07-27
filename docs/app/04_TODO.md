@@ -148,6 +148,18 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - operationele write-RPC, 44-row mapping/population, physical-site matching, PDOK/BAG, verifier acceptance, relation tables, customer-safe projection, caller cutover, retirement, privacy and final retention remain BLOCKED;
   - next: approve the exact physical observation/descriptor/acceptance catalog in a separate docs-only decision, then separately authorize migration/proof implementation;
   - no migration, proof, SQL, database write, runtime, Edge Function, frontend, CSS, staging, commit, push, deploy or remote action occurred.
+- WP3G-B exact physical location schema decisions package 1–8 is APPROVED TARGET — DOCS ONLY:
+  - WP3G is committed in HEAD `c021d57aacc5d8beb4aa2043bc963839fa38da07`; its readiness verdict and proof contract remain unchanged historical evidence;
+  - `docs/app/operations/wp3gb-location-physical-schema-decisions.md`;
+  - decision status is exactly `DECISION RECORD — WP3G-B EXACT PHYSICAL LOCATION SCHEMA PACKAGE APPROVED — NO IMPLEMENTATION AUTHORIZATION`;
+  - location contract status is exactly `TARGET — WP3G-B EXACT PHYSICAL LOCATION SCHEMA APPROVED — MIGRATION AND PROOF NOT AUTHORIZED / DATA MIGRATION AND CALLER CUTOVER BLOCKED`;
+  - Daan approved package 1–8: the exact observation columns and provenance; null-or-64-lowercase-hex source hashes and kind-specific retrieval/freshness rules; normalized exclusive postal/site descriptors; exactly one unique same-root primary observation per version; exact unique opaque acceptance provenance; `clock_timestamp()` only for root creation and immutable recording time; same-root composite accepted-observation and supersession FKs; and the docs-only authorization boundary;
+  - the six physical-catalog gaps identified by WP3G are closed as APPROVED TARGET, not as implementation or proof evidence;
+  - `TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE`;
+  - implementation is `NOT IMPLEMENTED`, proof is `NOT PROVEN`, migration and database writes are `NOT AUTHORIZED`, operational write-RPC/data population/caller cutover are `BLOCKED`, retirement is `NOT AUTHORIZED`, and external blockers are `OPEN`;
+  - operationele write-RPC, advisory-lock concurrency, true two-transaction concurrency proof, 44-row mapping/population, physical-site matching, PDOK/BAG source, verifier acceptance, case/allocation-point/charge-point links, split/merge, customer-safe projection, caller cutover, current-table retirement, privacy and final retention remain blocked/open;
+  - next: perform a new bounded docs-only implementation-readiness reconciliation, then seek separate explicit migration/proof authorization; do not create migration, SQL or proof automatically;
+  - no migration, proof, SQL, database write, runtime, Edge Function, frontend, CSS, package/config, staging, commit, push, deploy or remote action occurred.
 - WP2A party directory and customer-party binding is CURRENT PROVEN — LOCAL:
   - `app_parties`
   - `app_party_person_versions`

@@ -737,3 +737,18 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Kept operationele write-RPC, all 44-row mapping/population, physical-site matching, PDOK/BAG, verifier acceptance, relation tables, projection, caller cutover, retirement, privacy and final retention blocked.
 - CSS reuse is not applicable.
 - This docs-only proof batch changed no location contract, WP3D/WP3E/WP3F/WP3F-B record, target architecture, traceability matrix, requirement, connection/EAN contract, party/case contract, migration, proof, baseline proposal, SQL, database data, runtime, Edge Function, frontend, CSS, package/config, remote state, staging, commit, push or deploy state.
+
+## 2026-07-27 — Approve WP3G-B exact physical location schema decisions
+
+- Recorded WP3G as committed in HEAD `c021d57aacc5d8beb4aa2043bc963839fa38da07`; its historical verdict `BLOCKED — BOUNDED LOCATION FOUNDATION IMPLEMENTATION NOT SAFE` and TARGET / NOT IMPLEMENTED proof contract remain unchanged.
+- Added `docs/app/operations/wp3gb-location-physical-schema-decisions.md` with exact status `DECISION RECORD — WP3G-B EXACT PHYSICAL LOCATION SCHEMA PACKAGE APPROVED — NO IMPLEMENTATION AUTHORIZATION`.
+- Recorded Daan's approval of exact physical schema package 1–8 for the bounded `app_locations`, `app_location_address_observations`, and `app_location_versions` TARGET.
+- Updated the location contract to exact status `TARGET — WP3G-B EXACT PHYSICAL LOCATION SCHEMA APPROVED — MIGRATION AND PROOF NOT AUTHORIZED / DATA MIGRATION AND CALLER CUTOVER BLOCKED`.
+- Closed the six internal WP3G catalog-decision gaps as TARGET: exact observation actor/request columns; null-or-64-lowercase-hex hashes and kind-specific retrieval/freshness; normalized exclusive descriptor columns; exactly one unique same-root primary observation per version; exact unique opaque acceptance provenance; and exact `clock_timestamp()` recording defaults.
+- Approved same-root `UNIQUE (location_id, id)`, composite accepted-observation and supersession FKs, while preserving one-successor, no-cycle, correction-reason, later-recording, half-open-validity and one-operational-leaf rules.
+- Kept additional evidence behind the opaque acceptance-decision reference; added no fourth foundation table and no document, provider, case or generic-evidence FK.
+- Recorded exact marker `TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE`.
+- Kept implementation `NOT IMPLEMENTED`, proof `NOT PROVEN`, migration/database writes `NOT AUTHORIZED`, operational write-RPC/data population/caller cutover `BLOCKED`, retirement `NOT AUTHORIZED`, and external blockers `OPEN`.
+- Kept blocked/open: operational write-RPC; advisory-lock and true two-transaction concurrency proof; 44-row mapping/population; physical-site matching; PDOK/BAG; verifier acceptance; case/allocation-point/charge-point links; split/merge; projection; cutover; retirement; privacy and final retention.
+- Required a new bounded readiness reconciliation before any separately authorized migration/proof batch; no implementation authorization follows from package 1–8.
+- This docs-only decision batch changed no WP3D/WP3E/WP3F/WP3F-B/WP3G historical record, requirement, completeness audit, connection/EAN contract, party/case contract, migration, proof, proposal, SQL, database data, runtime, Edge Function, frontend, CSS, package/config, remote state, staging, commit, push or deploy state.
