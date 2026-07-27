@@ -690,3 +690,17 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Recorded future proof scenarios for root immutability, no observation auto-acceptance, correction/relocation/split-merge history, operational-version cardinality, interval boundaries/overlap, linear supersession/cycles, concurrent creation/correction, browser denial, no ownership/mandate/eligibility inference, and 44-row mapping/protected history.
 - Kept connection DDL dependent on a proven locationfoundation and kept location implementation `NOT IMPLEMENTED`, proof `NOT PROVEN`, and DDL, data migration and retirement `NOT AUTHORIZED`.
 - This docs-only decision batch changed no WP3D audit, WP3C decision record, connection/EAN contract, party/case contract, directive, requirements, completeness audit, MVP plan, migration, proof, baseline proposal, SQL, database, Edge Function, helper/service, frontend, CSS, inline CSS, configuration, remote state, staging, commit, push or deploy state.
+
+## 2026-07-25 — Audit WP3F location DDL readiness and classify 44 rows
+
+- Recorded WP3E as committed in HEAD `e04f4a695d983c71a52f48d0c3c26ca605bb4402`.
+- Added `docs/app/operations/wp3f-location-ddl-readiness-audit.md` with exact status `PROOF ONLY — WP3F LOCATION DDL-READINESS AND 44-ROW CLASSIFICATION AUDIT`.
+- Added `docs/app/operations/wp3f-location-44-row-classification.md` with exact status `PROOF ONLY — PRIVACY-SAFE LOCAL LOCATION ROW CLASSIFICATION`.
+- Used repository/source inspection and explicit read-only local PostgreSQL transactions only; every SQL transaction rolled back and no raw ID, address, provider ID, other PII or alias-to-ID mapping was printed or retained.
+- Assigned ephemeral aliases `LOC-001` through `LOC-044` by `ORDER BY created_at, id`; all 44 are `POSSIBLE_DUPLICATE`, 7 have `CONFLICTING` and 37 `DECLARED_ONLY` evidence, all require manual review, and automatic promotion is `NO` for every row.
+- Reconfirmed 44 current location rows, 68 charger references, 73 document-slot references and zero connection, connection-period or ownership-claim references.
+- Audited ten candidate DDL responsibilities; none is safe for an empty additive migration, population or cutover while exact physical contracts, accepted-version representation, observation privacy/retention/provenance, deterministic concurrency, policies/grants/RPCs and proof matrix remain undecided.
+- Dispositioned current and planned callers without changing them: current mutable location and dependent connection objects remain replacement targets; signup, dashboard, document linkage and PDOK handling require repair; existing proofs remain reuse input or `PROVE AGAIN`; no retirement is authorized.
+- Recorded exact marker `TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE`.
+- Set the verdict to `BLOCKED — LOCATION DDL DESIGN NOT SAFE`; the next bounded step is a separate docs-only exact physical replacement-contract decision.
+- This proof-only batch changed no contract, prior WP3 record, directive, requirement, completeness audit, architecture, traceability, MVP plan, migration, proof, baseline proposal, SQL, database data, migration history, RPC, Edge Function, runtime, frontend, CSS, inline CSS, configuration, remote state, staging, commit, push, deploy or retirement state.

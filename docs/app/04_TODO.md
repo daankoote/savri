@@ -109,6 +109,17 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - implementation is `NOT IMPLEMENTED`, proof `NOT PROVEN`, and DDL, data migration and retirement are `NOT AUTHORIZED`;
   - next: attributable blocker resolution, an exact separately approved replacement contract and later bounded proof; connection DDL remains dependent on a proven locationfoundation;
   - no migration, proof, proof execution, SQL, database write, runtime, Edge Function, frontend, CSS, inline CSS, remote action, staging, commit, push, deploy or retirement occurred.
+- WP3F location DDL-readiness and 44-row classification audit is proof-only and uncommitted:
+  - `docs/app/operations/wp3f-location-ddl-readiness-audit.md`;
+  - exact audit status is `PROOF ONLY — WP3F LOCATION DDL-READINESS AND 44-ROW CLASSIFICATION AUDIT`;
+  - `docs/app/operations/wp3f-location-44-row-classification.md`;
+  - exact classification status is `PROOF ONLY — PRIVACY-SAFE LOCAL LOCATION ROW CLASSIFICATION`;
+  - explicit read-only local SQL assigned ephemeral `LOC-001` through `LOC-044` aliases by `ORDER BY created_at, id`; no raw ID, address, provider ID, other PII or alias mapping was printed or retained;
+  - all 44 rows are `POSSIBLE_DUPLICATE`; 7 have `CONFLICTING` and 37 `DECLARED_ONLY` evidence; manual review is `YES` and automatic promotion is `NO` for all 44;
+  - all ten candidate DDL responsibilities are blocked; exact physical columns/types/defaults, accepted-version representation, observation privacy/retention/provenance, deterministic lock and transaction-end enforcement, policies/grants/RPCs and future proof matrix remain undecided;
+  - verdict is `BLOCKED — LOCATION DDL DESIGN NOT SAFE`;
+  - next: a separate docs-only exact physical replacement-contract decision; do not start DDL, population, proof implementation, data migration, caller cutover or retirement;
+  - connection DDL remains dependent on a proven locationfoundation; no migration, proof script, database write, runtime, frontend, CSS, remote action, staging, commit, push, deploy or retirement occurred.
 - WP2A party directory and customer-party binding is CURRENT PROVEN — LOCAL:
   - `app_parties`
   - `app_party_person_versions`
