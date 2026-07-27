@@ -1,15 +1,20 @@
 # Location Foundation Contract
 
-TARGET — WP3E INTERNAL LOCATION DOMAIN DECISIONS APPROVED — EXTERNAL BLOCKERS OPEN / NOT DDL READY
+TARGET — WP3F-B BOUNDED LOCATION DDL DECISIONS APPROVED — DATA MIGRATION AND CALLER CUTOVER BLOCKED / NOT IMPLEMENTED
 
 ## 1. Contract Boundary
 
-This document is the bounded TARGET locationfoundation contract. Daan approved
-only `WP3E-LOC-01` through `WP3E-LOC-16` in
-`operations/wp3e-location-internal-domain-decisions.md`. It is not CURRENT
-truth, legal advice, external-source acceptance, an approved schema, a column
-contract, DDL authorization, implementation proof, backfill/cutover approval,
-data-migration authorization, or retirement approval.
+This document is the bounded TARGET locationfoundation contract. Daan first
+approved `WP3E-LOC-01` through `WP3E-LOC-16` in
+`operations/wp3e-location-internal-domain-decisions.md` and now approved the
+physical bounded package `WP3F-B-01` through `WP3F-B-18` in
+`operations/wp3fb-location-bounded-ddl-decisions.md`.
+
+WP3F-B approves the exact three-table foundation shape and its internal
+database invariants as TARGET. It is not CURRENT truth, legal advice,
+external-source acceptance, migration authorization, implementation proof,
+proof authorization, backfill/cutover approval, data-migration authorization,
+write-RPC authorization or retirement approval.
 
 The approved TARGET direction follows WP3C package B:
 
@@ -20,10 +25,12 @@ The approved TARGET direction follows WP3C package B:
 - correction, administrative change, and physical relocation must remain reconstructable.
 
 The CURRENT evidence and conflict verdict remain in the unchanged
-`operations/wp3d-location-current-truth-readiness-audit.md`. WP3E changes the
-internal package from candidate direction to approved TARGET only; implementation remains
-`NOT IMPLEMENTED`, proof remains `NOT PROVEN`, and the external blockers remain
-`OPEN`.
+`operations/wp3d-location-current-truth-readiness-audit.md`. The historical
+WP3F audit and classification also remain unchanged. WP3F remains the proof
+that DDL was unsafe before the WP3F-B decisions. Implementation remains
+`NOT IMPLEMENTED`, proof remains `NOT PROVEN`, migration and data population
+remain `NOT AUTHORIZED`, caller cutover remains `BLOCKED`, and external
+blockers remain `OPEN`.
 
 ## 2. Hard Separation Of Truth
 
@@ -45,22 +52,45 @@ internal package from candidate direction to approved TARGET only; implementatio
 
 Location truth creates no settlement or payout entitlement.
 
-## 3. Approved Responsibilities And Unapproved Candidate Names
+## 3. Approved Bounded Table Responsibilities
 
-The responsibilities in this section follow the approved package. Names remain
-candidate names only. They approve no table, column, constraint, vocabulary,
-FK, index, trigger, policy, grant, RPC, or migration.
+WP3F-B approves exactly these physical table names and bounded
+responsibilities. It does not authorize their migration or implementation.
 
-| candidate | one responsibility |
+| approved table | one bounded responsibility |
 |---|---|
 | `app_locations` | stable internal root for one physical-location continuity |
 | `app_location_versions` | immutable accepted location-description versions with business validity and recorded time |
 | `app_location_address_observations` | immutable declared, parsed, provider-returned, or manual address observations and provenance |
-| `app_case_locations` | administrative, typed, time-bound case-to-location use |
-| `app_allocation_point_locations` | typed, time-bound allocation-point-to-location relationship |
-| `app_charge_point_locations` | future typed, time-bound charge-point-to-location relationship |
 
-External location identifiers are a separate semantic responsibility inside the immutable observation/source boundary: namespaced, provenance-bound, time-aware, and never root identity by default. This contract intentionally names no extra candidate table for them.
+The first later-authorized migration must create an empty additive foundation.
+None of the 44 current rows may be copied, accepted or changed.
+
+The root contains only `id`, `created_at`, `created_by_actor_ref`,
+`created_from_request_id` and `creation_basis`. `creation_basis` is restricted
+to `customer_declaration`, `source_observation` and
+`manual_migration_review`.
+
+Observations carry `id`, `location_id`, `observation_kind`,
+`descriptor_kind`, `observed_at`, `recorded_at`, actor/request references,
+optional lowercase SHA-256 source hashes, freshness and normalized postal-
+address or site-reference fields. Raw source payloads and provider IDs remain
+outside the foundation.
+
+Versions are accepted-only immutable truth with business validity,
+`recorded_at`, acceptance provenance, exactly one descriptor shape and
+optional correction supersession. There is no draft, pending or rejected
+lifecycle column.
+
+The following responsibilities remain outside this bounded foundation and
+their earlier candidate names remain unapproved:
+
+- case-locationlinks;
+- allocation-point-locationlinks;
+- charge-point-locationlinks;
+- split/merge-relations;
+- customer-safe projection;
+- write-RPC.
 
 Not proposed:
 
@@ -119,21 +149,27 @@ evidence and an explicit decision classify the event.
 ## 5. Immutable Version Rules
 
 Approved TARGET under `WP3E-LOC-03` through `WP3E-LOC-05` and
-`WP3E-LOC-09` through `WP3E-LOC-11`:
+`WP3E-LOC-09` through `WP3E-LOC-11`, physically bounded by
+`WP3F-B-09` through `WP3F-B-14`:
 
 - every accepted description has a stable version ID and exactly one stable root;
 - a version is an immutable snapshot of the accepted location description;
+- the table is accepted-only and has no draft, pending or rejected lifecycle column;
 - business validity and recorded time are separate;
+- `valid_from`, `valid_to` and `recorded_at` use `timestamptz`;
 - business validity is half-open `[valid_from, valid_to)`;
 - null `valid_to` means unbounded;
 - `valid_to` must be later than `valid_from`;
 - touching boundaries are allowed;
 - `recorded_at` states when ENVAL immutably recorded the version;
-- conceptual `source_class`, `source_ref`, `request_id`, actor type/ref, decision time/reason, and an explicit superseded-version reference are required at the approved precision; these labels are contract concepts, not approved columns;
+- acceptance provenance, request and actor references, acceptance time/reason and an optional superseded-version reference are required;
+- `postal_address` requires country, postal code, house number, street and city;
+- `site_reference` requires `site_reference`;
 - a successor names exactly one predecessor;
 - one version has at most one direct successor;
 - a chain has no cycles;
 - successor `recorded_at` is later than predecessor `recorded_at`;
+- correction supersession is only within the same root and requires `correction_reason`;
 - root and version scope cannot change within a chain;
 - a later version never updates or deletes its predecessor;
 - historical consumers can remain pinned to the exact version on which they relied.
@@ -147,25 +183,31 @@ DDL-ready contract detail.
 
 ## 6. Address Observation Rules
 
-The following remain distinct observation classes:
+The approved `observation_kind` vocabulary is:
 
-- customer-declared address;
-- parser/OCR-derived address;
-- browser or server PDOK result;
-- BAG or another register result;
-- manual staff observation;
-- physical-visit observation;
-- address embodied in an already accepted location version.
+- `customer_declared`;
+- `document_parsed`;
+- `pdok_observed`;
+- `bag_observed`;
+- `provider_observed`;
+- `manual_observed`;
+- `migration_snapshot`.
 
-Approved TARGET under `WP3E-LOC-06`:
+The approved `descriptor_kind` vocabulary is:
+
+- `postal_address`;
+- `site_reference`.
+
+Approved TARGET under `WP3E-LOC-06`, physically bounded by
+`WP3F-B-05` through `WP3F-B-08`:
 
 1. Observations are immutable and never self-accept.
-2. Each observation records source class, source/reference namespace, exact external identifier where supplied, retrieval/observation time, request and actor provenance, transformation method/version, and a raw-reference plus content hash where applicable.
+2. Each observation records `id`, `location_id`, the two closed vocabularies, `observed_at`, `recorded_at`, actor/request references, optional source hashes, freshness and the normalized fields belonging to exactly one descriptor kind.
 3. A PDOK result does not rewrite a customer declaration, an existing observation, a location version, or a stable root.
-4. A BAG/PDOK/provider identifier is an external observation, not an ENVAL stable root ID.
+4. A BAG/PDOK/provider identifier is not stored raw in the foundation and is never an ENVAL stable root ID.
 5. Conflicting observations are preserved side by side and explicitly related as supporting, contradicting, insufficient, superseding, or revoking only under a separately approved evidence/decision contract.
 6. Freshness/expiry and acceptance are separate. A recent result is not automatically accepted; an older relied-on result is not silently erased.
-7. Raw provider payload belongs in a separately protected source/evidence store with its own retention, access, minimization, and integrity contract, not in core location rows.
+7. Raw payload, provider ID, storage path, document content, secret, e-mail and phone are forbidden in observations. Source references and payload references are stored only as lowercase SHA-256 hashes.
 8. Parser output is derived. Upload confirmation proves bytes/hash transport only. Client lookup is a UX observation. None creates root or accepted version truth.
 
 ## 7. Relationship Rules
@@ -225,12 +267,12 @@ Approved no-inference boundary under `WP3E-LOC-14`:
 
 Approved TARGET under `WP3E-LOC-15`.
 
-Every future location-foundation table must:
+All three bounded location-foundation tables must:
 
 - have RLS enabled;
 - be deny-all;
-- expose no `PUBLIC`, `anon`, or `authenticated` browser write;
-- allow `service_role` only `SELECT` and `INSERT` for immutable roots and versions;
+- expose no privileges to `PUBLIC`, `anon`, or `authenticated`;
+- allow `service_role` only `SELECT` and `INSERT`;
 - deny UPDATE and DELETE on immutable history;
 - model corrections append-only;
 - return customer data only through a later customer-safe projection.
@@ -248,9 +290,8 @@ database requirements and do not prove TKV acceptance.
 
 The business-validity, recording-time, half-open-period, maximum-one-
 operational-version and linear-supersession invariants are approved under
-`WP3E-LOC-05` and `WP3E-LOC-09` through `WP3E-LOC-11`. A later exact
-replacement contract must choose and prove a concurrency mechanism without
-changing those invariants:
+`WP3E-LOC-05`, `WP3E-LOC-09` through `WP3E-LOC-11` and
+`WP3F-B-12` through `WP3F-B-16`:
 
 1. Competing writes for the same location root serialize or conflict safely.
 2. The committed transaction state satisfies one-successor, no-cycle,
@@ -261,9 +302,12 @@ changing those invariants:
 4. A failed competing transaction leaves none of the approved invariants
    violated.
 
-Advisory locks, deferred constraints, serializable transactions, or another
-mechanism are not selected by WP3E. The WP2B-I temporal/concurrency proof
-discipline is reusable input, not an approved location mechanism or vocabulary.
+Allowed database enforcement is CHECK constraints, composite FKs, partial
+unique indexes, immutable guards and deferrable transaction-end constraint
+triggers for same-root, cycle, successor and overlap invariants. Later
+operational writes require one server transaction, deterministic
+`pg_advisory_xact_lock` per `location_id`, deferred validation, idempotency,
+audit and real concurrency proof. The bounded foundation contains no write-RPC.
 
 ## 11. Required Future Proof
 
@@ -324,14 +368,16 @@ The WP3D object-level candidate dispositions remain audit/design input. WP3E
 does not separately approve a table, trigger, FK, caller, endpoint, projection,
 proposal, proof, or retirement action.
 
-## 13. WP3E Approved Decision Package
+## 13. Approved Decision Packages
 
 The authoritative full wording is in
-`operations/wp3e-location-internal-domain-decisions.md`.
+`operations/wp3e-location-internal-domain-decisions.md` and
+`operations/wp3fb-location-bounded-ddl-decisions.md`.
 
-| IDs | status | implementation | proof | DDL | data migration | retirement | external blockers |
-|---|---|---|---|---|---|---|---|
-| `WP3E-LOC-01` through `WP3E-LOC-16` | APPROVED TARGET by Daan | NOT IMPLEMENTED | NOT PROVEN | NOT AUTHORIZED | NOT AUTHORIZED | NOT AUTHORIZED | OPEN |
+| IDs | status | implementation | proof | migration | data population | caller cutover | retirement | external blockers |
+|---|---|---|---|---|---|---|---|---|
+| `WP3E-LOC-01` through `WP3E-LOC-16` | APPROVED TARGET by Daan | NOT IMPLEMENTED | NOT PROVEN | NOT AUTHORIZED | NOT AUTHORIZED | BLOCKED | NOT AUTHORIZED | OPEN |
+| `WP3F-B-01` through `WP3F-B-18` | APPROVED TARGET by Daan | NOT IMPLEMENTED | NOT PROVEN | NOT AUTHORIZED | NOT AUTHORIZED | BLOCKED | NOT AUTHORIZED | OPEN |
 
 ## 14. TKV Alignment Guard
 
@@ -357,34 +403,43 @@ verifier-accepted implementation.
 
 ## 15. External Blockers
 
-- PDOK/BAG source contract and freshness;
-- reliable physical-site matching;
-- verifier acceptance of location evidence;
-- DSO/CAR semantics;
-- primary/secondary/MLOEA;
-- location-visit procedure and evidence;
-- evidence categories and acceptance;
-- privacy/minimization;
-- retention beyond the explicit TKV minimum;
-- mapping of all 44 current rows;
-- remote catalog and caller truth.
+- 44-row migrationmapping;
+- physical-site matching;
+- PDOK/BAG broncontract;
+- verifieracceptatie;
+- case-locationlinks;
+- allocation-point-locationlinks;
+- charge-point-locationlinks;
+- split/merge-relaties;
+- customer-safe projection;
+- write-RPC;
+- caller-cutover;
+- current-table retirement;
+- privacy en definitieve retention.
 
 External answers do not automatically authorize internal DDL or establish
 regulatory acceptance.
 
-## 16. Release Gate
+## 16. Implementation And Release Gate
 
-Location foundation remains `NOT DDL READY` until:
+The bounded three-table TARGET shape is approved. Location foundation remains
+`NOT IMPLEMENTED` and `NOT PROVEN`; migration, proof execution, data
+population, caller cutover and retirement remain unauthorized or blocked.
 
-1. the approved package is translated into an exact replacement contract;
-2. the applicable external blockers are resolved in attributable writing;
-3. all 44 current rows and protected history have an explicit mapping;
-4. exact columns, types, constraints, functions, policies, grants,
-   caller/cutover behavior, data handling, rollback, and proof are approved;
-5. a later explicitly authorized additive local migration/proof batch succeeds;
-6. no retirement or remote action occurs without its own approval.
+1. A later migration/proof batch requires separate explicit authorization.
+2. Its first migration is empty and additive and is limited to
+   `app_locations`, `app_location_address_observations` and
+   `app_location_versions`.
+3. No current row may be copied, accepted or changed.
+4. The exact approved constraints, guards, policies, grants, temporal and
+   supersession invariants require green local proof before any population.
+5. All 44 current rows and protected history require an explicit manual
+   mapping before a separately authorized population batch.
+6. Relation tables, write-RPC, customer projection, caller cutover and
+   retirement each require their own later contract, proof and approval.
+7. No retirement or remote action occurs without its own approval.
 
 Connection/EAN remains location-dependent. Approval of the WP3E internal
-package does not authorize location or connection DDL, evidence acceptance,
-charger/MID, mandate, authority, kWh, booking, verifier, settlement, remote,
-or deployment work.
+package and WP3F-B bounded shape does not authorize location or connection
+implementation, evidence acceptance, charger/MID, mandate, authority, kWh,
+booking, verifier, settlement, remote, or deployment work.

@@ -109,7 +109,7 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - implementation is `NOT IMPLEMENTED`, proof `NOT PROVEN`, and DDL, data migration and retirement are `NOT AUTHORIZED`;
   - next: attributable blocker resolution, an exact separately approved replacement contract and later bounded proof; connection DDL remains dependent on a proven locationfoundation;
   - no migration, proof, proof execution, SQL, database write, runtime, Edge Function, frontend, CSS, inline CSS, remote action, staging, commit, push, deploy or retirement occurred.
-- WP3F location DDL-readiness and 44-row classification audit is proof-only and uncommitted:
+- WP3F location DDL-readiness and 44-row classification audit is proof-only and committed in `c5a46faa26d94ad22adbd2b3748f411e1b37e51e`:
   - `docs/app/operations/wp3f-location-ddl-readiness-audit.md`;
   - exact audit status is `PROOF ONLY — WP3F LOCATION DDL-READINESS AND 44-ROW CLASSIFICATION AUDIT`;
   - `docs/app/operations/wp3f-location-44-row-classification.md`;
@@ -118,8 +118,22 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - all 44 rows are `POSSIBLE_DUPLICATE`; 7 have `CONFLICTING` and 37 `DECLARED_ONLY` evidence; manual review is `YES` and automatic promotion is `NO` for all 44;
   - all ten candidate DDL responsibilities are blocked; exact physical columns/types/defaults, accepted-version representation, observation privacy/retention/provenance, deterministic lock and transaction-end enforcement, policies/grants/RPCs and future proof matrix remain undecided;
   - verdict is `BLOCKED — LOCATION DDL DESIGN NOT SAFE`;
-  - next: a separate docs-only exact physical replacement-contract decision; do not start DDL, population, proof implementation, data migration, caller cutover or retirement;
+  - this remains the historical proof that DDL was unsafe before the WP3F-B physical decisions;
   - connection DDL remains dependent on a proven locationfoundation; no migration, proof script, database write, runtime, frontend, CSS, remote action, staging, commit, push, deploy or retirement occurred.
+- WP3F-B bounded location DDL decisions 1–18 are APPROVED TARGET — DOCS ONLY:
+  - `docs/app/operations/wp3fb-location-bounded-ddl-decisions.md`;
+  - decision status is exactly `DECISION RECORD — WP3F-B BOUNDED LOCATION DDL PACKAGE APPROVED — NO IMPLEMENTATION AUTHORIZATION`;
+  - location contract status is exactly `TARGET — WP3F-B BOUNDED LOCATION DDL DECISIONS APPROVED — DATA MIGRATION AND CALLER CUTOVER BLOCKED / NOT IMPLEMENTED`;
+  - bounded foundation is exactly `app_locations`, `app_location_address_observations`, and `app_location_versions`;
+  - root is opaque, server-assigned, statusless and immutable; observations are immutable and never accepted truth; versions are immutable, accepted-only and use separate `timestamptz` business validity and `recorded_at`;
+  - approved invariants include half-open periods, at most one operational non-superseded version per root/time, same-root correction supersession, one successor, no cycles, later recorded time and mandatory correction reason;
+  - allowed future enforcement is CHECKs, composite FKs, partial unique indexes, immutable guards and deferrable transaction-end constraint triggers; future writes require one server transaction, deterministic per-location advisory locking, deferred validation, idempotency, audit and real concurrency proof;
+  - all three tables are RLS enabled and deny-all, with no `PUBLIC`/`anon`/`authenticated` privileges and `service_role` only `SELECT`/`INSERT`; no UPDATE or DELETE;
+  - `TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE`;
+  - implementation is `NOT IMPLEMENTED`, proof `NOT PROVEN`, migration/data population/retirement `NOT AUTHORIZED`, caller cutover `BLOCKED`, and external blockers `OPEN`;
+  - the first future migration must be empty and additive but is not authorized; none of the 44 current rows may be copied, accepted or changed;
+  - OPEN remain 44-row mapping, physical-site matching, PDOK/BAG, verifier acceptance, relation links, split/merge, customer-safe projection, write-RPC, caller cutover, current-table retirement, privacy and final retention;
+  - next: seek separate explicit migration/proof authorization; do not create migration, SQL or proof automatically.
 - WP2A party directory and customer-party binding is CURRENT PROVEN — LOCAL:
   - `app_parties`
   - `app_party_person_versions`

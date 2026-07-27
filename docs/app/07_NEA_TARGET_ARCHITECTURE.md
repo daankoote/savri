@@ -62,7 +62,7 @@ Target bounded-context count: 24.
 | customer/account | Maintain customer account shell and customer-safe portal scope. | customers, customer cases, projections | `app_customers`, dashboard projection | EXTEND CURRENT |
 | mandate | Store signed mandate, version, period, clauses, withdrawal, and renewal. | mandates and mandate versions | legal acceptance pattern only | FULL REBUILD |
 | connection/EAN | Keep the physical connection, EAN-bearing allocation point, observations and party/profile-pinned claim separate; only terminal non-superseded confirmed claims are operational. | connection roots, allocation-point roots, EAN observations, party claim versions | predicates and security patterns only; existing objects conflict with TARGET | TARGET — WP3C INTERNAL DOMAIN APPROVED; NOT IMPLEMENTED |
-| location | Keep a stable statusless physical-location root, immutable accepted location versions and non-accepting address observations distinct from connection, EAN and party claims. Same-site corrections retain the root; physical relocation creates a new root; split/merge is explicit history. | location roots, accepted versions, address observations, and separate typed case/allocation-point/future charge-point links | `app_dossier_locations` is conflicting source material, not automatically TARGET | TARGET — WP3E INTERNAL DOMAIN APPROVED; NOT IMPLEMENTED / NOT PROVEN / NOT DDL READY |
+| location | Keep a stable statusless physical-location root, immutable accepted-only location versions and non-accepting address observations distinct from connection, EAN and party claims. Same-site corrections retain the root; physical relocation creates a new root. | bounded foundation tables `app_locations`, `app_location_address_observations`, and `app_location_versions`; relation tables and split/merge remain outside the bounded package | immutable/temporal/RLS/grant/audit patterns only; `app_dossier_locations` remains conflicting source material | TARGET — WP3F-B BOUNDED DDL DECISIONS APPROVED; NOT IMPLEMENTED / NOT PROVEN |
 | charger/charge point | Model charger asset and individual charge points with history. | chargers, charge points | `app_dossier_chargers` fields | PROVISIONALLY REUSABLE — FINAL DISPOSITION AFTER REGULATORY CANON |
 | MID/conformity | Decide MID applicability and evidence validity for concrete assets. | MID meters, conformity evidence via evidence tables | MID field, document slots | FULL REBUILD |
 | evidence/document lifecycle | Issue uploads, confirm bytes, version evidence, and separate acceptance decisions. | evidence slots/files/versions/decisions | document upload/confirm/download/withdraw primitives | EXTEND CURRENT |
@@ -92,7 +92,7 @@ Target entity count: 54. Table-level details are in `docs/app/architecture/datab
 | legal entity | Company/VvE legal person. | Legal/Ops | KvK, legal name | period-valid | versioned | KvK/customer evidence | representation evidence | legal review | supersede | internal summary | MAND, ORG | limited | no |
 | representative | Natural person or role authorized to sign. | Legal/Ops | representative_id, identity refs | authority period | versioned | mandate/KvK/board proof | authority documents | representation review | supersede | internal/customer own | MAND, SEC | limited | no |
 | case/dossier | Operational container for one onboarding/booking relationship. | Ops | case_id, case_number | lifecycle period | mutable state only | promotion | all domain rows | lifecycle audit | correction/revision | customer projection | AUD, RET | yes | yes |
-| location | Stable statusless physical charging-location root, immutable accepted versions, and separate non-accepting address observations. | Product/Ops | opaque server-assigned location ID; exact schema open | business validity separate from recorded time | root append-only; versions and observations immutable | customer/address source/manual observation with attributable provenance | separately accepted exact-version location evidence and decision | location review | same-site correction creates a version; relocation creates a root; split/merge is explicit history | customer-safe summary only; deny-all core | EAN, CHG | yes | supports reconstruction; no TKV acceptance claim |
+| location | Stable statusless physical charging-location root, immutable accepted-only versions, and separate non-accepting address observations. | Product/Ops | opaque server-assigned `app_locations.id`; exact three-table foundation approved by WP3F-B | `timestamptz` half-open business validity separate from `recorded_at` | all three tables immutable; versions correct only within one root through explicit supersession | creation, observation and acceptance actor/request provenance; source/payload refs hashed lowercase SHA-256 only | separately accepted exact-version location evidence and decision | location review | same-site correction creates a version; relocation creates a root; split/merge remains a later relationship module | later customer-safe summary only; deny-all core, `service_role` `SELECT`/`INSERT` | EAN, CHG | yes | supports reconstruction; no TKV acceptance claim |
 | electricity connection | Physical electricity connection distinct from location and EAN-bearing allocation point. | Ops/Compliance | stable connection ID; exact schema open | required where applicable | immutable material history | declared/observed/external sources remain observations | accepted evidence decision separate | connection review | append/supersede; no silent overwrite | internal + safe summary | EAN | limited | yes |
 | allocation point/EAN | Stable allocation-point identity with an immutable accepted EAN; exact 18-digit syntax without an unsupported checksum claim. | Ops/Compliance | stable allocation-point ID and accepted EAN; exact schema open | required | accepted EAN immutable; observations append-only | declared/parser/external values are observations, not accepted roots | separate accepted evidence decision | EAN review | new root or explicit later-approved historical relation; no rewrite | internal + safe summary | EAN | limited | yes |
 | allocation-point party claim/version | Period-bound aangeslotene claim linking the exact point, party and matching immutable party-profile version. | Ops/Compliance | claim root, point, party, person/organization profile version; exact schema open | required, half-open | immutable versions; explicit linear supersession | asserted source plus separate review/acceptance | evidence acceptance remains separate | claim decision/review | wrong party creates new claim root | internal; safe status only | EAN, MAND | status only | yes |
@@ -388,6 +388,64 @@ This overlay is `NOT IMPLEMENTED`, `NOT PROVEN`, and authorizes no DDL, data
 migration, caller cutover, retirement, proof execution, remote action, or
 regulatory/verifier acceptance. Connection DDL remains dependent on a proven
 locationfoundation.
+
+## O. WP3F-B Bounded Location DDL Decision Overlay
+
+DECISION RECORD — WP3F-B BOUNDED LOCATION DDL PACKAGE APPROVED — NO IMPLEMENTATION AUTHORIZATION
+
+Daan approved `WP3F-B-01` through `WP3F-B-18` in
+`operations/wp3fb-location-bounded-ddl-decisions.md`. The approved TARGET
+foundation contains exactly `app_locations`,
+`app_location_address_observations`, and `app_location_versions`.
+
+`app_locations` is an opaque, server-assigned, statusless and immutable root
+with creation actor/request provenance and the closed creation basis
+`customer_declaration`, `source_observation`, or `manual_migration_review`.
+It contains no address, external identifier, deduplication, status, UPDATE,
+DELETE, cascade or address-derived uniqueness.
+
+`app_location_address_observations` contains immutable source observations
+with the closed observation kinds `customer_declared`, `document_parsed`,
+`pdok_observed`, `bag_observed`, `provider_observed`, `manual_observed`, and
+`migration_snapshot`, and descriptor kinds `postal_address` and
+`site_reference`. It contains no raw payload, provider ID, storage path,
+document content, secret, e-mail or phone. Source and payload references are
+lowercase SHA-256 hashes. An observation never becomes accepted, approved,
+verified, current, operational or eligible truth.
+
+`app_location_versions` is accepted-only immutable location truth. Postal
+addresses require country, postal code, house number, street and city; site
+references require `site_reference`. Business validity uses `timestamptz`
+half-open intervals separate from `recorded_at`. Per root and business-time
+moment at most one non-superseded version is operational. Correction
+supersession remains within one root, has at most one direct successor, no
+cycles, later `recorded_at`, mandatory `correction_reason`, and preserved
+history. Physical relocation creates a new root.
+
+Future enforcement may use CHECK constraints, composite FKs, partial unique
+indexes, immutable guards and deferrable transaction-end constraint triggers.
+Future operational writes require one server transaction, deterministic
+`pg_advisory_xact_lock` per `location_id`, deferred validation, idempotency,
+audit and true concurrency proof. The bounded foundation contains no
+write-RPC.
+
+All three tables use RLS enabled, deny-all, no `PUBLIC`, `anon` or
+`authenticated` privileges, and only `SELECT`/`INSERT` for `service_role`.
+UPDATE and DELETE are forbidden.
+
+The first future migration is bounded to an empty additive foundation, but is
+`NOT AUTHORIZED`. None of the 44 current rows may be copied, accepted or
+changed. Implementation is `NOT IMPLEMENTED`; proof is `NOT PROVEN`; data
+population and retirement are `NOT AUTHORIZED`; caller cutover is `BLOCKED`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+The internal model supports reconstruction and the applicable TKV retention
+boundary but proves no verifier or NEa acceptance. Open remain 44-row
+migrationmapping, physical-site matching, the PDOK/BAG source contract,
+verifier acceptance, case/allocation-point/charge-point location links,
+split/merge relations, customer-safe projection, write-RPC, caller cutover,
+current-table retirement, privacy and final retention.
 
 ## Overall Architecture Verdict
 

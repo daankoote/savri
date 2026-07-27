@@ -704,3 +704,19 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Recorded exact marker `TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE`.
 - Set the verdict to `BLOCKED — LOCATION DDL DESIGN NOT SAFE`; the next bounded step is a separate docs-only exact physical replacement-contract decision.
 - This proof-only batch changed no contract, prior WP3 record, directive, requirement, completeness audit, architecture, traceability, MVP plan, migration, proof, baseline proposal, SQL, database data, migration history, RPC, Edge Function, runtime, frontend, CSS, inline CSS, configuration, remote state, staging, commit, push, deploy or retirement state.
+
+## 2026-07-27 — Approve WP3F-B bounded location DDL decisions
+
+- Recorded WP3F as committed in HEAD `c5a46faa26d94ad22adbd2b3748f411e1b37e51e`; its historical verdict `BLOCKED — LOCATION DDL DESIGN NOT SAFE` and privacy-safe 44-row classification remain unchanged proof of the pre-decision state.
+- Added `docs/app/operations/wp3fb-location-bounded-ddl-decisions.md` with exact status `DECISION RECORD — WP3F-B BOUNDED LOCATION DDL PACKAGE APPROVED — NO IMPLEMENTATION AUTHORIZATION`.
+- Recorded Daan's approval of `WP3F-B-01` through `WP3F-B-18` as APPROVED TARGET for exactly `app_locations`, `app_location_address_observations`, and `app_location_versions`.
+- Updated the location contract to exact status `TARGET — WP3F-B BOUNDED LOCATION DDL DECISIONS APPROVED — DATA MIGRATION AND CALLER CUTOVER BLOCKED / NOT IMPLEMENTED`.
+- Approved an opaque server-assigned statusless immutable root, immutable non-accepting observations, immutable accepted-only versions, `timestamptz` half-open business validity, at most one operational non-superseded version per root/time, and same-root correction supersession with one successor, no cycles, later recorded time, required correction reason, and preserved history.
+- Approved the closed creation, observation, and descriptor vocabularies; required complete postal-address or site-reference descriptors; prohibited raw payload, provider IDs, storage paths, document contents, secrets, e-mail and phone; and limited source/payload references to lowercase SHA-256 hashes.
+- Approved future CHECK/composite-FK/partial-unique/immutable-guard/deferrable-constraint-trigger enforcement and future per-location advisory locking, deferred validation, idempotency, audit and real concurrency proof, without adding or authorizing a write-RPC.
+- Approved RLS enabled and deny-all for all three tables, no `PUBLIC`, `anon`, or `authenticated` privileges, and only `SELECT`/`INSERT` for `service_role`; UPDATE and DELETE remain forbidden.
+- Recorded exact marker `TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE`: the internal architecture supports reconstruction but proves no verifier or NEa acceptance.
+- Kept implementation `NOT IMPLEMENTED`, proof `NOT PROVEN`, migration/data population/retirement `NOT AUTHORIZED`, caller cutover `BLOCKED`, and external blockers `OPEN`.
+- Kept the first future migration empty and additive but not authorized; none of the 44 current rows may be copied, accepted or changed.
+- Kept open 44-row migrationmapping, physical-site matching, PDOK/BAG source contract, verifier acceptance, case/allocation-point/charge-point links, split/merge relations, customer-safe projection, write-RPC, caller cutover, current-table retirement, privacy and final retention.
+- This docs-only decision batch changed no WP3D audit, WP3E decision record, WP3F audit/classification, connection/EAN contract, party/case contract, directive, requirements, completeness audit, migration, proof, baseline proposal, SQL, database, runtime, Edge Function, frontend, CSS, remote state, staging, commit, push or deploy state.
