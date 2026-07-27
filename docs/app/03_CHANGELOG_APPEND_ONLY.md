@@ -720,3 +720,20 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Kept the first future migration empty and additive but not authorized; none of the 44 current rows may be copied, accepted or changed.
 - Kept open 44-row migrationmapping, physical-site matching, PDOK/BAG source contract, verifier acceptance, case/allocation-point/charge-point links, split/merge relations, customer-safe projection, write-RPC, caller cutover, current-table retirement, privacy and final retention.
 - This docs-only decision batch changed no WP3D audit, WP3E decision record, WP3F audit/classification, connection/EAN contract, party/case contract, directive, requirements, completeness audit, migration, proof, baseline proposal, SQL, database, runtime, Edge Function, frontend, CSS, remote state, staging, commit, push or deploy state.
+
+## 2026-07-27 — Audit WP3G location foundation implementation readiness
+
+- Recorded WP3F-B as committed in HEAD `e6aac0119c5e545673a07c6a985e1921a663ba49`.
+- Added `docs/app/operations/wp3g-location-foundation-implementation-readiness.md` with exact status `PROOF ONLY — WP3G BOUNDED LOCATION FOUNDATION IMPLEMENTATION READINESS`.
+- Added `docs/app/operations/wp3g-location-foundation-proof-contract.md` with exact status `TARGET — WP3G BOUNDED LOCATION FOUNDATION PROOF CONTRACT — NOT IMPLEMENTED`.
+- Read all seventeen required canon, requirement, contract, WP3 and tracker documents; verified the official local TKV SHA-256 as `f08ae9cc56d7145f8962e9e0930f0e9b8676a55e73437aba4f0193b3edcc55cf`.
+- Inspected all 22 tracked migrations, 25 proof sources and six protected baseline/rollback proposals plus immutable, temporal, supersession, deferred-trigger, advisory-lock, RLS/grant, audit/idempotency, function-security, caller, frontend and CSS patterns.
+- Used only an explicit local read-only catalog transaction and printed no application row, address, UUID or PII; found no TARGET-name object/FK conflict, visible `gen_random_uuid()`, `pgcrypto 1.3`, 24 RLS-enabled `app_*` tables with 24 `deny_all` policies, and zero local migration-history rows.
+- Found that WP3F-B fixes the three responsibilities, root fields, vocabularies, temporal/supersession invariants and security boundary, but does not physically fix observation actor/request fields, hash/freshness representation, normalized descriptor columns, version-to-observation cardinality, acceptance provenance or recording defaults.
+- Set verdict `BLOCKED — BOUNDED LOCATION FOUNDATION IMPLEMENTATION NOT SAFE`; no external blocker prevents an empty foundation, but these internal catalog decisions and later implementation authorization remain required.
+- Recorded non-authoritative recommended future paths `supabase/migrations/20260728100000_app_location_foundation.sql` and `scripts/proofs/app-location-foundation.proof.ts`; neither file was created.
+- Defined proof contract Q01-Q42 for exact catalog/additivity/emptiness, immutable roots/observations/versions, vocabularies/descriptors/hashes, sequential temporal/supersession validation, RLS/grants, isolation, rollback and protected counts/hashes.
+- Explicitly deferred advisory-lock and true two-transaction operationele concurrency proof to a separately approved write-RPC batch.
+- Kept operationele write-RPC, all 44-row mapping/population, physical-site matching, PDOK/BAG, verifier acceptance, relation tables, projection, caller cutover, retirement, privacy and final retention blocked.
+- CSS reuse is not applicable.
+- This docs-only proof batch changed no location contract, WP3D/WP3E/WP3F/WP3F-B record, target architecture, traceability matrix, requirement, connection/EAN contract, party/case contract, migration, proof, baseline proposal, SQL, database data, runtime, Edge Function, frontend, CSS, package/config, remote state, staging, commit, push or deploy state.

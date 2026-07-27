@@ -134,6 +134,20 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - the first future migration must be empty and additive but is not authorized; none of the 44 current rows may be copied, accepted or changed;
   - OPEN remain 44-row mapping, physical-site matching, PDOK/BAG, verifier acceptance, relation links, split/merge, customer-safe projection, write-RPC, caller cutover, current-table retirement, privacy and final retention;
   - next: seek separate explicit migration/proof authorization; do not create migration, SQL or proof automatically.
+- WP3G bounded location foundation implementation-readiness and proof contract are PROOF ONLY / DOCS ONLY:
+  - WP3F-B is committed in HEAD `e6aac0119c5e545673a07c6a985e1921a663ba49`;
+  - readiness status is exactly `PROOF ONLY — WP3G BOUNDED LOCATION FOUNDATION IMPLEMENTATION READINESS`;
+  - readiness verdict is exactly `BLOCKED — BOUNDED LOCATION FOUNDATION IMPLEMENTATION NOT SAFE`;
+  - proof-contract status is exactly `TARGET — WP3G BOUNDED LOCATION FOUNDATION PROOF CONTRACT — NOT IMPLEMENTED`;
+  - all 22 migrations, 25 proof sources, six baseline/rollback proposals, reusable database patterns, callers, frontend modules and CSS layers were inspected read-only;
+  - local catalog inspection found all three TARGET names free, zero TARGET FK dependencies, visible `gen_random_uuid()`, `pgcrypto 1.3`, 24 RLS-enabled `app_*` tables with 24 `deny_all` policies, and zero local migration-history rows;
+  - WP3F-B translates exactly for table responsibilities, root fields, vocabularies, temporal/supersession invariants and security grants, but not for exact observation actor/request fields, source-hash shape, freshness, normalized descriptors, accepted-input cardinality, acceptance provenance or timestamp defaults;
+  - the recommended future paths are `supabase/migrations/20260728100000_app_location_foundation.sql` and `scripts/proofs/app-location-foundation.proof.ts`; neither file exists or is authorized;
+  - proof contract Q01-Q42 covers exact catalog/additivity/emptiness, immutable root/observation/version behavior, vocabularies/descriptors/hashes, sequential temporal/supersession checks, RLS/grants, isolation, rollback and protected counts/hashes;
+  - operationele advisory-lock and true two-transaction concurrency proof are explicitly deferred to a separately approved write-RPC;
+  - operationele write-RPC, 44-row mapping/population, physical-site matching, PDOK/BAG, verifier acceptance, relation tables, customer-safe projection, caller cutover, retirement, privacy and final retention remain BLOCKED;
+  - next: approve the exact physical observation/descriptor/acceptance catalog in a separate docs-only decision, then separately authorize migration/proof implementation;
+  - no migration, proof, SQL, database write, runtime, Edge Function, frontend, CSS, staging, commit, push, deploy or remote action occurred.
 - WP2A party directory and customer-party binding is CURRENT PROVEN — LOCAL:
   - `app_parties`
   - `app_party_person_versions`
