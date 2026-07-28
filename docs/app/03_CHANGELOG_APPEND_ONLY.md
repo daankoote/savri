@@ -810,3 +810,18 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Preserved `TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE` and made no complete NEA-EAN, NEA-CHG, NEA-AUD, NEA-COR or NEA-SEC CURRENT PROVEN claim.
 - Kept caller authorization, population/44-row mapping, relation links, projection, remote apply, production, cutover and retirement blocked or unproven.
 - This docs-only batch changed no WP3D-WP3I historical record, requirement, completeness audit, connection/EAN contract, party/case contract, migration, proof, SQL, database, runtime, Edge Function, frontend, CSS, package/config, staging, commit, push, deploy or remote state.
+
+## 2026-07-28 — Audit WP3K authorized operational location caller readiness
+
+- Recorded WP3J documentation commit `ce7be9fea4d4efef66aa9585c7763bb3a6593296`, parent `45d926478945fedc610ea02a0ff2b0d4f5f14be4`, subject `Record WP3J local location write proof`.
+- Added `docs/app/operations/wp3k-location-caller-boundary-readiness.md` with exact status `DRAFT — WP3K AUTHORIZED OPERATIONAL LOCATION CALLER BOUNDARY — DECISION REQUIRED`.
+- Inspected the current customer Auth/session/dossier boundary, case and case-party-role foundation, representation-authority readiness, all seven `api-app-*` callers, shared request/idempotency/audit helpers, WP3J RPC security, current frontend session use, CSS organization and the read-only local function/table/grant catalog.
+- Set exact verdict `PARTIAL — ROLE, AUTHORITY OR SCOPE FOUNDATION INCOMPLETE`: no current workforce identity model, governed internal role assignment, reviewer qualification, case-to-location authorization relation or authorized WP3J runtime caller exists.
+- Kept customer identity, dossier ownership, customer contact, case service-recipient/contact roles and representation authority separate from internal operational location-review authority; representation authority remains `NOT SCHEMA READY` and its pilot/manual-escalation boundaries remain unchanged.
+- Proposed four specific, still-unapproved `api-app-ops-location-*` callers, focused shared helper `supabase/functions/_shared/app_workforce_authorization.ts`, server-derived non-PII actor provenance and proof path `scripts/proofs/api-app-ops-location-callers.proof.ts`.
+- Recorded twelve unapproved decisions covering caller shape, verified principal, workforce foundation, capability governance, object scope, representation separation, ingestion, maker/checker controls, actor provenance, audit/idempotency correlation, safe errors and proof.
+- Recommended root creation and observation registration as non-accepting operations without a default second checker; recommended distinct qualified maker/checker authorization for initial acceptance and same-root correction; no emergency override was approved.
+- Recorded safe separation between unauthenticated, authenticated-but-unauthorized and conflict/idempotency failures without disclosing sensitive existence or authorization detail.
+- Verified official local TKV SHA-256 `f08ae9cc56d7145f8962e9e0930f0e9b8676a55e73437aba4f0193b3edcc55cf` and preserved exact marker `TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE`.
+- CSS reuse is not applicable because no UI or CSS change is proposed.
+- This docs-only/read-only batch created no Edge Function, helper, migration, proof implementation, SQL write, database change, RPC change, runtime caller, frontend, CSS, package/config change, staging, commit, push, deploy or remote action.

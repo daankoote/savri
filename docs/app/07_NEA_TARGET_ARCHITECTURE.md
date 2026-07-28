@@ -619,6 +619,33 @@ boundary`. No browser-direct RPC call is permitted.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+## T. WP3K Authorized Operational Caller Readiness Overlay
+
+DRAFT — WP3K AUTHORIZED OPERATIONAL LOCATION CALLER BOUNDARY — DECISION REQUIRED
+
+WP3K documents a partial caller boundary. The current system proves customer
+Auth and customer-dossier ownership, but no workforce identity, internal
+role/capability assignment, reviewer qualification or case-to-location scope
+relation. `service_role` is only the technical database caller.
+
+The proposed architecture keeps seven authorities separate: server runtime,
+authenticated principal, workforce capability, object scope,
+customer/party representation, evidence/location decision authority and
+four-eyes. No Auth user, customer identity, case role or representation
+authority is promoted into another layer.
+
+Four specific `api-app-ops-location-*` callers and one focused
+`_shared/app_workforce_authorization.ts` helper are proposed but not approved
+or implemented. Root creation and observation registration remain
+non-accepting operations. Initial acceptance and correction are proposed
+material maker/checker decisions; exact human role names remain undecided.
+
+No authorized caller exists. WP3J stays `CURRENT PROVEN — LOCAL ONLY`;
+caller/runtime implementation, population, relation links, projection,
+remote, production, cutover and retirement remain outside CURRENT evidence.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## Overall Architecture Verdict
 
 Recommendation: HYBRID PARALLEL REBUILD.

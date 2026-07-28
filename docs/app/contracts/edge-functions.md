@@ -117,3 +117,34 @@ Current app classification:
 Do not claim a future endpoint is CURRENT before it exists and is proven.
 
 Legacy endpoint inventories and uniformity checks may be used as migration source material only. They do not make `api-dossier-*`, legacy token/session contracts, or legacy table writes current for `/app`.
+
+## WP3K Proposed Internal Location Callers
+
+Status: DRAFT / NOT IMPLEMENTED / DECISION REQUIRED.
+
+WP3K finds no existing authorized operations caller and no proven workforce
+identity/role model. The four WP3J RPCs remain service-role-only database
+operations with no Edge Function caller.
+
+The recommended naming family is `api-app-ops-location-*`, not
+`api-app-location-*`, because the latter can be mistaken for customer
+self-service. The following specific paths are proposed and unapproved:
+
+- `api-app-ops-location-root-create`;
+- `api-app-ops-location-observation-record`;
+- `api-app-ops-location-version-accept-initial`;
+- `api-app-ops-location-version-correct`.
+
+Each future caller must satisfy CORS/META/IDEM/AUD/AUTH/SRV/DEP, compile-time
+bind one operation and RPC, verify a server principal, resolve an active
+workforce identity and exact capability, authorize case/location scope, and
+derive actor/request/idempotency/authorization context server-side.
+
+Initial acceptance and correction are proposed four-eyes decisions. A caller
+must fail closed before RPC execution when maker/checker, role or scope is
+absent. Root creation and immutable observation registration remain separate
+non-accepting operations. No emergency override is approved.
+
+Safe caller errors, audit ownership and the full later proof matrix are in
+`operations/wp3k-location-caller-boundary-readiness.md`. None of these
+endpoints or helpers exists or is authorized for implementation.

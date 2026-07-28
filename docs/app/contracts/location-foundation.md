@@ -642,3 +642,28 @@ object retirement, verifier acceptance and production remain blocked or
 unproven.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 19. WP3K Authorized Caller Readiness Overlay
+
+DRAFT — WP3K AUTHORIZED OPERATIONAL LOCATION CALLER BOUNDARY — DECISION REQUIRED
+
+The readiness audit in
+`operations/wp3k-location-caller-boundary-readiness.md` is partial because the
+repository has no proven workforce identity, internal role assignment,
+reviewer qualification or case-to-location authorization relation.
+
+WP3J remains `CURRENT PROVEN — LOCAL ONLY` for the four RPCs and technical
+service-role boundary. An authenticated customer, customer identity, dossier
+owner, case participant or party representative does not thereby receive
+location-write or review authority. `service_role` is not a human identity.
+
+The proposed caller boundary keeps root creation, observation registration,
+initial acceptance and correction as four specific operations. Root creation
+and observation are non-accepting registration paths; initial acceptance and
+correction are proposed material maker/checker decisions. Exact human role
+names remain decision-required and are not invented by WP3K.
+
+No Edge Function, helper, workforce object, case/location link, operations UI,
+population, remote apply, cutover or retirement is implemented or authorized.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

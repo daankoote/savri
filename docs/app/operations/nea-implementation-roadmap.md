@@ -6,7 +6,7 @@ Authority: operational tracker only; it does not override the official TKV sourc
 
 Architecture decision: TARGET — approved by Daan on 2026-07-22; not CURRENT PROVEN.
 
-Next bounded gates: WP3H proves the exact empty three-table location foundation locally and WP3J commit `45d926478945fedc610ea02a0ff2b0d4f5f14be4` proves four bounded operational RPCs, definitive fresh apply and real concurrency locally. No authorized runtime caller or population exists. The next readiness step is `WP3K — authorized operational location caller boundary`. All 44-row mapping/population, relation links, caller cutover and retirement remain separately blocked. No EAN, connection, aangeslotene, verifier or regulatory fact follows from WP3J.
+Next bounded gates: WP3H proves the exact empty three-table location foundation locally and WP3J commit `45d926478945fedc610ea02a0ff2b0d4f5f14be4` proves four bounded operational RPCs, definitive fresh apply and real concurrency locally. WP3K now records a partial, decision-required caller-boundary proposal. No workforce identity/role model, case-to-location scope relation, qualified maker/checker boundary, authorized runtime caller or population exists. All caller implementation, 44-row mapping/population, relation links, cutover and retirement remain separately blocked. No EAN, connection, aangeslotene, verifier or regulatory fact follows from WP3J/WP3K.
 
 Baseline commit: `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`.
 
@@ -44,13 +44,13 @@ The tracker never removes a blocker itself. A status changes only when the appli
 | field | value |
 |---|---|
 | Current phase | Approved TARGET direction; bounded work-package authorization only |
-| Current work package | WP3J-DOC — register committed local operational location write proof — DOCS ONLY |
-| Last completed work package | WP3J — operational location write RPCs, fresh apply and real concurrency — CURRENT PROVEN LOCAL ONLY — commit `45d926478945fedc610ea02a0ff2b0d4f5f14be4` |
-| Next executable work package | WP3K — authorized operational location caller boundary — readiness/decision first, no browser-direct RPC call |
-| Current blockers | Human/operations roles, server-derived actor context, case/dossier/party/authority scope, four-eyes decisions, caller-to-RPC mapping, safe error mapping and audit correlation are undecided. Population, relation links, projection, cutover and retirement remain blocked. External source/matching/verifier/privacy and 44-row mapping remain open. Remote/production is not proven. |
+| Current work package | WP3K — authorized operational location caller boundary — DOCS-ONLY READINESS / DECISION REQUIRED |
+| Last completed work package | WP3J-DOC — local implementation/fresh-apply/concurrency evidence committed in `ce7be9fea4d4efef66aa9585c7763bb3a6593296`; WP3J remains CURRENT PROVEN LOCAL ONLY |
+| Next executable work package | Explicitly decide the WP3K caller package; first resolve workforce identity/role governance and case-to-location scope. This is not caller implementation authorization. |
+| Current blockers | No workforce identity, closed role/capability vocabulary, assignment authority, reviewer qualification, case-to-location relation, maker/checker record or authorized caller exists. Representation authority remains NOT SCHEMA READY. Population, links, projection, remote, production, cutover and retirement remain blocked. |
 | External research running in parallel | CAR, EAN/aangeslotene, DSO, KvK, MID/certificate sources, CPO/backoffice, energy supplier, kWh exchange, REV, verifier, and payment provider where relevant |
 | Last updated | 2026-07-28 |
-| Evidence reference | WP2B-I commit `5a5265adc516e8198cc25757654920d4aa3316bd`; WP3A commit `f3b39aafb2e6817e64401ccb2c47eed285552869`; WP3B commit `ee3f6b59c937f0c39a67ba09936e9ef688bcea59`; WP3C commit `da961fa84da73ecc320b55b2cb83881a12d658f3`; WP3D commit `88e8c0b754c7d44e769f89037676d9732e6fe63c`; WP3E commit `e04f4a695d983c71a52f48d0c3c26ca605bb4402`; WP3F commit `c5a46faa26d94ad22adbd2b3748f411e1b37e51e`; WP3F-B commit `e6aac0119c5e545673a07c6a985e1921a663ba49`; WP3G commit `c021d57aacc5d8beb4aa2043bc963839fa38da07`; WP3G-B commit `98f7aa5007a458115afab1f2c3b2333862411250`; WP3H commit `3bb8d50cd7723ad631d75857df4e08d6ef0db311`; WP3J commit `45d926478945fedc610ea02a0ff2b0d4f5f14be4`; `operations/wp3j-location-write-rpcs-local-proof.md` |
+| Evidence reference | WP2B-I commit `5a5265adc516e8198cc25757654920d4aa3316bd`; WP3A commit `f3b39aafb2e6817e64401ccb2c47eed285552869`; WP3B commit `ee3f6b59c937f0c39a67ba09936e9ef688bcea59`; WP3C commit `da961fa84da73ecc320b55b2cb83881a12d658f3`; WP3D commit `88e8c0b754c7d44e769f89037676d9732e6fe63c`; WP3E commit `e04f4a695d983c71a52f48d0c3c26ca605bb4402`; WP3F commit `c5a46faa26d94ad22adbd2b3748f411e1b37e51e`; WP3F-B commit `e6aac0119c5e545673a07c6a985e1921a663ba49`; WP3G commit `c021d57aacc5d8beb4aa2043bc963839fa38da07`; WP3G-B commit `98f7aa5007a458115afab1f2c3b2333862411250`; WP3H commit `3bb8d50cd7723ad631d75857df4e08d6ef0db311`; WP3J commit `45d926478945fedc610ea02a0ff2b0d4f5f14be4`; WP3J-DOC commit `ce7be9fea4d4efef66aa9585c7763bb3a6593296`; `operations/wp3k-location-caller-boundary-readiness.md` |
 
 ## Target Approval And Bounded Work-Package Rule
 
@@ -270,18 +270,18 @@ production remain outside the proof.
 
 | checklist item | status | evidence / gate |
 |---|---|---|
-| design/contract | CURRENT PROVEN — LOCAL | WP3H implements the exact empty-foundation contract and WP3J implements the bounded operational RPC mechanics locally. WP3K caller authorization remains a separate decision. |
+| design/contract | PARTIAL — DECISION REQUIRED | WP3H implements the exact empty-foundation contract and WP3J implements the bounded operational RPC mechanics locally. WP3K now records a caller-boundary proposal, but workforce role/authority and object scope foundations remain incomplete. |
 | existing module inventory | COMPLETE — CURRENT PROVEN | WP3G inspected all 22 migrations, 25 proof sources, six proposals, shared audit/idempotency, callers, frontend and CSS. Reuse WP2A/WP2B-I constraints, the existing immutable guard, deferred guard pattern, RLS/grants and proof cleanup. |
 | existing CSS inventory indien UI relevant | NOT APPLICABLE | Read-only inspection found existing shared address/form/read-only overview styles and no runtime or visual change required for this documentation batch. |
 | database | CURRENT PROVEN — LOCAL | Exactly `app_locations`, `app_location_address_observations` and `app_location_versions` are locally present and empty with 44 exact columns, constraints, indexes, triggers, RLS, policies and minimum grants. The direct local apply added no migration-history record. |
-| Edge Function/service | NOT IMPLEMENTED | No Edge/operations caller invokes WP3J. WP3K must define the trusted caller and authorization boundary before runtime work. |
+| Edge Function/service | NOT IMPLEMENTED | No Edge/operations caller invokes WP3J. WP3K proposes four specific `api-app-ops-location-*` callers and a focused workforce helper; none is approved or implemented. |
 | frontend/UI | NOT APPLICABLE | No UI module or CSS change is needed or authorized. Existing callers remain unchanged; PDOK input is only an observation. |
 | tests | CURRENT PROVEN — LOCAL | WP3G-Q01-Q42 prove the foundation. WP3J-Q01-Q42 prove fresh-applied RPC behavior and Q35-Q41 use separate processes/connections; marker `app-location-write-rpcs-proof-ok`. |
 | SQL proof | CURRENT PROVEN — LOCAL | WP3H proves the exact local foundation; WP3J proves definitive fresh apply, seven migration-body-equal definitions, protected equality and complete disposable cleanup. No remote or production proof. |
 | browser proof | TODO | Required only when approved customer-visible behavior is implemented. |
-| documentation update | COMPLETE — UNCOMMITTED | WP3J-DOC registers one new evidence page and six bounded tracker/contract updates. Historical WP3 records, migration, proof and runtime remain unchanged. |
+| documentation update | COMPLETE — UNCOMMITTED | WP3J-DOC is committed in `ce7be9fea4d4efef66aa9585c7763bb3a6593296`; the current WP3K readiness page and bounded contract/tracker updates remain uncommitted. Historical WP3 records, migration, proof and runtime remain unchanged. |
 | accepted by Daan | CURRENT PROVEN — LOCAL | WP3H foundation and WP3J operational RPC mechanics are green locally; this is not caller, remote, production, NEa or verifier acceptance. |
-| commit | COMPLETE — CURRENT PROVEN | WP3H is committed in `3bb8d50cd7723ad631d75857df4e08d6ef0db311`; WP3J migration/proof are committed in `45d926478945fedc610ea02a0ff2b0d4f5f14be4`; this docs-only registration remains uncommitted. |
+| commit | PARTIAL | WP3H is committed in `3bb8d50cd7723ad631d75857df4e08d6ef0db311`; WP3J migration/proof are committed in `45d926478945fedc610ea02a0ff2b0d4f5f14be4`; WP3J-DOC is committed in `ce7be9fea4d4efef66aa9585c7763bb3a6593296`; the current WP3K docs-only batch remains uncommitted. |
 | remote/deploy separately approved | BLOCKED — DECISION | Internal GO grants no remote mutation, deployment, or production authority. |
 
 ### WP3I Readiness Gate
@@ -319,6 +319,33 @@ and operations roles, trusted server-derived actor references, required
 case/dossier/party/authority context, four-eyes decisions, caller-to-RPC
 mapping, safe error mapping and audit correlation. Browser-direct RPC calls
 remain forbidden.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+### WP3K Caller-Boundary Readiness
+
+WP3K is a docs-only readiness and decision proposal. Its evidence is in
+`operations/wp3k-location-caller-boundary-readiness.md`.
+
+Current result:
+
+- WP3J remains `CURRENT PROVEN — LOCAL ONLY`;
+- customer Auth/dossier-ownership patterns are reusable only within their
+  proven customer boundary;
+- no workforce identity or role model is CURRENT;
+- no case-to-location authorization relation exists;
+- representation authority remains `NOT SCHEMA READY` and cannot replace an
+  internal reviewer role;
+- four specific `api-app-ops-location-*` callers and one focused workforce
+  authorization helper are proposed, not approved or implemented;
+- initial acceptance and correction are proposed maker/checker decisions;
+- no emergency override is approved;
+- Edge Functions, helper, operations UI, population, remote, production,
+  cutover and retirement remain not implemented or blocked.
+
+The next gate is an explicit decision on the twelve WP3K choices followed by
+a separately authorized workforce/scope contract. No runtime implementation
+starts from this readiness result.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 

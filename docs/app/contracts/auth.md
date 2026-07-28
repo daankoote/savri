@@ -689,3 +689,43 @@ Coexistence phases:
 4. Prove production Auth URL/redirect configuration.
 5. Implement support/messages/kWh/result/fee lifecycle.
 6. Plan production migration/cutover separately; keep old root/static production untouched until approved.
+
+## 12. WP3K Operations-Caller Authentication Boundary
+
+Status: DRAFT / DECISION REQUIRED. Detailed readiness evidence:
+`docs/app/operations/wp3k-location-caller-boundary-readiness.md`.
+
+The current Auth foundation proves customer authentication only:
+
+- `requireVerifiedSupabaseAuthUser` proves a server-verified Supabase Auth
+  user ID and verified e-mail;
+- `requireAppCustomer` binds that user to one active customer identity and
+  customer account;
+- `requireAppDossierAccess` proves ownership of a current customer dossier.
+
+None proves workforce identity, internal role, reviewer qualification,
+case/location scope, representation authority or four-eyes. Current code uses
+no JWT role, `app_metadata`, `user_metadata`, AAL or other claim as operations
+authorization.
+
+Future internal location callers must keep these layers separate:
+
+1. server-verified principal;
+2. separately approved active workforce identity;
+3. closed internal capability/role assignment;
+4. exact case/location object scope;
+5. separately evaluated representation context where required;
+6. evidence/location decision authority;
+7. independent maker/checker for material acceptance/correction.
+
+The recommended, still-unapproved implementation direction is to compose the
+existing verified-bearer primitive with a focused future
+`_shared/app_workforce_authorization.ts` helper. The customer-specific helper
+must not be broadened into a mixed customer/workforce role resolver. No
+workforce object, helper or role vocabulary is CURRENT.
+
+`service_role` remains a technical database credential and is never a human
+identity or role. Browser input may not authoritatively select `actor_ref`,
+role/capability, object scope or authorization outcome.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

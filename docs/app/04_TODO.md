@@ -210,6 +210,17 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - NEXT: `WP3K — authorized operational location caller boundary`;
   - WP3K must decide human/operations roles, trusted server-derived `actor_ref`, required case/dossier/party/authority context, four-eyes decisions, caller-to-RPC mapping, safe error mapping and audit correlation;
   - Edge Function/runtimecaller, browser-direct calls, population, 44-row mapping, relation links, projection, cutover, retirement, remote and production remain blocked or unproven.
+- WP3K authorized operational location caller boundary is DRAFT / DECISION REQUIRED:
+  - readiness evidence is `docs/app/operations/wp3k-location-caller-boundary-readiness.md`;
+  - result is partial because no proven workforce identity/role model, role assignment authority, reviewer qualification, case-to-location authorization relation or authorized caller exists;
+  - customer Auth, customer identity, dossier ownership, case roles and representation authority cannot be reused as internal location-review authority;
+  - representation authority remains `NOT SCHEMA READY`; the existing simple pilot perimeter and manual-escalation exclusions remain unchanged;
+  - twelve decisions remain unapproved and cover specific callers, principal, workforce foundation, capabilities, object scope, representation separation, ingestion, maker/checker, actor provenance, audit/idempotency correlation, safe errors and proof;
+  - proposed free callers use the `api-app-ops-location-*` family; a focused `_shared/app_workforce_authorization.ts` helper and `scripts/proofs/api-app-ops-location-callers.proof.ts` are proposed only;
+  - root creation and observation registration remain non-accepting; initial acceptance and correction are proposed four-eyes decisions;
+  - no emergency override is approved;
+  - NEXT: explicitly decide the WP3K package, then separately contract workforce identity/role governance and case-to-location scope before implementation;
+  - no Edge Function, helper, schema, proof, UI, population, relation link, remote apply, production, cutover or retirement is implemented or authorized.
 - WP2A party directory and customer-party binding is CURRENT PROVEN — LOCAL:
   - `app_parties`
   - `app_party_person_versions`
