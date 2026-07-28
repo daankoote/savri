@@ -825,3 +825,20 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Verified official local TKV SHA-256 `f08ae9cc56d7145f8962e9e0930f0e9b8676a55e73437aba4f0193b3edcc55cf` and preserved exact marker `TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE`.
 - CSS reuse is not applicable because no UI or CSS change is proposed.
 - This docs-only/read-only batch created no Edge Function, helper, migration, proof implementation, SQL write, database change, RPC change, runtime caller, frontend, CSS, package/config change, staging, commit, push, deploy or remote action.
+
+## 2026-07-28 — Propose WP3L-A exact workforce authorization foundation
+
+- Recorded WP3K documentation commit `a23f57ab18c3be7fe1c07cbc325fe9dcc4421837`, parent `ce7be9fea4d4efef66aa9585c7763bb3a6593296`, subject `Record WP3K location caller readiness`.
+- Recorded Daan's explicit approval of WP3K-D01 through WP3K-D12 as TARGET input without authorizing an Edge Function, helper, workforce schema or runtime caller.
+- Added `docs/app/operations/wp3l-workforce-authorization-foundation-decisions.md` with exact status `DRAFT — WP3L WORKFORCE AUTHORIZATION FOUNDATION — EXACT SCHEMA DECISION REQUIRED`.
+- Compared the compact five-table, normalized seven-table and customer/case-extension models; recommended normalized option B because lifecycle, capability, case/location relation, object scope and maker/checker facts change independently.
+- Set exact verdict `READY FOR DECISION — BOUNDED WORKFORCE AUTHORIZATION FOUNDATION PACKAGE CAN BE APPROVED`; readiness is not migration/proof authorization.
+- Proposed exactly seven additive tables for workforce roots, lifecycle events, six closed capability assignment events, case/location relation events, workforce scope events, material operation requests and immutable checker reviews.
+- Proposed exact capabilities `location.root.create`, `location.observation.record`, `location.version.accept.prepare`, `location.version.accept.approve`, `location.version.correct.prepare` and `location.version.correct.approve`; no human title or JWT/customer/case-party/representation role becomes authorization.
+- Required distinct active maker/checker identities, exact payload-hash review, execution-time revalidation, at-most-once execution and no emergency override.
+- Proposed a controlled environment-specific dual-operator pilot bootstrap runbook; prohibited self-enrollment, browser bootstrap, silent admin claims and hardcoded Auth-user migration seeds.
+- Recorded eighteen exact, still-unapproved physical decisions and a 32-case later proof contract including ACL, no-inference, revocation, wrong-scope, self-approval, real two-connection review/execution races, rollback, protected equality and cleanup.
+- Verified free future paths `supabase/migrations/20260728180000_app_workforce_location_authorization_foundation.sql` and `scripts/proofs/app-workforce-location-authorization-foundation.proof.ts`; neither file was created.
+- Verified the official local TKV SHA-256 `f08ae9cc56d7145f8962e9e0930f0e9b8676a55e73437aba4f0193b3edcc55cf` and preserved `TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE`.
+- CSS reuse is not applicable.
+- This docs-only/read-only batch created no migration, proof implementation, SQL write, database change, function, Edge Function, helper, runtime caller, frontend, CSS, package/config change, staging, commit, push, deploy or remote action.

@@ -626,3 +626,35 @@ Specific prerequisites:
 - signup write-v3 direct creation: verified intake promotion is atomic, idempotent, correction-safe, and proven for all party configurations.
 - legacy dossier/session/functions: no required caller, active session, retained dossier, document/export, audit, reminder, retention, rollback, or recovery dependency remains.
 - wave-1 proposals: replacement design and rollback ownership are recorded before archival/removal; proposal files are never treated as applied objects.
+
+## WP3L Workforce And Case/Location Scope Overlay
+
+WP3K-D01 through WP3K-D12 are approved TARGET input. WP3L-A proposes, but does
+not approve or implement, a separate seven-table workforce authorization
+foundation.
+
+The proposed `app_case_location_relations` responsibility links one
+`app_cases` root to one `app_locations` root for an explicit half-open workflow
+scope. The relation is separate from workforce scope assignment and may be
+many-to-many only through explicit rows. It proves none of:
+
+- customer or party ownership;
+- service-recipient/contact status;
+- representation authority or mandate;
+- EAN, aangeslotene or physical-site match;
+- location observation/acceptance;
+- evidence, eligibility, verifier or settlement truth.
+
+`app_case_party_roles` remains exactly case participation. It cannot be reused
+as a workforce capability or checker qualification. Representation authority
+remains `NOT SCHEMA READY` and cannot replace maker/checker authority.
+
+The proposed workforce assignment uses only exact capability, case and
+location scope. A customer identity and workforce identity may bind the same
+Auth user only as independently resolved trust domains; no permission crosses
+between them automatically.
+
+WP3L physical recommendations remain decision-required. No relation,
+workforce object, role, runtime, Edge Function, UI or population is CURRENT.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

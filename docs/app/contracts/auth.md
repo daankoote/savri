@@ -729,3 +729,39 @@ identity or role. Browser input may not authoritatively select `actor_ref`,
 role/capability, object scope or authorization outcome.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 13. WP3L Workforce Authorization Foundation Decision Overlay
+
+WP3K-D01 through WP3K-D12 are approved TARGET input. Authorized callers and a
+workforce foundation remain `NOT IMPLEMENTED`.
+
+WP3L-A records exact status
+`DRAFT — WP3L WORKFORCE AUTHORIZATION FOUNDATION — EXACT SCHEMA DECISION REQUIRED`
+and verdict
+`READY FOR DECISION — BOUNDED WORKFORCE AUTHORIZATION FOUNDATION PACKAGE CAN BE APPROVED`.
+READY FOR DECISION is not schema implementation authorization.
+
+The recommended, still-unapproved model has separate immutable workforce
+roots, append-only lifecycle events, closed capability assignments, explicit
+case/location relations, explicit workforce scope assignments, immutable
+maker requests and immutable checker reviews. Auth proves a credential only.
+The exact six capabilities are:
+
+- `location.root.create`;
+- `location.observation.record`;
+- `location.version.accept.prepare`;
+- `location.version.accept.approve`;
+- `location.version.correct.prepare`;
+- `location.version.correct.approve`.
+
+No e-mail, name, human title, customer ID, party role or JWT role claim is an
+authorization key. A single Auth user may later have both customer and
+workforce bindings only when both trust domains are independently resolved;
+neither binding inherits the other's authority.
+
+The temporary pilot bootstrap recommendation is a controlled,
+environment-specific, dual-operator runbook. Self-enrollment, browser
+bootstrap, a hardcoded Auth user in a general migration and a silent admin
+claim are prohibited. The recommendation remains unapproved.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

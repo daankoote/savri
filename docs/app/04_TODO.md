@@ -210,17 +210,30 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - NEXT: `WP3K — authorized operational location caller boundary`;
   - WP3K must decide human/operations roles, trusted server-derived `actor_ref`, required case/dossier/party/authority context, four-eyes decisions, caller-to-RPC mapping, safe error mapping and audit correlation;
   - Edge Function/runtimecaller, browser-direct calls, population, 44-row mapping, relation links, projection, cutover, retirement, remote and production remain blocked or unproven.
-- WP3K authorized operational location caller boundary is DRAFT / DECISION REQUIRED:
+- WP3K authorized operational location caller boundary readiness is committed; D01-D12 are APPROVED TARGET:
   - readiness evidence is `docs/app/operations/wp3k-location-caller-boundary-readiness.md`;
   - result is partial because no proven workforce identity/role model, role assignment authority, reviewer qualification, case-to-location authorization relation or authorized caller exists;
   - customer Auth, customer identity, dossier ownership, case roles and representation authority cannot be reused as internal location-review authority;
   - representation authority remains `NOT SCHEMA READY`; the existing simple pilot perimeter and manual-escalation exclusions remain unchanged;
-  - twelve decisions remain unapproved and cover specific callers, principal, workforce foundation, capabilities, object scope, representation separation, ingestion, maker/checker, actor provenance, audit/idempotency correlation, safe errors and proof;
-  - proposed free callers use the `api-app-ops-location-*` family; a focused `_shared/app_workforce_authorization.ts` helper and `scripts/proofs/api-app-ops-location-callers.proof.ts` are proposed only;
-  - root creation and observation registration remain non-accepting; initial acceptance and correction are proposed four-eyes decisions;
+  - Daan approves the twelve TARGET decisions covering specific callers, principal, workforce foundation, capabilities, object scope, representation separation, ingestion, maker/checker, actor provenance, audit/idempotency correlation, safe errors and proof;
+  - the approved TARGET caller shape uses the `api-app-ops-location-*` family; a focused `_shared/app_workforce_authorization.ts` helper and `scripts/proofs/api-app-ops-location-callers.proof.ts` remain not implemented;
+  - root creation and observation registration remain non-accepting; initial acceptance and correction require four-eyes;
   - no emergency override is approved;
-  - NEXT: explicitly decide the WP3K package, then separately contract workforce identity/role governance and case-to-location scope before implementation;
+  - NEXT: decide WP3L-A's exact workforce identity/capability/case-location-scope/four-eyes physical package before implementation;
   - no Edge Function, helper, schema, proof, UI, population, relation link, remote apply, production, cutover or retirement is implemented or authorized.
+- WP3L-A exact workforce authorization foundation package is DRAFT / DECISION REQUIRED:
+  - Daan explicitly approves WP3K-D01 through WP3K-D12 as TARGET input; this does not authorize caller implementation;
+  - decision evidence is `docs/app/operations/wp3l-workforce-authorization-foundation-decisions.md`;
+  - exact verdict is `READY FOR DECISION — BOUNDED WORKFORCE AUTHORIZATION FOUNDATION PACKAGE CAN BE APPROVED`;
+  - normalized option B proposes exactly seven responsibilities: workforce roots, lifecycle events, capability events, case/location relation events, workforce scope events, maker requests and checker reviews;
+  - exact capability codes are root create, observation record, acceptance prepare/approve and correction prepare/approve; no human role titles;
+  - all eighteen WP3L physical decisions remain unapproved;
+  - maker/checker must be different active workforce identities with matching capability/scope and exact payload hash; execution revalidates all authority and occurs at most once;
+  - no emergency override or browser-direct WP3J call exists;
+  - temporary pilot bootstrap recommendation is a controlled environment-specific dual-operator runbook; migration seeding, self-enrollment and silent admin claims are prohibited;
+  - proposed migration and proof paths are free but not created or authorized;
+  - NEXT: Daan decides the complete WP3L-D01 through WP3L-D18 package, followed only by a separately authorized migration/proof readiness batch;
+  - no workforce schema, authorized caller, Edge Function, helper, UI, system ingestion, population, remote apply, production, cutover or retirement is implemented.
 - WP2A party directory and customer-party binding is CURRENT PROVEN — LOCAL:
   - `app_parties`
   - `app_party_person_versions`

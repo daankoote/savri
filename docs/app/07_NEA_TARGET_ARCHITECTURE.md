@@ -646,6 +646,37 @@ remote, production, cutover and retirement remain outside CURRENT evidence.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+## U. WP3L Workforce Authorization Foundation Decision Overlay
+
+DRAFT — WP3L WORKFORCE AUTHORIZATION FOUNDATION — EXACT SCHEMA DECISION REQUIRED
+
+WP3K-D01 through WP3K-D12 are approved TARGET inputs. This does not make an
+authorized caller or workforce foundation CURRENT.
+
+WP3L-A recommends normalized option B with exactly seven separately changing
+responsibilities: workforce roots, lifecycle events, capability assignment
+events, case/location relation events, workforce scope assignment events,
+material operation requests and checker reviews. The exact verdict is
+`READY FOR DECISION — BOUNDED WORKFORCE AUTHORIZATION FOUNDATION PACKAGE CAN BE APPROVED`.
+All eighteen physical recommendations remain unapproved.
+
+The target capability vocabulary contains only root create, observation
+record, acceptance prepare/approve and correction prepare/approve. It is not
+a generic RBAC engine and contains no human job titles. Customer identity,
+case-party role and representation authority remain separate from workforce
+authority. `service_role` remains only the technical database caller.
+
+Material requests bind one maker, exact case/location objects and an immutable
+payload hash. One different checker may approve or reject that exact hash.
+Execution revalidates both principals, capability, scope and relation and may
+occur at most once. Suspension or revocation before execution blocks the old
+request; there is no emergency override.
+
+No schema, proof, runtime, Edge Function, helper, UI, population, remote,
+production, cutover or retirement is implemented or authorized.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## Overall Architecture Verdict
 
 Recommendation: HYBRID PARALLEL REBUILD.

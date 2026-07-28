@@ -667,3 +667,34 @@ No Edge Function, helper, workforce object, case/location link, operations UI,
 population, remote apply, cutover or retirement is implemented or authorized.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 20. WP3L Workforce Authorization Foundation Decision Overlay
+
+WP3K-D01 through WP3K-D12 are approved TARGET input. WP3J remains
+`CURRENT PROVEN — LOCAL ONLY`; authorized caller execution remains
+`NOT IMPLEMENTED`.
+
+WP3L-A proposes exact normalized responsibilities for workforce roots,
+lifecycle, six closed capabilities, case/location relations, workforce scope,
+material operation requests and checker reviews. The exact readiness verdict
+is
+`READY FOR DECISION — BOUNDED WORKFORCE AUTHORIZATION FOUNDATION PACKAGE CAN BE APPROVED`.
+Every physical recommendation remains unapproved and no migration/proof is
+authorized.
+
+Root creation uses exact case scope before a location exists and must later
+create the case/location relation atomically with the root. Observation
+registration requires capability plus exact case/location scope but no
+checker. Initial acceptance and correction require immutable maker intent,
+the exact payload hash, a different active checker with the matching approve
+capability/scope and revalidation at execution.
+
+The case/location relation is workflow scope only. It does not infer address
+acceptance, physical identity, ownership, EAN, aangeslotene, party authority,
+representation, evidence acceptance or customer projection.
+
+No emergency override, system-ingestion principal, population, relation data,
+runtime caller, Edge Function, UI, remote apply, cutover or retirement is
+implemented or authorized.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
