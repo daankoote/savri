@@ -692,7 +692,8 @@ Coexistence phases:
 
 ## 12. WP3K Operations-Caller Authentication Boundary
 
-Status: DRAFT / DECISION REQUIRED. Detailed readiness evidence:
+Status: HISTORICAL WP3K READINESS; TARGET DECISIONS APPROVED, CALLERS NOT
+IMPLEMENTED. Detailed readiness evidence:
 `docs/app/operations/wp3k-location-caller-boundary-readiness.md`.
 
 The current Auth foundation proves customer authentication only:
@@ -718,11 +719,12 @@ Future internal location callers must keep these layers separate:
 6. evidence/location decision authority;
 7. independent maker/checker for material acceptance/correction.
 
-The recommended, still-unapproved implementation direction is to compose the
+The WP3K-recommended direction, later approved as TARGET shape, composes the
 existing verified-bearer primitive with a focused future
 `_shared/app_workforce_authorization.ts` helper. The customer-specific helper
-must not be broadened into a mixed customer/workforce role resolver. No
-workforce object, helper or role vocabulary is CURRENT.
+must not be broadened into a mixed customer/workforce role resolver. WP3L-B
+now proves the bounded database objects and closed capability vocabulary
+locally; the runtime helper and authorized caller remain not implemented.
 
 `service_role` remains a technical database credential and is never a human
 identity or role. Browser input may not authoritatively select `actor_ref`,
@@ -730,22 +732,19 @@ role/capability, object scope or authorization outcome.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## 13. WP3L Workforce Authorization Foundation Decision Overlay
+## 13. WP3L-B Workforce Authorization Foundation
 
-WP3K-D01 through WP3K-D12 are approved TARGET input. Authorized callers and a
-workforce foundation remain `NOT IMPLEMENTED`.
+CURRENT PROVEN — LOCAL ONLY — WP3L WORKFORCE AUTHORIZATION FOUNDATION / BOOTSTRAP, POPULATION, AUTHORIZED CALLERS, REMOTE APPLY AND CUTOVER NOT IMPLEMENTED
 
-WP3L-A records exact status
-`DRAFT — WP3L WORKFORCE AUTHORIZATION FOUNDATION — EXACT SCHEMA DECISION REQUIRED`
-and verdict
-`READY FOR DECISION — BOUNDED WORKFORCE AUTHORIZATION FOUNDATION PACKAGE CAN BE APPROVED`.
-READY FOR DECISION is not schema implementation authorization.
+WP3L-D01 through WP3L-D18 are APPROVED TARGET. Commit
+`6485dad9a1cc481efc3f17095f90df72a219b315` implements and locally proves the
+exact seven-table empty workforce authorization foundation. Auth remains the
+credential layer only; an Auth binding row is not populated by the migration.
 
-The recommended, still-unapproved model has separate immutable workforce
-roots, append-only lifecycle events, closed capability assignments, explicit
+The bounded model has separate immutable workforce roots, append-only
+lifecycle events, closed capability assignments, explicit temporal
 case/location relations, explicit workforce scope assignments, immutable
-maker requests and immutable checker reviews. Auth proves a credential only.
-The exact six capabilities are:
+maker requests and immutable checker reviews. The exact six capabilities are:
 
 - `location.root.create`;
 - `location.observation.record`;
@@ -759,9 +758,21 @@ authorization key. A single Auth user may later have both customer and
 workforce bindings only when both trust domains are independently resolved;
 neither binding inherits the other's authority.
 
-The temporary pilot bootstrap recommendation is a controlled,
-environment-specific, dual-operator runbook. Self-enrollment, browser
-bootstrap, a hardcoded Auth user in a general migration and a silent admin
-claim are prohibited. The recommendation remains unapproved.
+The local database proves active/suspended/revoked lifecycle, temporal
+capability and scope truth, distinct maker/checker review, self-approval
+rejection, and execution-time revalidation. Three operation trigger
+entrypoints are `SECURITY DEFINER` with empty search path; six guards are
+invoker functions. Browser roles have no table access and `service_role` has
+only table `SELECT, INSERT`, with no direct guard execute.
+
+`WP3L-B-Q01` through `WP3L-B-Q48` pass, including a rolled-back
+`SET LOCAL ROLE service_role` trigger route and real review/execution races.
+
+Bootstrap and population are not implemented. No fixed or hardcoded Auth user,
+workforce identity, seeded capability or admin exists. Assignment-authority
+runtime, authorized Edge callers, shared runtime authorization helper,
+automatic WP3J execution, remote apply and cutover remain not implemented.
+The next readiness batch is
+`WP3M — authorized operational location callers and WP3J execution bridge readiness`.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

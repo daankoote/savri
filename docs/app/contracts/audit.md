@@ -127,3 +127,31 @@ Current locally proven behavior:
 - locked/finalized dossiers reject withdrawal safely.
 
 Proof cleanup of disposable local fixtures is separate and must not be described as normal product deletion.
+
+## WP3L-B Workforce Authorization Audit Boundary
+
+CURRENT PROVEN — LOCAL ONLY for the bounded empty WP3L-B foundation and its
+local proof; authorized callers and WP3J execution remain not implemented.
+
+Implementation commit `6485dad9a1cc481efc3f17095f90df72a219b315`
+additively extends `app_audit_events_scope_type_chk` with exactly:
+
+- `workforce_identity`
+- `workforce_authorization`
+- `location_operation_request`
+
+The seven workforce/case-location/scope/request/review tables store bounded
+opaque actor, decision, request, idempotency and payload-hash correlation.
+They store no raw operation payload, e-mail, name, title, phone, address or
+JWT.
+
+The migration and proof write no real local audit rows. Protected
+`app_audit_events` count is `753` before and after. WP3L-B Q01-Q48, fresh
+apply and real review/execution concurrency are registered in
+`operations/wp3l-workforce-authorization-foundation-local-proof.md`.
+
+This does not implement bootstrap, population, assignment authority,
+operational callers, automatic WP3J execution, remote audit parity,
+production export or a retention schedule.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

@@ -633,8 +633,8 @@ disposable cleanup.
 
 Technical `service_role` execute does not authorize a human, operations role,
 case, dossier, party, authority or use case. No browser-direct RPC call is
-permitted. The next separate readiness step is `WP3K — authorized operational
-location caller boundary`.
+permitted. At the WP3J checkpoint, the next separate readiness step was
+`WP3K — authorized operational location caller boundary`.
 
 Population and 44-row mapping, physical matching, PDOK/BAG, EAN/connection,
 relation links, customer projection, remote apply, caller cutover, current
@@ -645,56 +645,60 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
 ## 19. WP3K Authorized Caller Readiness Overlay
 
-DRAFT — WP3K AUTHORIZED OPERATIONAL LOCATION CALLER BOUNDARY — DECISION REQUIRED
+HISTORICAL WP3K READINESS OVERLAY — TARGET DECISIONS APPROVED; CALLERS NOT IMPLEMENTED
 
 The readiness audit in
-`operations/wp3k-location-caller-boundary-readiness.md` is partial because the
-repository has no proven workforce identity, internal role assignment,
-reviewer qualification or case-to-location authorization relation.
+`operations/wp3k-location-caller-boundary-readiness.md` was partial because,
+at that checkpoint, the repository had no proven workforce identity, internal
+role assignment, reviewer qualification or case-to-location authorization
+relation. WP3L-B later closes only that bounded local foundation gap.
 
 WP3J remains `CURRENT PROVEN — LOCAL ONLY` for the four RPCs and technical
 service-role boundary. An authenticated customer, customer identity, dossier
 owner, case participant or party representative does not thereby receive
 location-write or review authority. `service_role` is not a human identity.
 
-The proposed caller boundary keeps root creation, observation registration,
-initial acceptance and correction as four specific operations. Root creation
-and observation are non-accepting registration paths; initial acceptance and
-correction are proposed material maker/checker decisions. Exact human role
-names remain decision-required and are not invented by WP3K.
+The approved TARGET caller shape keeps root creation, observation
+registration, initial acceptance and correction as four specific operations.
+Root creation and observation are non-accepting registration paths; initial
+acceptance and correction are material maker/checker decisions. Exact human
+role names remain decision-required and are not invented by WP3K.
 
-No Edge Function, helper, workforce object, case/location link, operations UI,
-population, remote apply, cutover or retirement is implemented or authorized.
+No Edge Function, helper, authorized caller, operations UI, population,
+remote apply, cutover or retirement is implemented or authorized.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## 20. WP3L Workforce Authorization Foundation Decision Overlay
+## 20. WP3L-B Workforce Authorization Foundation Local-Proof Overlay
 
-WP3K-D01 through WP3K-D12 are approved TARGET input. WP3J remains
-`CURRENT PROVEN — LOCAL ONLY`; authorized caller execution remains
-`NOT IMPLEMENTED`.
+CURRENT PROVEN — LOCAL ONLY — WP3L WORKFORCE LOCATION AUTHORIZATION FOUNDATION AND CONCURRENCY
 
-WP3L-A proposes exact normalized responsibilities for workforce roots,
-lifecycle, six closed capabilities, case/location relations, workforce scope,
-material operation requests and checker reviews. The exact readiness verdict
-is
-`READY FOR DECISION — BOUNDED WORKFORCE AUTHORIZATION FOUNDATION PACKAGE CAN BE APPROVED`.
-Every physical recommendation remains unapproved and no migration/proof is
-authorized.
+WP3L-D01 through WP3L-D18 are APPROVED TARGET. Commit
+`6485dad9a1cc481efc3f17095f90df72a219b315` implements exactly seven empty
+tables for workforce roots, lifecycle, six closed capabilities, temporal
+case/location relations, temporal workforce scope, material operation
+requests and checker reviews.
 
 Root creation uses exact case scope before a location exists and must later
-create the case/location relation atomically with the root. Observation
-registration requires capability plus exact case/location scope but no
-checker. Initial acceptance and correction require immutable maker intent,
-the exact payload hash, a different active checker with the matching approve
-capability/scope and revalidation at execution.
+use an authorized caller to create a case/location relation atomically with
+the root; that caller remains not implemented. Observation registration
+requires capability plus exact case/location scope but no checker. Initial
+acceptance and correction use immutable maker intent, the exact payload hash,
+a different active checker with the matching approve capability/scope and
+revalidation at execution.
 
 The case/location relation is workflow scope only. It does not infer address
 acceptance, physical identity, ownership, EAN, aangeslotene, party authority,
 representation, evidence acceptance or customer projection.
 
-No emergency override, system-ingestion principal, population, relation data,
-runtime caller, Edge Function, UI, remote apply, cutover or retirement is
-implemented or authorized.
+All seven tables have deny-all browser RLS and only `SELECT, INSERT` for
+`service_role`. Q01-Q48 prove catalog, no-inference, temporal rules,
+maker/checker separation, execution eligibility, fresh apply and real
+two-process review/execution races. No WP3J RPC is called.
+
+No emergency override, system-ingestion principal, bootstrap, population,
+authorized runtime caller, execution bridge, Edge Function, UI, 44-row
+mapping, remote apply, cutover or retirement is implemented. Next:
+`WP3M — authorized operational location callers and WP3J execution bridge readiness`.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

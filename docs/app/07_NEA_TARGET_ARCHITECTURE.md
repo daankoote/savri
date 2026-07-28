@@ -614,31 +614,33 @@ is `NOT IMPLEMENTED`, population is `NOT IMPLEMENTED`, remote/production is
 `service_role` execute alone does not establish a human role, operations role,
 case/dossier/party/authority context or four-eyes decision.
 
-The next readiness step is `WP3K — authorized operational location caller
-boundary`. No browser-direct RPC call is permitted.
+At the WP3J checkpoint, the next readiness step was `WP3K — authorized
+operational location caller boundary`. No browser-direct RPC call is
+permitted.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
 ## T. WP3K Authorized Operational Caller Readiness Overlay
 
-DRAFT — WP3K AUTHORIZED OPERATIONAL LOCATION CALLER BOUNDARY — DECISION REQUIRED
+HISTORICAL WP3K READINESS OVERLAY — TARGET DECISIONS APPROVED; CALLERS NOT IMPLEMENTED
 
-WP3K documents a partial caller boundary. The current system proves customer
-Auth and customer-dossier ownership, but no workforce identity, internal
-role/capability assignment, reviewer qualification or case-to-location scope
-relation. `service_role` is only the technical database caller.
+WP3K documented a partial caller boundary. At that readiness checkpoint the
+system proved customer Auth and customer-dossier ownership, but no workforce
+identity, internal role/capability assignment, reviewer qualification or
+case-to-location scope relation. WP3L-B later closes only that bounded local
+foundation gap. `service_role` remains only the technical database caller.
 
-The proposed architecture keeps seven authorities separate: server runtime,
+The approved TARGET architecture keeps seven authorities separate: server runtime,
 authenticated principal, workforce capability, object scope,
 customer/party representation, evidence/location decision authority and
 four-eyes. No Auth user, customer identity, case role or representation
 authority is promoted into another layer.
 
 Four specific `api-app-ops-location-*` callers and one focused
-`_shared/app_workforce_authorization.ts` helper are proposed but not approved
-or implemented. Root creation and observation registration remain
-non-accepting operations. Initial acceptance and correction are proposed
-material maker/checker decisions; exact human role names remain undecided.
+`_shared/app_workforce_authorization.ts` helper are approved TARGET shape but
+not implemented. Root creation and observation registration remain
+non-accepting operations. Initial acceptance and correction remain material
+maker/checker decisions; exact human role names remain undecided.
 
 No authorized caller exists. WP3J stays `CURRENT PROVEN — LOCAL ONLY`;
 caller/runtime implementation, population, relation links, projection,
@@ -646,34 +648,42 @@ remote, production, cutover and retirement remain outside CURRENT evidence.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## U. WP3L Workforce Authorization Foundation Decision Overlay
+## U. WP3L Workforce Authorization Foundation Local-Proof Overlay
 
-DRAFT — WP3L WORKFORCE AUTHORIZATION FOUNDATION — EXACT SCHEMA DECISION REQUIRED
+CURRENT PROVEN — LOCAL ONLY — WP3L WORKFORCE LOCATION AUTHORIZATION FOUNDATION AND CONCURRENCY
 
-WP3K-D01 through WP3K-D12 are approved TARGET inputs. This does not make an
-authorized caller or workforce foundation CURRENT.
+WP3L-D01 through WP3L-D18 are APPROVED TARGET. Implementation commit
+`6485dad9a1cc481efc3f17095f90df72a219b315` additively creates exactly seven
+empty local tables for workforce roots, lifecycle events, capability events,
+case/location relation events, workforce scope events, immutable maker
+requests and immutable checker reviews.
 
-WP3L-A recommends normalized option B with exactly seven separately changing
-responsibilities: workforce roots, lifecycle events, capability assignment
-events, case/location relation events, workforce scope assignment events,
-material operation requests and checker reviews. The exact verdict is
-`READY FOR DECISION — BOUNDED WORKFORCE AUTHORIZATION FOUNDATION PACKAGE CAN BE APPROVED`.
-All eighteen physical recommendations remain unapproved.
+The foundation implements exactly six closed capability codes, append-only
+active/suspended/revoked state, temporal assignments/relations/scope,
+different maker/checker identities, exact payload-hash review, self-approval
+rejection and execution-time revalidation. It is not a generic RBAC engine.
+Customer identity, case-party role and representation authority confer no
+workforce power.
 
-The target capability vocabulary contains only root create, observation
-record, acceptance prepare/approve and correction prepare/approve. It is not
-a generic RBAC engine and contains no human job titles. Customer identity,
-case-party role and representation authority remain separate from workforce
-authority. `service_role` remains only the technical database caller.
+Nine focused functions and fourteen triggers enforce the boundary. Three
+operation trigger entrypoints are `SECURITY DEFINER` with empty search path;
+six guards are invoker functions with `pg_catalog, public`. Fully immutable
+rows reuse `public.app_wp2b_i_immutable_guard()`. All seven tables have RLS,
+one `deny_all` browser policy and only `SELECT, INSERT` for `service_role`;
+internal guards have no direct execute grant.
 
-Material requests bind one maker, exact case/location objects and an immutable
-payload hash. One different checker may approve or reject that exact hash.
-Execution revalidates both principals, capability, scope and relation and may
-occur at most once. Suspension or revocation before execution blocks the old
-request; there is no emergency override.
+`WP3L-B-Q01` through `WP3L-B-Q48` pass with exact marker
+`app-workforce-location-authorization-foundation-proof-ok`. The definitive
+migration fresh-applies once with exit code 0 in a disposable database; real
+two-process review and execution races allow at most one result. Protected
+counts and WP3J fingerprints remain equal, all seven real local tables remain
+empty and no disposable database remains.
 
-No schema, proof, runtime, Edge Function, helper, UI, population, remote,
-production, cutover or retirement is implemented or authorized.
+Bootstrap, population, assignment-authority runtime, authorized operational
+callers, an approved-request-to-WP3J execution bridge, UI, 44-row mapping,
+remote, production, cutover, retirement and regulatory/verifier acceptance
+remain not implemented, blocked or unproven. The next readiness batch is
+`WP3M — authorized operational location callers and WP3J execution bridge readiness`.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 

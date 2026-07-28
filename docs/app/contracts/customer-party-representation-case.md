@@ -629,11 +629,11 @@ Specific prerequisites:
 
 ## WP3L Workforce And Case/Location Scope Overlay
 
-WP3K-D01 through WP3K-D12 are approved TARGET input. WP3L-A proposes, but does
-not approve or implement, a separate seven-table workforce authorization
-foundation.
+WP3L-D01 through WP3L-D18 are APPROVED TARGET. WP3L-B implements and locally
+proves a separate seven-table empty workforce authorization foundation in
+commit `6485dad9a1cc481efc3f17095f90df72a219b315`.
 
-The proposed `app_case_location_relations` responsibility links one
+The `app_case_location_relations` responsibility links one
 `app_cases` root to one `app_locations` root for an explicit half-open workflow
 scope. The relation is separate from workforce scope assignment and may be
 many-to-many only through explicit rows. It proves none of:
@@ -649,12 +649,19 @@ many-to-many only through explicit rows. It proves none of:
 as a workforce capability or checker qualification. Representation authority
 remains `NOT SCHEMA READY` and cannot replace maker/checker authority.
 
-The proposed workforce assignment uses only exact capability, case and
+The locally proven workforce assignment uses only exact capability, case and
 location scope. A customer identity and workforce identity may bind the same
 Auth user only as independently resolved trust domains; no permission crosses
 between them automatically.
 
-WP3L physical recommendations remain decision-required. No relation,
-workforce object, role, runtime, Edge Function, UI or population is CURRENT.
+The exact seven tables, six capabilities, temporal relation/scope guards,
+immutable maker/checker records and self-approval rejection are
+`CURRENT PROVEN — LOCAL ONLY`. All seven tables remain empty. Q01-Q48,
+fresh apply and real review/execution concurrency are green.
+
+No customer, party, case-role or representation row was converted into
+workforce authority. Bootstrap, population, assignment authority, authorized
+caller runtime, Edge Function, UI, remote and production remain not
+implemented or unproven.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

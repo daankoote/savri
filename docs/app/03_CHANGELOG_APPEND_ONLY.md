@@ -842,3 +842,21 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Verified the official local TKV SHA-256 `f08ae9cc56d7145f8962e9e0930f0e9b8676a55e73437aba4f0193b3edcc55cf` and preserved `TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE`.
 - CSS reuse is not applicable.
 - This docs-only/read-only batch created no migration, proof implementation, SQL write, database change, function, Edge Function, helper, runtime caller, frontend, CSS, package/config change, staging, commit, push, deploy or remote action.
+
+## 2026-07-28 — Register WP3L-B workforce authorization foundation local proof
+
+- Recorded implementation commit `6485dad9a1cc481efc3f17095f90df72a219b315`, parent `1baaef4174df7a002c8a3bebd1b526d68c7f1d1c`, subject `Add WP3L workforce authorization foundation`.
+- Recorded migration SHA-256 `e29f0576be4b13cb4250f9e0e931b895e1fa02723b8d8cdac2cffa96006319ac` and proof SHA-256 `f451ab67902ebe1a2612ebc4ab23e4a8777fed95b376fa4936942e1e46d55acb`; the implementation commit contains exactly those two files.
+- Added `docs/app/operations/wp3l-workforce-authorization-foundation-local-proof.md` with exact status `CURRENT PROVEN — LOCAL ONLY — WP3L WORKFORCE LOCATION AUTHORIZATION FOUNDATION AND CONCURRENCY`.
+- Registered the exact seven empty workforce/case-location/scope/request/review tables and six closed location capability codes; no generic RBAC engine, bootstrap identity, population or emergency override exists.
+- Registered nine exact new functions and fourteen triggers, including three `SECURITY DEFINER` operation trigger entrypoints with empty search path, six invoker guards, and reuse of `public.app_wp2b_i_immutable_guard()`.
+- Recorded deny-all RLS on all seven tables, no browser privileges, only `SELECT, INSERT` for `service_role`, and no direct execute grant on internal guards.
+- Recorded the additive audit-scope values `workforce_identity`, `workforce_authorization` and `location_operation_request`; no audit row was written.
+- Registered 48/48 green `WP3L-B-Q` cases and marker `app-workforce-location-authorization-foundation-proof-ok`.
+- Recorded definitive fresh apply exit code `0`, true separate-process review/execution races with at most one result, and a green rolled-back `SET LOCAL ROLE service_role` trigger route.
+- Preserved protected before/after counts and WP3J fingerprints; all seven real local target tables remain empty, direct local apply is absent from migration history and zero disposable databases remain.
+- Kept bootstrap, population, assignment-authority runtime, authorized callers, automatic WP3J execution, 44-row mapping, remote, production and cutover outside CURRENT PROVEN.
+- Set the next readiness batch to `WP3M — authorized operational location callers and WP3J execution bridge readiness`; no implementation authorization follows.
+- Verified the official local TKV SHA-256 `f08ae9cc56d7145f8962e9e0930f0e9b8676a55e73437aba4f0193b3edcc55cf` and preserved `TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE`.
+- CSS reuse is not applicable.
+- This docs-only batch changed no migration, proof, SQL/database state, runtime, Edge Function, helper, frontend, CSS, package/config, staging, commit, push, deploy or remote state.
