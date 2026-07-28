@@ -160,6 +160,17 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - operationele write-RPC, advisory-lock concurrency, true two-transaction concurrency proof, 44-row mapping/population, physical-site matching, PDOK/BAG source, verifier acceptance, case/allocation-point/charge-point links, split/merge, customer-safe projection, caller cutover, current-table retirement, privacy and final retention remain blocked/open;
   - next: perform a new bounded docs-only implementation-readiness reconciliation, then seek separate explicit migration/proof authorization; do not create migration, SQL or proof automatically;
   - no migration, proof, SQL, database write, runtime, Edge Function, frontend, CSS, package/config, staging, commit, push, deploy or remote action occurred.
+- WP3G-C bounded location foundation readiness reconciliation is PROOF ONLY / DOCS ONLY:
+  - WP3G-B is committed in HEAD `98f7aa5007a458115afab1f2c3b2333862411250`;
+  - `docs/app/operations/wp3gc-location-foundation-readiness-reconciliation.md`;
+  - exact document status is `PROOF ONLY — WP3G-C LOCATION FOUNDATION READINESS RECONCILIATION`;
+  - exact verdict is `READY — EMPTY BOUNDED LOCATION FOUNDATION IMPLEMENTATION MAY START`;
+  - all 8 physical blocker groups are CLOSED; all 42 existing WP3G foundation cases are directly implementation-ready, 0 are deferred within Q01-Q42 and 0 require a new decision;
+  - future free paths remain `supabase/migrations/20260728100000_app_location_foundation.sql` and `scripts/proofs/app-location-foundation.proof.ts`;
+  - READY is not implementation authorization: implementation is not performed and migration/proof/database writes remain unauthorized;
+  - operationele write-RPC, advisory-lock/two-transaction concurrency proof, data population, relation tables, customer-safe projection, caller cutover and current-table retirement remain blocked;
+  - PDOK/BAG, physical-site matching, verifier acceptance, privacy/retention above the recorded minimum, 44-row mapping and caller cutover do not block the empty foundation but remain open for later batches;
+  - no migration, proof, SQL, database write, runtime, Edge Function, frontend, CSS, package/config, staging, commit, push, deploy or remote action occurred.
 - WP2A party directory and customer-party binding is CURRENT PROVEN — LOCAL:
   - `app_parties`
   - `app_party_person_versions`

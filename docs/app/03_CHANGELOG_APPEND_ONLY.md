@@ -752,3 +752,17 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Kept blocked/open: operational write-RPC; advisory-lock and true two-transaction concurrency proof; 44-row mapping/population; physical-site matching; PDOK/BAG; verifier acceptance; case/allocation-point/charge-point links; split/merge; projection; cutover; retirement; privacy and final retention.
 - Required a new bounded readiness reconciliation before any separately authorized migration/proof batch; no implementation authorization follows from package 1–8.
 - This docs-only decision batch changed no WP3D/WP3E/WP3F/WP3F-B/WP3G historical record, requirement, completeness audit, connection/EAN contract, party/case contract, migration, proof, proposal, SQL, database data, runtime, Edge Function, frontend, CSS, package/config, remote state, staging, commit, push or deploy state.
+
+## 2026-07-27 — Reconcile WP3G-C location foundation readiness
+
+- Recorded WP3G-B as committed in HEAD `98f7aa5007a458115afab1f2c3b2333862411250`.
+- Added `docs/app/operations/wp3gc-location-foundation-readiness-reconciliation.md` with exact status `PROOF ONLY — WP3G-C LOCATION FOUNDATION READINESS RECONCILIATION`.
+- Reconciled all eight physical blocker groups against WP3G-B and set exact verdict `READY — EMPTY BOUNDED LOCATION FOUNDATION IMPLEMENTATION MAY START`.
+- Confirmed all 42 unchanged WP3G foundation-proof cases are directly implementation-ready; zero are deferred within Q01-Q42 and zero require a new decision. The seven operational write-RPC/concurrency assertions remain outside the foundation matrix.
+- Confirmed free future paths `supabase/migrations/20260728100000_app_location_foundation.sql` and `scripts/proofs/app-location-foundation.proof.ts`, exactly three empty tables, no fourth foundation table, no write-RPC, no population, no current-table/caller change, no DROP, retirement or cutover.
+- Reconfirmed exact marker `TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE`.
+- Kept implementation `NOT IMPLEMENTED` and migration/proof/database writes `NOT AUTHORIZED`; READY creates no implementation authorization.
+- Kept blocked for later batches: operationele write-RPC, advisory-lock/two-transaction concurrency proof, data population, relation tables, customer-safe projection, caller cutover and current-table retirement.
+- Kept PDOK/BAG, physical-site matching, verifier acceptance, privacy/retention above the recorded minimum, 44-row mapping and caller cutover open without treating them as blockers for the empty foundation.
+- CSS reuse is not applicable.
+- This docs-only reconciliation changed no contract, target architecture, traceability matrix, WP3D/WP3E/WP3F/WP3F-B/WP3G/WP3G-B historical record, requirement, completeness audit, connection/EAN contract, party/case contract, migration, proof, proposal, SQL, database data, runtime, Edge Function, frontend, CSS, package/config, remote state, staging, commit, push or deploy state.
