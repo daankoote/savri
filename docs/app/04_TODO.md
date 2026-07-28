@@ -171,6 +171,19 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - operationele write-RPC, advisory-lock/two-transaction concurrency proof, data population, relation tables, customer-safe projection, caller cutover and current-table retirement remain blocked;
   - PDOK/BAG, physical-site matching, verifier acceptance, privacy/retention above the recorded minimum, 44-row mapping and caller cutover do not block the empty foundation but remain open for later batches;
   - no migration, proof, SQL, database write, runtime, Edge Function, frontend, CSS, package/config, staging, commit, push, deploy or remote action occurred.
+- WP3H empty bounded location foundation is CURRENT PROVEN — LOCAL ONLY:
+  - implementation commit is `3bb8d50cd7723ad631d75857df4e08d6ef0db311`, parent `98df5993088a098c01d2dafab3f8a9c358f9374d`, subject `Add WP3H location foundation`;
+  - migration is `supabase/migrations/20260728100000_app_location_foundation.sql`, SHA-256 `c10c3492eda04b2c342200879be7e3b3e98f098269b19b3190d71f61c24c5aa5`;
+  - proof is `scripts/proofs/app-location-foundation.proof.ts`, SHA-256 `2570ab01627ff32fed30fe589adf7d6d88af8087a4107307366ba08f5913f1d6`;
+  - exactly three empty additive tables with 44 columns are locally proven;
+  - WP3G-Q01 through WP3G-Q42 are green with marker `app-location-foundation-proof-ok`;
+  - RLS is enabled on all three tables, exactly three `deny_all` policies exist, browser roles have no grants, and `service_role` has only `SELECT` and `INSERT`;
+  - all fixture groups rolled back, all TARGET tables ended empty, protected counts/hashes were equal before and after, and `app_dossier_locations` remained at 44 rows;
+  - the migration was applied directly locally; no migration-history record, remote apply, push or deploy exists;
+  - docs proof registration is in `docs/app/operations/wp3h-location-foundation-local-proof.md`;
+  - NEXT: separately authorize an operational write-RPC/idempotency/advisory-lock/two-transaction concurrency batch;
+  - BLOCKED separately: 44-row mapping/population, physical-site matching, PDOK/BAG, verifier acceptance, relations, customer-safe projection, caller cutover and current-table retirement;
+  - no EAN, connection, aangeslotene, charge-point, case/allocation-point relationship, remote, production or regulatory claim follows from WP3H.
 - WP2A party directory and customer-party binding is CURRENT PROVEN — LOCAL:
   - `app_parties`
   - `app_party_person_versions`

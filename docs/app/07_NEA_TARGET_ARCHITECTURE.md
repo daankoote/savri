@@ -62,7 +62,7 @@ Target bounded-context count: 24.
 | customer/account | Maintain customer account shell and customer-safe portal scope. | customers, customer cases, projections | `app_customers`, dashboard projection | EXTEND CURRENT |
 | mandate | Store signed mandate, version, period, clauses, withdrawal, and renewal. | mandates and mandate versions | legal acceptance pattern only | FULL REBUILD |
 | connection/EAN | Keep the physical connection, EAN-bearing allocation point, observations and party/profile-pinned claim separate; only terminal non-superseded confirmed claims are operational. | connection roots, allocation-point roots, EAN observations, party claim versions | predicates and security patterns only; existing objects conflict with TARGET | TARGET — WP3C INTERNAL DOMAIN APPROVED; NOT IMPLEMENTED |
-| location | Keep a stable statusless physical-location root, immutable accepted-only location versions and non-accepting address observations distinct from connection, EAN and party claims. Same-site corrections retain the root; physical relocation creates a new root. | bounded foundation tables `app_locations`, `app_location_address_observations`, and `app_location_versions`; WP3G-B fixes the exact physical schema; relation tables and split/merge remain outside the bounded package | immutable/temporal/RLS/grant/audit patterns only; `app_dossier_locations` remains conflicting source material | TARGET — WP3G-B EXACT PHYSICAL LOCATION SCHEMA APPROVED; MIGRATION AND PROOF NOT AUTHORIZED |
+| location | Keep a stable statusless physical-location root, immutable accepted-only location versions and non-accepting address observations distinct from connection, EAN and party claims. Same-site corrections retain the root; physical relocation creates a new root. | bounded foundation tables `app_locations`, `app_location_address_observations`, and `app_location_versions`; WP3H proves the exact empty physical schema locally; relation tables and split/merge remain outside the bounded package | exact immutable/temporal/RLS/minimum-grant foundation locally proven; `app_dossier_locations` remains separate conflicting source material | CURRENT PROVEN — LOCAL ONLY — EMPTY FOUNDATION; OPERATIONAL WRITES, POPULATION AND CALLER CUTOVER NOT IMPLEMENTED |
 | charger/charge point | Model charger asset and individual charge points with history. | chargers, charge points | `app_dossier_chargers` fields | PROVISIONALLY REUSABLE — FINAL DISPOSITION AFTER REGULATORY CANON |
 | MID/conformity | Decide MID applicability and evidence validity for concrete assets. | MID meters, conformity evidence via evidence tables | MID field, document slots | FULL REBUILD |
 | evidence/document lifecycle | Issue uploads, confirm bytes, version evidence, and separate acceptance decisions. | evidence slots/files/versions/decisions | document upload/confirm/download/withdraw primitives | EXTEND CURRENT |
@@ -92,7 +92,7 @@ Target entity count: 54. Table-level details are in `docs/app/architecture/datab
 | legal entity | Company/VvE legal person. | Legal/Ops | KvK, legal name | period-valid | versioned | KvK/customer evidence | representation evidence | legal review | supersede | internal summary | MAND, ORG | limited | no |
 | representative | Natural person or role authorized to sign. | Legal/Ops | representative_id, identity refs | authority period | versioned | mandate/KvK/board proof | authority documents | representation review | supersede | internal/customer own | MAND, SEC | limited | no |
 | case/dossier | Operational container for one onboarding/booking relationship. | Ops | case_id, case_number | lifecycle period | mutable state only | promotion | all domain rows | lifecycle audit | correction/revision | customer projection | AUD, RET | yes | yes |
-| location | Stable statusless physical charging-location root, immutable accepted-only versions, and separate non-accepting address observations. | Product/Ops | opaque server-assigned `app_locations.id`; exact three-table schema approved by WP3G-B | `timestamptz` half-open business validity separate from source, acceptance and immutable recording time | all three tables immutable; exact one same-root primary observation per version; versions correct only within one root through explicit supersession | exact creation, observation and acceptance actor/request provenance; source/payload refs null or lowercase SHA-256; exact retrieval/freshness guards | opaque unique `acceptance_decision_ref`; separately accepted evidence remains outside the three-table foundation | location review | same-site correction creates a version; relocation creates a root; split/merge remains a later relationship module | later customer-safe summary only; deny-all core, `service_role` `SELECT`/`INSERT` | EAN, CHG | yes | supports reconstruction; no TKV acceptance claim |
+| location | Stable statusless physical charging-location root, immutable accepted-only versions, and separate non-accepting address observations. | Product/Ops | opaque server-assigned `app_locations.id`; exact empty three-table schema locally proven by WP3H | `timestamptz` half-open business validity separate from source, acceptance and immutable recording time | all three tables immutable; exact one same-root primary observation per version; versions correct only within one root through explicit supersession | exact creation, observation and acceptance actor/request provenance; source/payload refs null or lowercase SHA-256; exact retrieval/freshness guards | opaque unique `acceptance_decision_ref`; separately accepted evidence remains outside the three-table foundation | future authorized location review; no operational write route exists | same-site correction schema is proven; operational correction, relocation and split/merge remain later batches | later customer-safe summary only; deny-all core, `service_role` `SELECT`/`INSERT` locally proven | EAN, CHG | yes | local foundation supports reconstruction; no remote, EAN, verifier or TKV acceptance claim |
 | electricity connection | Physical electricity connection distinct from location and EAN-bearing allocation point. | Ops/Compliance | stable connection ID; exact schema open | required where applicable | immutable material history | declared/observed/external sources remain observations | accepted evidence decision separate | connection review | append/supersede; no silent overwrite | internal + safe summary | EAN | limited | yes |
 | allocation point/EAN | Stable allocation-point identity with an immutable accepted EAN; exact 18-digit syntax without an unsupported checksum claim. | Ops/Compliance | stable allocation-point ID and accepted EAN; exact schema open | required | accepted EAN immutable; observations append-only | declared/parser/external values are observations, not accepted roots | separate accepted evidence decision | EAN review | new root or explicit later-approved historical relation; no rewrite | internal + safe summary | EAN | limited | yes |
 | allocation-point party claim/version | Period-bound aangeslotene claim linking the exact point, party and matching immutable party-profile version. | Ops/Compliance | claim root, point, party, person/organization profile version; exact schema open | required, half-open | immutable versions; explicit linear supersession | asserted source plus separate review/acceptance | evidence acceptance remains separate | claim decision/review | wrong party creates new claim root | internal; safe status only | EAN, MAND | status only | yes |
@@ -525,6 +525,38 @@ database writes are `NOT AUTHORIZED`, population and caller cutover are
 `BLOCKED`, and retirement is `NOT AUTHORIZED`. A new bounded readiness
 reconciliation is required; migration/proof implementation requires later
 separate explicit authorization.
+
+## Q. WP3H Empty Bounded Location Foundation Local-Proof Overlay
+
+CURRENT PROVEN — LOCAL ONLY — WP3H EMPTY BOUNDED LOCATION FOUNDATION
+
+Commit `3bb8d50cd7723ad631d75857df4e08d6ef0db311` implements the exact
+WP3G-B three-table package through
+`supabase/migrations/20260728100000_app_location_foundation.sql` and
+`scripts/proofs/app-location-foundation.proof.ts`. The migration and proof
+hashes, 42/42 green WP3G-Q cases, marker, protected state and cleanup evidence
+are registered in
+`operations/wp3h-location-foundation-local-proof.md`.
+
+The local database proof establishes exactly three empty additive tables and
+44 columns, immutable roots/observations/accepted versions, normalized
+descriptors, provenance, same-root cardinality, temporal and supersession
+enforcement, RLS, three deny-all policies and `service_role` `SELECT`/`INSERT`
+only. All three tables ended empty; `app_dossier_locations` remained at 44
+rows and the protected before/after manifest was equal.
+
+The migration was applied directly locally and has no migration-history
+record. No runtime caller, operational write RPC, advisory lock, idempotent
+operation, true two-transaction concurrency, data population, PDOK/BAG
+integration, physical-site matching, EAN/connection truth, relationship,
+projection, caller cutover, retirement, remote apply or production proof is
+part of WP3H.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+WP3D, WP3E, WP3F, WP3F-B, WP3G, WP3G-B and WP3G-C remain unchanged
+historical evidence and decision records. WP3H changes only the current local
+implementation status of the bounded empty foundation.
 
 ## Overall Architecture Verdict
 

@@ -766,3 +766,17 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Kept PDOK/BAG, physical-site matching, verifier acceptance, privacy/retention above the recorded minimum, 44-row mapping and caller cutover open without treating them as blockers for the empty foundation.
 - CSS reuse is not applicable.
 - This docs-only reconciliation changed no contract, target architecture, traceability matrix, WP3D/WP3E/WP3F/WP3F-B/WP3G/WP3G-B historical record, requirement, completeness audit, connection/EAN contract, party/case contract, migration, proof, proposal, SQL, database data, runtime, Edge Function, frontend, CSS, package/config, remote state, staging, commit, push or deploy state.
+
+## 2026-07-28 — Register WP3H empty bounded location foundation local proof
+
+- Recorded implementation commit `3bb8d50cd7723ad631d75857df4e08d6ef0db311`, parent `98df5993088a098c01d2dafab3f8a9c358f9374d`, subject `Add WP3H location foundation`.
+- Registered exact status `CURRENT PROVEN — LOCAL ONLY — WP3H EMPTY BOUNDED LOCATION FOUNDATION` in `docs/app/operations/wp3h-location-foundation-local-proof.md`.
+- Registered migration `supabase/migrations/20260728100000_app_location_foundation.sql` with SHA-256 `c10c3492eda04b2c342200879be7e3b3e98f098269b19b3190d71f61c24c5aa5` and proof `scripts/proofs/app-location-foundation.proof.ts` with SHA-256 `2570ab01627ff32fed30fe589adf7d6d88af8087a4107307366ba08f5913f1d6`.
+- Recorded exactly three empty additive tables and 44 columns, immutable roots/observations/accepted versions, descriptor/provenance/temporal/supersession enforcement, RLS on all three tables, three `deny_all` policies, no browser grants and `service_role` only `SELECT`/`INSERT`.
+- Recorded 42 of 42 green WP3G-Q cases and marker `app-location-foundation-proof-ok`; every fixture group rolled back and all three TARGET tables ended empty.
+- Recorded equal protected before/after counts and hashes and unchanged `app_dossier_locations=44`; no current row was populated, copied, accepted or changed.
+- Recorded that the migration was applied directly locally without a migration-history record; no remote apply, push or deploy occurred.
+- Set the location contract to exact status `CURRENT PROVEN — LOCAL ONLY — WP3H EMPTY BOUNDED LOCATION FOUNDATION / OPERATIONAL WRITES, DATA MIGRATION AND CALLER CUTOVER NOT IMPLEMENTED`.
+- Preserved exact marker `TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE` and made no full NEA-EAN or NEA-CHG CURRENT PROVEN claim.
+- Kept operational write-RPC, advisory locking, idempotent writes, true two-transaction concurrency, 44-row mapping/population, physical-site matching, PDOK/BAG, verifier acceptance, EAN/connection/aangeslotene truth, relations, customer-safe projection, caller cutover, retirement, remote and production outside CURRENT PROVEN.
+- This docs-only registration changed no WP3D/WP3E/WP3F/WP3F-B/WP3G/WP3G-B/WP3G-C record, requirement, completeness audit, connection/EAN contract, party/case contract, migration, proof, existing migration/proof, proposal, SQL, database, runtime, Edge Function, frontend, CSS, package/config, staging, commit, push, deploy or remote state.

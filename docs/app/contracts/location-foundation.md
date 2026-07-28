@@ -1,6 +1,6 @@
 # Location Foundation Contract
 
-TARGET — WP3G-B EXACT PHYSICAL LOCATION SCHEMA APPROVED — MIGRATION AND PROOF NOT AUTHORIZED / DATA MIGRATION AND CALLER CUTOVER BLOCKED
+CURRENT PROVEN — LOCAL ONLY — WP3H EMPTY BOUNDED LOCATION FOUNDATION / OPERATIONAL WRITES, DATA MIGRATION AND CALLER CUTOVER NOT IMPLEMENTED
 
 ## 1. Contract Boundary
 
@@ -12,14 +12,13 @@ approved `WP3E-LOC-01` through `WP3E-LOC-16` in
 schema package 1–8 in
 `operations/wp3gb-location-physical-schema-decisions.md`.
 
-WP3G-B closes the six physical-catalog gaps identified by the historical WP3G
+WP3G-B closed the six physical-catalog gaps identified by the historical WP3G
 readiness audit: exact observation actor/request fields, hash/freshness shape,
 normalized descriptor columns, version-to-observation cardinality, acceptance
-provenance and timestamp defaults. Package 1–8 is APPROVED TARGET. It is not
-CURRENT truth, legal advice, external-source acceptance, migration
-authorization, implementation proof, proof authorization, backfill/cutover
-approval, data-migration authorization, write-RPC authorization or retirement
-approval.
+provenance and timestamp defaults. Package 1–8 remains the APPROVED TARGET
+authority. WP3H subsequently implemented and proved only that exact empty
+three-table foundation locally. The committed evidence is
+`operations/wp3h-location-foundation-local-proof.md`.
 
 The approved TARGET direction follows WP3C package B:
 
@@ -34,11 +33,27 @@ The CURRENT evidence and conflict verdict remain in the unchanged
 WP3F audit and classification and both WP3G documents also remain unchanged.
 WP3F remains the proof that DDL was unsafe before the WP3F-B decisions, and
 WP3G remains the proof that implementation was unsafe before package 1–8.
-Implementation remains `NOT IMPLEMENTED`, proof remains `NOT PROVEN`,
-migration and database writes remain `NOT AUTHORIZED`, data population and
-caller cutover remain `BLOCKED`, retirement remains `NOT AUTHORIZED`, and
-external blockers remain `OPEN`. A new readiness reconciliation is required
-before any separately authorized migration/proof batch.
+The WP3H schema/proof boundary is `CURRENT PROVEN — LOCAL ONLY`. Operational
+writes, data population and caller cutover remain `NOT IMPLEMENTED`;
+retirement remains `NOT AUTHORIZED`; remote/production remains `NOT PROVEN`;
+external blockers remain `OPEN`. The proof does not reinterpret the
+historical WP3D, WP3F, WP3G or WP3G-C verdicts.
+
+### WP3H Local Evidence
+
+Implementation commit `3bb8d50cd7723ad631d75857df4e08d6ef0db311`
+contains exactly:
+
+- `supabase/migrations/20260728100000_app_location_foundation.sql`, SHA-256
+  `c10c3492eda04b2c342200879be7e3b3e98f098269b19b3190d71f61c24c5aa5`;
+- `scripts/proofs/app-location-foundation.proof.ts`, SHA-256
+  `2570ab01627ff32fed30fe589adf7d6d88af8087a4107307366ba08f5913f1d6`.
+
+The local proof passed 42 of 42 WP3G-Q cases with marker
+`app-location-foundation-proof-ok`. It left all three TARGET tables empty,
+kept `app_dossier_locations` at 44 rows, and preserved the protected
+before/after manifest. The migration was applied directly locally without a
+migration-history record. No remote apply, push or deploy occurred.
 
 ## 2. Hard Separation Of Truth
 
@@ -62,9 +77,9 @@ Location truth creates no settlement or payout entitlement.
 
 ## 3. Approved Bounded Table Responsibilities
 
-WP3F-B approves exactly these physical table names and bounded
-responsibilities; WP3G-B approves their exact physical TARGET schema. Neither
-authorizes migration, proof or implementation.
+WP3F-B approved exactly these physical table names and bounded
+responsibilities; WP3G-B approved their exact physical TARGET schema. WP3H
+implements and proves these three empty tables locally only.
 
 | approved table | one bounded responsibility |
 |---|---|
@@ -72,8 +87,8 @@ authorizes migration, proof or implementation.
 | `app_location_versions` | immutable accepted location-description versions with business validity and recorded time |
 | `app_location_address_observations` | immutable declared, parsed, provider-returned, or manual address observations and provenance |
 
-The first later-authorized migration must create an empty additive foundation.
-None of the 44 current rows may be copied, accepted or changed.
+The WP3H migration created the empty additive foundation. None of the 44
+current rows was copied, accepted or changed.
 
 The root contains exactly:
 
@@ -410,26 +425,18 @@ operational writes require one server transaction, deterministic
 `pg_advisory_xact_lock` per `location_id`, deferred validation, idempotency,
 audit and real concurrency proof. The bounded foundation contains no write-RPC.
 
-## 11. Required Future Proof
+## 11. Proven Foundation And Required Future Proof
 
-Before any implementation can be called `CURRENT PROVEN — LOCAL`, prove at minimum:
+WP3H proves the exact empty three-table catalog, constraints, immutable
+history, sequential transaction-end temporal/supersession behavior, RLS,
+minimum grants, rollback, protected counts/hashes and absence of a write
+route. It does not prove the later operational and relationship responsibilities
+below, which still require separately authorized proof:
 
-- a root contains no mutable address fields;
-- an observation cannot create an accepted version;
-- Deno/type checking for the proof and any changed runtime source;
-- exact object, function, trigger, constraint, index, policy, and grant inventory;
-- exact additive file/object scope;
-- RLS enabled and no `public`, `anon`, or `authenticated` table privileges;
-- no browser writes and no direct customer read policy;
-- minimal service-role grants and exact server-function execute grants;
-- valid minimal root, version, observation, case-link, and approved relationship inserts;
-- invalid root/scope/type combinations rejected;
-- invalid and empty temporal intervals rejected;
-- touching half-open intervals accepted where applicable;
-- unauthorized operational overlap rejected;
-- immutable UPDATE and DELETE rejected;
-- linear supersession, one successor, no cycles, and increasing record time;
-- same-site correction preserves root and predecessor;
+- operational write authorization and idempotency;
+- deterministic per-location advisory locking;
+- true concurrent competing writes;
+- same-site correction decisions under the operational caller contract;
 - relocation uses a new root;
 - split and merge preserve history and uncertainty does not auto-merge;
 - customer declaration, parser, upload, PDOK/BAG result, Auth, account, party, case, charger, and document slot cannot simulate acceptance;
@@ -440,9 +447,6 @@ Before any implementation can be called `CURRENT PROVEN — LOCAL`, prove at min
 - no location fact infers ownership, mandate, or eligibility;
 - an explicit mapping covers all 44 current location rows and proves protected history remains unchanged;
 - signup/dashboard/document compatibility or explicitly approved cutover behavior;
-- protected source hashes and all existing `app_*` row counts unchanged;
-- isolated proof records fully cleaned up;
-- no remote action.
 
 ## 12. Approved Current Object Disposition Direction
 
@@ -481,6 +485,11 @@ The authoritative full wording is in
 | `WP3E-LOC-01` through `WP3E-LOC-16` | APPROVED TARGET by Daan | NOT IMPLEMENTED | NOT PROVEN | NOT AUTHORIZED | NOT AUTHORIZED | BLOCKED | NOT AUTHORIZED | OPEN |
 | `WP3F-B-01` through `WP3F-B-18` | APPROVED TARGET by Daan | NOT IMPLEMENTED | NOT PROVEN | NOT AUTHORIZED | NOT AUTHORIZED | BLOCKED | NOT AUTHORIZED | OPEN |
 | WP3G-B package 1–8 | APPROVED TARGET by Daan | NOT IMPLEMENTED | NOT PROVEN | NOT AUTHORIZED | BLOCKED | BLOCKED | NOT AUTHORIZED | OPEN |
+| WP3H empty bounded foundation | CURRENT PROVEN — LOCAL ONLY | CURRENT PROVEN — LOCAL ONLY | 42/42 PASS | LOCAL DIRECT APPLY; NO HISTORY RECORD | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT AUTHORIZED | OPEN |
+
+The first three rows preserve the statuses of the historical decision
+packages. The WP3H row records the later bounded implementation/proof outcome;
+it does not rewrite those decision records.
 
 ## 14. TKV Alignment Guard
 
@@ -528,19 +537,20 @@ regulatory acceptance.
 
 ## 16. Implementation And Release Gate
 
-The exact bounded three-table physical TARGET schema is approved. Location
-foundation remains `NOT IMPLEMENTED` and `NOT PROVEN`; migration, proof
-execution and database writes remain `NOT AUTHORIZED`; data population and
-caller cutover remain `BLOCKED`; retirement remains `NOT AUTHORIZED`.
+The exact bounded three-table physical schema is
+`CURRENT PROVEN — LOCAL ONLY` through WP3H. Operational writes, data
+population and caller cutover remain `NOT IMPLEMENTED`; remote/production
+remains `NOT PROVEN`; retirement remains `NOT AUTHORIZED`.
 
-1. A new readiness reconciliation is required after WP3G-B; a later
-   migration/proof batch still requires separate explicit authorization.
+1. WP3H is committed in
+   `3bb8d50cd7723ad631d75857df4e08d6ef0db311`; its local proof evidence is in
+   `operations/wp3h-location-foundation-local-proof.md`.
 2. Its first migration is empty and additive and is limited to
    `app_locations`, `app_location_address_observations` and
    `app_location_versions`.
-3. No current row may be copied, accepted or changed.
-4. The exact approved columns, constraints, guards, policies, grants, temporal and
-   supersession invariants require green local proof before any population.
+3. No current row was copied, accepted or changed.
+4. The exact approved columns, constraints, guards, policies, grants, temporal
+   and supersession invariants have green local foundation proof.
 5. All 44 current rows and protected history require an explicit manual
    mapping before a separately authorized population batch.
 6. Relation tables, write-RPC, customer projection, caller cutover and
@@ -549,6 +559,6 @@ caller cutover remain `BLOCKED`; retirement remains `NOT AUTHORIZED`.
 
 Connection/EAN remains location-dependent. Approval of the WP3E internal
 package, WP3F-B bounded shape and WP3G-B exact physical schema does not
-authorize location or connection
-implementation, evidence acceptance, charger/MID, mandate, authority, kWh,
-booking, verifier, settlement, remote, or deployment work.
+authorize operational location writes or connection implementation, evidence
+acceptance, charger/MID, mandate, authority, kWh, booking, verifier,
+settlement, remote, or deployment work.
