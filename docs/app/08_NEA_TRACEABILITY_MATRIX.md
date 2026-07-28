@@ -21,7 +21,7 @@ Implementation status meanings:
 
 Assessment source: `docs/app/06B_CURRENT_IMPLEMENTATION_ASSESSMENT.md`.
 
-The current implementation columns below are governed by the proof-only assessment overlay. The electricity TKV source blocker is resolved. WP3E approves the internal location semantics, WP3F-B approves the bounded three-table foundation shape and invariants, and WP3G-B approves exact package 1–8 for the physical columns, normalized descriptors, provenance, freshness, cardinality and same-root keys. WP3H now proves that exact empty three-table foundation locally only. It does not prove the full NEA-EAN, NEA-CHG, NEA-AUD or NEA-SEC requirement, an operational write route, data population, external validation, remote state or production.
+The current implementation columns below are governed by the proof-only assessment overlay. The electricity TKV source blocker is resolved. WP3E approves the internal location semantics, WP3F-B approves the bounded three-table foundation shape and invariants, and WP3G-B approves exact package 1–8 for the physical columns, normalized descriptors, provenance, freshness, cardinality and same-root keys. WP3H now proves that exact empty three-table foundation locally only. WP3I is a decision-required readiness proposal for the still-unimplemented operational write boundary; none of its twelve recommendations is approved. Neither WP3H nor WP3I proves the full NEA-EAN, NEA-CHG, NEA-AUD or NEA-SEC requirement, an operational write route, data population, external validation, remote state or production.
 
 Coverage counts from the current assessment:
 

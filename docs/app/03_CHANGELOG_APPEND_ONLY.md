@@ -780,3 +780,14 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Preserved exact marker `TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE` and made no full NEA-EAN or NEA-CHG CURRENT PROVEN claim.
 - Kept operational write-RPC, advisory locking, idempotent writes, true two-transaction concurrency, 44-row mapping/population, physical-site matching, PDOK/BAG, verifier acceptance, EAN/connection/aangeslotene truth, relations, customer-safe projection, caller cutover, retirement, remote and production outside CURRENT PROVEN.
 - This docs-only registration changed no WP3D/WP3E/WP3F/WP3F-B/WP3G/WP3G-B/WP3G-C record, requirement, completeness audit, connection/EAN contract, party/case contract, migration, proof, existing migration/proof, proposal, SQL, database, runtime, Edge Function, frontend, CSS, package/config, staging, commit, push, deploy or remote state.
+
+## 2026-07-28 — Audit WP3I operational location-write readiness
+
+- Added `docs/app/operations/wp3i-location-operational-write-readiness.md` with exact status `DRAFT — WP3I OPERATIONAL LOCATION WRITE READINESS — DECISION REQUIRED`.
+- Inspected all current migrations, proof sources/evidence, baseline proposals, shared actor/request/hash helpers, idempotency and audit tables/RPC patterns, security-definer/search-path conventions, advisory locks, stable errors, real concurrency runners, current catalog grants/policies/functions, frontend and CSS read-only.
+- Reused the bounded patterns for canonical hashing, server provenance, shared idempotency, transactional success/reject audit, deterministic per-root locking, service-role-only functions, safe error mapping and true process-level concurrency proof; rejected fail-open/legacy and conflicting connection patterns as direct implementation dependencies.
+- Set exact verdict `READY FOR DECISION — OPERATIONAL WRITE PACKAGE CAN BE APPROVED`; this is not implementation authorization.
+- Recorded twelve explicit, still-unapproved decisions for four narrow operations and proposed free paths `supabase/migrations/20260728140000_app_location_write_rpcs.sql` and `scripts/proofs/app-location-write-rpcs.proof.ts`.
+- Kept WP3H `CURRENT PROVEN — LOCAL ONLY` and operational writes `NOT IMPLEMENTED`; population, links, projection, caller cutover, retirement, remote and production remain blocked or unproven.
+- Preserved `TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE`; CSS reuse is not applicable.
+- This docs-only/read-only batch created no migration, proof, SQL write, database change, RPC, helper, runtime, Edge Function, frontend, CSS, package/config change, staging, commit, push, deploy or remote action.

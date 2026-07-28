@@ -184,6 +184,16 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - NEXT: separately authorize an operational write-RPC/idempotency/advisory-lock/two-transaction concurrency batch;
   - BLOCKED separately: 44-row mapping/population, physical-site matching, PDOK/BAG, verifier acceptance, relations, customer-safe projection, caller cutover and current-table retirement;
   - no EAN, connection, aangeslotene, charge-point, case/allocation-point relationship, remote, production or regulatory claim follows from WP3H.
+- WP3I operational location-write readiness is DRAFT / DECISION REQUIRED:
+  - `docs/app/operations/wp3i-location-operational-write-readiness.md`;
+  - exact verdict is `READY FOR DECISION — OPERATIONAL WRITE PACKAGE CAN BE APPROVED`;
+  - the four bounded operations are root creation, observation recording, initial-version acceptance and same-root correction by immutable successor;
+  - twelve explicit choices cover RPC shape, server provenance, shared idempotency, canonical hashing/replay, fail-closed audit, root locking, observation/acceptance separation, decision references, immutable correction, safe errors, service-role security and true concurrency proof;
+  - every recommended choice remains `NOT APPROVED`; READY FOR DECISION is not implementation authorization;
+  - proposed free paths are `supabase/migrations/20260728140000_app_location_write_rpcs.sql` and `scripts/proofs/app-location-write-rpcs.proof.ts`; neither exists;
+  - NEXT: Daan explicitly decides the complete twelve-choice package, including idempotency expiry/cleanup and the server-role boundary;
+  - operational writes remain `NOT IMPLEMENTED`; population, links, projection, caller cutover, retirement, remote and production remain blocked;
+  - WP3H remains `CURRENT PROVEN — LOCAL ONLY`; no migration, proof, SQL write, database change, runtime, frontend, CSS, staging, commit, push, deploy or remote action occurred.
 - WP2A party directory and customer-party binding is CURRENT PROVEN — LOCAL:
   - `app_parties`
   - `app_party_person_versions`

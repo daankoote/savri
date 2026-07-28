@@ -562,3 +562,25 @@ package, WP3F-B bounded shape and WP3G-B exact physical schema does not
 authorize operational location writes or connection implementation, evidence
 acceptance, charger/MID, mandate, authority, kWh, booking, verifier,
 settlement, remote, or deployment work.
+
+## 17. WP3I Operational Write Readiness Overlay
+
+`operations/wp3i-location-operational-write-readiness.md` records a
+docs-only/read-only readiness verdict:
+`READY FOR DECISION — OPERATIONAL WRITE PACKAGE CAN BE APPROVED`.
+
+The proposal is limited to four operations: create one root, record one
+observation, accept one initial version, and correct one version by inserting
+an immutable same-root successor. It recommends four narrow service-role-only
+RPCs, shared `app_idempotency_keys`, canonical server hashing, transactionally
+fail-closed success/controlled-reject audit, deterministic per-root advisory
+locking, stable safe error codes and a real two-process/two-connection proof.
+
+All twelve WP3I recommendations are `NOT APPROVED`. The proposed migration and
+proof paths are not implementation, and no expiry duration is selected
+without an explicit cleanup/retention decision. WP3H remains
+`CURRENT PROVEN — LOCAL ONLY`; operational writes remain `NOT IMPLEMENTED`.
+Population, relationships, projection, caller cutover, retirement, remote and
+production remain blocked or unproven.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

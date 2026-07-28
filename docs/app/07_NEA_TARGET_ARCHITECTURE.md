@@ -558,6 +558,34 @@ WP3D, WP3E, WP3F, WP3F-B, WP3G, WP3G-B and WP3G-C remain unchanged
 historical evidence and decision records. WP3H changes only the current local
 implementation status of the bounded empty foundation.
 
+## R. WP3I Operational Location-Write Readiness Overlay
+
+DRAFT — WP3I OPERATIONAL LOCATION WRITE READINESS — DECISION REQUIRED
+
+The docs-only/read-only readiness audit in
+`operations/wp3i-location-operational-write-readiness.md` finds the bounded
+operational package ready for an explicit decision. It is limited to four
+narrow server operations: root creation, immutable observation recording,
+initial accepted-version insertion and same-root correction by an immutable
+successor.
+
+The recommended, still-unapproved architecture reuses the shared canonical
+payload hash, `app_idempotency_keys`, `app_audit_events`, the strongest
+service-role-only definer/search-path convention, the deterministic
+per-location lock pattern and the existing true-process proof runner. It
+requires server-derived provenance, separate observation and acceptance,
+transactionally persisted success and controlled-reject events, stable safe
+codes and real two-connection race proof. It proposes no generic upsert,
+foundation mutation, new business table, browser grant, population, link,
+projection, caller or retirement behavior.
+
+The proposed migration and proof manifest remains unimplemented. Every one of
+the twelve choices, including expiry/cleanup and caller-role boundaries,
+requires Daan's explicit approval. WP3H remains
+`CURRENT PROVEN — LOCAL ONLY`; operational writes remain `NOT IMPLEMENTED`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## Overall Architecture Verdict
 
 Recommendation: HYBRID PARALLEL REBUILD.

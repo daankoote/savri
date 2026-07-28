@@ -6,7 +6,7 @@ Authority: operational tracker only; it does not override the official TKV sourc
 
 Architecture decision: TARGET — approved by Daan on 2026-07-22; not CURRENT PROVEN.
 
-Next bounded gates: WP3H is committed in `3bb8d50cd7723ad631d75857df4e08d6ef0db311` and proves the exact empty three-table location foundation locally only. All 42 WP3G-Q cases are green. Operationele write-RPC/advisory-lock/two-transaction concurrency is the next separate implementation step. All 44-row mapping/population, caller cutover and retirement remain separately blocked. Connection DDL remains dependent on later operationally usable and accepted location truth; WP3H alone proves no EAN, connection or aangeslotene fact.
+Next bounded gates: WP3H is committed in `3bb8d50cd7723ad631d75857df4e08d6ef0db311` and proves the exact empty three-table location foundation locally only. WP3I now records a docs-only/read-only operational-write proposal that is ready for Daan's explicit decision; all twelve recommendations remain unapproved and operational writes remain not implemented. All 44-row mapping/population, caller cutover and retirement remain separately blocked. Connection DDL remains dependent on later operationally usable and accepted location truth; WP3H alone proves no EAN, connection or aangeslotene fact.
 
 Baseline commit: `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`.
 
@@ -44,10 +44,10 @@ The tracker never removes a blocker itself. A status changes only when the appli
 | field | value |
 |---|---|
 | Current phase | Approved TARGET direction; bounded work-package authorization only |
-| Current work package | WP3H-DOC — register committed local-only location-foundation proof — DOCS ONLY |
+| Current work package | WP3I — operational location-write readiness and exact decision proposal — DOCS ONLY |
 | Last completed work package | WP3H — empty bounded location foundation — CURRENT PROVEN LOCAL ONLY — commit `3bb8d50cd7723ad631d75857df4e08d6ef0db311` |
-| Next executable work package | Separately authorize an operational location write-RPC/idempotency/advisory-lock/two-transaction concurrency batch |
-| Current blockers | Population, operational write-RPC, advisory-lock/two-transaction concurrency, relation links, projection, caller cutover and retirement remain blocked. External source/matching/verifier/privacy and 44-row mapping remain open. Remote/production is not proven. |
+| Next executable work package | Daan decides the complete twelve-choice WP3I proposal; implementation still requires a later separate authorization |
+| Current blockers | WP3I choices, exact idempotency expiry/cleanup and caller-role boundary are not approved. Operational writes, population, relation links, projection, caller cutover and retirement remain blocked. External source/matching/verifier/privacy and 44-row mapping remain open. Remote/production is not proven. |
 | External research running in parallel | CAR, EAN/aangeslotene, DSO, KvK, MID/certificate sources, CPO/backoffice, energy supplier, kWh exchange, REV, verifier, and payment provider where relevant |
 | Last updated | 2026-07-28 |
 | Evidence reference | WP2B-I commit `5a5265adc516e8198cc25757654920d4aa3316bd`; WP3A commit `f3b39aafb2e6817e64401ccb2c47eed285552869`; WP3B commit `ee3f6b59c937f0c39a67ba09936e9ef688bcea59`; WP3C commit `da961fa84da73ecc320b55b2cb83881a12d658f3`; WP3D commit `88e8c0b754c7d44e769f89037676d9732e6fe63c`; WP3E commit `e04f4a695d983c71a52f48d0c3c26ca605bb4402`; WP3F commit `c5a46faa26d94ad22adbd2b3748f411e1b37e51e`; WP3F-B commit `e6aac0119c5e545673a07c6a985e1921a663ba49`; WP3G commit `c021d57aacc5d8beb4aa2043bc963839fa38da07`; WP3G-B commit `98f7aa5007a458115afab1f2c3b2333862411250`; WP3H commit `3bb8d50cd7723ad631d75857df4e08d6ef0db311`; `operations/wp3h-location-foundation-local-proof.md` |
@@ -273,10 +273,28 @@ population, caller cutover, remote and production remain outside the proof.
 | tests | CURRENT PROVEN — LOCAL | WP3G-Q01 through WP3G-Q42 are green with marker `app-location-foundation-proof-ok`; all fixture groups roll back and all three tables end empty. Advisory-lock/two-transaction concurrency follows with a separately approved write-RPC. |
 | SQL proof | CURRENT PROVEN — LOCAL | WP3H proves the exact local foundation, protected count/hash equality and 44 unchanged `app_dossier_locations` rows. No remote or production proof. |
 | browser proof | TODO | Required only when approved customer-visible behavior is implemented. |
-| documentation update | COMPLETE — UNCOMMITTED | WP3H-DOC registers the committed implementation evidence in one new proof record and six bounded canonical documents. Historical WP3 records, migration, proof and runtime remain unchanged. |
+| documentation update | COMPLETE — UNCOMMITTED | WP3I records one new readiness proposal and six bounded tracker/contract updates. Historical WP3 records, migration, proof and runtime remain unchanged. |
 | accepted by Daan | CURRENT PROVEN — LOCAL | The separately authorized WP3H implementation/proof boundary is green; this is not operational, remote, production, NEa or verifier acceptance. |
 | commit | COMPLETE — CURRENT PROVEN | Migration and proof are committed in `3bb8d50cd7723ad631d75857df4e08d6ef0db311`; this docs-only registration remains uncommitted. |
 | remote/deploy separately approved | BLOCKED — DECISION | Internal GO grants no remote mutation, deployment, or production authority. |
+
+### WP3I Readiness Gate
+
+WP3I has verdict
+`READY FOR DECISION — OPERATIONAL WRITE PACKAGE CAN BE APPROVED`. Its exact
+record is `operations/wp3i-location-operational-write-readiness.md`. The
+proposal covers only four narrow operations and twelve explicit choices. All
+recommendations remain `NOT APPROVED`; readiness is not implementation
+authorization.
+
+The proposed, currently free manifest paths are
+`supabase/migrations/20260728140000_app_location_write_rpcs.sql` and
+`scripts/proofs/app-location-write-rpcs.proof.ts`. Neither file exists.
+Operational writes remain `NOT IMPLEMENTED`. WP3H remains
+`CURRENT PROVEN — LOCAL ONLY`. Population, links, projection, caller cutover,
+retirement, remote and production remain outside the proposed package.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
 ## Update Contract
 
