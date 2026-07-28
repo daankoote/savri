@@ -194,6 +194,22 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - NEXT: Daan explicitly decides the complete twelve-choice package, including idempotency expiry/cleanup and the server-role boundary;
   - operational writes remain `NOT IMPLEMENTED`; population, links, projection, caller cutover, retirement, remote and production remain blocked;
   - WP3H remains `CURRENT PROVEN — LOCAL ONLY`; no migration, proof, SQL write, database change, runtime, frontend, CSS, staging, commit, push, deploy or remote action occurred.
+- WP3J operational location write RPCs are CURRENT PROVEN — LOCAL ONLY:
+  - implementation commit is `45d926478945fedc610ea02a0ff2b0d4f5f14be4`, parent `685e85ff537c7055c9885992e098b88c8fd73025`, subject `Add WP3J operational location write RPCs`;
+  - migration is `supabase/migrations/20260728140000_app_location_write_rpcs.sql`, SHA-256 `171490e672a500d303ca097b8aececda8da7f98ae2411cc5e13cd1cb43a48593`;
+  - proof is `scripts/proofs/app-location-write-rpcs.proof.ts`, SHA-256 `9330b086e82cff5ce40fcfa25ab0650023c1e3a92174a613a06035f8ee9d626d`;
+  - exact public RPCs are `app_create_location_root_v1`, `app_record_location_observation_v1`, `app_accept_initial_location_version_v1` and `app_correct_location_version_v1`;
+  - exact helpers are `app_location_write_idempotency_begin_v1`, `app_location_write_lock_v1` and `app_location_write_complete_v1`;
+  - public RPCs are service-role-only `SECURITY DEFINER` functions with empty search path; helpers have no direct service-role execute;
+  - `app_idempotency_keys` and fail-closed `app_audit_events` are reused; no new table, foundation mutation, TTL or cleanup rule was added;
+  - the definitive migration fresh-applies with exitcode `0` after exact removal of the seven functions in a disposable WP3H-compatible schema; seven resulting body hashes equal the migration bodies;
+  - `WP3J-Q01` through `WP3J-Q42` are green with marker `app-location-write-rpcs-proof-ok`; Q35-Q41 use genuine separate processes/connections;
+  - real local counts remain `app_locations=0`, `app_location_address_observations=0`, `app_location_versions=0`, `app_dossier_locations=44`, `app_audit_events=753`, and `app_idempotency_keys=306`; disposable database count ends at 0;
+  - the local direct apply is absent from remote migration history; no remote apply, push or deploy occurred;
+  - docs proof registration is `docs/app/operations/wp3j-location-write-rpcs-local-proof.md`;
+  - NEXT: `WP3K — authorized operational location caller boundary`;
+  - WP3K must decide human/operations roles, trusted server-derived `actor_ref`, required case/dossier/party/authority context, four-eyes decisions, caller-to-RPC mapping, safe error mapping and audit correlation;
+  - Edge Function/runtimecaller, browser-direct calls, population, 44-row mapping, relation links, projection, cutover, retirement, remote and production remain blocked or unproven.
 - WP2A party directory and customer-party binding is CURRENT PROVEN — LOCAL:
   - `app_parties`
   - `app_party_person_versions`

@@ -1,6 +1,6 @@
 # Location Foundation Contract
 
-CURRENT PROVEN — LOCAL ONLY — WP3H EMPTY BOUNDED LOCATION FOUNDATION / OPERATIONAL WRITES, DATA MIGRATION AND CALLER CUTOVER NOT IMPLEMENTED
+CURRENT PROVEN — LOCAL ONLY — WP3J OPERATIONAL LOCATION WRITE RPCS / CALLER AUTHORIZATION, DATA MIGRATION, REMOTE APPLY AND CUTOVER NOT IMPLEMENTED
 
 ## 1. Contract Boundary
 
@@ -18,7 +18,10 @@ normalized descriptor columns, version-to-observation cardinality, acceptance
 provenance and timestamp defaults. Package 1–8 remains the APPROVED TARGET
 authority. WP3H subsequently implemented and proved only that exact empty
 three-table foundation locally. The committed evidence is
-`operations/wp3h-location-foundation-local-proof.md`.
+`operations/wp3h-location-foundation-local-proof.md`. WP3J subsequently
+implemented and proved four bounded operational write RPCs plus three focused
+helpers locally. Its evidence is
+`operations/wp3j-location-write-rpcs-local-proof.md`.
 
 The approved TARGET direction follows WP3C package B:
 
@@ -33,10 +36,11 @@ The CURRENT evidence and conflict verdict remain in the unchanged
 WP3F audit and classification and both WP3G documents also remain unchanged.
 WP3F remains the proof that DDL was unsafe before the WP3F-B decisions, and
 WP3G remains the proof that implementation was unsafe before package 1–8.
-The WP3H schema/proof boundary is `CURRENT PROVEN — LOCAL ONLY`. Operational
-writes, data population and caller cutover remain `NOT IMPLEMENTED`;
-retirement remains `NOT AUTHORIZED`; remote/production remains `NOT PROVEN`;
-external blockers remain `OPEN`. The proof does not reinterpret the
+The WP3H schema/proof boundary and WP3J operational-RPC/concurrency boundary
+are `CURRENT PROVEN — LOCAL ONLY`. Caller authorization, data population and
+caller cutover remain `NOT IMPLEMENTED`; retirement remains `NOT AUTHORIZED`;
+remote/production remains `NOT PROVEN`; external blockers remain `OPEN`.
+Neither proof reinterprets the
 historical WP3D, WP3F, WP3G or WP3G-C verdicts.
 
 ### WP3H Local Evidence
@@ -54,6 +58,28 @@ The local proof passed 42 of 42 WP3G-Q cases with marker
 kept `app_dossier_locations` at 44 rows, and preserved the protected
 before/after manifest. The migration was applied directly locally without a
 migration-history record. No remote apply, push or deploy occurred.
+
+### WP3J Local Evidence
+
+Implementation commit `45d926478945fedc610ea02a0ff2b0d4f5f14be4`
+contains exactly:
+
+- `supabase/migrations/20260728140000_app_location_write_rpcs.sql`, SHA-256
+  `171490e672a500d303ca097b8aececda8da7f98ae2411cc5e13cd1cb43a48593`;
+- `scripts/proofs/app-location-write-rpcs.proof.ts`, SHA-256
+  `9330b086e82cff5ce40fcfa25ab0650023c1e3a92174a613a06035f8ee9d626d`.
+
+The proof passed `WP3J-Q01` through `WP3J-Q42` with marker
+`app-location-write-rpcs-proof-ok`. It fresh-applied the definitive migration
+from a seven-function-free WP3H-compatible disposable schema, proved exact
+migration-body equality with the resulting `pg_proc.prosrc` definitions and
+used separate processes/connections for Q35-Q41. All disposable databases were
+removed. The three foundation tables stayed empty, `app_dossier_locations`
+stayed at 44 rows, and `app_audit_events` and `app_idempotency_keys` stayed at
+753 and 306 rows.
+
+The local direct apply is not recorded in remote migration history. No
+runtime caller, data population, remote apply, push or deploy occurred.
 
 ## 2. Hard Separation Of Truth
 
@@ -168,7 +194,7 @@ their earlier candidate names remain unapproved:
 - charge-point-locationlinks;
 - split/merge-relations;
 - customer-safe projection;
-- write-RPC.
+- authorized runtime caller.
 
 Not proposed:
 
@@ -387,10 +413,11 @@ All three bounded location-foundation tables must:
 
 No frontend hiding, Auth claim, customer ID, dossier ID, or service-role possession substitutes for domain authorization.
 
-The exact physical schema is approved by WP3G-B. Policies, functions,
-execution privileges, projection fields, operational authorization and any
-additional protected-source boundary remain later replacement-contract
-details and are not approved here.
+The exact physical schema is approved by WP3G-B and locally proven by WP3H.
+WP3J locally proves four service-role-only public RPCs and three non-public
+helpers. `service_role` execute is only a technical boundary: projection
+fields, operational caller authorization and any additional protected-source
+boundary remain later contract responsibilities.
 
 These controls are internal ENVAL architecture. They are not literal NEa
 database requirements and do not prove TKV acceptance.
@@ -421,22 +448,24 @@ acceptance and correction supersession are prohibited.
 Allowed database enforcement is CHECK constraints, composite FKs, partial
 unique indexes, immutable guards and deferrable transaction-end constraint
 triggers for same-root, cycle, successor and overlap invariants. Later
-operational writes require one server transaction, deterministic
-`pg_advisory_xact_lock` per `location_id`, deferred validation, idempotency,
-audit and real concurrency proof. The bounded foundation contains no write-RPC.
+operational callers must use the four WP3J RPCs, which locally prove one server
+transaction, deterministic advisory locking, deferred validation,
+idempotency, fail-closed audit and real process-level concurrency. The caller
+authorization boundary remains not implemented.
 
 ## 11. Proven Foundation And Required Future Proof
 
 WP3H proves the exact empty three-table catalog, constraints, immutable
 history, sequential transaction-end temporal/supersession behavior, RLS,
 minimum grants, rollback, protected counts/hashes and absence of a write
-route. It does not prove the later operational and relationship responsibilities
-below, which still require separately authorized proof:
+route at the WP3H boundary. WP3J later proves four bounded local operational
+RPCs, transactionally fail-closed audit/idempotency, advisory locking, fresh
+migration apply and true concurrency. It does not prove the later caller and
+relationship responsibilities below:
 
-- operational write authorization and idempotency;
-- deterministic per-location advisory locking;
-- true concurrent competing writes;
-- same-site correction decisions under the operational caller contract;
+- authorized operational caller roles and use-case context;
+- server-derived actor, case/dossier, party and authority enforcement;
+- four-eyes decisions where required;
 - relocation uses a new root;
 - split and merge preserve history and uncertainty does not auto-merge;
 - customer declaration, parser, upload, PDOK/BAG result, Auth, account, party, case, charger, and document slot cannot simulate acceptance;
@@ -486,6 +515,7 @@ The authoritative full wording is in
 | `WP3F-B-01` through `WP3F-B-18` | APPROVED TARGET by Daan | NOT IMPLEMENTED | NOT PROVEN | NOT AUTHORIZED | NOT AUTHORIZED | BLOCKED | NOT AUTHORIZED | OPEN |
 | WP3G-B package 1–8 | APPROVED TARGET by Daan | NOT IMPLEMENTED | NOT PROVEN | NOT AUTHORIZED | BLOCKED | BLOCKED | NOT AUTHORIZED | OPEN |
 | WP3H empty bounded foundation | CURRENT PROVEN — LOCAL ONLY | CURRENT PROVEN — LOCAL ONLY | 42/42 PASS | LOCAL DIRECT APPLY; NO HISTORY RECORD | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT AUTHORIZED | OPEN |
+| WP3J operational write RPCs | CURRENT PROVEN — LOCAL ONLY | CURRENT PROVEN — LOCAL ONLY | 42/42 PASS INCLUDING FRESH APPLY AND REAL CONCURRENCY | LOCAL DIRECT APPLY; NO REMOTE HISTORY RECORD | NOT IMPLEMENTED | NOT IMPLEMENTED | NOT AUTHORIZED | OPEN |
 
 The first three rows preserve the statuses of the historical decision
 packages. The WP3H row records the later bounded implementation/proof outcome;
@@ -516,9 +546,7 @@ verifier-accepted implementation.
 ## 15. External Blockers
 
 - 44-row migrationmapping;
-- operational write-RPC;
-- advisory-lock concurrency;
-- two-transaction concurrency proof;
+- authorized operational caller boundary;
 - data population;
 - physical-site matching;
 - PDOK/BAG broncontract;
@@ -538,7 +566,9 @@ regulatory acceptance.
 ## 16. Implementation And Release Gate
 
 The exact bounded three-table physical schema is
-`CURRENT PROVEN — LOCAL ONLY` through WP3H. Operational writes, data
+`CURRENT PROVEN — LOCAL ONLY` through WP3H. Four bounded operational write
+RPCs, fresh migration apply and real concurrency are
+`CURRENT PROVEN — LOCAL ONLY` through WP3J. Caller authorization, data
 population and caller cutover remain `NOT IMPLEMENTED`; remote/production
 remains `NOT PROVEN`; retirement remains `NOT AUTHORIZED`.
 
@@ -553,14 +583,14 @@ remains `NOT PROVEN`; retirement remains `NOT AUTHORIZED`.
    and supersession invariants have green local foundation proof.
 5. All 44 current rows and protected history require an explicit manual
    mapping before a separately authorized population batch.
-6. Relation tables, write-RPC, customer projection, caller cutover and
-   retirement each require their own later contract, proof and approval.
+6. Authorized caller roles/context, relation tables, customer projection,
+   population, caller cutover and retirement each require their own later
+   contract, proof and approval.
 7. No retirement or remote action occurs without its own approval.
 
-Connection/EAN remains location-dependent. Approval of the WP3E internal
-package, WP3F-B bounded shape and WP3G-B exact physical schema does not
-authorize operational location writes or connection implementation, evidence
-acceptance, charger/MID, mandate, authority, kWh, booking, verifier,
+Connection/EAN remains location-dependent. WP3J proves only the bounded local
+RPC mechanics; it does not authorize a caller or connection implementation,
+evidence acceptance, charger/MID, mandate, authority, kWh, booking, verifier,
 settlement, remote, or deployment work.
 
 ## 17. WP3I Operational Write Readiness Overlay
@@ -582,5 +612,33 @@ without an explicit cleanup/retention decision. WP3H remains
 `CURRENT PROVEN — LOCAL ONLY`; operational writes remain `NOT IMPLEMENTED`.
 Population, relationships, projection, caller cutover, retirement, remote and
 production remain blocked or unproven.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 18. WP3J Operational Location Write RPC Local-Proof Overlay
+
+CURRENT PROVEN — LOCAL ONLY — WP3J OPERATIONAL LOCATION WRITE RPCS AND CONCURRENCY
+
+Commit `45d926478945fedc610ea02a0ff2b0d4f5f14be4` implements exactly four
+public RPCs and three focused internal helpers. The public functions are
+`SECURITY DEFINER`, use an empty search path and grant execute only to
+`service_role`; the helpers have no direct service-role execute.
+
+WP3J reuses `app_idempotency_keys` without adding a TTL or cleanup rule and
+reuses `app_audit_events` transactionally fail closed. It creates no table and
+changes no foundation table. Q01-Q42 prove bounded behavior, rollback,
+replay/conflict semantics, fresh migration apply, equality between migration
+bodies and resulting catalog bodies, separate-process concurrency and complete
+disposable cleanup.
+
+Technical `service_role` execute does not authorize a human, operations role,
+case, dossier, party, authority or use case. No browser-direct RPC call is
+permitted. The next separate readiness step is `WP3K — authorized operational
+location caller boundary`.
+
+Population and 44-row mapping, physical matching, PDOK/BAG, EAN/connection,
+relation links, customer projection, remote apply, caller cutover, current
+object retirement, verifier acceptance and production remain blocked or
+unproven.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

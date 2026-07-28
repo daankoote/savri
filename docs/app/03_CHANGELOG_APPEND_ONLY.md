@@ -791,3 +791,22 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Kept WP3H `CURRENT PROVEN — LOCAL ONLY` and operational writes `NOT IMPLEMENTED`; population, links, projection, caller cutover, retirement, remote and production remain blocked or unproven.
 - Preserved `TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE`; CSS reuse is not applicable.
 - This docs-only/read-only batch created no migration, proof, SQL write, database change, RPC, helper, runtime, Edge Function, frontend, CSS, package/config change, staging, commit, push, deploy or remote action.
+
+## 2026-07-28 — Register WP3J operational location write RPC local proof
+
+- Recorded implementation commit `45d926478945fedc610ea02a0ff2b0d4f5f14be4`, parent `685e85ff537c7055c9885992e098b88c8fd73025`, subject `Add WP3J operational location write RPCs`.
+- Added `docs/app/operations/wp3j-location-write-rpcs-local-proof.md` with exact status `CURRENT PROVEN — LOCAL ONLY — WP3J OPERATIONAL LOCATION WRITE RPCS AND CONCURRENCY`.
+- Registered migration `supabase/migrations/20260728140000_app_location_write_rpcs.sql` with SHA-256 `171490e672a500d303ca097b8aececda8da7f98ae2411cc5e13cd1cb43a48593` and proof `scripts/proofs/app-location-write-rpcs.proof.ts` with SHA-256 `9330b086e82cff5ce40fcfa25ab0650023c1e3a92174a613a06035f8ee9d626d`.
+- Registered exactly four public RPCs: `app_create_location_root_v1`, `app_record_location_observation_v1`, `app_accept_initial_location_version_v1`, and `app_correct_location_version_v1`.
+- Registered exactly three focused helpers: `app_location_write_idempotency_begin_v1`, `app_location_write_lock_v1`, and `app_location_write_complete_v1`.
+- Recorded `SECURITY DEFINER`, empty search paths, execute only for `service_role` on the public RPCs, no execute for `PUBLIC`/`anon`/`authenticated`, and no direct service-role execute on helpers.
+- Recorded reuse of `app_idempotency_keys` and transactionally fail-closed `app_audit_events`, with no new table, foundation mutation, TTL or cleanup rule.
+- Recorded definitive migration fresh apply with exitcode `0` from a seven-function-free WP3H-compatible disposable schema, exactly seven resulting functions, and equality between migration-body and `pg_proc.prosrc` hashes.
+- Recorded 42 of 42 green `WP3J-Q` cases and marker `app-location-write-rpcs-proof-ok`; Q35-Q41 use genuine separate PostgreSQL processes/connections.
+- Recorded unchanged real local counts: three empty foundation tables, `app_dossier_locations=44`, `app_audit_events=753`, and `app_idempotency_keys=306`; no disposable database remained.
+- Set the location contract to exact status `CURRENT PROVEN — LOCAL ONLY — WP3J OPERATIONAL LOCATION WRITE RPCS / CALLER AUTHORIZATION, DATA MIGRATION, REMOTE APPLY AND CUTOVER NOT IMPLEMENTED`.
+- Kept technical service-role execute separate from human/operations authorization; no Edge Function/runtimecaller or browser-direct RPC access was added.
+- Set `WP3K — authorized operational location caller boundary` as the next readiness step.
+- Preserved `TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE` and made no complete NEA-EAN, NEA-CHG, NEA-AUD, NEA-COR or NEA-SEC CURRENT PROVEN claim.
+- Kept caller authorization, population/44-row mapping, relation links, projection, remote apply, production, cutover and retirement blocked or unproven.
+- This docs-only batch changed no WP3D-WP3I historical record, requirement, completeness audit, connection/EAN contract, party/case contract, migration, proof, SQL, database, runtime, Edge Function, frontend, CSS, package/config, staging, commit, push, deploy or remote state.

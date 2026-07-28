@@ -43,7 +43,7 @@ Local app foundations that depend on regulatory semantics are not automatically 
 | append-only material history | Material facts and decisions are not overwritten; corrections supersede or append. | App document versions and withdrawal RPC partially prove this. | PARTIAL PROVEN |
 | raw/normalized/decision separation | Raw submitted or imported data, normalized facts, and decisions are distinct layers. | Current document file/version split helps; kWh layer absent. | TARGET |
 | derived data mutates no core truth | Calculations and projections are reproducible outputs, not sources of truth. | Dashboard projection pattern supports this. | PARTIAL PROVEN |
-| server-side writes | Business writes go through Edge/RPC/server-side service-role paths. | Current `api-app-*` endpoints and service-role-only grants partially prove this. | PARTIAL PROVEN |
+| server-side writes | Business writes go through Edge/RPC/server-side service-role paths. | Current `api-app-*` endpoints and WP3J service-role-only location RPCs partially prove this locally; authorized location caller wiring is absent. | PARTIAL PROVEN |
 | explicit provenance | Every material row points to source, actor/request, evidence, or transform. | Request metadata, hashes, audit primitives exist. | PARTIAL PROVEN |
 | four-eyes for critical decisions | Eligibility, evidence acceptance, batch approval, correction, REV, verifier finding, and settlement require distinct actors where critical. | Not implemented. | TARGET |
 | customer-safe projections | Customers see status and next actions, not raw audit, raw storage paths, internal findings, or verifier workpapers. | `api-app-dashboard-get` partially proves customer-safe projection. | PARTIAL PROVEN |
@@ -62,7 +62,7 @@ Target bounded-context count: 24.
 | customer/account | Maintain customer account shell and customer-safe portal scope. | customers, customer cases, projections | `app_customers`, dashboard projection | EXTEND CURRENT |
 | mandate | Store signed mandate, version, period, clauses, withdrawal, and renewal. | mandates and mandate versions | legal acceptance pattern only | FULL REBUILD |
 | connection/EAN | Keep the physical connection, EAN-bearing allocation point, observations and party/profile-pinned claim separate; only terminal non-superseded confirmed claims are operational. | connection roots, allocation-point roots, EAN observations, party claim versions | predicates and security patterns only; existing objects conflict with TARGET | TARGET — WP3C INTERNAL DOMAIN APPROVED; NOT IMPLEMENTED |
-| location | Keep a stable statusless physical-location root, immutable accepted-only location versions and non-accepting address observations distinct from connection, EAN and party claims. Same-site corrections retain the root; physical relocation creates a new root. | bounded foundation tables `app_locations`, `app_location_address_observations`, and `app_location_versions`; WP3H proves the exact empty physical schema locally; relation tables and split/merge remain outside the bounded package | exact immutable/temporal/RLS/minimum-grant foundation locally proven; `app_dossier_locations` remains separate conflicting source material | CURRENT PROVEN — LOCAL ONLY — EMPTY FOUNDATION; OPERATIONAL WRITES, POPULATION AND CALLER CUTOVER NOT IMPLEMENTED |
+| location | Keep a stable statusless physical-location root, immutable accepted-only location versions and non-accepting address observations distinct from connection, EAN and party claims. Same-site corrections retain the root; physical relocation creates a new root. | bounded foundation tables `app_locations`, `app_location_address_observations`, and `app_location_versions`; WP3H proves the exact empty physical schema locally; WP3J proves four bounded local write RPCs plus fresh apply and real concurrency; relation tables and split/merge remain outside the bounded package | exact immutable/temporal/RLS/minimum-grant foundation and operational RPC mechanics locally proven; `app_dossier_locations` remains separate conflicting source material; no authorized caller or population exists | CURRENT PROVEN — LOCAL ONLY — EMPTY FOUNDATION AND OPERATIONAL RPC MECHANICS; CALLER AUTHORIZATION, POPULATION, REMOTE AND CUTOVER NOT IMPLEMENTED |
 | charger/charge point | Model charger asset and individual charge points with history. | chargers, charge points | `app_dossier_chargers` fields | PROVISIONALLY REUSABLE — FINAL DISPOSITION AFTER REGULATORY CANON |
 | MID/conformity | Decide MID applicability and evidence validity for concrete assets. | MID meters, conformity evidence via evidence tables | MID field, document slots | FULL REBUILD |
 | evidence/document lifecycle | Issue uploads, confirm bytes, version evidence, and separate acceptance decisions. | evidence slots/files/versions/decisions | document upload/confirm/download/withdraw primitives | EXTEND CURRENT |
@@ -92,7 +92,7 @@ Target entity count: 54. Table-level details are in `docs/app/architecture/datab
 | legal entity | Company/VvE legal person. | Legal/Ops | KvK, legal name | period-valid | versioned | KvK/customer evidence | representation evidence | legal review | supersede | internal summary | MAND, ORG | limited | no |
 | representative | Natural person or role authorized to sign. | Legal/Ops | representative_id, identity refs | authority period | versioned | mandate/KvK/board proof | authority documents | representation review | supersede | internal/customer own | MAND, SEC | limited | no |
 | case/dossier | Operational container for one onboarding/booking relationship. | Ops | case_id, case_number | lifecycle period | mutable state only | promotion | all domain rows | lifecycle audit | correction/revision | customer projection | AUD, RET | yes | yes |
-| location | Stable statusless physical charging-location root, immutable accepted-only versions, and separate non-accepting address observations. | Product/Ops | opaque server-assigned `app_locations.id`; exact empty three-table schema locally proven by WP3H | `timestamptz` half-open business validity separate from source, acceptance and immutable recording time | all three tables immutable; exact one same-root primary observation per version; versions correct only within one root through explicit supersession | exact creation, observation and acceptance actor/request provenance; source/payload refs null or lowercase SHA-256; exact retrieval/freshness guards | opaque unique `acceptance_decision_ref`; separately accepted evidence remains outside the three-table foundation | future authorized location review; no operational write route exists | same-site correction schema is proven; operational correction, relocation and split/merge remain later batches | later customer-safe summary only; deny-all core, `service_role` `SELECT`/`INSERT` locally proven | EAN, CHG | yes | local foundation supports reconstruction; no remote, EAN, verifier or TKV acceptance claim |
+| location | Stable statusless physical charging-location root, immutable accepted-only versions, and separate non-accepting address observations. | Product/Ops | opaque server-assigned `app_locations.id`; exact empty three-table schema locally proven by WP3H | `timestamptz` half-open business validity separate from source, acceptance and immutable recording time | all three tables immutable; exact one same-root primary observation per version; versions correct only within one root through explicit supersession | exact creation, observation and acceptance actor/request provenance; source/payload refs null or lowercase SHA-256; exact retrieval/freshness guards | opaque unique `acceptance_decision_ref`; separately accepted evidence remains outside the three-table foundation | WP3J locally proves fail-closed operational audit/idempotency mechanics; authorized review/caller roles remain absent | same-site correction by immutable successor is locally proven through WP3J; relocation and split/merge remain later batches | later customer-safe summary only; deny-all core plus four service-role-only RPCs locally proven; helpers are not directly executable | EAN, CHG | yes | local foundation/write mechanics support reconstruction; no caller authorization, population, remote, EAN, verifier or TKV acceptance claim |
 | electricity connection | Physical electricity connection distinct from location and EAN-bearing allocation point. | Ops/Compliance | stable connection ID; exact schema open | required where applicable | immutable material history | declared/observed/external sources remain observations | accepted evidence decision separate | connection review | append/supersede; no silent overwrite | internal + safe summary | EAN | limited | yes |
 | allocation point/EAN | Stable allocation-point identity with an immutable accepted EAN; exact 18-digit syntax without an unsupported checksum claim. | Ops/Compliance | stable allocation-point ID and accepted EAN; exact schema open | required | accepted EAN immutable; observations append-only | declared/parser/external values are observations, not accepted roots | separate accepted evidence decision | EAN review | new root or explicit later-approved historical relation; no rewrite | internal + safe summary | EAN | limited | yes |
 | allocation-point party claim/version | Period-bound aangeslotene claim linking the exact point, party and matching immutable party-profile version. | Ops/Compliance | claim root, point, party, person/organization profile version; exact schema open | required, half-open | immutable versions; explicit linear supersession | asserted source plus separate review/acceptance | evidence acceptance remains separate | claim decision/review | wrong party creates new claim root | internal; safe status only | EAN, MAND | status only | yes |
@@ -194,7 +194,7 @@ No target status may combine different meanings. Each lifecycle below is provisi
 | customer-safe read models | Customers read projections through Edge/API, not raw tables or raw audit. | `api-app-dashboard-get`. | PARTIAL PROVEN |
 | deny-by-default internal tables | All sensitive tables use RLS deny/default and service-role or role-scoped server access. | app migrations. | PARTIAL PROVEN |
 | Edge Function writes | Business writes use CORS/META/AUTH/IDEM/AUD/SRV as applicable. | `contracts/edge-functions.md`, app functions. | PARTIAL PROVEN |
-| RPC ownership | RPCs are used only for reviewed atomic database transitions. | document confirm/reject/withdraw and auth bootstrap RPCs. | PARTIAL PROVEN |
+| RPC ownership | RPCs are used only for reviewed atomic database transitions. | document confirm/reject/withdraw, auth bootstrap, and WP3J location write RPCs; WP3J caller authorization remains absent. | PARTIAL PROVEN |
 | four-eyes actor separation | Critical approvals require two distinct qualified actors and audit proof. | none. | TARGET |
 | secrets/server-only integrations | Provider, REV, storage, email, and payment secrets stay in server env and are logged only by reference. | Supabase env pattern only. | TARGET |
 
@@ -211,7 +211,7 @@ No target status may combine different meanings. Each lifecycle below is provisi
 | decision | Decision events include decision, result, reviewer, basis, and blocker state. | not implemented beyond document transport. | TARGET |
 | reason | Rejections, corrections, exclusions, CAPA, and overrides require reason codes. | some safe error/rejection reasons. | PARTIAL PROVEN |
 | time | Event time, source period, validity period, and effective period are separated. | `created_at`, some validity gaps. | TARGET |
-| idempotency | Write actions reserve, conflict-check, replay, and finalize idempotency. | app idempotency keys and RPCs. | PARTIAL PROVEN |
+| idempotency | Write actions reserve, conflict-check, replay, and finalize idempotency. | app idempotency keys and RPCs; WP3J proves transactionally serialized location replay/conflict locally without adding a TTL or cleanup rule. | PARTIAL PROVEN |
 | correlation | Cross-object workflows carry correlation IDs across Edge/RPC/workers. | request IDs partially. | TARGET |
 | exportability | Verifier/admin packs can be reconstructed from source, normalized data, decisions, and audit. | legacy export concept only. | TARGET |
 | customer projection versus raw audit | Customer projections are derived and redacted; raw audit remains internal. | dashboard proof partial. | PARTIAL PROVEN |
@@ -583,6 +583,39 @@ The proposed migration and proof manifest remains unimplemented. Every one of
 the twelve choices, including expiry/cleanup and caller-role boundaries,
 requires Daan's explicit approval. WP3H remains
 `CURRENT PROVEN — LOCAL ONLY`; operational writes remain `NOT IMPLEMENTED`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## S. WP3J Operational Location Write RPC Local-Proof Overlay
+
+CURRENT PROVEN — LOCAL ONLY — WP3J OPERATIONAL LOCATION WRITE RPCS AND CONCURRENCY
+
+Commit `45d926478945fedc610ea02a0ff2b0d4f5f14be4` adds exactly four bounded
+public location operations and three focused internal helpers. The four RPCs
+are service-role-only `SECURITY DEFINER` functions with an empty search path;
+the helpers have no direct service-role execute.
+
+The package locally proves root creation, immutable observation recording,
+separate initial acceptance, immutable same-root correction, shared
+`app_idempotency_keys`, transactionally fail-closed `app_audit_events`,
+stable replay/conflict semantics and deterministic advisory locking. It adds
+no table, foundation mutation, TTL or cleanup rule.
+
+The definitive migration fresh-applies with exit code `0` from a
+seven-function-free WP3H-compatible disposable schema. Exactly seven
+definitions result and normalized migration bodies equal `pg_proc.prosrc`.
+`WP3J-Q01` through `WP3J-Q42` pass, Q35-Q41 use separate
+processes/connections, and the final marker is
+`app-location-write-rpcs-proof-ok`.
+
+This is a technical local foundation contribution only. Caller authorization
+is `NOT IMPLEMENTED`, population is `NOT IMPLEMENTED`, remote/production is
+`NOT PROVEN`, and external location validation remains `BLOCKED/UNKNOWN`.
+`service_role` execute alone does not establish a human role, operations role,
+case/dossier/party/authority context or four-eyes decision.
+
+The next readiness step is `WP3K — authorized operational location caller
+boundary`. No browser-direct RPC call is permitted.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
