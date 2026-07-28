@@ -239,6 +239,18 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - REMOTE APPLY / CUTOVER: OPEN/BLOCKED;
   - NEXT: `WP3M — authorized operational location callers and WP3J execution bridge readiness`;
   - WP3M is readiness/decision work only and grants no implementation authorization.
+- WP3M authorized caller and execution-bridge readiness is DRAFT / DECISION REQUIRED:
+  - evidence is `docs/app/operations/wp3m-location-callers-execution-bridge-readiness.md`;
+  - exact verdict is `READY FOR DECISION — CALLER AND EXECUTION BRIDGE PACKAGE CAN BE APPROVED`;
+  - all eighteen WP3M recommendations remain NOT APPROVED and grant no implementation authorization;
+  - recommendation is exactly four operation-family Edge callers with closed actions above eight purpose-specific service-role-only bridge RPCs;
+  - hard requirement is one database transaction for workforce resolution/revalidation, request/review locks, exact WP3J call, WP3L execution marking, idempotency completion and correlated audit;
+  - proposed four Edge paths, shared helper, bridge migration, eight public RPCs, one private authorization resolver and proof path are free but not created;
+  - AUTHORIZED CALLER: NOT IMPLEMENTED;
+  - WP3J EXECUTION BRIDGE: NOT IMPLEMENTED;
+  - BOOTSTRAP / POPULATION / ASSIGNMENT AUTHORITY: NOT IMPLEMENTED;
+  - OPERATIONS UI / REMOTE APPLY / CUTOVER: OPEN/BLOCKED;
+  - NEXT: Daan explicitly decides the complete eighteen-choice WP3M package; no implementation starts automatically.
 - WP2A party directory and customer-party binding is CURRENT PROVEN — LOCAL:
   - `app_parties`
   - `app_party_person_versions`

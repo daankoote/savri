@@ -860,3 +860,17 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Verified the official local TKV SHA-256 `f08ae9cc56d7145f8962e9e0930f0e9b8676a55e73437aba4f0193b3edcc55cf` and preserved `TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE`.
 - CSS reuse is not applicable.
 - This docs-only batch changed no migration, proof, SQL/database state, runtime, Edge Function, helper, frontend, CSS, package/config, staging, commit, push, deploy or remote state.
+
+## 2026-07-28 — Audit WP3M caller and execution-bridge readiness
+
+- Added `docs/app/operations/wp3m-location-callers-execution-bridge-readiness.md` with exact status `DRAFT — WP3M AUTHORIZED OPERATIONAL LOCATION CALLERS AND WP3J EXECUTION BRIDGE — DECISION REQUIRED`.
+- Set exact verdict `READY FOR DECISION — CALLER AND EXECUTION BRIDGE PACKAGE CAN BE APPROVED`; readiness is not implementation authorization.
+- Inspected all current `api-app-*` callers, shared customer-Auth/foundation helpers, frontend Auth/session/dashboard modules, CSS/layout inventory, all WP3J RPC/helpers, all WP3L tables/functions/triggers/policies/grants, idempotency/audit and current `SECURITY DEFINER` patterns.
+- Confirmed no current runtime caller, workforce helper or execution bridge exists; all proposed Edge, shared-helper, migration, RPC, private-helper and proof names are free.
+- Recommended, without approval, four operation-family Edge callers with closed actions above eight purpose-specific database bridge RPCs; rejected eight Edge endpoints and generic Edge/database dispatchers.
+- Required workforce resolution, authority locks/revalidation, request/review locking, WP3J write, WP3L execution marking, idempotency and correlated audit to commit in one database transaction.
+- Recorded `WP3M-D01` through `WP3M-D18` as not approved, the full authorization/execution matrix, exact safe-error contract and layered negative/concurrency/rollback proof contract.
+- Kept WP3J and WP3L `CURRENT PROVEN — LOCAL ONLY`; authorized callers, bridge, bootstrap, population, assignment authority, operations UI, remote apply and cutover remain not implemented/open.
+- Verified the official local TKV SHA-256 `f08ae9cc56d7145f8962e9e0930f0e9b8676a55e73437aba4f0193b3edcc55cf` and preserved `TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE`.
+- CSS reuse is not applicable.
+- This docs-only/read-only batch changed no migration, proof, SQL/database state, function, Edge Function, runtime helper, frontend, CSS, package/config, staging, commit, push, deploy or remote state.

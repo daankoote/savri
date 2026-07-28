@@ -44,13 +44,13 @@ The tracker never removes a blocker itself. A status changes only when the appli
 | field | value |
 |---|---|
 | Current phase | Approved TARGET direction; bounded work-package authorization only |
-| Current work package | WP3L-DOC — register WP3L-B local implementation/fresh-apply/concurrency evidence — DOCS ONLY |
-| Last completed work package | WP3L-B committed in `6485dad9a1cc481efc3f17095f90df72a219b315`; exact seven-table foundation and Q01-Q48 are CURRENT PROVEN — LOCAL ONLY |
-| Next executable work package | `WP3M — authorized operational location callers and WP3J execution bridge readiness`; decision/readiness only, no implementation authorization |
+| Current work package | WP3M — authorized operational location callers and WP3J execution bridge readiness — DOCS ONLY / DECISION REQUIRED |
+| Last completed work package | WP3L-DOC committed in `0e284ca4d520eae897b94b4319562cd0e8ec7c1d`; WP3L-B remains CURRENT PROVEN — LOCAL ONLY |
+| Next executable work package | Daan decides the complete WP3M eighteen-choice package; no implementation authorization follows automatically |
 | Current blockers | Bootstrap, workforce population, assignment-authority runtime, four operational callers, WP3J execution bridge, 44-row mapping, remote, production, cutover and retirement remain not implemented/open/blocked. Representation remains NOT SCHEMA READY and grants no workforce authority. |
 | External research running in parallel | CAR, EAN/aangeslotene, DSO, KvK, MID/certificate sources, CPO/backoffice, energy supplier, kWh exchange, REV, verifier, and payment provider where relevant |
 | Last updated | 2026-07-28 |
-| Evidence reference | WP2B-I commit `5a5265adc516e8198cc25757654920d4aa3316bd`; WP3A commit `f3b39aafb2e6817e64401ccb2c47eed285552869`; WP3B commit `ee3f6b59c937f0c39a67ba09936e9ef688bcea59`; WP3C commit `da961fa84da73ecc320b55b2cb83881a12d658f3`; WP3D commit `88e8c0b754c7d44e769f89037676d9732e6fe63c`; WP3E commit `e04f4a695d983c71a52f48d0c3c26ca605bb4402`; WP3F commit `c5a46faa26d94ad22adbd2b3748f411e1b37e51e`; WP3F-B commit `e6aac0119c5e545673a07c6a985e1921a663ba49`; WP3G commit `c021d57aacc5d8beb4aa2043bc963839fa38da07`; WP3G-B commit `98f7aa5007a458115afab1f2c3b2333862411250`; WP3H commit `3bb8d50cd7723ad631d75857df4e08d6ef0db311`; WP3J commit `45d926478945fedc610ea02a0ff2b0d4f5f14be4`; WP3J-DOC commit `ce7be9fea4d4efef66aa9585c7763bb3a6593296`; WP3K-DOC commit `a23f57ab18c3be7fe1c07cbc325fe9dcc4421837`; WP3L-B commit `6485dad9a1cc481efc3f17095f90df72a219b315`; `operations/wp3l-workforce-authorization-foundation-local-proof.md` |
+| Evidence reference | WP2B-I commit `5a5265adc516e8198cc25757654920d4aa3316bd`; WP3A commit `f3b39aafb2e6817e64401ccb2c47eed285552869`; WP3B commit `ee3f6b59c937f0c39a67ba09936e9ef688bcea59`; WP3C commit `da961fa84da73ecc320b55b2cb83881a12d658f3`; WP3D commit `88e8c0b754c7d44e769f89037676d9732e6fe63c`; WP3E commit `e04f4a695d983c71a52f48d0c3c26ca605bb4402`; WP3F commit `c5a46faa26d94ad22adbd2b3748f411e1b37e51e`; WP3F-B commit `e6aac0119c5e545673a07c6a985e1921a663ba49`; WP3G commit `c021d57aacc5d8beb4aa2043bc963839fa38da07`; WP3G-B commit `98f7aa5007a458115afab1f2c3b2333862411250`; WP3H commit `3bb8d50cd7723ad631d75857df4e08d6ef0db311`; WP3J commit `45d926478945fedc610ea02a0ff2b0d4f5f14be4`; WP3J-DOC commit `ce7be9fea4d4efef66aa9585c7763bb3a6593296`; WP3K-DOC commit `a23f57ab18c3be7fe1c07cbc325fe9dcc4421837`; WP3L-B commit `6485dad9a1cc481efc3f17095f90df72a219b315`; WP3L-DOC commit `0e284ca4d520eae897b94b4319562cd0e8ec7c1d`; `operations/wp3m-location-callers-execution-bridge-readiness.md` |
 
 ## Target Approval And Bounded Work-Package Rule
 
@@ -374,6 +374,28 @@ atomic request-to-WP3J correlation, execution ownership, caller-to-RPC
 mapping, safe errors, audit/idempotency correlation, approval-to-call
 revocation races and the prohibition on browser-direct database calls. It
 grants no implementation authorization.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+### WP3M Caller And Execution-Bridge Readiness
+
+WP3M has exact status
+`DRAFT — WP3M AUTHORIZED OPERATIONAL LOCATION CALLERS AND WP3J EXECUTION BRIDGE — DECISION REQUIRED`
+and verdict
+`READY FOR DECISION — CALLER AND EXECUTION BRIDGE PACKAGE CAN BE APPROVED`.
+
+The unapproved recommendation is four operation-family Edge callers with a
+closed action vocabulary above eight purpose-specific service-role-only
+bridge RPCs. Edge owns bearer/metadata/normalization/hash/safe mapping only.
+Database truth resolves workforce authority and one transaction spans
+authorization revalidation, request/review locks, exact WP3J execution, WP3L
+execution marking, idempotency and correlated fail-closed audit.
+
+All eighteen recommendations remain not approved. Authorized caller, helper,
+bridge migration/RPCs, proof, bootstrap, population, assignment authority,
+operations UI, remote apply and cutover remain not implemented/open/blocked.
+Evidence:
+`operations/wp3m-location-callers-execution-bridge-readiness.md`.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 

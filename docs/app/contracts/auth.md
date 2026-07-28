@@ -776,3 +776,30 @@ The next readiness batch is
 `WP3M — authorized operational location callers and WP3J execution bridge readiness`.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 14. WP3M Proposed Workforce Caller Authentication Boundary
+
+DRAFT — WP3M AUTHORIZED OPERATIONAL LOCATION CALLERS AND WP3J EXECUTION BRIDGE — DECISION REQUIRED
+
+`requireVerifiedSupabaseAuthUser()` is reusable only to verify a bearer and
+derive `auth.users.id`. The database must resolve that ID to exactly one
+active workforce identity and exact active capability/scope. Edge input may
+not select a workforce identity, capability, scope assignment, checker or
+execution outcome.
+
+The recommended shared helper
+`supabase/functions/_shared/app_workforce_authorization.ts` is not
+implemented or approved. Its bounded role is bearer resolution, request
+metadata, input normalization/canonical hashing, safe error mapping and one
+compile-time bridge-RPC call. It may not query raw workforce tables as a local
+authorization engine. `requireAppCustomer()` and
+`requireAppDossierAccess()` remain customer-only and are rejected for
+workforce authorization.
+
+The proposed database resolver and eight bridge RPCs remain unimplemented.
+Bootstrap, population, assignment authority, fixed Auth identities, seeded
+admin and browser self-enrollment remain prohibited/not implemented.
+Readiness evidence:
+`operations/wp3m-location-callers-execution-bridge-readiness.md`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

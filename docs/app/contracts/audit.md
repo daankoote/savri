@@ -155,3 +155,30 @@ operational callers, automatic WP3J execution, remote audit parity,
 production export or a retention schedule.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## WP3M Proposed Caller And Execution Audit Correlation
+
+Status: DRAFT / NOT IMPLEMENTED / DECISION REQUIRED.
+
+WP3M recommends, without approval, distinct but transactionally correlated
+authorization/workflow audit and WP3J business audit. Minimum opaque
+correlation is request ID, compile-time caller/action, workforce actor and
+identity reference, exact capability, case/location, operation request/review,
+WP3J operation/result, idempotency reference, authorization/business outcome
+and applicable timestamps.
+
+Critical authorization, request/review and execution outcomes are fail closed
+inside the bridge transaction. `insertAppAuditFailOpen()` is not reusable for
+this material boundary. No e-mail, name, title, JWT, raw payload, raw evidence,
+SQL/schema detail or out-of-scope existence enters audit or public responses.
+
+Root/relation creation, observation writes and material WP3J execution may not
+commit separately from their required authorization audit/idempotency
+correlation. The existing WP3J business events remain distinct and are not
+relabelled as workforce authorization or regulatory acceptance.
+
+Evidence and the exact proposed field/error/proof contract are in
+`operations/wp3m-location-callers-execution-bridge-readiness.md`. No audit
+schema, row, event implementation, caller or bridge was added.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

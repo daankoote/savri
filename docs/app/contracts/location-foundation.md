@@ -702,3 +702,35 @@ mapping, remote apply, cutover or retirement is implemented. Next:
 `WP3M — authorized operational location callers and WP3J execution bridge readiness`.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 21. WP3M Caller And Atomic WP3J Bridge Readiness Overlay
+
+DRAFT — WP3M AUTHORIZED OPERATIONAL LOCATION CALLERS AND WP3J EXECUTION BRIDGE — DECISION REQUIRED
+
+Exact verdict:
+`READY FOR DECISION — CALLER AND EXECUTION BRIDGE PACKAGE CAN BE APPROVED`.
+All recommendations remain unapproved.
+
+The recommended shape preserves exactly four operation families and uses
+eight purpose-specific database bridge RPCs. Root creation requires active
+`location.root.create` case-only scope and creates the first valid
+case/location relation atomically with the WP3J root. Relation failure leaves
+no root. Observation requires active `location.observation.record`, exact
+case/location scope and relation; it remains non-accepting.
+
+Acceptance/correction prepare create immutable exact-hash maker requests;
+review creates one immutable distinct-checker approve/reject; neither calls
+WP3J. Execute locks/revalidates request, review, maker, checker, capabilities,
+scope, relation and hash, then calls the exact WP3J acceptance/correction RPC
+and marks the request executed inside the same transaction. WP3J failure
+cannot leave the request executed and required-request WP3J success cannot
+commit without execution marking.
+
+No relation proves ownership, EAN, aangeslotene, representation, physical-site
+match, evidence acceptance or customer projection. No browser-direct
+database call, generic dispatcher, emergency override, caller, helper, bridge,
+bootstrap, population, UI, remote apply or cutover is implemented.
+Evidence:
+`operations/wp3m-location-callers-execution-bridge-readiness.md`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

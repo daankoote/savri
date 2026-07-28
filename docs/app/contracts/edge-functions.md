@@ -118,13 +118,16 @@ Do not claim a future endpoint is CURRENT before it exists and is proven.
 
 Legacy endpoint inventories and uniformity checks may be used as migration source material only. They do not make `api-dossier-*`, legacy token/session contracts, or legacy table writes current for `/app`.
 
-## WP3K Proposed Internal Location Callers
+## WP3K Historical And WP3M Current Proposed Internal Location Callers
 
-Status: DRAFT / NOT IMPLEMENTED / DECISION REQUIRED.
+WP3K is historical approved TARGET input. WP3L-B later proves the empty
+workforce foundation locally, but no operations caller exists.
 
-WP3K finds no existing authorized operations caller and no proven workforce
-identity/role model. The four WP3J RPCs remain service-role-only database
-operations with no Edge Function caller.
+DRAFT — WP3M AUTHORIZED OPERATIONAL LOCATION CALLERS AND WP3J EXECUTION BRIDGE — DECISION REQUIRED
+
+WP3M exact verdict is
+`READY FOR DECISION — CALLER AND EXECUTION BRIDGE PACKAGE CAN BE APPROVED`.
+It approves no recommendation and authorizes no implementation.
 
 The recommended naming family is `api-app-ops-location-*`, not
 `api-app-location-*`, because the latter can be mistaken for customer
@@ -132,19 +135,27 @@ self-service. The following specific paths are proposed and unapproved:
 
 - `api-app-ops-location-root-create`;
 - `api-app-ops-location-observation-record`;
-- `api-app-ops-location-version-accept-initial`;
+- `api-app-ops-location-version-accept`;
 - `api-app-ops-location-version-correct`.
 
-Each future caller must satisfy CORS/META/IDEM/AUD/AUTH/SRV/DEP, compile-time
-bind one operation and RPC, verify a server principal, resolve an active
-workforce identity and exact capability, authorize case/location scope, and
-derive actor/request/idempotency/authorization context server-side.
+The recommended, unapproved option keeps those four operation-family
+functions. Root and observation each have one fixed execute action;
+acceptance and correction accept only `prepare`, `review`, `execute`. Eight
+Edge Functions are rejected as unnecessary surface duplication and a generic
+dispatcher is rejected as an authorization/audit risk.
 
-Initial acceptance and correction are proposed four-eyes decisions. A caller
-must fail closed before RPC execution when maker/checker, role or scope is
-absent. Root creation and immutable observation registration remain separate
-non-accepting operations. No emergency override is approved.
+Each caller satisfies CORS/META/IDEM/AUD/AUTH/SRV/DEP and maps at compile time
+to one purpose-specific bridge RPC. The focused shared helper may verify
+bearer, derive metadata, normalize/hash and map safe errors only. Workforce
+identity/capability/scope, maker/checker and execution eligibility are
+database truth. No Edge-side check-then-write or two-call authorization/WP3J
+flow is allowed.
 
-Safe caller errors, audit ownership and the full later proof matrix are in
-`operations/wp3k-location-caller-boundary-readiness.md`. None of these
-endpoints or helpers exists or is authorized for implementation.
+Root creation and relation creation are atomic. Observation remains
+non-accepting. Acceptance/correction prepare and review call no WP3J RPC;
+execute revalidates both principals and calls WP3J in the same transaction as
+WP3L execution marking. No emergency override exists.
+
+Exact paths, bridge RPCs, safe errors, audit ownership and proof matrix are in
+`operations/wp3m-location-callers-execution-bridge-readiness.md`. None of
+these endpoints, helper, bridge functions or proof exists or is authorized.

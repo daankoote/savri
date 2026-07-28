@@ -687,6 +687,44 @@ remain not implemented, blocked or unproven. The next readiness batch is
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+## V. WP3M Caller And Execution-Bridge Readiness Overlay
+
+DRAFT — WP3M AUTHORIZED OPERATIONAL LOCATION CALLERS AND WP3J EXECUTION BRIDGE — DECISION REQUIRED
+
+Exact readiness verdict:
+`READY FOR DECISION — CALLER AND EXECUTION BRIDGE PACKAGE CAN BE APPROVED`.
+This approves nothing and authorizes no implementation.
+
+The recommended, unapproved architecture keeps exactly four operation-family
+Edge callers: root create and observation record each have one execute path;
+acceptance and correction each expose only `prepare`, `review`, `execute`.
+Eight purpose-specific database bridge RPCs keep action signatures,
+authorization, audit, WP3J response validation and proof narrow. A generic
+Edge or database dispatcher is rejected.
+
+Edge derives verified bearer, request metadata, normalized canonical input and
+safe HTTP mapping only. The database resolves the Auth user to workforce
+truth. Workforce state, capability, case/location scope, relation,
+maker/checker distinctness and execution eligibility never become Edge truth.
+Customer identity, case-party role, representation authority and
+`service_role` confer no workforce authority.
+
+Each execute action requires one PostgreSQL transaction spanning
+authorization locks/revalidation, request/review locking, the exact WP3J call,
+exact WP3J response validation, WP3L pending-to-executed marking, idempotency
+completion and correlated fail-closed audit. Root creation additionally
+creates the first case/location relation in the same transaction. A WP3J
+failure cannot leave WP3L executed, and a required-request WP3J success cannot
+commit without the matching execution marking.
+
+All eighteen WP3M recommendations remain unapproved. Authorized callers,
+bridge RPCs, helper, bootstrap, population, assignment authority, operations
+UI, remote apply and cutover remain `NOT IMPLEMENTED`, `OPEN` or `BLOCKED`.
+Evidence:
+`operations/wp3m-location-callers-execution-bridge-readiness.md`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## Overall Architecture Verdict
 
 Recommendation: HYBRID PARALLEL REBUILD.
