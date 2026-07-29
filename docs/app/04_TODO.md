@@ -469,3 +469,20 @@ Local proof is not production proof. Remote migration/function deploy, productio
 - [ ] OPEN and separate: party identity/roles, representation authority, mandate, location acceptance, EAN/aangeslotene, evidence, kWh, eligibility and NEa acceptance.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-PARTY-01A checkpoint — 2026-07-29
+
+- [x] CURRENT PROVEN — LOCAL ONLY: verified Auth bootstrap v3 atomically
+  creates/resolves one canonical root party per current customer and reuses it
+  across that customer's dossiers/cases.
+- [x] CURRENT PROVEN — LOCAL ONLY: the exact internal link is the existing
+  `app_customer_party_relationships.account_owner` service/account relation;
+  it creates no legal, representation, mandate or case-role truth.
+- [x] Particulier maps to `natural_person`; zakelijk and VvE map to
+  `organization`; Q01-Q18, concurrency, rollback, fresh apply and cleanup are
+  green.
+- [ ] OPEN and separate: profiles/names/identifiers, service recipient,
+  case contact, representation authority, mandate, EAN/location/evidence/kWh,
+  eligibility, browser-live, remote, production and NEa acceptance.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

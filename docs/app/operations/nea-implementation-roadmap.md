@@ -308,6 +308,29 @@ cutover, retirement, remote and production remain outside that package.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+### PILOT-PARTY-01A Authenticated Customer Party Root Activation
+
+CURRENT PROVEN — LOCAL ONLY for one canonical root party and existing
+non-authoritative `account_owner` relationship per verified current customer.
+Auth bootstrap v3 composes unchanged v2, preserves its safe public response
+and adds no frontend/CSS surface.
+
+Q01-Q18 and `authenticated-customer-party-activation-proof-ok` are green,
+including one exact fresh disposable apply, genuine concurrent bootstraps,
+valid-binding resolve, ambiguity/conflict rejection, party/audit rollback,
+protected equality and cleanup. Real local party, relationship, profile, case
+and case-role tables remain empty.
+
+Profiles/identifiers, service recipient/contact, legal identity,
+representation authority, mandate, EAN, location, evidence, kWh, eligibility,
+browser-live, remote/deploy, production and regulatory acceptance remain
+separate and unproven.
+
+Evidence:
+`operations/pilot-party-01a-authenticated-customer-party-activation-local-proof.md`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ### WP3J Local Proof And WP3K Next Gate
 
 WP3J is `CURRENT PROVEN — LOCAL ONLY` for exactly four operational RPCs, three

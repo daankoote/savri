@@ -912,3 +912,25 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Frontend build and targeted frontend proofs are green. Browser-live proof remains OPEN; no remote, production, party, authority, EAN, location, evidence, kWh, workforce or regulatory claim is made.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-07-29 — Prove PILOT-PARTY-01A authenticated customer party activation
+
+- Added service-role-only `app_bootstrap_customer_auth_v3`, which reuses v2
+  atomically and creates or resolves one canonical `app_parties` root plus the
+  existing non-authoritative `account_owner` relationship per current
+  customer.
+- Preserved v1/v2 migrations and local function fingerprints exactly; the
+  Auth Edge caller changed only from v2 to v3 and the safe v2 response contract
+  remains unchanged.
+- Recorded migration/proof/Edge hashes
+  `3cecb481c0e8182d21454fea47030fb9bb5d3bb100511636d5d22dc4ec8b023d`,
+  `9ef631f545df82f0d07b21d0f0c6cd2035a9ca4e0babaa0c232a70d72baed5fa`
+  and `d59e52b1c41b7d9940756a1c70df07f8e22d7803024096e33ed23914c3f1ba7b`.
+- `PILOT-PARTY-01A-Q01` through Q18 and marker
+  `authenticated-customer-party-activation-proof-ok` are green, including
+  exact fresh apply, real concurrency, resolve/conflict, rollback and cleanup.
+- Real local party, relationship, profile, case and case-role tables remained
+  empty. No frontend/CSS, profile, identifier, case role, legal identity,
+  authority, mandate, remote, production or regulatory claim was added.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

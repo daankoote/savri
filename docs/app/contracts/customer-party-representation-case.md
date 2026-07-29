@@ -666,6 +666,29 @@ implemented or unproven.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+## PILOT-PARTY-01A Canonical Customer Party Root
+
+CURRENT PROVEN — LOCAL ONLY.
+
+Every verified current customer is activated to at most one stable
+`app_parties` root. The exact customer coupling is a current terminal
+`app_customer_party_relationships` row with role `account_owner`. This is the
+existing WP2A account/service relation and is explicitly not legal identity,
+case participation, representation authority or mandate.
+
+The bounded source is `authenticated_customer_party_root` with reference type
+`app_customer` and customer UUID text. A targeted partial unique source index
+and deterministic customer advisory lock make create-or-resolve
+concurrency-safe. One valid existing account-owner binding is reused;
+duplicate, non-current or kind-conflicting terminal binding fails closed.
+
+Particulier maps to `natural_person`; zakelijk and VvE map to `organization`.
+No profile version, name, identifier or `app_case_party_roles` row is created.
+Q01-Q18 are green; real local party/relationship/profile/case/role tables
+remain empty. Remote, production and NEa/verifier acceptance remain unproven.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## WP3O Dual-Binding And Workforce Governance Separation
 
 WP3O remains decision-required and not implemented. The same Auth account can

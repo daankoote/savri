@@ -732,6 +732,27 @@ role/capability, object scope or authorization outcome.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+## PILOT-PARTY-01A Auth Bootstrap V3
+
+CURRENT PROVEN — LOCAL ONLY.
+
+`api-app-auth-bootstrap` now invokes service-role-only
+`app_bootstrap_customer_auth_v3`. V3 calls the unchanged v2 RPC in the same
+transaction and then creates or resolves one canonical party root plus the
+existing non-authoritative `account_owner` service relationship. V1 and v2
+remain present and fingerprint-unchanged.
+
+The response remains exactly the safe v2 shape and mode. It exposes no party
+ID/kind, provenance, relationship, profile, role or authority data. Party or
+audit failure rolls back new Auth binding, case activation and idempotency
+from that attempt.
+
+Auth proves account access only. This activation creates no legal identity,
+profile fact, case role, representation authority or mandate. Frontend,
+browser-live, remote and production remain unchanged/open.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## 16. WP3O Proposed Genesis And Structural Workforce Governance Boundary
 
 Status: DRAFT / DECISION REQUIRED / NOT IMPLEMENTED.

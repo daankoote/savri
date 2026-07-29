@@ -238,7 +238,7 @@ serve(async (req) => {
     );
   }
 
-  const { data, error } = await SB.rpc("app_bootstrap_customer_auth_v2", {
+  const { data, error } = await SB.rpc("app_bootstrap_customer_auth_v3", {
     p_auth_user_id: verifiedAuth.context.authUserId,
     p_email_normalized: verifiedAuth.context.emailNormalized,
     p_actor_ref: actorRef,

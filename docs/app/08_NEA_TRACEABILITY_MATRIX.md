@@ -194,6 +194,21 @@ cutover remain not implemented or open. Full evidence:
 `operations/wp3o-workforce-bootstrap-assignment-authority-readiness.md`.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-PARTY-01A local traceability checkpoint
+
+| Capability | Status | Evidence | Boundary |
+|---|---|---|---|
+| Authenticated customer to one canonical party root | CURRENT PROVEN — LOCAL ONLY | `20260729180000_app_authenticated_customer_party_activation.sql`; Q01-Q08 | Root/account linkage only |
+| Replay, concurrency, resolve and conflict controls | CURRENT PROVEN — LOCAL ONLY | Q11-Q15 | No duplicate root; ambiguity fails closed |
+| Atomic party/audit rollback and safe response | CURRENT PROVEN — LOCAL ONLY | Q16-Q17 | Safe v2 response shape; no party/profile/role internals |
+| Fresh apply, protected equality and cleanup | CURRENT PROVEN — LOCAL ONLY | Q18 and end marker | Disposable behavior DB; real target tables remain empty |
+| Legal identity, case participation and NEa acceptance | NOT PROVEN | None from PILOT-PARTY-01A | Profiles, authority, mandate, case roles and downstream truth remain separate |
+
+No NEA requirement is marked complete solely by customer-to-party root
+activation.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 ## PILOT-CASE-01 local traceability checkpoint
 
 | Capability | Status | Evidence | Boundary |

@@ -361,6 +361,26 @@ customer-safe projection patterns.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+## PILOT-PARTY-01A Current Local Party Root Activation
+
+CURRENT PROVEN — LOCAL ONLY: `app_bootstrap_customer_auth_v3` composes the
+unchanged v2 Auth/case bootstrap and activates exactly one stable
+`app_parties` root for the current customer. A customer-scoped transaction
+lock, targeted source-unique index, strict existing-binding resolution,
+fail-closed audit and shared idempotency enforce create-or-resolve.
+
+The internal coupling is an `app_customer_party_relationships` row with exact
+role `account_owner`. WP2A defines that as an account/service relationship,
+not legal identity, case participation, representation authority or mandate.
+Particulier maps to `natural_person`; zakelijk and VvE map to `organization`.
+
+The v2 public response is unchanged and contains no party internal. No
+frontend or CSS changed. Profiles, identifiers, case roles, authority,
+mandate, downstream pilot truth, browser-live, remote and production remain
+outside this proven boundary.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 Stable roots, immutable versions, RLS, and grants are internal ENVAL controls.
 They support a reconstructable dossier but do not prove TKV acceptance and do
 not replace checks of connection, allocation point, metered delivery point,

@@ -647,3 +647,22 @@ protected-route proof remains OPEN; no browser-runtime, remote or production
 claim is made.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-PARTY-01A Bootstrap-Only Party Activation
+
+CURRENT PROVEN — LOCAL ONLY.
+
+After the existing signup-created customer reaches verified Auth bootstrap,
+v3 creates or resolves one internal canonical party root and `account_owner`
+service relationship. All dossiers/cases of that customer reuse the same
+root; different customers receive different roots.
+
+The safe v2 bootstrap response and dashboard contract are unchanged and
+contain no party internal. No frontend component, client, route, CSS token,
+layout or inline style changed. The dashboard makes no party, profile,
+service-recipient, authority or mandate claim.
+
+Q01-Q18 prove local database behavior only. Browser-live, remote and
+production remain OPEN.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

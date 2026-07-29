@@ -156,6 +156,24 @@ production export or a retention schedule.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+## PILOT-PARTY-01A Authenticated Party Activation Audit
+
+CURRENT PROVEN — LOCAL ONLY.
+
+`app_bootstrap_customer_auth_v3` records
+`authenticated_customer_party_root_activated` fail closed in the same
+transaction as Auth v2, root/relationship activation and idempotency
+completion. The bounded event uses customer scope and records request,
+opaque customer/party references, party kind, created/resolved outcome,
+idempotency correlation, environment and timestamp.
+
+No raw payload, JWT, e-mail/name/address, profile fact, identifier, case role,
+authority or mandate enters this event. Replay creates no second activation
+audit. Party or audit failure rolls back the complete bootstrap attempt.
+Q11, Q16 and Q18 prove replay, rollback and protected cleanup locally.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## WP3O Proposed Genesis And Workforce Governance Audit Boundary
 
 Status: DRAFT / DECISION REQUIRED / NOT IMPLEMENTED.
