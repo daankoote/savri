@@ -248,3 +248,23 @@ Bootstrap, population, assignment-authority audit, UI audit, remote parity and
 production export remain not implemented.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+## PILOT-SIGNUP-ATOMIC-01 Atomic Signup Audit Boundary
+
+CURRENT PROVEN — LOCAL ONLY.
+
+`app_submit_signup_v4` writes the current customer/dossier/signup event family,
+one minimized `signup_party_declaration_recorded` event and
+`signup_submit_write_accepted` fail closed in the same transaction as all
+business rows and idempotency completion. Audit failure rolls back the full
+attempt; replay then safely starts again.
+
+Declaration audit correlates request, opaque customer/dossier/source
+references, declaration kind/account type, payload hash, environment and
+recording time. Names, e-mail, KvK, address, JWT and raw request payload are
+excluded. The declaration facts themselves remain only in the protected
+declaration table.
+
+Q15-Q20 prove rollback after every material transaction stage, including
+audit and pre-completion failure. This is local evidence only.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

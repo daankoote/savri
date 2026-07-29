@@ -934,3 +934,17 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   authority, mandate, remote, production or regulatory claim was added.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+## 2026-07-29 — PILOT-SIGNUP-ATOMIC-01 atomic recoverable signup
+
+- Replaced the current direct signup Edge multi-write sequence with one
+  service-role-only `app_submit_signup_v4(jsonb)` transaction while retaining
+  the existing safe `write_v3` public response.
+- Added immutable `app_party_declaration_sources` for applicant-declared
+  person or organization facts with request/payload provenance. Declaration
+  is not verified identity, KvK, address, representation, mandate, EAN,
+  eligibility, evidence acceptance or regulatory acceptance.
+- Recorded local-only Q01-Q24 proof for replay, payload conflict, real
+  concurrency, fail-closed audit, six rollback points, fresh apply, protected
+  equality and disposable cleanup.
+- No frontend/CSS, profile, case role, authority, mandate, EAN, remote,
+  deployment or production work was included.

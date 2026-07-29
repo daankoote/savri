@@ -898,3 +898,19 @@ mandate or workforce authorization. Browser-live, remote and production
 proof remain OPEN.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+## PILOT-SIGNUP-ATOMIC-01 Pre-Auth Transaction Boundary
+
+CURRENT PROVEN — LOCAL ONLY.
+
+The public signup gateway remains anonymous and uses a server-side service
+credential, but now delegates all business, audit and idempotency mutation to
+exactly one `SECURITY DEFINER` function:
+`app_submit_signup_v4(jsonb)`. Execute is granted only to `service_role`;
+`PUBLIC`, `anon` and `authenticated` have no execute.
+
+This pre-auth flow creates the same technical customer identity handle used
+by later verified Auth bootstrap. It does not verify identity, bind an Auth
+user, activate a party profile, establish representation or grant authority.
+The public response remains the current `write_v3` shape.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

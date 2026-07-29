@@ -666,3 +666,28 @@ Q01-Q18 prove local database behavior only. Browser-live, remote and
 production remain OPEN.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+## PILOT-SIGNUP-ATOMIC-01 Transactional Current Submit
+
+CURRENT PROVEN — LOCAL ONLY.
+
+The previous Edge-side multi-write flow is replaced by one
+`app_submit_signup_v4(jsonb)` database transaction. It owns the existing
+customer/identity/dossier/location/charger/document-slot/legal-acceptance
+creation, immutable applicant declaration, fail-closed audit and existing
+v3-scope idempotency completion.
+
+Same-key/same-payload returns the exact stored `write_v3` response.
+Same-key/different-payload returns `idempotency_conflict`. Any exception
+before completion rolls back every row including the idempotency reservation;
+the same request can retry safely. Concurrency yields one logical dossier and
+one declaration source.
+
+The Edge still performs server-side validation/normalization and canonical
+payload hashing, then makes exactly one service-role RPC call. No direct
+business, audit or idempotency table write remains in the handler. Frontend,
+response validator, components and CSS are unchanged.
+
+Declaration capture is not profile promotion, address truth, verified KvK,
+representation, mandate, EAN, eligibility or evidence acceptance.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

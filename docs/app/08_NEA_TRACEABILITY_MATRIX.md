@@ -222,3 +222,18 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 No NEA requirement is marked complete solely by case-root activation.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+## PILOT-SIGNUP-ATOMIC-01 local traceability checkpoint
+
+| Capability | Status | Evidence | Boundary |
+|---|---|---|---|
+| Atomic current direct signup | CURRENT PROVEN — LOCAL ONLY | `20260729220000_app_atomic_signup_submission.sql`; Q01-Q13 | Existing customer/dossier/signup object semantics and safe `write_v3` response only |
+| Immutable applicant declaration source | CURRENT PROVEN — LOCAL ONLY | Q03-Q09, Q14 | Declared person/organization facts; no verification/profile/authority |
+| Failure rollback and safe replay | CURRENT PROVEN — LOCAL ONLY | Q15-Q20 | Idempotency reservation and all business/audit rows share one transaction |
+| Edge single-RPC boundary | CURRENT PROVEN — LOCAL ONLY | Q21 | No Edge-side table businesswrites |
+| Fresh apply, protected equality and cleanup | CURRENT PROVEN — LOCAL ONLY | Q23-Q24 | Disposable behavior database; real target data unchanged |
+| Regulatory/domain acceptance | NOT PROVEN | None from this batch | No address, verified KvK, representation, mandate, EAN, evidence, eligibility, NEa or verifier decision |
+
+No NEa requirement is marked complete solely by atomic signup mechanics or
+declaration capture.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

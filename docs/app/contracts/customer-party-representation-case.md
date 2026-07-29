@@ -732,3 +732,25 @@ PILOT-CASE-01 Q01-Q32 are green; real local cases and party roles remain
 empty. Browser-live, remote and production remain OPEN.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+## PILOT-SIGNUP-ATOMIC-01 Declared Signup Source
+
+CURRENT PROVEN — LOCAL ONLY.
+
+The current direct signup transaction captures exactly one immutable
+`app_party_declaration_sources` row per logical dossier submit. Particulier
+stores declared first/last/full name. Zakelijk/VvE stores declared legal name,
+`business|vve` classification and an exactly eight-digit declared
+trade-register number. Request ID, canonical payload SHA-256, environment and
+recording time preserve provenance.
+
+This source is input for a later separately authorized profile-promotion
+batch; no `app_party_*_versions`, `app_case_party_roles` or authority record is
+created here. Applicant contact, organization declaration, account shell,
+party root, profile, case participation, representation, mandate, connection
+and evidence decisions remain distinct.
+
+`app_signup_intakes` is not reused: quarantine/verification/promotion
+lifecycle and immutable direct-signup declaration capture are different
+bounded responsibilities.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

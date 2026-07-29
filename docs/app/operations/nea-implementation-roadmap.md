@@ -514,3 +514,25 @@ Evidence:
 `operations/pilot-case-01-authenticated-dossier-case-activation-local-proof.md`.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+### PILOT-SIGNUP-ATOMIC-01 Atomic Recoverable Signup
+
+CURRENT PROVEN — LOCAL ONLY for the current direct signup transaction.
+
+`app_submit_signup_v4(jsonb)` now owns the existing customer/identity,
+dossier, submitted child objects, one immutable applicant declaration source,
+fail-closed audit and idempotency completion in one transaction. The public
+`write_v3` response remains unchanged and the Edge has one RPC businesswrite.
+
+Q01-Q24 and `atomic-signup-submission-proof-ok` are green, including one
+fresh disposable apply, genuine concurrency, rollback/replay at six failure
+points, protected equality and cleanup. Real local declaration, party/profile,
+case and role target tables remain empty.
+
+Profile promotion, case participation, representation, mandate,
+EAN/aangeslotene, evidence acceptance, kWh, eligibility, browser-live,
+remote/deploy and production remain separate and unproven.
+
+Evidence:
+`operations/pilot-signup-atomic-01-local-proof.md`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

@@ -838,3 +838,26 @@ evidence, kWh, eligibility or regulatory truth. Browser-live, remote and
 production remain OPEN.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+## PILOT-SIGNUP-ATOMIC-01 Current Local Atomic Signup Boundary
+
+CURRENT PROVEN — LOCAL ONLY.
+
+The current direct signup path now uses one service-role-only
+`app_submit_signup_v4(jsonb)` transaction for customer/identity resolution,
+one dossier, submitted locations/chargers/document slots/legal acceptances,
+one immutable declaration source, fail-closed audit and idempotency
+completion. The Edge owns normalization, canonical hashing and safe mapping
+only; it performs no direct business-table write.
+
+`app_party_declaration_sources` stores typed applicant-declared natural-person
+or organization facts and request/payload provenance. It creates no verified
+identity/KvK, address, party profile, case role, representation, mandate,
+EAN/aangeslotene, ownership, eligibility or evidence decision.
+`app_signup_intakes` remains the separate inactive quarantine/promotion
+foundation.
+
+Q01-Q24 prove local replay, payload conflict, genuine concurrency, full
+failure rollback, fresh apply, protected equality and cleanup. Remote,
+browser and production remain open.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

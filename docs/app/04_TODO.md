@@ -486,3 +486,16 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   eligibility, browser-live, remote, production and NEa acceptance.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+## PILOT-SIGNUP-ATOMIC-01 checkpoint
+
+CURRENT PROVEN — LOCAL ONLY for the bounded current direct-signup transaction.
+`app_submit_signup_v4` owns customer/identity, one dossier, submitted child
+objects, one immutable declaration source, fail-closed audit and idempotency
+completion atomically. Q01-Q24 prove failure/replay and concurrency locally.
+
+Still open: profile promotion, service-recipient case claims, address/legal
+identity verification, representation, mandate, EAN/aangeslotene, evidence
+acceptance, kWh, eligibility, browser-live, remote, deploy and production.
+`app_signup_intakes` remains inactive and separate.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
