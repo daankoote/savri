@@ -6,6 +6,8 @@ export type DashboardDossierSummary = {
   account_type: DashboardAccountType;
   status: string;
   document_changes_allowed: boolean;
+  case_id: string;
+  case_reference: string;
 };
 
 export type DashboardLocation = {

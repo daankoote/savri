@@ -625,3 +625,25 @@ C. Production Auth and deployment proof
 
 - Apply and prove remote migrations/functions/storage policies only in an explicit deployment task.
 - Do not mark the full app live from local proof.
+## PILOT-CASE-01 Dashboard Case Projection
+
+CURRENT PROVEN — LOCAL ONLY.
+
+After Auth bootstrap v2, every relevant safe dossier summary includes
+`case_id` and `case_reference`. `api-app-dashboard-get` remains fully
+write-free, derives the customer/dossier scope server-side and loads case rows
+in one customer-bounded bulk query. Missing, ambiguous or conflicting case
+truth fails safely; no case is created during read.
+
+The frontend validates both fields without deriving a fallback. Existing
+selected-dossier state, cache behavior and document refresh/upload journey
+remain unchanged. The selected dossier overview reuses
+`portal-content-stack`, `portal-card-compact`, `portal-info-rows` and
+`portal-info-row` to show `Zaakreferentie`; `case_id` is not visible. No CSS
+or inline style was added.
+
+Targeted frontend proofs and the production build are green. Browser-live
+protected-route proof remains OPEN; no browser-runtime, remote or production
+claim is made.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

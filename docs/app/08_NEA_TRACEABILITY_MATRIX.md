@@ -194,3 +194,16 @@ cutover remain not implemented or open. Full evidence:
 `operations/wp3o-workforce-bootstrap-assignment-authority-readiness.md`.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+## PILOT-CASE-01 local traceability checkpoint
+
+| Capability | Status | Evidence | Boundary |
+|---|---|---|---|
+| Authenticated current dossier to one canonical case root | CURRENT PROVEN — LOCAL ONLY | `20260729140000_app_authenticated_dossier_case_activation.sql`; PILOT-CASE-01 Q01-Q23 | Root linkage only; no party/authority/mandate claim |
+| Safe Auth/dashboard case projection | CURRENT PROVEN — LOCAL ONLY | Q24-Q31; green frontend build and targeted client proofs | `case_id`/`case_reference` only; dashboard write-free; no source/audit exposure |
+| Concurrency, rollback, fresh apply and cleanup | CURRENT PROVEN — LOCAL ONLY | Q13, Q16-Q17, Q32 and end marker | Disposable DB evidence; real local case and party-role tables remain empty |
+| Browser-live protected-route behavior | OPEN | No established safe non-mutating app intercept harness | Browser-ready source/build is not browser-runtime proof |
+| NEa acceptance and downstream dossier truth | UNKNOWN / NOT PROVEN | None from PILOT-CASE-01 | EAN, location, evidence, kWh, eligibility and acceptance remain separate |
+
+No NEA requirement is marked complete solely by case-root activation.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

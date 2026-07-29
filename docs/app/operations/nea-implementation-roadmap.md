@@ -470,3 +470,24 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 - `docs/app/09_NEA_MVP_PLAN.md` remains the normative gate plan.
 - Every execution batch follows `docs/app/00_CANON.md#codex-execution-batch-discipline`; this tracker does not duplicate that governance.
 - Remote action and deploy always require separate explicit approval.
+### PILOT-CASE-01 Authenticated Dossier Case Activation
+
+CURRENT PROVEN — LOCAL ONLY for one canonical immutable case per verified
+customer's current active/non-minimized dossier, atomic Auth-bootstrap v2,
+safe Auth/dashboard projection and existing-dashboard `Zaakreferentie`.
+
+Q01-Q32 and `authenticated-dossier-case-activation-proof-ok` are green,
+including one fresh disposable migration apply, real process concurrency,
+case/audit rollback, protected equality and cleanup. The fixed local
+migration was already applied; its earlier apply count is UNKNOWN and is not
+used as proof. Real local `app_cases` and `app_case_party_roles` remain 0.
+
+Frontend build and targeted frontend proofs are green. Browser-live,
+remote/deploy and production remain OPEN. Party roles, representation,
+authority, mandate, EAN, location acceptance, evidence, kWh, eligibility,
+workforce governance and NEa acceptance remain separate and unproven.
+
+Evidence:
+`operations/pilot-case-01-authenticated-dossier-case-activation-local-proof.md`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

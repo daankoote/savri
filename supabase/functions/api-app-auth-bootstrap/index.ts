@@ -1,6 +1,6 @@
 // supabase/functions/api-app-auth-bootstrap/index.ts
 //
-// Auth bootstrap v1 for the new /app customer dashboard boundary.
+// Auth bootstrap v2 for the new /app customer dashboard boundary.
 // Frontend may assist; backend decides.
 //
 // This endpoint binds a verified Supabase Auth user to an existing active
@@ -37,9 +37,10 @@ type BootstrapRpcResponse = {
   replayed?: unknown;
 };
 
-const MODE = "auth_bootstrap_v1";
-const IDEMPOTENCY_SCOPE_PREFIX = "api-app-auth-bootstrap:v1";
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MODE = "auth_bootstrap_v2";
+const IDEMPOTENCY_SCOPE_PREFIX = "api-app-auth-bootstrap:v2";
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SHA256_RE = /^[0-9a-f]{64}$/i;
 const ACCOUNT_TYPES = new Set(["particulier", "zakelijk", "vve"]);
 
@@ -71,7 +72,12 @@ function isSha256(value: unknown): value is string {
 
 async function parseEmptyJsonBody(
   req: Request,
-): Promise<{ ok: true; body: Record<string, unknown> } | { ok: false; code: "invalid_json" }> {
+): Promise<
+  { ok: true; body: Record<string, unknown> } | {
+    ok: false;
+    code: "invalid_json";
+  }
+> {
   try {
     const body = await req.json();
     if (!isRecord(body)) return { ok: false, code: "invalid_json" };
@@ -85,16 +91,20 @@ function dossierSummaryIsValid(value: unknown): boolean {
   if (!Array.isArray(value) || value.length < 1) return false;
   return value.every((item) => {
     if (!isRecord(item)) return false;
-    return isUuid(item.dossier_id) &&
+    const dossierId = getString(item.dossier_id);
+    const caseReference = getString(item.case_reference);
+    return isUuid(dossierId) &&
       getString(item.dossier_number).length > 0 &&
       ACCOUNT_TYPES.has(getString(item.account_type)) &&
-      getString(item.status).length > 0;
+      getString(item.status).length > 0 &&
+      isUuid(item.case_id) &&
+      caseReference === `CASE-${dossierId}`;
   });
 }
 
 function validateSuccessBody(body: BootstrapRpcResponse): body is {
   ok: true;
-  mode: "auth_bootstrap_v1";
+  mode: "auth_bootstrap_v2";
   request_id: string;
   customer_id: string;
   identity_id: string;
@@ -154,11 +164,21 @@ serve(async (req) => {
   const meta = await getAppRequestMeta(req);
 
   if (req.method !== "POST") {
-    return appErrorResponse(req, 405, "Methode niet toegestaan.", "method_not_allowed");
+    return appErrorResponse(
+      req,
+      405,
+      "Methode niet toegestaan.",
+      "method_not_allowed",
+    );
   }
 
   if (!meta.idempotency_key) {
-    return appErrorResponse(req, 400, "Idempotency-Key ontbreekt.", "missing_idempotency_key");
+    return appErrorResponse(
+      req,
+      400,
+      "Idempotency-Key ontbreekt.",
+      "missing_idempotency_key",
+    );
   }
 
   const parsed = await parseEmptyJsonBody(req);
@@ -173,27 +193,52 @@ serve(async (req) => {
 
   const SB = appSupabaseClient();
   if (!SB) {
-    return appErrorResponse(req, 503, "Inloggen is tijdelijk niet beschikbaar.", "service_unavailable");
+    return appErrorResponse(
+      req,
+      503,
+      "Inloggen is tijdelijk niet beschikbaar.",
+      "service_unavailable",
+    );
   }
 
   const verifiedAuth = await requireVerifiedSupabaseAuthUser(req, SB);
   if (!verifiedAuth.ok) {
-    return appErrorResponse(req, verifiedAuth.status, verifiedAuth.message, verifiedAuth.code);
+    return appErrorResponse(
+      req,
+      verifiedAuth.status,
+      verifiedAuth.message,
+      verifiedAuth.code,
+    );
   }
 
-  const idempotencyScope = `${IDEMPOTENCY_SCOPE_PREFIX}:auth_user:${verifiedAuth.context.authUserId}`;
+  const idempotencyScope =
+    `${IDEMPOTENCY_SCOPE_PREFIX}:auth_user:${verifiedAuth.context.authUserId}`;
   const actorRef = `supabase_auth_user:${verifiedAuth.context.authUserId}`;
   const normalizedPayloadHash = await payloadHash(parsed.body);
 
   if (Object.keys(parsed.body).length > 0) {
-    const existingHash = await existingIdempotencyPayloadHash(SB, idempotencyScope, meta.idempotency_key);
+    const existingHash = await existingIdempotencyPayloadHash(
+      SB,
+      idempotencyScope,
+      meta.idempotency_key,
+    );
     if (existingHash && existingHash !== normalizedPayloadHash) {
-      return appErrorResponse(req, 409, "Aanvraag is al gebruikt met andere inhoud.", "idempotency_conflict");
+      return appErrorResponse(
+        req,
+        409,
+        "Aanvraag is al gebruikt met andere inhoud.",
+        "idempotency_conflict",
+      );
     }
-    return appErrorResponse(req, 400, "Controleer de aanvraag.", "invalid_body");
+    return appErrorResponse(
+      req,
+      400,
+      "Controleer de aanvraag.",
+      "invalid_body",
+    );
   }
 
-  const { data, error } = await SB.rpc("app_bootstrap_customer_auth_v1", {
+  const { data, error } = await SB.rpc("app_bootstrap_customer_auth_v2", {
     p_auth_user_id: verifiedAuth.context.authUserId,
     p_email_normalized: verifiedAuth.context.emailNormalized,
     p_actor_ref: actorRef,
@@ -207,16 +252,31 @@ serve(async (req) => {
   });
 
   if (error || !isRecord(data)) {
-    return appErrorResponse(req, 503, "Inloggen is tijdelijk niet beschikbaar.", "service_unavailable");
+    return appErrorResponse(
+      req,
+      503,
+      "Inloggen is tijdelijk niet beschikbaar.",
+      "service_unavailable",
+    );
   }
 
   const body = data as BootstrapRpcResponse;
   if (body.ok !== true) {
-    return appErrorResponse(req, statusFromRpcBody(body), safeMessageFromRpcBody(body), safeCodeFromRpcBody(body));
+    return appErrorResponse(
+      req,
+      statusFromRpcBody(body),
+      safeMessageFromRpcBody(body),
+      safeCodeFromRpcBody(body),
+    );
   }
 
   if (!validateSuccessBody(body)) {
-    return appErrorResponse(req, 503, "Inloggen is tijdelijk niet beschikbaar.", "invalid_bootstrap_response");
+    return appErrorResponse(
+      req,
+      503,
+      "Inloggen is tijdelijk niet beschikbaar.",
+      "invalid_bootstrap_response",
+    );
   }
 
   return appJsonResponse(req, 200, body);

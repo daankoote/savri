@@ -1,6 +1,12 @@
-import { isTerminalBootstrapBindingError, safeAuthError } from "./authErrorMapping.ts";
+import {
+  isTerminalBootstrapBindingError,
+  safeAuthError,
+} from "./authErrorMapping.ts";
 import type { AuthSafeErrorCode } from "./authTypes.ts";
-import { clearDashboardReadCache, loadDashboardReadOnce } from "../dashboard/dashboardReadCache.ts";
+import {
+  clearDashboardReadCache,
+  loadDashboardReadOnce,
+} from "../dashboard/dashboardReadCache.ts";
 import type { DashboardReadModel } from "../dashboard/dashboardTypes.ts";
 
 export type AuthSessionCleanupProofResult = {
@@ -18,18 +24,38 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 function makeModel(dossierId: string): DashboardReadModel {
+  const caseId = "20000000-0000-4000-8000-000000000001";
+  const caseReference = "CASE-10000000-0000-4000-8000-000000000001";
   return {
     chargers: [],
     document_slots: [],
-    dossiers: [{ account_type: "particulier", dossier_id: dossierId, dossier_number: "proof", status: "submitted", document_changes_allowed: true }],
+    dossiers: [{
+      account_type: "particulier",
+      case_id: caseId,
+      case_reference: caseReference,
+      dossier_id: dossierId,
+      dossier_number: "proof",
+      status: "submitted",
+      document_changes_allowed: true,
+    }],
     legal_acceptances: [],
     locations: [],
     request_id: "proof-request",
-    selected_dossier: { account_type: "particulier", dossier_id: dossierId, dossier_number: "proof", status: "submitted", document_changes_allowed: true },
+    selected_dossier: {
+      account_type: "particulier",
+      case_id: caseId,
+      case_reference: caseReference,
+      dossier_id: dossierId,
+      dossier_number: "proof",
+      status: "submitted",
+      document_changes_allowed: true,
+    },
   };
 }
 
-export async function runAuthSessionCleanupProof(): Promise<AuthSessionCleanupProofResult> {
+export async function runAuthSessionCleanupProof(): Promise<
+  AuthSessionCleanupProofResult
+> {
   const terminalCodes: AuthSafeErrorCode[] = [
     "customer_identity_not_found",
     "customer_identity_already_bound",
@@ -53,11 +79,17 @@ export async function runAuthSessionCleanupProof(): Promise<AuthSessionCleanupPr
   }
 
   for (const code of retryableCodes) {
-    assert(!isTerminalBootstrapBindingError(code), `${code} must not be terminal bootstrap`);
+    assert(
+      !isTerminalBootstrapBindingError(code),
+      `${code} must not be terminal bootstrap`,
+    );
   }
 
   const returnedError = safeAuthError("customer_identity_not_found");
-  assert(returnedError.message.includes("ENVAL-aanmelding"), "current attempt must keep safe terminal message available");
+  assert(
+    returnedError.message.includes("ENVAL-aanmelding"),
+    "current attempt must keep safe terminal message available",
+  );
 
   let fetchCount = 0;
   const getFetchCount = () => fetchCount;
@@ -88,7 +120,10 @@ export async function runAuthSessionCleanupProof(): Promise<AuthSessionCleanupPr
     dossierId: "proof-dossier",
     fetcher,
   });
-  assert(getFetchCount() === 2, "explicit logout clear must remove dashboard cache");
+  assert(
+    getFetchCount() === 2,
+    "explicit logout clear must remove dashboard cache",
+  );
 
   return {
     ok: true,

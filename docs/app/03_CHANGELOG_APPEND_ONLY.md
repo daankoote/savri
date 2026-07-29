@@ -901,3 +901,14 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Recorded decisions 01 through 18 as not approved and kept connected-party conflict policy, custody/recovery ownership, real pilot targets and every later execution gate open.
 - WP3N remains `CURRENT PROVEN — LOCAL ONLY`; bootstrap, population, assignment/revocation authority and operations UI remain `NOT IMPLEMENTED`; remote apply, deploy and cutover remain open.
 - This batch changed no schema, migration, RPC, proof, operator script, SQL/database state, workforce population, Edge Function, runtime helper, frontend, CSS, package/config, staging, commit, push, deploy or remote state.
+
+## 2026-07-29 — Prove PILOT-CASE-01 authenticated dossier case activation
+
+- Added `app_bootstrap_customer_auth_v2`, reusing v1 atomically, plus the unique `app_customer_dossier` source invariant and deterministic full-UUID `CASE-...` reference.
+- Wired strict safe case fields through Auth bootstrap, one bounded write-free dashboard bulkread, frontend clients/types and the existing `Zaakreferentie` info row; no CSS, fallback case or visible case ID was added.
+- Recorded migration/proof hashes `66f0a8a494426f70e3673134c2f29664155ff83344385749779aa6d6d26adc30` and `875c5bae5c72257e9a2f92ac0aa681c68f5d6cad50bbf7b4e3be22d1963cae70`; v1 fingerprint remains `690b68a752ac64b988bb69442dc8d20e`.
+- `PILOT-CASE-01-Q01` through Q32 and marker `authenticated-dossier-case-activation-proof-ok` are green, including one fresh disposable apply, true process concurrency, rollback and cleanup.
+- The fixed local migration was already present; its earlier apply count is UNKNOWN and not evidence. Real local `app_cases` and `app_case_party_roles` remained 0.
+- Frontend build and targeted frontend proofs are green. Browser-live proof remains OPEN; no remote, production, party, authority, EAN, location, evidence, kWh, workforce or regulatory claim is made.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

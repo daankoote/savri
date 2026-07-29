@@ -15,6 +15,8 @@ export type AuthDossierSummary = {
   dossier_number: string;
   account_type: "particulier" | "zakelijk" | "vve";
   status: string;
+  case_id: string;
+  case_reference: string;
 };
 
 export type AuthBootstrapSummary = {
@@ -58,8 +60,15 @@ export type AuthContextValue = {
   session: Session | null;
   summary: AuthBootstrapSummary | null;
   error: AuthSafeError | null;
-  signUpWithPassword: (email: string, password: string, passwordConfirmation: string) => Promise<AuthActionResult>;
-  signInWithPassword: (email: string, password: string) => Promise<AuthActionResult>;
+  signUpWithPassword: (
+    email: string,
+    password: string,
+    passwordConfirmation: string,
+  ) => Promise<AuthActionResult>;
+  signInWithPassword: (
+    email: string,
+    password: string,
+  ) => Promise<AuthActionResult>;
   retryBootstrap: () => Promise<AuthActionResult>;
   signOut: () => Promise<void>;
 };

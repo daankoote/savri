@@ -34,6 +34,11 @@ type DashboardReadConfig = {
 
 type UnknownRecord = Record<string, unknown>;
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const CASE_REFERENCE_RE =
+  /^CASE-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
 function isRecord(value: unknown): value is UnknownRecord {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
@@ -42,40 +47,57 @@ function stringField(record: UnknownRecord, key: string): string {
   return typeof record[key] === "string" ? record[key].trim() : "";
 }
 
-function nullableStringField(record: UnknownRecord, key: string): string | null {
+function nullableStringField(
+  record: UnknownRecord,
+  key: string,
+): string | null {
   const value = stringField(record, key);
   return value || null;
 }
 
 function numberField(record: UnknownRecord, key: string): number | null {
-  return typeof record[key] === "number" && Number.isFinite(record[key]) ? record[key] : null;
+  return typeof record[key] === "number" && Number.isFinite(record[key])
+    ? record[key]
+    : null;
 }
 
 function booleanField(record: UnknownRecord, key: string): boolean {
   return record[key] === true;
 }
 
+function isUuid(value: string): boolean {
+  return UUID_RE.test(value);
+}
+
 function isAccountType(value: string): value is DashboardAccountType {
   return value === "particulier" || value === "zakelijk" || value === "vve";
 }
 
-function safeDashboardError(code: DashboardReadErrorCode): DashboardReadSafeError {
+function safeDashboardError(
+  code: DashboardReadErrorCode,
+): DashboardReadSafeError {
   const messages: Record<DashboardReadErrorCode, string> = {
     dossier_inaccessible: "Dit dossier is niet beschikbaar voor dit account.",
-    invalid_response: "De dossiergegevens konden tijdelijk niet worden geladen. Probeer het opnieuw.",
+    invalid_response:
+      "De dossiergegevens konden tijdelijk niet worden geladen. Probeer het opnieuw.",
     not_configured: "Dashboard is lokaal nog niet geconfigureerd.",
-    service_unavailable: "De dossiergegevens konden tijdelijk niet worden geladen. Probeer het opnieuw.",
+    service_unavailable:
+      "De dossiergegevens konden tijdelijk niet worden geladen. Probeer het opnieuw.",
   };
 
   return { code, message: messages[code] };
 }
 
 function mapDashboardErrorCode(code: string): DashboardReadSafeError {
-  if (code === "dossier_not_found_or_forbidden" || code === "dossier_not_found") {
+  if (
+    code === "dossier_not_found_or_forbidden" || code === "dossier_not_found"
+  ) {
     return safeDashboardError("dossier_inaccessible");
   }
 
-  if (code === "service_unavailable") return safeDashboardError("service_unavailable");
+  if (code === "service_unavailable") {
+    return safeDashboardError("service_unavailable");
+  }
 
   return safeDashboardError("invalid_response");
 }
@@ -86,8 +108,17 @@ function parseDossier(value: unknown): DashboardDossierSummary | null {
   if (!isAccountType(accountType)) return null;
 
   const dossierId = stringField(value, "dossier_id");
+  const caseId = stringField(value, "case_id");
+  const caseReference = stringField(value, "case_reference");
   const status = stringField(value, "status");
-  if (!dossierId || !status) return null;
+  if (
+    !isUuid(dossierId) ||
+    !isUuid(caseId) ||
+    !CASE_REFERENCE_RE.test(caseReference) ||
+    !status
+  ) {
+    return null;
+  }
 
   return {
     dossier_id: dossierId,
@@ -95,6 +126,8 @@ function parseDossier(value: unknown): DashboardDossierSummary | null {
     account_type: accountType,
     status,
     document_changes_allowed: booleanField(value, "document_changes_allowed"),
+    case_id: caseId,
+    case_reference: caseReference,
   };
 }
 
@@ -113,7 +146,9 @@ function parseLocation(value: unknown): DashboardLocation | null {
   const postcode = stringField(value.address, "postcode");
   const houseNumber = stringField(value.address, "house_number");
   const country = stringField(value.address, "country");
-  if (!locationId || !status || !postcode || !houseNumber || !country) return null;
+  if (!locationId || !status || !postcode || !houseNumber || !country) {
+    return null;
+  }
 
   return {
     location_id: locationId,
@@ -137,7 +172,9 @@ function parseCharger(value: unknown): DashboardCharger | null {
   const status = stringField(value, "status");
   const midNumber = stringField(value, "mid_number");
   const midStatus = stringField(value, "mid_status");
-  if (!chargerId || !locationId || !status || !midNumber || !midStatus) return null;
+  if (!chargerId || !locationId || !status || !midNumber || !midStatus) {
+    return null;
+  }
 
   return {
     charger_id: chargerId,
@@ -191,7 +228,10 @@ function parseLegalAcceptance(value: unknown): DashboardLegalAcceptance | null {
   };
 }
 
-function parseArray<T>(value: unknown, parser: (item: unknown) => T | null): T[] | null {
+function parseArray<T>(
+  value: unknown,
+  parser: (item: unknown) => T | null,
+): T[] | null {
   if (!Array.isArray(value)) return null;
   const parsed = value.map(parser);
   if (parsed.some((item) => !item)) return null;
@@ -199,7 +239,9 @@ function parseArray<T>(value: unknown, parser: (item: unknown) => T | null): T[]
 }
 
 function validateDashboardBody(body: unknown): DashboardReadResult {
-  if (!isRecord(body) || body.ok !== true || body.mode !== "dashboard_read_v1") {
+  if (
+    !isRecord(body) || body.ok !== true || body.mode !== "dashboard_read_v1"
+  ) {
     return { ok: false, error: safeDashboardError("invalid_response") };
   }
 
@@ -208,10 +250,16 @@ function validateDashboardBody(body: unknown): DashboardReadResult {
   const locations = parseArray(body.locations, parseLocation);
   const chargers = parseArray(body.chargers, parseCharger);
   const documentSlots = parseArray(body.document_slots, parseDocumentSlot);
-  const legalAcceptances = parseArray(body.legal_acceptances, parseLegalAcceptance);
+  const legalAcceptances = parseArray(
+    body.legal_acceptances,
+    parseLegalAcceptance,
+  );
   const requestId = stringField(body, "request_id");
 
-  if (!dossiers || !selectedDossier || !locations || !chargers || !documentSlots || !legalAcceptances || !requestId) {
+  if (
+    !dossiers || !selectedDossier || !locations || !chargers ||
+    !documentSlots || !legalAcceptances || !requestId
+  ) {
     return { ok: false, error: safeDashboardError("invalid_response") };
   }
 
@@ -229,7 +277,11 @@ function validateDashboardBody(body: unknown): DashboardReadResult {
   };
 }
 
-async function parseJsonResponse(response: Response): Promise<{ ok: true; body: unknown } | { ok: false; error: DashboardReadSafeError }> {
+async function parseJsonResponse(
+  response: Response,
+): Promise<
+  { ok: true; body: unknown } | { ok: false; error: DashboardReadSafeError }
+> {
   try {
     return { ok: true, body: await response.json() };
   } catch (_error) {
@@ -251,11 +303,15 @@ export async function fetchDashboardReadModel({
       dashboardEndpointUrl: runtimeConfig.dashboardEndpointUrl,
     }
     : resolveAuthRuntimeConfig();
-  if (!runtime.ok) return { ok: false, error: safeDashboardError("not_configured") };
+  if (!runtime.ok) {
+    return { ok: false, error: safeDashboardError("not_configured") };
+  }
 
   const bearerToken = accessToken.trim();
   const selectedDossierId = dossierId.trim();
-  if (!bearerToken || !selectedDossierId) return { ok: false, error: safeDashboardError("invalid_response") };
+  if (!bearerToken || !selectedDossierId) {
+    return { ok: false, error: safeDashboardError("invalid_response") };
+  }
 
   let response: Response;
   try {
@@ -277,11 +333,17 @@ export async function fetchDashboardReadModel({
   }
 
   const parsed = await parseJsonResponse(response);
-  if (!parsed.ok) return { ok: false, error: parsed.error, status: response.status };
+  if (!parsed.ok) {
+    return { ok: false, error: parsed.error, status: response.status };
+  }
 
   if (!response.ok) {
     const code = isRecord(parsed.body) ? stringField(parsed.body, "code") : "";
-    return { ok: false, error: mapDashboardErrorCode(code), status: response.status };
+    return {
+      ok: false,
+      error: mapDashboardErrorCode(code),
+      status: response.status,
+    };
   }
 
   return validateDashboardBody(parsed.body);

@@ -16,12 +16,10 @@ import {
   appJsonResponse,
   appOptionsResponse,
   getAppRequestMeta,
-  insertAppAuditFailOpen,
 } from "../_shared/app_foundation.ts";
 import {
   requireAppCustomer,
   requireAppDossierAccess,
-  type AppCustomerAuthContext,
 } from "../_shared/app_customer_auth.ts";
 
 type DashboardPayload = {
@@ -35,6 +33,14 @@ type DossierRow = {
   status?: string | null;
   locked_at?: string | null;
   created_at?: string | null;
+};
+
+type CaseRow = {
+  id?: string;
+  customer_id?: string | null;
+  case_reference?: string | null;
+  source_class?: string | null;
+  source_ref?: string | null;
 };
 
 type LocationRow = {
@@ -115,6 +121,8 @@ type SafeDossier = {
   account_type: "particulier" | "zakelijk" | "vve";
   status: string;
   document_changes_allowed: boolean;
+  case_id: string;
+  case_reference: string;
 };
 
 type SafeSelectedDossier = SafeDossier;
@@ -191,9 +199,14 @@ type NormalizationError = {
 };
 
 const MODE = "dashboard_read_v1";
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ACCOUNT_TYPES = new Set(["particulier", "zakelijk", "vve"]);
-const DOCUMENT_CHANGE_ALLOWED_DOSSIER_STATUSES = new Set(["draft", "submitted", "needs_customer_action"]);
+const DOCUMENT_CHANGE_ALLOWED_DOSSIER_STATUSES = new Set([
+  "draft",
+  "submitted",
+  "needs_customer_action",
+]);
 
 function appSupabaseClient() {
   const url = Deno.env.get("SUPABASE_URL");
@@ -229,7 +242,8 @@ function safeDossierNumber(value: unknown): string | null {
 
 function documentChangesAllowed(row: DossierRow): boolean {
   const status = getString(row.status);
-  return !getString(row.locked_at) && DOCUMENT_CHANGE_ALLOWED_DOSSIER_STATUSES.has(status);
+  return !getString(row.locked_at) &&
+    DOCUMENT_CHANGE_ALLOWED_DOSSIER_STATUSES.has(status);
 }
 
 async function parseJsonBody(
@@ -244,7 +258,9 @@ async function parseJsonBody(
   }
 }
 
-function normalizePayload(body: DashboardPayload): { ok: true; payload: NormalizedPayload } | NormalizationError {
+function normalizePayload(
+  body: DashboardPayload,
+): { ok: true; payload: NormalizedPayload } | NormalizationError {
   const keys = Object.keys(body);
   if (keys.length !== 1 || !keys.includes("dossier_id")) {
     return {
@@ -268,36 +284,29 @@ function normalizePayload(body: DashboardPayload): { ok: true; payload: Normaliz
   return { ok: true, payload: { dossier_id: dossierId } };
 }
 
-async function auditScopedReject(
-  SB: any,
-  meta: Awaited<ReturnType<typeof getAppRequestMeta>>,
-  authContext: AppCustomerAuthContext | null,
-  dossierId: string | null,
-  reason: string,
-  stage: string,
-) {
-  if (!authContext) return;
-
-  await insertAppAuditFailOpen(SB, {
-    event_type: "dashboard_read_rejected",
-    scope_type: dossierId ? "dossier" : "customer",
-    scope_id: dossierId,
-    customer_id: authContext.customerId,
-    dossier_id: dossierId,
-    actor_type: "customer",
-    actor_ref: authContext.actorRef,
-    event_data: {
-      stage,
-      reason,
-    },
-  }, meta);
-}
-
-function mapDossier(row: DossierRow): SafeDossier | null {
+function mapDossier(
+  row: DossierRow,
+  casesByDossierId: Map<string, CaseRow[]>,
+): SafeDossier | null {
   const id = getString(row.id);
   const accountType = getString(row.account_type);
   const status = getString(row.status);
   if (!isUuid(id) || !ACCOUNT_TYPES.has(accountType) || !status) return null;
+
+  const caseRows = casesByDossierId.get(id) ?? [];
+  if (caseRows.length !== 1) return null;
+
+  const caseRow = caseRows[0];
+  const caseId = getString(caseRow.id);
+  const caseReference = getString(caseRow.case_reference);
+  if (
+    !isUuid(caseId) ||
+    getString(caseRow.source_class) !== "app_customer_dossier" ||
+    getString(caseRow.source_ref) !== id ||
+    caseReference !== `CASE-${id}`
+  ) {
+    return null;
+  }
 
   return {
     dossier_id: id,
@@ -305,6 +314,8 @@ function mapDossier(row: DossierRow): SafeDossier | null {
     account_type: accountType as SafeDossier["account_type"],
     status,
     document_changes_allowed: documentChangesAllowed(row),
+    case_id: caseId,
+    case_reference: caseReference,
   };
 }
 
@@ -345,7 +356,9 @@ function mapCharger(row: ChargerRow): SafeCharger | null {
   const status = getString(row.status);
   const midNumber = getString(row.mid_number);
   const midStatus = getString(row.mid_status);
-  if (!isUuid(id) || !isUuid(locationId) || !status || !midNumber || !midStatus) return null;
+  if (
+    !isUuid(id) || !isUuid(locationId) || !status || !midNumber || !midStatus
+  ) return null;
 
   return {
     charger_id: id,
@@ -356,13 +369,22 @@ function mapCharger(row: ChargerRow): SafeCharger | null {
     serial_number: nullString(row.serial_number),
     mid_number: midNumber,
     mid_status: midStatus,
-    installation_year: Number.isInteger(row.installation_year) ? Number(row.installation_year) : null,
-    backend_supplier: firstLabel(row.manual_backend_supplier, row.backend_supplier_label, row.backend_supplier_id),
+    installation_year: Number.isInteger(row.installation_year)
+      ? Number(row.installation_year)
+      : null,
+    backend_supplier: firstLabel(
+      row.manual_backend_supplier,
+      row.backend_supplier_label,
+      row.backend_supplier_id,
+    ),
     solar_export_status: nullString(row.solar_export_status),
   };
 }
 
-function mapDocumentSlot(row: DocumentSlotRow, fileNamesByVersionId: Map<string, string>): SafeDocumentSlot | null {
+function mapDocumentSlot(
+  row: DocumentSlotRow,
+  fileNamesByVersionId: Map<string, string>,
+): SafeDocumentSlot | null {
   const id = getString(row.id);
   const documentType = getString(row.document_type);
   const status = getString(row.status);
@@ -379,12 +401,18 @@ function mapDocumentSlot(row: DocumentSlotRow, fileNamesByVersionId: Map<string,
     required: row.required === true,
     title,
     status,
-    current_version_number: Number.isInteger(row.current_version_number) ? Number(row.current_version_number) : null,
-    current_file_name: currentVersionId ? fileNamesByVersionId.get(currentVersionId) || null : null,
+    current_version_number: Number.isInteger(row.current_version_number)
+      ? Number(row.current_version_number)
+      : null,
+    current_file_name: currentVersionId
+      ? fileNamesByVersionId.get(currentVersionId) || null
+      : null,
   };
 }
 
-function mapLegalAcceptance(row: LegalAcceptanceRow): SafeLegalAcceptance | null {
+function mapLegalAcceptance(
+  row: LegalAcceptanceRow,
+): SafeLegalAcceptance | null {
   const acceptanceType = getString(row.acceptance_type);
   const version = getString(row.version_ref);
   const status = getString(row.status);
@@ -419,7 +447,8 @@ async function loadCurrentFileNamesByVersionId(
 
   if (versionError) throw new Error("version_read_failed");
 
-  const versionRows = (Array.isArray(versions) ? versions : []) as DocumentVersionRow[];
+  const versionRows =
+    (Array.isArray(versions) ? versions : []) as DocumentVersionRow[];
   const fileIds = versionRows
     .map((version) => getString(version.document_file_id))
     .filter((id) => isUuid(id));
@@ -438,7 +467,10 @@ async function loadCurrentFileNamesByVersionId(
   const fileNamesByFileId = new Map<string, string>();
   for (const file of fileRows) {
     const fileId = getString(file.id);
-    const fileName = firstLabel(file.original_file_name, file.normalized_file_name);
+    const fileName = firstLabel(
+      file.original_file_name,
+      file.normalized_file_name,
+    );
     if (isUuid(fileId) && fileName) fileNamesByFileId.set(fileId, fileName);
   }
 
@@ -447,7 +479,9 @@ async function loadCurrentFileNamesByVersionId(
     const versionId = getString(version.id);
     const fileId = getString(version.document_file_id);
     const fileName = fileNamesByFileId.get(fileId);
-    if (isUuid(versionId) && fileName) fileNamesByVersionId.set(versionId, fileName);
+    if (isUuid(versionId) && fileName) {
+      fileNamesByVersionId.set(versionId, fileName);
+    }
   }
 
   return fileNamesByVersionId;
@@ -458,35 +492,47 @@ async function loadDashboardReadModel(
   customerId: string,
   dossierId: string,
 ): Promise<Omit<DashboardResponse, "ok" | "mode" | "request_id">> {
-  const dossierSelect = "id,dossier_number,account_type,status,locked_at,created_at";
+  const dossierSelect =
+    "id,dossier_number,account_type,status,locked_at,created_at";
 
   const allDossiersPromise = SB
     .from("app_customer_dossiers")
     .select(dossierSelect)
     .eq("customer_id", customerId)
+    .is("minimized_at", null)
+    .neq("status", "expired_minimized")
     .order("created_at", { ascending: false });
 
   const selectedDossierPromise = SB
     .from("app_customer_dossiers")
     .select(dossierSelect)
     .eq("id", dossierId)
+    .eq("customer_id", customerId)
+    .is("minimized_at", null)
+    .neq("status", "expired_minimized")
     .maybeSingle();
 
   const locationsPromise = SB
     .from("app_dossier_locations")
-    .select("id,client_location_id,label,status,postcode_normalized,house_number,suffix_normalized,street,city,country,created_at")
+    .select(
+      "id,client_location_id,label,status,postcode_normalized,house_number,suffix_normalized,street,city,country,created_at",
+    )
     .eq("dossier_id", dossierId)
     .order("created_at", { ascending: true });
 
   const chargersPromise = SB
     .from("app_dossier_chargers")
-    .select("id,location_id,client_charger_id,status,brand_id,brand_label,manual_brand,model_id,model_label,manual_model,serial_number,mid_number,mid_status,backend_supplier_id,backend_supplier_label,manual_backend_supplier,installation_year,solar_export_status,created_at")
+    .select(
+      "id,location_id,client_charger_id,status,brand_id,brand_label,manual_brand,model_id,model_label,manual_model,serial_number,mid_number,mid_status,backend_supplier_id,backend_supplier_label,manual_backend_supplier,installation_year,solar_export_status,created_at",
+    )
     .eq("dossier_id", dossierId)
     .order("created_at", { ascending: true });
 
   const slotsPromise = SB
     .from("app_dossier_document_slots")
-    .select("id,location_id,charger_id,document_type,status,required,title,current_version_id,current_version_number,created_at")
+    .select(
+      "id,location_id,charger_id,document_type,status,required,title,current_version_id,current_version_number,created_at",
+    )
     .eq("dossier_id", dossierId)
     .order("created_at", { ascending: true });
 
@@ -496,6 +542,12 @@ async function loadDashboardReadModel(
     .eq("dossier_id", dossierId)
     .order("created_at", { ascending: true });
 
+  const casesPromise = SB
+    .from("app_cases")
+    .select("id,customer_id,case_reference,source_class,source_ref")
+    .eq("customer_id", customerId)
+    .eq("source_class", "app_customer_dossier");
+
   const [
     allDossiersResult,
     selectedDossierResult,
@@ -503,6 +555,7 @@ async function loadDashboardReadModel(
     chargersResult,
     slotsResult,
     acceptancesResult,
+    casesResult,
   ] = await Promise.all([
     allDossiersPromise,
     selectedDossierPromise,
@@ -510,33 +563,95 @@ async function loadDashboardReadModel(
     chargersPromise,
     slotsPromise,
     acceptancesPromise,
+    casesPromise,
   ]);
 
-  if (allDossiersResult.error || selectedDossierResult.error || locationsResult.error || chargersResult.error || slotsResult.error || acceptancesResult.error) {
+  if (
+    allDossiersResult.error ||
+    selectedDossierResult.error ||
+    locationsResult.error ||
+    chargersResult.error ||
+    slotsResult.error ||
+    acceptancesResult.error ||
+    casesResult.error
+  ) {
     throw new Error("dashboard_read_failed");
   }
 
-  const dossiers = ((Array.isArray(allDossiersResult.data) ? allDossiersResult.data : []) as DossierRow[])
-    .map(mapDossier)
-    .filter((row): row is SafeDossier => !!row);
+  const casesByDossierId = new Map<string, CaseRow[]>();
+  for (
+    const caseRow
+      of (Array.isArray(casesResult.data) ? casesResult.data : []) as CaseRow[]
+  ) {
+    const sourceRef = getString(caseRow.source_ref);
+    const caseCustomerId = getString(caseRow.customer_id);
+    if (!isUuid(sourceRef) || caseCustomerId !== customerId) {
+      throw new Error("case_projection_failed");
+    }
+    const rows = casesByDossierId.get(sourceRef) ?? [];
+    rows.push(caseRow);
+    casesByDossierId.set(sourceRef, rows);
+  }
 
-  const selectedDossier = mapDossier((selectedDossierResult.data || {}) as DossierRow);
+  const dossierRows =
+    (Array.isArray(allDossiersResult.data)
+      ? allDossiersResult.data
+      : []) as DossierRow[];
+  const dossiers =
+    ((Array.isArray(allDossiersResult.data)
+      ? allDossiersResult.data
+      : []) as DossierRow[])
+      .map((row) => mapDossier(row, casesByDossierId))
+      .filter((row): row is SafeDossier => !!row);
+
+  if (dossiers.length !== dossierRows.length) {
+    throw new Error("case_projection_failed");
+  }
+
+  const selectedDossier = mapDossier(
+    (selectedDossierResult.data || {}) as DossierRow,
+    casesByDossierId,
+  );
   if (!selectedDossier) throw new Error("selected_dossier_projection_failed");
 
-  const locationRows = (Array.isArray(locationsResult.data) ? locationsResult.data : []) as LocationRow[];
-  const chargerRows = (Array.isArray(chargersResult.data) ? chargersResult.data : []) as ChargerRow[];
-  const slotRows = (Array.isArray(slotsResult.data) ? slotsResult.data : []) as DocumentSlotRow[];
-  const acceptanceRows = (Array.isArray(acceptancesResult.data) ? acceptancesResult.data : []) as LegalAcceptanceRow[];
+  const locationRows =
+    (Array.isArray(locationsResult.data)
+      ? locationsResult.data
+      : []) as LocationRow[];
+  const chargerRows =
+    (Array.isArray(chargersResult.data)
+      ? chargersResult.data
+      : []) as ChargerRow[];
+  const slotRows =
+    (Array.isArray(slotsResult.data)
+      ? slotsResult.data
+      : []) as DocumentSlotRow[];
+  const acceptanceRows =
+    (Array.isArray(acceptancesResult.data)
+      ? acceptancesResult.data
+      : []) as LegalAcceptanceRow[];
 
-  const fileNamesByVersionId = await loadCurrentFileNamesByVersionId(SB, dossierId, slotRows);
+  const fileNamesByVersionId = await loadCurrentFileNamesByVersionId(
+    SB,
+    dossierId,
+    slotRows,
+  );
 
   return {
     dossiers,
     selected_dossier: selectedDossier,
-    locations: locationRows.map(mapLocation).filter((row): row is SafeLocation => !!row),
-    chargers: chargerRows.map(mapCharger).filter((row): row is SafeCharger => !!row),
-    document_slots: slotRows.map((row) => mapDocumentSlot(row, fileNamesByVersionId)).filter((row): row is SafeDocumentSlot => !!row),
-    legal_acceptances: acceptanceRows.map(mapLegalAcceptance).filter((row): row is SafeLegalAcceptance => !!row),
+    locations: locationRows.map(mapLocation).filter((
+      row,
+    ): row is SafeLocation => !!row),
+    chargers: chargerRows.map(mapCharger).filter((row): row is SafeCharger =>
+      !!row
+    ),
+    document_slots: slotRows.map((row) =>
+      mapDocumentSlot(row, fileNamesByVersionId)
+    ).filter((row): row is SafeDocumentSlot => !!row),
+    legal_acceptances: acceptanceRows.map(mapLegalAcceptance).filter((
+      row,
+    ): row is SafeLegalAcceptance => !!row),
   };
 }
 
@@ -546,40 +661,66 @@ serve(async (req) => {
   const meta = await getAppRequestMeta(req);
 
   if (req.method !== "POST") {
-    return appErrorResponse(req, 405, "Methode niet toegestaan.", "method_not_allowed");
+    return appErrorResponse(
+      req,
+      405,
+      "Methode niet toegestaan.",
+      "method_not_allowed",
+    );
   }
 
   const parsed = await parseJsonBody(req);
   if (!parsed.ok) {
-    return appErrorResponse(req, 400, "Controleer de aanvraag.", "invalid_json");
+    return appErrorResponse(
+      req,
+      400,
+      "Controleer de aanvraag.",
+      "invalid_json",
+    );
   }
 
   const normalized = normalizePayload(parsed.body);
   if (!normalized.ok) {
-    return appErrorResponse(req, normalized.status, normalized.message, normalized.code);
+    return appErrorResponse(
+      req,
+      normalized.status,
+      normalized.message,
+      normalized.code,
+    );
   }
 
   const SB = appSupabaseClient();
   if (!SB) {
-    return appErrorResponse(req, 503, "Dashboard is tijdelijk niet beschikbaar.", "service_unavailable");
+    return appErrorResponse(
+      req,
+      503,
+      "Dashboard is tijdelijk niet beschikbaar.",
+      "service_unavailable",
+    );
   }
 
   const authResult = await requireAppCustomer(req, SB);
   if (!authResult.ok) {
-    return appErrorResponse(req, authResult.status, authResult.message, authResult.code);
+    return appErrorResponse(
+      req,
+      authResult.status,
+      authResult.message,
+      authResult.code,
+    );
   }
 
-  const accessResult = await requireAppDossierAccess(SB, authResult.context, normalized.payload.dossier_id);
+  const accessResult = await requireAppDossierAccess(
+    SB,
+    authResult.context,
+    normalized.payload.dossier_id,
+  );
   if (!accessResult.ok) {
-    await auditScopedReject(
-      SB,
-      meta,
-      authResult.context,
-      normalized.payload.dossier_id,
+    return appErrorResponse(
+      req,
+      accessResult.status,
+      accessResult.message,
       accessResult.code,
-      "dossier_access",
     );
-    return appErrorResponse(req, accessResult.status, accessResult.message, accessResult.code);
   }
 
   try {
@@ -598,14 +739,11 @@ serve(async (req) => {
 
     return appJsonResponse(req, 200, response);
   } catch (_error) {
-    await auditScopedReject(
-      SB,
-      meta,
-      authResult.context,
-      accessResult.dossier.dossierId,
-      "dashboard_read_failed",
-      "read_model",
+    return appErrorResponse(
+      req,
+      503,
+      "Dashboard is tijdelijk niet beschikbaar.",
+      "service_unavailable",
     );
-    return appErrorResponse(req, 503, "Dashboard is tijdelijk niet beschikbaar.", "service_unavailable");
   }
 });

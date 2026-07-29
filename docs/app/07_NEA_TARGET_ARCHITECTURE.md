@@ -798,3 +798,23 @@ Rationale:
 - Existing `app_customer_dossiers` mixes lifecycle meanings and should not become the final state source for all NEa domains.
 - Legacy `dossier_*`, `dossier_sessions`, `api-dossier-*`, lead/contact/mail, legacy analysis, and legacy retention should be treated as migration/fallback/export source material only.
 - Electricity TKV verification detail is mapped into modular boundaries. The architecture direction is approved as TARGET, while implementation, regulatory completeness, and external/legal dependencies remain separately gated.
+## PILOT-CASE-01 Current Local Case Activation
+
+CURRENT PROVEN — LOCAL ONLY: `app_bootstrap_customer_auth_v2` composes the
+existing verified customer Auth v1 boundary and activates one immutable
+`app_cases` root per current eligible dossier in the same transaction.
+Canonical provenance is `app_customer_dossier` plus dossier UUID text; the
+reference is `CASE-<full dossier UUID>`. A partial unique source index,
+per-source advisory lock, fail-closed audit and shared idempotency enforce the
+invariant.
+
+Auth-bootstrap and the write-free dashboard expose only `case_id` and
+`case_reference` inside safe dossier projections. Dashboard loading is one
+customer-bounded case bulkread. The browser validates fields, derives no case
+truth and displays only `case_reference`.
+
+This is a navigation/root linkage, not party, authority, EAN, location,
+evidence, kWh, eligibility or regulatory truth. Browser-live, remote and
+production remain OPEN.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

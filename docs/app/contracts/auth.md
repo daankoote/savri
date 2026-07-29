@@ -856,3 +856,24 @@ hardcoded Auth ID, bootstrap identity, seeded admin or self-enrollment exists.
 The real seven-table local workforce foundation remains empty.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+## PILOT-CASE-01 Auth Bootstrap V2
+
+CURRENT PROVEN — LOCAL ONLY.
+
+`api-app-auth-bootstrap` now calls service-role-only
+`app_bootstrap_customer_auth_v2`. V2 calls the unchanged v1 binding RPC inside
+the same transaction, then creates or resolves exactly one immutable case for
+each bound customer's current dossier where `minimized_at is null` and
+`status <> 'expired_minimized'`. Case/audit failure rolls back the binding and
+success idempotency.
+
+Each safe dossier summary adds strict `case_id` and deterministic
+`case_reference`; source and audit metadata remain internal. The client
+validates both fields and constructs no fallback. The v1 function remains
+present and fingerprint-unchanged.
+
+The case proves no party identity, case role, representation, authority,
+mandate or workforce authorization. Browser-live, remote and production
+proof remain OPEN.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

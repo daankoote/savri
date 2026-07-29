@@ -459,3 +459,13 @@ Local proof is not production proof. Remote migration/function deploy, productio
 - Do not use legacy `dossier_sessions` as app auth.
 - Do not treat a particulier-only mock as a global account-type rule.
 - Do not expose raw audit rows directly to customers.
+## PILOT-CASE-01 checkpoint — 2026-07-29
+
+- [x] CURRENT PROVEN — LOCAL ONLY: verified Auth bootstrap v2 atomically creates/resolves one canonical immutable case per active non-minimized customer dossier and returns safe case fields.
+- [x] CURRENT PROVEN — LOCAL ONLY: dashboard case projection is customer-bounded, one bulkread, write-free, strict and shown through the existing `Zaakreferentie` row without CSS or fallback.
+- [x] Q01-Q32, one fresh disposable apply, real concurrency, rollback, cleanup, targeted frontend proofs and production build are green; real local case/party-role counts remain 0.
+- [ ] OPEN: browser-live protected-route integration with non-mutating intercepted responses.
+- [ ] OPEN: remote apply/deploy/production proof.
+- [ ] OPEN and separate: party identity/roles, representation authority, mandate, location acceptance, EAN/aangeslotene, evidence, kWh, eligibility and NEa acceptance.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

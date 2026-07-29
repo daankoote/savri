@@ -688,3 +688,24 @@ acceptance or verifier authority. Bootstrap, population and
 assignment/revocation authority remain not implemented.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+## PILOT-CASE-01 Canonical Dossier Case Root
+
+CURRENT PROVEN — LOCAL ONLY.
+
+Every verified customer's current active/non-minimized dossier is now
+activated to at most one immutable `app_cases` row using exact source
+`app_customer_dossier` and the dossier UUID stored as text. The canonical
+reference is `CASE-<full dossier UUID>`. A partial unique source index and
+deterministic advisory lock make create-or-resolve concurrency safe; valid
+existing truth is reused and conflict fails closed.
+
+No `app_case_party_roles` row is created. This root proves only that ENVAL has
+one canonical case linked to one current customer dossier. It does not prove
+party identity, service recipient, case contact, representation authority,
+mandate, EAN/aangeslotene, ownership, location acceptance, evidence, kWh,
+eligibility or NEa acceptance.
+
+PILOT-CASE-01 Q01-Q32 are green; real local cases and party roles remain
+empty. Browser-live, remote and production remain OPEN.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
