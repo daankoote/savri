@@ -156,6 +156,31 @@ production export or a retention schedule.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+## WP3O Proposed Genesis And Workforce Governance Audit Boundary
+
+Status: DRAFT / DECISION REQUIRED / NOT IMPLEMENTED.
+
+Genesis evidence and structural governance evidence remain different event
+families. A proposed one-time genesis transaction correlates canonical
+manifest hash, request/idempotency reference, opaque executor/checker custody,
+artifact/environment references, aggregate pre/post state and controlled
+result. Later governance correlates immutable request/review/execution,
+opaque maker/checker, exact authority basis, affected identity/capability/scope
+and before/after state.
+
+Success audit is fail closed in the same transaction. Safe controlled rejects
+are auditable without exposing existence. `insertAppAuditFailOpen()` is not
+reusable. General logs/public responses contain no raw Auth-user ID, e-mail,
+name, JWT, secret, raw payload or unrelated principal/object detail.
+Rollback/recovery references preserve history and do not authorize an
+emergency override.
+
+The event vocabulary, migration, RPCs, scripts and proof remain proposed and
+unapproved. Bootstrap, population, assignment/revocation authority, remote
+apply and production audit/export remain not implemented.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## WP3M Proposed Caller And Execution Audit Correlation
 
 Status: DRAFT / NOT IMPLEMENTED / DECISION REQUIRED.

@@ -757,6 +757,36 @@ unproven. Next:
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+## X. WP3O Workforce Bootstrap And Assignment Authority Readiness Overlay
+
+WP3O is `DRAFT` and decision-required. Its exact readiness verdict is
+`READY FOR DECISION — BOOTSTRAP AND ASSIGNMENT AUTHORITY PACKAGE CAN BE APPROVED`.
+That verdict approves no recommendation and authorizes no implementation,
+bootstrap, population or remote action.
+
+The proposed genesis boundary is a one-time environment-specific CLI/runbook
+ceremony above one narrow service-role-only RPC. External executor/checker
+custody is temporary and separate from the structural workforce chain. The
+ceremony would atomically create an active two-principal governance pair with
+prepare/approve authority split across six narrow governance capabilities,
+zero location capabilities and zero operational scopes.
+
+Structural management would reuse the existing workforce root, state,
+capability and scope event tables and add at most two purpose-specific
+governance request/review tables. Purpose-specific prepare/review/execute RPCs
+would enforce distinct active actors, exact request hashes, execution-time
+revalidation, append-only changes, last-authority protection and correlated
+fail-closed audit/idempotency. Existing location-operation request/review
+tables remain domain-closed and are not reused.
+
+Customer/representation, workforce governance, location operations,
+technical `service_role` and deployment authority remain separate.
+Connected-party conflict policy, custody/recovery ownership and all physical
+implementation gates remain open. Evidence:
+`operations/wp3o-workforce-bootstrap-assignment-authority-readiness.md`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## Overall Architecture Verdict
 
 Recommendation: HYBRID PARALLEL REBUILD.

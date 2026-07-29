@@ -281,6 +281,24 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
     conflicts, single-use idempotent runbook and audit/rollback evidence;
   - browser self-enrollment is forbidden and no remote execution follows
     without separate approval.
+- WP3O workforce bootstrap and assignment-authority readiness is DECISION
+  REQUIRED:
+  - exact verdict is `READY FOR DECISION — BOOTSTRAP AND ASSIGNMENT AUTHORITY PACKAGE CAN BE APPROVED`; this is not implementation or execution approval;
+  - all eighteen proposed decisions remain not approved;
+  - recommended genesis route is a single-use environment-specific
+    CLI/runbook ceremony with designated executor, independent checker,
+    verified Auth checks and an atomic minimal split governance pair;
+  - recommended structural route is purpose-specific
+    prepare/review/execute governance with at most two new governance tables
+    and six narrow prepare/approve capabilities;
+  - WORKFORCE BOOTSTRAP: NOT IMPLEMENTED;
+  - WORKFORCE POPULATION: NOT IMPLEMENTED;
+  - ASSIGNMENT / REVOCATION AUTHORITY: NOT IMPLEMENTED;
+  - PROPOSED MANIFEST / MIGRATION / RPC / OPS SCRIPT / PROOF: NOT APPROVED;
+  - connected-party conflict policy, operator/secret/recovery custody,
+    last-authority recovery and real pilot targets remain decision blockers;
+  - LOCAL PROOF / REAL POPULATION / REMOTE APPLY / DEPLOY / OPERATIONS UI /
+    CUTOVER remain separate open gates.
 - WP2A party directory and customer-party binding is CURRENT PROVEN — LOCAL:
   - `app_parties`
   - `app_party_person_versions`

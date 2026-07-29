@@ -434,6 +434,31 @@ requires separate approval.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+### WP3O Workforce Bootstrap And Assignment Authority Readiness
+
+WP3O records exact verdict
+`READY FOR DECISION — BOOTSTRAP AND ASSIGNMENT AUTHORITY PACKAGE CAN BE APPROVED`.
+The proposal remains unapproved and authorizes no implementation or
+execution.
+
+The recommended genesis route is a one-time environment-specific CLI/runbook
+ceremony with designated executor, independent checker, live verified Auth
+checks, a canonical single-use manifest and atomic minimal split governance
+pair. The recommended structural route uses purpose-specific
+prepare/review/execute governance, six narrow governance capabilities and at
+most two new request/review tables. Existing location-operation workflow
+tables remain domain-closed.
+
+Workforce bootstrap: `NOT IMPLEMENTED`. Workforce population:
+`NOT IMPLEMENTED`. Assignment and revocation authority: `NOT IMPLEMENTED`.
+Proposed manifest/migration/RPC/scripts/proof: `NOT APPROVED`. Operations UI,
+remote apply, deploy and cutover: `OPEN/BLOCKED`. Connected-party conflict
+policy and operator/secret/recovery custody remain decision blockers.
+Evidence:
+`operations/wp3o-workforce-bootstrap-assignment-authority-readiness.md`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## Update Contract
 
 - After every accepted batch, update this roadmap.

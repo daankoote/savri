@@ -732,6 +732,34 @@ role/capability, object scope or authorization outcome.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+## 16. WP3O Proposed Genesis And Structural Workforce Governance Boundary
+
+Status: DRAFT / DECISION REQUIRED / NOT IMPLEMENTED.
+
+Genesis cannot derive approval from an empty workforce chain. The unapproved
+pilot recommendation is therefore a single-use environment-specific
+CLI/runbook ceremony with a designated executor and independent checker. One
+narrow service-role-only RPC would live-check two existing verified Auth
+accounts and atomically create an active split governance pair. Neither
+principal receives location capabilities or operational scope from genesis.
+
+After genesis, identity lifecycle, capability lifecycle and scope lifecycle
+would use separate purpose-specific prepare/review/execute contracts with
+active distinct workforce principals and execution-time revalidation.
+Customer Auth/bootstrap, customer ownership, case-party roles,
+representation, JWT metadata, e-mail and technical `service_role` never confer
+workforce governance. A technically dual-bound Auth account retains two
+independently resolved trust domains; no right crosses automatically.
+
+Browser self-enrollment, a permanent bootstrap endpoint, fixed Auth IDs,
+generic admin/RBAC, emergency override and direct structural service-role
+inserts remain prohibited. Connected-party conflict policy and all
+implementation, population, remote and deployment gates remain open.
+Evidence:
+`operations/wp3o-workforce-bootstrap-assignment-authority-readiness.md`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## 13. WP3L-B Workforce Authorization Foundation
 
 CURRENT PROVEN — LOCAL ONLY — WP3L WORKFORCE AUTHORIZATION FOUNDATION / BOOTSTRAP, POPULATION, AUTHORIZED CALLERS, REMOTE APPLY AND CUTOVER NOT IMPLEMENTED

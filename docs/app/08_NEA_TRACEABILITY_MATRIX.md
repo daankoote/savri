@@ -175,3 +175,22 @@ code/schema/test batch.
   ONLY; no new table and no population.
 - TKV source-blocked mapping families: none.
 - TKV-affected implementation families remaining target/not implemented: NEA-VER, NEA-RET and parts of NEA-OPS/NEA-COR.
+
+## WP3O Readiness Overlay
+
+WP3N remains `CURRENT PROVEN — LOCAL ONLY`; all seven real local workforce
+tables remain empty. WP3O records a decision-ready, still-unapproved proposal
+for one-time genesis custody and later structural identity/capability/scope
+governance. It adds no CURRENT PROVEN requirement row and changes none of the
+implementation-status counts above.
+
+For `NEA-AUD` and `NEA-SEC`, the proposed target is a split two-principal
+genesis pair, six narrow governance prepare/approve capabilities, at most two
+purpose-specific governance request/review tables, fail-closed audit,
+single-use idempotency, conflict controls, last-authority protection and
+layered recovery/concurrency proof. Bootstrap, population,
+assignment/revocation authority, operations UI, remote apply, deploy and
+cutover remain not implemented or open. Full evidence:
+`operations/wp3o-workforce-bootstrap-assignment-authority-readiness.md`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

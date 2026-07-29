@@ -525,6 +525,29 @@ it does not rewrite those decision records.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+## 16. WP3O Workforce Assignment Authority Separation
+
+WP3O is decision-required and not implemented. Workforce identity,
+capability and scope governance does not create or modify location truth.
+Conversely, a location root, observation, accepted version,
+case/location relation or operational maker/checker record grants no
+workforce administration authority.
+
+The proposed genesis pair receives zero location capabilities and zero
+case/location scopes. Later location capabilities and exact operational
+scopes would require separate structural workforce governance with distinct
+maker/checker, immutable intent, execution-time revalidation, append-only
+assignment events and fail-closed audit/idempotency. No wildcard, global
+location scope, customer-derived scope or `app_dossier_locations` reuse is
+allowed.
+
+WP3J and WP3N remain `CURRENT PROVEN — LOCAL ONLY`. Real workforce
+population, assignment/revocation authority, real location population,
+operations UI, remote apply and cutover remain separate unimplemented/open
+gates.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 - Stable roots, immutable versions, RLS and grants are internal ENVAL controls.
 - They support reconstruction but do not prove TKV acceptance.
 - Location acceptance does not replace checks of connection, allocation point,

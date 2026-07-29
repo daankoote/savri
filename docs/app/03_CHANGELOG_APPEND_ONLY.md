@@ -890,3 +890,14 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Set next readiness batch `WP3O — controlled pilot workforce bootstrap and assignment authority readiness`; it grants no bootstrap or remote implementation authorization.
 - Verified official local TKV SHA-256 `f08ae9cc56d7145f8962e9e0930f0e9b8676a55e73437aba4f0193b3edcc55cf` and preserved `TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE`.
 - This docs-only batch changed no migration, proof, SQL/database state, function, Edge Function, runtime helper, frontend, CSS, package/config, staging, commit, push, deploy or remote state.
+
+## 2026-07-29 — Audit WP3O controlled workforce bootstrap and assignment authority readiness
+
+- Added `docs/app/operations/wp3o-workforce-bootstrap-assignment-authority-readiness.md` as a docs-only/read-only decision proposal.
+- Set exact verdict `READY FOR DECISION — BOOTSTRAP AND ASSIGNMENT AUTHORITY PACKAGE CAN BE APPROVED`; readiness grants no implementation or execution authority.
+- Separated temporary genesis custody from structural identity, capability and scope governance, operational maker/checker, customer/representation authority, technical `service_role` and deployment authority.
+- Recommended, without approval, a single-use environment-specific CLI/runbook ceremony that creates an exact minimal split governance pair, followed by purpose-specific prepare/review/execute governance RPCs.
+- Proposed at most two governance tables, six closed governance capabilities, bounded operator/proof paths, safe errors, audit/idempotency, recovery and layered proof contracts; all proposed names were free and no file outside documentation was created.
+- Recorded decisions 01 through 18 as not approved and kept connected-party conflict policy, custody/recovery ownership, real pilot targets and every later execution gate open.
+- WP3N remains `CURRENT PROVEN — LOCAL ONLY`; bootstrap, population, assignment/revocation authority and operations UI remain `NOT IMPLEMENTED`; remote apply, deploy and cutover remain open.
+- This batch changed no schema, migration, RPC, proof, operator script, SQL/database state, workforce population, Edge Function, runtime helper, frontend, CSS, package/config, staging, commit, push, deploy or remote state.

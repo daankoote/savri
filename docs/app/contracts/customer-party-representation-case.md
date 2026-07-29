@@ -665,3 +665,26 @@ caller runtime, Edge Function, UI, remote and production remain not
 implemented or unproven.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## WP3O Dual-Binding And Workforce Governance Separation
+
+WP3O remains decision-required and not implemented. The same Auth account can
+technically have independently established customer and workforce bindings,
+but customer bearer context grants no workforce authority and workforce
+context grants no customer ownership, case-party role or representation.
+Genesis and structural governance may not infer either binding from the
+other.
+
+The unapproved pilot recommendation blocks a dual-bound workforce principal
+from making, checking or governing an action on its own customer, case or
+location. Broader connected-party conflicts require an explicit
+compliance/governance decision; no legal conflict policy is invented here.
+Until decided, uncertain conflicts fail closed with anti-enumeration and no
+party/customer/object detail in public output.
+
+Case/location scope remains an operational authorization fact only. It proves
+no customer ownership, representation, mandate, EAN/aangeslotene, evidence
+acceptance or verifier authority. Bootstrap, population and
+assignment/revocation authority remain not implemented.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
