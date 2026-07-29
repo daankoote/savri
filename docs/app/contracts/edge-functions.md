@@ -159,3 +159,31 @@ WP3L execution marking. No emergency override exists.
 Exact paths, bridge RPCs, safe errors, audit ownership and proof matrix are in
 `operations/wp3m-location-callers-execution-bridge-readiness.md`. None of
 these endpoints, helper, bridge functions or proof exists or is authorized.
+
+## WP3N Operational Location Callers
+
+CURRENT PROVEN — LOCAL ONLY — WP3N OPERATIONAL LOCATION CALLERS AND EXECUTION BRIDGE / WORKFORCE BOOTSTRAP, POPULATION, ASSIGNMENT AUTHORITY, OPERATIONS UI, REMOTE APPLY AND CUTOVER NOT IMPLEMENTED
+
+Exactly four operation-family Edge callers now exist:
+
+- `api-app-ops-location-root-create`: `execute` to
+  `app_ops_location_root_create_v1`;
+- `api-app-ops-location-observation-record`: `execute` to
+  `app_ops_location_observation_record_v1`;
+- `api-app-ops-location-version-accept`: `prepare`, `review`, `execute` to
+  the three matching `app_ops_location_accept_*_v1` RPCs;
+- `api-app-ops-location-version-correct`: `prepare`, `review`, `execute` to
+  the three matching `app_ops_location_correct_*_v1` RPCs.
+
+The shared adapter accepts no caller-selected RPC name and performs no
+Edge-side authorization join or check-then-write. It owns bearer transport,
+metadata, bounded normalization, canonical hashing, safe responses and the
+fixed RPC invocation only. Database functions own authorization, locking and
+atomic business execution. Q01-Q64 and marker
+`api-app-ops-location-callers-proof-ok` prove this bounded local source and
+integration contract.
+
+No caller deployment, remote runtime proof, browser operations UI or
+production claim follows.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

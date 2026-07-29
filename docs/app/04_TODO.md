@@ -251,6 +251,36 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - BOOTSTRAP / POPULATION / ASSIGNMENT AUTHORITY: NOT IMPLEMENTED;
   - OPERATIONS UI / REMOTE APPLY / CUTOVER: OPEN/BLOCKED;
   - NEXT: Daan explicitly decides the complete eighteen-choice WP3M package; no implementation starts automatically.
+- WP3N authorized operation callers and atomic WP3J execution bridge are
+  CURRENT PROVEN — LOCAL ONLY:
+  - WP3M-D01 through WP3M-D18 are APPROVED TARGET;
+  - implementation commit is `6705fa3baf046510d70b8502da6058009b30b2f3`;
+  - exactly four operation-family Edge callers, one shared transport adapter,
+    eight purpose-specific bridge RPCs and one private authorization resolver
+    are implemented locally;
+  - closed action maps prevent browser-selected RPC names and the adapter owns
+    no authorization truth;
+  - root/relation is atomic, observation is non-accepting, prepare/review call
+    no WP3J, and execute is original-maker-only after distinct-checker review
+    and execution-time revalidation;
+  - `WP3N-Q01` through `WP3N-Q64` pass with marker
+    `api-app-ops-location-callers-proof-ok`;
+  - fresh apply exactly once, function-body equality, real review race, real
+    execution race, real revocation-versus-execution race, protected equality
+    and complete disposable cleanup are proven;
+  - all seven real local WP3L tables remain empty;
+  - WORKFORCE BOOTSTRAP: NOT IMPLEMENTED;
+  - WORKFORCE POPULATION: NOT IMPLEMENTED;
+  - ASSIGNMENT AUTHORITY: NOT IMPLEMENTED;
+  - OPERATIONS UI: NOT IMPLEMENTED;
+  - REMOTE APPLY / CUTOVER: OPEN/BLOCKED;
+  - NEXT: `WP3O — controlled pilot workforce bootstrap and assignment authority readiness`;
+  - WP3O must decide bootstrap custody, designated executor and independent
+    checker, first identity lifecycle, initial capabilities/scopes,
+    assignment/revocation authority, dual customer/workforce-binding
+    conflicts, single-use idempotent runbook and audit/rollback evidence;
+  - browser self-enrollment is forbidden and no remote execution follows
+    without separate approval.
 - WP2A party directory and customer-party binding is CURRENT PROVEN — LOCAL:
   - `app_parties`
   - `app_party_person_versions`

@@ -734,3 +734,31 @@ Evidence:
 `operations/wp3m-location-callers-execution-bridge-readiness.md`.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 22. WP3N Authorized Caller And Atomic Bridge Local-Proof Overlay
+
+CURRENT PROVEN — LOCAL ONLY — WP3N AUTHORIZED OPERATIONAL LOCATION CALLERS AND ATOMIC WP3J EXECUTION BRIDGE
+
+Exactly four operation-family callers and eight purpose-specific bridge RPCs
+are locally implemented and proven. Root creation plus the first
+case/location relation commits atomically or not at all. Observation remains
+non-accepting. Acceptance and correction prepare/review remain immutable
+maker/checker steps without WP3J calls. Execute is restricted to the original
+maker after a distinct checker decision and revalidates lifecycle,
+capabilities, exact scope/relation and payload before atomically coupling the
+WP3J version write to WP3L execution marking.
+
+The private Auth-to-workforce resolver is database-authoritative. Closed Edge
+action maps prevent browser-selected RPC names; the shared adapter performs no
+authorization joins. Replay, payload conflict, safe errors, fail-closed audit,
+fresh apply, body equality and real review/execution/revocation races pass in
+`WP3N-Q01` through `WP3N-Q64`.
+
+This adds no location or workforce table and populates no row. The three
+location tables and seven WP3L tables remain empty locally;
+`app_dossier_locations=44` remains separate mutable source data. Physical-site
+matching, PDOK/BAG, EAN/connection/aangeslotene, assignment authority,
+operations/customer UI, population, remote, deployment, production and
+cutover remain outside CURRENT PROVEN.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

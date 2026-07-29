@@ -6,7 +6,14 @@ Authority: operational tracker only; it does not override the official TKV sourc
 
 Architecture decision: TARGET — approved by Daan on 2026-07-22; not CURRENT PROVEN.
 
-Next bounded gates: WP3H proves the exact empty three-table location foundation locally and WP3J commit `45d926478945fedc610ea02a0ff2b0d4f5f14be4` proves four bounded operational RPCs, definitive fresh apply and real concurrency locally. WP3K-D01 through WP3K-D12 and WP3L-D01 through WP3L-D18 are APPROVED TARGET. WP3L-B commit `6485dad9a1cc481efc3f17095f90df72a219b315` now proves the exact empty seven-table workforce identity/capability/case-location-scope/maker-checker foundation, operation eligibility, fresh apply and real concurrency locally. Bootstrap, population, authorized runtime callers and the WP3J execution bridge remain not implemented. Mapping, remote, cutover and retirement remain blocked. No EAN, connection, aangeslotene, verifier or regulatory fact follows from WP3J/WP3K/WP3L-B.
+Next bounded gates: WP3M-D01 through WP3M-D18 are APPROVED TARGET. WP3N
+commit `6705fa3baf046510d70b8502da6058009b30b2f3` now proves exactly four
+operation-family callers, one transport adapter, eight atomic bridge RPCs,
+private database authorization resolution, fresh apply and real
+review/execution/revocation concurrency locally. Bootstrap, workforce
+population, assignment authority and operations UI remain not implemented.
+Mapping, remote, cutover and retirement remain blocked. No EAN, connection,
+aangeslotene, verifier or regulatory fact follows.
 
 Baseline commit: `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`.
 
@@ -44,13 +51,13 @@ The tracker never removes a blocker itself. A status changes only when the appli
 | field | value |
 |---|---|
 | Current phase | Approved TARGET direction; bounded work-package authorization only |
-| Current work package | WP3M — authorized operational location callers and WP3J execution bridge readiness — DOCS ONLY / DECISION REQUIRED |
-| Last completed work package | WP3L-DOC committed in `0e284ca4d520eae897b94b4319562cd0e8ec7c1d`; WP3L-B remains CURRENT PROVEN — LOCAL ONLY |
-| Next executable work package | Daan decides the complete WP3M eighteen-choice package; no implementation authorization follows automatically |
-| Current blockers | Bootstrap, workforce population, assignment-authority runtime, four operational callers, WP3J execution bridge, 44-row mapping, remote, production, cutover and retirement remain not implemented/open/blocked. Representation remains NOT SCHEMA READY and grants no workforce authority. |
+| Current work package | WP3N-DOC — register local authorized callers and atomic WP3J execution bridge proof — DOCS ONLY |
+| Last completed work package | WP3N implementation commit `6705fa3baf046510d70b8502da6058009b30b2f3`; CURRENT PROVEN — LOCAL ONLY |
+| Next executable work package | `WP3O — controlled pilot workforce bootstrap and assignment authority readiness` |
+| Current blockers | Workforce bootstrap, population, assignment-authority runtime, operations UI, 44-row mapping, remote, production, cutover and retirement remain not implemented/open/blocked. Representation remains NOT SCHEMA READY and grants no workforce authority. |
 | External research running in parallel | CAR, EAN/aangeslotene, DSO, KvK, MID/certificate sources, CPO/backoffice, energy supplier, kWh exchange, REV, verifier, and payment provider where relevant |
-| Last updated | 2026-07-28 |
-| Evidence reference | WP2B-I commit `5a5265adc516e8198cc25757654920d4aa3316bd`; WP3A commit `f3b39aafb2e6817e64401ccb2c47eed285552869`; WP3B commit `ee3f6b59c937f0c39a67ba09936e9ef688bcea59`; WP3C commit `da961fa84da73ecc320b55b2cb83881a12d658f3`; WP3D commit `88e8c0b754c7d44e769f89037676d9732e6fe63c`; WP3E commit `e04f4a695d983c71a52f48d0c3c26ca605bb4402`; WP3F commit `c5a46faa26d94ad22adbd2b3748f411e1b37e51e`; WP3F-B commit `e6aac0119c5e545673a07c6a985e1921a663ba49`; WP3G commit `c021d57aacc5d8beb4aa2043bc963839fa38da07`; WP3G-B commit `98f7aa5007a458115afab1f2c3b2333862411250`; WP3H commit `3bb8d50cd7723ad631d75857df4e08d6ef0db311`; WP3J commit `45d926478945fedc610ea02a0ff2b0d4f5f14be4`; WP3J-DOC commit `ce7be9fea4d4efef66aa9585c7763bb3a6593296`; WP3K-DOC commit `a23f57ab18c3be7fe1c07cbc325fe9dcc4421837`; WP3L-B commit `6485dad9a1cc481efc3f17095f90df72a219b315`; WP3L-DOC commit `0e284ca4d520eae897b94b4319562cd0e8ec7c1d`; `operations/wp3m-location-callers-execution-bridge-readiness.md` |
+| Last updated | 2026-07-29 |
+| Evidence reference | WP2B-I commit `5a5265adc516e8198cc25757654920d4aa3316bd`; WP3A commit `f3b39aafb2e6817e64401ccb2c47eed285552869`; WP3B commit `ee3f6b59c937f0c39a67ba09936e9ef688bcea59`; WP3C commit `da961fa84da73ecc320b55b2cb83881a12d658f3`; WP3D commit `88e8c0b754c7d44e769f89037676d9732e6fe63c`; WP3E commit `e04f4a695d983c71a52f48d0c3c26ca605bb4402`; WP3F commit `c5a46faa26d94ad22adbd2b3748f411e1b37e51e`; WP3F-B commit `e6aac0119c5e545673a07c6a985e1921a663ba49`; WP3G commit `c021d57aacc5d8beb4aa2043bc963839fa38da07`; WP3G-B commit `98f7aa5007a458115afab1f2c3b2333862411250`; WP3H commit `3bb8d50cd7723ad631d75857df4e08d6ef0db311`; WP3J commit `45d926478945fedc610ea02a0ff2b0d4f5f14be4`; WP3J-DOC commit `ce7be9fea4d4efef66aa9585c7763bb3a6593296`; WP3K-DOC commit `a23f57ab18c3be7fe1c07cbc325fe9dcc4421837`; WP3L-B commit `6485dad9a1cc481efc3f17095f90df72a219b315`; WP3L-DOC commit `0e284ca4d520eae897b94b4319562cd0e8ec7c1d`; WP3N commit `6705fa3baf046510d70b8502da6058009b30b2f3`; `operations/wp3n-location-callers-execution-bridge-local-proof.md` |
 
 ## Target Approval And Bounded Work-Package Rule
 
@@ -112,7 +119,7 @@ TARGET approval authorizes none of these domains for blanket implementation. Eac
 | 0 | Canon, official source and architecture baseline | Lock source hierarchy, 19-clause mapping, review package, and documentation baseline. | COMPLETE — CURRENT PROVEN | NEA-OPS-002/004; all mapped requirement families | Documentation and source governance only. | Internal documentation plus official source | Green validation; baseline commit | Canon, source registry, audits, architecture package | None | Source hash/pages/clauses, reference checks, `git diff --check` | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805` | Maintain source-change and supersede hard stops. |
 | 1 | Current implementation to target reconciliation | Inventory current frontend, functions, database, proofs, and dispositions against target requirements. | COMPLETE — CURRENT PROVEN | All 73 requirement rows | Proof-only assessment; no implementation-complete claim by inventory alone. | Internal documentation/proof | Work package 0 source and architecture inputs | Current implementation assessment; traceability overlay | None | Complete inventory and disposition evidence | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; `06B` and `08` | Preserve assessment as baseline evidence; update only when implementation proof changes. |
 | 2 | Customer, person, organization, representation and case foundation | Establish provider-independent party, authority, identity, and case contracts. | IN PROGRESS | NEA-ORG; NEA-MAND-003; NEA-SEC | Internal core truth; case participation never creates legal authority. | Internal | Commit `5a5265adc516e8198cc25757654920d4aa3316bd`; TARGET architecture approval; bounded WP2 subpackages | WP2A party/customer binding plus WP2B-I case/case-role schema locally; authority remains not schema-ready | WP2A four-table and WP2B-I two-table local foundations; migration-history, API/runtime, remote and production remain open | WP2A Q01-Q24 and WP2B-I Q01-Q34 are green locally; WP2B-II is PROOF ONLY readiness evidence; pilot brief is a validation draft only | `proofs/wp2b-i-case-party-role-foundation.md`; `operations/wp2b-ii-representation-authority-readiness-audit.md`; `legal/representation-authority-pilot-validation-brief.md`; no remote, production, NEa or verifier evidence | Obtain attributable written legal/verifier answers for the proposed simple cases, then seek Daan's bounded contract decision; do not start schema automatically. |
-| 3 | Location, connection/EAN and validity periods | Complete location/connection truth, temporal facts, aangeslotene claims, and safe review/read boundaries. | IN PROGRESS | NEA-EAN; NEA-AUD-002/003; NEA-SEC-001/002 | Legal-party connection truth is separate from account, case role, authority, mandate, location, charger/MID and kWh; TKV-aligned internal controls do not establish regulatory acceptance. | Hybrid | WP3H foundation commit `3bb8d50cd7723ad631d75857df4e08d6ef0db311`; WP3J RPC commit `45d926478945fedc610ea02a0ff2b0d4f5f14be4`; WP3L-B commit `6485dad9a1cc481efc3f17095f90df72a219b315`; WP3K-D01-D12 and WP3L-D01-D18 approved TARGET; WP2 party/case patterns | Empty location and workforce foundations plus bounded RPC/authorization eligibility mechanics are CURRENT PROVEN locally; authorized caller, bootstrap/population, EAN/connection truth and external relations remain separate | Three empty location tables, four WP3J RPCs/three helpers and seven empty WP3L workforce/scope/request/review tables proven; no authorized runtime caller, WP3J bridge, population, cutover, remote migration history or production proof | WP3G-Q01-Q42, WP3J-Q01-Q42 and WP3L-B-Q01-Q48 are green; WP3J and WP3L-B include definitive fresh apply and real separate-process concurrency | `operations/wp3h-location-foundation-local-proof.md`; `operations/wp3j-location-write-rpcs-local-proof.md`; `operations/wp3l-workforce-authorization-foundation-local-proof.md`; TKV guard | Run WP3M caller/execution-bridge readiness first. Bootstrap, population, EAN/connection work, cutover and retirement remain separate. |
+| 3 | Location, connection/EAN and validity periods | Complete location/connection truth, temporal facts, aangeslotene claims, and safe review/read boundaries. | IN PROGRESS | NEA-EAN; NEA-AUD-002/003; NEA-SEC-001/002 | Legal-party connection truth is separate from account, case role, authority, mandate, location, charger/MID and kWh; TKV-aligned internal controls do not establish regulatory acceptance. | Hybrid | WP3H, WP3J, WP3L-B and WP3N implementation commits; WP3M-D01-D18 APPROVED TARGET; WP2 party/case patterns | Empty location/workforce foundations, bounded location writes and authorized atomic caller/bridge mechanics are CURRENT PROVEN locally; bootstrap/population, assignment authority, EAN/connection truth and external relations remain separate | Three empty location tables, four WP3J RPCs/three helpers, seven empty WP3L tables, four WP3N callers, one adapter, eight bridge RPCs and one private resolver proven; no population, cutover, remote migration history or production proof | WP3G-Q01-Q42, WP3J-Q01-Q42, WP3L-B-Q01-Q48 and WP3N-Q01-Q64 green; fresh apply and real concurrency proven | `operations/wp3n-location-callers-execution-bridge-local-proof.md`; earlier bounded proofs; TKV guard | Run WP3O bootstrap/assignment-authority readiness first. No bootstrap or remote implementation follows automatically. |
 | 4 | Charger, charge point, meter/MID and asset relationships | Split assets, measured points, meter identity, conformity evidence, and validity. | TODO | NEA-CHG; NEA-MID | Internal asset truth; conformity conclusion and external evidence stay separate. | Hybrid | Work package 3; evidence and external source contracts | Chargers, charge points, meters/MID, evidence links | Target entity split and historization | Asset/location/EAN/period linkage, conformity boundary, history, and negative proofs | Current charger snapshot and document-slot primitives inventoried in `06B` | Define asset model and accepted-evidence review contract. |
 | 5 | Mandates, permissions and representation evidence | Build signed versioned mandates with exact actors, clauses, EANs, dates, validity, withdrawal, and renewal. | TODO | NEA-MAND-001-005 | Legal acceptance is not a complete mandate; legal/verifier acceptance remains external. | Hybrid | Work packages 2-4; final wording/e-sign evidence decision | Mandates, mandate versions, signing, authority evidence | Dedicated target mandate/version entities | Exact-field, signer, authority, permission, calendar-year, withdrawal, and supersede proofs | Requirement and TKV clause mapping in `06`, `06A`, and `08` | Resolve final Dutch wording and evidence standard before build. |
 | 6 | Document and evidence ingestion | Preserve bytes, hashes, versions, provenance, and separate evidence review decisions. | IN PROGRESS | NEA-MAND; NEA-CHG; NEA-MID; NEA-AUD; NEA-RET | Transport/versioning never equals evidence acceptance or verifier sufficiency. | Internal | Work packages 2-5; retention and decision contracts | Evidence slots/files/versions/decisions, upload/download/withdraw | Extend proven transport/version primitives; add separate decisions later | Hash, immutability, supersede, access, retention, and no-auto-accept proofs | Current upload/confirm/download/withdraw primitives and proofs inventoried in `06B` | Define target evidence decision and retention contracts before extending behavior. |
@@ -396,6 +403,34 @@ bridge migration/RPCs, proof, bootstrap, population, assignment authority,
 operations UI, remote apply and cutover remain not implemented/open/blocked.
 Evidence:
 `operations/wp3m-location-callers-execution-bridge-readiness.md`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+### WP3N Authorized Callers And Atomic Bridge Local Proof
+
+WP3M-D01 through WP3M-D18 are APPROVED TARGET. WP3N is
+`CURRENT PROVEN — LOCAL ONLY` for exactly four operation-family callers, one
+shared transport adapter without authorization truth, eight purpose-specific
+bridge RPCs and one private Auth-to-workforce resolver.
+
+`WP3N-Q01` through `WP3N-Q64` pass with marker
+`api-app-ops-location-callers-proof-ok`. Evidence includes definitive fresh
+apply exactly once, function-body equality, atomic root/relation and WP3J/WP3L
+execution, fail-closed audit/idempotency, and genuine review, execution and
+revocation-versus-execution races. All seven real local WP3L tables remain
+empty.
+
+Workforce bootstrap: `NOT IMPLEMENTED`. Workforce population:
+`NOT IMPLEMENTED`. Assignment authority: `NOT IMPLEMENTED`. Operations UI:
+`NOT IMPLEMENTED`. Remote apply and cutover: `OPEN/BLOCKED`.
+
+Next readiness batch:
+`WP3O — controlled pilot workforce bootstrap and assignment authority readiness`.
+WP3O decides custody, designated executor/independent checker, first identity
+lifecycle, initial capability and scope assignments, assignment/revocation
+authority, dual-binding conflicts, single-use idempotent runbook and
+audit/rollback evidence. Browser self-enrollment is forbidden; remote action
+requires separate approval.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 

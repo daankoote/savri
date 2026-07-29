@@ -803,3 +803,28 @@ Readiness evidence:
 `operations/wp3m-location-callers-execution-bridge-readiness.md`.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 15. WP3N Workforce Caller Authentication Boundary
+
+CURRENT PROVEN — LOCAL ONLY — WP3N OPERATIONAL LOCATION CALLERS AND EXECUTION BRIDGE / WORKFORCE BOOTSTRAP, POPULATION, ASSIGNMENT AUTHORITY, OPERATIONS UI, REMOTE APPLY AND CUTOVER NOT IMPLEMENTED
+
+The shared `app_workforce_authorization.ts` adapter now verifies the bearer,
+derives `auth.users.id`, normalizes/hashes bounded inputs and invokes only the
+compile-time mapped bridge RPC. It queries no WP3L authorization table and
+owns no workforce truth.
+
+The private
+`app_ops_location_authorization_resolve_v1(uuid, text, uuid, uuid,
+timestamptz)` resolver maps the verified Auth UUID to current active workforce
+identity, exact capability, exact case/location scope and relation inside the
+database transaction. It has no direct execute grant for `PUBLIC`, `anon`,
+`authenticated` or `service_role`. The eight public bridge RPCs are
+`SECURITY DEFINER`, have empty search paths and grant execute only to
+`service_role`.
+
+No customer identity, dossier access, case-party role, representation
+authority, JWT metadata or browser field confers workforce authority. No
+hardcoded Auth ID, bootstrap identity, seeded admin or self-enrollment exists.
+The real seven-table local workforce foundation remains empty.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

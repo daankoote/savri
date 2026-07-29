@@ -182,3 +182,26 @@ Evidence and the exact proposed field/error/proof contract are in
 schema, row, event implementation, caller or bridge was added.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## WP3N Caller And Execution Audit Correlation
+
+CURRENT PROVEN — LOCAL ONLY for the bounded WP3N caller/bridge transaction.
+The implementation preserves distinct correlated authorization/workflow and
+WP3J business audit. Successful material operations and controlled rejects
+complete audit and idempotency fail closed in the same transaction as their
+required root/relation, observation, request/review or WP3J/WP3L execution
+state.
+
+The proven allowlist uses compile-time caller/action, opaque workforce actor,
+exact capability, case/location, operation request/review, WP3J result,
+request/idempotency correlation and bounded outcomes. It excludes e-mail,
+name, title, JWT, raw payload/evidence, SQL/schema detail and sensitive
+existence information. `WP3N-Q57` and `WP3N-Q58` cover correlation/no-PII and
+safe errors; all Q01-Q64 pass.
+
+No real local audit row was added: protected `app_audit_events` remained
+`753` before and after, and all seven real WP3L tables remained empty.
+Bootstrap, population, assignment-authority audit, UI audit, remote parity and
+production export remain not implemented.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

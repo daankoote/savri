@@ -874,3 +874,19 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 - Verified the official local TKV SHA-256 `f08ae9cc56d7145f8962e9e0930f0e9b8676a55e73437aba4f0193b3edcc55cf` and preserved `TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE`.
 - CSS reuse is not applicable.
 - This docs-only/read-only batch changed no migration, proof, SQL/database state, function, Edge Function, runtime helper, frontend, CSS, package/config, staging, commit, push, deploy or remote state.
+
+## 2026-07-29 — Register WP3N authorized location callers and atomic bridge local proof
+
+- Recorded implementation commit `6705fa3baf046510d70b8502da6058009b30b2f3`, parent `961dd90b529e336f67322b951d58998edfb66c92`, subject `Add WP3N location operation callers and bridge`.
+- Recorded exactly seven committed artifacts and SHA-256 values: proof `3b8a9724941c59cb00e30204b9b7e84ced074fe8b8c7c84a32711226eacb047c`; shared adapter `85ce30ff3b119a7d4a09062651e8c9e30dbf6f20d9b8a990a940b9a39cfcc30a`; observation caller `b7cd8c8f37d00198cf73e3affefc0cdb1601837275ccf112c5488b98ceefd6d5`; root caller `08bf3d77e1c7a4e1c02b1579de5ef2244cec0bef0a06f7bbdd31dc8e75bfce82`; acceptance caller `4349e54d787cbfc6c6088c20a2ec6f29367ae694e70935af45ac8453c9c0b7b9`; correction caller `48b2c4abc25bdd587150dad633c4af37aeb4d456c101b23bad2bb7c08a87996d`; migration `9b71230ed2b2a91691f763e4cd539e2d923c996c31ca9297ae445cf62807230b`.
+- Added `operations/wp3n-location-callers-execution-bridge-local-proof.md` with exact status `CURRENT PROVEN — LOCAL ONLY — WP3N AUTHORIZED OPERATIONAL LOCATION CALLERS AND ATOMIC WP3J EXECUTION BRIDGE`.
+- Marked WP3M-D01 through WP3M-D18 APPROVED TARGET and registered exactly four operation-family callers, closed action maps, one shared transport adapter without authorization truth, eight public service-role-only bridge RPCs and one private Auth-to-workforce resolver; no additional private helper exists.
+- Recorded atomic root/first-relation creation, non-accepting observations, no WP3J call during acceptance/correction prepare or review, original-maker execution after distinct-checker review, execution-time revalidation and atomic WP3J write plus WP3L execution marking.
+- Recorded replay/payload-conflict handling, fail-closed caller/business audit, safe errors, no browser-selected RPC, no Edge-side authorization join, no new table, no generic dispatcher/RBAC engine, no emergency override, no bootstrap/population or hardcoded Auth ID.
+- Registered `WP3N-Q01` through `WP3N-Q64` PASS and marker `api-app-ops-location-callers-proof-ok`.
+- Recorded definitive fresh disposable apply exactly once, migration/function-body equality, unchanged WP3J/WP3L fingerprints, genuine review/execution/revocation-versus-execution races, complete cleanup and zero remaining proof databases.
+- Recorded unchanged protected counts: `auth.users=5`, `app_customers=211`, `app_customer_identities=73`, `app_cases=0`, `app_case_party_roles=0`, three location tables `0`, `app_dossier_locations=44`, `app_audit_events=753`, `app_idempotency_keys=306`; all seven real local WP3L tables remained empty.
+- Kept workforce bootstrap, population, assignment authority, operations UI, system-ingestion principal, 44-row population, PDOK/BAG, EAN/connection/aangeslotene, remote apply, function deploy, production, cutover and regulatory/verifier acceptance outside CURRENT PROVEN.
+- Set next readiness batch `WP3O — controlled pilot workforce bootstrap and assignment authority readiness`; it grants no bootstrap or remote implementation authorization.
+- Verified official local TKV SHA-256 `f08ae9cc56d7145f8962e9e0930f0e9b8676a55e73437aba4f0193b3edcc55cf` and preserved `TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE`.
+- This docs-only batch changed no migration, proof, SQL/database state, function, Edge Function, runtime helper, frontend, CSS, package/config, staging, commit, push, deploy or remote state.
