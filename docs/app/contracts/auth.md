@@ -752,6 +752,24 @@ profile fact, case role, representation authority or mandate. Frontend,
 browser-live, remote and production remain unchanged/open.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+## PILOT-PROFILE-02 Auth Bootstrap V4
+
+CURRENT PROVEN — LOCAL ONLY.
+
+`app_bootstrap_customer_auth_v4` invokes unchanged v3 in the same transaction.
+It preserves the exact v3 safe browser response and adds no party, source,
+profile or role IDs. Execute is service-role-only; browser roles cannot call
+the function.
+
+No-source safely returns v3 without profile/role. Complete equivalent source
+coverage creates or resolves one declared profile and asserted
+service-recipient claims. Partial/conflicting coverage or profile/role truth
+fails closed and rolls back the complete attempt.
+
+This does not verify identity, KvK, address, representation, mandate or any
+regulatory fact.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
 ## 16. WP3O Proposed Genesis And Structural Workforce Governance Boundary
 

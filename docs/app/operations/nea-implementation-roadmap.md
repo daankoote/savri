@@ -330,6 +330,28 @@ Evidence:
 `operations/pilot-party-01a-authenticated-customer-party-activation-local-proof.md`.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+### PILOT-PROFILE-02 Declared Profile And Asserted Service Recipient
+
+CURRENT PROVEN — LOCAL ONLY.
+
+Auth bootstrap v4 composes unchanged v3. Complete equivalent signup
+declarations create or resolve one immutable declared profile and one
+`service_recipient/asserted` claim per canonical case. No-source remains a
+safe no-op; incomplete/conflicting source, profile or role truth fails closed.
+
+The exact source timestamp maps to the deterministic Europe/Amsterdam profile
+business date without changing WP2A column types. Q01-Q24 and
+`declared-profile-asserted-service-recipient-proof-ok` prove replay, genuine
+profile/role concurrency, timezone independence, three rollback stages,
+protected equality and cleanup.
+
+Verified identity/KvK, address, case-confirmed, representation, mandate, EAN,
+evidence, kWh, eligibility, browser-live, remote/deploy and production remain
+open and unproven.
+
+Evidence: `operations/pilot-profile-02-local-proof.md`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
 ### WP3J Local Proof And WP3K Next Gate
 

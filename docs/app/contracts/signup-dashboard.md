@@ -666,6 +666,22 @@ Q01-Q18 prove local database behavior only. Browser-live, remote and
 production remain OPEN.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+## PILOT-PROFILE-02 Auth-Time Declared Profile Promotion
+
+CURRENT PROVEN — LOCAL ONLY.
+
+Signup write v3 and immutable declaration capture remain unchanged. During
+later verified Auth bootstrap, v4 resolves all relevant dossier declaration
+sources. No source is a backward-compatible no-op. Partial coverage or
+conflicting authoritative facts fails closed. Complete equivalent coverage
+creates or resolves one shared declared profile and one asserted
+service-recipient claim per canonical case.
+
+The public Auth response remains exactly the existing safe v3 shape. No
+frontend or CSS changed. Source timestamp and Dutch profile business date
+remain distinct; neither is verified legal validity.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 ## PILOT-SIGNUP-ATOMIC-01 Transactional Current Submit
 
 CURRENT PROVEN — LOCAL ONLY.

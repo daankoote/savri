@@ -948,3 +948,17 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   equality and disposable cleanup.
 - No frontend/CSS, profile, case role, authority, mandate, EAN, remote,
   deployment or production work was included.
+
+## 2026-07-30 — PILOT-PROFILE-02 declared profile and asserted case linkage
+
+- Added service-role-only Auth bootstrap v4 over unchanged v1/v2/v3.
+- Complete equivalent signup declaration coverage now creates or resolves one
+  immutable declared WP2A profile and one asserted service-recipient claim per
+  canonical case; no-source remains backward-compatible.
+- The exact source timestamp remains `timestamptz`; profile `valid_from` is
+  the deterministic Europe/Amsterdam business date. Q01-Q24 prove timezone
+  independence, replay, concurrency, conflicts, rollback and cleanup locally.
+- No verified identity/KvK, address, representation, mandate, EAN,
+  case-confirmed, frontend, remote, deploy or production claim was added.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

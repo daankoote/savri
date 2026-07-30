@@ -486,6 +486,19 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   eligibility, browser-live, remote, production and NEa acceptance.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+## PILOT-PROFILE-02 checkpoint
+
+CURRENT PROVEN — LOCAL ONLY: Auth bootstrap v4 promotes complete equivalent
+immutable signup declarations to one declared profile and creates or resolves
+one `service_recipient/asserted` claim per canonical case. No-source remains
+a safe no-op; partial/conflicting source, profile or role truth fails closed.
+
+The declaration timestamp remains exact. Profile validity is the
+Europe/Amsterdam business date. Verified identity/KvK, address,
+case-confirmed, representation, mandate, EAN, evidence, kWh, eligibility,
+browser-live, remote, deploy and production remain open.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 ## PILOT-SIGNUP-ATOMIC-01 checkpoint
 
 CURRENT PROVEN — LOCAL ONLY for the bounded current direct-signup transaction.

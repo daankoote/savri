@@ -380,6 +380,25 @@ mandate, downstream pilot truth, browser-live, remote and production remain
 outside this proven boundary.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+## PILOT-PROFILE-02 Current Declared Profile Boundary
+
+CURRENT PROVEN — LOCAL ONLY.
+
+Auth bootstrap v4 composes unchanged v3 and, only with complete equivalent
+declaration coverage, creates or resolves one immutable declared WP2A profile
+and one non-operational `service_recipient/asserted` claim per canonical case.
+No-source is backward-compatible; partial or conflicting coverage fails
+closed.
+
+The immutable source owns the exact event timestamp. Existing profile
+`valid_from date` owns the deterministic Dutch business-effective date:
+`(source.valid_from AT TIME ZONE 'Europe/Amsterdam')::date`. These granularities
+are intentionally different and establish no verified legal validity.
+
+This boundary creates no verified identity/KvK, address, case-confirmed,
+representation, mandate, EAN, evidence, eligibility or regulatory truth.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
 Stable roots, immutable versions, RLS, and grants are internal ENVAL controls.
 They support a reconstructable dossier but do not prove TKV acceptance and do

@@ -688,6 +688,28 @@ Q01-Q18 are green; real local party/relationship/profile/case/role tables
 remain empty. Remote, production and NEa/verifier acceptance remain unproven.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+## PILOT-PROFILE-02 Declared Profile And Asserted Service Recipient
+
+CURRENT PROVEN — LOCAL ONLY.
+
+Complete equivalent signup declarations for every active, non-minimized
+customer dossier select one canonical source by earliest `valid_from`, then
+`declared_at`, then source UUID. Different timestamps are not a fact
+conflict. Person equality uses declared names; organization equality also
+uses classification, legal name and declared trade-register number.
+
+The canonical source projects one immutable declared person or organization
+profile. Its exact timestamp remains in the source; profile `valid_from` is
+`(source.valid_from AT TIME ZONE 'Europe/Amsterdam')::date`. Trade-register
+number remains a declared source fact and is not promoted as verified
+identifier truth.
+
+Each canonical case receives one terminal `service_recipient/asserted` claim
+with exactly one matching profile anchor. Asserted participation is not
+operational, never `case_confirmed`, and proves no representation authority
+or mandate.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
 ## WP3O Dual-Binding And Workforce Governance Separation
 

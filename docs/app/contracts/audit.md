@@ -173,6 +173,25 @@ audit. Party or audit failure rolls back the complete bootstrap attempt.
 Q11, Q16 and Q18 prove replay, rollback and protected cleanup locally.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+## PILOT-PROFILE-02 Audit Boundary
+
+CURRENT PROVEN — LOCAL ONLY.
+
+V4 records one fail-closed
+`declared_profile_asserted_service_recipient_linked` event after complete
+profile and claim state. It correlates request/idempotency, opaque customer,
+party, canonical declaration source and profile references, created/resolved
+outcomes, claim counts, environment and time.
+
+Audit contains no name, e-mail, KvK, raw declaration, JWT, address,
+representation or mandate fact. Audit failure rolls back Auth binding, newly
+activated cases/party, profile, claims and success idempotency.
+
+The source timestamp remains exact `timestamptz`; profile `valid_from` is the
+Europe/Amsterdam business date. Both are auditable without conflating their
+temporal granularity or claiming legal verification.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
 ## WP3O Proposed Genesis And Workforce Governance Audit Boundary
 

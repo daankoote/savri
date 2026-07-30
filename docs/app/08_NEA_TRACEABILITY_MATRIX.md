@@ -209,6 +209,20 @@ No NEA requirement is marked complete solely by customer-to-party root
 activation.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+## PILOT-PROFILE-02 local traceability checkpoint
+
+| Capability | Status | Evidence | Boundary |
+|---|---|---|---|
+| Complete declaration coverage | CURRENT PROVEN — LOCAL ONLY | Q06-Q08, Q14 | No-source no-op; partial/conflict fail closed |
+| Declared immutable profile | CURRENT PROVEN — LOCAL ONLY | Q09-Q14 | Source timestamp exact; profile is Dutch business date, not verified identity |
+| Asserted service-recipient linkage | CURRENT PROVEN — LOCAL ONLY | Q15-Q21 | One profile anchor; asserted, never case-confirmed |
+| Atomic rollback/concurrency | CURRENT PROVEN — LOCAL ONLY | Q17-Q24 | Local disposable behavior and protected equality |
+| Regulatory/domain acceptance | NOT PROVEN | None from this batch | No authority, mandate, EAN, evidence, eligibility, verifier or NEa decision |
+
+No NEa requirement is marked complete solely by declared profile promotion or
+asserted case participation.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 ## PILOT-CASE-01 local traceability checkpoint
 
 | Capability | Status | Evidence | Boundary |
