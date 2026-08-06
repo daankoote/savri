@@ -326,7 +326,10 @@ Current frontend consent state is:
 
 - `termsBundleAccepted`
 
-Current frontend UI bundles terms, privacy, and ENVAL fee behind one checkbox and shows draft legal popups. Final backend design may split this into separate versioned legal acceptances after legal review.
+Current frontend UI bundles terms, privacy, and ENVAL-succesfee behind one checkbox
+and shows draft legal popups. The target signing contract projects that one
+customer action into three separate versioned legal intents; persistence remains
+NOT IMPLEMENTED until the complete legal bundle is approved.
 
 No fixed consent duration is a current frontend requirement. Consent duration remains an open legal/commercial decision if needed later.
 
@@ -346,12 +349,16 @@ For every acceptance, store:
 Fee terms acceptance must include:
 
 - fee model version
-- success fee percentage
-- current value: 10%
+- bruto verkoopopbrengst and every directe externe transactiekost used;
+- netto gerealiseerde verkoopopbrengst;
+- ENVAL-succesfee: 10% inclusief toepasselijke btw;
+- klantaandeel: 90%;
+- settlement and settlementrevision references where applicable;
 - no guarantee acknowledgement
-- exact success trigger still pending final legal terms
+- exact approved legal-text version after later legal validation
 
-Legal copy remains draft until reviewed.
+F-01 through F-15 are approved commercial direction. Legal copy remains DRAFT;
+fee/settlement runtime is NOT IMPLEMENTED.
 
 ## 7. Document Slot Creation
 
@@ -595,9 +602,12 @@ Unresolved before production:
 - Whether submit requires all files immediately or creates open document slots.
 - Exact legal copy and versions.
 - Consent duration options.
-- Fee success trigger and fee base.
-- VAT/tax wording for fee.
-- Partial success, reversal, audit correction, and clawback behavior.
+- Legal enforceability and exact customer wording for the commercially approved
+  receipt/reconciliation moment, netto gerealiseerde verkoopopbrengst
+  calculation, correction, reversal and bounded clawback direction.
+- VAT, invoicing and other tax validation of the all-in 10% direction.
+- Financial-legal, banking and payment-regulatory classification of the
+  preferred own-ENVAL-account model and possible PSP/split-payment fallback.
 - MID verification source.
 - Energy bill/account holder evidence requirements.
 - Dashboard route granularity.
@@ -649,6 +659,48 @@ or inline style was added.
 Targeted frontend proofs and the production build are green. Browser-live
 protected-route proof remains OPEN; no browser-runtime, remote or production
 claim is made.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## Entity, formation, year and withdrawal-09B2A2 customer boundary
+
+P-01 and T-01 are approved product/legal direction with entity details pending.
+The intended core-service controller and contracting party is the future ENVAL
+B.V.; that same entity receives the assignment, manages the service and performs
+the agreed financial settlement. Full statutory identity and contact details
+must be filled before CURRENT. Particulier is a natural person acting for their
+own relevant connection; Zakelijk is a Dutch enterprise/organization acting for
+its own relevant connection; VvE is a Dutch owners association acting through
+the stated natural person. A Zakelijk/VvE authority declaration is not ENVAL
+review or verifier acceptance. Foreign entities/registers are post-MVP.
+
+T-02 fixes the customer-facing formation rule exactly as follows:
+
+> De overeenkomst komt tot stand op het moment waarop ENVAL de elektronische
+> ondertekening server-side succesvol heeft afgerond en de klant de
+> indieningsbevestiging met een veilige referentie ontvangt.
+
+Account/e-mail selection, intake start, document selection/upload,
+`confirmed_quarantine`, parser output, fact confirmation, reaching Step 3,
+clicking confirmations and OTP request/delivery are never sufficient by
+themselves. Only successful atomic server finalization is decisive.
+
+The service and mandate each cover exactly one selected calendar year, without
+silent renewal or a subscription/ongoing-mandate claim. A new year requires a
+new explicit customer action, legal bundle, immutable snapshot, mandate and
+signature. After the selected year, only related verification, booking, sale,
+settlement, correction/reversal, objection/dispute and required retention may
+continue. Server finalization supplies the mandate issue date and the snapshot
+pins the exact year; the current multi-year-capable frontend/model remains to be
+reconciled in a later implementation batch. No retroactivity is claimed.
+
+M-06 approves a future prospective withdrawal route through an authenticated
+dashboard or reliably identity-verified written notice. It must create a new
+immutable server event containing received date, actor, source and audit
+context, without changing original evidence. Legal/verifier validation remains
+required for exact effective date, unfinished booking, irreversibility,
+notifications and retention. No such withdrawal/signing/finalization runtime is
+implemented here, and all four legal documents remain DRAFT/unverified.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
@@ -1232,5 +1284,26 @@ Step 3 has three confirmations total: summary, legal bundle and signing
 declaration. There is no mandate checkbox and no active or disabled primary
 action. The 09B action will require server-side legal/OTP/finalization gates;
 signing and persistence remain NOT IMPLEMENTED.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## Legal consolidation-09B2A3 customer boundary
+
+The four legal documents are now compact internally approved validation
+candidates, not CURRENT customer copy. Product direction is no longer blocked
+on unresolved wording choices, but entity completion, external legal/verifier
+validation, canonical freeze, effective dates and hashes remain required.
+
+The signup presentation contract is unchanged: one privacy-read intent, two
+terms acceptances, a separate mandate signature and a separate
+account-type-aware signer declaration. No legal candidate is written into the
+existing legacy acceptance payload, and no parser observation becomes a party,
+EAN, location, authority or mandate fact.
+
+The future server action must use server-canonical party facts, enumerate every
+EAN and relevant linked location, bind the approved evidence-pack fields and
+block required Zakelijk/VvE downstream use until authority review is sufficient.
+This documentation checkpoint adds no UI, OTP, signing, withdrawal, persistence,
+submit, promotion, dashboard, remote or production behavior.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

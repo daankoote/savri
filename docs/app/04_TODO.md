@@ -392,15 +392,18 @@ Local proof is not production proof. Remote migration/function deploy, productio
   - WP3C connection and WP3E location internal TARGET directions are approved without DDL authority; WP3D current-object conflict remains evidence, and open external/source/mapping blockers plus exact replacement contract and proof keep location and dependent connection schema/read-projection implementation unauthorized.
   - Do not start deployment, database drops, migration squash/baseline, runtime removals, function deletion, cron changes, Storage cleanup, Auth mutation, or remote SQL until recovery readiness is proven and Daan approves the exact mutation batch.
 - Settlement & Payouts TARGET contract:
-  - DONE documentair: provider-independent boundary from ERE sale proceeds through legal-party allocation, gross/net entitlement, 10% ENVAL TARGET fee, settlement, payout, reconciliation, correction, reversal, and clawback;
+  - DONE documentair: provider-independent boundary from bruto verkoopopbrengst through direct external transaction costs, netto gerealiseerde verkoopopbrengst, 10% ENVAL-succesfee, 90% klantaandeel, settlement, payout, reconciliation, correction, reversal and bounded clawback;
+  - F-01 through F-15 are `APPROVED COMMERCIAL DIRECTION — LEGAL, TAX AND PAYMENT-REGULATORY VALIDATION REQUIRED`;
+  - preferred pilot hypothesis is receipt on ENVAL's own bank account, reconciliation, retention of the 10% all-in fee and payout of the 90% klantaandeel;
+  - PSP/split-payment is fallback/risk-reduction, not the standard architecture;
   - implementation remains late, separately bounded, and not approved;
-  - legal analysis of the money flow remains open;
-  - bank versus PSP and account structure/safeguarding remain open;
+  - legal/payment-regulatory analysis of the own-account money flow remains open;
+  - account structure, segregation, safeguarding, licensing and PSD2/Wft classification remain open;
   - beneficiary/IBAN verification and payout export formats remain open;
-  - tax, VAT, withholding, invoicing, and final fee-trigger/base wording remain open;
-  - payout approval, reconciliation, reversals, and clawbacks remain open;
+  - tax, VAT, withholding, invoicing and final legal fee wording remain open;
+  - payout approval roles and legal enforceability of correction, reversal and clawback remain open;
   - retention, legal basis, access, and privacy for payment data remain open;
-  - pilot candidate: ledger, statements, manual payout, and manual reconciliation; bank/PSP automation later only after a separate decision and batch.
+  - pilot candidate after external validation: ledger, statements, own-account manual payout and manual reconciliation; bank/PSP automation later only after a separate decision and batch.
 - Password recovery UX.
 - Resend verification UX.
 - Production secrets, storage, function, and migration deployment proof.
@@ -986,5 +989,162 @@ CURRENT PROVEN — LOCAL RUNTIME/SOURCE ONLY.
 - [ ] 09B2: legal versions, OTP, canonical signing snapshot/hash, atomic legal/mandate/signing evidence and authority-review linkage.
 - [ ] 09C: verified promotion and customer-safe dashboard projection.
 - [ ] OPEN: production TTL/rate-limit/retention settings, remote migration/deploy, production Storage and interactive browser acceptance.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-LEGAL-BUNDLE-APPROVAL-09B2A checkpoint
+
+DOCUMENTATION/DECISION ONLY — LEGAL BUNDLE DRAFT; OTP ARCHITECTURE AUTHORIZED.
+
+- [x] Record that 09B2 stopped correctly before schema/runtime changes on
+      `LEGAL_BUNDLE_SOURCE_BLOCKED` and `OTP_TRANSPORT_BLOCKED`.
+- [x] Create one four-document approval source with proposed
+      `privacy-notice-nl-v1`, `service-terms-nl-v1`, `fee-terms-nl-v1` and
+      `mandate-nl-v1`, exact draft text, clause provenance and explicit
+      `DECISION REQUIRED` markers.
+- [x] Preserve privacy reading as an acknowledgement, not blanket consent, and
+      preserve the combined UI action as three separate legal intents.
+- [x] Authorize one new app-scoped `SigningOtpTransportPort`, local Supabase
+      mail-testing adapter boundary and configurable production adapter while
+      excluding legacy mail/dossier functions.
+- [x] P-01: approve future ENVAL B.V. as intended core-service controller —
+      `APPROVED PRODUCT/LEGAL DIRECTION — ENTITY DETAILS PENDING`.
+- [x] 09B2A3: resolve P-02 through P-06 as internally approved privacy
+      directions and consolidate their status in one canonical registry.
+- [ ] BLOCKED — ENTITY/EXTERNAL LEGAL: fill the exact controller/contact data
+      and validate bases, recipients/processors, transfers, retention, rights
+      and material-change action.
+- [x] T-01 and T-02: approve future ENVAL B.V. as contracting/assignment/
+      service/settlement entity, the Dutch MVP customer definitions, atomic
+      server-finalization formation and exact one-year/no-renewal direction.
+- [x] 09B2A3: resolve T-03 through T-08 as internally approved contract and
+      liability directions without inventing a numeric liability cap.
+- [ ] BLOCKED — ENTITY/EXTERNAL LEGAL/INSURANCE: fill the contracting-party
+      data and validate consumer rights, termination, liability/cap, force
+      majeure, changes, disputes and durable-medium notices.
+- [x] DAAN/COMMERCIAL: approve F-01 through F-15 as commercial direction,
+      including the exact 10/90 formula, closed external-cost model,
+      receipt/reconciliation trigger, correction/reversal rules, fourteen-day
+      payout direction and itemized settlement statement.
+- [ ] BLOCKED — LEGAL/TAX/PAYMENT: validate final fee wording, VAT/invoicing,
+      own-account money flow, beneficiary/ownership, safeguarding, PSD2/Wft,
+      banking and enforceability of correction/reversal/clawback.
+- [x] M-04 and M-06: approve exactly one chosen full calendar year per
+      mandate/finalization and prospective immutable-event withdrawal —
+      `APPROVED PRODUCT DIRECTION — LEGAL/VERIFIER VALIDATION REQUIRED`.
+- [x] 09B2A3: resolve M-01 through M-03, M-05 and M-07 through M-09 as
+      internally approved product directions with exact external gates.
+- [ ] BLOCKED — EXTERNAL LEGAL/VERIFIER: validate permission clauses,
+      organization/VvE authority, simple-signature evidence, calendar-year and
+      withdrawal questions, and obtain written verifier acceptance.
+- [ ] After all external gates: freeze effective dates and canonical content, then
+      derive server-side SHA-256 and reconcile exactly four registry records to
+      `CURRENT` in the separately authorized 09B2 implementation batch.
+- [ ] 09B2 runtime remains NOT IMPLEMENTED: no OTP, migration, RPC, Edge
+      Function, legal acceptance, mandate, signature evidence, snapshot,
+      customer lock or finalization exists from 09B2A.
+- [ ] Post-MVP: foreign trade-register and jurisdiction-specific authority
+      modules.
+
+Decision sources:
+`legal/signing-legal-bundle-approval.md` and
+`architecture/signing-otp-transport.md`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-FEE-DECISION-09B2A1 checkpoint
+
+APPROVED COMMERCIAL DIRECTION — LEGAL, TAX AND PAYMENT-REGULATORY VALIDATION REQUIRED.
+
+- [x] F-01 through F-15 preserve their historical IDs and now contain approved
+      commercial direction rather than open recommendations.
+- [x] Formula: bruto verkoopopbrengst minus closed directe externe
+      transactiekosten equals netto gerealiseerde verkoopopbrengst; 10% is the
+      all-in ENVAL-succesfee including applicable VAT and 90% is klantaandeel.
+- [x] Internal operating/overhead costs remain inside the 10%; every deductible
+      external cost is third-party, sale-linked, itemized and without markup.
+- [x] No fee exists before definitive receipt and reconciliation. Settlement
+      precedes payout; target payout is within fourteen calendar days unless an
+      explicit block is recorded.
+- [x] Corrections and reversals move the fee proportionally; clawback is capped
+      at evidenced net overpayment; every change is a settlementrevision.
+- [x] Preferred pilot operating hypothesis: ENVAL own-account receipt,
+      reconciliation, 10% retention and 90% payout. PSP/split-payment remains a
+      fallback, not the standard architecture.
+- [ ] BLOCKED — external legal, tax, banking and payment-regulatory validation,
+      including VAT/invoicing, ownership/entitlement, safeguarding, PSD2/Wft,
+      beneficiary verification and correction/clawback enforceability.
+- [ ] Technical fee, settlement, payout, report and settlementrevision runtime
+      remains NOT IMPLEMENTED. The complete legal bundle remains DRAFT.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-ENTITY-TERM-MANDATE-DECISIONS-09B2A2 checkpoint
+
+DOCUMENTATION/DECISION ONLY — FIVE TARGET DIRECTIONS APPROVED; NO LEGAL OR
+RUNTIME PROMOTION.
+
+- [x] `P-01 — APPROVED PRODUCT/LEGAL DIRECTION — ENTITY DETAILS PENDING`:
+      future ENVAL B.V. is the intended controller; explicit statutory and
+      contact placeholders are mandatory before CURRENT and partner roles stay
+      subject to separate legal assessment.
+- [x] `T-01 — APPROVED PRODUCT/LEGAL DIRECTION — ENTITY DETAILS PENDING`:
+      future ENVAL B.V. is the contracting party, assignment recipient, service
+      manager and financial-settlement entity; Particulier, Zakelijk and VvE
+      have bounded Dutch MVP definitions and foreign registers are post-MVP.
+- [x] `T-02 — APPROVED PRODUCT/LEGAL DIRECTION`: contract formation requires
+      successful atomic server signing finalization plus a safe-reference
+      submission confirmation; intake, upload, parser, Step 3, confirmations or
+      OTP request/delivery do not form the contract.
+- [x] Exact one-year term: no silent renewal, subscription or ongoing mandate;
+      a later year requires new customer action, legal bundle, snapshot, mandate
+      and signature, while only necessary year-related completion and retention
+      may continue after year-end.
+- [x] `M-04 — APPROVED PRODUCT DIRECTION — LEGAL/VERIFIER VALIDATION REQUIRED`:
+      one full selected calendar year, server-finalization issue date, exact year
+      in the snapshot, no multi-year mandate and no retroactivity claim.
+- [x] `M-06 — APPROVED PRODUCT DIRECTION — LEGAL/VERIFIER VALIDATION REQUIRED`:
+      authenticated/reliably verified prospective withdrawal becomes a new
+      immutable event and preserves original evidence and bounded historic acts.
+- [ ] Reconcile current multi-year-capable frontend/model behavior to the
+      one-year TARGET rule only in a separately authorized implementation batch.
+- [x] 09B2A3 resolves the then-unapproved P/T/M product directions into one
+      canonical decision registry and removes superseded alternatives.
+- [ ] Resolve entity details and the enumerated external legal/verifier gates.
+      The bundle remains DRAFT; `effective_from` stays unset and hashes remain
+      unverified.
+- [ ] No OTP, signing, mandate, withdrawal, finalization, remote or production
+      behavior is implemented or proven by 09B2A2.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-LEGAL-CONSOLIDATION-09B2A3 checkpoint
+
+DOCUMENTATION/DECISION ONLY — INTERNALLY APPROVED VALIDATION CANDIDATES;
+EXTERNAL LIVE GATES OPEN.
+
+- [x] Consolidate every P-01 through P-06, T-01 through T-08, F-01 through
+      F-15 and M-01 through M-09 decision exactly once in the canonical legal
+      registry.
+- [x] Replace duplicate decision tables, rejected alternatives, repeated
+      disclaimers and customer-facing architecture detail with four compact
+      validation candidates.
+- [x] Mark each document
+      `VALIDATION CANDIDATE — INTERNALLY APPROVED, NOT CURRENT` while the bundle
+      remains `DRAFT — EXTERNAL LEGAL/VERIFIER VALIDATION REQUIRED`.
+- [x] Preserve unset `effective_from`, unverified hashes, incomplete future
+      ENVAL B.V. details, the pending numeric liability cap and the written
+      verifier-acceptance gate.
+- [x] Fix server-canonical party/EAN/location snapshot direction, separate NEa
+      and verifier permissions, server issue date and the complete minimized
+      simple-signature evidence-pack target without raw OTP or advanced/
+      qualified-signature claims.
+- [ ] EXTERNAL LIVE GATES: entity data; privacy and consumer-law validation;
+      insurance/liability cap; exact mandate wording and authority standard;
+      written verifier acceptance; tax, banking, safeguarding and
+      payment-services classification.
+- [ ] IMPLEMENTATION: registry promotion, effective dates, hashes, OTP,
+      signing, mandate, authority review, withdrawal, settlement and atomic
+      finalization remain separately authorized future work.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

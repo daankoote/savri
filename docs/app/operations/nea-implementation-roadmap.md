@@ -134,7 +134,7 @@ TARGET approval authorizes none of these domains for blanket implementation. Eac
 | 10 | External ports, adapters and manual fallbacks | Connect external capabilities without provider-specific core architecture. | TODO | NEA-SEC-003 plus applicable domain requirements | Provider-independent port; adapters and controlled manual fallback; external data is not automatic core truth. | Hybrid | Stable core contracts from work packages 2-9; external access | Capability ports, adapters, external references, retries, manual intake | External references/imports only; no provider fields in core | Contract, mapping, provenance, retry/failure, supersede, and provider-substitution proofs | Port/adapter invariants are defined in `07`, database appendix, and `10`. | Prioritize port contracts; keep provider adapters blocked until access exists. |
 | 11 | Verifier support, location visits, sampling, findings and CAPA | Support the external verifier lifecycle while preserving professional authority. | BLOCKED — EXTERNAL | NEA-VER-001-017; NEA-COR; NEA-RET | Risk, materiality, sample, official visit, sufficiency, findings closure, statement, and fraud reporting remain external. | External professional plus internal support | Work packages 7-10; verifier/protocol/RvA/NEa/minister access and decisions | Engagement, scope, plan, visits, samples, findings, CAPA, external results | Dedicated external-provenance records | Actor boundary, immutability, no-self-verification, safe projection, pack reconstruction, and retention proofs | All 19 present TKV clauses are mapped; implementation and verifier access remain open. | Research qualified verifier/protocol path while keeping internal records provider-independent. |
 | 12 | Booking batches, ERE calculation and REV readiness | Produce reproducible candidate batches, calculations, REV inputs, results, and reconciliation. | BLOCKED — EXTERNAL | NEA-BOOK; NEA-KWH; NEA-OPS; NEA-VER-002/007/015 | Internal batch/calculation truth is separate from REV and external verification outcomes. | Hybrid | Work packages 5-11; formula, deadlines, REV account/interface | Batches, items, calculations, REV submissions/responses | New booking/calculation/REV entities | Replay, formula/version, blockers, role, input completeness, reconciliation, and deadline proofs | Requirements and target entities exist; REV details and deadline interpretation remain open. | Resolve REV access/interface and `REG-CONFLICT-001`; design internal batch contract. |
-| 13 | Finance, settlement, payouts, retention, legal and production hardening | Implement finance late: first a controlled ledger/statements/manual-payout/manual-reconciliation pilot, later bank/PSP/export/import adapters. | BLOCKED — DECISION | NEA-FIN; NEA-AUD; NEA-RET; NEA-SEC; NEA-COR; NEA-OPS | ERE sale/proceeds, legal-party allocation and entitlement, settlement, payout execution, reconciliation, corrections, legal decisions, privacy, external providers, and production authority remain distinct. | Hybrid | Work packages 2-12; proven party/case, EAN/kWh, booking/calculation, recorded ERE sale/proceeds; legal, fiscal, finance, retention, provider, remote, and deploy approvals | Settlement core, ledger, legal-party entitlement, statements, payout port, manual fallback, reconciliation, retention actions, incidents; later bank/PSP adapters | Finance/retention/operations entities only after a separately approved batch | Append-only ledger, formula/version, four-eyes, instruction/import idempotency, manual reconciliation, reversal/clawback, privacy/retention and later adapter-contract gates | `contracts/settlement-and-payouts.md` is TARGET only; bank, PSP, legal money flow, tax and safeguarding remain UNKNOWN. | Complete legal/fiscal/banking decisions and design a separately bounded manual-pilot batch; do not approve implementation or provider adapters here. |
+| 13 | Finance, settlement, payouts, retention, legal and production hardening | Implement finance late around the approved commercial 10/90 formula; preferred pilot hypothesis is ENVAL own-account receipt/reconciliation/fee retention/customer payout, with PSP/split-payment only as fallback or risk reduction. | BLOCKED — EXTERNAL LEGAL/TAX/PAYMENT VALIDATION | NEA-FIN; NEA-AUD; NEA-RET; NEA-SEC; NEA-COR; NEA-OPS | Bruto verkoopopbrengst, directe externe transactiekosten, netto gerealiseerde verkoopopbrengst, ENVAL-succesfee, klantaandeel, settlement, payout execution, reconciliation, corrections, legal decisions, privacy and production authority remain distinct. | Hybrid | Work packages 2-12; proven party/case, EAN/kWh, booking/calculation and recorded ERE sale/proceeds; legal, tax, banking, payment-regulatory, retention, provider, remote and deploy approvals | Settlement core, ledger, legal-party entitlement, statements, payout port, own-account manual path, reconciliation, retention actions, incidents; possible later bank/PSP adapters | Finance/retention/operations entities only after a separately approved batch | Append-only ledger, formula/version, four-eyes, instruction/import idempotency, settlementrevision, manual reconciliation, reversal/bounded-clawback, privacy/retention and later adapter-contract gates | F-01 through F-15 are approved commercial direction; `contracts/settlement-and-payouts.md` remains TARGET and own-account legal/tax/PSD2/Wft/safeguarding classification remains UNKNOWN. | Obtain financial-legal, tax and banking advice, then design a separately bounded pilot batch; do not approve implementation or provider adapters here. |
 
 ## Parser Position And Boundaries
 
@@ -180,7 +180,7 @@ External research may run in parallel, but it may not introduce provider-specifi
 | External research | kWh API/export | BLOCKED — EXTERNAL | Raw format, cadence, hash, retry, corrections, and replay contract. |
 | External research | REV | BLOCKED — EXTERNAL | Account, roles, interface/fields, submission, response, and reconciliation. |
 | External research | verificateur | BLOCKED — EXTERNAL | Engagement, protocol, requests, plan, visits, findings, result, and access boundaries. |
-| External research | bank/PSP/payment provider | DEFERRED | Route and provider remain UNKNOWN. A controlled manual pilot may precede automation; later adapters require separate approval. |
+| External research | bank/PSP/payment provider | BLOCKED — EXTERNAL VALIDATION | Preferred pilot hypothesis is ENVAL own-account receipt, reconciliation, 10% retention and 90% payout. PSP/split-payment is fallback, not standard. Financial-legal, tax, banking, PSD2/Wft and safeguarding classification remains UNKNOWN; later adapters require separate approval. |
 
 ## Detailed Tracking — Current Work Package 2
 
@@ -968,5 +968,146 @@ approved copy/hash and the full server-side signing boundary.
 
 Evidence:
 `operations/pilot-signup-signing-kiss-09a1-local-proof.md`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+### PILOT-SIGNUP-LEGAL-BUNDLE-APPROVAL-09B2A
+
+DOCUMENTATION/DECISION ONLY — LEGAL BUNDLE DRAFT; OTP ARCHITECTURE AUTHORIZED.
+
+The first 09B2 runtime batch stopped correctly before implementation because
+privacy, service, fee and mandate sources were not CURRENT/verified and no
+suitable existing app-scoped signing OTP transport existed. No schema, runtime,
+frontend, database or remote boundary moved.
+
+09B2A creates one controlled legal approval draft at
+`legal/signing-legal-bundle-approval.md`. It contains the four proposed
+versions `privacy-notice-nl-v1`, `service-terms-nl-v1`, `fee-terms-nl-v1` and
+`mandate-nl-v1`. Every unsupported clause remains `DECISION REQUIRED`; no draft
+hash, legacy page or recommendation is silently promoted to legal truth.
+
+`architecture/signing-otp-transport.md` now explicitly authorizes one new
+app-scoped `SigningOtpTransportPort`. Local delivery targets the local Supabase
+mail-testing boundary when available; the production adapter remains
+configurable and separately approved. Legacy mail-worker, outbound queue,
+dossier functions and dossier sessions stay frozen. Raw OTP persistence and
+logging are forbidden; hash-only verification, expiry, attempts, one-time use,
+rate limits and verified-channel binding are required.
+
+The 09B2 implementation startgate waits on explicit product direction plus
+external legal/verifier validation of the exact four-document bundle. 09B2A3
+later supplies the delegated product direction; external validation and freeze
+remain open. Runtime remains NOT IMPLEMENTED: no OTP, registry promotion,
+effective date, hash, acceptance, mandate evidence, snapshot, finalization or
+customer lock exists. Foreign trade-register and jurisdiction-specific
+authority support remain post-MVP.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+### PILOT-SIGNUP-FEE-DECISION-09B2A1
+
+APPROVED COMMERCIAL DIRECTION — LEGAL, TAX AND PAYMENT-REGULATORY VALIDATION REQUIRED.
+
+F-01 through F-15 now define one commercial model: bruto verkoopopbrengst minus
+closed, evidenced directe externe transactiekosten yields netto gerealiseerde
+verkoopopbrengst; ENVAL-succesfee is 10% including applicable VAT and
+klantaandeel is 90%. Internal operating, normal compliance/verification and
+overhead costs stay inside the 10%.
+
+No fee arises at intake, dossier acceptance, ERE award alone or sale without
+definitive receipt. Receipt plus reconciliation precedes fee settlement and the
+target customer payout is within fourteen calendar days unless an explicit
+block is recorded. Final NEa/verifier/quantity/sale corrections recalculate the
+fee, reversals move it proportionally, clawback is capped at evidenced net
+overpayment and every change creates a settlementrevision.
+
+The preferred pilot operating hypothesis is receipt on ENVAL's own bank
+account, reconciliation, retention of the 10% all-in fee and payout of the 90%
+klantaandeel. PSP/split-payment is fallback or risk reduction, not the
+standard architecture. Status remains
+`TARGET — PREFERRED OPERATING MODEL, REGULATORY CLASSIFICATION UNKNOWN`.
+
+This documentation decision changes no legal-bundle status and builds no
+runtime. The full bundle remains DRAFT. Legal wording, VAT/invoicing,
+ownership/entitlement, sale/representation role, safeguarding, banking and
+PSD2/Wft classification require external financial-legal, tax and banking
+advice before production. Fee, settlement, payout, reporting and
+settlementrevision implementation remains NOT IMPLEMENTED.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+### PILOT-SIGNUP-ENTITY-TERM-MANDATE-DECISIONS-09B2A2
+
+DOCUMENTATION/DECISION ONLY — FIVE TARGET DIRECTIONS APPROVED; ENTITY DETAILS,
+LEGAL/VERIFIER VALIDATION AND RUNTIME REMAIN OPEN.
+
+P-01 approves future ENVAL B.V. as the intended core-service controller and
+T-01 approves that same entity as contracting party, assignment recipient,
+service manager and financial-settlement entity. Both are
+`APPROVED PRODUCT/LEGAL DIRECTION — ENTITY DETAILS PENDING`: the complete
+statutory identity and contact fields must be filled before CURRENT. Partner
+controller roles remain a separate legal assessment. The Dutch MVP definitions
+for Particulier, Zakelijk and VvE are fixed; declared Zakelijk/VvE authority is
+not ENVAL review or verifier acceptance and foreign entities are post-MVP.
+
+T-02 is `APPROVED PRODUCT/LEGAL DIRECTION`. Contract formation occurs only when
+ENVAL successfully completes electronic signing atomically server-side and the
+customer receives submission confirmation with a safe reference. Earlier
+account, intake, document, parser, fact, Step 3, confirmation and OTP events do
+not form the contract. Exactly one selected calendar year applies, with no
+silent renewal, subscription or ongoing mandate. A new year requires a new
+customer action, legal bundle, snapshot, mandate and signature; bounded
+year-related completion and retention may continue after year-end.
+
+M-04 and M-06 are
+`APPROVED PRODUCT DIRECTION — LEGAL/VERIFIER VALIDATION REQUIRED`. M-04 fixes
+one full selected calendar year, server-finalization issue date, exact year in
+the signed snapshot, no multi-year mandate and no retroactivity claim. The
+current multi-year-capable frontend/model requires later reconciliation. M-06
+defines authenticated or reliably identity-verified prospective withdrawal as
+a new immutable event that preserves original evidence, stops bounded future
+acts and preserves lawful historic acts, required records and accrued
+settlement. Effective-date, unfinished-booking, irreversibility, notification,
+retention, earlier-period, existing-inboekdienstverlener overlap,
+EAN/year-exclusivity and verifier questions
+remain external blockers.
+
+The controlled legal bundle remains DRAFT with unset effective dates and
+unverified hashes. All other P/T/M decisions remained open at this checkpoint
+and are superseded by the internally approved validation directions in 09B2A3.
+This checkpoint authorizes no model, registry, mandate, withdrawal, OTP,
+signing, finalization, remote, deploy or production change.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+### PILOT-SIGNUP-LEGAL-CONSOLIDATION-09B2A3
+
+DOCUMENTATION/DECISION ONLY — FOUR INTERNALLY APPROVED VALIDATION CANDIDATES;
+EXTERNAL PILOT-LIVE GATES OPEN.
+
+The legal approval source now holds one canonical registry with every P/T/F/M
+decision exactly once. Delegated product directions resolve the remaining
+privacy, contract, liability and mandate choices. The four customer documents
+are compacted to reviewable Dutch candidate text and each has internal status
+`VALIDATION CANDIDATE — INTERNALLY APPROVED, NOT CURRENT`.
+
+The bundle remains `DRAFT — EXTERNAL LEGAL/VERIFIER VALIDATION REQUIRED`.
+Entity details, effective dates, final hashes, a numeric liability cap and
+verifier acceptance are intentionally not invented. Privacy/consumer law,
+insurance/liability, exact mandate permissions, authority/signature evidence,
+tax, banking, safeguarding and payment-services classification remain external
+live gates.
+
+The signing target uses server-canonical party facts, exact EAN/location scope,
+server issue time and a minimized evidence pack without raw OTP or an advanced/
+qualified-signature claim. Zakelijk/VvE downstream use remains blocked on a
+separate sufficient authority review, and written verifier acceptance remains
+a hard pilot-live gate.
+
+This closes the documentation decision phase only. Registry promotion,
+effective dates, hashes, one-year model reconciliation, OTP, mandate/signature
+evidence, authority review, withdrawal, settlement, finalization, browser,
+database, remote, deploy and production work remain NOT IMPLEMENTED or outside
+this batch.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

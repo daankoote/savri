@@ -160,6 +160,31 @@ production export or a retention schedule.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+## PILOT-SIGNUP-FEE-DECISION-09B2A1 Audit Boundary
+
+Status: APPROVED COMMERCIAL DIRECTION — TARGET AUDIT; NOT IMPLEMENTED.
+
+F-01 through F-15 now define the commercial calculation and reporting inputs,
+but create no CURRENT legal text, ledger, fee calculation, settlement, payment
+or audit event. Future server-owned finance audit must reconstruct the bruto
+verkoopopbrengst, every directe externe transactiekost, netto gerealiseerde
+verkoopopbrengst, ENVAL-succesfee, klantaandeel, VAT specification, payout and
+reconciliation from immutable source/formula versions.
+
+Every final NEa, verifier, quantity or sale correction creates a separate
+append-only settlementrevision. Reversal of result proportionally reverses the
+related fee. Any clawback is capped at evidenced net overpayment and remains
+subject to a separately validated legal basis. No original settlement is
+overwritten and no silent or unbounded negative balance is an audit state.
+
+The preferred own-ENVAL-account flow and PSP/split-payment fallback remain
+TARGET with regulatory classification UNKNOWN. Audit requirements do not prove
+ownership, entitlement, safeguarding, tax, PSD2/Wft, bank or payment-services
+compliance. Raw bank/PSP payloads and full account details remain outside broad
+audit and customer projections.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## PILOT-SIGNUP-SIGNATURE-CORE-09A Audit Boundary
 
 CURRENT PROVEN — LOCAL FRONTEND CONTRACT/PRESENTATION ONLY.
