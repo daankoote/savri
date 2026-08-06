@@ -974,3 +974,17 @@ CURRENT PROVEN — LOCAL FRONTEND PRESENTATION ONLY.
       IMPLEMENTED by 09A2.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-QUARANTINE-UPLOAD-09B1 checkpoint
+
+CURRENT PROVEN — LOCAL RUNTIME/SOURCE ONLY.
+
+- [x] Collecting intake, scoped app idempotency/audit, hashed `intake_manage`, explicit server TTLs and session-only browser storage.
+- [x] Private PDF-only signed uploads, server byte/MIME/SHA-256 confirmation and one-time file capability consumption.
+- [x] Immutable revisions, atomic replacement/removal, one current revision, no file-history DELETE grant and stable account/location/charger binding isolation.
+- [x] Shared dashboard/signup transport primitives and document-first gating on current `confirmed_quarantine` plus fact resolution.
+- [ ] 09B2: legal versions, OTP, canonical signing snapshot/hash, atomic legal/mandate/signing evidence and authority-review linkage.
+- [ ] 09C: verified promotion and customer-safe dashboard projection.
+- [ ] OPEN: production TTL/rate-limit/retention settings, remote migration/deploy, production Storage and interactive browser acceptance.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

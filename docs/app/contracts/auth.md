@@ -106,6 +106,14 @@ Fraud controls are backend concerns:
 
 ## 3. Auth Model
 
+### Pre-Auth Signup Capability Boundary
+
+Status: CURRENT PROVEN — LOCAL ONLY for 09B1.
+
+`intake_manage` is an opaque pre-auth capability, not an Auth session, identity, customer, dossier token, email proof, or authorization outside one collecting intake. Its raw value exists only in the central signup `sessionStorage` helper and expires server-side; only its SHA-256 is persisted. The file-scoped `quarantine_upload` capability is one-time and is not browser-persisted. Neither capability is placed in a URL query parameter, React state, logs, audit metadata, or customer-facing errors.
+
+Email verification, Auth binding, customer creation, dossier promotion, OTP, password recovery, and dashboard authorization remain separate flows. 09B1 grants none of them.
+
 ### Current App Auth Foundation
 
 Status: CURRENT / LOCAL PROOF.

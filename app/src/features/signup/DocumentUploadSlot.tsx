@@ -62,6 +62,9 @@ export function DocumentUploadSlot<T extends LocalDocumentDraft>({
       ...document,
       file,
       status: file ? "selected" : "empty",
+      quarantineStatus: "idle",
+      quarantineFileReference: null,
+      quarantineRevision: null,
     });
   };
 
@@ -150,6 +153,13 @@ export function DocumentUploadSlot<T extends LocalDocumentDraft>({
           : null}
         {fileMessage
           ? <small className="field-message">{fileMessage}</small>
+          : null}
+        {document.quarantineStatus === "uploading"
+          ? <small className="fine-print" role="status">Uploaden…</small>
+          : document.quarantineStatus === "confirmed_quarantine"
+          ? <small className="fine-print" role="status">Bestand veilig ontvangen</small>
+          : document.quarantineStatus === "error"
+          ? <small className="field-message" role="alert">Upload mislukt</small>
           : null}
         {error
           ? (

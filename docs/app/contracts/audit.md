@@ -43,6 +43,10 @@ Current locally proven app flows include:
 - document file/version replacement behavior
 - customer current-document withdrawal audit
 - immutable file/version evidence retention after withdrawal
+- pre-auth collecting-intake creation and idempotent replay/conflict
+- immutable signup quarantine issue, replacement, removal, confirm, reject, and capability consumption
+
+09B1 intake audit metadata contains only scoped references, binding/document type, revision, result, environment, request/idempotency IDs, and hashed request metadata. Raw capabilities, raw IP/user-agent, email, document content, complete EAN values, hashes, and Storage paths are excluded. `confirmed_quarantine` records transport confirmation only and never an evidence-acceptance event.
 
 Exact runtime event names live in the current endpoint and RPC code. This document defines doctrine and table ownership, not a substitute for code inspection.
 

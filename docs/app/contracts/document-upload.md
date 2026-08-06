@@ -10,14 +10,14 @@ Implementation status:
 - CURRENT / LOCAL PROOF: shared frontend upload transport.
 - CURRENT / LOCAL PROOF: reusable authenticated dashboard document card for MID and invoice evidence, download, replacement, and withdrawal.
 - OPEN: parser/precheck integration, production storage bucket/policies, remote deploy, and production browser QA.
-- TARGET / NOT IMPLEMENTED: public pre-auth quarantine upload and verification promotion are defined in `docs/app/contracts/intake-verification-promotion.md`.
+- CURRENT / LOCAL PROOF: public pre-auth quarantine upload is defined in `signup-quarantine-upload.md`; verification and promotion remain TARGET / NOT IMPLEMENTED in `intake-verification-promotion.md`.
 
 ## 1. Current Truth
 
 - `api-app-signup-submit` write v3 creates the dossier shell, locations, chargers, `app_dossier_document_slots`, legal acceptances, scoped idempotency, and app audit events.
-- The `/app` signup UI currently has local PDF invoice preview only. It does not upload files, create storage objects, confirm hashes, or mutate document slot state.
+- The document-first signup UI now uploads required PDFs through the separate pre-auth quarantine lane after local parsing and requires current `confirmed_quarantine` receipts for progression.
 - Public signup must not call the authenticated `api-app-document-*` upload/download/withdrawal endpoints until an explicit Auth/journey decision changes that boundary.
-- Target public intake document upload requires a separate private pre-auth quarantine lane.
+- Public intake document upload uses a separate private pre-auth quarantine lane; it never calls authenticated dossier document endpoints.
 - `app_dossier_document_slots` is the expected-evidence/current-version projection.
 - `app_dossier_document_files` is the server-issued physical upload target and file lifecycle table.
 - `app_dossier_document_versions` is immutable confirmed version history.

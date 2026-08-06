@@ -106,7 +106,9 @@ the intent and snapshot as explicit review risks and do not disappear.
 
 ## Later phases
 
-09B owns OTP challenge issue/delivery/verification, verified-channel binding,
+09B1 owns only pre-auth collecting intake and confirmed private quarantine transport. It creates no legal acceptance, mandate, signing evidence, OTP, customer or dossier.
+
+09B2 owns OTP challenge issue/delivery/verification, verified-channel binding,
 expiry/replay/rate limits, server-side canonicalization and hashes, CURRENT
 legal-version enforcement, server issue time, atomic signature/mandate
 finalization, authority-review linkage, idempotency and audit evidence.

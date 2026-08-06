@@ -9,6 +9,16 @@ import type {
   UploadDocumentInput,
   UploadDocumentResult,
 } from "./documentUploadTypes.ts";
+import {
+  createUploadIdempotencyKey,
+  isJsonRecord,
+  jsonNumberField,
+  jsonStringField,
+  parseJsonResponse,
+  postUploadJson,
+  putSignedUpload,
+  sha256HexFromBlob,
+} from "./documentUploadTransport.ts";
 
 type RuntimeConfig = {
   anonKey: string;
@@ -29,15 +39,15 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-
 const SHA256_RE = /^[0-9a-f]{64}$/;
 
 function isRecord(value: unknown): value is UnknownRecord {
-  return !!value && typeof value === "object" && !Array.isArray(value);
+  return isJsonRecord(value);
 }
 
 function stringField(record: UnknownRecord, key: string): string {
-  return typeof record[key] === "string" ? record[key].trim() : "";
+  return jsonStringField(record, key);
 }
 
 function numberField(record: UnknownRecord, key: string): number | null {
-  return typeof record[key] === "number" && Number.isFinite(record[key]) ? record[key] : null;
+  return jsonNumberField(record, key);
 }
 
 function safeError(
@@ -130,29 +140,6 @@ function validateInput(input: UploadDocumentInput): { ok: true; fileName: string
   return { ok: true, fileName, mimeType, sizeBytes: input.file.size };
 }
 
-async function sha256HexFromFile(
-  file: Blob,
-  digestImpl: (algorithm: AlgorithmIdentifier, data: BufferSource) => Promise<ArrayBuffer>,
-): Promise<string | null> {
-  try {
-    const bytes = await file.arrayBuffer();
-    const hash = await digestImpl("SHA-256", bytes);
-    return Array.from(new Uint8Array(hash))
-      .map((byte) => byte.toString(16).padStart(2, "0"))
-      .join("");
-  } catch (_error) {
-    return null;
-  }
-}
-
-async function parseJsonResponse(response: Response): Promise<{ ok: true; body: unknown } | { ok: false }> {
-  try {
-    return { ok: true, body: await response.json() };
-  } catch (_error) {
-    return { ok: false };
-  }
-}
-
 function validateIssueResponse(body: unknown): {
   ok: true;
   documentFileId: string;
@@ -217,30 +204,10 @@ function validateConfirmResponse(body: unknown): UploadDocumentResult {
   };
 }
 
-async function postJson(
-  endpointUrl: string,
-  accessToken: string,
-  anonKey: string,
-  idempotencyKey: string,
-  body: unknown,
-  fetchImpl: typeof fetch,
-): Promise<Response> {
-  return fetchImpl(endpointUrl, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      apikey: anonKey,
-      "Content-Type": "application/json",
-      "Idempotency-Key": idempotencyKey,
-    },
-    body: JSON.stringify(body),
-  });
-}
-
 export function createDocumentUploadAttempt(): DocumentUploadAttempt {
   return {
-    uploadUrlIdempotencyKey: crypto.randomUUID(),
-    confirmIdempotencyKey: crypto.randomUUID(),
+    uploadUrlIdempotencyKey: createUploadIdempotencyKey(),
+    confirmIdempotencyKey: createUploadIdempotencyKey(),
   };
 }
 
@@ -268,7 +235,7 @@ export async function uploadDocument(
   if (!validated.ok) return { ok: false, error: validated.error };
 
   const digestImpl = dependencies.digestImpl ?? crypto.subtle.digest.bind(crypto.subtle);
-  const clientSha256 = await sha256HexFromFile(input.file, digestImpl);
+  const clientSha256 = await sha256HexFromBlob(input.file, digestImpl);
   if (!clientSha256 || !SHA256_RE.test(clientSha256)) {
     return {
       ok: false,
@@ -292,14 +259,14 @@ export async function uploadDocument(
 
   let issueResponse: Response;
   try {
-    issueResponse = await postJson(
-      runtime.uploadUrlEndpointUrl,
+    issueResponse = await postUploadJson({
+      endpointUrl: runtime.uploadUrlEndpointUrl,
       accessToken,
-      runtime.anonKey,
-      input.attempt.uploadUrlIdempotencyKey.trim(),
-      issueBody,
+      anonKey: runtime.anonKey,
+      idempotencyKey: input.attempt.uploadUrlIdempotencyKey.trim(),
+      body: issueBody,
       fetchImpl,
-    );
+    });
   } catch (_error) {
     return {
       ok: false,
@@ -327,13 +294,16 @@ export async function uploadDocument(
     };
   }
 
-  const uploadResult = await supabaseClient.storage
-    .from(issued.storageBucket)
-    .uploadToSignedUrl(issued.storagePath, issued.uploadToken, input.file, {
-      contentType: validated.mimeType,
-    });
+  const uploadResult = await putSignedUpload({
+    supabaseClient,
+    bucket: issued.storageBucket,
+    path: issued.storagePath,
+    uploadToken: issued.uploadToken,
+    file: input.file,
+    contentType: validated.mimeType,
+  });
 
-  if (uploadResult.error) {
+  if (!uploadResult.ok) {
     return {
       ok: false,
       error: safeError("upload_failed", "upload", "Bestand kon niet worden geupload.", true),
@@ -349,14 +319,14 @@ export async function uploadDocument(
 
   let confirmResponse: Response;
   try {
-    confirmResponse = await postJson(
-      runtime.uploadConfirmEndpointUrl,
+    confirmResponse = await postUploadJson({
+      endpointUrl: runtime.uploadConfirmEndpointUrl,
       accessToken,
-      runtime.anonKey,
-      input.attempt.confirmIdempotencyKey.trim(),
-      confirmBody,
+      anonKey: runtime.anonKey,
+      idempotencyKey: input.attempt.confirmIdempotencyKey.trim(),
+      body: confirmBody,
       fetchImpl,
-    );
+    });
   } catch (_error) {
     return {
       ok: false,

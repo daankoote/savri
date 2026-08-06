@@ -18,6 +18,8 @@ The old `dossier.html` wizard and current `api-dossier-*` endpoints are source m
 
 Target intake quarantine, email verification, and promotion are defined separately in `docs/app/contracts/intake-verification-promotion.md` as TARGET / NOT IMPLEMENTED. That target contract supersedes any future design that would require every customer to submit the full dossier again in the dashboard.
 
+09B1 update: the active document-first journey now uses `api-app-signup-intake-start`, `api-app-signup-upload-url`, and `api-app-signup-upload-confirm` only for a collecting pre-auth intake and private quarantine files. It does not invoke `api-app-signup-submit`, create a dossier, or bootstrap dashboard access. Actual signing remains 09B2; verified promotion and dashboard projection remain 09C.
+
 ## Implementation Status
 
 `api-app-signup-submit` write v3 endpoint is implemented and locally proven.

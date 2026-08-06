@@ -44,6 +44,14 @@ export async function runSignupJourneyProof(): Promise<void> {
   );
   const locationTabs = await source("SignupLocationTabs.tsx");
   const upload = await source("DocumentUploadSlot.tsx");
+  const quarantineClient = await source("signupQuarantineUploadClient.ts");
+  const capabilityStore = await source("signupIntakeCapabilityStore.ts");
+  const sharedUploadTransport = await Deno.readTextFile(
+    "app/src/features/documents/documentUploadTransport.ts",
+  );
+  const dashboardUploadClient = await Deno.readTextFile(
+    "app/src/features/documents/documentUploadClient.ts",
+  );
   const consent = await source("ConsentSignatureSection.tsx");
   const types = await source("signupTypes.ts");
   const normalizers = await source("signupNormalizers.ts");
@@ -113,11 +121,31 @@ export async function runSignupJourneyProof(): Promise<void> {
   assert(
     documents.includes("DocumentUploadSlot") &&
       documents.includes("parseInvoicePdfInput") &&
+      documents.indexOf("parseInvoicePdfInput") <
+        documents.indexOf("uploadSignupDocument") &&
       documents.includes("activeLocation.energyDocument") &&
       documents.includes("chargerDocumentsByChargerId[chargerId]") &&
       documents.includes('"installation_invoice"') &&
       !documents.includes("ChargerForm"),
     "document_scope_or_binding_mismatch",
+  );
+
+  assert(
+    upload.includes("Uploaden…") &&
+      upload.includes("Bestand veilig ontvangen") &&
+      upload.includes("Upload mislukt") &&
+      selectors.includes('quarantineStatus !== "confirmed_quarantine"') &&
+      selectors.includes('quarantineStatus === "confirmed_quarantine"') &&
+      quarantineClient.includes("api-app-signup-intake-start") &&
+      quarantineClient.includes("api-app-signup-upload-url") &&
+      quarantineClient.includes("api-app-signup-upload-confirm") &&
+      quarantineClient.includes("sha256HexFromBlob") &&
+      quarantineClient.includes("putSignedUpload") &&
+      dashboardUploadClient.includes('from "./documentUploadTransport.ts"') &&
+      sharedUploadTransport.includes("postUploadJson") &&
+      capabilityStore.includes("window.sessionStorage") &&
+      !capabilityStore.includes("localStorage"),
+    "signup_quarantine_transport_or_gating_missing",
   );
 
   assert(

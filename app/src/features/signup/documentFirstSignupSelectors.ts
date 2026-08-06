@@ -577,6 +577,7 @@ function accountComplete(draft: DocumentFirstSignupDraft): boolean {
   if (draft.accountBasis.accountType === "particulier") return true;
   if (
     !draft.organizationDocument.file ||
+    draft.organizationDocument.quarantineStatus !== "confirmed_quarantine" ||
     draft.organizationDocument.parseStatus === "parsing"
   ) return false;
   const rows = selectOrganizationDocumentReviewRows(draft);
@@ -604,7 +605,11 @@ function documentsComplete(draft: DocumentFirstSignupDraft): boolean {
         const document = draft.chargerDocumentsByChargerId[chargerId]?.find(
           (candidate) => candidate.documentType === "installation_invoice",
         );
-        return Boolean(document?.file && document.parseStatus !== "parsing");
+        return Boolean(
+          document?.file &&
+            document.quarantineStatus === "confirmed_quarantine" &&
+            document.parseStatus !== "parsing",
+        );
       });
     const locationFactsComplete = factRowsAllowProgress(
       presentation.locations.find((section) =>
@@ -616,7 +621,9 @@ function documentsComplete(draft: DocumentFirstSignupDraft): boolean {
       .filter((section) => section.locationId === locationId)
       .every((section) => factRowsAllowProgress(section.rows));
     return Boolean(
-      energyDocument?.file && energyTerminal && chargersComplete &&
+      energyDocument?.file &&
+        energyDocument.quarantineStatus === "confirmed_quarantine" &&
+        energyTerminal && chargersComplete &&
         locationFactsComplete && chargerFactsComplete,
     );
   });

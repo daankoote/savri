@@ -95,6 +95,9 @@ export type LocalDocumentDraft = {
   documentType: DocumentType;
   file: File | null;
   status: "empty" | "selected";
+  quarantineStatus?: "idle" | "uploading" | "confirmed_quarantine" | "error";
+  quarantineFileReference?: string | null;
+  quarantineRevision?: number | null;
 };
 
 export type AccountDocumentDraft = LocalDocumentDraft & {

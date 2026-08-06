@@ -39,6 +39,11 @@ import {
 } from "./signupAccountTypeTransition";
 import { transitionSignupStep } from "./signupStepTransition";
 import type { AccountDocumentDraft, PersonalInfoDraft } from "./signupTypes";
+import { clearSignupIntakeSession } from "./signupIntakeCapabilityStore";
+import {
+  removeSignupDocument,
+  uploadSignupDocument,
+} from "./signupQuarantineUploadClient";
 
 export const ACCOUNT_TYPE_RESET_CONFIRMATION =
   "Accounttype wijzigen? Alle ingevulde gegevens en geselecteerde documenten worden gewist.";
@@ -66,6 +71,7 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
   );
   const draftGenerationRef = useRef(0);
   const organizationAttemptsRef = useRef(0);
+  const organizationAbortRef = useRef<AbortController | null>(null);
   const legacyDraft = useMemo(() => selectMapperCompatibleDraft(draft), [
     draft,
   ]);
@@ -104,6 +110,8 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
   const replaceWithFreshDraft = (fresh: DocumentFirstSignupDraft) => {
     draftGenerationRef.current += 1;
     organizationAttemptsRef.current += 1;
+    organizationAbortRef.current?.abort();
+    clearSignupIntakeSession();
     dispatch({ type: "replace_draft", value: fresh });
     setActiveLocationId(fresh.locationOrder[0]);
     changeActiveStep("account");
@@ -113,6 +121,9 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
     document: AccountDocumentDraft,
   ) => {
     const generation = draftGenerationRef.current;
+    organizationAbortRef.current?.abort();
+    const controller = new AbortController();
+    organizationAbortRef.current = controller;
     const attempt = organizationAttemptsRef.current + 1;
     organizationAttemptsRef.current = attempt;
     const reset: AccountDocumentDraft = {
@@ -120,28 +131,69 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
       parseStatus: document.file ? "parsing" : "idle",
     };
     dispatch({ type: "update_organization_document", document: reset });
-    if (!document.file) return;
+    if (!document.file) {
+      void removeSignupDocument({
+        accountType: draft.accountBasis.accountType,
+        email: draft.accountBasis.email,
+        clientSlotId: document.clientId,
+        signal: controller.signal,
+      });
+      return;
+    }
 
     const result = await parseInvoicePdfInput(document.file);
     if (
       organizationAttemptsRef.current !== attempt ||
       !isDraftGenerationCurrent(generation)
     ) return;
+    const parsed: AccountDocumentDraft = {
+      ...reset,
+      parseStatus: result.ok ? "parsed" : "error",
+    };
     dispatch({
       type: "update_organization_document",
-      document: { ...reset, parseStatus: result.ok ? "parsed" : "error" },
+      document: parsed,
     });
-    if (!result.ok) return;
-    const envelope = result.observation_envelope;
-    dispatch({
-      type: "set_document_observation",
-      documentId: document.clientId,
-      value: {
+    if (result.ok) {
+      const envelope = result.observation_envelope;
+      dispatch({
+        type: "set_document_observation",
         documentId: document.clientId,
-        contentFingerprint: envelope.contentFingerprint,
-        parserVersion: envelope.parserVersion,
-        envelope,
-      },
+        value: {
+          documentId: document.clientId,
+          contentFingerprint: envelope.contentFingerprint,
+          parserVersion: envelope.parserVersion,
+          envelope,
+        },
+      });
+    }
+    const uploading: AccountDocumentDraft = {
+      ...parsed,
+      quarantineStatus: "uploading",
+      quarantineFileReference: null,
+      quarantineRevision: null,
+    };
+    dispatch({ type: "update_organization_document", document: uploading });
+    const upload = await uploadSignupDocument({
+      accountType: draft.accountBasis.accountType,
+      email: draft.accountBasis.email,
+      clientSlotId: document.clientId,
+      documentType: document.documentType,
+      file: document.file,
+      signal: controller.signal,
+    });
+    if (organizationAttemptsRef.current !== attempt ||
+      !isDraftGenerationCurrent(generation) || (!upload.ok && upload.aborted)) return;
+    dispatch({
+      type: "update_organization_document",
+      document: upload.ok
+        ? {
+          ...uploading,
+          quarantineStatus: "confirmed_quarantine",
+          quarantineFileReference: upload.receipt.fileReference,
+          quarantineRevision: upload.receipt.revisionNumber,
+        }
+        : { ...uploading, quarantineStatus: "error" },
     });
   };
 
@@ -162,6 +214,13 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
         );
       }
       return;
+    }
+    if (next.email.trim().toLowerCase() !== draft.accountBasis.email.trim().toLowerCase()) {
+      draftGenerationRef.current += 1;
+      organizationAttemptsRef.current += 1;
+      organizationAbortRef.current?.abort();
+      clearSignupIntakeSession();
+      dispatch({ type: "invalidate_quarantine_receipts" });
     }
     dispatch({
       type: "update_account_basis",
@@ -295,12 +354,20 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
           candidate.clientId === chargerSource.documentId
         );
       if (document) {
+        void removeSignupDocument({
+          accountType: draft.accountBasis.accountType,
+          email: draft.accountBasis.email,
+          clientSlotId: document.clientId,
+        });
         dispatch({
           type: "update_charger_document",
           document: {
             ...document,
             file: null,
             status: "empty",
+            quarantineStatus: "idle",
+            quarantineFileReference: null,
+            quarantineRevision: null,
             observation: null,
             parseStatus: "idle",
           },
@@ -315,9 +382,21 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
     const document = Object.values(draft.energyDocumentsByLocationId)
       .find((candidate) => candidate.clientId === energySource.documentId);
     if (!document) return;
+    void removeSignupDocument({
+      accountType: draft.accountBasis.accountType,
+      email: draft.accountBasis.email,
+      clientSlotId: document.clientId,
+    });
     dispatch({
       type: "update_energy_document",
-      document: { ...document, file: null, status: "empty" },
+      document: {
+        ...document,
+        file: null,
+        status: "empty",
+        quarantineStatus: "idle",
+        quarantineFileReference: null,
+        quarantineRevision: null,
+      },
     });
   };
 

@@ -6,6 +6,8 @@ Authority: operational tracker only; it does not override the official TKV sourc
 
 Architecture decision: TARGET — approved by Daan on 2026-07-22; not CURRENT PROVEN.
 
+Signup lane note: PILOT-SIGNUP-QUARANTINE-UPLOAD-09B1 is CURRENT PROVEN — LOCAL ONLY for collecting intake, capability-scoped private upload, server byte/hash confirmation, immutable replacement and document-first gating. It is transport proof, not regulatory/evidence acceptance. Signing remains 09B2 and verified promotion/dashboard projection remains 09C. Remote, deploy and production remain open.
+
 Next bounded gates: WP3M-D01 through WP3M-D18 are APPROVED TARGET. WP3N
 commit `6705fa3baf046510d70b8502da6058009b30b2f3` now proves exactly four
 operation-family callers, one transport adapter, eight atomic bridge RPCs,

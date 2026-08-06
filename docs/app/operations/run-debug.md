@@ -51,6 +51,46 @@ If a request receives 401 before app CORS/error shape appears, treat it as a gat
 
 If the function runtime is not reached, the function cannot write app audit events.
 
+## Local Signup Quarantine Gateway 503
+
+A Kong `503` with `DNS resolution failed` or `name resolution failed` for
+`supabase_edge_runtime_enval` means Kong cannot resolve the local Edge Runtime
+container. The request did not reach the signup function. Keep this distinct
+from a gateway `401`/`404` and from a safe function-level `4xx` response.
+The client-side parser may still show observations in this state because it
+runs before upload. That is not upload evidence: `confirmed_quarantine` stays
+absent and the customer journey must remain blocked.
+
+Use this bounded recovery sequence:
+
+1. Run `supabase status` locally and do not paste its raw secret-bearing output.
+2. Confirm that Kong, DB, and Storage are healthy and whether
+   `supabase_edge_runtime_enval` is absent or stopped. Inspect only filtered,
+   redacted Kong/Edge log lines.
+3. Run `supabase start`. If it reports that the stack is already running while
+   Edge remains stopped, do not reset the database or remove containers,
+   volumes, Storage objects, or testdata.
+4. Confirm that `supabase/functions/.env.local` is ignored by Git and contains
+   `APP_SIGNUP_CAPABILITY_SECRET`. Never print its value.
+5. Start only the local function runtime:
+
+   ```bash
+   supabase functions serve --env-file supabase/functions/.env.local
+   ```
+
+6. In a separate sequential command, run the local gateway smoke:
+
+   ```bash
+   ENVAL_ALLOW_LOCAL_SIGNUP_QUARANTINE_PROOF=YES \
+     node scripts/proofs/app-signup-quarantine-gateway-smoke.proof.mjs
+   ```
+
+The smoke is green only when OPTIONS reaches the function runtime, an
+incomplete authenticated POST returns a safe function `4xx`, valid start and
+replay return `200`, conflicting idempotent input returns `409`, and no
+customer, identity, case, or dossier is created. Do not report recovery while
+Kong still logs Edge Runtime name-resolution errors.
+
 ## Remote PostgREST Health
 
 For remote PostgREST diagnosis, separate these facts:

@@ -8,6 +8,10 @@ import {
 import { documentFirstSignupToLegacyDraft } from "./documentFirstSignupModel";
 import { projectEnergyEanCandidates } from "./documentSemanticProjector";
 import { DocumentUploadSlot } from "./DocumentUploadSlot";
+import {
+  removeSignupDocument,
+  uploadSignupDocument,
+} from "./signupQuarantineUploadClient";
 import { SignupLocationTabs } from "./SignupLocationTabs";
 import type {
   ChargerDocumentDraft,
@@ -34,6 +38,8 @@ export function DocumentFirstDocumentsStep({
 }: DocumentFirstDocumentsStepProps) {
   const energyAttempts = useRef(new Map<string, number>());
   const chargerAttempts = useRef(new Map<string, number>());
+  const energyAbortControllers = useRef(new Map<string, AbortController>());
+  const chargerAbortControllers = useRef(new Map<string, AbortController>());
   const legacy = documentFirstSignupToLegacyDraft(draft);
   const activeLocation =
     legacy.locations.find((location) =>
@@ -52,25 +58,51 @@ export function DocumentFirstDocumentsStep({
     value: ConnectionDeclarationDraft,
   ) => dispatch({ type: "update_connection_declaration", locationId, value });
 
-  const removeLocation = (locationId: string) => {
+  const removeLocation = async (locationId: string) => {
     energyAttempts.current.set(
       locationId,
       (energyAttempts.current.get(locationId) || 0) + 1,
     );
-    (draft.chargerOrderByLocationId[locationId] || []).forEach((chargerId) =>
+    (draft.chargerOrderByLocationId[locationId] || []).forEach((chargerId) => {
+      chargerAbortControllers.current.get(chargerId)?.abort();
       chargerAttempts.current.set(
         chargerId,
         (chargerAttempts.current.get(chargerId) || 0) + 1,
-      )
+      );
+    });
+    energyAbortControllers.current.get(locationId)?.abort();
+    const documents = [
+      draft.energyDocumentsByLocationId[locationId],
+      ...(draft.chargerOrderByLocationId[locationId] || []).flatMap((chargerId) =>
+        draft.chargerDocumentsByChargerId[chargerId] || []
+      ),
+    ].filter(
+      (document): document is LocationDocumentDraft | ChargerDocumentDraft =>
+        Boolean(document),
     );
+    for (const document of documents) {
+      await removeSignupDocument({
+        accountType: draft.accountBasis.accountType,
+        email: draft.accountBasis.email,
+        clientSlotId: document.clientId,
+      });
+    }
     dispatch({ type: "remove_location", locationId });
   };
 
-  const removeCharger = (locationId: string, chargerId: string) => {
+  const removeCharger = async (locationId: string, chargerId: string) => {
+    chargerAbortControllers.current.get(chargerId)?.abort();
     chargerAttempts.current.set(
       chargerId,
       (chargerAttempts.current.get(chargerId) || 0) + 1,
     );
+    for (const document of draft.chargerDocumentsByChargerId[chargerId] || []) {
+      await removeSignupDocument({
+        accountType: draft.accountBasis.accountType,
+        email: draft.accountBasis.email,
+        clientSlotId: document.clientId,
+      });
+    }
     dispatch({ type: "remove_charger", locationId, chargerId });
   };
 
@@ -79,6 +111,9 @@ export function DocumentFirstDocumentsStep({
   ) => {
     const locationId = document.locationClientId;
     const generation = draftGeneration;
+    energyAbortControllers.current.get(locationId)?.abort();
+    const controller = new AbortController();
+    energyAbortControllers.current.set(locationId, controller);
     const attempt = (energyAttempts.current.get(locationId) || 0) + 1;
     energyAttempts.current.set(locationId, attempt);
     dispatch({ type: "update_energy_document", document });
@@ -92,7 +127,15 @@ export function DocumentFirstDocumentsStep({
       customerConfirmed: false,
     };
     updateConnection(locationId, reset);
-    if (!document.file) return;
+    if (!document.file) {
+      void removeSignupDocument({
+        accountType: draft.accountBasis.accountType,
+        email: draft.accountBasis.email,
+        clientSlotId: document.clientId,
+        signal: controller.signal,
+      });
+      return;
+    }
 
     const result = await parseInvoicePdfInput(document.file);
     if (
@@ -105,48 +148,74 @@ export function DocumentFirstDocumentsStep({
         ...reset,
         preflightStatus: "parser_error",
       });
-      return;
+    } else {
+      const envelope = result.observation_envelope;
+      dispatch({
+        type: "set_document_observation",
+        documentId: document.clientId,
+        value: {
+          documentId: document.clientId,
+          contentFingerprint: envelope.contentFingerprint,
+          parserVersion: envelope.parserVersion,
+          envelope,
+        },
+      });
+      const candidates = projectEnergyEanCandidates(envelope);
+      const confirmable = getConfirmableEnergyEanCandidates(candidates);
+      if (confirmable.length === 0) {
+        updateConnection(locationId, {
+          ...reset,
+          candidates,
+          preflightStatus: candidates.length === 0
+            ? "no_candidate"
+            : "manual_entry_required",
+        });
+      } else if (confirmable.length > 1) {
+        updateConnection(locationId, {
+          ...reset,
+          candidates,
+          preflightStatus: "multiple_candidates",
+        });
+      } else {
+        const candidate = confirmable[0];
+        updateConnection(locationId, {
+          ...reset,
+          candidates,
+          selectedCandidateEan: candidate.normalizedEan,
+          preflightStatus: candidate.classification === "electricity"
+            ? "electricity_candidate_found"
+            : "unclassified_candidate_found",
+        });
+      }
     }
 
-    const envelope = result.observation_envelope;
-    dispatch({
-      type: "set_document_observation",
-      documentId: document.clientId,
-      value: {
-        documentId: document.clientId,
-        contentFingerprint: envelope.contentFingerprint,
-        parserVersion: envelope.parserVersion,
-        envelope,
-      },
+    const uploading: LocationDocumentDraft = {
+      ...document,
+      quarantineStatus: "uploading",
+      quarantineFileReference: null,
+      quarantineRevision: null,
+    };
+    dispatch({ type: "update_energy_document", document: uploading });
+    const upload = await uploadSignupDocument({
+      accountType: draft.accountBasis.accountType,
+      email: draft.accountBasis.email,
+      clientSlotId: document.clientId,
+      documentType: document.documentType,
+      file: document.file,
+      signal: controller.signal,
     });
-    const candidates = projectEnergyEanCandidates(envelope);
-    const confirmable = getConfirmableEnergyEanCandidates(candidates);
-    if (confirmable.length === 0) {
-      updateConnection(locationId, {
-        ...reset,
-        candidates,
-        preflightStatus: candidates.length === 0
-          ? "no_candidate"
-          : "manual_entry_required",
-      });
-      return;
-    }
-    if (confirmable.length > 1) {
-      updateConnection(locationId, {
-        ...reset,
-        candidates,
-        preflightStatus: "multiple_candidates",
-      });
-      return;
-    }
-    const candidate = confirmable[0];
-    updateConnection(locationId, {
-      ...reset,
-      candidates,
-      selectedCandidateEan: candidate.normalizedEan,
-      preflightStatus: candidate.classification === "electricity"
-        ? "electricity_candidate_found"
-        : "unclassified_candidate_found",
+    if (energyAttempts.current.get(locationId) !== attempt ||
+      !isDraftGenerationCurrent(generation) || (!upload.ok && upload.aborted)) return;
+    dispatch({
+      type: "update_energy_document",
+      document: upload.ok
+        ? {
+          ...uploading,
+          quarantineStatus: "confirmed_quarantine",
+          quarantineFileReference: upload.receipt.fileReference,
+          quarantineRevision: upload.receipt.revisionNumber,
+        }
+        : { ...uploading, quarantineStatus: "error" },
     });
   };
 
@@ -155,6 +224,9 @@ export function DocumentFirstDocumentsStep({
   ) => {
     const generation = draftGeneration;
     const chargerId = document.chargerClientId;
+    chargerAbortControllers.current.get(chargerId)?.abort();
+    const controller = new AbortController();
+    chargerAbortControllers.current.set(chargerId, controller);
     const attempt = (chargerAttempts.current.get(chargerId) || 0) + 1;
     chargerAttempts.current.set(chargerId, attempt);
     const reset: ChargerDocumentDraft = {
@@ -163,7 +235,15 @@ export function DocumentFirstDocumentsStep({
       parseStatus: document.file ? "parsing" : "idle",
     };
     dispatch({ type: "update_charger_document", document: reset });
-    if (!document.file) return;
+    if (!document.file) {
+      void removeSignupDocument({
+        accountType: draft.accountBasis.accountType,
+        email: draft.accountBasis.email,
+        clientSlotId: document.clientId,
+        signal: controller.signal,
+      });
+      return;
+    }
 
     const result = await parseInvoicePdfInput(document.file);
     if (
@@ -178,17 +258,47 @@ export function DocumentFirstDocumentsStep({
         parseStatus: result.ok ? "parsed" : "error",
       },
     });
-    if (!result.ok) return;
-    const envelope = result.observation_envelope;
-    dispatch({
-      type: "set_document_observation",
-      documentId: document.clientId,
-      value: {
+    if (result.ok) {
+      const envelope = result.observation_envelope;
+      dispatch({
+        type: "set_document_observation",
         documentId: document.clientId,
-        contentFingerprint: envelope.contentFingerprint,
-        parserVersion: envelope.parserVersion,
-        envelope,
-      },
+        value: {
+          documentId: document.clientId,
+          contentFingerprint: envelope.contentFingerprint,
+          parserVersion: envelope.parserVersion,
+          envelope,
+        },
+      });
+    }
+    const parsed: ChargerDocumentDraft = {
+      ...reset,
+      parseStatus: result.ok ? "parsed" : "error",
+      quarantineStatus: "uploading",
+      quarantineFileReference: null,
+      quarantineRevision: null,
+    };
+    dispatch({ type: "update_charger_document", document: parsed });
+    const upload = await uploadSignupDocument({
+      accountType: draft.accountBasis.accountType,
+      email: draft.accountBasis.email,
+      clientSlotId: document.clientId,
+      documentType: document.documentType,
+      file: document.file,
+      signal: controller.signal,
+    });
+    if (chargerAttempts.current.get(chargerId) !== attempt ||
+      !isDraftGenerationCurrent(generation) || (!upload.ok && upload.aborted)) return;
+    dispatch({
+      type: "update_charger_document",
+      document: upload.ok
+        ? {
+          ...parsed,
+          quarantineStatus: "confirmed_quarantine",
+          quarantineFileReference: upload.receipt.fileReference,
+          quarantineRevision: upload.receipt.revisionNumber,
+        }
+        : { ...parsed, quarantineStatus: "error" },
     });
   };
 
@@ -229,7 +339,7 @@ export function DocumentFirstDocumentsStep({
                   ? {
                     disabled: draft.locationOrder.length <= 1,
                     label: "Locatie verwijderen",
-                    onClick: () => removeLocation(activeLocation.clientId),
+                    onClick: () => void removeLocation(activeLocation.clientId),
                   }
                   : undefined}
                 title="Energienota of energiecontract"
@@ -262,7 +372,7 @@ export function DocumentFirstDocumentsStep({
                         ] || []).length <= 1,
                         label: "Laadpaal verwijderen",
                         onClick: () =>
-                          removeCharger(activeLocation.clientId, chargerId),
+                          void removeCharger(activeLocation.clientId, chargerId),
                       }}
                       title="Installatiefactuur"
                     />

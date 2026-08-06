@@ -1426,3 +1426,14 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   unchanged or not implemented.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-08-06 — PILOT-SIGNUP-QUARANTINE-UPLOAD-09B1
+
+- Added a collecting pre-auth intake lifecycle with hashed `intake_manage` and one-time file-scoped capabilities, configured expiry, app idempotency and privacy-safe intake audit.
+- Added immutable signup file revisions with atomic supersession, one current revision, no file-history DELETE grant, and private `app-documents/signup-quarantine/...` targets.
+- Added start, issue/remove and confirm `api-app-*` endpoints. Confirm downloads the private object and determines actual PDF signature, byte size and SHA-256 server-side.
+- Reused shared dashboard upload primitives in one signup adapter and kept the raw management capability only in a central `sessionStorage` helper.
+- Gated the document-first journey on current `confirmed_quarantine` receipts plus existing fact resolution. The status means transport confirmation only, never evidence acceptance.
+- Added local runtime marker `signup-quarantine-runtime-09b1-proof-ok`. Signing remains 09B2; verified promotion/dashboard projection remains 09C. No remote action, deploy or production proof occurred.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

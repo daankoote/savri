@@ -1,8 +1,8 @@
 # Intake Verification Promotion Contract
 
-Status: TARGET / NOT IMPLEMENTED contract for future `/aanmelden` intake quarantine, email verification, and promotion.
+Status: MIXED — 09B1 collecting intake/private quarantine is CURRENT PROVEN LOCALLY; finalization, email verification, evidence promotion, and dossier promotion remain TARGET / NOT IMPLEMENTED.
 
-This document defines target behavior only. Current runtime behavior remains the committed code and migrations. Do not treat any target flow in this document as CURRENT until schema, endpoints, browser QA, and proof are implemented and documented.
+The bounded current 09B1 behavior is defined in `signup-quarantine-upload.md`. It creates only a collecting pre-auth intake and immutable private file revisions. Everything from finalization through verification and promotion remains target behavior and must not be inferred from transport confirmation.
 
 ## 1. Status And Scope
 
@@ -15,15 +15,12 @@ Scope:
 - server-side promotion into app customer/dossier state
 - targeted correction/revision lifecycle
 
-Out of scope:
+Out of scope for this promotion contract:
 
-- runtime code
-- migrations
-- Edge Functions
 - production deployment
 - exact retention duration
 
-Current implementation is different: `/aanmelden` can submit through `api-app-signup-submit` write v3, and authenticated dashboard document upload/download/withdrawal is implemented separately.
+Current document-first signup uses the separate 09B1 quarantine transport and does not call `api-app-signup-submit`. The older write-v3 endpoint remains protected source but is outside the active 09B1 journey. Authenticated dashboard document upload/download/withdrawal remains separate.
 
 ## 2. Product Decision
 
@@ -45,9 +42,11 @@ The initial `Start dossier` action must include clear confirmation copy explaini
 
 ## 3. Current Versus Target
 
-CURRENT:
+CURRENT / LOCAL PROOF:
 
 - public signup form and browser preview/parser journey;
+- collecting intake plus `intake_manage` capability;
+- private immutable quarantine revisions and server-side PDF byte/hash confirmation;
 - Supabase Auth/bootstrap;
 - authenticated customer dashboard;
 - authenticated reusable document module;
@@ -56,7 +55,6 @@ CURRENT:
 
 TARGET / NOT IMPLEMENTED:
 
-- public pre-auth quarantine upload lane;
 - `pending_verification` intake state;
 - single-use verification promotion;
 - quarantine-to-dossier evidence promotion;
