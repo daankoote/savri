@@ -1,6 +1,7 @@
 # Connection, EAN And Aangeslotene Contract
 
-TARGET — WP3C INTERNAL DOMAIN DECISIONS APPROVED — EXTERNAL BLOCKERS OPEN / NOT DDL READY
+TARGET — WP3C INTERNAL DOMAIN DECISIONS APPROVED — EXTERNAL BLOCKERS OPEN / NOT
+DDL READY
 
 Dit document is het connection-, allocatiepunt-, EAN- en aangeslotenecontract. Daan heeft via `operations/wp3c-connection-ean-internal-domain-decisions.md` uitsluitend internal decision package A-E als TARGET goedgekeurd. Die goedkeuring is geen juridische interpretatie, externe validatie, DDL-specificatie, implementatiebewijs of toestemming voor schema-, runtime-, provider-, remote- of deploywerk.
 
@@ -26,7 +27,7 @@ De bronvolgorde uit `00_CANON.md` blijft leidend. Dit voorstel gebruikt uitsluit
 De gescheiden verantwoordelijkheden voor physical connection, allocation point, metadata/history, aangesloteneclaim en administratieve case link zijn approved TARGET onder package A-D. De volgende fysieke namen blijven uitsluitend niet-goedgekeurde voorstellen. Zij zijn geen schema-authorisatie en definiëren geen kolommen of constraints.
 
 | voorgestelde verantwoordelijkheid | niet-goedgekeurde kandidaatnaam | begrensde TARGET-verantwoordelijkheid |
-|---|---|---|
+| ------------------------------------------------------------------------ | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | fysieke elektriciteitsaansluiting | `app_electricity_connections` | Stabiele identiteit van één fysieke aansluiting en haar historiseerbare relatie met een goedgekeurde stabiele locationroot; geen EAN-, aangeslotene-, mandate-, charger-, kWh- of eligibility-engine. |
 | EAN-dragend allocatiepunt | `app_allocation_points` | Stabiele externe allocatiepuntroot waarvan een geaccepteerde EAN de voorgestelde immutable identiteit is; declared, parsed of observed waarden creëren deze root niet. |
 | allocatiepuntmetadata over tijd en primary/secondary/direct-line-relatie | `app_allocation_point_versions` | Immutable versies van period-bound netwerk-/constructmetadata en de bewuste historische relatie met een primary connection/point; geen accepted-evidencebesluit in de versie zelf. |
@@ -110,7 +111,7 @@ Approved TARGET:
 Business validity en recorded time blijven approved afzonderlijk. Evidence validity, decision time en calendar-year controls blijven eveneens afzonderlijke concerns, maar hun precieze external/evidencecontracten zijn open:
 
 | tijd | betekenis |
-|---|---|
+| ---------------------- | ------------------------------------------------------------------------------------ |
 | business validity | periode waarin de connection-, allocation- of partyrelatie in de werkelijkheid geldt |
 | recording time | wanneer ENVAL de immutable row vastlegde |
 | evidence validity | periode/freshness waarin een artifact of externe bron bruikbaar is |
@@ -190,7 +191,7 @@ Customer-safe projection, concrete RPC-vorm, `SECURITY DEFINER`-gebruik, search 
 De interne TARGET-richting van pakketten A tot en met E is op 2026-07-24 expliciet door Daan goedgekeurd. Dat besluit autoriseert geen DDL, implementatie, retirement of proofclaim.
 
 | besluit-ID | onderwerp | WP3C-pakket | besluitstatus | goedgekeurde TARGET-richting | externe/open blocker | DDL-status | latere proofverplichting |
-|---|---|---|---|---|---|---|---|
+| ---------- | ---------------------------------------- | ----------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | -------------- | ----------------------------------------------------- |
 | WP3B-D01 | connection versus allocation-pointroot | A | APPROVED TARGET | separate fysieke connection- en EAN-dragende allocation-pointroots | register-/verifieraansluiting | NOT AUTHORIZED | objectinventaris en negatieve cross-contexttests |
 | WP3B-D02 | accepted-EAN-immutability | A | APPROVED TARGET | accepted EAN is immutable op de stabiele allocation-pointroot; correctie herschrijft niet | officiële correctie-/reuserules | NOT AUTHORIZED | correction/replacement/historyproof |
 | WP3B-D03 | EAN syntax/checksum | A | APPROVED TARGET | exact 18 numerieke tekens; geen checksumclaim zonder officiële toepasselijke bron | officiële toepasselijke bron | NOT AUTHORIZED | syntax en no-auto-accept tests |
@@ -211,7 +212,8 @@ De interne TARGET-richting van pakketten A tot en met E is op 2026-07-24 explici
 
 ## M. Contractverdict
 
-TARGET — WP3C INTERNAL DOMAIN DECISIONS APPROVED — EXTERNAL BLOCKERS OPEN / NOT DDL READY
+TARGET — WP3C INTERNAL DOMAIN DECISIONS APPROVED — EXTERNAL BLOCKERS OPEN / NOT
+DDL READY
 
 ### Goedgekeurde interne grens
 
@@ -253,3 +255,194 @@ De eerstvolgende bounded context is uitsluitend de locationfoundation-readiness.
 - backfill, cutover, drop/cleanup van bestaande objecten;
 - RPC, Edge Function, runtime, frontend, UI of CSS;
 - remote apply, deploy of productie.
+
+
+## PILOT-CONNECTION-01B Current Assisted Signup Overlay
+
+CURRENT PROVEN — LOCAL ONLY — ASSISTED AND CUSTOMER-CONFIRMED EAN ACQUISITION
+WITH MANUAL FALLBACK
+
+`app_connection_declaration_sources` is a purpose-specific signup observation,
+not implementation of the accepted WP3C connection/allocation-point TARGET.
+Initial signup may defer EAN and then creates no source. An exact 18-digit EAN
+creates or resolves one immutable source only after explicit customer
+confirmation. Its acquisition method is bounded to
+`energy_document_customer_confirmed` or `manual_customer_confirmed`.
+
+Parser output remains observed/derived and does not independently write this
+table. Network operator is not customer-required and is derived later without an
+automatic verified claim. Standard connection dates are not collected; mandate
+and calendar-year validity are separate future truth. The current pre-auth path
+has no safe energy-document transport plus EAN parser, so the next bounded batch
+must reuse the authenticated document transport for energy bill/contract intake,
+candidate preview and confirmation.
+
+The source does not create or update `app_connections`,
+`app_connection_periods`, `app_connection_ownership_periods`, accepted canonical
+location roots/versions, CAR results or connection-confirmed party claims. Every
+external source, accepted-evidence and human decision gate in this contract
+remains open.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-PARTY-NAME-CROSSCHECK-03 Connection Document Party Boundary
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF ONLY.
+
+Every location's energy-document check resolves the same dossier party:
+declared full natural-person name for a private signup, or `legalEntity.name`
+for a business/VvE. The location, selected document, observed name status and
+EAN mode remain location-scoped. Switching to manual EAN changes neither the
+expected party nor any role truth.
+
+An exact full name may show `Komt overeen`. Matching observed initials plus the
+complete surname show only `Initiaal en achternaam komen overeen`; a different
+full name, initial, surname or legal-entity name shows `Controle nodig`.
+Administrators and representatives never mask that mismatch. The same rules are
+used for charger/MID documents and do not overwrite declared input.
+
+The recorded NEa/Regeling requirement names a `naam` field but does not resolve initials
+versus full given names. ENVAL asks for given name(s) in full as a product
+control; external verifier acceptance of initials remains UNKNOWN. Parser
+comparison is observed/derived assistance only and creates no canonical
+connection, aangeslotene/ownership, authority, mandate, accepted evidence or
+MID claim.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-DOCUMENT-CROSSCHECK-02 Exclusive Source and Address Overlay
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF AND PROOF-ONLY LOCAL PDFS.
+
+The signup location retains separate street, house number, house-number
+addition, postcode, city and country fields. Display uses one shared bounded
+formatter (`28-1`); comparison normalizes only the addition's case, whitespace
+and common separators. An observed `281` without a reliable layout boundary is
+not split and cannot create a false match.
+
+Exactly one frontend EAN source mode is active per location. Document mode owns
+the local file, observations, chosen electricity candidate and explicit
+confirmation. Manual mode owns only the exact manually entered and confirmed
+18-digit value. Entering manual mode clears all document state; a new document
+clears all manual state. The mapper fails closed when these sources coexist.
+Manual mode needs no synthetic or hidden document metadata and keeps the
+unchanged `manual_customer_confirmed` payload boundary.
+
+Energy and charger document observations share customer-safe comparison
+presentation but remain separate from declared data. Charger MID and invoice
+observations are not accepted MID evidence, verified charger identity,
+connection truth, canonical location or aangeslotene truth. No automatic
+prefill or overwrite follows from a match, probable match or mismatch.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-ENERGY-DOCUMENT-CROSSCHECK-01 Bounded Observations
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF AND PROOF-ONLY REAL PDF.
+
+The current PDF decoder and layout reconstruction are reused unchanged as the
+single parser boundary. Contractholder, delivery address and supplier now
+require bounded semantic blocks and explicit candidate validation. A global
+Naam, Adres, Postadres or Postcode match cannot independently create an observed
+field. Rejected and ambiguous candidates are not customer-facing.
+
+Document fields remain observed/derived. The applicant/location comparison is
+assistance only and creates no verified/accepted claim. Missing declared input
+shows a valid document value without a status pill; missing parser output hides
+that row. Customer input is never overwritten. Only the existing explicit
+confirmation of an electricity EAN can create declared state.
+
+The privacy-safe local real-PDF proof establishes extraction/classification
+counts and displayability without logging values or full EANs. It does not
+establish accepted evidence, canonical connection/location, CAR,
+aangeslotene/ownership, mandate, remote or production truth.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-EAN-PREFLIGHT-02 Real-Text-PDF Observation Correction
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF AND PROOF-ONLY REAL PDF.
+
+The previous synthetic case did not prove the real PDF stream/font/text-item
+shape. The unchanged parser boundary is now extended generically for Flate-only
+streams and ToUnicode mappings. Page and row composition retains an explicit
+separator between columns, so an EAN remains exactly 18 digits even when a
+contract date is the next text item.
+
+Classification remains row-local. Exactly one observed electricity candidate
+wins over any observed gas candidates for customer confirmation. Gas is not
+presented as an electricity choice. Multiple choice is reserved for multiple
+electricity candidates or, without electricity, multiple unclassified
+candidates. No checksum, CAR, register, canonical connection, aangeslotene,
+ownership, evidence-acceptance or mandate claim follows from parsing or
+confirmation.
+
+The personal proof input remains outside the repository and proof output
+contains only candidate/classification counts. Successful submit, external
+verification and persistence remain OPEN.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-EAN-PREFLIGHT-01 Frontend Observation Boundary
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF ONLY.
+
+The existing PDF adapter now emits exact 18-digit EAN candidates as
+`electricity`, `gas` or `unclassified`, strictly from nearby document labels. It
+adds no checksum, register, CAR or accepted-source claim. A candidate is
+observed/derived and cannot populate the submit declaration without explicit
+customer confirmation.
+
+The confirmed frontend value uses the existing bounded capture methods
+`energy_document_customer_confirmed` or `manual_customer_confirmed` through the
+unchanged signup payload and v5 boundary. This preflight does not persist the
+selected file, create accepted evidence, establish canonical connection or
+location truth, prove an aangeslotene/ownership relationship, or create a signed
+mandate. External control and every mandate/calendar-year decision remain
+separate.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-JOURNEY-02 Deferred Signup UI — historical frontend slice
+
+HISTORICAL PARTIAL — SUPERSEDED BY LATER EAN/CROSSCHECK BATCHES.
+
+At this checkpoint the signup UI did not expose manual EAN entry or customer EAN
+confirmation. Later bounded EAN/crosscheck batches supersede that UI statement;
+network-operator and connection valid-from/to inputs remain absent.
+
+The existing optional `manual_customer_confirmed` backend contract and deferred
+mapping remain unchanged for compatibility, but no current signup control can
+activate that manual path. EAN acquisition and confirmation move to the
+authenticated dashboard after document transport or another competent source
+exists.
+
+No selected document, resolved address, Auth account, onboarding signature or
+charger fact establishes a canonical connection, aangeslotene/ownership,
+accepted location or definitive mandate. The future mandate requires an
+immutable signed snapshot scoped to signer, party, location, EAN and calendar
+year.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-JOURNEY-01 Location Ownership Clarification
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF COMPOSITION ONLY.
+
+Assisted/manual EAN state, explicit customer confirmation and the local
+energy-document cross-check source are now owned by the same signup location.
+The selected document and any future parser candidate remain observations. Only
+the existing explicit customer confirmation can create the current declared
+source through the unchanged payload/RPC boundary.
+
+Network operator remains absent as a required customer field and is presented as
+later automatically determined and checked by ENVAL. Standard connection
+valid-from/to fields remain absent. Charger invoices and MID preview remain
+charger-scoped and cannot establish EAN, connection, aangeslotene, ownership or
+mandate truth.
+
+The current general legal acceptances are not mandate evidence. Definitive
+mandate validity remains a separate authenticated future boundary with exact
+signer, EAN, location and calendar-year scope.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

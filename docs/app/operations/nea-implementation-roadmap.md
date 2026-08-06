@@ -49,7 +49,7 @@ The tracker never removes a blocker itself. A status changes only when the appli
 ## Dashboard
 
 | field | value |
-|---|---|
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Current phase | Approved TARGET direction; bounded work-package authorization only |
 | Current work package | WP3N-DOC — register local authorized callers and atomic WP3J execution bridge proof — DOCS ONLY |
 | Last completed work package | WP3N implementation commit `6705fa3baf046510d70b8502da6058009b30b2f3`; CURRENT PROVEN — LOCAL ONLY |
@@ -105,7 +105,7 @@ TARGET approval authorizes none of these domains for blanket implementation. Eac
 ## Initial Validated Baseline
 
 | item | status | evidence reference |
-|---|---|---|
+| -------------------------------------------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Official TKV source and 19/19 present-clause mapping | COMPLETE — CURRENT PROVEN | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; official PDF SHA-256 `f08ae9cc56d7145f8962e9e0930f0e9b8676a55e73437aba4f0193b3edcc55cf`; `06A` |
 | Legacy documentation removed | COMPLETE — CURRENT PROVEN | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; `00_DOCUMENT_MIGRATION_AUDIT` and `10` |
 | Documentation structure and target architecture review package | COMPLETE — CURRENT PROVEN | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; `07`, database target appendix, decisions, operations, proofs, and `10` |
@@ -115,7 +115,7 @@ TARGET approval authorizes none of these domains for blanket implementation. Eac
 ## Chronological Roadmap
 
 | sequence | work_package | purpose | status | NEa/TKV_requirements | architecture_boundary | internal_or_external | dependencies | expected_modules | database_impact | test_and_proof_gate | last_evidence | next_action |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| -------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0 | Canon, official source and architecture baseline | Lock source hierarchy, 19-clause mapping, review package, and documentation baseline. | COMPLETE — CURRENT PROVEN | NEA-OPS-002/004; all mapped requirement families | Documentation and source governance only. | Internal documentation plus official source | Green validation; baseline commit | Canon, source registry, audits, architecture package | None | Source hash/pages/clauses, reference checks, `git diff --check` | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805` | Maintain source-change and supersede hard stops. |
 | 1 | Current implementation to target reconciliation | Inventory current frontend, functions, database, proofs, and dispositions against target requirements. | COMPLETE — CURRENT PROVEN | All 73 requirement rows | Proof-only assessment; no implementation-complete claim by inventory alone. | Internal documentation/proof | Work package 0 source and architecture inputs | Current implementation assessment; traceability overlay | None | Complete inventory and disposition evidence | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; `06B` and `08` | Preserve assessment as baseline evidence; update only when implementation proof changes. |
 | 2 | Customer, person, organization, representation and case foundation | Establish provider-independent party, authority, identity, and case contracts. | IN PROGRESS | NEA-ORG; NEA-MAND-003; NEA-SEC | Internal core truth; case participation never creates legal authority. | Internal | Commit `5a5265adc516e8198cc25757654920d4aa3316bd`; TARGET architecture approval; bounded WP2 subpackages | WP2A party/customer binding plus WP2B-I case/case-role schema locally; authority remains not schema-ready | WP2A four-table and WP2B-I two-table local foundations; migration-history, API/runtime, remote and production remain open | WP2A Q01-Q24 and WP2B-I Q01-Q34 are green locally; WP2B-II is PROOF ONLY readiness evidence; pilot brief is a validation draft only | `proofs/wp2b-i-case-party-role-foundation.md`; `operations/wp2b-ii-representation-authority-readiness-audit.md`; `legal/representation-authority-pilot-validation-brief.md`; no remote, production, NEa or verifier evidence | Obtain attributable written legal/verifier answers for the proposed simple cases, then seek Daan's bounded contract decision; do not start schema automatically. |
@@ -153,7 +153,7 @@ Parser output requires human review before any evidence decision.
 External research may run in parallel, but it may not introduce provider-specific fields or behavior into core architecture.
 
 | track | capability | status | boundary / required output |
-|---|---|---|---|
+| ----------------- | ------------------------------ | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Internal after GO | identity/customer/organization | TODO | Provider-independent party, identity, legal-entity, and case contract. |
 | Internal after GO | representation | TODO | Time-bound authority and evidence; no inferred signing authority. |
 | Internal after GO | locations | CURRENT PROVEN — LOCAL | WP3H commit `3bb8d50cd7723ad631d75857df4e08d6ef0db311` proves the empty three-table foundation; WP3J commit `45d926478945fedc610ea02a0ff2b0d4f5f14be4` proves bounded operational RPC mechanics, fresh apply and concurrency. No authorized caller, population, cutover, remote migration history or production proof exists. |
@@ -184,8 +184,8 @@ External research may run in parallel, but it may not introduce provider-specifi
 
 WP2 remains `IN PROGRESS`. WP2A party directory/customer-party binding and WP2B-I case/case-role schema are `CURRENT PROVEN — LOCAL` only within their cited table, invariant, security and proof boundaries. The historical WP2B readiness audit remains `PROOF ONLY`; its earlier blocked outcome was correct. Representation authority remains `NOT SCHEMA READY`, and every API/runtime, customer projection, remote, production, NEa/verifier and deployment concern remains outside the local proof.
 
-| checklist item | status | evidence / gate |
-|---|---|---|
+| checklist item                            | status                    | evidence / gate                                                                                                                                                                                                                                                                                                                                                          |
+| ----------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | design/contract | TARGET + RECONCILED | `docs/app/contracts/customer-party-representation-case.md#wp2b-i-ddl-ready-target-contract` preserves the approved domain semantics and reconciles its physical columns/types to the proven migration. The historical audit remains PROOF ONLY. Representation authority remains NOT SCHEMA READY. |
 | existing module inventory | COMPLETE — CURRENT PROVEN | Baseline commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; `06B` inventories current customer/auth/case modules and dispositions. |
 | existing CSS inventory indien UI relevant | COMPLETE — CURRENT PROVEN | Baseline commit records the existing UI/CSS inventory; no styling implementation is authorized by this status. |
@@ -275,8 +275,8 @@ no foundation table and performs no population. Authorized callers,
 migration-history integration, population, caller cutover, remote and
 production remain outside the proof.
 
-| checklist item | status | evidence / gate |
-|---|---|---|
+| checklist item                            | status                    | evidence / gate                                                                                                                                                                                                                                                              |
+| ----------------------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | design/contract | READY | WP3K-D01 through WP3K-D12 and WP3L-D01 through WP3L-D18 are APPROVED TARGET. WP3L-B implements the exact seven-responsibility foundation locally. |
 | existing module inventory | COMPLETE — CURRENT PROVEN | WP3G inspected all 22 migrations, 25 proof sources, six proposals, shared audit/idempotency, callers, frontend and CSS. Reuse WP2A/WP2B-I constraints, the existing immutable guard, deferred guard pattern, RLS/grants and proof cleanup. |
 | existing CSS inventory indien UI relevant | NOT APPLICABLE | Read-only inspection found existing shared address/form/read-only overview styles and no runtime or visual change required for this documentation batch. |
@@ -308,6 +308,237 @@ cutover, retirement, remote and production remain outside that package.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+### PILOT-SIGNUP-DOCUMENT-FIRST-UI-01 Bounded Frontend State And Journey
+
+CURRENT PROVEN — LOCAL ONLY — DOCUMENT-FIRST KISS SIGNUP UI AND GAP-DRIVEN CONFIRMATION MODEL.
+
+The local frontend now has one shared document-first draft, one account-type
+configuration, exact five-step composition, scoped documents/observations,
+customer-safe review matrices, explicit confirmation/correction and pure
+gap/readiness/mapper selectors. Existing parser, crosscheck, address, EAN,
+upload, tabs, consent and CSS authorities are reused. Evidence marker:
+`signup-document-first-ui-proof-ok`.
+
+Batch 3 remains open: document and observation/declaration persistence,
+capability transport, verification/promotion, approved mandate clauses and
+hashes, calendar-year/renewal policy, signer authority, e-sign evidence,
+signing snapshot/persistence and safe end-to-end resume. No successful submit,
+interactive browser acceptance, database, remote apply, deploy, production or
+regulatory/verifier acceptance is proven by this frontend slice.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+### PILOT-SIGNUP-PARTY-NAME-CROSSCHECK-03
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF ONLY.
+
+One pure module now resolves the expected document party and compares bounded
+natural-person or organization names for both energy and charger/MID flows.
+Private uses declared full given name(s) and surname; business/VvE uses only the
+legal-entity name. Representatives, administrators, contacts and signers remain
+separate future authority/signing truth.
+
+Full-name equality, limited initial-plus-complete-surname equality, mismatch
+and unavailable are distinct. Prefix, substring, token-set and edit-distance
+acceptance are absent. Existing shared document-card presentation, status-pill
+CSS, fields, focus/scroll helpers and design tokens are reused. Location and
+charger state isolation and manual/document EAN exclusivity remain unchanged.
+
+The recorded NEa/Regeling source says `naam` without deciding initials versus full given
+names. ENVAL requests full given names as a product control; verifier acceptance
+of initial-only evidence stays UNKNOWN. Parser comparison remains
+observed/derived assistance and proves no identity, authority, aangeslotene,
+ownership, accepted evidence, MID status or verifier decision.
+
+Evidence: `scripts/proofs/app-signup-party-name-crosscheck.proof.ts` with marker
+`signup-party-name-crosscheck-proof-ok`, plus the parity, energy, EAN, journey,
+mapper, contractfixture and client proof set. Browser-runtime, database, remote,
+deploy, production and regulatory acceptance remain outside scope.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+### PILOT-SIGNUP-PARTY-RUNTIME-04 Local Runtime Guard
+
+Energy and charger observations remain selected-document facts. Their party
+comparisons are derived from the current declared draft during render and are
+never written back into parser state. A confirmed account-type change replaces
+the complete pre-submit draft through existing initializers, retains no hidden
+account-type history and increments a generation checked by pending parsers.
+
+Evidence is the local integrated marker `signup-party-runtime-04-proof-ok`.
+Local browser proof is still required. The parser and comparison remain
+observed/derived assistance and establish no accepted evidence, identity,
+authority, verifier, remote, deployment, production or regulatory result.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+### PILOT-SIGNUP-DOCUMENT-CROSSCHECK-02 Shared Crosscheck Parity
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF AND PROOF-ONLY LOCAL PDFS.
+
+One structured-address helper now controls signup location headings/tabs and
+energy/charger document display. House number and addition remain separate;
+bounded separator variants compare equally, while `281` without a reliable
+layout boundary fails closed. The current local energy fixture reaches exact
+address match including its addition.
+
+Each location has one EAN source mode. Manual transition removes the local
+energy file, parser observations, candidates and confirmation; selecting a new
+document removes manual input and validation state. Manual confirmation remains
+payload-compatible without hidden document metadata, and a pure mapper
+assertion prevents mixed serialization.
+
+The existing PDF adapter supplies energy and charger observations. Both
+customer surfaces reuse one bounded row/card contract and current CSS. Charger
+MID, serial, brand, model, location, customer and explicit installation-year
+comparisons do not prefill or overwrite fields; invoice date is never promoted
+to installation year. Parser output is not accepted MID evidence or verified
+charger identity.
+
+Evidence: `scripts/proofs/app-signup-document-crosscheck-parity.proof.ts` and
+marker `signup-document-crosscheck-parity-proof-ok`, plus the existing energy,
+EAN, journey, parser, mapper, contractfixture and client proofs. Fixtures stay
+outside the repository; output contains no values or full EANs. Browser-runtime,
+persistence, OCR, accepted evidence, remote, deploy and production remain OPEN.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+### PILOT-SIGNUP-ENERGY-DOCUMENT-CROSSCHECK-01 Recovery
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF AND PROOF-ONLY REAL PDF.
+
+The existing PDF decoder and layout reconstruction now feed bounded semantic
+blocks, field candidates, validation, comparison and compact presentation as
+separate stages. Contractholder, delivery address and supplier candidates fail
+closed on combined columns, labels, multiple addresses/postcodes, ambiguity or
+non-name values. Only displayable candidates enter the customer card.
+
+Missing applicant/location input produces no comparison pill. Match,
+probable-match and mismatch remain Komt overeen, Lijkt overeen and Controle
+nodig. Missing/rejected parser candidates hide the row. Parser output stays
+observed/derived, comparison stays assistance, customer input is not overwritten
+and only confirmed electricity EAN reaches declared state.
+
+Evidence: parseradapter proof; crosscheck Q01-Q37 and marker
+signup-energy-document-crosscheck-proof-ok; EAN-preflight, journey, mapper,
+contractfixture and client proofs. The real fixture remains outside the
+repository and no values or full EANs are logged. Database, SQL, RPC, Edge,
+package, OCR, remote, deploy, production and acceptance remain outside scope.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+### PILOT-SIGNUP-EAN-PREFLIGHT-02 Real-PDF and Submit-Attempt Correction
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF AND PROOF-ONLY REAL PDF.
+
+The previous synthetic parser proof and field-placement proof were insufficient
+for real-PDF coverage and initial error visibility. The existing adapter now
+composes Flate-only/ToUnicode text items with page, row and column boundaries.
+Privacy-safe local proof records exactly one electricity and one gas candidate;
+only the unique electricity candidate enters the normal confirmation route.
+
+One central submit-attempt gate leaves required errors hidden initially. An
+invalid CTA click reveals all current field-local errors, focuses the first
+invalid control and stops before mapper/client/network work. The CTA remains
+idle-active and is disabled only for a running valid request.
+
+Evidence: `PILOT-SIGNUP-EAN-PREFLIGHT-02-Q01` through `Q32`, marker
+`signup-ean-preflight-02-proof-ok` and direct parser/journey proofs. The
+personal PDF and its text/values are not repository artefacts. Successful
+submit, broader supplier coverage, OCR, persistence, mandate, remote, deployment
+and production remain OPEN.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+### PILOT-SIGNUP-EAN-PREFLIGHT-01 Client-Side Candidate Confirmation
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF ONLY.
+
+The existing location-owned energy-document file now reaches the current PDF
+adapter and text extractor. Exact 18-digit candidates are context-classified,
+presented per location and require explicit customer confirmation. Manual
+fallback appears only for the bounded inconclusive/rejected paths. A document
+change invalidates only that location's preflight state and stale async results
+cannot restore it.
+
+Shared field-path validation now gates the CTA and places simultaneous errors at
+their owning controls. This is frontend readiness only: no upload, quarantine,
+document promotion, mandate/signature persistence, verification, calendar-year
+or authority implementation is included. Successful live signup remains outside
+browser proof.
+
+Evidence: `scripts/proofs/app-signup-ean-preflight.proof.ts` and the directly
+coupled frontend proofs.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+### PILOT-SIGNUP-JOURNEY-02 Compact Five-Step Onboarding — historical slice
+
+HISTORICAL PARTIAL — SUPERSEDED BY LATER EAN/CROSSCHECK BATCHES.
+
+The active signup journey is Aanvrager, Locatie, Aansluiting, Laadpalen and
+Ondertekenen. Address/precheck, energy-document and charger/invoice draft
+ownership remain respectively location-, location- and charger-scoped. One
+shared location selector connects the Aansluiting and Laadpalen views.
+
+At this checkpoint manual EAN was absent. Later bounded EAN/crosscheck batches
+supersede that statement. Network operator, connection periods, additional
+documents, expanded review and kWh remain absent; the protected backend remains
+payload-compatible.
+
+Next authenticated dashboard work: energy-document transport, EAN
+acquisition/confirmation, additional documents and a definitive immutable signed
+mandate snapshot after complete signer/party/location/EAN/year facts. kWh stays
+dashboard-only. Remote, deploy, production and regulatory acceptance remain
+open.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+### PILOT-SIGNUP-JOURNEY-01 Five-Step Frontend Recomposition
+
+HISTORICAL PARTIAL — SUPERSEDED BY PILOT-SIGNUP-JOURNEY-02.
+
+The customer journey now exposes five ordered sections: applicant,
+connection/location, chargers, additional documents, and review/completion. EAN
+plus energy-document selection are location-scoped; charger invoices and MID
+preview remain charger-scoped; zakelijk rijden is one conditional dossier-wide
+document.
+
+The current draft drives one read-only review with state-preserving edit
+navigation. Current general acceptances remain separate from the future
+definitive mandate. kWh remains dashboard-only.
+
+Next bounded work remains the authenticated energy-document transport and EAN
+candidate confirmation path, followed separately by the scoped mandate contract.
+No migration, RPC, Edge, parser, upload transport, remote or production action
+belongs to this journey batch.
+
+Evidence: historical source only; this composition is not the active journey.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+### PILOT-CONNECTION-01B Assisted And Confirmed EAN Capture
+
+CURRENT PROVEN — LOCAL ONLY.
+
+`app_submit_signup_v5(jsonb)` wraps unchanged v4 and atomically creates or
+resolves one immutable declared source only for a customer-confirmed EAN.
+Initial signup may safely defer EAN and then creates no source. Q01-Q24 prove
+deferred/manual/parser-candidate boundaries, exact syntax, bounded capture
+methods, optional operator/period fields, account types, replay/conflict, real
+concurrency, rollback/retry, frontend contract and cleanup.
+
+No safe CURRENT pre-auth energy-document transport plus EAN parser exists, so
+this batch creates no second upload system. The next bounded batch is
+authenticated energy-bill/contract intake, candidate extraction and explicit
+confirmation through the CURRENT document transport. Accepted connection,
+CAR/DSO result, aangeslotene/ownership, mandate validity, remote, production and
+regulatory acceptance remain open.
+
+Evidence: `operations/pilot-connection-01-local-proof.md`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ### PILOT-PARTY-01A Authenticated Customer Party Root Activation
 
 CURRENT PROVEN — LOCAL ONLY for one canonical root party and existing
@@ -330,6 +561,7 @@ Evidence:
 `operations/pilot-party-01a-authenticated-customer-party-activation-local-proof.md`.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ### PILOT-PROFILE-02 Declared Profile And Asserted Service Recipient
 
 CURRENT PROVEN — LOCAL ONLY.
@@ -507,14 +739,20 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 ## Update Contract
 
 - After every accepted batch, update this roadmap.
-- Change status only from received evidence and the applicable decision authority.
-- Every `COMPLETE — CURRENT PROVEN` or `COMPLETE — UNCOMMITTED` entry must cite the relevant HEAD, commit, and/or green proof.
-- `docs/app/03_CHANGELOG_APPEND_ONLY.md` remains append-only historical evidence.
+- Change status only from received evidence and the applicable decision
+  authority.
+- Every `COMPLETE — CURRENT PROVEN` or `COMPLETE — UNCOMMITTED` entry must cite
+  the relevant HEAD, commit, and/or green proof.
+- `docs/app/03_CHANGELOG_APPEND_ONLY.md` remains append-only historical
+  evidence.
 - `docs/app/04_TODO.md` remains the complete backlog.
 - This roadmap remains the compact daily overview.
 - `docs/app/09_NEA_MVP_PLAN.md` remains the normative gate plan.
-- Every execution batch follows `docs/app/00_CANON.md#codex-execution-batch-discipline`; this tracker does not duplicate that governance.
+- Every execution batch follows
+  `docs/app/00_CANON.md#codex-execution-batch-discipline`; this tracker does not
+  duplicate that governance.
 - Remote action and deploy always require separate explicit approval.
+
 ### PILOT-CASE-01 Authenticated Dossier Case Activation
 
 CURRENT PROVEN — LOCAL ONLY for one canonical immutable case per verified
@@ -536,6 +774,7 @@ Evidence:
 `operations/pilot-case-01-authenticated-dossier-case-activation-local-proof.md`.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ### PILOT-SIGNUP-ATOMIC-01 Atomic Recoverable Signup
 
 CURRENT PROVEN — LOCAL ONLY for the current direct signup transaction.
@@ -556,5 +795,176 @@ remote/deploy and production remain separate and unproven.
 
 Evidence:
 `operations/pilot-signup-atomic-01-local-proof.md`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+### PILOT-SIGNUP-DOCUMENT-FIRST-REVIEW-02
+
+Local frontend preparation now has one common document-fact registry, a
+responsive cross-document matrix, scoped correction/confirmation invalidation
+and a confirmed-only signing summary. Two local real fixtures prove simultaneous
+party and address differences without customer-data logging.
+
+This does not advance evidence acceptance, canonical location or connection,
+aangeslotene, legal identity, authority, mandate activation or regulatory
+acceptance. The next signing batch must first resolve exact approved copy,
+snapshot/hash, signer verification, authority proof and audit persistence.
+
+Evidence:
+`operations/pilot-signup-document-first-review-02-local-proof.md`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+### PILOT-SIGNUP-DOCUMENT-DECISION-03
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF AND TWO LOCAL REAL PDF FIXTURES.
+
+The document-first preparation surface now uses semantic roles and a pure
+seven-state decision policy. Different cross-document roles route to persistent
+ENVAL review instead of an exact conflict; bounded formatting/initial variants
+may normalize; comparable EAN, MID, serial, same-role party and explicit
+location conflicts block. Customer correction preserves the original
+observation and never converts review-required into clean/green.
+
+The compact upload grid, canonical five-column matrix and charger summary are
+source/proof complete. The sign action is absent. Accepted evidence, canonical
+TARGET data, server decision persistence, legal/mandate approval, immutable
+snapshot/hash, signer/authority verification, audit persistence, browser-live,
+remote, deploy and production remain OPEN.
+
+Evidence:
+`operations/pilot-signup-document-decision-03-local-proof.md`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+### PILOT-SIGNUP-UNIFIED-DOCUMENT-PARSER-04
+
+HISTORICAL LOCAL TECHNICAL-PIPELINE PROOF — CUSTOMER TYPE-GATING SUPERSEDED BY
+PILOT-SIGNUP-GENERIC-DOCUMENT-FACTS-05.
+
+Energy and charger uploads now share one deterministic PDF decode/layout and
+generic candidate pipeline. Same bytes and parser version produce the same
+observation envelope. Its former active classification/slot-compatibility
+behavior is no longer part of the customer journey.
+
+The local proof covers correct distribution and both swapped-document
+scenarios using privacy-safe envelope digests. The signing action remains
+absent. OCR, broader fixture diversity, accepted evidence, canonical TARGET
+data, legal/mandate approval, immutable snapshot/hash, authorized review,
+audit persistence, browser-live, remote, deploy and production remain OPEN.
+
+Evidence:
+`operations/pilot-signup-unified-document-parser-04-local-proof.md`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+### PILOT-SIGNUP-GENERIC-DOCUMENT-FACTS-05
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF, TWO LOCAL REAL PDF FIXTURES AND
+ONE LOCAL NO-FACT PDF.
+
+Both upload columns consume the same generic fact projection. Upload slot is
+source binding only and changes no candidate value, confidence, method,
+displayability or semantic role. Active signup state and progression contain no
+document classification, compatibility result or document-type blocker.
+
+Required canonical facts and real material conflicts determine progression.
+Missing or rejected values render as `—`; no-fact documents use one bounded
+upload-card state. Signing remains absent. OCR, broader fixture diversity,
+accepted evidence, canonical TARGET data, legal/mandate approval, immutable
+snapshot/hash, authorized review, audit persistence, browser-live, remote,
+deploy and production remain OPEN.
+
+Evidence:
+`operations/pilot-signup-generic-document-facts-05-local-proof.md`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+### PILOT-SIGNUP-FACT-APPLICABILITY-SUMMARY-06
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF AND TWO LOCAL REAL PDF FIXTURES.
+
+Generic facts remain parser output. A separate pure account-type selector now
+owns dossier applicability, so missing informational and not-applicable facts
+cannot create false completion work. The default country is UI-only until a
+complete manual address is explicitly saved; that correction remains distinct
+from its source observations and requires ENVAL review.
+
+The existing compact signing summary now includes applicable confirmed
+account/location/charger facts, bound safe document names and found
+informational facts. Missing informational facts and technical parser metadata
+remain hidden. Parser files and backend payload are unchanged. Signing,
+accepted evidence, canonical TARGET data, browser acceptance, remote, deploy
+and production remain OPEN.
+
+Evidence:
+`operations/pilot-signup-fact-applicability-summary-06-local-proof.md`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+### PILOT-SIGNUP-ORGANIZATION-DOCUMENT-FIRST-07
+
+SOURCE IMPLEMENTED — LOCAL REAL-FIXTURE GATE BLOCKED.
+
+Zakelijk/VvE now use one account-bound KvK extract in Step 2 while all account
+types keep Step 1 to account type and e-mail. The unified parser and generic
+projection cover the bounded organization fact set; the conditional matrix and
+preparation summary keep registered-address and representation semantics
+separate. Manual organization facts cannot replace the required account PDF.
+
+Typecheck, source/UI/journey and mapper/contract/client proofs pass. A real
+English KvK extract passes the new parser. No suitable real Dutch standalone
+extract with the three required core facts exists in the searched local
+corpus, so the exact Org-07 marker remains unearned. No backend, signing,
+audit, remote or production boundary moved.
+
+Evidence:
+`operations/pilot-signup-organization-document-first-07-local-proof.md`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+### PILOT-SIGNUP-SIGNATURE-CORE-09A
+
+CURRENT PROVEN — LOCAL FRONTEND CONTRACT/PRESENTATION ONLY.
+
+The provider-independent method port, registry/composition root, legal registry,
+canonical signing facts, generated mandate, intent/readiness model and modular
+Step 3 presentation are implemented locally. `typed_name_otp_v1` is active;
+reserved drawn/advanced/qualified identifiers have no adapter or UI.
+
+This does not complete roadmap work package 5. Privacy is UNKNOWN; service,
+fee and mandate text are DRAFT; all hashes are unverified. No OTP, evidence,
+immutable snapshot/hash, server timestamp, authority approval, audit write,
+persistence, submit, dossier start, promotion, remote or production behavior
+exists.
+
+Next bounded phase 09B must approve/version legal copy and build the server-side
+challenge, canonical snapshot, atomic finalization and audit-evidence contract.
+09C remains the later verified promotion/dashboard phase. Foreign
+trade-register documents remain post-MVP.
+
+Evidence: marker `signup-signature-core-09a-proof-ok` and
+`contracts/signing-and-mandate.md`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+### PILOT-SIGNUP-SIGNING-KISS-09A1
+
+CURRENT PROVEN — LOCAL FRONTEND CONTRACT/PRESENTATION ONLY.
+
+The Step 3 customer surface is compacted to summary, mandate, combined legal
+bundle and signing declaration. One canonical render input now supports safe
+browser preview/download; the three legal actions remain distinct internally.
+Current-year-plus-two mandate choices and centralized scroll/focus navigation
+are locally covered.
+
+All legal sources remain DRAFT/UNKNOWN and unverified. Customer-declared
+organization authority remains unresolved. This checkpoint adds no active
+signature, OTP, evidence acceptance, persistence, audit write, finalization,
+submit, promotion, remote or production behavior. Work package 09B still owns
+approved copy/hash and the full server-side signing boundary.
+
+Evidence:
+`operations/pilot-signup-signing-kiss-09a1-local-proof.md`.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

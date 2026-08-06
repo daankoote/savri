@@ -453,12 +453,14 @@ Local proof is not production proof. Remote migration/function deploy, productio
 
 ## Boundaries
 
-- Future execution batches follow the canonical discipline in `docs/app/00_CANON.md`; do not duplicate it here.
+- Future execution batches follow the canonical discipline in
+  `docs/app/00_CANON.md`; do not duplicate it here.
 - Do not mark the complete inboekservice live or finished.
 - Do not use legacy `api-dossier-*` for new app behavior.
 - Do not use legacy `dossier_sessions` as app auth.
 - Do not treat a particulier-only mock as a global account-type rule.
 - Do not expose raw audit rows directly to customers.
+
 ## PILOT-CASE-01 checkpoint — 2026-07-29
 
 - [x] CURRENT PROVEN — LOCAL ONLY: verified Auth bootstrap v2 atomically creates/resolves one canonical immutable case per active non-minimized customer dossier and returns safe case fields.
@@ -467,6 +469,222 @@ Local proof is not production proof. Remote migration/function deploy, productio
 - [ ] OPEN: browser-live protected-route integration with non-mutating intercepted responses.
 - [ ] OPEN: remote apply/deploy/production proof.
 - [ ] OPEN and separate: party identity/roles, representation authority, mandate, location acceptance, EAN/aangeslotene, evidence, kWh, eligibility and NEa acceptance.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-UNIFIED-PRESENTATION-08 checkpoint
+
+SOURCE IMPLEMENTED — LOCAL FRONTEND PROOF ONLY.
+
+- [x] Step 1, Step 2 and Step 3 use the same applicability-driven React-free
+      row model and shared `FactTable`; all interactive rows use the same
+      `FactReviewControls`.
+- [x] One `DocumentUploadSlot` presents the account extract, energy document
+      and installation invoice through title, scope, binding and help props.
+- [x] Step 2 groups facts per stable location and charger binding; Step 3 is
+      one vertical review-only document in Account → locations → chargers →
+      Documents order.
+- [x] Not-applicable and absent informational rows stay out of customer review;
+      parser observations remain separate from confirmations and corrections.
+- [ ] OPEN: interactive browser acceptance, signing/legal copy, immutable
+      signing snapshot and persistence, submit integration, remote, deploy,
+      production and verifier/NEa acceptance.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-DOCUMENT-FIRST-UI-01 checkpoint
+
+CURRENT PROVEN — LOCAL ONLY — DOCUMENT-FIRST KISS SIGNUP UI AND GAP-DRIVEN CONFIRMATION MODEL
+
+- [x] Exactly five visible steps: Account, Documenten, Controleren, Aanvullen,
+      Ondertekenen.
+- [x] One account-type configuration and shared shell for Particulier,
+      Zakelijk and VvE; audited ORPHAN fields are absent from active Account.
+- [x] Location- and charger-scoped documents, parser observations and stable
+      client IDs; stale async results cannot repopulate a reset draft.
+- [x] One presentation-only customer matrix with bounded statuses; observed,
+      confirmed and manually corrected values remain separate.
+- [x] Aanvullen is selector-driven and resolved gaps disappear.
+- [x] Mapper compatibility retains only confirmed/manual target facts and the
+      exclusive document/manual EAN assertion.
+- [ ] Batch 3: persist documents, observations/declarations, verification and
+      promotion under an approved backend contract.
+- [ ] Batch 3: approve/version mandate copy, calendar-year scope, signer
+      authority/e-sign evidence and signing persistence.
+- [ ] Run interactive desktop/mobile browser acceptance and end-to-end resume;
+      do not execute a successful signup until the signing contract exists.
+- [ ] Supply an intended `ENVAL_EAN_REAL_PDF` to complete the retained real-PDF
+      parity and energy-crosscheck acceptance gates.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-PARTY-NAME-CROSSCHECK-03 checkpoint
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF ONLY.
+
+- [x] Resolve the expected private party from full given names plus surname and
+      the expected business/VvE party from `legalEntity.name` only.
+- [x] Exclude administrator, representative, contact, signer, e-mail and
+      display-name fallback from document-holder comparison.
+- [x] Replace fuzzy/prefix/substring name acceptance with exact full-name,
+      limited initial-plus-surname, mismatch and unavailable outcomes.
+- [x] Reuse the same resolver/comparator for energy and charger/MID documents,
+      while keeping each location/document and charger/document state isolated.
+- [x] Focus a mismatch on given names, surname or legal-entity name and reuse
+      existing fields, scroll/focus helpers, status pills and design tokens.
+- [x] Keep parser comparison observed/derived assistance without overwrite,
+      identity verification, authority, aangeslotene, ownership, accepted
+      evidence or MID acceptance.
+- [ ] OPEN: whether an external verifier accepts an initial-only document for
+      the applicable mandate/control. The source wording says `naam` and does
+      not resolve initials versus full given names.
+- [ ] OPEN: browser-runtime acceptance, remote, deployment and production.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-PARTY-RUNTIME-04 checkpoint
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF ONLY.
+
+- [x] Keep each parser observation unchanged as observed/derived document data
+      while energy and charger party comparisons are reactively derived from
+      the current applicant or legal entity during render.
+- [x] Treat account type as a hard draft boundary: confirm meaningful data,
+      replace it with one fresh initializer-built draft and retain no hidden
+      per-account-type history.
+- [x] Invalidate pre-reset asynchronous parser results with a monotone draft
+      generation.
+- [ ] OPEN: local browser proof, accepted evidence, identity/authority or
+      verifier acceptance, remote, deployment and production.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-DOCUMENT-CROSSCHECK-02 checkpoint
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF AND PROOF-ONLY LOCAL PDFS.
+
+- [x] Keep house number and addition structurally separate; render the canonical
+      `28-1` form and compare `28/1`, `28 / 1` and separate bounded PDF cells as
+      equivalent without splitting an arbitrary `281`.
+- [x] Enforce exactly one location EAN source mode. Manual mode clears the
+      document and all observations/candidates/confirmation; a new document
+      clears manual input and confirmation; the mapper rejects mixed sources.
+- [x] Permit confirmed manual fallback without an energy document while keeping
+      the existing server payload and capture-method values unchanged.
+- [x] Reuse one PDF adapter and one customer-safe document-check row/card
+      contract for energy and charger documents. Technical preview fields are
+      absent from the active customer UI.
+- [x] Compare charger MID, serial, brand, model, location, customer and explicit
+      installation year without fuzzy substring guesses, acceptance claims,
+      prefilling or declared-data overwrite. Invoice date stays distinct.
+- [x] Prove location/charger state isolation and bounded cleanup with the two
+      existing uncommitted local fixtures; emit no fixture values or full EANs.
+- [ ] OPEN: broader supplier/installer corpus, scans/OCR, document persistence,
+      accepted evidence, verified charger identity, browser-runtime acceptance,
+      remote, deployment, production and regulatory acceptance.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-EAN-PREFLIGHT-02 checkpoint
+
+- [x] Required errors are hidden until the first submit attempt; validation
+      truth remains continuously computed.
+- [x] An invalid CTA click shows all current field-local errors, focuses and
+      scrolls the first invalid control and performs no mapper/client/network
+      work.
+- [x] The idle CTA retains normal active styling and is disabled only during a
+      genuine valid request.
+- [x] The existing adapter handles Flate-only, ToUnicode-encoded text items with
+      page/row boundaries and an explicit column separator.
+- [x] A sanitized electricity/gas/contract-period fixture and one uncommitted
+      local real-PDF proof both produce one electricity and one gas candidate.
+- [x] A unique electricity candidate wins the normal confirmation route; gas is
+      not offered as an electricity choice and manual fallback stays hidden.
+- [ ] OPEN: broader supplier-document corpus, OCR/scans, persistence, external
+      EAN verification, signed mandate, successful browser submit, remote and
+      production proof.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-EAN-PREFLIGHT-01 checkpoint
+
+- [x] Energy-document selection invokes the existing client-side PDF parser;
+      candidates retain compact source context and stay observed/derived.
+- [x] Every location independently handles parsing, candidate selection,
+      explicit confirmation, document reset and conditional exact-18-digit
+      manual fallback without state leakage.
+- [x] Frontend validation produces stable field paths and renders errors at
+      applicant, location, document, EAN, charger, invoice and acceptance
+      fields.
+- [x] `Ondertekenen en dossier starten` is disabled and guarded until the
+      complete current frontend draft, documents, confirmed EANs and acceptances
+      are ready.
+- [ ] NOT IMPLEMENTED: document persistence/promotion, signed mandate or digital
+      signature evidence, intake runtime, e-mail verification,
+      calendar-year/authority contract, CAR, remote, deploy or production.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-JOURNEY-02 checkpoint — historical, superseded frontend slice
+
+- [x] Current visible order is exactly Aanvrager, Locatie, Aansluiting,
+      Laadpalen and Ondertekenen.
+- [x] Address/precheck is location-only. Energy-document selection is
+      location-scoped under Aansluiting; charger invoices remain charger-scoped.
+- [x] Aansluiting and Laadpalen reuse one shared location-tab model; one
+      location hides tabs and multiple locations preserve the active selection.
+- [x] At that checkpoint manual EAN, operator/period controls, additional
+      documents and the expanded review were absent. The later bounded
+      connection/crosscheck batches supersede the manual-EAN statement.
+- [x] Onboarding acceptance is not presented as the definitive NEa mandate.
+- [ ] DASHBOARD: authenticated energy-document transport, EAN acquisition and
+      confirmation, additional documents and definitive signed mandate snapshot.
+- [ ] DASHBOARD: kWh source/import and customer-safe status projection.
+- [ ] OPEN: remote, deployment, production and regulatory acceptance.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-JOURNEY-01 checkpoint
+
+- [x] Visible order is exactly Aanvrager, Aansluiting en locatie, Laadpalen,
+      Aanvullende documenten, Controleren en afronden.
+- [x] EAN and local energy-document state are location-scoped and independent;
+      charger/MID invoice state remains charger-scoped.
+- [x] The zakelijk-rijden document is dossier-wide and conditionally hidden
+      behind an explicit not-applicable state for other account types.
+- [x] The read-only summary covers applicant, locations, EAN/document state,
+      chargers, additional documents and current general acceptances with
+      state-preserving Wijzigen actions.
+- [x] Current general acceptances are not shown as a definitive mandate; kWh is
+      absent from signup and remains dashboard-only.
+- [ ] OPEN: authenticated energy-document transport, candidate extraction,
+      confirmation and the later scoped definitive mandate.
+- [ ] OPEN: remote, deployment, production and regulatory acceptance.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-CONNECTION-01B checkpoint
+
+CURRENT PROVEN — LOCAL ONLY — ASSISTED AND CUSTOMER-CONFIRMED EAN ACQUISITION
+WITH MANUAL FALLBACK
+
+- [x] Initial signup safely defers EAN; a deferred location creates no
+      declaration source.
+- [x] Manual EAN is a secondary action, requires exactly 18 digits and explicit
+      confirmation, and creates exactly one declared source.
+- [x] `app_submit_signup_v5` wraps unchanged v4 atomically and creates/resolves
+      one immutable protected source only for confirmed data.
+- [x] Netbeheerder and connection dates are no longer customer requirements;
+      mandate/calendar-year validity remains separate future truth.
+- [x] Q01-Q24 cover deferred/manual/parser-candidate boundaries, all account
+      types, replay, conflict, concurrency, rollback/retry and cleanup.
+- [ ] NEXT BOUNDED BATCH: authenticated energy-bill/contract intake, EAN
+      candidate extraction/preview and explicit confirmation through the CURRENT
+      document transport.
+- [ ] OPEN: CAR/DSO derivation, accepted canonical connection/allocation point,
+      aangeslotene/ownership decision and accepted canonical location.
+- [ ] OPEN: browser-live remote integration, remote apply/deploy, production and
+      verifier/NEa acceptance.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
@@ -486,6 +704,7 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   eligibility, browser-live, remote, production and NEa acceptance.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## PILOT-PROFILE-02 checkpoint
 
 CURRENT PROVEN — LOCAL ONLY: Auth bootstrap v4 promotes complete equivalent
@@ -499,6 +718,31 @@ case-confirmed, representation, mandate, EAN, evidence, kWh, eligibility,
 browser-live, remote, deploy and production remain open.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-ENERGY-DOCUMENT-CROSSCHECK-01 recovery checkpoint
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF AND PROOF-ONLY REAL PDF.
+
+- [x] Reuse the existing PDF decoder, page/row reconstruction and EAN
+      classifier; no second parser, package or OCR.
+- [x] Bound contractholder, delivery-address and supplier extraction to semantic
+      blocks and validate every field candidate before display.
+- [x] Reject combined Naam columns, non-delivery post addresses, multiple
+      addresses/postcodes and label-only supplier values.
+- [x] Hide rejected/missing parser rows and omit comparison pills until
+      applicant/location input is sufficient.
+- [x] Preserve EAN confirmation, EAN klopt niet and manual fallback; only a
+      confirmed electricity EAN reaches declared state.
+- [x] Keep parser output observed/derived, comparison assistive, customer input
+      unchanged and rejection reasons non-customer-facing.
+- [x] Prove the local real-PDF path without fixture commit, document-value
+      output, full EAN output or forbidden PII keys.
+- [ ] OPEN: browser-runtime acceptance, upload transport, evidence acceptance,
+      canonical connection/location, CAR/aangeslotene, mandate, remote,
+      deployment, production and regulatory acceptance.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## PILOT-SIGNUP-ATOMIC-01 checkpoint
 
 CURRENT PROVEN — LOCAL ONLY for the bounded current direct-signup transaction.
@@ -510,5 +754,223 @@ Still open: profile promotion, service-recipient case claims, address/legal
 identity verification, representation, mandate, EAN/aangeslotene, evidence
 acceptance, kWh, eligibility, browser-live, remote, deploy and production.
 `app_signup_intakes` remains inactive and separate.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-DOCUMENT-FIRST-REVIEW-02 checkpoint
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF AND TWO LOCAL REAL PDF FIXTURES.
+
+- [x] Exactly Account, Documenten and Ondertekenen, shared footer navigation
+      and fail-closed step-2 continuation.
+- [x] Common fact registry, generic responsive matrix, one action per row,
+      inline replacement/correction and explicit canonical-fact confirmation.
+- [x] Confirmed-only account/location/charger/document summary; no parser
+      context, confidence or source-page data in customer UI.
+- [ ] OPEN: approved exact legal/mandate copy, immutable server snapshot/hash,
+      signer verification, authority evidence, signed timestamp and audit
+      persistence.
+- [ ] OPEN: browser acceptance, remote persistence, accepted evidence,
+      canonical location/EAN/aangeslotene, deploy, production and verifier/NEa
+      acceptance.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-DOCUMENT-DECISION-03 checkpoint
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF AND TWO LOCAL REAL PDF FIXTURES.
+
+- [x] Compact responsive upload-card grid using the existing upload slot and
+      parser; no duplicate card title or second upload/CSS system.
+- [x] Exact five-column review matrix with a blank-until-chosen canonical
+      `Wordt gebruikt` column and real shared button classes.
+- [x] Pure semantic decision policy with bounded normalization, persistent
+      review markers and fail-closed material blockers.
+- [x] Observation-preserving correction metadata with exact correction types;
+      correction and customer intent never create a clean/green fact.
+- [x] Compact Account/Locaties/Laadpalen/Documenten summary; unavailable sign
+      action is absent.
+- [ ] OPEN: approved legal/mandate copy, accepted evidence, server-side
+      decision persistence, immutable signing snapshot/hash, signer and
+      authority verification, audit persistence, browser acceptance, remote,
+      deploy, production and verifier/NEa acceptance.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-UNIFIED-DOCUMENT-PARSER-04 historical checkpoint
+
+HISTORICAL LOCAL PROOF — CUSTOMER TYPE-GATING SUPERSEDED BY
+PILOT-SIGNUP-GENERIC-DOCUMENT-FACTS-05.
+
+- [x] Same bytes plus the same parser version produce the same privacy-safe
+      observation-envelope digest and identical generic candidate facts.
+- [x] Historical classification/compatibility experiment recorded; it is no
+      longer active customer behavior and provides no progression gate.
+- [x] Document-ID/fingerprint/parser-version cache with document-scoped
+      replacement/removal invalidation.
+- [ ] OPEN: OCR/scanned-document support, broader independent fixture corpus,
+      interactive browser acceptance, accepted evidence, canonical TARGET
+      truth, signing/snapshot persistence, remote, deploy and production.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-GENERIC-DOCUMENT-FACTS-05 checkpoint
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF, TWO LOCAL REAL PDF FIXTURES AND
+ONE LOCAL NO-FACT PDF.
+
+- [x] Same bytes plus the same parser version produce the same envelope, facts
+      and display values in both upload columns.
+- [x] Upload slot is source binding only; no active customer-facing document
+      classification, compatibility state or document-type blocker remains.
+- [x] Missing/declined candidates render as `—`; a parsed document with no
+      supported facts renders `Geen gegevens gevonden.` at its upload card.
+- [x] Required canonical facts and charger/location binding gate progression;
+      real EAN, MID, serial, same-role party and explicit-location conflicts
+      remain decision-policy blockers.
+- [x] Obsolete slot-compatibility module removed with no remaining app caller;
+      internal type-candidate scores remain non-blocking envelope metadata.
+- [ ] OPEN: OCR/scanned-document support, broader independent fixture corpus,
+      interactive browser acceptance, accepted evidence, canonical TARGET
+      truth, signing/snapshot persistence, remote, deploy and production.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-FACT-APPLICABILITY-SUMMARY-06 checkpoint
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF AND TWO LOCAL REAL PDF FIXTURES.
+
+- [x] One pure account-type plus fact-key selector determines required,
+      informational or not-applicable dossier behavior after generic
+      extraction.
+- [x] Particulier requires exactly name, address, electricity EAN and charger
+      brand/model/MID/serial; organization name, KvK and gas EAN are not needed.
+- [x] Zakelijk/VvE require organization name and KvK without making document
+      `partyName` a second generic organization requirement.
+- [x] Missing informational facts show no action and do not block; not-needed
+      rows show neutral `Niet nodig` and stay outside `Wordt gebruikt`.
+- [x] UI-default `Nederland` creates no correction or confirmation. An explicit
+      complete manual address save preserves observations and remains marked
+      for ENVAL review.
+- [x] The existing signing summary includes confirmed applicable facts, bound
+      safe document names and found informational facts without technical
+      parser metadata.
+- [ ] OPEN: browser acceptance, address-lookup runtime behavior, accepted
+      evidence, canonical TARGET truth, legal/mandate approval, signing,
+      snapshot/audit persistence, remote, deploy and production.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-ORGANIZATION-DOCUMENT-FIRST-07 checkpoint
+
+SOURCE IMPLEMENTED — LOCAL REAL-FIXTURE GATE BLOCKED.
+
+- [x] Step 1 contains only account type and e-mail; company/VvE name and KvK
+      number are absent from the active form.
+- [x] One account-bound KvK PDF slot for Zakelijk/VvE reuses the unified
+      parser/cache/upload state and clears on account-type reset.
+- [x] Conditional six-column organization matrix; Particulier retains five
+      columns and no organization upload.
+- [x] Organization name, KvK number and registered address are required and a
+      manual value cannot compensate for an absent KvK document.
+- [x] Legal form, trade name, director/board member and representation text are
+      informational and never fill a signer or create an authority decision.
+- [ ] BLOCKED: provide a privacy-safe local real Dutch KvK extract whose text
+      layer yields organization name, KvK number and registered address. The
+      available local Dutch files are a brochure and a multi-document corpus;
+      neither is accepted as proof. Re-run the Org-07 proof with both NL/EN
+      fixture environment variables to earn the marker.
+- [ ] OPEN: interactive browser acceptance, signing/legal copy, immutable
+      snapshot/audit persistence, backend payload, remote, deploy, production
+      and verifier/NEa acceptance.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-FACT-RESOLUTION-08B checkpoint
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF; REAL KVK FIXTURE GATES BLOCKED.
+
+- [x] One React-free neutral/green/orange/red resolution model and one shared
+      progression gate for organization, location and charger facts.
+- [x] Exact five-column review table, compact correction editor and sibling
+      location/charger sections without page-local resolution logic.
+- [x] Separate source observations with document identity/fingerprint and
+      stable bindings; same bytes cannot create false corroboration.
+- [x] Bounded natural-person/organization name and structured Dutch address
+      comparisons, including orange probable matches and red clear mismatches.
+- [x] Confirmation remains customer intent; corrections, manual values and
+      resolved document conflicts remain orange rather than becoming evidence.
+- [ ] BLOCKED: provide an intended privacy-safe Dutch standalone KvK extract
+      that yields exact `organizationName`, and an intended real English KvK
+      PDF under Downloads, Desktop or Documents. Then set
+      `ENVAL_KVK_DUTCH_PDF=/absolute/path.pdf` and
+      `ENVAL_KVK_ENGLISH_PDF=/absolute/path.pdf` and rerun the Org-07 proof.
+- [ ] OPEN: browser acceptance, evidence acceptance, approved legal/signing
+      copy, immutable snapshot, persistence, backend, remote, deploy,
+      production and verifier/NEa acceptance.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-SIGNATURE-CORE-09A checkpoint
+
+CURRENT PROVEN — LOCAL FRONTEND CONTRACT/PRESENTATION ONLY.
+
+- [x] `typed_name_otp_v1` is the only registered method behind one stable port
+      and composition root; future method identifiers have no implementation.
+- [x] One generated mandate model covers Particulier, Zakelijk and VvE with
+      canonical facts, both required permission references and one whole-
+      calendar-year policy.
+- [x] Privacy read acknowledgement is separate from service/fee acceptance and
+      mandate signing. All four legal documents are versioned and fail closed
+      while status/hash is not CURRENT/verified.
+- [x] Step 3 reuses the canonical fact document and shows mandate, legal bundle,
+      signer inputs and closed readiness without active sign/submit behavior.
+- [ ] 09B: approve final legal copy and hashes; implement server-side OTP,
+      immutable snapshot/hash, server timestamp, atomic signing/mandate
+      finalization, authority-review linkage, idempotency and audit evidence.
+- [ ] 09C: implement verified promotion/dashboard projection only after 09B
+      evidence and persistence contracts are proven.
+- [ ] Post-MVP: jurisdiction-aware foreign trade-register document support and
+      separately approved drawn/advanced/qualified method adapters if needed.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-SIGNING-KISS-09A1 checkpoint
+
+CURRENT PROVEN — LOCAL FRONTEND CONTRACT/PRESENTATION ONLY.
+
+- [x] Step 3 has exactly four major customer sections and no customer-facing
+      readiness, document-status, method or server-finalization diagnostics.
+- [x] Summary confirmation is separate from evidence acceptance; one legal
+      checkbox produces three separate versioned legal action intents.
+- [x] Local preview and download use one canonical self-contained legal bundle
+      and do not navigate to the placeholder privacy/terms routes.
+- [x] Mandate year choices are current year plus two and organization signing
+      remains a customer declaration with authority review unresolved.
+- [x] Tabs, next and back use one scroll/focus transition while preserving the
+      browser-local signup draft.
+- [ ] 09B: approve final legal copy and hashes and implement server-owned OTP,
+      immutable snapshot/hash, timestamp, finalization and audit evidence.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-SIGNING-LAYOUT-09A2 checkpoint
+
+CURRENT PROVEN — LOCAL FRONTEND PRESENTATION ONLY.
+
+- [x] One compact Account table and one compact Documents table show exactly
+      two customer columns without removing internal provenance.
+- [x] Every location owns one bounded horizontal rail of sibling location and
+      stable-ID-linked charger panels with global charger numbering.
+- [x] Machtiging, Voorwaarden en privacy and Ondertekening share one responsive
+      composition and Step 3 has exactly three customer confirmations.
+- [x] Machtiging has no duplicate confirmation; full bundle preview reuses the
+      existing export port.
+- [x] Signer-name formatting reuses the existing normalizer on blur.
+- [ ] 09B: add one working `Ondertekenen en indienen` action only with CURRENT
+      server legal versions, complete declarations, valid signer fields,
+      calendar year, OTP and atomic finalization.
+- [ ] Signing, persistence, audit evidence, remote and production remain NOT
+      IMPLEMENTED by 09A2.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

@@ -1,6 +1,18 @@
-import { getBackendSupplierLabel, getBrandLabel, getModelLabel } from "./chargerCatalog";
-import { normalizeHouseNumber, normalizePostcode, normalizeSuffix } from "./address/addressNormalizers";
-import { normalizeEmail, normalizeKvkNumber, normalizePhone } from "./signupFieldNormalizers";
+import {
+  getBackendSupplierLabel,
+  getBrandLabel,
+  getModelLabel,
+} from "./chargerCatalog";
+import {
+  normalizeHouseNumber,
+  normalizePostcode,
+  normalizeSuffix,
+} from "./address/addressNormalizers";
+import {
+  normalizeEmail,
+  normalizeKvkNumber,
+  normalizePhone,
+} from "./signupFieldNormalizers";
 import type {
   AccountType,
   AddressDraft,
@@ -41,6 +53,13 @@ export type SignupSubmitChargerPayload = {
 export type SignupSubmitLocationPayload = {
   clientLocationId: string;
   address: SignupSubmitAddressPayload;
+  connectionDeclaration?: {
+    ean: string;
+    captureMethod:
+      | "energy_document_customer_confirmed"
+      | "manual_customer_confirmed";
+    customerConfirmed: boolean;
+  };
   chargers: SignupSubmitChargerPayload[];
 };
 
@@ -74,7 +93,10 @@ function optionalString(value: string): string | undefined {
   return normalized || undefined;
 }
 
-function stableLocationId(location: SignupLocationDraft | undefined, index: number): string {
+function stableLocationId(
+  location: SignupLocationDraft | undefined,
+  index: number,
+): string {
   return optionalString(location?.clientId || "") || `location-${index + 1}`;
 }
 
@@ -83,7 +105,8 @@ function stableChargerId(
   locationIndex: number,
   chargerIndex: number,
 ): string {
-  return optionalString(charger?.clientId || "") || `charger-${locationIndex + 1}-${chargerIndex + 1}`;
+  return optionalString(charger?.clientId || "") ||
+    `charger-${locationIndex + 1}-${chargerIndex + 1}`;
 }
 
 function mapAddress(address: AddressDraft): SignupSubmitAddressPayload {
@@ -131,11 +154,21 @@ function mapCharger(
   };
 
   if (brand) payload.brandLabel = getBrandLabel(brand, charger.manualBrand);
-  if (charger.manualBrand.trim()) payload.manualBrand = charger.manualBrand.trim();
-  if (model) payload.modelLabel = getModelLabel(brand, model, charger.manualModel);
-  if (charger.manualModel.trim()) payload.manualModel = charger.manualModel.trim();
-  if (charger.installationYear.trim()) payload.installationYear = charger.installationYear.trim();
-  if (charger.serialNumber.trim()) payload.serialNumber = charger.serialNumber.trim();
+  if (charger.manualBrand.trim()) {
+    payload.manualBrand = charger.manualBrand.trim();
+  }
+  if (model) {
+    payload.modelLabel = getModelLabel(brand, model, charger.manualModel);
+  }
+  if (charger.manualModel.trim()) {
+    payload.manualModel = charger.manualModel.trim();
+  }
+  if (charger.installationYear.trim()) {
+    payload.installationYear = charger.installationYear.trim();
+  }
+  if (charger.serialNumber.trim()) {
+    payload.serialNumber = charger.serialNumber.trim();
+  }
 
   if (backendSupplier) {
     payload.backendSupplier = backendSupplier;
@@ -156,28 +189,91 @@ function mapCharger(
   return payload;
 }
 
+export function assertExclusiveConnectionDeclarationSource(
+  location: SignupLocationDraft,
+): void {
+  const declaration = location.connectionDeclaration;
+  if (declaration.sourceMode === "document") {
+    if (declaration.manualEan) {
+      throw new Error("connection_source_conflict:manual_ean_in_document_mode");
+    }
+    if (
+      declaration.customerConfirmed &&
+      declaration.confirmedEan !== declaration.selectedCandidateEan
+    ) {
+      throw new Error(
+        "connection_source_conflict:document_confirmation_not_selected",
+      );
+    }
+    return;
+  }
+
+  if (
+    location.energyDocument.file || location.energyDocumentObservation ||
+    declaration.candidates.length > 0 || declaration.selectedCandidateEan
+  ) {
+    throw new Error("connection_source_conflict:document_data_in_manual_mode");
+  }
+  if (
+    declaration.customerConfirmed &&
+    declaration.confirmedEan !== declaration.manualEan
+  ) {
+    throw new Error("connection_source_conflict:manual_confirmation_not_input");
+  }
+}
+
 function mapLocations(draft: SignupDraft): SignupSubmitLocationPayload[] {
+  const mapConnectionDeclaration = (
+    location: SignupLocationDraft,
+  ): SignupSubmitLocationPayload["connectionDeclaration"] => {
+    assertExclusiveConnectionDeclarationSource(location);
+    if (
+      !location.connectionDeclaration.customerConfirmed ||
+      !/^\d{18}$/.test(location.connectionDeclaration.confirmedEan)
+    ) {
+      return undefined;
+    }
+
+    return {
+      ean: location.connectionDeclaration.confirmedEan,
+      captureMethod: location.connectionDeclaration.sourceMode === "document"
+        ? "energy_document_customer_confirmed"
+        : "manual_customer_confirmed",
+      customerConfirmed: true,
+    };
+  };
+
   if (draft.personalInfo.accountType === "particulier") {
     const firstLocation = draft.locations[0];
     const chargers = firstLocation?.chargers || [];
 
     return [{
       clientLocationId: stableLocationId(firstLocation, 0),
-      address: mapAddress(draft.personalInfo.address),
-      chargers: chargers.map((charger, chargerIndex) => mapCharger(charger, 0, chargerIndex)),
+      address: mapAddress(firstLocation.address),
+      ...(mapConnectionDeclaration(firstLocation)
+        ? { connectionDeclaration: mapConnectionDeclaration(firstLocation) }
+        : {}),
+      chargers: chargers.map((charger, chargerIndex) =>
+        mapCharger(charger, 0, chargerIndex)
+      ),
     }];
   }
 
   return draft.locations.map((location, locationIndex) => ({
     clientLocationId: stableLocationId(location, locationIndex),
     address: mapAddress(location.address),
+    ...(mapConnectionDeclaration(location)
+      ? { connectionDeclaration: mapConnectionDeclaration(location) }
+      : {}),
     chargers: location.chargers.map((charger, chargerIndex) =>
       mapCharger(charger, locationIndex, chargerIndex)
     ),
   }));
 }
 
-function mapLegalEntity(draft: SignupDraft): SignupSubmitPayloadV3["legalEntity"] {
+function mapLegalEntity(
+  draft: SignupDraft,
+): SignupSubmitPayloadV3["legalEntity"] {
   const { personalInfo } = draft;
 
   if (personalInfo.accountType === "zakelijk") {
@@ -199,10 +295,14 @@ function mapLegalEntity(draft: SignupDraft): SignupSubmitPayloadV3["legalEntity"
   return undefined;
 }
 
-export function mapSignupDraftToSubmitPayload(draft: SignupDraft): SignupSubmitPayloadV3 {
+export function mapSignupDraftToSubmitPayload(
+  draft: SignupDraft,
+): SignupSubmitPayloadV3 {
   const accepted = draft.consents.termsBundleAccepted === true;
   const phone = normalizePhone(draft.personalInfo.phone);
   const legalEntity = mapLegalEntity(draft);
+  const applicantAddress = draft.locations[0]?.address ||
+    draft.personalInfo.address;
 
   return {
     accountType: draft.personalInfo.accountType,
@@ -211,7 +311,7 @@ export function mapSignupDraftToSubmitPayload(draft: SignupDraft): SignupSubmitP
       lastName: draft.personalInfo.lastName.trim(),
       email: normalizeEmail(draft.personalInfo.email),
       ...(phone ? { phone } : {}),
-      address: mapAddress(draft.personalInfo.address),
+      address: mapAddress(applicantAddress),
     },
     ...(legalEntity ? { legalEntity } : {}),
     consentBundleAcceptance: {

@@ -913,6 +913,100 @@ Correction status: HISTORICAL / NEXT STEP SUPERSEDED by the later recipient-diag
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+## 2026-08-04 — PILOT-SIGNUP-FACT-APPLICABILITY-SUMMARY-06
+
+- Separated generic document extraction from one pure account-type fact
+  applicability selector. Parser results no longer imply whether a dossier
+  fact is required.
+- Made Particulier organization name, KvK and gas EAN not applicable; missing
+  informational facts now have no action and do not block. Zakelijk and VvE
+  require organization name and KvK without requiring document `partyName` as
+  a second organization fact.
+- Prevented the UI-only default country `Nederland` from creating declared
+  address state. Only an explicitly saved complete manual address creates a
+  separate correction and persistent ENVAL-review marker.
+- Extended the existing compact signing summary with applicable confirmed
+  account facts, canonical location/EAN facts, explicit document bindings and
+  found informational document facts. Missing informational facts stay hidden.
+- Added real-fixture proof marker
+  `signup-fact-applicability-summary-06-proof-ok`. Parser files, backend,
+  payload, signing, submit, browser acceptance, remote and production remain
+  unchanged or unproven.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-08-03 — PILOT-SIGNUP-DOCUMENT-CROSSCHECK-02 parity correction
+
+- Kept street, house number, house-number addition, postcode, city and country
+  structurally separate. The single customer-facing formatter renders additions
+  canonically as `28-1`; separators and surrounding whitespace are ignored only
+  for comparison, and an unbounded `281` is never heuristically split.
+- Formalized one active EAN source per location: `document` or `manual`.
+  `EAN klopt niet` clears the selected energy document, observations,
+  candidates and document confirmation; selecting a new document clears manual
+  input and confirmation. A pure mapper assertion rejects mixed sources.
+- Reused the existing PDF adapter and customer-safe card/status/field/button
+  CSS. Energy and charger documents now map bounded rows into one shared
+  `Uit het document gehaald` presentation contract.
+- Charger invoice observations remain observed/derived and are compared with
+  declared MID, serial, brand, model, location, applicant and explicit
+  installation year without prefilling or overwriting. An invoice date is not
+  treated as an installation year, and no charger/MID identity or evidence is
+  accepted or verified.
+- Added local-only parity proof with the existing local energy and charger PDF
+  fixtures. No fixture values or full EANs are emitted, and no database, SQL,
+  RPC, Edge, Storage, OCR, persistence, package, submit, remote, deployment or
+  production action is included.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-08-03 — PILOT-SIGNUP-EAN-PREFLIGHT-02 real-text-PDF and submit-attempt correction
+
+- Corrected the previous preflight evidence boundary: its synthetic parser
+  fixture did not prove the current real text-PDF shape, and field-local error
+  placement did not prove that required errors were initially hidden.
+- Extended the existing client parser for Flate-only streams, ToUnicode font
+  mappings, page boundaries and coordinate-aware text-item composition. A column
+  separator now prevents an 18-digit EAN and following contract date from
+  becoming one numeric sequence.
+- Proved privacy-safe against one local proof-only contract: exactly two
+  observed candidates, classified as one electricity and one gas, without
+  logging or committing document text, personal values or candidate values.
+- Made the unique electricity candidate the only normal confirmation route; gas
+  remains observed parser output. Manual fallback stays hidden until extraction
+  cannot provide a unique route or the customer selects `EAN klopt
+  niet`.
+- Added one central `submitAttempted` visibility gate. Validation still computes
+  every current error, while the UI shows none before the first submit attempt.
+  An invalid click shows all field-local errors, focuses the first field and
+  returns before mapping, client code or network access.
+- The CTA remains visually active while idle and is disabled only during a
+  genuine valid request. No successful browser submit was performed.
+- No package, migration, SQL, RPC, Edge, Storage, OCR, intake/quarantine,
+  document-promotion, mandate, CAR, remote or production behavior changed.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-08-03 — PILOT-SIGNUP-EAN-PREFLIGHT-01 local EAN preflight
+
+- Connected the location-owned energy bill/contract `File` to the existing
+  client-side PDF parser and text extractor. No second parser, OCR, server call,
+  upload transport or business write was added.
+- Added exact 18-digit EAN candidate extraction with electricity, gas and
+  unclassified document-context labels. Candidate output remains observed; only
+  explicit customer confirmation produces the existing declared signup payload
+  field.
+- Added location-scoped parser/reset state, stale-result protection, conditional
+  manual fallback and exact 18-digit manual confirmation.
+- Replaced the CTA's first-error message with stable field paths, field-local
+  accessible errors and one shared signing-readiness gate. The obsolete
+  dashboard-mandate sentence was removed without adding a signing claim.
+- Persistence, signed mandate evidence, intake/quarantine runtime, Storage,
+  e-mail verification, calendar-year scope, authority verification, CAR, kWh,
+  migrations, SQL and Edge behavior remain outside this batch.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## 2026-07-29 — Prove PILOT-PARTY-01A authenticated customer party activation
 
 - Added service-role-only `app_bootstrap_customer_auth_v3`, which reuses v2
@@ -934,6 +1028,7 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   authority, mandate, remote, production or regulatory claim was added.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## 2026-07-29 — PILOT-SIGNUP-ATOMIC-01 atomic recoverable signup
 
 - Replaced the current direct signup Edge multi-write sequence with one
@@ -960,5 +1055,374 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   independence, replay, concurrency, conflicts, rollback and cleanup locally.
 - No verified identity/KvK, address, representation, mandate, EAN,
   case-confirmed, frontend, remote, deploy or production claim was added.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-07-30 — PILOT-CONNECTION-01B assisted connection correction
+
+- Added a forward-only correction over the unchanged original migration: initial
+  signup may defer EAN and then creates no declaration source.
+- Moved exact 18-digit manual EAN behind a secondary action with explicit
+  customer confirmation; removed required netbeheerder and connection-period
+  input without adding CSS or another upload system.
+- Bounded capture methods to confirmed energy-document or manual acquisition.
+  Parser output remains observed/derived until confirmation.
+- Q01-Q24 prove deferred/manual/parser boundaries, optional operator/period,
+  unchanged v4, replay, conflict, concurrency, rollback and cleanup.
+- The source is declaration only: no canonical connection/location, CAR,
+  aangeslotene/ownership, party address, case-confirmed role, mandate,
+  eligibility, verifier or regulatory acceptance is created.
+- No commit, push, deploy or remote action is part of this batch.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-07-30 — PILOT-SIGNUP-JOURNEY-01 scoped frontend journey
+
+- Reorganized the visible signup into exactly Aanvrager, Aansluiting en locatie,
+  Laadpalen, Aanvullende documenten, and Controleren en afronden.
+- Moved assisted EAN and one local energy-document selection into independent
+  per-location state. Charger/MID invoice selection and its existing local
+  preview remain per charger; the existing zakelijk-rijden document is now one
+  dossier-wide conditional state.
+- Reused the existing address, charger, upload, parser-preview, consent, review,
+  layout, token and CSS modules. Added one location-scoped composition and one
+  dossier-document composition; no upload/parser/summary/CSS system was
+  duplicated.
+- Current general conditions/privacy/fee acceptances remain general acceptances,
+  not a definitive mandate. That scoped mandate follows after authenticated
+  completion of the required connection facts.
+- kWh remains dashboard-only and is absent from signup. Migrations, v4/v5,
+  signup Edge, database contracts and Supabase configuration are unchanged.
+- No staging, commit, push, deploy or remote action is part of this batch.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-08-03 — Recover bounded energy-document crosscheck
+
+- Reused the existing PDF decoder, page/row/column reconstruction, EAN
+  classifier, signup draft and shared card/status/field/layout CSS.
+- Replaced global invoice-name/address promotion with semantic customer,
+  delivery-address and supplier blocks plus explicit candidate metadata,
+  validation, displayability and internal rejection reasons.
+- Rejected combined Naam columns, post-/supplier addresses, multiple
+  addresses/postcodes and label-only supplier values.
+- Hid rejected/missing rows and removed the unavailable status pill; incomplete
+  applicant/location input now keeps a displayable document value without a
+  comparison claim.
+- Preserved electricity/gas classification, contract-start detection, EAN
+  confirmation, EAN klopt niet, manual fallback and the rule that only a
+  confirmed electricity EAN reaches declared state.
+- Proved Q01-Q37 on synthetic negative fixtures and the existing local real PDF
+  without logging document values, full EANs or fixture PII. Parser,
+  EAN-preflight, journey, mapper, contractfixture and client proofs are green.
+- Parser output remains observed/derived; comparison is assistance, no customer
+  input is overwritten and no database, SQL, RPC, Edge, package, OCR, remote,
+  deployment, production or acceptance work was performed.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-07-31 — PILOT-SIGNUP-JOURNEY-02 compact five-step onboarding
+
+- Superseded the uncommitted Journey-01 frontend composition with exactly
+  Aanvrager, Locatie, Aansluiting, Laadpalen and Ondertekenen.
+- Split address/precheck from location-scoped energy-document selection and
+  reused one shared location-tab component for Aansluiting and Laadpalen.
+- Removed manual EAN controls, the additional-document step and the expanded
+  review from the active signup UI. The unchanged backend still accepts optional
+  confirmed connection data, but signup no longer exposes that path.
+- Kept charger invoices and their existing local preview per charger. EAN
+  acquisition/confirmation, additional documents, kWh and the definitive scoped
+  mandate remain authenticated dashboard tasks.
+- Reused existing state, address, charger, upload, consent, tabs, tokens and
+  CSS. Added one signup-scoped compact modifier; no inline styling or second
+  upload, parser, location, charger or consent system was added.
+- No migration, RPC, Edge, parser, upload transport, staging, commit, push,
+  deploy or remote action is part of this batch.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-08-03 — PILOT-SIGNUP-PARTY-NAME-CROSSCHECK-03
+
+- Added one pure accounttype-aware resolver for the expected document party:
+  `firstName + lastName` for a private customer and the declared legal-entity
+  name for a business or VvE. Administrator, representative, signer, contact,
+  e-mail and display-name fallbacks are excluded.
+- Replaced prefix, substring and broad fuzzy name behavior with deterministic
+  `exact_full_match`, `initial_and_surname_match`, `mismatch` and
+  `unavailable` outcomes. Organization comparison permits only bounded case,
+  whitespace, diacritic and BV/NV punctuation normalization.
+- Changed the private customer label to `Voornaam/voornamen (voluit)` and made
+  mismatch actions focus the given names, surname or legal-entity name field.
+- Kept initial-only comparison explicitly limited: an initial and complete
+  surname do not prove the declared full given name. The NEa/Regeling source
+  uses `naam` without resolving initials versus full given names; verifier
+  acceptance therefore remains UNKNOWN.
+- Energy and charger/MID documents reuse the same resolver and comparator.
+  Parser observations remain derived assistance and create no identity,
+  authority, aangeslotene, accepted-evidence, MID or ownership claim.
+- Added local source/proof coverage with marker
+  `signup-party-name-crosscheck-proof-ok`. No payload shape, backend, migration,
+  RPC, Edge, database, package, remote, deploy or production action changed.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-08-03 — PILOT-SIGNUP-PARTY-RUNTIME-04
+
+- Kept selected-document observations as location- or charger-scoped observed
+  facts and derived both energy and charger party comparisons during render
+  from the current account type, applicant/legal entity and displayable
+  observation. Applicant changes therefore require no PDF reparse.
+- Made account type a hard pre-submit draft boundary. An empty draft switches
+  directly; a meaningful draft requires confirmation and then receives one
+  completely fresh factory-built draft, without files, observations, EAN state,
+  chargers, consent, validation visibility or hidden per-account-type history.
+- Added one draft-generation guard so parser work started before a confirmed
+  account-type reset cannot write into the fresh draft.
+- Added integrated local runtime proof with marker
+  `signup-party-runtime-04-proof-ok`. Local browser proof remains required; no
+  accepted-evidence, identity, authority, verifier or production claim follows.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-08-04 — PILOT-SIGNUP-DOCUMENT-FIRST-UI-01
+
+- Replaced the active form-first composition with exactly Account, Documenten,
+  Controleren, Aanvullen and Ondertekenen, using one linear navigation model.
+- Added one canonical document-first frontend draft and pure selectors for
+  account requirements, review facts, open gaps, step completeness, mapper
+  compatibility and fail-closed signing readiness.
+- Kept parser observations separate from customer confirmations and manual
+  corrections; document and manual EAN sources remain exclusive.
+- Reused the upload slot, parser, observation and candidate models, crosschecks,
+  address model, location tabs, EAN confirmation control, consent surface and
+  existing CSS tokens. Added only one flow and one matrix CSS modifier.
+- Added local proof marker `signup-document-first-ui-proof-ok` and updated only
+  superseded focused journey assertions. Document persistence, mandate/signing
+  persistence, successful submit, interactive browser, remote, deploy and
+  production remain unproven.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-08-04 — PILOT-SIGNUP-DOCUMENT-FIRST-REVIEW-02
+
+- Collapsed the active signup into exactly Account, Documenten and
+  Ondertekenen. Upload, parsing, cross-document review, missing values,
+  ambiguity, correction and confirmation now share step 2.
+- Added one common document-fact registry and one generic five-column row
+  presentation for declared, energy-document and charger-invoice values.
+- Kept parser observations separate from customer action. Manual corrections
+  require a subsequent explicit confirmation and never become accepted evidence.
+- Added dependency-scoped invalidation: replacing one document clears only
+  confirmations and corrections that cite that document.
+- Added a confirmed-only signing summary and signing record target. The sign
+  action remains disabled; no legal copy, signature or successful submit was
+  invented.
+- Added real-fixture proof marker
+  `signup-document-first-review-02-proof-ok`; simultaneous name and address
+  differences block without logging document values or full EANs.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-08-04 — PILOT-SIGNUP-DOCUMENT-DECISION-03
+
+- Made step-2 uploads a compact responsive card grid while retaining the one
+  existing upload control and local parser path. Each card shows one title,
+  its charger number where applicable, the input, safe filename and removal.
+- Replaced generic cross-document equality with one pure semantic decision
+  policy. It distinguishes clean, bounded-normalized, review-required,
+  blocked, missing, ambiguous and not-applicable results.
+- Kept contract holder versus buyer and delivery address versus invoice address
+  as role differences requiring ENVAL review. A customer can state canonical
+  intent without turning that review marker into accepted or verified truth.
+- Restricted hard blocks to comparable material conflicts such as EAN, MID,
+  serial, same-role parties and explicit delivery/install address conflicts.
+- Changed the matrix to the canonical five columns ending in `Wordt gebruikt`,
+  with real existing button classes and an initially blank canonical column.
+- Kept Account, Locaties and Documenten in the compact signing summary, added
+  one semantic charger table, and hid the unavailable sign action completely.
+- Added local real-fixture proof marker
+  `signup-document-decision-policy-03-proof-ok`. No payload, backend, schema,
+  RPC, Edge, Storage, remote, deployment or evidence-acceptance boundary moved.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-08-04 — PILOT-SIGNUP-UNIFIED-DOCUMENT-PARSER-04
+
+- Made `parseInvoicePdfInput(input)` the only active technical PDF entrypoint
+  for both energy and charger uploads. Its input has no upload-slot, expected
+  family, location, charger, account or matrix context.
+- Added one generic observation envelope with parser version, SHA-256 content
+  fingerprint, page count, document-type candidates, generic fact candidates,
+  warnings and internally rejected candidates.
+- Added separate pure content classification, semantic projection and upload
+  slot compatibility layers. A slot expresses only an expectation after
+  extraction; it cannot change classification or extracted facts.
+- Cached observations by document/client ID together with fingerprint and
+  parser version. Replacing or removing that document clears its cache and
+  dependent local confirmations/corrections only.
+- Added fail-closed document-level handling for wrong, ambiguous and unknown
+  types. Wrong-type facts are not shown as valid matrix sources and do not
+  produce a cascade of missing-field messages.
+- Added real-fixture proof marker
+  `signup-unified-document-parser-04-proof-ok`. Signing, submit, backend,
+  persistence, browser acceptance, remote and production remain unproven.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-08-04 — PILOT-SIGNUP-GENERIC-DOCUMENT-FACTS-05
+
+- Corrected Parser-04 product behavior: document classification and upload-slot
+  compatibility no longer participate in the active customer journey.
+- Kept `parseInvoicePdfInput(input)` as the single technical PDF pipeline and
+  retained same-bytes/same-version deterministic observation envelopes.
+- Projected every supported generic fact into either matrix source column
+  without changing value, confidence, extraction method, displayability or
+  semantic-role metadata based on the upload slot.
+- Reduced upload slots to source binding only. Missing required canonical facts
+  and real material fact conflicts determine progression; document type does
+  not.
+- Replaced per-cell `Niet gevonden` text with `—` and added the bounded upload
+  state `Geen gegevens gevonden.` when a parsed PDF has no supported facts.
+- Removed the obsolete slot-compatibility module and customer copy for wrong or
+  unrecognized document types. Internal descriptive type-candidate scores stay
+  envelope metadata only and have no signup caller.
+- Added real-fixture and no-fact proof marker
+  `signup-generic-document-facts-05-proof-ok`. Signing, submit, backend,
+  persistence, browser acceptance, remote and production remain unproven.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-08-04 — PILOT-SIGNUP-ORGANIZATION-DOCUMENT-FIRST-07
+
+- Reduced active Account step input for every account type to account type and
+  e-mail. Legacy organization/KvK fields remain in compatibility and backend
+  shapes but are no longer active customer inputs.
+- Added one account-bound `KvK-uittreksel` PDF upload for Zakelijk/VvE through
+  the existing `parseInvoicePdfInput(input)` path. Particulier has no such
+  upload or matrix source column.
+- Added organization name, KvK number, registered address, legal form, trade
+  name, director/board-member and representation-text candidates. Extraction
+  is content/layout based and retains raw values only inside the observation
+  envelope.
+- Made organization name, KvK number and registered address required for
+  Zakelijk/VvE. Manual corrections cannot replace the selected account
+  document. Legal form and the remaining organization facts are informational.
+- Added account document binding to the preparation summary and isolated
+  observed representation text under `Bevoegdheidsinformatie uit document`.
+  It fills no signer and makes no authority decision.
+- Improved the existing PDF decoder for inherited resource dictionaries and
+  embedded ToUnicode font mappings; no second parser was introduced.
+- Added proof marker contract
+  `signup-organization-document-first-07-proof-ok`. Source/type/UI proofs pass,
+  but the marker is not currently earned: no local Dutch standalone extract
+  with the three required core facts was found. The real English extract does
+  pass. This checkpoint therefore remains local fixture-blocked.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-08-05 — PILOT-SIGNUP-UNIFIED-PRESENTATION-08
+
+- Replaced the three separate organization, document-check and signing-summary
+  row renderers with one React-free fact presentation projector, one shared
+  `FactTable` in `review` and `document` mode and one `FactReviewControls`.
+- Kept applicability, observations, decisions, confirmations and manual
+  corrections as the existing authorities. The presentation layer only maps
+  those values to customer-safe rows, sources and judgments.
+- Reused one configurable `DocumentUploadSlot` for the account extract, energy
+  document and installation invoice. Upload scope and binding are props; parser
+  orchestration and document-bound invalidation are unchanged.
+- Grouped Step 2 by stable location and charger IDs with globally increasing
+  visible charger numbers. Rebuilt Step 3 as one vertical, read-only document
+  in Account, locations, chargers and Documents order.
+- Kept signing copy, signing/persistence, submit, parser semantics, mapper,
+  backend, database, remote and production outside this local frontend batch.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-08-05 — PILOT-SIGNUP-FACT-RESOLUTION-08B
+
+- Centralized every customer fact in the React-free `pending`, `confirmed`,
+  `review_required` and `blocked` resolution model, with exact neutral/green/
+  orange/red judgments and one shared progression gate.
+- Preserved every document observation and stable binding as a separate source;
+  same document bytes in two bindings no longer count as two corroborating
+  documents. Customer confirmation remains intent rather than evidence.
+- Added explicit handling for one-document confirmation, distinct-document
+  agreement, unresolved and customer-resolved conflicts, valid manual values,
+  invalid values, bounded name matching and structured Dutch address matching.
+- Rebuilt the shared review surface as the exact five-column table with a
+  separate compact editor. Address correction exposes postcode, house number
+  and suffix with the existing lookup preview. Location and charger tables are
+  direct sibling sections.
+- Added local proof marker `signup-fact-resolution-08b-proof-ok`. The English
+  KvK real-fixture regression remains `ENGLISH_KVK_FIXTURE=BLOCKED`; no parser
+  assumption or parser change was made. The available Dutch PDF also still
+  misses exact `organizationName` in the Org-07 real-fixture proof.
+- Signing, evidence acceptance, persistence, submit mapping, backend, database,
+  remote, deploy, production and verifier/NEa acceptance remain outside scope.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-08-06 — PILOT-SIGNUP-SIGNATURE-CORE-09A
+
+- Added a provider-independent signing core with a stable method port,
+  method registry and one composition root. The only active method is
+  `typed_name_otp_v1`; three future identifiers remain reserved and
+  unimplemented.
+- Added separate React-free canonical fact, signing-intent, signing-evidence,
+  legal-document and generated mandate models. No evidence, hash, OTP or signed
+  state is fabricated client-side.
+- Registered privacy notice, service terms, fee terms and mandate separately.
+  Existing incomplete legal sources are `UNKNOWN`/`DRAFT`, unverified and
+  therefore keep readiness false.
+- Extended the existing vertical Step 3 document after its canonical summary
+  with mandate, privacy, service, fee, signer and readiness sections. There is
+  no sign/submit action, canvas, print/scan route, fake OTP or success state.
+- Added proof marker `signup-signature-core-09a-proof-ok`. Parser, semantic
+  projector, submit mapper, migrations and backend remain hash-protected and
+  unchanged by this batch.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-08-06 — PILOT-SIGNUP-SIGNING-KISS-09A1
+
+- Reduced Step 3 to four customer sections: summary, mandate, one combined
+  legal-bundle action and signing declaration. Removed customer-facing legal
+  status pills, readiness reasons, method/version/hash language and placeholder
+  legal routes.
+- Kept summary confirmation separate from evidence and projected the single
+  legal checkbox to three versioned actions without relaxing internal legal
+  readiness.
+- Added one canonical bundle render model plus a browser-only HTML preview and
+  download adapter with new-context isolation and object-URL revocation.
+- Changed mandate validity choices to current year plus two, added the exact
+  customer permission/declaration wording and kept organization authority
+  review unresolved.
+- Centralized all tab, next and back transitions so the flow top is restored
+  and the visible step heading receives focus without smooth scrolling or
+  draft replacement.
+- Added proof marker `signup-signing-kiss-09a1-proof-ok`. No parser, semantic
+  projector, signup payload, backend, database, signing, OTP, persistence,
+  remote or production behavior changed.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-08-06 — PILOT-SIGNUP-SIGNING-LAYOUT-09A2
+
+- Kept `DocumentFirstSigningSummary` as the single renderer and reduced its
+  customer tables to `Gegeven`/`Waarde` and
+  `Documentsoort`/`Bestandsnaam`.
+- Grouped every location with its stable-ID-linked chargers in one bounded
+  horizontal rail while retaining the projector's global charger numbering.
+- Added only `SigningEntityGroup` as a presentation component; it composes
+  sibling document-mode `FactTable`s and owns no fact or state logic.
+- Placed Machtiging, Voorwaarden en privacy and Ondertekening in one responsive
+  three-column composition. The mandate links to the existing full bundle and
+  adds no fourth confirmation.
+- Reused `normalizeName` on signer-name blur and reserved an empty 09B primary
+  action boundary without rendering a signing button.
+- Added marker `signup-signing-layout-09a2-proof-ok`. Signing, OTP, submit,
+  persistence, parser, backend, database, remote and production remain
+  unchanged or not implemented.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

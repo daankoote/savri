@@ -14,6 +14,7 @@ import type {
   AddressDraft,
   ChargerDraft,
   SignupDraft,
+  SignupFieldErrors,
   SignupValidationResult,
   ValidationIssue,
 } from "./signupTypes";
@@ -23,214 +24,394 @@ function filled(value: string) {
 }
 
 function chargerLabel(charger: ChargerDraft, index: number) {
-  const brand = charger.brand ? getBrandLabel(charger.brand, charger.manualBrand) : "";
-  const model = charger.model ? getModelLabel(charger.brand, charger.model, charger.manualModel) : "";
+  const brand = charger.brand
+    ? getBrandLabel(charger.brand, charger.manualBrand)
+    : "";
+  const model = charger.model
+    ? getModelLabel(charger.brand, charger.model, charger.manualModel)
+    : "";
   return [brand, model].filter(Boolean).join(" ") || `Laadpaal ${index + 1}`;
 }
 
-function validateAddress(address: AddressDraft, prefix: string, errors: ValidationIssue[]) {
+function addIssue(
+  target: ValidationIssue[],
+  fieldPath: string,
+  id: string,
+  message: string,
+  severity: ValidationIssue["severity"] = "error",
+) {
+  target.push({ id, fieldPath, message, severity });
+}
+
+function validateAddress(
+  address: AddressDraft,
+  fieldPrefix: string,
+  label: string,
+  errors: ValidationIssue[],
+) {
   if (!filled(address.postcode)) {
-    errors.push({ id: `${prefix}-postcode`, message: `${prefix}: postcode is verplicht.`, severity: "error" });
+    addIssue(
+      errors,
+      `${fieldPrefix}.postalCode`,
+      `${fieldPrefix}.postalCode.required`,
+      `${label}: postcode is verplicht.`,
+    );
   } else if (!isValidDutchPostcode(address.postcode)) {
-    errors.push({ id: `${prefix}-postcode-format`, message: `${prefix}: gebruik postcode zoals 1234AB.`, severity: "error" });
+    addIssue(
+      errors,
+      `${fieldPrefix}.postalCode`,
+      `${fieldPrefix}.postalCode.format`,
+      `${label}: gebruik postcode zoals 1234AB.`,
+    );
   }
 
   if (!filled(address.houseNumber)) {
-    errors.push({ id: `${prefix}-houseNumber`, message: `${prefix}: huisnummer is verplicht.`, severity: "error" });
+    addIssue(
+      errors,
+      `${fieldPrefix}.houseNumber`,
+      `${fieldPrefix}.houseNumber.required`,
+      `${label}: huisnummer is verplicht.`,
+    );
   } else if (!isValidHouseNumber(address.houseNumber)) {
-    errors.push({
-      id: `${prefix}-houseNumber-format`,
-      message: `${prefix}: huisnummer moet uit cijfers tot 9999 bestaan.`,
-      severity: "error",
-    });
+    addIssue(
+      errors,
+      `${fieldPrefix}.houseNumber`,
+      `${fieldPrefix}.houseNumber.format`,
+      `${label}: huisnummer moet uit cijfers tot 9999 bestaan.`,
+    );
   }
 
   if (address.suffix && !isValidSuffix(address.suffix)) {
-    errors.push({
-      id: `${prefix}-suffix-format`,
-      message: `${prefix}: controleer de suffix/toevoeging.`,
-      severity: "error",
-    });
+    addIssue(
+      errors,
+      `${fieldPrefix}.suffix`,
+      `${fieldPrefix}.suffix.format`,
+      `${label}: controleer de suffix/toevoeging.`,
+    );
   }
 }
 
 function hasModel(charger: ChargerDraft) {
-  return charger.model === "manual" ? filled(charger.manualModel) : filled(charger.model);
+  return charger.model === "manual"
+    ? filled(charger.manualModel)
+    : filled(charger.model);
 }
 
-function validateConsents(draft: SignupDraft, errors: ValidationIssue[]) {
-  const { consents } = draft;
-
-  if (!consents.termsBundleAccepted) {
-    errors.push({
-      id: "consent-terms-bundle",
-      message: "Accepteer de voorwaarden voordat ENVAL uw dossier kan starten.",
-      severity: "error",
-    });
-  }
+function groupFieldErrors(errors: ValidationIssue[]): SignupFieldErrors {
+  return errors.reduce<SignupFieldErrors>((grouped, issue) => {
+    (grouped[issue.fieldPath] ||= []).push(issue);
+    return grouped;
+  }, {});
 }
 
-export function validateSignupDraft(draft: SignupDraft): SignupValidationResult {
+export function signupFieldErrorId(fieldPath: string): string {
+  return `signup-error-${fieldPath.replace(/[^A-Za-z0-9_-]+/g, "-")}`;
+}
+
+export function firstSignupFieldError(
+  fieldErrors: SignupFieldErrors,
+  fieldPath: string,
+): ValidationIssue | null {
+  return fieldErrors[fieldPath]?.[0] || null;
+}
+
+export function validateSignupDraft(
+  draft: SignupDraft,
+): SignupValidationResult {
   const errors: ValidationIssue[] = [];
   const warnings: ValidationIssue[] = [];
   const { personalInfo } = draft;
   const isBusiness = personalInfo.accountType !== "particulier";
 
   if (!filled(personalInfo.accountType)) {
-    errors.push({ id: "accountType", message: "Kies een type aanmelding.", severity: "error" });
+    addIssue(
+      errors,
+      "applicant.accountType",
+      "applicant.accountType.required",
+      "Kies een type aanmelding.",
+    );
   }
 
   if (!filled(personalInfo.firstName)) {
-    errors.push({ id: "firstName", message: "Voornaam is verplicht.", severity: "error" });
+    addIssue(
+      errors,
+      "applicant.firstName",
+      "applicant.firstName.required",
+      "Voornaam is verplicht.",
+    );
   } else if (!isValidName(personalInfo.firstName)) {
-    errors.push({ id: "firstName-format", message: "Voornaam: gebruik alleen letters, spaties en streepjes.", severity: "error" });
+    addIssue(
+      errors,
+      "applicant.firstName",
+      "applicant.firstName.format",
+      "Voornaam: gebruik alleen letters, spaties en streepjes.",
+    );
   }
 
   if (!filled(personalInfo.lastName)) {
-    errors.push({ id: "lastName", message: "Achternaam is verplicht.", severity: "error" });
+    addIssue(
+      errors,
+      "applicant.lastName",
+      "applicant.lastName.required",
+      "Achternaam is verplicht.",
+    );
   } else if (!isValidName(personalInfo.lastName)) {
-    errors.push({ id: "lastName-format", message: "Achternaam: gebruik alleen letters, spaties en streepjes.", severity: "error" });
+    addIssue(
+      errors,
+      "applicant.lastName",
+      "applicant.lastName.format",
+      "Achternaam: gebruik alleen letters, spaties en streepjes.",
+    );
   }
 
   if (!filled(personalInfo.email)) {
-    errors.push({ id: "email", message: "E-mailadres is verplicht.", severity: "error" });
+    addIssue(
+      errors,
+      "applicant.email",
+      "applicant.email.required",
+      "E-mailadres is verplicht.",
+    );
   } else if (!isValidEmail(personalInfo.email)) {
-    errors.push({ id: "email", message: "Controleer het e-mailadres.", severity: "error" });
+    addIssue(
+      errors,
+      "applicant.email",
+      "applicant.email.format",
+      "Controleer het e-mailadres.",
+    );
   }
 
   if (personalInfo.phone && !isValidPhone(personalInfo.phone)) {
-    errors.push({ id: "phone", message: "Controleer het telefoonnummer.", severity: "error" });
+    addIssue(
+      errors,
+      "applicant.phone",
+      "applicant.phone.format",
+      "Controleer het telefoonnummer.",
+    );
   }
 
-  if (personalInfo.accountType === "zakelijk" && !filled(personalInfo.companyName)) {
-    errors.push({ id: "companyName", message: "Bedrijfsnaam is verplicht.", severity: "error" });
-  } else if (personalInfo.accountType === "zakelijk" && !isValidName(personalInfo.companyName)) {
-    errors.push({
-      id: "companyName-format",
-      message: "Bedrijfsnaam: gebruik alleen letters, spaties en streepjes.",
-      severity: "error",
-    });
-  }
-
-  if (personalInfo.accountType === "vve" && !filled(personalInfo.organizationName)) {
-    errors.push({ id: "organizationName", message: "VVE naam is verplicht.", severity: "error" });
-  } else if (personalInfo.accountType === "vve" && !isValidName(personalInfo.organizationName)) {
-    errors.push({
-      id: "organizationName-format",
-      message: "VVE naam: gebruik alleen letters, spaties en streepjes.",
-      severity: "error",
-    });
+  const legalEntityName = personalInfo.accountType === "vve"
+    ? personalInfo.organizationName
+    : personalInfo.companyName;
+  if (isBusiness && !filled(legalEntityName)) {
+    addIssue(
+      errors,
+      "legalEntity.name",
+      "legalEntity.name.required",
+      personalInfo.accountType === "vve"
+        ? "VVE naam is verplicht."
+        : "Bedrijfsnaam is verplicht.",
+    );
+  } else if (isBusiness && !isValidName(legalEntityName)) {
+    addIssue(
+      errors,
+      "legalEntity.name",
+      "legalEntity.name.format",
+      personalInfo.accountType === "vve"
+        ? "VVE naam: gebruik alleen letters, spaties en streepjes."
+        : "Bedrijfsnaam: gebruik alleen letters, spaties en streepjes.",
+    );
   }
 
   if (isBusiness && !filled(personalInfo.kvkNumber)) {
-    errors.push({ id: "kvkNumber", message: "KVK nummer is verplicht.", severity: "error" });
+    addIssue(
+      errors,
+      "legalEntity.tradeRegisterNumber",
+      "legalEntity.tradeRegisterNumber.required",
+      "KVK nummer is verplicht.",
+    );
   } else if (isBusiness && !isValidKvkNumber(personalInfo.kvkNumber)) {
-    errors.push({ id: "kvkNumber-format", message: "KVK nummer moet uit 8 cijfers bestaan.", severity: "error" });
+    addIssue(
+      errors,
+      "legalEntity.tradeRegisterNumber",
+      "legalEntity.tradeRegisterNumber.format",
+      "KVK nummer moet uit 8 cijfers bestaan.",
+    );
   }
 
   if (isBusiness && !personalInfo.kvkDocument) {
-    warnings.push({
-      id: "kvkDocument",
-      message: "KVK-uittreksel moet later worden toegevoegd.",
-      severity: "warning",
-    });
+    addIssue(
+      warnings,
+      "legalEntity.tradeRegisterDocument",
+      "legalEntity.tradeRegisterDocument.deferred",
+      "KVK-uittreksel moet later worden toegevoegd.",
+      "warning",
+    );
   }
 
-  validateAddress(personalInfo.address, isBusiness ? "Hoofdgegevens" : "Adres", errors);
-
   if (draft.locations.length < 1) {
-    errors.push({ id: "locations", message: "Voeg minimaal één locatie toe.", severity: "error" });
+    addIssue(
+      errors,
+      "locations",
+      "locations.required",
+      "Voeg minimaal één locatie toe.",
+    );
   }
 
   draft.locations.forEach((location, locationIndex) => {
-    const locationLabel = isBusiness ? `Locatie ${locationIndex + 1}` : "Locatie";
+    const locationLabel = isBusiness
+      ? `Locatie ${locationIndex + 1}`
+      : "Locatie";
+    const locationPath = `locations.${location.clientId}`;
+    const declaration = location.connectionDeclaration;
 
-    if (isBusiness) {
-      validateAddress(location.address, locationLabel, errors);
+    validateAddress(location.address, locationPath, locationLabel, errors);
+
+    if (
+      declaration.sourceMode === "document" &&
+      !location.energyDocument.file
+    ) {
+      addIssue(
+        errors,
+        `${locationPath}.energyDocument`,
+        `${locationPath}.energyDocument.required`,
+        `${locationLabel}: kies een energienota of energiecontract.`,
+      );
+    }
+
+    if (
+      !declaration.customerConfirmed ||
+      !/^\d{18}$/.test(declaration.confirmedEan)
+    ) {
+      addIssue(
+        errors,
+        `${locationPath}.confirmedEan`,
+        `${locationPath}.confirmedEan.required`,
+        declaration.sourceMode === "manual" && declaration.manualEan &&
+          !/^\d{18}$/.test(declaration.manualEan)
+          ? `${locationLabel}: EAN moet uit exact 18 cijfers bestaan.`
+          : `${locationLabel}: bevestig één EAN van de elektriciteitsaansluiting.`,
+      );
     }
 
     if (location.chargers.length < 1) {
-      errors.push({
-        id: `${location.clientId}-chargers`,
-        message: `${locationLabel}: voeg minimaal één laadpaal toe.`,
-        severity: "error",
-      });
+      addIssue(
+        errors,
+        `${locationPath}.chargers`,
+        `${locationPath}.chargers.required`,
+        `${locationLabel}: voeg minimaal één laadpaal toe.`,
+      );
     }
 
     location.chargers.forEach((charger, chargerIndex) => {
       const label = `${locationLabel} / ${chargerLabel(charger, chargerIndex)}`;
+      const chargerPath = `chargers.${charger.clientId}`;
 
       if (!filled(charger.brand)) {
-        errors.push({ id: `${charger.clientId}-brand`, message: `${label}: merk is verplicht.`, severity: "error" });
+        addIssue(
+          errors,
+          `${chargerPath}.brand`,
+          `${chargerPath}.brand.required`,
+          `${label}: merk is verplicht.`,
+        );
       }
 
       if (charger.brand === "other" && !filled(charger.manualBrand)) {
-        errors.push({
-          id: `${charger.clientId}-manual-brand`,
-          message: `${label}: vul merk namelijk in.`,
-          severity: "error",
-        });
+        addIssue(
+          errors,
+          `${chargerPath}.manualBrand`,
+          `${chargerPath}.manualBrand.required`,
+          `${label}: vul merk namelijk in.`,
+        );
       }
 
       if (!hasModel(charger)) {
-        errors.push({ id: `${charger.clientId}-model`, message: `${label}: model is verplicht.`, severity: "error" });
+        addIssue(
+          errors,
+          `${chargerPath}.model`,
+          `${chargerPath}.model.required`,
+          `${label}: model is verplicht.`,
+        );
       }
 
       if (!filled(charger.installationYear)) {
-        errors.push({
-          id: `${charger.clientId}-installation-year`,
-          message: `${label}: installatiejaar is verplicht.`,
-          severity: "error",
-        });
+        addIssue(
+          errors,
+          `${chargerPath}.installationYear`,
+          `${chargerPath}.installationYear.required`,
+          `${label}: installatiejaar is verplicht.`,
+        );
       }
 
       if (!filled(charger.midNumber)) {
-        errors.push({
-          id: `${charger.clientId}-mid-number`,
-          message: `${label}: MID nummer is verplicht.`,
-          severity: "error",
-        });
+        addIssue(
+          errors,
+          `${chargerPath}.midNumber`,
+          `${chargerPath}.midNumber.required`,
+          `${label}: MID nummer is verplicht.`,
+        );
       }
 
       if (!filled(charger.serialNumber)) {
-        errors.push({
-          id: `${charger.clientId}-serial`,
-          message: `${label}: serienummer is verplicht.`,
-          severity: "error",
-        });
+        addIssue(
+          errors,
+          `${chargerPath}.serialNumber`,
+          `${chargerPath}.serialNumber.required`,
+          `${label}: serienummer is verplicht.`,
+        );
       }
 
-      if (charger.backendSupplier === "Custom (nieuwe toevoegen)" && !filled(charger.manualBackendSupplier)) {
-        errors.push({
-          id: `${charger.clientId}-manual-backend-supplier`,
-          message: `${label}: vul back-end leverancier namelijk in.`,
-          severity: "error",
-        });
+      if (
+        charger.backendSupplier === "Custom (nieuwe toevoegen)" &&
+        !filled(charger.manualBackendSupplier)
+      ) {
+        addIssue(
+          errors,
+          `${chargerPath}.manualBackendSupplier`,
+          `${chargerPath}.manualBackendSupplier.required`,
+          `${label}: vul back-end leverancier namelijk in.`,
+        );
       }
 
       if (!filled(charger.solarPanelStatus)) {
-        errors.push({
-          id: `${charger.clientId}-solar`,
-          message: `${label}: kies een optie voor zonnepanelen.`,
-          severity: "error",
-        });
+        addIssue(
+          errors,
+          `${chargerPath}.solarPanelStatus`,
+          `${chargerPath}.solarPanelStatus.required`,
+          `${label}: kies een optie voor zonnepanelen.`,
+        );
       }
 
       if (charger.solarPanelStatus === "not_hourly_exportable") {
-        warnings.push({
-          id: `${charger.clientId}-solar-review`,
-          message: `${label}: zonnepanelendata vraagt mogelijk extra review.`,
-          severity: "warning",
-        });
+        addIssue(
+          warnings,
+          `${chargerPath}.solarPanelStatus`,
+          `${chargerPath}.solarPanelStatus.review`,
+          `${label}: zonnepanelendata vraagt mogelijk extra review.`,
+          "warning",
+        );
+      }
+
+      const invoice = draft.documentsByChargerId[charger.clientId]?.find(
+        (document) => document.documentType === "installation_invoice",
+      );
+      if (!invoice?.file) {
+        addIssue(
+          errors,
+          `${chargerPath}.invoice`,
+          `${chargerPath}.invoice.required`,
+          `${label}: kies de installatie- of aanschaffactuur.`,
+        );
       }
     });
   });
 
-  validateConsents(draft, errors);
+  if (!draft.consents.termsBundleAccepted) {
+    addIssue(
+      errors,
+      "acceptances.terms",
+      "acceptances.terms.required",
+      "Accepteer de voorwaarden voordat ENVAL uw dossier kan starten.",
+    );
+  }
 
   return {
     canStartDossier: errors.length === 0,
     errors,
+    fieldErrors: groupFieldErrors(errors),
     warnings,
   };
+}
+
+export function isSignupReadyForSigning(draft: SignupDraft): boolean {
+  return validateSignupDraft(draft).canStartDossier;
 }

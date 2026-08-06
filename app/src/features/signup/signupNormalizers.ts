@@ -2,13 +2,18 @@ import type {
   AddressDraft,
   ChargerDocumentDraft,
   ChargerDraft,
+  ConnectionDeclarationDraft,
   ConsentDraft,
+  DocumentsByChargerId,
   DocumentType,
+  LocationDocumentDraft,
   PersonalInfoDraft,
   SignupLocationDraft,
 } from "./signupTypes";
 
-export const documentTypes: DocumentType[] = ["installation_invoice", "monthly_reimbursement"];
+export const documentTypes: ChargerDocumentDraft["documentType"][] = [
+  "installation_invoice",
+];
 
 export function createAddressDraft(): AddressDraft {
   return {
@@ -52,7 +57,9 @@ export function createClientId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 }
 
-export function createChargerDraft(source: ChargerDraft["source"] = "manual"): ChargerDraft {
+export function createChargerDraft(
+  source: ChargerDraft["source"] = "manual",
+): ChargerDraft {
   return {
     clientId: createClientId("charger"),
     source,
@@ -69,30 +76,132 @@ export function createChargerDraft(source: ChargerDraft["source"] = "manual"): C
   };
 }
 
-export function createLocationDraft(source: ChargerDraft["source"] = "manual"): SignupLocationDraft {
+export function createLocationDraft(
+  source: ChargerDraft["source"] = "manual",
+): SignupLocationDraft {
+  const clientId = createClientId("location");
+
   return {
-    clientId: createClientId("location"),
+    clientId,
     address: createAddressDraft(),
+    energyDocument: {
+      clientId: createClientId("doc_energy"),
+      locationClientId: clientId,
+      documentType: "energy_bill_or_contract",
+      file: null,
+      status: "empty",
+    },
+    energyDocumentObservation: null,
+    connectionDeclaration: createConnectionDeclarationDraft(),
     chargers: [createChargerDraft(source)],
+  };
+}
+
+export function createConnectionDeclarationDraft(): ConnectionDeclarationDraft {
+  return {
+    sourceMode: "document",
+    preflightStatus: "idle",
+    candidates: [],
+    selectedCandidateEan: "",
+    confirmedEan: "",
+    manualEan: "",
+    customerConfirmed: false,
+  };
+}
+
+export function transitionLocationToManualEanSource(
+  location: SignupLocationDraft,
+  preflightStatus: Extract<
+    ConnectionDeclarationDraft["preflightStatus"],
+    "parser_error" | "no_candidate" | "manual_entry_required"
+  > = "manual_entry_required",
+): SignupLocationDraft {
+  return {
+    ...location,
+    energyDocument: {
+      ...location.energyDocument,
+      file: null,
+      status: "empty",
+    },
+    energyDocumentObservation: null,
+    connectionDeclaration: {
+      sourceMode: "manual",
+      preflightStatus,
+      candidates: [],
+      selectedCandidateEan: "",
+      confirmedEan: "",
+      manualEan: "",
+      customerConfirmed: false,
+    },
+  };
+}
+
+export function transitionLocationToDocumentEanSource(
+  location: SignupLocationDraft,
+  document: LocationDocumentDraft,
+): SignupLocationDraft {
+  return {
+    ...location,
+    energyDocument: document,
+    energyDocumentObservation: null,
+    connectionDeclaration: {
+      sourceMode: "document",
+      preflightStatus: document.file ? "parsing" : "idle",
+      candidates: [],
+      selectedCandidateEan: "",
+      confirmedEan: "",
+      manualEan: "",
+      customerConfirmed: false,
+    },
   };
 }
 
 export function createDocumentDraftsForCharger(
   chargerClientId: string,
-  includeBusinessMonthly = true,
 ): ChargerDocumentDraft[] {
   return documentTypes
-    .filter((documentType) => includeBusinessMonthly || documentType === "installation_invoice")
     .map((documentType) => ({
       clientId: createClientId(`doc_${documentType}`),
       chargerClientId,
       documentType,
       file: null,
       status: "empty",
+      observation: null,
+      parseStatus: "idle",
     }));
 }
 
+export function replaceChargerDocumentState(
+  documents: DocumentsByChargerId,
+  updated: ChargerDocumentDraft,
+): DocumentsByChargerId {
+  return {
+    ...documents,
+    [updated.chargerClientId]: (documents[updated.chargerClientId] || []).map(
+      (document) => document.clientId === updated.clientId ? updated : document,
+    ),
+  };
+}
+
+export function removeChargerDocumentState(
+  documents: DocumentsByChargerId,
+  chargerClientIds: string[],
+): DocumentsByChargerId {
+  const next = { ...documents };
+  chargerClientIds.forEach((chargerClientId) => {
+    delete next[chargerClientId];
+  });
+  return next;
+}
+
 export function documentLabel(documentType: DocumentType) {
-  if (documentType === "installation_invoice") return "Factuur installatie";
-  return "Indien zakelijk rijden: voeg een maandoverzicht van je thuislaadvergoeding toe";
+  if (documentType === "organization_extract") return "KvK-uittreksel";
+  if (documentType === "energy_bill_or_contract") {
+    return "Energienota of energiecontract";
+  }
+  if (documentType === "installation_invoice") {
+    return "Installatie- of aanschaffactuur laadpaal";
+  }
+
+  return documentType;
 }

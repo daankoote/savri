@@ -1,11 +1,12 @@
 import type { AddressLookupInput } from "./addressLookup";
+import { normalizeHouseNumberAddition } from "../structuredAddress";
 
 export function normalizePostcode(value: string): string {
   return String(value || "").replace(/\s+/g, "").toUpperCase().trim();
 }
 
 export function normalizeSuffix(value: string): string {
-  return String(value || "").replace(/\s+/g, "").toUpperCase().trim();
+  return normalizeHouseNumberAddition(value);
 }
 
 export function normalizeHouseNumber(value: string): string {
@@ -37,12 +38,15 @@ export function isValidSuffix(value: string): boolean {
   if (!suffix) return true;
 
   // TODO: expand suffix edge cases after real-world QA.
-  return /^([1-9][0-9]?|100)[A-Z]{0,3}$/.test(suffix) || /^[A-Z]{1,3}$/.test(suffix);
+  return /^([1-9][0-9]?|100)[A-Z]{0,3}$/.test(suffix) ||
+    /^[A-Z]{1,3}$/.test(suffix);
 }
 
 export function getPostcodeValidationMessage(value: string): string {
   const normalized = normalizePostcode(value);
-  if (!normalized || normalized.length < 6 || isValidDutchPostcode(normalized)) return "";
+  if (
+    !normalized || normalized.length < 6 || isValidDutchPostcode(normalized)
+  ) return "";
   return "Gebruik postcode zoals 1234AB.";
 }
 
@@ -66,7 +70,9 @@ export function createAddressLookupKey(input: AddressLookupInput): string {
   ].join("|");
 }
 
-export function normalizeAddressLookupInput(input: AddressLookupInput): AddressLookupInput {
+export function normalizeAddressLookupInput(
+  input: AddressLookupInput,
+): AddressLookupInput {
   return {
     postcode: normalizePostcode(input.postcode),
     houseNumber: normalizeHouseNumber(input.houseNumber),
@@ -75,5 +81,6 @@ export function normalizeAddressLookupInput(input: AddressLookupInput): AddressL
 }
 
 export function isLookupReady(input: AddressLookupInput): boolean {
-  return isValidDutchPostcode(input.postcode) && isValidHouseNumber(input.houseNumber) && isValidSuffix(input.suffix || "");
+  return isValidDutchPostcode(input.postcode) &&
+    isValidHouseNumber(input.houseNumber) && isValidSuffix(input.suffix || "");
 }

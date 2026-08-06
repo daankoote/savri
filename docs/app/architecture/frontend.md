@@ -256,6 +256,93 @@ The year overview is customer-facing output and later supports the audit-worthy 
 - Do not upload files or call document upload endpoints from `/aanmelden` yet.
 - Feature files live under `app/src/features/signup/`.
 
+### Unified signup fact presentation
+
+- `app/src/features/signup/presentation/factPresentationModel.ts` is the
+  React-free projection boundary for existing observations, applicability,
+  decisions, canonical values, confirmations and corrections.
+- `FactTable` owns headers, rows, sources, judgments, responsive layout and the
+  `review`/`document` typography variants. `FactReviewControls` is the only
+  confirm/correct/checkmark renderer.
+- Step-level components supply state, callbacks and sections only. They do not
+  define fact rows, source labels or judgment mappings.
+- `DocumentUploadSlot` is the single signup upload surface; account, location
+  and charger differences are configuration and stable binding props.
+- The signing document is read-only review presentation. It is not a signed
+  snapshot, persistence boundary, approval, evidence acceptance or production
+  proof.
+- The same React-free projector owns the customer resolution state for every
+  account, location and charger fact: `pending`, `confirmed`,
+  `review_required` or `blocked`. Required pending/blocked facts stop progress;
+  confirmed/review-required facts may progress; informational facts never gate.
+- The five-column review table is fixed to `Gegeven`, `Waarde`, `Bronnen`,
+  `Bevestiging / correctie` and `Oordeel`. Actions and the compact correction
+  editor stay outside the value and judgment cells. Address correction exposes
+  only postcode, house number and suffix plus the existing read-only lookup
+  preview.
+- Presentation keeps every source observation with its stable document and
+  location/charger binding. Equal bytes in two upload bindings remain one
+  document identity and therefore are not independent corroboration.
+- Step 2 projects location and charger fact tables as sibling sections in
+  location order. Page components do not recreate resolution or gating rules.
+
+### Modular signup signing core
+
+- `app/src/features/signup/signing/` owns React-free method, registry, intent,
+  evidence, legal-document, canonical-fact and mandate contracts. The core does
+  not import a concrete method.
+- `signupSigningComposition.ts` is the only composition root and registers
+  `typed_name_otp_v1`. Step 3 requests the active port from that root and never
+  imports `methods/typedNameOtpV1.ts`.
+- `DocumentFirstSigningSummary` remains the one vertical Step 3 renderer and
+  reuses `selectUnifiedFactPresentation` plus the `FactTable` document variant.
+  Mandate, legal, signer and readiness components extend it; they do not create
+  a second dossier summary.
+- Legal status, signer input, intent, year scope and readiness are browser-local
+  09A state outside the protected signup submit mapper. No signing API client,
+  OTP control, evidence creation, snapshot hash or success state exists yet.
+- Signing UI reuses `components.css` document, form, checkbox, button and status
+  tokens. New selectors are signing-document scoped; no stylesheet or global
+  typography rule was added.
+
+### Compact signing presentation 09A1
+
+- Step 3 renders exactly four major sections. Fact tables remain subparts of
+  the single summary and do not become separate signing cards.
+- `legalBundleDocument.ts` is the canonical legal/mandate render input.
+  `legalBundleExportPort.ts` isolates export behavior and
+  `browserHtmlLegalBundleV1.ts` supplies the local blob-backed preview/download
+  adapter. React components do not contain duplicate legal paragraphs.
+- The combined legal control changes three separate browser-local action
+  intents. Legal status still closes readiness internally but is not presented
+  as customer diagnostics.
+- `signupStepTransition.ts` is the single active-step transition path for tabs,
+  next, back and reachability correction. It uses immediate scrolling and
+  focuses the newly visible heading; ordinary transitions do not recreate the
+  reducer draft.
+- The signing method and evidence contracts are unchanged. There is still no
+  active signing, OTP, finalization, persistence or success UI.
+
+### Compact signing layout 09A2
+
+- `DocumentFirstSigningSummary` remains the sole state/composition owner.
+  `SigningEntityGroup` is its only new presentation child and owns only a
+  heading, bounded horizontal rail and sibling `FactTable` panels.
+- The additive two-column `FactTable` configuration hides source and judgment
+  cells in the customer summary. Review variants and the underlying projected
+  sources/resolution values are unchanged.
+- Location-to-charger grouping uses projected `locationId` values and existing
+  global charger titles. The rail contains overflow locally and stacks at the
+  existing narrow-screen breakpoint.
+- Document binding is visible in the document-type label; customer-safe
+  filename remains the value. No third column or alternate document projector
+  exists.
+- The three signing sections share an equal-column desktop grid and stack in
+  source order on narrow screens. The empty primary-action boundary is reserved
+  for 09B and renders no control in 09A2.
+- Signer name normalization imports the existing `normalizeName` helper and
+  runs on blur, preserving controlled input behavior while typing.
+
 ## Migration Rule
 
 Legacy root HTML, `assets/js/**`, and `assets/css/**` are source material only. They should not be edited or replaced until the new app has a reviewed migration plan.

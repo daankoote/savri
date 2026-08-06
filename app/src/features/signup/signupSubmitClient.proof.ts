@@ -54,6 +54,11 @@ function proofPayload(): SignupSubmitPayloadV3 {
           city: "Zandvoort",
           country: "Nederland",
         },
+        connectionDeclaration: {
+          ean: "871685900012345678",
+          captureMethod: "manual_customer_confirmed",
+          customerConfirmed: true,
+        },
         chargers: [
           {
             clientChargerId: "charger-client-proof-1",
@@ -95,15 +100,19 @@ function getHeader(init: RequestInit | undefined, key: string): string {
 
   if (headers instanceof Headers) return headers.get(key) || "";
   if (Array.isArray(headers)) {
-    return headers.find(([name]) => name.toLowerCase() === key.toLowerCase())?.[1] || "";
+    return headers.find(([name]) => name.toLowerCase() === key.toLowerCase())
+      ?.[1] || "";
   }
 
   return String((headers as Record<string, string>)[key] || "");
 }
 
-export async function runSignupSubmitClientProof(): Promise<SignupSubmitClientProofResult> {
+export async function runSignupSubmitClientProof(): Promise<
+  SignupSubmitClientProofResult
+> {
   const payload = proofPayload();
-  const endpointUrl = "http://localhost:54321/functions/v1/api-app-signup-submit";
+  const endpointUrl =
+    "http://localhost:54321/functions/v1/api-app-signup-submit";
   const anonKey = "local-proof-key";
   const idempotencyKey = "client-proof-idempotency-key";
   const successBody = {
@@ -122,7 +131,10 @@ export async function runSignupSubmitClientProof(): Promise<SignupSubmitClientPr
   };
   const { calls, fetchImpl } = createMockFetch([
     jsonResponse(successBody),
-    jsonResponse({ ok: false, code: "idempotency_conflict", error: "Conflict" }, 409),
+    jsonResponse(
+      { ok: false, code: "idempotency_conflict", error: "Conflict" },
+      409,
+    ),
     jsonResponse({ ok: true, mode: "write_v3" }),
   ]);
 
@@ -135,17 +147,39 @@ export async function runSignupSubmitClientProof(): Promise<SignupSubmitClientPr
 
   assert(success.ok === true, "success response must validate");
   assert(success.mode === "write_v3", "success mode must be write_v3");
-  assert(success.document_slot_count === 3, "success document_slot_count must validate");
-  assert(success.legal_acceptance_count === 2, "success legal_acceptance_count must validate");
+  assert(
+    success.document_slot_count === 3,
+    "success document_slot_count must validate",
+  );
+  assert(
+    success.legal_acceptance_count === 2,
+    "success legal_acceptance_count must validate",
+  );
 
   const firstCall = calls[0];
   assert(firstCall.input === endpointUrl, "endpoint URL must be used");
   assert(firstCall.init?.method === "POST", "POST method must be used");
-  assert(getHeader(firstCall.init, "Authorization") === `Bearer ${anonKey}`, "Authorization header must be set");
-  assert(getHeader(firstCall.init, "apikey") === anonKey, "apikey header must be set");
-  assert(getHeader(firstCall.init, "Content-Type") === "application/json", "Content-Type header must be set");
-  assert(getHeader(firstCall.init, "Idempotency-Key") === idempotencyKey, "Idempotency-Key header must be set");
-  assert(JSON.stringify(JSON.parse(String(firstCall.init?.body))) === JSON.stringify(payload), "body must equal mapped payload");
+  assert(
+    getHeader(firstCall.init, "Authorization") === `Bearer ${anonKey}`,
+    "Authorization header must be set",
+  );
+  assert(
+    getHeader(firstCall.init, "apikey") === anonKey,
+    "apikey header must be set",
+  );
+  assert(
+    getHeader(firstCall.init, "Content-Type") === "application/json",
+    "Content-Type header must be set",
+  );
+  assert(
+    getHeader(firstCall.init, "Idempotency-Key") === idempotencyKey,
+    "Idempotency-Key header must be set",
+  );
+  assert(
+    JSON.stringify(JSON.parse(String(firstCall.init?.body))) ===
+      JSON.stringify(payload),
+    "body must equal mapped payload",
+  );
 
   const conflict = await submitSignupPayload(payload, {
     endpointUrl,
@@ -155,7 +189,10 @@ export async function runSignupSubmitClientProof(): Promise<SignupSubmitClientPr
   });
 
   assert(conflict.ok === false, "conflict result must be an error");
-  assert(conflict.code === "idempotency_conflict", "idempotency_conflict must be typed");
+  assert(
+    conflict.code === "idempotency_conflict",
+    "idempotency_conflict must be typed",
+  );
   assert(conflict.status === 409, "idempotency_conflict status must be 409");
 
   const invalid = await submitSignupPayload(payload, {

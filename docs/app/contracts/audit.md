@@ -156,6 +156,80 @@ production export or a retention schedule.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+## PILOT-SIGNUP-SIGNATURE-CORE-09A Audit Boundary
+
+CURRENT PROVEN — LOCAL FRONTEND CONTRACT/PRESENTATION ONLY.
+
+The 09A signing intent, evidence-envelope type, legal registry and mandate model
+create no audit event or evidence. Typed name, role, intent checkbox, selected
+calendar year and legal-action state are browser-local and untrusted. The
+evidence envelope is validation-only: no challenge ID, verified timestamp,
+channel reference, snapshot hash, legal hash or audit reference is generated.
+
+`review_required` canonical facts remain explicit risk markers. Business/VvE
+authority status is `required_not_completed`; neither parser representation
+text, signer role, Auth context nor customer ownership becomes authority proof.
+
+09B must atomically bind the server-canonical snapshot/hash, exact CURRENT legal
+and mandate content hashes, server issue timestamp, typed signer input,
+verified OTP challenge/channel, method and intent versions, mandate year scope,
+authority-review reference where applicable, idempotency and actor/request audit
+metadata. Until that exists there is no signed mandate, successful signing
+event, dossier start or audit evidence.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-DOCUMENT-FIRST-REVIEW-02 Signing Record Target
+
+The disabled signing surface is not an audit event. A future working sign
+action must atomically bind an immutable final snapshot and hash to exact
+legal-text and mandate-text versions, signer full name and role, verified
+account/e-mail, one-time verification or reauthentication, explicit sign
+action, server timestamp, request/actor/audit metadata and, for business or VvE,
+authority evidence. Until that record exists, signing and successful submit
+remain closed.
+
+Frontend `confirmedAt` is interaction state only, not a trusted signed timestamp
+or audit authority.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-PARTY-NAME-CROSSCHECK-03 Frontend-Only Audit Boundary
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF ONLY.
+
+The shared expected-party resolver, deterministic comparator, labels and focus
+targets create no audit row and change no audit schema, event vocabulary,
+payload, RPC or Edge caller. Energy and charger/MID observations remain
+browser-local and do not enter audit metadata.
+
+The dedicated proof emits only numbered PASS lines and
+`signup-party-name-crosscheck-proof-ok`; it logs no document value, full name,
+address, EAN or other PII. Exact and initial-limited comparison statuses are
+assistive UI output only and cannot claim identity, representation authority,
+aangeslotene/ownership, accepted evidence, MID acceptance or verifier approval.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-CONNECTION-01B Customer-Confirmed Connection Audit Boundary
+
+CURRENT PROVEN — LOCAL ONLY.
+
+`app_submit_signup_v5` records fail-closed
+`signup_connection_declaration_recorded` events in the same transaction as v4,
+the immutable confirmed source and idempotency success. Deferred locations and
+unconfirmed parser candidates create no source and no connection-declaration
+event. Source or audit failure rolls the entire signup attempt back.
+
+Each event contains request/idempotency correlation, opaque customer,
+dossier, dossier-location and connection-source references, created/resolved
+outcome, bounded capture method, customer-confirmed flag, absent
+network-operator/period flags and recording time. It excludes raw EAN, address,
+netbeheerder text, name, e-mail, JWT and request payload. The typed fact remains
+only in the RLS-protected source table.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## PILOT-PARTY-01A Authenticated Party Activation Audit
 
 CURRENT PROVEN — LOCAL ONLY.
@@ -285,5 +359,93 @@ declaration table.
 
 Q15-Q20 prove rollback after every material transaction stage, including
 audit and pre-completion failure. This is local evidence only.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-DOCUMENT-CROSSCHECK-02 Frontend-Only Audit Boundary
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF ONLY.
+
+The address-normalization, exclusive EAN source-mode and shared energy/charger
+document-check batch creates no audit row and changes no audit schema, event
+vocabulary, RPC or Edge caller. Parser observations remain browser-local and do
+not enter the signup payload or audit metadata. Manual confirmation keeps the
+existing bounded capture method; the server-side audit contract is unchanged.
+
+Proof output contains only PASS markers and the final marker. It emits no local
+fixture path/value, raw or full EAN, name, address, parser context, technical
+confidence or document content. Charger observations do not constitute accepted
+MID evidence or verified charger identity, and no automatic overwrite creates a
+new declared or evaluated fact.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-DOCUMENT-DECISION-03 Frontend-Only Audit Boundary
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF ONLY.
+
+The semantic decision policy, customer confirmation and correction metadata
+remain browser-local and excluded from the signup mapper. This batch creates
+no audit row, vocabulary, schema, RPC, Edge call, Storage write or remote
+effect. Proof output emits only generic pass/final markers and no extracted
+name, address, EAN, MID, serial or document content.
+
+`review_required` is an internal routing marker, not an acceptance outcome.
+Customer intent may permit the local preparation summary to continue while the
+marker persists; it does not record accepted evidence, verified identity,
+authority, location, connection or charger truth. Material `blocked`, missing
+and ambiguous results remain fail closed.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-GENERIC-DOCUMENT-FACTS-05 Frontend-Only Audit Boundary
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF ONLY.
+
+The unified observation envelope, generic projector and document cache remain
+browser-local observed/derived state. Upload source binding is not a document
+classification or evidence decision. No compatibility result or document-type
+blocker exists in active customer state. Parser-04 compatibility behavior is
+historical and superseded.
+
+This batch creates no audit event, schema, RPC, Edge call, Storage write,
+backend payload or remote effect. Customer confirmations and decision state
+remain separate and are not written by this batch.
+
+The generic-facts proof emits only its exact final marker. It prints no fixture
+path, document value, name, address, full EAN, MID, serial, raw PDF context or
+PII. Missing facts and local review/block decisions do not constitute evidence
+rejection or acceptance by an authorized decision owner.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-ORGANIZATION-DOCUMENT-FIRST-07 Frontend-Only Audit Boundary
+
+The account-bound KvK document, generic organization observations, customer
+confirmations and corrections remain browser-local. They create no audit row,
+schema, vocabulary, RPC, Edge call, Storage write, backend payload or remote
+effect. Account-type replacement invalidates this local state.
+
+The Org-07 proof is privacy-safe: it emits only failure reasons or the exact
+final marker and never prints fixture paths or extracted organization, address,
+register, director or representation values. Its local Dutch real-fixture gate
+currently fails closed, so this batch is not recorded as fully proven.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-SIGNING-KISS-09A1 Audit Boundary
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF ONLY.
+
+The summary confirmation, three projected legal actions, mandate year and
+signer declaration remain browser-local intent. They create no audit row,
+accepted evidence, verified identity, authority outcome, immutable snapshot,
+hash, timestamp, RPC, Edge call, Storage write or remote effect.
+
+The legal bundle preserves document type, version, language and hash status as
+render metadata, while customer preview/download omits technical status. The
+organization declaration does not change `required_not_completed` authority
+review. The 09A1 proof emits only its exact final marker and no customer facts,
+document content or local paths.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

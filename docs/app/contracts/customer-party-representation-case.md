@@ -687,6 +687,45 @@ No profile version, name, identifier or `app_case_party_roles` row is created.
 Q01-Q18 are green; real local party/relationship/profile/case/role tables
 remain empty. Remote, production and NEa/verifier acceptance remain unproven.
 
+## PILOT-SIGNUP-PARTY-NAME-CROSSCHECK-03 Role Separation
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF ONLY.
+
+Signup document assistance now resolves the expected contract-holder party by
+account type. A private signup uses the declared natural-person full name; a
+business or VvE uses the declared legal-entity name. The administrator,
+contact, representative and signer remain separate authority/signing roles and
+can never substitute for that expected document party.
+
+An observed initial establishes at most the matching initial position plus the
+complete surname for this UI comparison. It does not establish the complete
+given name, identity, representation authority, signing authority or a
+confirmed case role. The recorded NEa/Regeling wording says `naam` but does not
+resolve initials versus full given names; ENVAL's full-given-name input is a
+product control and verifier acceptance of initial-only evidence remains
+UNKNOWN.
+
+Parser values and comparison outcomes stay observed/derived assistance. They
+cannot create or label accepted party evidence, aangeslotene status, ownership,
+mandate validity or verifier approval.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-PARTY-RUNTIME-04 Draft/Observation Separation
+
+Signup retains a selected document's bounded party name as an observed fact.
+The current applicant or legal-entity name is declared state, and the UI
+comparison between those layers is derived reactively rather than stored with
+the observation. A legal account-type change discards the complete pre-submit
+draft after confirmation and does not restore a prior account-type history.
+
+The reset and generation guard prevent old files, observations and delayed
+parser results from crossing that draft boundary. These controls establish no
+party identity, representation authority, mandate, evidence acceptance or
+verifier decision. Local browser proof remains required.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 ## PILOT-PROFILE-02 Declared Profile And Asserted Service Recipient
 
@@ -774,5 +813,20 @@ and evidence decisions remain distinct.
 `app_signup_intakes` is not reused: quarantine/verification/promotion
 lifecycle and immutable direct-signup declaration capture are different
 bounded responsibilities.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## Organization document-first-07 representation separation
+
+A KvK extract is an account-bound observation source. Organization name, trade
+register number and registered address remain customer-confirmed preparation
+facts; they do not establish a canonical party profile, case role or mandate.
+The registered address is not a delivery, invoice or installation address.
+
+Legal form, trade name, director/board-member text and representation text are
+informational observations only. No observed person is assigned as applicant,
+representative, administrator or signer. No phrase from the document is
+converted into an authority decision. Account-type reset removes the selected
+document and all dependent local observations/confirmations.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

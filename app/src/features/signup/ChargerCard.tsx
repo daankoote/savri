@@ -1,22 +1,44 @@
 import { ChargerForm } from "./ChargerForm";
-import { getBackendSupplierLabel, getBrandLabel, getModelLabel } from "./chargerCatalog";
-import type { ChargerDraft } from "./signupTypes";
+import {
+  getBackendSupplierLabel,
+  getBrandLabel,
+  getModelLabel,
+} from "./chargerCatalog";
+import type { ChargerDraft, SignupFieldErrors } from "./signupTypes";
 
 type ChargerCardProps = {
   charger: ChargerDraft;
+  fieldErrors: SignupFieldErrors;
   index: number;
   canRemove: boolean;
   onChange: (charger: ChargerDraft) => void;
   onRemove: (clientId: string) => void;
+  children?: ReactNode;
 };
 
-export function ChargerCard({ canRemove, charger, index, onChange, onRemove }: ChargerCardProps) {
-  const brandLabel = charger.brand ? getBrandLabel(charger.brand, charger.manualBrand) : "";
-  const modelLabel = charger.model ? getModelLabel(charger.brand, charger.model, charger.manualModel) : "";
-  const supplierLabel = charger.backendSupplier
-    ? getBackendSupplierLabel(charger.backendSupplier, charger.manualBackendSupplier)
+export function ChargerCard({
+  canRemove,
+  charger,
+  children,
+  fieldErrors,
+  index,
+  onChange,
+  onRemove,
+}: ChargerCardProps) {
+  const brandLabel = charger.brand
+    ? getBrandLabel(charger.brand, charger.manualBrand)
     : "";
-  const title = [brandLabel, modelLabel].filter(Boolean).join(" ") || "Nieuwe laadpaal";
+  const modelLabel = charger.model
+    ? getModelLabel(charger.brand, charger.model, charger.manualModel)
+    : "";
+  const supplierLabel = charger.backendSupplier
+    ? getBackendSupplierLabel(
+      charger.backendSupplier,
+      charger.manualBackendSupplier,
+    )
+    : "";
+  const title = [brandLabel, modelLabel].filter(Boolean).join(" ") ||
+    "Nieuwe laadpaal";
 
   return (
     <article className="charger-card">
@@ -24,7 +46,9 @@ export function ChargerCard({ canRemove, charger, index, onChange, onRemove }: C
         <div>
           <span className="step-number">Laadpaal {index + 1}</span>
           <h3>{title}</h3>
-          {supplierLabel ? <p className="charger-card-meta">{supplierLabel}</p> : null}
+          {supplierLabel
+            ? <p className="charger-card-meta">{supplierLabel}</p>
+            : null}
         </div>
         <button
           className="button button-ghost"
@@ -36,7 +60,13 @@ export function ChargerCard({ canRemove, charger, index, onChange, onRemove }: C
         </button>
       </div>
 
-      <ChargerForm charger={charger} onChange={onChange} />
+      <ChargerForm
+        charger={charger}
+        fieldErrors={fieldErrors}
+        onChange={onChange}
+      />
+      {children}
     </article>
   );
 }
+import type { ReactNode } from "react";

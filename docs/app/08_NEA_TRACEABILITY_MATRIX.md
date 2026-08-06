@@ -195,6 +195,70 @@ cutover remain not implemented or open. Full evidence:
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+## PILOT-SIGNUP-ENERGY-DOCUMENT-CROSSCHECK-01 local traceability
+
+| Concern                                                  | Current state                                | Local evidence                                                    | Boundary                                                                            |
+| -------------------------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Existing PDF decoding and layout reconstruction          | REUSED / CURRENT PROVEN — LOCAL SOURCE/PROOF | Parseradapter proof; real-PDF crosscheck Q01-Q37                  | No second parser, package or OCR                                                    |
+| Contractholder, delivery address and supplier candidates | CURRENT PROVEN — LOCAL SOURCE/PROOF          | Negative semantic-block fixtures plus privacy-safe real-PDF proof | Rejected or ambiguous candidates are not displayable                                |
+| Comparison presentation                                  | CURRENT PROVEN — LOCAL SOURCE/PROOF          | Empty applicant/location fixtures and card source assertions      | No pill until declared input is sufficient; unavailable parser rows are hidden      |
+| Declared connection state                                | UNCHANGED                                    | EAN-preflight, journey and mapper proofs                          | Only confirmed electricity EAN; parser observations never auto-declare or overwrite |
+| Real-PDF evidence                                        | PROOF ONLY — LOCAL                           | signup-energy-document-crosscheck-proof-ok; values omitted        | No fixture commit, PII log, remote or production proof                              |
+| Verification/acceptance                                  | NOT PROVEN / NOT IMPLEMENTED                 | None                                                              | Comparison is assistance, not evidence acceptance or canonical truth                |
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-JOURNEY-02 local frontend traceability
+
+| Concern                      | Current state                                         | Local evidence                                    | Boundary                                                                 |
+| ---------------------------- | ----------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------ |
+| Five-step onboarding         | CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF          | Journey source proof                              | Aanvrager, Locatie, Aansluiting, Laadpalen, Ondertekenen                 |
+| Location-scoped selection    | CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF          | Shared-tabs source checks                         | One location hides tabs; multiple locations preserve isolated state      |
+| Energy document              | CURRENT PROVEN — LOCAL UI STATE/SOURCE/PROOF          | Upload and crosscheck source proofs               | Observed/derived only; no upload transport or evidence acceptance        |
+| Deferred EAN                 | CURRENT PROVEN — UI DEFERRED                          | Absence/source proof plus protected hashes        | Manual/backend capability remains compatible but unreachable from signup |
+| Charger invoice              | CURRENT PROVEN — LOCAL UI STATE/PREVIEW ONLY          | Charger-scoped upload and existing preview checks | No MID, asset or evidence acceptance                                     |
+| Onboarding signing           | CURRENT PROVEN — GENERAL ACCEPTANCE SOURCE/PROOF ONLY | Consent source check                              | Not the definitive NEa mandate                                           |
+| Dashboard follow-up          | TARGET                                                | No implementation in this batch                   | EAN confirmation, additional documents, kWh and scoped signed mandate    |
+| Regulatory/remote acceptance | NOT PROVEN                                            | None                                              | No NEa, verifier, remote, deploy or production claim                     |
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-JOURNEY-01 local frontend checkpoint
+
+| Capability                                    | Status                                       | Evidence                                                   | Boundary                                                                  |
+| --------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Exact five-step visible journey               | CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF | `app-signup-journey.proof.ts`                              | Composition only; backend contract unchanged                              |
+| Location-scoped EAN and energy-document state | CURRENT PROVEN — LOCAL FRONTEND              | journey/mapper proofs                                      | Local selection and declaration boundary; no accepted evidence/connection |
+| Charger-scoped invoice and MID preview        | CURRENT PROVEN — LOCAL FRONTEND              | reused `ChargerDocumentsSection`, `InvoicePdfPreviewPanel` | Parser observations only                                                  |
+| Dossier-wide conditional additional document  | CURRENT PROVEN — LOCAL FRONTEND              | `AdditionalDocumentsSection`                               | No duplicate charger or energy document                                   |
+| Read-only summary and Wijzigen actions        | HISTORICAL PARTIAL / NOT CURRENTLY ACTIVE    | source history only                                        | No active review surface and no state promotion                           |
+| Current general acceptances                   | CURRENT PROVEN — EXISTING CONTRACT           | `consent_bundle`, `fee_terms`, visible privacy bundle      | Not a definitive mandate                                                  |
+| kWh signup scope                              | OUT OF SCOPE                                 | source-negative proof                                      | Dashboard-only                                                            |
+| Definitive scoped mandate                     | TARGET / NOT IMPLEMENTED                     | None from this batch                                       | Authenticated completion after signer/EAN/location/year facts             |
+
+No NEa requirement is marked complete solely by the signup journey
+recomposition.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-CONNECTION-01B local traceability checkpoint
+
+CURRENT PROVEN — LOCAL ONLY — ASSISTED AND CUSTOMER-CONFIRMED EAN ACQUISITION
+WITH MANUAL FALLBACK
+
+| Control                                      | Status                              | Local evidence                                                       | Hard boundary                                                               |
+| -------------------------------------------- | ----------------------------------- | -------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Deferred location without source             | CURRENT PROVEN — LOCAL ONLY         | `20260730170000_app_assisted_connection_capture_correction.sql`; Q05 | EAN still required before mandate/booking                                   |
+| Customer-confirmed declared EAN/source       | CURRENT PROVEN — LOCAL ONLY         | Q06-Q10                                                              | Exact 18-digit syntax; parser candidate alone is observed/derived           |
+| Atomicity/idempotency/concurrency            | CURRENT PROVEN — LOCAL ONLY         | Q15-Q19                                                              | V5 wraps unchanged v4; source/audit failure rolls all signup writes back    |
+| Edge/frontend shared contract                | CURRENT PROVEN — LOCAL SOURCE/BUILD | Q20-Q23                                                              | Manual fallback only in pre-auth UI; no network/date field or browser truth |
+| Security/privacy/cleanup                     | CURRENT PROVEN — LOCAL ONLY         | Q03-Q04, Q11, Q24                                                    | RLS deny-all, service `SELECT, INSERT`, no raw EAN in audit                 |
+| Authenticated energy-document EAN extraction | TARGET — NEXT BOUNDED BATCH         | Current document transport/parser inventory                          | Reuse authenticated slots; candidate confirmation required                  |
+| Accepted connection/CAR/aangeslotene         | NOT PROVEN / NOT IMPLEMENTED        | None from this batch                                                 | Separate source/evidence/review/acceptance contexts remain required         |
+| Verifier/NEa/remote/production               | NOT PROVEN                          | None from this batch                                                 | TKV alignment is internal architecture only                                 |
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## PILOT-PARTY-01A local traceability checkpoint
 
 | Capability | Status | Evidence | Boundary |

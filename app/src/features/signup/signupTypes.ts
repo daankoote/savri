@@ -1,12 +1,23 @@
+import type { EnergyEanCandidate } from "../invoice-analysis/energyEanCandidateExtractor";
+import type {
+  EnergyDocumentObservation,
+} from "../invoice-analysis/energyDocumentObservation";
+import type { ChargerDocumentObservation } from "../invoice-analysis/invoicePdfParserAdapter";
+export type { ChargerDocumentObservation } from "../invoice-analysis/invoicePdfParserAdapter";
+
 export type AccountType = "particulier" | "zakelijk" | "vve";
 
 export type ChargerSource = "manual" | "import";
 
-export type DocumentType = "installation_invoice" | "monthly_reimbursement";
+export type DocumentType =
+  | "organization_extract"
+  | "energy_bill_or_contract"
+  | "installation_invoice";
 
 export type SignupTab = "manual" | "import";
 
 export type SolarPanelStatus =
+  | ""
   | "hourly_exportable"
   | "not_hourly_exportable"
   | "none";
@@ -50,18 +61,58 @@ export type ChargerDraft = {
   solarPanelStatus: SolarPanelStatus;
 };
 
+export type ConnectionDeclarationDraft = {
+  sourceMode: "document" | "manual";
+  preflightStatus:
+    | "idle"
+    | "parsing"
+    | "electricity_candidate_found"
+    | "unclassified_candidate_found"
+    | "multiple_candidates"
+    | "no_candidate"
+    | "parser_error"
+    | "customer_confirmed"
+    | "manual_entry_required"
+    | "manual_customer_confirmed";
+  candidates: EnergyEanCandidate[];
+  selectedCandidateEan: string;
+  confirmedEan: string;
+  manualEan: string;
+  customerConfirmed: boolean;
+};
+
 export type SignupLocationDraft = {
   clientId: string;
   address: AddressDraft;
+  energyDocument: LocationDocumentDraft;
+  energyDocumentObservation: EnergyDocumentObservation | null;
+  connectionDeclaration: ConnectionDeclarationDraft;
   chargers: ChargerDraft[];
 };
 
-export type ChargerDocumentDraft = {
+export type LocalDocumentDraft = {
   clientId: string;
-  chargerClientId: string;
   documentType: DocumentType;
   file: File | null;
   status: "empty" | "selected";
+};
+
+export type AccountDocumentDraft = LocalDocumentDraft & {
+  accountScope: "account";
+  documentType: "organization_extract";
+  parseStatus: "idle" | "parsing" | "parsed" | "error";
+};
+
+export type LocationDocumentDraft = LocalDocumentDraft & {
+  locationClientId: string;
+  documentType: "energy_bill_or_contract";
+};
+
+export type ChargerDocumentDraft = LocalDocumentDraft & {
+  chargerClientId: string;
+  documentType: "installation_invoice";
+  observation: ChargerDocumentObservation | null;
+  parseStatus: "idle" | "parsing" | "parsed" | "error";
 };
 
 export type DocumentsByChargerId = Record<string, ChargerDocumentDraft[]>;
@@ -79,12 +130,16 @@ export type SignupDraft = {
 
 export type ValidationIssue = {
   id: string;
+  fieldPath: string;
   message: string;
   severity: "error" | "warning";
 };
 
+export type SignupFieldErrors = Record<string, ValidationIssue[]>;
+
 export type SignupValidationResult = {
   canStartDossier: boolean;
   errors: ValidationIssue[];
+  fieldErrors: SignupFieldErrors;
   warnings: ValidationIssue[];
 };

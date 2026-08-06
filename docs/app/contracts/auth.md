@@ -732,6 +732,23 @@ role/capability, object scope or authorization outcome.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+## PILOT-CONNECTION-01B Pre-Auth Assisted Connection Boundary
+
+CURRENT PROVEN — LOCAL ONLY.
+
+The anonymous signup gateway continues to use its server-side service
+credential and one business RPC. That target is now service-role-only
+`app_submit_signup_v5(jsonb)`, which calls unchanged v4 and records protected
+per-location declarations only after explicit customer confirmation in the
+same transaction. Missing confirmed connection data is a safe deferred state.
+
+No browser role receives table or RPC access. Pre-auth signup transports no
+energy document in this batch. A submitted confirmed EAN is declared, not
+verified, and does not grant customer, party, representation, mandate,
+workforce or connection authority.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## PILOT-PARTY-01A Auth Bootstrap V3
 
 CURRENT PROVEN — LOCAL ONLY.

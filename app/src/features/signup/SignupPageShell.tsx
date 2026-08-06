@@ -1,269 +1,422 @@
-import { useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import type { RoutedPageProps } from "../../routes/types";
 import { AppHeader } from "../../shared/components/AppHeader";
-import { ChargerDocumentsSection } from "./ChargerDocumentsSection";
-import { ChargerInfoSection } from "./ChargerInfoSection";
-import { ConsentSignatureSection } from "./ConsentSignatureSection";
-import { PersonalInfoSection } from "./PersonalInfoSection";
-import { SignupReviewPanel } from "./SignupReviewPanel";
-import { SignupSubmitStatusPanel, type SignupSubmitState } from "./SignupSubmitStatusPanel";
+import { parseInvoicePdfInput } from "../invoice-analysis/invoicePdfParserAdapter";
+import { DocumentFirstCheckMatrix } from "./DocumentFirstCheckMatrix";
+import { DocumentFirstDocumentsStep } from "./DocumentFirstDocumentsStep";
+import { DocumentFirstSigningSummary } from "./DocumentFirstSigningSummary";
+import { DocumentFirstSignupFlow } from "./DocumentFirstSignupFlow";
 import {
-  createChargerDraft,
-  createConsentDraft,
-  createDocumentDraftsForCharger,
-  createLocationDraft,
-  createPersonalInfoDraft,
-} from "./signupNormalizers";
-import { buildSignupSubmitClientConfig } from "./signupSubmitConfig";
-import { submitSignupPayload } from "./signupSubmitClient";
-import { mapSignupDraftToSubmitPayload } from "./signupSubmitMapper";
-import type {
-  AddressDraft,
-  ChargerDocumentDraft,
-  ChargerDraft,
-  ConsentDraft,
-  DocumentsByChargerId,
-  PersonalInfoDraft,
-  SignupLocationDraft,
-  SignupTab,
-  SignupValidationResult,
-} from "./signupTypes";
-import { validateSignupDraft } from "./signupValidation";
+  createDocumentFirstSignupDraftFromLegacy,
+  createFreshDocumentFirstSignupDraft,
+  type DocumentFirstFactValue,
+  type DocumentFirstSignupDraft,
+  documentFirstSignupReducer,
+} from "./documentFirstSignupModel";
+import {
+  DOCUMENT_FIRST_STEPS,
+  type DocumentFirstStepId,
+  selectMapperCompatibleDraft,
+  selectMaximumReachableStepIndex,
+  selectPersonalInfoAdapter,
+  selectStepCompleteness,
+} from "./documentFirstSignupSelectors";
+import type { DocumentReviewRow } from "./documentReviewMatrix";
+import { OrganizationDocumentStepPanel } from "./OrganizationDocumentStepPanel";
+import { selectUnifiedFactPresentation } from "./presentation/factPresentationModel";
+import { PersonalInfoSection } from "./PersonalInfoSection";
+import { SignupFlowNavigation } from "./SignupFlowNavigation";
+import {
+  hasMeaningfulSignupDraft,
+  transitionSignupAccountType,
+} from "./signupAccountTypeTransition";
+import { transitionSignupStep } from "./signupStepTransition";
+import type { AccountDocumentDraft, PersonalInfoDraft } from "./signupTypes";
 
-const firstLocation = createLocationDraft();
+export const ACCOUNT_TYPE_RESET_CONFIRMATION =
+  "Accounttype wijzigen? Alle ingevulde gegevens en geselecteerde documenten worden gewist.";
 
-function createInitialDocuments(): DocumentsByChargerId {
-  return Object.fromEntries(
-    firstLocation.chargers.map((charger) => [
-      charger.clientId,
-      createDocumentDraftsForCharger(charger.clientId),
-    ]),
-  );
+export function confirmSignupAccountTypeReset(
+  confirmChange: (message: string) => boolean = (message) =>
+    window.confirm(message),
+): boolean {
+  return confirmChange(ACCOUNT_TYPE_RESET_CONFIRMATION);
 }
 
-function createSignupIdempotencyKey(): string {
-  if (crypto.randomUUID) {
-    return `signup-submit-${crypto.randomUUID()}`;
-  }
-
-  return `signup-submit-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+function stepIndex(step: DocumentFirstStepId): number {
+  return DOCUMENT_FIRST_STEPS.findIndex((candidate) => candidate.id === step);
 }
 
 export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
-  const [personalInfo, setPersonalInfoState] = useState<PersonalInfoDraft>(() => createPersonalInfoDraft());
-  const [locations, setLocations] = useState<SignupLocationDraft[]>(() => [firstLocation]);
-  const [documentsByChargerId, setDocumentsByChargerId] = useState<DocumentsByChargerId>(() =>
-    createInitialDocuments(),
+  const [draft, dispatch] = useReducer(
+    documentFirstSignupReducer,
+    "particulier",
+    createFreshDocumentFirstSignupDraft,
   );
-  const [consents, setConsents] = useState<ConsentDraft>(() => createConsentDraft());
-  const [activeLocationId, setActiveLocationId] = useState(firstLocation.clientId);
-  const [activeTab, setActiveTab] = useState<SignupTab>("manual");
-  const [review, setReview] = useState<SignupValidationResult | null>(null);
-  const [submitState, setSubmitState] = useState<SignupSubmitState>({ status: "idle" });
-
-  const draft = useMemo(
-    () => ({
-      personalInfo,
-      locations,
-      documentsByChargerId,
-      consents,
-    }),
-    [consents, documentsByChargerId, locations, personalInfo],
+  const [activeStep, setActiveStep] = useState<DocumentFirstStepId>("account");
+  const [activeLocationId, setActiveLocationId] = useState(
+    draft.locationOrder[0],
+  );
+  const draftGenerationRef = useRef(0);
+  const organizationAttemptsRef = useRef(0);
+  const legacyDraft = useMemo(() => selectMapperCompatibleDraft(draft), [
+    draft,
+  ]);
+  const personalInfo = useMemo(() => selectPersonalInfoAdapter(draft), [draft]);
+  const completeness = useMemo(() => selectStepCompleteness(draft), [draft]);
+  const maximumReachableStepIndex = useMemo(
+    () => selectMaximumReachableStepIndex(draft),
+    [draft],
+  );
+  const presentation = useMemo(
+    () => selectUnifiedFactPresentation(draft),
+    [draft],
+  );
+  const changeActiveStep = useCallback(
+    (step: DocumentFirstStepId) => transitionSignupStep(step, setActiveStep),
+    [],
   );
 
-  const setPersonalInfo = (next: PersonalInfoDraft) => {
-    setPersonalInfoState(next);
-
-    if (next.accountType === "particulier") {
-      setLocations((current) => {
-        const first = current[0] || createLocationDraft();
-        setActiveLocationId(first.clientId);
-        return [first];
-      });
+  useEffect(() => {
+    if (!draft.locationOrder.includes(activeLocationId)) {
+      setActiveLocationId(draft.locationOrder[0]);
     }
+  }, [activeLocationId, draft.locationOrder]);
+
+  useEffect(() => {
+    if (stepIndex(activeStep) > maximumReachableStepIndex) {
+      changeActiveStep(DOCUMENT_FIRST_STEPS[maximumReachableStepIndex].id);
+    }
+  }, [activeStep, changeActiveStep, maximumReachableStepIndex]);
+
+  const isDraftGenerationCurrent = useCallback(
+    (generation: number) => draftGenerationRef.current === generation,
+    [],
+  );
+
+  const replaceWithFreshDraft = (fresh: DocumentFirstSignupDraft) => {
+    draftGenerationRef.current += 1;
+    organizationAttemptsRef.current += 1;
+    dispatch({ type: "replace_draft", value: fresh });
+    setActiveLocationId(fresh.locationOrder[0]);
+    changeActiveStep("account");
   };
 
-  const addLocation = () => {
-    const next = createLocationDraft();
-    setLocations((current) => [...current, next]);
-    setActiveLocationId(next.clientId);
-    setDocumentsByChargerId((current) => ({
-      ...current,
-      ...Object.fromEntries(
-        next.chargers.map((charger) => [
-          charger.clientId,
-          createDocumentDraftsForCharger(charger.clientId),
-        ]),
-      ),
-    }));
-  };
+  const handleOrganizationDocument = async (
+    document: AccountDocumentDraft,
+  ) => {
+    const generation = draftGenerationRef.current;
+    const attempt = organizationAttemptsRef.current + 1;
+    organizationAttemptsRef.current = attempt;
+    const reset: AccountDocumentDraft = {
+      ...document,
+      parseStatus: document.file ? "parsing" : "idle",
+    };
+    dispatch({ type: "update_organization_document", document: reset });
+    if (!document.file) return;
 
-  const removeLocation = (locationId: string) => {
-    setLocations((current) => {
-      if (current.length <= 1) return current;
-      const removed = current.find((location) => location.clientId === locationId);
-      const next = current.filter((location) => location.clientId !== locationId);
-      const nextActive = next[0];
-
-      if (nextActive) {
-        setActiveLocationId(nextActive.clientId);
-      }
-
-      if (removed) {
-        setDocumentsByChargerId((documents) => {
-          const nextDocuments = { ...documents };
-          removed.chargers.forEach((charger) => {
-            delete nextDocuments[charger.clientId];
-          });
-          return nextDocuments;
-        });
-      }
-
-      return next;
+    const result = await parseInvoicePdfInput(document.file);
+    if (
+      organizationAttemptsRef.current !== attempt ||
+      !isDraftGenerationCurrent(generation)
+    ) return;
+    dispatch({
+      type: "update_organization_document",
+      document: { ...reset, parseStatus: result.ok ? "parsed" : "error" },
+    });
+    if (!result.ok) return;
+    const envelope = result.observation_envelope;
+    dispatch({
+      type: "set_document_observation",
+      documentId: document.clientId,
+      value: {
+        documentId: document.clientId,
+        contentFingerprint: envelope.contentFingerprint,
+        parserVersion: envelope.parserVersion,
+        envelope,
+      },
     });
   };
 
-  const updateLocationAddress = (locationId: string, address: AddressDraft) => {
-    setLocations((current) =>
-      current.map((location) => (location.clientId === locationId ? { ...location, address } : location)),
-    );
+  const updateAccount = (next: PersonalInfoDraft) => {
+    if (next.accountType !== draft.accountBasis.accountType) {
+      const confirmationRequired = hasMeaningfulSignupDraft(legacyDraft) ||
+        Object.keys(draft.customerConfirmations).length > 0 ||
+        Object.keys(draft.manualCorrections).length > 0;
+      if (confirmationRequired && !confirmSignupAccountTypeReset()) return;
+      const transition = transitionSignupAccountType(
+        legacyDraft,
+        next.accountType,
+        true,
+      );
+      if (transition.changed) {
+        replaceWithFreshDraft(
+          createDocumentFirstSignupDraftFromLegacy(transition.draft),
+        );
+      }
+      return;
+    }
+    dispatch({
+      type: "update_account_basis",
+      value: { accountType: next.accountType, email: next.email },
+    });
   };
 
-  const addCharger = (locationId: string) => {
-    const next = createChargerDraft();
-    setLocations((current) =>
-      current.map((location) =>
-        location.clientId === locationId
-          ? { ...location, chargers: [...location.chargers, next] }
-          : location,
-      ),
-    );
-    setDocumentsByChargerId((current) => ({
-      ...current,
-      [next.clientId]: createDocumentDraftsForCharger(next.clientId),
-    }));
+  const confirmRow = (row: DocumentReviewRow) => {
+    if (
+      !row.proposedValue ||
+      row.decisionStatus === "blocked" || row.decisionStatus === "ambiguous" ||
+      row.decisionStatus === "missing" ||
+      row.decisionStatus === "not_applicable"
+    ) return;
+    dispatch({
+      type: "confirm_fact",
+      factKey: row.scopeKey,
+      canonicalFactKey: row.factKey,
+      value: row.proposedValue,
+      sourceDocuments: row.sourceDocuments,
+      confirmedAt: new Date().toISOString(),
+      decisionStatus: row.decisionStatus,
+      normalizationApplied: row.normalizationApplied,
+      pendingPersistence: false,
+    });
   };
 
-  const updateCharger = (locationId: string, updated: ChargerDraft) => {
-    setLocations((current) =>
-      current.map((location) =>
-        location.clientId === locationId
-          ? {
-              ...location,
-              chargers: location.chargers.map((charger) =>
-                charger.clientId === updated.clientId ? updated : charger,
-              ),
+  const correctRow = (
+    row: DocumentReviewRow,
+    value: DocumentFirstFactValue,
+  ) => {
+    const observedFact =
+      row.observations.find((observation) =>
+        typeof value === "string" && observation.displayable &&
+        observation.value === value
+      ) ||
+      row.observations.find((observation) =>
+        observation.extractionStatus !== "not_applicable"
+      ) || null;
+    const source = observedFact
+      ? {
+        documentId: observedFact.sourceDocumentId,
+        documentType: observedFact.sourceDocumentType,
+      }
+      : row.sourceDocuments[0] || (() => {
+        const organizationScoped = row.scopeKey.startsWith("account:");
+        if (organizationScoped) {
+          return {
+            documentId: draft.organizationDocument.clientId,
+            documentType: "organization_extract" as const,
+          };
+        }
+        const chargerScoped = [
+          "installerOrSupplier",
+          "chargerBrand",
+          "chargerModel",
+          "midNumber",
+          "serialNumber",
+          "invoiceDate",
+          "explicitInstallationDate",
+        ].includes(row.factKey);
+        if (chargerScoped) {
+          const scopedChargerId = row.scopeKey.startsWith("charger:")
+            ? row.scopeKey.split(":")[1]
+            : "";
+          const document = draft.chargerDocumentsByChargerId[
+            scopedChargerId
+          ]?.find((candidate) =>
+            candidate.documentType === "installation_invoice"
+          );
+          return document
+            ? {
+              documentId: document.clientId,
+              documentType: "installation_invoice" as const,
             }
-          : location,
-      ),
-    );
-  };
-
-  const removeCharger = (locationId: string, chargerClientId: string) => {
-    setLocations((current) =>
-      current.map((location) => {
-        if (location.clientId !== locationId || location.chargers.length <= 1) return location;
-        return {
-          ...location,
-          chargers: location.chargers.filter((charger) => charger.clientId !== chargerClientId),
-        };
-      }),
-    );
-
-    setDocumentsByChargerId((current) => {
-      const next = { ...current };
-      delete next[chargerClientId];
-      return next;
+            : undefined;
+        }
+        const scopedLocationId = row.scopeKey.startsWith("location:")
+          ? row.scopeKey.split(":")[1]
+          : "";
+        const document = draft.energyDocumentsByLocationId[scopedLocationId];
+        return document
+          ? {
+            documentId: document.clientId,
+            documentType: "energy_bill_or_contract" as const,
+          }
+          : undefined;
+      })();
+    if (!source) return;
+    const confirmedAt = new Date().toISOString();
+    const correctionType = row.factKey === "structuredAddress" ||
+        row.decisionStatus === "review_required"
+      ? "customer_declared_difference" as const
+      : "parser_correction" as const;
+    dispatch({
+      type: "set_manual_correction",
+      factKey: row.scopeKey,
+      canonicalFactKey: row.factKey,
+      value,
+      sourceDocumentId: source.documentId,
+      sourceDocumentType: source.documentType,
+      observedFact,
+      correctionType,
+      confirmedAt,
+      pendingPersistence: false,
+    });
+    dispatch({
+      type: "confirm_fact",
+      factKey: row.scopeKey,
+      canonicalFactKey: row.factKey,
+      value,
+      sourceDocuments: row.sourceDocuments.length > 0
+        ? row.sourceDocuments
+        : [source],
+      confirmedAt,
+      decisionStatus: "review_required",
+      normalizationApplied: false,
+      pendingPersistence: false,
     });
   };
 
-  const updateDocument = (updated: ChargerDocumentDraft) => {
-    setDocumentsByChargerId((current) => ({
-      ...current,
-      [updated.chargerClientId]: (current[updated.chargerClientId] || []).map((document) =>
-        document.clientId === updated.clientId ? updated : document,
-      ),
-    }));
+  const replaceRowDocument = (
+    target: Pick<DocumentReviewRow, "sourceDocuments">,
+  ) => {
+    const chargerSource = target.sourceDocuments.find((source) =>
+      source.documentType === "installation_invoice"
+    );
+    if (chargerSource) {
+      const document = Object.values(draft.chargerDocumentsByChargerId)
+        .flat().find((candidate) =>
+          candidate.clientId === chargerSource.documentId
+        );
+      if (document) {
+        dispatch({
+          type: "update_charger_document",
+          document: {
+            ...document,
+            file: null,
+            status: "empty",
+            observation: null,
+            parseStatus: "idle",
+          },
+        });
+        return;
+      }
+    }
+    const energySource = target.sourceDocuments.find((source) =>
+      source.documentType === "energy_bill_or_contract"
+    );
+    if (!energySource) return;
+    const document = Object.values(draft.energyDocumentsByLocationId)
+      .find((candidate) => candidate.clientId === energySource.documentId);
+    if (!document) return;
+    dispatch({
+      type: "update_energy_document",
+      document: { ...document, file: null, status: "empty" },
+    });
   };
 
-  const handleStartDossier = async () => {
-    const nextReview = validateSignupDraft(draft);
-    setReview(nextReview);
-    setSubmitState({ status: "idle" });
+  const activeStepContent = activeStep === "account"
+    ? (
+      <>
+        <PersonalInfoSection
+          fieldErrors={{}}
+          onChange={updateAccount}
+          value={personalInfo}
+        />
+        {draft.accountBasis.accountType !== "particulier"
+          ? (
+            <section className="signup-section">
+              <OrganizationDocumentStepPanel
+                document={draft.organizationDocument}
+                hasObservation={presentation.organizationRows.some((row) =>
+                  Boolean(row.canonicalValue)
+                )}
+                onConfirm={confirmRow}
+                onCorrect={correctRow}
+                onDocumentChange={(document) =>
+                  void handleOrganizationDocument(document)}
+                rows={presentation.organizationRows}
+              />
+            </section>
+          )
+          : null}
+      </>
+    )
+    : activeStep === "documents"
+    ? (
+      <>
+        <DocumentFirstDocumentsStep
+          activeLocationId={activeLocationId}
+          dispatch={dispatch}
+          draft={draft}
+          draftGeneration={draftGenerationRef.current}
+          isDraftGenerationCurrent={isDraftGenerationCurrent}
+          onSelectLocation={setActiveLocationId}
+        />
+        <section
+          aria-labelledby="document-first-review-title"
+          className="signup-section"
+          id="signup-document-review"
+        >
+          <div className="signup-section-header">
+            <p className="eyebrow">Upload en controle</p>
+            <h2 id="document-first-review-title">
+              Controleer de documentgegevens
+            </h2>
+          </div>
+          <DocumentFirstCheckMatrix
+            chargers={presentation.chargers}
+            locations={presentation.locations}
+            onConfirm={confirmRow}
+            onCorrect={correctRow}
+            onReplaceDocument={replaceRowDocument}
+          />
+        </section>
+      </>
+    )
+    : (
+      <section
+        aria-labelledby="document-first-signing-title"
+        className="signup-section"
+        id="signup-signing"
+      >
+        <div className="signup-section-header">
+          <p className="eyebrow">Stap 3</p>
+          <h2 id="document-first-signing-title">Ondertekenen</h2>
+        </div>
+        <DocumentFirstSigningSummary draft={draft} />
+      </section>
+    );
 
-    if (!nextReview.canStartDossier) return;
-
-    const idempotencyKey = createSignupIdempotencyKey();
-    const config = buildSignupSubmitClientConfig(idempotencyKey);
-
-    if (!config.ok) {
-      setSubmitState({ status: "error", message: config.message });
-      return;
-    }
-
-    setSubmitState({ status: "submitting" });
-    const result = await submitSignupPayload(mapSignupDraftToSubmitPayload(draft), config.config);
-
-    if (result.ok) {
-      setSubmitState({ status: "success", result });
-      return;
-    }
-
-    setSubmitState({ status: "error", message: result.message });
-  };
+  const canContinue = activeStep === "account"
+    ? completeness.account
+    : activeStep === "documents"
+    ? completeness.documents
+    : false;
 
   return (
     <div className="site-frame">
       <AppHeader currentPath={currentPath} navigate={navigate} />
       <main className="page-shell">
-        <section className="section signup-hero" aria-labelledby="signup-title">
-          <div className="container page-intro">
-            <p className="eyebrow">Aanmelden</p>
-            <h1 id="signup-title">Start je aanmelding</h1>
-            <p>Vul je gegevens, laadpalen en documenten lokaal in.</p>
-          </div>
-        </section>
-
-        <div className="container signup-flow">
-          <PersonalInfoSection value={personalInfo} onChange={setPersonalInfo} />
-          <ChargerInfoSection
-            accountType={personalInfo.accountType}
-            activeLocationId={activeLocationId}
-            activeTab={activeTab}
-            locations={locations}
-            onAddCharger={addCharger}
-            onAddLocation={addLocation}
-            onChangeCharger={updateCharger}
-            onLocationAddressChange={updateLocationAddress}
-            onRemoveCharger={removeCharger}
-            onRemoveLocation={removeLocation}
-            onSelectLocation={setActiveLocationId}
-            onTabChange={setActiveTab}
-          />
-          <ChargerDocumentsSection
-            accountType={personalInfo.accountType}
-            kvkDocument={personalInfo.kvkDocument}
-            locations={locations}
-            documentsByChargerId={documentsByChargerId}
-            onDocumentChange={updateDocument}
-          />
-          <ConsentSignatureSection value={consents} onChange={setConsents} />
-
-          <section className="signup-section">
-            <div className="signup-actions">
-              <button
-                className="button button-primary"
-                disabled={submitState.status === "submitting"}
-                onClick={handleStartDossier}
-                type="button"
-              >
-                {submitState.status === "submitting" ? "Versturen..." : "Start dossier"}
-              </button>
-              <p className="fine-print">Je blijft op deze pagina na het verzenden.</p>
-            </div>
-            <SignupReviewPanel result={review} />
-            <SignupSubmitStatusPanel state={submitState} />
-          </section>
+        <div className="container">
+          <DocumentFirstSignupFlow
+            activeStep={activeStep}
+            maximumReachableStepIndex={maximumReachableStepIndex}
+            onStepChange={changeActiveStep}
+          >
+            {activeStepContent}
+            <SignupFlowNavigation
+              activeStep={activeStep}
+              canContinue={canContinue}
+              onStepChange={changeActiveStep}
+            />
+          </DocumentFirstSignupFlow>
         </div>
       </main>
     </div>

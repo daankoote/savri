@@ -4,7 +4,7 @@
 // Frontend may assist; backend decides.
 //
 // All business, audit and idempotency writes are owned by
-// app_submit_signup_v4 in one database transaction.
+// app_submit_signup_v5 in one database transaction.
 
 import { serve } from "jsr:@std/http@0.224.0/server";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
@@ -146,6 +146,13 @@ type NormalizedLocation = {
   lookup_provider: string | null;
   lookup_provider_id: string | null;
   lookup_metadata: Record<string, unknown>;
+  connection_declaration: {
+    ean_normalized: string;
+    capture_method:
+      | "energy_document_customer_confirmed"
+      | "manual_customer_confirmed";
+    customer_confirmed: true;
+  } | null;
   chargers: NormalizedCharger[];
 };
 
@@ -371,6 +378,13 @@ function normalizeLocation(
     "client_id",
   ]) ||
     `location-${locationIndex + 1}`;
+  const rawConnectionDeclarationValue = pickValue(rawLocation, [
+    "connectionDeclaration",
+    "connection_declaration",
+  ]);
+  const rawConnectionDeclaration = isRecord(rawConnectionDeclarationValue)
+    ? rawConnectionDeclarationValue
+    : null;
 
   const postcode_normalized = normalizePostcode(
     pickValue(address, ["postcode", "postalCode", "postal_code"]),
@@ -386,6 +400,57 @@ function normalizeLocation(
     return {
       ok: false,
       message: "Controleer postcode en huisnummer van iedere locatie.",
+    };
+  }
+
+  if (
+    rawConnectionDeclarationValue !== undefined &&
+    rawConnectionDeclarationValue !== null &&
+    !rawConnectionDeclaration
+  ) {
+    return {
+      ok: false,
+      message: "Controleer en bevestig de EAN van iedere locatie.",
+    };
+  }
+
+  let connection_declaration: NormalizedLocation["connection_declaration"] =
+    null;
+  if (rawConnectionDeclaration) {
+    const ean_normalized = pickString(rawConnectionDeclaration, [
+      "ean",
+      "eanNormalized",
+      "ean_normalized",
+    ]);
+    const capture_method = pickString(rawConnectionDeclaration, [
+      "captureMethod",
+      "capture_method",
+    ]);
+    const customer_confirmed = pickValue(rawConnectionDeclaration, [
+      "customerConfirmed",
+      "customer_confirmed",
+    ]) === true;
+
+    if (
+      !/^[0-9]{18}$/.test(ean_normalized) ||
+      ![
+        "energy_document_customer_confirmed",
+        "manual_customer_confirmed",
+      ].includes(capture_method) ||
+      !customer_confirmed
+    ) {
+      return {
+        ok: false,
+        message: "Controleer en bevestig de EAN van iedere locatie.",
+      };
+    }
+
+    connection_declaration = {
+      ean_normalized,
+      capture_method: capture_method as
+        | "energy_document_customer_confirmed"
+        | "manual_customer_confirmed",
+      customer_confirmed: true,
     };
   }
 
@@ -429,6 +494,7 @@ function normalizeLocation(
         ]),
       ),
       lookup_metadata: minimizedLookupMetadata(address),
+      connection_declaration,
       chargers,
     },
   };
@@ -740,7 +806,7 @@ export async function handleSignupSubmit(
   const legal_acceptances = buildLegalAcceptanceRows(parsed.body);
   const now = dependencies.now?.() || new Date();
 
-  const { data, error } = await SB.rpc("app_submit_signup_v4", {
+  const { data, error } = await SB.rpc("app_submit_signup_v5", {
     p_request: {
       request_id: meta.request_id,
       idempotency_scope: IDEMPOTENCY_SCOPE,

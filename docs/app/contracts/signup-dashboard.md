@@ -623,8 +623,10 @@ C. Production Auth and deployment proof
 - Configure password recovery and resend-verification UX.
 - Prove production Auth URL/redirect settings.
 
-- Apply and prove remote migrations/functions/storage policies only in an explicit deployment task.
+- Apply and prove remote migrations/functions/storage policies only in an
+  explicit deployment task.
 - Do not mark the full app live from local proof.
+
 ## PILOT-CASE-01 Dashboard Case Projection
 
 CURRENT PROVEN — LOCAL ONLY.
@@ -648,6 +650,373 @@ claim is made.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+## Signature core and generated mandate-09A customer boundary
+
+The Step 3 canonical dossier summary remains the existing unified fact
+projection. After it, the same vertical document shows exactly: generated
+mandate, privacy notice, service terms, fee terms, signer input and signing
+readiness. No second summary renderer or dashboard grid is introduced.
+
+`typed_name_otp_v1` is the active MVP method. Particulier supplies typed full
+name and explicit personal signing intent. Zakelijk/VvE additionally supplies
+signer role and explicit intent to sign on behalf of the organization. Role or
+intent is input, not authority evidence. The one-time challenge is mandatory in
+the method contract but has no 09A input, call or success state.
+
+Privacy uses read acknowledgement. Service and fee terms use separate
+acceptances. Mandate uses signed status only after future server finalization.
+The existing placeholder/draft sources are not CURRENT and have no verified
+content hashes, so controls and readiness fail closed. The protected legacy
+`termsBundleAccepted` submit mapping is not expanded or reused as mandate truth.
+
+The generated mandate consumes canonical presentation facts without accepting
+parser observations as legal truth. It includes required party/organization,
+address, KvK, EAN, permission, issue-date-placeholder, calendar-year, method and
+authority-review fields per account type. `review_required` facts remain in the
+intent as review markers. Pending/blocked required facts, incomplete signer or
+legal input, missing year/method/challenge, or non-CURRENT legal versions keep
+readiness false.
+
+09A performs no signing, submit, dossier start, persistence, promotion, audit
+write, backend call or remote action. 09B owns immutable snapshot/hash, OTP and
+finalization; 09C owns verified promotion/dashboard projection.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## Signup fact resolution-08B customer boundary
+
+All organization, location and charger facts use one customer resolution
+contract. `pending` has no judgment text; `confirmed` shows `Bevestigd`;
+`review_required` shows `ENVAL-controle nodig`; and `blocked` shows `Kan niet
+worden ingediend`. The customer color model is neutral, green, orange and red
+respectively. Initial absence is neutral and never labeled `Ontbreekt`.
+
+One observed document value stays pending until the customer confirms it. A
+valid correction or a valid manual value without document evidence stays
+orange. Two distinct documents with the same normalized value may confirm a
+fact automatically. Reusing the same document bytes in two bindings does not
+count twice. Conflicting document values are red until the customer chooses a
+canonical value; that explicit choice remains orange. Invalid values, clear
+identity/address mismatches, unresolved document conflicts and required facts
+still missing after an attempted resolution are red blockers.
+
+All source/value observations remain separate from the chosen canonical value.
+Customer confirmation is intent, not new evidence. Each displayed observation
+retains source ID/type/label, upload binding, observed and normalized value,
+document identity/fingerprint and stable location/charger binding. Raw parser
+context and technical metadata remain absent from customer UI and submit
+mapping.
+
+Natural-person names compare using the existing bounded name helper;
+organization names use organization semantics and do not treat initials as a
+person match. Structured Dutch address comparison is exact on postcode and
+house number, with a missing suffix treated as probable and a conflicting
+suffix as a mismatch. Required confirmed and review-required rows may progress;
+pending and blocked rows may not; informational rows never gate.
+
+This is browser-local presentation and decision behavior only. It does not
+prove evidence acceptance, signing, immutable snapshot, persistence, backend,
+remote, deploy, production or verifier/NEa acceptance.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## Unified signup presentation-08 customer boundary
+
+Step 1, Step 2 and the Step 3 preparation share one applicability-driven fact
+presentation contract. It projects existing observations, canonical values,
+decision status, confirmations and corrections; it cannot create or change
+fact truth. Customer judgments are limited to `Door klant bevestigd`,
+`ENVAL-controle nodig` and `Ontbreekt`. A customer confirmation is not ENVAL
+approval, verified evidence or a representation-authority outcome.
+
+Not-applicable facts and missing informational facts are absent from customer
+tables. Manual corrections retain `Handmatig aangepast` as source and
+`ENVAL-controle nodig` as judgment. Parser-derived values use the concrete
+document type as source. Account type, e-mail and stable customer bindings use
+`Door gebruiker` and remain review-needed.
+
+Step 2 groups each location and its chargers by stable client IDs. Visible
+charger numbering is global only; it is not state identity. Step 3 is one
+vertical read-only document ordered as Account, each location, each charger and
+Documents. It contains no signing clauses, sign action, submit, dossier start,
+technical parser metadata or persistence claim.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-DOCUMENT-FIRST-UI-01 Active Frontend Journey
+
+CURRENT PROVEN — LOCAL ONLY — DOCUMENT-FIRST KISS SIGNUP UI AND GAP-DRIVEN CONFIRMATION MODEL.
+
+The active customer composition is Account, Documenten, Controleren,
+Aanvullen and Ondertekenen. One canonical frontend draft keeps account/legal
+party, locations, chargers, documents, parser observations, customer
+confirmations, manual corrections and acceptances separate. Review matrices and
+gaps are derived by pure selectors; comparison output is not persistent state.
+
+Documents remain location- or charger-scoped. Parser values stay observed and
+never overwrite declared input. A value requiring customer confirmation becomes
+declared frontend state only after explicit confirmation, correction, candidate
+selection or manual fallback. The mapper adapter continues to serialize only
+existing confirmed/manual target facts and preserves exclusive document/manual
+EAN handling.
+
+Document persistence, upload promotion, evidence acceptance, final mandate
+copy/versioning, calendar-year scope, signer authority, signing persistence and
+a successful submit remain outside this bounded proof. The final action is
+fail-closed. Interactive browser, remote, deployment and production behavior
+are not proven.
+
+Evidence: `docs/app/operations/pilot-signup-document-first-ui-01-local-proof.md`
+and marker `signup-document-first-ui-proof-ok`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-PARTY-NAME-CROSSCHECK-03 Customer-Safe Name Semantics
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF ONLY.
+
+One pure resolver supplies the dossier party used by both energy and
+charger/MID document checks. A private signup uses the declared full given
+name(s) plus full surname. A business or VvE uses only its declared legal name.
+The bestuurder/representative remains separate authority and signing truth and
+is never a contract-holder fallback. The customer field asks
+`Voornaam/voornamen (voluit)` without adding or changing payload fields.
+
+Natural-person comparison is deterministic. A complete observed name is green
+only when all declared given-name and surname tokens match after bounded case,
+diacritic and whitespace normalization. Recognizable observed initials may
+produce only `initial_and_surname_match` when every initial matches the
+corresponding declared given name and the full surname matches. That orange
+status reads `Initiaal en achternaam komen overeen`; it does not prove the full
+given name. Full-name differences, different initials and surname differences
+are red `Controle nodig`. Missing, non-displayable, incomplete or reliably
+unbounded candidates have no pill.
+
+Organization comparison permits bounded case/whitespace and BV/B.V. or NV/N.V.
+punctuation equivalence only. It does not use substring, token-set, e-mail
+domain, representative or surname fallback. Mismatch actions focus the given
+names, surname or legal-entity name field through the existing focus/scroll
+path. Other comparison types retain their existing `probable_match` and
+`Lijkt overeen` presentation where applicable.
+
+The recorded NEa/Regeling requirement says `naam`; it does not determine
+initials versus a full given name. ENVAL requests full given
+names as a product control. Parser comparison is observed/derived assistance,
+not identity verification, authority, aangeslotene status, evidence acceptance
+or verifier acceptance. Verifier acceptance of initials remains UNKNOWN.
+
+Evidence is local proof marker `signup-party-name-crosscheck-proof-ok`. No
+browser-runtime, remote, deployment or production claim follows.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+### PILOT-SIGNUP-PARTY-RUNTIME-04 Reactive Draft Boundary
+
+The selected energy or charger document owns only its parser observation.
+Party comparison is not persisted in document state: both customer surfaces
+derive it during render from the current account type, current applicant or
+legal-entity fields and the current displayable observation. Editing a declared
+name changes the pill without reparsing or mutating the observation.
+
+Changing account type crosses a hard pre-submit draft boundary. Empty drafts
+switch immediately. Meaningful drafts require the explicit destructive-change
+confirmation and then use the existing initializers for one fresh location,
+charger, document collection and consent state. No files, observations, EAN
+candidates/confirmations, old active location, validation visibility or hidden
+per-account-type draft history survives. A generation guard rejects parser
+results started before that reset.
+
+This is local source/proof evidence only. Customer-visible acceptance still
+requires local browser proof; parser output stays observed/derived and no
+accepted-evidence, identity, authority, verifier, remote or production claim is
+made.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-DOCUMENT-CROSSCHECK-02 Shared Customer-Safe Crosscheck
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF AND PROOF-ONLY LOCAL PDFS.
+
+Location address truth remains six separate fields: street, house number,
+house-number addition, postcode, city and country. One formatter renders a
+bounded addition as `28-1`; comparison removes case, surrounding whitespace and
+the common `-`, `/` or space separators from the addition only. It never splits
+an unbounded `281`. Postcode, house number and addition remain the primary match
+basis; one missing addition is at most `probable_match` and unreliable observed
+structure is `unavailable`.
+
+Each location has exactly one active EAN source mode. Document mode owns the
+selected energy file, observations, selected electricity candidate and customer
+confirmation. Manual mode owns only an exact 18-digit manually confirmed EAN.
+`EAN klopt niet` and automatic manual fallback clear the document and every
+document-derived state; selecting a new document clears every manual value and
+validation state. A pure mapper assertion rejects a mixed source. The public
+payload shape and the existing `energy_document_customer_confirmed` and
+`manual_customer_confirmed` values are unchanged.
+
+Energy and charger documents map their own business facts into the same bounded
+row presentation: label, display value, optional comparison status, optional
+focus action and displayability. The active charger UI shows no parser status,
+timing, field keys, confidence, raw context or limitation codes. Charger MID,
+serial, brand and model comparisons are normalized but exact; location and
+customer comparisons reuse the energy rules. Invoice date stays separate from
+explicit installation date/year.
+
+All parser values remain observed/derived and all form values declared.
+Comparison is assistance: it does not prefill, overwrite, verify identity or
+accept MID evidence. The two PDF fixtures are local proof only and are neither
+copied nor committed; proof output omits document values and full EANs.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-ENERGY-DOCUMENT-CROSSCHECK-01 Customer Presentation
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF AND PROOF-ONLY REAL PDF.
+
+The compact Uit het document gehaald card shows only displayable electricity
+EAN, contractholder, delivery address, supplier and contract-start fields.
+Rejected values, raw context, source metadata and rejection reasons stay out of
+customer presentation. Gas EAN remains outside the normal UI.
+
+Komt overeen, Lijkt overeen and Controle nodig are shown only when declared
+input is sufficient for comparison. An incomplete applicant or location keeps
+the document value visible without a pill. A missing/rejected parser candidate
+hides the complete row; the generic Niet automatisch te controleren text is not
+shown. EAN confirmation, EAN klopt niet and manual fallback remain intact.
+
+Comparison is assistance, not verification. No customer field is automatically
+overwritten, and parser output cannot reach the submit mapper. Only an
+explicitly confirmed electricity EAN follows the existing declaration boundary.
+Real-PDF evidence is local proof only and contains no logged document values,
+full EANs or fixture PII.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-EAN-PREFLIGHT-02 Submit-Attempt and Real-Text-PDF Correction
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF AND PROOF-ONLY REAL PDF.
+
+The earlier synthetic EAN fixture established bounded extraction rules but did
+not establish real-text-PDF coverage. The current adapter now supports the
+observed Flate-only and ToUnicode text shape, preserves page/row composition and
+emits an explicit column boundary. This prevents a contract date directly
+following an EAN column from invalidating the exact-18-digit candidate.
+
+One local personal contract was used only through `ENVAL_EAN_REAL_PDF`; it is
+not copied, committed or logged. Privacy-safe proof output records only two
+candidate counts: one electricity and one gas. When one electricity candidate is
+unique, only that candidate is confirmable. Gas stays observed. The manual route
+is activated by `EAN klopt niet` or a failed/no-confirmable extraction and owns
+no background document state.
+
+Validation always computes the current field-error truth. `submitAttempted`
+keeps the visible field-error map empty until an invalid CTA click. That click
+reveals all current field-local errors, focuses/scrolls the first invalid
+control and returns before mapper, client or network work. Corrected and
+no-longer-applicable fields disappear immediately after that first attempt. The
+CTA is idle-active and is disabled only while a valid request is actually
+running.
+
+No successful browser submit, persistence, accepted evidence, external EAN
+verification, authority determination, signature or mandate is claimed.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-EAN-PREFLIGHT-01 Observed Candidate Confirmation
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF ONLY.
+
+The existing energy-document `File` remains browser-local and location-scoped.
+Selection now invokes the existing PDF adapter and existing text extraction.
+Exact 18-digit candidates carry compact context and are classified only when the
+document contains an explicit electricity or gas signal. Page remains absent
+when the current extractor cannot establish it.
+
+One clear electricity or unclassified candidate requires explicit customer
+confirmation. Multiple candidates require an explicit non-gas choice. Only gas,
+no candidate, parser failure or `EAN klopt niet` opens the exact-18-digit manual
+fallback. Changing or removing a document resets only that location's candidate,
+manual value and confirmation; stale async parser results are ignored.
+
+Validation is computed as stable field paths and shown at each applicable input,
+document slot, EAN confirmation and acceptance. The CTA is disabled and guarded
+until the current frontend draft is complete. Parser output is observed;
+confirmation is only declared frontend preflight. Neither is persisted evidence,
+a signed mandate, external EAN verification, authority verification or
+regulatory acceptance.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-JOURNEY-02 KISS Onboarding
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF ONLY.
+
+Signup now exposes exactly Aanvrager, Locatie, Aansluiting, Laadpalen and
+Ondertekenen. The expanded review and separate additional-document step are not
+active. The final action is `Ondertekenen en dossier starten`.
+
+Locatie owns postcode/house-number/suffix precheck and multi-location
+add/remove. Aansluiting owns one local energy-document draft per location.
+Aansluiting and Laadpalen reuse the same location-tab component and active
+location ID; charger creation always binds to that active location.
+
+The signup payload and public `write_v3` response remain compatible. Deferred
+connection data is omitted as before. Current general conditions/privacy/fee
+acceptance is not the definitive NEa mandate.
+
+Authenticated dashboard work remains open for document transport, EAN
+acquisition/confirmation, additional documents, kWh and the immutable scoped
+mandate snapshot.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-JOURNEY-01 Five-Step Customer Journey
+
+HISTORICAL PARTIAL — SUPERSEDED BY PILOT-SIGNUP-JOURNEY-02.
+
+The visible signup order is Aanvrager, Aansluiting en locatie, Laadpalen,
+Aanvullende documenten, and Controleren en afronden. Applicant contains
+account/person/organization/contact/KVK inputs. Each location owns its address,
+local energy-document selection, assisted/manual EAN state and confirmation.
+Charger fields, installation/acquisition invoice and local MID-oriented preview
+remain grouped per charger under their location.
+
+Zakelijk rijden uses one dossier-wide conditional local document state and shows
+no empty upload card for non-applicable account types. The existing
+`SignupReviewPanel` now derives one read-only summary from the same draft.
+Wijzigen actions scroll to the owning section without replacing state.
+
+Current conditions/privacy/fee acceptances are not a definitive mandate. The UI
+states that the mandate follows after the connection and mandatory facts are
+complete. kWh is absent from signup and remains dashboard-only.
+
+The submit mapper retains the existing payload shape. No backend, transport,
+parser, CSS or Supabase configuration changed.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-CONNECTION-01B Assisted Location Declaration
+
+CURRENT PROVEN — LOCAL ONLY.
+
+Each shared signup location independently defers EAN by default. The primary
+copy explains later acquisition through an energy bill or available connector
+and customer review. “EAN handmatig invoeren” is a secondary action requiring
+exactly 18 digits and explicit customer confirmation. Particulier uses the
+applicant address; zakelijk and VvE retain independent tabbed locations.
+
+The mapper omits deferred connection data and emits only the confirmed manual
+EAN contract. Frontend validation assists, while Edge and database validate
+again. Netbeheerder and standard valid-from/to fields are absent. Existing
+field, checkbox, action, button and location CSS is reused with no inline style
+or new CSS.
+
+The dashboard receives no new connection projection in this batch. No
+verified/green status, canonical connection, CAR, ownership, mandate validity or
+accepted location is shown.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## PILOT-PARTY-01A Bootstrap-Only Party Activation
 
 CURRENT PROVEN — LOCAL ONLY.
@@ -666,6 +1035,7 @@ Q01-Q18 prove local database behavior only. Browser-live, remote and
 production remain OPEN.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## PILOT-PROFILE-02 Auth-Time Declared Profile Promotion
 
 CURRENT PROVEN — LOCAL ONLY.
@@ -682,6 +1052,7 @@ frontend or CSS changed. Source timestamp and Dutch profile business date
 remain distinct; neither is verified legal validity.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## PILOT-SIGNUP-ATOMIC-01 Transactional Current Submit
 
 CURRENT PROVEN — LOCAL ONLY.
@@ -705,5 +1076,159 @@ response validator, components and CSS are unchanged.
 
 Declaration capture is not profile promotion, address truth, verified KvK,
 representation, mandate, EAN, eligibility or evidence acceptance.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## Document-first review-02 boundary
+
+The current public signup review is a three-step browser-local preparation
+surface: Account, Documenten, Ondertekenen. Step 2 may compare only displayable
+observed facts, declared values and separately stored manual corrections.
+`Bevestigen` creates frontend confirmation state; it does not create accepted
+evidence, canonical TARGET truth, identity, authority, aangeslotene or mandate
+truth.
+
+Step 3 reads confirmed canonical facts only. Document tokens contain a safe
+filename, type and local location/charger relation. Raw parser context,
+confidence, source pages and rejection reasons remain internal. The unavailable
+sign action is hidden and does not start a dossier.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## Document decision-03 customer boundary
+
+The browser-local review matrix presents exactly `Gegeven`,
+`Energiecontract/-nota`, `Installatiefactuur`, `Actie` and `Wordt gebruikt`.
+The last column stays empty until the customer confirms a supported match or
+states a canonical correction/difference. Such customer intent remains
+declared frontend state; it does not turn a review-required fact green and is
+not accepted evidence, verified TARGET truth or a dashboard status.
+
+Semantic roles remain distinct. Contract holder is not automatically the
+invoice buyer, and an invoice address is not an installation location. EAN is
+energy-document scoped; charger brand, model, MID and serial are
+charger-document scoped. Only comparable material conflicts fail closed.
+
+The signing preparation shows compact Account, Locaties, Laadpalen and
+Documenten summaries. It exposes review markers but no raw parser context or
+technical metadata. Because signing is not implemented, no sign button is
+shown and no submit path is enabled.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## Generic document facts-05 customer boundary
+
+Both browser-local PDF upload slots call the same technical
+`parseInvoicePdfInput(input)` entrypoint. Same bytes and parser version produce
+the same observation envelope and generic facts. Upload slot, location,
+charger, account and matrix column are not parser inputs.
+
+An upload slot binds a parsed observation to the energy-document or
+installation-invoice source column only. It does not classify, accept, reject,
+hide or reinterpret facts. The active customer state has no document-type
+classification or compatibility result. Internal descriptive type-candidate
+scores remain non-blocking envelope metadata only.
+
+Missing required canonical facts and real material fact conflicts determine
+progression. Missing or rejected values render as `—`; a parsed document with
+no supported facts renders `Geen gegevens gevonden.` at that upload card.
+
+The document cache is browser-local and keyed by document/client ID, with the
+content fingerprint and parser version stored in the entry. It is excluded from
+the submit mapper. This is not accepted evidence, canonical TARGET truth,
+signing, persistence or dashboard status. Parser-04 customer-facing
+compatibility behavior is historical and superseded by this boundary.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## Fact applicability and signing summary-06 customer boundary
+
+Generic extraction and dossier applicability are separate. One pure selector
+uses only account type and fact key to mark a matrix row required,
+informational or not applicable. Parser presence or absence never determines a
+legal or product requirement.
+
+For Particulier, organization name, KvK and gas EAN show neutral `Niet nodig`.
+For Zakelijk and VvE, organization name and KvK are required while a found
+document party remains informational and never fills a representative,
+administrator or signer. Missing informational facts show `—`, have no action
+and do not block.
+
+`Nederland` is an address-editor display default only. No declared address,
+correction, confirmation or canonical value exists until the customer
+explicitly saves a complete street, house number, postcode and city. That
+manual declaration preserves source observations and remains marked
+`Handmatig aangepast · ENVAL-controle nodig`.
+
+The existing signing preparation groups Account, Locaties, Laadpalen,
+Documenten and found additional document facts. It shows only confirmed
+applicable canonical facts, safe filenames and explicit location/charger
+binding, with no missing informational rows or technical parser metadata.
+Signing and submit remain unavailable.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## Organization document-first-07 customer boundary
+
+The active Account step captures only account type and e-mail. For Zakelijk
+and VvE, Step 2 requires exactly one account-bound `KvK-uittreksel`; Particulier
+does not render that slot. Hidden legacy organization and trade-register fields
+are compatibility state only and are not an alternative input route.
+
+The unified browser-local PDF parser may observe organization name, KvK number,
+registered address, legal form, trade name, director/board-member text and
+representation text. Filename, upload slot and provider are not parser inputs.
+Registered address remains separate from energy delivery and invoice address.
+
+Zakelijk/VvE show `KvK-uittreksel` between `Gegeven` and the existing energy
+and installation-invoice sources. Organization name, KvK number and registered
+address are required. If the account document is absent, the action returns to
+that upload; a manual value cannot remove the document blocker. Particulier
+retains the five-column matrix.
+
+The preparation summary binds the KvK file to Account. Representation text is
+observed only under `Bevoegdheidsinformatie uit document`; it does not identify
+or populate a signer and is not an authority outcome. No fact or document from
+this batch enters submit or dossier persistence.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## Compact signing-09A1 customer boundary
+
+The final local signup step presents one canonical fact summary, one generated
+mandate, one combined legal-bundle action and one signing declaration. Summary
+confirmation is customer intent and does not turn displayed facts or parser
+observations into accepted evidence.
+
+The combined legal checkbox is presentation only: privacy reading, general
+terms acceptance and fee-terms acceptance remain separately versioned intents.
+Preview and download render from the registry plus mandate model in browser
+memory. They create no dashboard document, persisted acceptance or signed
+artifact.
+
+For Zakelijk/VvE, naming the canonical organization in the declaration records
+only what the customer declares. It does not satisfy authority review. Step
+navigation preserves the local reducer draft and restores the visible flow
+heading; it does not submit or promote dossier state.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## Signing layout-09A2 customer boundary
+
+The customer summary shows applicable Account facts in two columns. Each
+location then groups one location panel with only chargers whose projected
+`locationId` matches that group; stable IDs remain keys and global charger
+numbers remain visible. Internal sources, resolution state, technical IDs and
+parser metadata are not rendered by these document-mode tables.
+
+The Documents table shows only document type plus binding and customer-safe
+filename. The existing projector remains authoritative; 09A2 creates no second
+fact, document or signup-state model.
+
+Machtiging, Voorwaarden en privacy and Ondertekening form one responsive row.
+Step 3 has three confirmations total: summary, legal bundle and signing
+declaration. There is no mandate checkbox and no active or disabled primary
+action. The 09B action will require server-side legal/OTP/finalization gates;
+signing and persistence remain NOT IMPLEMENTED.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

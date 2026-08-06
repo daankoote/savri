@@ -361,6 +361,105 @@ customer-safe projection patterns.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+## PILOT-SIGNUP-ENERGY-DOCUMENT-CROSSCHECK-01 Observation Boundary
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF AND PROOF-ONLY REAL PDF.
+
+The existing PDF decoder and page/row/column reconstruction feed separate
+semantic customer, delivery-address and supplier blocks. Every observed field
+has source-page, confidence, extraction-method and displayability metadata.
+Candidates that combine columns, contain field labels, merge addresses or remain
+ambiguous are rejected and are not customer-facing.
+
+Parser data remains observed/derived. Comparison is assistance, never
+verification or acceptance. Missing applicant or location input shows a
+displayable document value without a comparison pill; a missing/rejected parser
+candidate hides the row. Only a customer-confirmed electricity EAN can reach
+declared signup state. No customer input is overwritten.
+
+The real-PDF proof is local only and logs no document values, full EAN or
+fixture PII. It establishes no upload transport, accepted evidence, canonical
+location/connection, CAR/aangeslotene, mandate, remote or production truth.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-JOURNEY-02 Compact Onboarding Boundary
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF ONLY.
+
+The current pre-auth onboarding composition is exactly Aanvrager, Locatie,
+Aansluiting, Laadpalen and Ondertekenen. Location address/precheck state,
+location-scoped energy-document state and charger-scoped asset/invoice state
+remain separate while reusing stable location and charger client IDs.
+
+One shared location selector drives Aansluiting and Laadpalen. A single location
+renders no tabstrip; multiple locations use the short resolved address or
+`Locatie N`. Removing a location deletes its charger/document drafts and never
+reassigns them to another location.
+
+Manual EAN, DSO/operator and connection-period controls are not reachable in the
+current signup UI. The existing optional confirmed connection backend contract
+remains compatible and unchanged. Authenticated EAN acquisition and
+confirmation, additional documents, kWh and the immutable signer/party/
+location/EAN/calendar-year mandate snapshot remain dashboard/TARGET work.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-SIGNUP-JOURNEY-01 Frontend Composition Boundary
+
+CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF ONLY.
+
+The signup composition now follows five visible contexts: applicant,
+connection/location, location-grouped chargers, dossier-wide conditional
+documents, and review/completion. EAN and energy-document selection are owned by
+one location draft. The energy document is a future cross-check source;
+selection and parser observations create no accepted connection or evidence
+truth. Installation/acquisition invoices and the existing charger/MID preview
+remain owned by each charger.
+
+The review derives one read-only presentation directly from the existing signup
+draft and provides state-preserving navigation back to each owner. Current
+condition/privacy/fee acceptances remain general acceptances. The definitive
+mandate is a separate future authenticated object requiring the complete scoped
+signer, EAN, location and calendar-year facts.
+
+kWh remains dashboard-only. This composition changes no migrations, RPC, Edge,
+Auth, database object, payload shape, upload transport or parser.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## PILOT-CONNECTION-01B Current Assisted Connection Source Boundary
+
+CURRENT PROVEN — LOCAL ONLY — ASSISTED AND CUSTOMER-CONFIRMED EAN ACQUISITION
+WITH MANUAL FALLBACK
+
+The current direct signup transaction now extends unchanged v4 through
+service-role-only `app_submit_signup_v5(jsonb)`. V5 permits a safe deferred
+state with no source and records exactly one typed, immutable
+`app_connection_declaration_sources` declaration only for an explicitly
+customer-confirmed EAN. The public `write_v3` response and idempotency boundary
+remain unchanged.
+
+The source uses the current exact 18-numeric-character EAN syntax, a bounded
+manual or energy-document-confirmed capture method and
+request/payload/actor/environment provenance. Parser output is observed/derived
+until customer confirmation. Network operator is derived later and not
+automatically verified. Standard connection dates are not signup input;
+mandate/calendar-year validity remains separate future truth. Its role is
+exactly `connection_service_location`.
+
+This source does not implement the accepted physical connection or
+allocation-point/EAN roots in the WP3C TARGET model. It creates no CAR result,
+connection-confirmed party claim, ownership, accepted canonical location, party
+address, mandate, eligibility or verifier/regulatory decision.
+
+No safe CURRENT pre-auth energy-document transport plus EAN parser exists. This
+batch therefore adds no upload path; authenticated document intake, candidate
+extraction/preview and explicit confirmation are the next bounded integration
+batch.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## PILOT-PARTY-01A Current Local Party Root Activation
 
 CURRENT PROVEN — LOCAL ONLY: `app_bootstrap_customer_auth_v3` composes the
