@@ -4,8 +4,9 @@ import { factsByKey } from "./canonicalSigningFacts";
 import type { SignatureMethodId } from "./signatureMethod";
 
 export const MANDATE_YEAR_POLICY = {
-  policyId: "whole_calendar_years_v1",
+  policyId: "one_whole_calendar_year_v1",
   minimumYearCount: 1,
+  maximumYearCount: 1,
 } as const;
 
 export type MandatePermission = {
@@ -76,10 +77,9 @@ export function getMandateYearOptions(
 export function validateMandateCalendarYears(
   years: readonly number[],
 ): boolean {
-  if (years.length < MANDATE_YEAR_POLICY.minimumYearCount) return false;
-  return years.every((year, index) =>
-    Number.isInteger(year) && (index === 0 || year === years[index - 1] + 1)
-  );
+  return years.length === MANDATE_YEAR_POLICY.minimumYearCount &&
+    years.length === MANDATE_YEAR_POLICY.maximumYearCount &&
+    years.every(Number.isInteger);
 }
 
 export function createMandateDocumentModel(input: {

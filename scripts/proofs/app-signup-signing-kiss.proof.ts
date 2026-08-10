@@ -67,7 +67,7 @@ const mandate: MandateDocumentModel = {
   ],
   issueDate: { status: "server_assigned_at_finalization", value: null },
   validity: {
-    policyId: "whole_calendar_years_v1",
+    policyId: "one_whole_calendar_year_v1",
     calendarYears: [2026],
   },
   signatureMethod: "typed_name_otp_v1",
@@ -244,16 +244,17 @@ assert(
 assert(
   (summarySource.match(/type="checkbox"/g) || []).length === 1 &&
     (legalSource.match(/type="checkbox"/g) || []).length === 1 &&
+    summarySource.includes("Ondertekenen en indienen") &&
+    summarySource.includes("Ondertekening bevestigen") &&
+    summarySource.includes("Eenmalige code") &&
     customerSources.every((value) =>
-      !value.includes("Ondertekenen en indienen") &&
-      !value.includes("code versturen") &&
       !value.includes("OTP") &&
       !value.includes("<canvas") &&
       !/print|scan/i.test(value) &&
       !value.includes("style={{") &&
       !/\.css["']/.test(value)
     ),
-  "dead_signing_control_or_forbidden_ui_implementation_present",
+  "signing_control_or_forbidden_ui_implementation_invalid",
 );
 assert(
   customerSources.every((value) =>

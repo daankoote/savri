@@ -629,6 +629,48 @@ function documentsComplete(draft: DocumentFirstSignupDraft): boolean {
   });
 }
 
+export function selectSigningFileReadiness(
+  draft: DocumentFirstSignupDraft,
+): { ready: boolean; fileReferences: string[] } {
+  const requiredDocuments = [
+    ...(draft.accountBasis.accountType === "particulier"
+      ? []
+      : [draft.organizationDocument]),
+    ...draft.locationOrder.map((locationId) =>
+      draft.energyDocumentsByLocationId[locationId]
+    ),
+    ...draft.locationOrder.flatMap((locationId) =>
+      (draft.chargerOrderByLocationId[locationId] || []).map((chargerId) =>
+        draft.chargerDocumentsByChargerId[chargerId]?.find((document) =>
+          document.documentType === "installation_invoice"
+        )
+      )
+    ),
+  ];
+  const fileReferences = [
+    ...new Set(
+      requiredDocuments.flatMap((document) =>
+        typeof document?.quarantineFileReference === "string" &&
+          document.quarantineFileReference
+          ? [document.quarantineFileReference]
+          : []
+      ),
+    ),
+  ];
+  return {
+    ready: requiredDocuments.length > 0 &&
+      fileReferences.length === requiredDocuments.length &&
+      requiredDocuments.every((document) =>
+        Boolean(
+          document?.file &&
+            document.quarantineStatus === "confirmed_quarantine" &&
+            document.quarantineFileReference,
+        )
+      ),
+    fileReferences,
+  };
+}
+
 function reviewComplete(draft: DocumentFirstSignupDraft): boolean {
   return draft.locationOrder.every((locationId) =>
     selectReviewGroups(draft, locationId).every((group) =>

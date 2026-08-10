@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 import { sha256Hex } from "./app_foundation.ts";
+import { isLocalSupabaseRuntime } from "./local_supabase_runtime.ts";
 
 export const SIGNUP_QUARANTINE_BUCKET = "app-documents";
 export const SIGNUP_QUARANTINE_PREFIX = "signup-quarantine/";
@@ -41,6 +42,10 @@ function base64Url(bytes: Uint8Array): string {
   return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
 }
 
+export class SignupCapabilityConfigurationError extends Error {
+  override name = "SignupCapabilityConfigurationError";
+}
+
 export async function deriveCapabilityToken(
   purpose: "intake_manage" | "quarantine_upload",
   idempotencyKey: string,
@@ -48,17 +53,10 @@ export async function deriveCapabilityToken(
 ): Promise<string> {
   const configuredSecret = Deno.env.get("APP_SIGNUP_CAPABILITY_SECRET") || "";
   const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-  let localRuntime = false;
-  try {
-    localRuntime = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(
-      new URL(supabaseUrl).hostname,
-    );
-  } catch (_error) {
-    localRuntime = false;
-  }
+  const localRuntime = isLocalSupabaseRuntime(supabaseUrl);
   const secret = configuredSecret ||
     (localRuntime ? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "" : "");
-  if (!secret) throw new Error("capability secret unavailable");
+  if (!secret) throw new SignupCapabilityConfigurationError();
 
   const cryptoKey = await crypto.subtle.importKey(
     "raw",

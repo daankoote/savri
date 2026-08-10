@@ -20,6 +20,7 @@ import {
   SHA256_RE,
   SIGNUP_MAX_UPLOAD_BYTES,
   signupServiceClient,
+  SignupCapabilityConfigurationError,
   stringField,
   UUID_RE,
 } from "../_shared/signup_quarantine.ts";
@@ -89,11 +90,19 @@ serve(async (req) => {
     client_sha256: clientSha256,
   };
   const normalizedPayloadHash = await payloadHash(normalized);
-  const rawUploadCapability = await deriveCapabilityToken(
-    "quarantine_upload",
-    meta.idempotency_key,
-    normalizedPayloadHash,
-  );
+  let rawUploadCapability: string;
+  try {
+    rawUploadCapability = await deriveCapabilityToken(
+      "quarantine_upload",
+      meta.idempotency_key,
+      normalizedPayloadHash,
+    );
+  } catch (error) {
+    if (error instanceof SignupCapabilityConfigurationError) {
+      return appErrorResponse(req, 503, "Upload is tijdelijk niet beschikbaar.", "service_unavailable");
+    }
+    throw error;
+  }
   const uploadTokenSha256 = await capabilityHash(rawUploadCapability);
   const fileTtlMinutes = configuredMinutes("APP_SIGNUP_FILE_TTL_MINUTES", 120, 10, 1440);
   const capabilityTtlMinutes = configuredMinutes("APP_SIGNUP_UPLOAD_CAPABILITY_TTL_MINUTES", 30, 10, fileTtlMinutes);

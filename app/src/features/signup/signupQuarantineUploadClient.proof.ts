@@ -133,6 +133,12 @@ export async function runSignupQuarantineUploadClientProof(): Promise<void> {
     "first_confirmation_missing");
   assert(calls.map((call) => call.url.split("/").pop()).join("|") ===
     "api-app-signup-intake-start|api-app-signup-upload-url|api-app-signup-upload-confirm", "stage_order_invalid");
+  const startBody = JSON.parse(String(calls[0]?.init?.body || "{}"));
+  assert(
+    Object.keys(startBody).sort().join("|") === "account_type|email" &&
+      startBody.account_type === input.accountType && startBody.email === input.email,
+    "frontend_intake_start_request_shape_invalid",
+  );
   assert(uploads.length === 1 && uploads[0].bucket === "app-documents", "signed_upload_missing");
   assert(sessionStorage.getItem("enval.signup.intake.v1")?.includes("manage-proof-secret"), "manage_capability_not_in_session_storage");
   assert(localStorage.length === 0, "capability_written_to_local_storage");

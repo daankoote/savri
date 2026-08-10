@@ -124,6 +124,66 @@ production behavior is approved by 09A.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+## 09B2C signed submission receipt
+
+The atomic server finalization and immutable records remain the only core
+truth. A successful `pending_verification` response may create one same-tab
+presentation receipt with schema `signup-submission-receipt-v1`, the safe
+public `SIG-...` reference and status only. The receipt grants no capability
+and cannot authorize intake, upload, signing, verification or dashboard work.
+
+On refresh, the existing scoped intake session calls the existing signing
+boundary in status mode. Only its server response may establish `finalized`
+and `locked`; the presentation receipt never may. A valid finalized response
+restores the compact locked confirmation and exactly the same safe reference.
+A temporary status failure remains read-only with retry and never falls back
+to an editable or newly created intake. Missing, corrupt, extra-field or
+unknown receipt values are removed or ignored. No intake UUID, capability,
+idempotency key, request ID, OTP/challenge, e-mail, signer/party data,
+EAN/address, document data, legal/snapshot hash or canonical snapshot may
+enter the receipt cache.
+
+`app_signup_signing_status_v1` is service-role-only and requires both the
+intake UUID and hash of the existing `intake_manage` ownership capability. It
+does not support lookup by safe reference. Finalized status is returned only
+when the intake, consumed challenge/capability, one snapshot, three legal
+acceptances, one mandate, one signature evidence row and one finalization
+audit event agree. Finalized intake-file rows are database-trigger locked.
+
+This local receipt behavior does not promote the validation-candidate legal
+bundle to CURRENT and does not configure or approve production OTP delivery.
+
+## 09B2C-R2 local signing runtime
+
+The server uses one shared strict classifier for local signup and signing
+runtime behavior. It accepts loopback Supabase URLs and exact
+`http://kong:8000`, the embedded local Supabase Edge URL. It rejects HTTPS
+Kong, other Kong ports, Kong-like hostnames and production Supabase URLs.
+
+Only that local runtime may automatically use the local Mailpit adapter and
+the service-role-backed verifier-secret fallback. A configured production
+transport and dedicated verifier secret remain mandatory outside local
+development; missing production configuration returns a customer-safe 503.
+The local exception does not make the validation-candidate legal bundle
+CURRENT and does not approve production legal or OTP behavior.
+
+## 09B2C-R3 frontend challenge readiness
+
+The frontend challenge CTA gates only observable customer prerequisites:
+confirmed required uploads, the scoped intake session, summary confirmation,
+one mandate year, the three legal acknowledgements, typed signer fields and
+the signer declaration. Missing customer input is shown next to the action.
+
+Legal-bundle eligibility is not duplicated as a build-time or development
+flag. The intent model still records non-CURRENT legal status, while the
+server decides whether the active runtime may issue a challenge. One enabled
+click issues at most one challenge request and never finalizes. Finalization
+still requires the separate OTP confirmation action and every server gate.
+Signing input is retained across step navigation while the underlying draft
+is unchanged and reset when that draft changes.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## 09A1 compact customer presentation
 
 Step 3 has exactly four customer sections: `Samenvatting`, `Machtiging`,

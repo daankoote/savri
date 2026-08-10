@@ -72,6 +72,70 @@ export type SigningIntent = {
   };
 };
 
+export type SigningStartReadinessReason =
+  | Exclude<
+    SigningReadinessReason,
+    "legal_version_not_current" | "signature_challenge_missing"
+  >
+  | "required_upload_missing"
+  | "intake_session_missing";
+
+export type SigningStartReadiness = {
+  ready: boolean;
+  reasons: SigningStartReadinessReason[];
+};
+
+export function selectSigningStartReadiness(input: {
+  intentReadiness: SigningIntent["readiness"];
+  requiredUploadsConfirmed: boolean;
+  intakeSessionAvailable: boolean;
+}): SigningStartReadiness {
+  const reasons: SigningStartReadinessReason[] = input.intentReadiness.reasons
+    .filter((reason) =>
+      reason !== "legal_version_not_current" &&
+      reason !== "signature_challenge_missing"
+    )
+    .map((reason) => reason as SigningStartReadinessReason);
+  if (!input.requiredUploadsConfirmed) {
+    reasons.push("required_upload_missing");
+  }
+  if (!input.intakeSessionAvailable) reasons.push("intake_session_missing");
+  return { ready: reasons.length === 0, reasons: [...new Set(reasons)] };
+}
+
+export function signingStartReadinessMessage(
+  reason: SigningStartReadinessReason,
+): string {
+  if (reason === "summary_confirmation_missing") {
+    return "Bevestig dat de samenvatting juist en volledig is.";
+  }
+  if (reason === "signer_full_name_missing") {
+    return "Vul je volledige naam in.";
+  }
+  if (reason === "signer_role_missing") {
+    return "Vul je functie of rol in.";
+  }
+  if (reason === "signing_intent_missing") {
+    return "Bevestig de verklaring bij de ondertekening.";
+  }
+  if (reason === "mandate_year_missing") {
+    return "Kies een kalenderjaar voor de machtiging.";
+  }
+  if (reason === "legal_action_missing") {
+    return "Lees en bevestig de voorwaarden en privacyverklaring.";
+  }
+  if (reason === "required_upload_missing") {
+    return "Wacht tot alle vereiste documenten veilig zijn ontvangen.";
+  }
+  if (reason === "intake_session_missing") {
+    return "De veilige aanmeldsessie is niet beschikbaar.";
+  }
+  if (reason === "pending_required_fact" || reason === "blocked_fact") {
+    return "Controleer eerst alle verplichte gegevens.";
+  }
+  return "Ondertekenen kan nog niet worden gestart.";
+}
+
 export function createSigningIntent(input: {
   accountType: AccountType;
   presentation: UnifiedFactPresentation;

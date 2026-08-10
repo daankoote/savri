@@ -16,6 +16,7 @@ import {
   parseRecordBody,
   publicRpcBody,
   signupServiceClient,
+  SignupCapabilityConfigurationError,
   stringField,
 } from "../_shared/signup_quarantine.ts";
 
@@ -38,7 +39,15 @@ serve(async (req) => {
 
   const normalized = { account_type: accountType, email };
   const normalizedPayloadHash = await payloadHash(normalized);
-  const rawCapability = await deriveCapabilityToken("intake_manage", meta.idempotency_key, normalizedPayloadHash);
+  let rawCapability: string;
+  try {
+    rawCapability = await deriveCapabilityToken("intake_manage", meta.idempotency_key, normalizedPayloadHash);
+  } catch (error) {
+    if (error instanceof SignupCapabilityConfigurationError) {
+      return appErrorResponse(req, 503, "Aanmelden is tijdelijk niet beschikbaar.", "service_unavailable");
+    }
+    throw error;
+  }
   const manageTokenSha256 = await capabilityHash(rawCapability);
   const intakeTtlMinutes = configuredMinutes("APP_SIGNUP_INTAKE_TTL_MINUTES", 1440, 10, 10080);
   const manageTtlMinutes = configuredMinutes("APP_SIGNUP_MANAGE_TTL_MINUTES", 720, 10, intakeTtlMinutes);

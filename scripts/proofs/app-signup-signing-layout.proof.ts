@@ -179,16 +179,19 @@ assert(
   "shared_name_normalizer_or_account_type_signer_contract_failed",
 );
 assert(
-  summarySource.includes("signing-primary-action-boundary") &&
+    summarySource.includes("signing-primary-action-boundary") &&
+    summarySource.includes("Ondertekenen en indienen") &&
+    summarySource.includes("Ondertekening bevestigen") &&
+    summarySource.includes("disabled={!signingStartReadiness.ready") &&
+    summarySource.includes("{readinessMessage}") &&
+    !summarySource.includes("VITE_SIGNING_LOCAL_CANDIDATES") &&
     customerSources.every((value) =>
-      !value.includes("Ondertekenen en indienen") &&
-      !value.includes("disabled") &&
       !value.includes("OTP") &&
       !value.includes("Signing-readiness") &&
       !value.includes("style={{") &&
       !/\.css["']/.test(value)
     ),
-  "dead_primary_action_or_forbidden_signing_ui_present",
+  "primary_action_or_forbidden_signing_ui_invalid",
 );
 
 for (
@@ -202,11 +205,11 @@ for (
     "app/src/features/signup/signing/signupSigningComposition.ts":
       "6e11a2360071bd02236d6de77f693cdb7097b394b0886819103f1deaf13326dd",
     "app/src/features/signup/signing/legalDocumentRegistry.ts":
-      "966fd145c58d938039b3c0f728600879ebc13a1d23c9afa29650573b4cb21916",
+      "6da68da17a7df18c6af4da23228342af51a2653f900f2738dedaf02d79e97748",
     "app/src/features/signup/signing/mandateDocumentModel.ts":
-      "6c85d917ca0c5904530dd7b62fed2d28fc21a3c2708ef1d3b867889d0b454071",
+      "877168ae26d08913c1770797045e0ea9346d0e3c892a1bed9f7a14030fee6a6f",
     "app/src/features/signup/signing/signingIntent.ts":
-      "deed0253c9e6ddb554cd6f6d2d95d7a171615cecfbc1abcaf4e449fd1524b7cb",
+      "77e4f523f5eee7c7febb0feb6efbc3ea2dd2a39c046a90871ec3ea52cd421af1",
     "app/src/features/signup/signing/legalBundleDocument.ts":
       "f73a1bb26b175f768d0c27e97d6467c2e633bd6c2538753b56b589b6d9676813",
     "app/src/features/invoice-analysis/invoicePdfParserAdapter.ts":

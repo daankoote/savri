@@ -2,7 +2,10 @@
 // Refuses non-local targets and prints only case labels plus the exact marker.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
-import { downloadSignupObject } from "../../supabase/functions/_shared/signup_quarantine.ts";
+import {
+  downloadSignupObject,
+} from "../../supabase/functions/_shared/signup_quarantine.ts";
+import { isLocalSupabaseRuntime } from "../../supabase/functions/_shared/local_supabase_runtime.ts";
 
 type LocalConfig = { url: string; anonKey: string; serviceRoleKey: string };
 type Json = Record<string, unknown>;
@@ -58,6 +61,21 @@ async function run(id: string, fn: () => Promise<void>): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  await run("Q00_local_capability_runtime_boundary", async () => {
+    assert(
+      isLocalSupabaseRuntime("http://127.0.0.1:54321") &&
+        isLocalSupabaseRuntime("http://kong:8000"),
+      "local_runtime_not_recognized",
+    );
+    assert(
+      !isLocalSupabaseRuntime("http://kong:9000") &&
+        !isLocalSupabaseRuntime("https://kong:8000") &&
+        !isLocalSupabaseRuntime("http://kong:8000/not-the-runtime") &&
+        !isLocalSupabaseRuntime("https://example.supabase.co"),
+      "non_local_runtime_accepted",
+    );
+  });
+
   const cfg = await localConfig();
   const service = createClient(cfg.url, cfg.serviceRoleKey, { auth: { persistSession: false } });
   const anon = createClient(cfg.url, cfg.anonKey, { auth: { persistSession: false } });

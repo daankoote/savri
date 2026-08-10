@@ -662,6 +662,29 @@ claim is made.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+## Signed receipt-09B2C customer boundary
+
+After successful server finalization, the signup surface shows
+`Je dossier is ondertekend en ingediend.` plus the safe public reference. A
+same-tab refresh uses the existing scoped intake browser session to read a
+minimal server status projection. Only a server-confirmed `finalized` and
+`locked` response renders the same locked confirmation instead of an empty
+signup flow. Loading and temporary errors remain fail-closed and offer only a
+retry; status hydration creates no intake and performs no upload or signing
+mutation.
+
+The receipt contains no draft, account or document data, capability, internal
+identifier, OTP/challenge, e-mail/name/address/EAN, legal hash or snapshot. It
+is neither dashboard state nor authorization and cannot start or mutate an
+intake. Server `pending_verification` plus the immutable signing records remain
+authoritative. The safe reference alone is never a lookup credential. A new
+annual/dossier signup remains a later account/dashboard flow; this
+confirmation has no general reset action.
+
+Production legal and OTP gates remain closed.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## Entity, formation, year and withdrawal-09B2A2 customer boundary
 
 P-01 and T-01 are approved product/legal direction with entity details pending.

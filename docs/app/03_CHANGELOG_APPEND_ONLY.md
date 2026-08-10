@@ -1437,3 +1437,28 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 - Added local runtime marker `signup-quarantine-runtime-09b1-proof-ok`. Signing remains 09B2; verified promotion/dashboard projection remains 09C. No remote action, deploy or production proof occurred.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-08-06 — PILOT-SIGNUP-SIGNED-RECEIPT-09B2C
+
+- Proved the existing browser finalization through customer-safe reference
+  `SIG-5B457BDED316`: one `pending_verification` intake, consumed challenge and
+  management capability, three legal acceptances, one mandate, one signature
+  evidence record and one immutable canonical snapshot.
+- Added a schema-validated `sessionStorage` presentation receipt containing
+  only its schema version, safe public reference and
+  `pending_verification`. It is not core truth and grants no authority.
+- Added a service-role-only status RPC behind the existing finalize endpoint.
+  Same-tab refresh reuses existing scoped intake ownership; only the server
+  may return `finalized`, `locked` and the same safe reference. There is no
+  public safe-reference lookup.
+- Loading/error recovery stays read-only with retry and never falls back to an
+  editable intake. Finalized file rows now have a database lock in addition to
+  the existing upload/remove/confirm/challenge/finalize route guards.
+- Targeted runtime, receipt, journey and read-only SQL proof cover atomic
+  records, idempotent replay, challenge consumption, mutation rejection,
+  server-authoritative hydration and secret-free output.
+- Production remains fail-closed while legal documents are not CURRENT and a
+  production OTP transport is not configured. No remote or deploy action was
+  performed.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

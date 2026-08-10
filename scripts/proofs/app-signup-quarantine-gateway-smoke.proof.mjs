@@ -146,6 +146,21 @@ async function main() {
     typeof firstBody.management_capability === "string",
     "valid_start_missing_capability",
   );
+  const allowedStartFields = new Set([
+    "ok",
+    "mode",
+    "request_id",
+    "intake_reference",
+    "intake_expires_at",
+    "capability_expires_at",
+    "replayed",
+    "management_capability",
+  ]);
+  assert(
+    Object.keys(firstBody).every((field) => allowedStartFields.has(field)) &&
+      !JSON.stringify(firstBody).includes(payload.email),
+    "valid_start_response_not_customer_safe",
+  );
   console.log("Q03 valid gateway start returned 200: PASS");
 
   const replay = await request(payload);
@@ -173,11 +188,58 @@ async function main() {
   );
   console.log("Q05 same key with different payload returned conflict: PASS");
 
+  const uploadEndpoint = `${config.url}/functions/v1/api-app-signup-upload-url`;
+  const uploadPayload = {
+    operation: "issue",
+    intake_reference: firstBody.intake_reference,
+    management_capability: firstBody.management_capability,
+    client_slot_id: "09b2c-r1-gateway-slot",
+    document_type: "energy_bill_or_contract",
+    file_name: "proof.pdf",
+    mime_type: "application/pdf",
+    size_bytes: 16,
+    client_sha256: "a".repeat(64),
+  };
+  const uploadRequest = (body, label) =>
+    fetch(uploadEndpoint, {
+      method: "POST",
+      headers: {
+        ...authHeaders,
+        "idempotency-key": `09b2c-r1-${label}-${crypto.randomUUID()}`,
+      },
+      body: JSON.stringify(body),
+    });
+  const invalidCapability = await uploadRequest({
+    ...uploadPayload,
+    management_capability: "invalid-proof-capability",
+  }, "invalid-capability");
+  const invalidCapabilityBody = await responseJson(invalidCapability);
+  assert(
+    invalidCapability.status === 403 &&
+      invalidCapabilityBody.code === "upload_not_available",
+    `invalid_capability_not_safe:${invalidCapability.status}`,
+  );
+  console.log("Q06 invalid existing capability returned safe 403: PASS");
+
+  const upload = await uploadRequest(uploadPayload, "valid-upload");
+  const uploadBody = await responseJson(upload);
+  assert(
+    upload.status === 201 && uploadBody.ok === true &&
+      typeof uploadBody.file_reference === "string" &&
+      typeof uploadBody.quarantine_upload_capability === "string",
+    `upload_url_after_start_failed:${upload.status}`,
+  );
+  assert(
+    !JSON.stringify(uploadBody).includes(payload.email),
+    "upload_response_exposed_email",
+  );
+  console.log("Q07 upload URL works after normal gateway start: PASS");
+
   const after = await entityCounts(config);
   for (const table of ENTITY_TABLES) {
     assert(after.get(table) === before.get(table), `entity_created:${table}`);
   }
-  console.log("Q06 no customer, identity, case, or dossier created: PASS");
+  console.log("Q08 no customer, identity, case, or dossier created: PASS");
   console.log(MARKER);
 }
 

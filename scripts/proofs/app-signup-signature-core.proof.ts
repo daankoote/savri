@@ -239,9 +239,9 @@ const privateIntent = createSigningIntent({
 });
 assert(
   yearOptions.join("|") === "2026|2027|2028" &&
-    MANDATE_YEAR_POLICY.policyId === "whole_calendar_years_v1" &&
-    validateMandateCalendarYears([2027, 2028]) &&
-    !validateMandateCalendarYears([2027, 2029]) &&
+    MANDATE_YEAR_POLICY.policyId === "one_whole_calendar_year_v1" &&
+    validateMandateCalendarYears([2027]) &&
+    !validateMandateCalendarYears([2027, 2028]) &&
     privateIntent.mandate?.mandatingParty.fullName === "Daan Koote" &&
     privateIntent.mandate.mandatingParty.canonicalAddresses.length === 1 &&
     privateIntent.mandate.electricityEans.length === 1 &&

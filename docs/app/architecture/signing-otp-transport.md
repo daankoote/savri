@@ -13,10 +13,12 @@ challenge, endpoint, database record, mail template, signature or finalization.
   legacy dossier sessions are not used or extended.
 - The transport is provider-independent behind `SigningOtpTransportPort`.
 - The local adapter uses the existing local Supabase mail-testing environment
-  when that environment is available and explicitly configured. The current
-  local configuration exposes Supabase's mail-testing/Inbucket boundary; lack
-  of a usable local SMTP path must fail closed and must not become console mail
-  or a fake-success OTP.
+  only when the server runtime is classified as local by the shared strict
+  Supabase-runtime helper. Loopback URLs and exact `http://kong:8000` are
+  local; arbitrary Kong-like or remote URLs are not. The current local
+  configuration exposes Supabase's mail-testing/Inbucket boundary; lack of a
+  usable local SMTP path must fail closed and must not become console mail or
+  a fake-success OTP.
 - The production adapter is selected and configured server-side. No provider,
   credential, recipient or transport secret is part of signature core,
   mandate, snapshot, frontend state or customer output.
@@ -107,11 +109,15 @@ Port rules:
 Logical name: `LocalSupabaseSigningOtpTransportAdapter`.
 
 - Enabled only in an explicitly recognized local environment.
+- Selected automatically for that local runtime when no server-side driver is
+  configured, so ordinary local function serving needs no ad-hoc shell export.
 - Uses the existing local Supabase mail-testing/SMTP boundary when reachable.
 - Delivers a dedicated app signing template; it does not invoke Supabase Auth
   account confirmation and does not change Auth state.
 - Does not invoke the legacy mail worker or write `outbound_emails`.
 - Fails closed when the local delivery boundary is absent or misconfigured.
+- A configured `local_mailpit` driver is rejected outside the strict local
+  runtime classification; production never falls back to Mailpit.
 - May expose the message only inside the local mail-testing inbox; application
   logs and proof output remain free of recipient and OTP.
 

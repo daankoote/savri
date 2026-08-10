@@ -475,6 +475,31 @@ Local proof is not production proof. Remote migration/function deploy, productio
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+## PILOT-SIGNUP-SIGNED-RECEIPT-09B2C checkpoint
+
+CURRENT PROVEN — LOCAL SERVER RECORDS + SERVER-AUTHORITATIVE RECOVERY.
+
+- [x] Server finalization remains core truth; the proved intake is locked in
+      `pending_verification` with consumed challenge/capability and exactly one
+      immutable signing evidence set.
+- [x] Same-tab refresh reuses the existing scoped intake session and the
+      service-role-only signing status RPC. Only the server establishes
+      `finalized`/`locked` and returns the same safe reference; safe-reference-
+      only lookup does not exist.
+- [x] The versioned `sessionStorage` receipt remains optional presentation
+      cache only. No capability, PII, internal ID, draft, document data or hash
+      is cached in it, and it authorizes no mutation.
+- [x] Loading and temporary errors fail closed without an editable fallback;
+      corrupt/unknown receipt schemas are ignored. There is intentionally no
+      `Nieuwe aanmelding` action.
+- [x] Finalized upload/replace/remove/confirm, intake update, challenge and
+      second-finalization paths are server-rejected; a database trigger also
+      locks finalized intake-file rows.
+- [ ] BLOCKED: CURRENT production legal records, configured production OTP
+      delivery, remote apply/deploy and production/browser acceptance.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## PILOT-SIGNUP-UNIFIED-PRESENTATION-08 checkpoint
 
 SOURCE IMPLEMENTED — LOCAL FRONTEND PROOF ONLY.

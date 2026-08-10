@@ -11,7 +11,11 @@ import { AppHeader } from "../../shared/components/AppHeader";
 import { parseInvoicePdfInput } from "../invoice-analysis/invoicePdfParserAdapter";
 import { DocumentFirstCheckMatrix } from "./DocumentFirstCheckMatrix";
 import { DocumentFirstDocumentsStep } from "./DocumentFirstDocumentsStep";
-import { DocumentFirstSigningSummary } from "./DocumentFirstSigningSummary";
+import {
+  createSigningCustomerState,
+  DocumentFirstSigningSummary,
+  type SigningCustomerState,
+} from "./DocumentFirstSigningSummary";
 import { DocumentFirstSignupFlow } from "./DocumentFirstSignupFlow";
 import {
   createDocumentFirstSignupDraftFromLegacy,
@@ -38,8 +42,18 @@ import {
   transitionSignupAccountType,
 } from "./signupAccountTypeTransition";
 import { transitionSignupStep } from "./signupStepTransition";
+import {
+  clearSignupSubmissionReceipt,
+  readSignupSubmissionReceipt,
+  type SignupSubmissionReceipt,
+  writeSignupSubmissionReceipt,
+} from "./signupSubmissionReceiptStore";
 import type { AccountDocumentDraft, PersonalInfoDraft } from "./signupTypes";
-import { clearSignupIntakeSession } from "./signupIntakeCapabilityStore";
+import {
+  clearSignupIntakeSession,
+  readSignupIntakeSession,
+} from "./signupIntakeCapabilityStore";
+import { readSignupSigningStatus } from "./signupSigningClient";
 import {
   removeSignupDocument,
   uploadSignupDocument,
@@ -65,13 +79,30 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
     "particulier",
     createFreshDocumentFirstSignupDraft,
   );
+  const [signingCustomerState, setSigningCustomerState] = useState<
+    SigningCustomerState
+  >(() => createSigningCustomerState(draft.accountBasis.accountType));
   const [activeStep, setActiveStep] = useState<DocumentFirstStepId>("account");
+  const [submissionReceipt, setSubmissionReceipt] = useState<
+    SignupSubmissionReceipt | null
+  >(null);
+  const [signupLocked, setSignupLocked] = useState(false);
+  const [recoveryStatus, setRecoveryStatus] = useState<
+    "loading" | "ready" | "error"
+  >(() =>
+    readSignupIntakeSession() || readSignupSubmissionReceipt()
+      ? "loading"
+      : "ready"
+  );
+  const [recoveryMessage, setRecoveryMessage] = useState("");
   const [activeLocationId, setActiveLocationId] = useState(
     draft.locationOrder[0],
   );
   const draftGenerationRef = useRef(0);
   const organizationAttemptsRef = useRef(0);
   const organizationAbortRef = useRef<AbortController | null>(null);
+  const recoveryBootstrapStartedRef = useRef(false);
+  const signingCustomerDraftRef = useRef(draft);
   const legacyDraft = useMemo(() => selectMapperCompatibleDraft(draft), [
     draft,
   ]);
@@ -90,11 +121,71 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
     [],
   );
 
+  const hydrateSigningState = useCallback(async () => {
+    const session = readSignupIntakeSession();
+    const cachedReceipt = readSignupSubmissionReceipt();
+    if (!session) {
+      if (cachedReceipt) {
+        setSignupLocked(true);
+        setRecoveryMessage("Deze aanmelding kan niet veilig worden hersteld.");
+        setRecoveryStatus("error");
+      } else {
+        setSignupLocked(false);
+        setRecoveryStatus("ready");
+      }
+      return;
+    }
+
+    setSignupLocked(true);
+    setRecoveryMessage("");
+    setRecoveryStatus("loading");
+    const result = await readSignupSigningStatus();
+    if (!result.ok) {
+      setRecoveryMessage(result.message);
+      setRecoveryStatus("error");
+      return;
+    }
+    if (result.value.signingState === "collecting") {
+      clearSignupSubmissionReceipt();
+      setSubmissionReceipt(null);
+      setSignupLocked(false);
+      setRecoveryStatus("ready");
+      return;
+    }
+
+    const receipt = writeSignupSubmissionReceipt({
+      safeReference: result.value.safeReference,
+      status: result.value.intakeStatus,
+    });
+    if (!receipt) {
+      setRecoveryMessage("Deze aanmelding kan niet veilig worden hersteld.");
+      setRecoveryStatus("error");
+      return;
+    }
+    setSubmissionReceipt(receipt);
+    setSignupLocked(true);
+    setRecoveryStatus("ready");
+  }, []);
+
+  useEffect(() => {
+    if (recoveryBootstrapStartedRef.current) return;
+    recoveryBootstrapStartedRef.current = true;
+    void hydrateSigningState();
+  }, [hydrateSigningState]);
+
   useEffect(() => {
     if (!draft.locationOrder.includes(activeLocationId)) {
       setActiveLocationId(draft.locationOrder[0]);
     }
   }, [activeLocationId, draft.locationOrder]);
+
+  useEffect(() => {
+    if (signingCustomerDraftRef.current === draft) return;
+    signingCustomerDraftRef.current = draft;
+    setSigningCustomerState(
+      createSigningCustomerState(draft.accountBasis.accountType),
+    );
+  }, [draft]);
 
   useEffect(() => {
     if (stepIndex(activeStep) > maximumReachableStepIndex) {
@@ -182,8 +273,10 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
       file: document.file,
       signal: controller.signal,
     });
-    if (organizationAttemptsRef.current !== attempt ||
-      !isDraftGenerationCurrent(generation) || (!upload.ok && upload.aborted)) return;
+    if (
+      organizationAttemptsRef.current !== attempt ||
+      !isDraftGenerationCurrent(generation) || (!upload.ok && upload.aborted)
+    ) return;
     dispatch({
       type: "update_organization_document",
       document: upload.ok
@@ -215,7 +308,10 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
       }
       return;
     }
-    if (next.email.trim().toLowerCase() !== draft.accountBasis.email.trim().toLowerCase()) {
+    if (
+      next.email.trim().toLowerCase() !==
+        draft.accountBasis.email.trim().toLowerCase()
+    ) {
       draftGenerationRef.current += 1;
       organizationAttemptsRef.current += 1;
       organizationAbortRef.current?.abort();
@@ -469,7 +565,16 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
           <p className="eyebrow">Stap 3</p>
           <h2 id="document-first-signing-title">Ondertekenen</h2>
         </div>
-        <DocumentFirstSigningSummary draft={draft} />
+        <DocumentFirstSigningSummary
+          customerState={signingCustomerState}
+          draft={draft}
+          intakeSessionAvailable={Boolean(readSignupIntakeSession())}
+          onCustomerStateChange={setSigningCustomerState}
+          onFinalized={(receipt) => {
+            setSignupLocked(true);
+            setSubmissionReceipt(receipt);
+          }}
+        />
       </section>
     );
 
@@ -479,23 +584,98 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
     ? completeness.documents
     : false;
 
+  if (recoveryStatus === "loading" || recoveryStatus === "error") {
+    return (
+      <div className="site-frame">
+        <AppHeader currentPath={currentPath} navigate={navigate} />
+        <main className="page-shell">
+          <section className="section">
+            <div className="container">
+              <div
+                className="review-panel"
+                role={recoveryStatus === "loading" ? "status" : "alert"}
+              >
+                <h2>
+                  {recoveryStatus === "loading"
+                    ? "Aanmelding laden"
+                    : "Aanmelding niet beschikbaar"}
+                </h2>
+                <p>
+                  {recoveryStatus === "loading"
+                    ? "Je aanmelding wordt veilig opgehaald."
+                    : recoveryMessage}
+                </p>
+                {recoveryStatus === "error"
+                  ? (
+                    <div className="section-actions">
+                      <button
+                        className="button button-secondary"
+                        onClick={() => void hydrateSigningState()}
+                        type="button"
+                      >
+                        Opnieuw proberen
+                      </button>
+                    </div>
+                  )
+                  : null}
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+    );
+  }
+
+  if (submissionReceipt) {
+    return (
+      <div className="site-frame">
+        <AppHeader currentPath={currentPath} navigate={navigate} />
+        <main className="page-shell">
+          <div className="container">
+            <section
+              aria-labelledby="signup-submission-receipt-title"
+              className="signup-section"
+            >
+              <article className="signing-document">
+                <header className="signing-document__header">
+                  <h2 id="signup-submission-receipt-title">
+                    Indieningsbevestiging
+                  </h2>
+                  <p className="status-message status-message-success">
+                    Je dossier is ondertekend en ingediend.
+                  </p>
+                  <p>
+                    Referentie:{" "}
+                    <strong>{submissionReceipt.safeReference}</strong>
+                  </p>
+                </header>
+              </article>
+            </section>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="site-frame">
       <AppHeader currentPath={currentPath} navigate={navigate} />
       <main className="page-shell">
         <div className="container">
-          <DocumentFirstSignupFlow
-            activeStep={activeStep}
-            maximumReachableStepIndex={maximumReachableStepIndex}
-            onStepChange={changeActiveStep}
-          >
-            {activeStepContent}
-            <SignupFlowNavigation
+          <fieldset className="signup-lock-boundary" disabled={signupLocked}>
+            <DocumentFirstSignupFlow
               activeStep={activeStep}
-              canContinue={canContinue}
+              maximumReachableStepIndex={maximumReachableStepIndex}
               onStepChange={changeActiveStep}
-            />
-          </DocumentFirstSignupFlow>
+            >
+              {activeStepContent}
+              <SignupFlowNavigation
+                activeStep={activeStep}
+                canContinue={canContinue}
+                onStepChange={changeActiveStep}
+              />
+            </DocumentFirstSignupFlow>
+          </fieldset>
         </div>
       </main>
     </div>

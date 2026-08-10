@@ -72,10 +72,14 @@ Use this bounded recovery sequence:
    volumes, Storage objects, or testdata.
 4. Confirm that `supabase/functions/.env.local` is ignored by Git and contains
    `APP_SIGNUP_CAPABILITY_SECRET`. Never print its value.
-5. Start only the local function runtime:
+   The embedded CLI Edge container may use its strictly bounded local fallback;
+   production still requires the dedicated secret.
+5. Start the ordinary local function runtime. The strict shared runtime helper
+   recognizes loopback and exact `http://kong:8000`; no ad-hoc signing or
+   capability export is required:
 
    ```bash
-   supabase functions serve --env-file supabase/functions/.env.local
+   supabase functions serve
    ```
 
 6. In a separate sequential command, run the local gateway smoke:
@@ -90,6 +94,29 @@ incomplete authenticated POST returns a safe function `4xx`, valid start and
 replay return `200`, conflicting idempotent input returns `409`, and no
 customer, identity, case, or dossier is created. Do not report recovery while
 Kong still logs Edge Runtime name-resolution errors.
+
+## Local Signing Challenge 503
+
+A safe `legal_bundle_not_current` or `service_unavailable` response from
+`api-app-signup-signing-challenge` means the function was reached and closed
+one of its signing composition gates. In the embedded local runtime,
+`SUPABASE_URL=http://kong:8000` is the authoritative local classification;
+ordinary local serving selects Mailpit without `SIGNING_*` shell exports.
+Production and other non-local URLs still require an explicitly configured
+provider and verifier secret and never fall back to Mailpit.
+
+Run the focused local gateway proof with its explicit opt-in:
+
+```bash
+ENVAL_ALLOW_LOCAL_SIGNING_GATEWAY_PROOF=YES \
+  deno run --allow-env --allow-run --allow-net \
+  scripts/proofs/app-signup-signing-gateway.proof.ts
+```
+
+The proof never finalizes. It checks the actual gateway, response redaction,
+Mailpit delivery metadata, intake/capability scope, replay/rate limiting and
+absence of customer, case or dossier promotion without printing an OTP,
+capability or recipient.
 
 ## Remote PostgREST Health
 
@@ -179,3 +206,26 @@ Prefer narrow app table inspection:
 - `app_idempotency_keys`
 
 Do not mix app proof with legacy `dossier_*` tables unless the task is explicitly a migration/legacy comparison.
+
+## Local Signed Receipt Proof
+
+Treat the submission receipt as presentation cache only. Inspect a finalization
+by safe `SIG-...` prefix and output only status, timestamps-present flags and
+counts; never output e-mail, typed name, OTP, capability, document/legal
+content, internal IDs, full snapshot or full hash.
+
+Run the local signing proof with its explicit destructive-local opt-in, then:
+
+```bash
+deno run --allow-read scripts/proofs/app-signup-signed-receipt.proof.ts
+docker exec -i supabase_db_enval psql -v ON_ERROR_STOP=1 -U postgres -d postgres \
+  < /tmp/enval-09b2c-finalization-proof.sql
+```
+
+Green receipt proof demonstrates exact safe shape, server-authoritative
+same-tab hydration, loading/error fail-closed rendering, corrupt-schema
+rejection and absence of receipt mutation authority. The SQL proof runs in a
+read-only transaction, targets the newest local finalized test intake and hard
+fails on record cardinality, legal/mandate/challenge/audit, safe-reference,
+ownership-status or mutation-lock drift. Neither proof is remote, production,
+legal-bundle or production-OTP proof.

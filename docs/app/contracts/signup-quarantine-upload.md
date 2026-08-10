@@ -30,7 +30,7 @@ File history has no `service_role` DELETE grant. All three intake tables retain 
 
 `quarantine_upload` is file-scoped, short-lived, and one-time. Confirm or reject consumes it; expiry invalidates it. Only lowercase SHA-256 values are stored in the database. Raw capability values are absent from URLs, audit metadata, logs, customer errors, and durable frontend results. Idempotent replay is one logical issuance and reconstructs the same raw capability server-side without storing it.
 
-Production must configure a dedicated `APP_SIGNUP_CAPABILITY_SECRET`. The service-role-key derivation fallback is accepted only when `SUPABASE_URL` resolves to localhost for local proof; non-local runtime fails closed without the dedicated secret.
+Production must configure a dedicated `APP_SIGNUP_CAPABILITY_SECRET`. The service-role-key derivation fallback is accepted only for a loopback URL or the exact Supabase CLI Edge-container URL `http://kong:8000`; non-local runtime fails closed without the dedicated secret. Missing capability configuration returns customer-safe service-unavailable JSON and never bypasses capability validation.
 
 ## Endpoints And RPCs
 
