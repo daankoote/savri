@@ -1,6 +1,6 @@
 # Signup Intake Architecture
 
-Status: current signup intake architecture. Frontend draft flow, local validation, payload mapper, controlled submit wiring, and `api-app-signup-submit` write v3 are implemented and locally proven. Authenticated dashboard document upload is implemented separately; public signup upload, import parsing, and production deployment remain out of scope.
+Status: MIXED. The active document-first journey, pre-auth quarantine, `typed_name_otp_v1` finalization, locked receipt and server-authoritative recovery are CURRENT PROVEN locally. The older direct `api-app-signup-submit` path remains proven source but is not the active signed-intake owner. Atomic case promotion, Auth binding/cutover and production deployment remain TARGET / NOT IMPLEMENTED.
 
 ## Scope
 
@@ -11,13 +11,13 @@ The new `/aanmelden` page is a single-page intake with these customer-facing sec
 3. Documentatie uploaden
 4. Toestemming en handtekening
 
-No backend writes happen while the customer edits the draft. The final `Start dossier` action now maps the draft and calls the locally proven `api-app-signup-submit` write v3 endpoint. Document upload, storage mutation, dashboard bootstrap, and production deployment remain separate later tasks.
+Draft edits remain browser-local. Required PDFs use the dedicated private pre-auth quarantine path; successful Step 3 `typed_name_otp_v1` finalization atomically stores the signed snapshot, legal acceptances, mandate and signature evidence and locks the intake. It does not create a customer, Auth session, dossier or case.
 
-The shared document upload module exists under `app/src/features/documents/`, but `/aanmelden` does not use it. The signup page retains local PDF preview and file selection only.
+The authenticated shared document module remains separate. `/aanmelden` uses the signup-quarantine transport and keeps parser observations separate from declared/signed facts.
 
-Pre-auth signup must not call authenticated upload endpoints. The first real upload UI is the authenticated dashboard document module. Parser/precheck reuse inside `DocumentUploadCard` remains OPEN. Any later public/signup upload would need an explicit Auth and journey decision, not a bypass around the app auth boundary.
+Pre-auth signup must not call authenticated upload endpoints. Quarantine confirmation proves only server-observed bytes/MIME/size/hash and never evidence acceptance. Parser/precheck output remains observed/derived and cannot silently overwrite declared state.
 
-Target intake quarantine and email-verification promotion are documented in `docs/app/contracts/intake-verification-promotion.md` as TARGET / NOT IMPLEMENTED. That target replaces a second full dashboard submit with one public `Start dossier` action plus server-side promotion after email verification.
+The converged lifecycle is documented in `docs/app/contracts/intake-verification-promotion.md`. A separate email-verification promotion link is `SUPERSEDED`; the CURRENT signing OTP already proves bounded email control. Server-only atomic promotion into `app_cases`-owned durable state remains TARGET / NOT IMPLEMENTED.
 
 ## Old Flow Inventory
 
@@ -506,11 +506,11 @@ Future extension points:
 - external check/API if discovered later
 - confidence labels rather than binary hidden decisions
 
-## Final Submit Model
+## Historical Direct Submit Model
 
-Final submit foundation is implemented locally through `api-app-signup-submit` write v3.
+The direct `api-app-signup-submit` write-v3/v5 family remains locally proven source and supplies reusable transaction/idempotency patterns. It is not the active signed-intake lifecycle and must not become a parallel case owner.
 
-Current behavior:
+Historical proven behavior:
 
 - User completes local draft.
 - Client validates complete draft.
@@ -519,6 +519,8 @@ Current behavior:
 - Frontend calls the `api-app-signup-submit` write v3 endpoint.
 - Backend creates or matches customer/identity, creates the dossier shell, locations, chargers, document slots, legal acceptances, idempotency, intake audit, and app audit rows.
 - Frontend shows loading, success, or safe error state on the same page.
+
+It created the dossier-shaped records listed above without the later signed-intake lifecycle. For 09C1, `app_cases` is the target owner and no new `app_customer_dossiers` row may be created merely to reuse old foreign keys.
 
 Still open:
 
@@ -530,19 +532,20 @@ Still open:
 
 Final submit must be idempotent and audit-worthy. It must not depend on hidden browser-only state.
 
-## Target Verification Promotion Model
+## Target Post-Signing Promotion Model
 
-Status: TARGET / NOT IMPLEMENTED.
+Status: TARGET / NOT IMPLEMENTED. Exact contract: `docs/app/contracts/intake-verification-promotion.md`.
 
 Future public intake should move toward:
 
-1. Customer completes public form, local parser/prechecks, documents, and consents.
-2. Customer clicks `Start dossier` as the one normal full submission.
-3. Backend creates a pre-dossier intake in `pending_verification` and stores explicit confirmation/legal-version acceptance.
-4. Documents use a separate private pre-auth quarantine lane, not authenticated dashboard upload endpoints.
-5. Email verification validates identity/email control and triggers atomic server-side promotion.
-6. Complete intake promotes into a submitted or under-review dossier.
-7. Correctable server-side issues promote into `needs_customer_action` with only affected sections editable.
+1. Customer completes public form, parser-assisted review, quarantine documents and legal/signing actions.
+2. `typed_name_otp_v1` proves signing intent and control of the used email channel and atomically finalizes the intake.
+3. CURRENT status `pending_verification` means finalized/locked only; 09C1 renames it to `submitted_for_review` to avoid TKV ambiguity.
+4. A server-only caller prepares durable private file copies and invokes one idempotent promotion transaction.
+5. Promotion safely creates/reuses customer, unbound login identity and parties, creates one `app_cases` root, asserted case roles, declared location observations/links, durable evidence versions and internal-review state.
+6. Promotion never creates an `app_customer_dossiers` core, authority truth, accepted EAN/location/MID/evidence or external-verifier state.
+7. Supabase Auth binding and dashboard access happen after promotion through the existing Auth product route, not through signing OTP.
+8. Later correctable issues expose only targeted server-authorized correction actions.
 
 Parser/precheck may warn, block locally, or prefill. It may not approve evidence, lock lifecycle state, or replace backend validation.
 

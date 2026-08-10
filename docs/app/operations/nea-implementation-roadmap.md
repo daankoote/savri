@@ -6,7 +6,9 @@ Authority: operational tracker only; it does not override the official TKV sourc
 
 Architecture decision: TARGET — approved by Daan on 2026-07-22; not CURRENT PROVEN.
 
-Signup lane note: PILOT-SIGNUP-QUARANTINE-UPLOAD-09B1 is CURRENT PROVEN — LOCAL ONLY for collecting intake, capability-scoped private upload, server byte/hash confirmation, immutable replacement and document-first gating. It is transport proof, not regulatory/evidence acceptance. Signing remains 09B2 and verified promotion/dashboard projection remains 09C. Remote, deploy and production remain open.
+Signup lane note: PILOT-SIGNUP-QUARANTINE-UPLOAD-09B1 is CURRENT PROVEN — LOCAL ONLY for collecting intake, capability-scoped private upload, server byte/hash confirmation, immutable replacement and document-first gating. It is transport proof, not regulatory/evidence acceptance. 09B2 signing finalization is now CURRENT PROVEN locally within its explicit legal/runtime gates; internal promotion/dashboard projection remains 09C. Remote, deploy and production remain open.
+
+Signup convergence note: 09B2 signing finalization, lock, receipt and status recovery are CURRENT PROVEN locally. `typed_name_otp_v1` already supplies bounded email control, so the former separate email-verification promotion trigger is `SUPERSEDED`. 09C1 is the next server-only case-owned promotion target; it is not implemented and is never external inboekverificatie.
 
 Next bounded gates: WP3M-D01 through WP3M-D18 are APPROVED TARGET. WP3N
 commit `6705fa3baf046510d70b8502da6058009b30b2f3` now proves exactly four
@@ -942,7 +944,8 @@ exists.
 
 Next bounded phase 09B must approve/version legal copy and build the server-side
 challenge, canonical snapshot, atomic finalization and audit-evidence contract.
-09C remains the later verified promotion/dashboard phase. Foreign
+09C remains the later internal durable promotion/dashboard phase, distinct
+from external inboekverificatie. Foreign
 trade-register documents remain post-MVP.
 
 Evidence: marker `signup-signature-core-09a-proof-ok` and
@@ -1109,5 +1112,41 @@ effective dates, hashes, one-year model reconciliation, OTP, mandate/signature
 evidence, authority review, withdrawal, settlement, finalization, browser,
 database, remote, deploy and production work remain NOT IMPLEMENTED or outside
 this batch.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+### 09C0 Post-Signing Lifecycle Convergence
+
+DOCS / ARCHITECTURE COMPLETE — 09C1 IMPLEMENTATION NOT STARTED.
+
+- CURRENT flow is mapped from intake start through quarantine, challenge,
+  OTP/email control, atomic signing finalization, locked refresh recovery and
+  the waiting intake state.
+- Separate one-time email-verification as promotion trigger is `SUPERSEDED`;
+  later Supabase Auth email is login/account access only.
+- CURRENT `pending_verification` is API/database-internal finalized/locked
+  state with no verifier meaning. 09C1 must rename it exactly to
+  `submitted_for_review`, including receipt schema and proofs.
+- 09C1 target uses `app_cases` as the sole core owner and creates no new
+  `app_customer_dossiers` row.
+- Promotion is internal server-only, atomic and idempotent. It safely
+  creates/reuses customer/identity/party/profile roots, creates one case,
+  asserted roles, internal lifecycle state, declared location observations and
+  case links, and durable private evidence versions linked to immutable signing
+  evidence.
+- Particulier gets no fictitious authority record. Zakelijk/VvE stays asserted
+  with `required_not_completed` authority review.
+- Declared/parser EAN, charger, MID and document facts remain source material;
+  promotion creates no accepted connection, `aangeslotene`, location, asset,
+  conformity or evidence-decision truth.
+- Signing OTP creates no Supabase Auth session. Auth bootstrap/dashboard must
+  later bind and reuse the promoted customer/party/case.
+- External verifier risk analysis, sampling, location visits, mandate check,
+  findings, statement, five-year verification dossier and REV result remain a
+  separate external boundary.
+
+Exact implementation and proof scope is in
+`contracts/intake-verification-promotion.md#15-exact-09c1-implementation-scope`.
+No runtime, schema, frontend, remote or deployment work follows from 09C0.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

@@ -315,3 +315,23 @@ No NEa requirement is marked complete solely by atomic signup mechanics or
 declaration capture.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 09C0 post-signing promotion traceability checkpoint
+
+| boundary | source / requirements | CURRENT input | 09C1 target control | explicit non-claim |
+|---|---|---|---|---|
+| signing and email control | internal signing contract; NEA-MAND-001-005 support | `typed_name_otp_v1`, consumed delivered challenge, immutable snapshot/acceptances/mandate/signature evidence | use successful finalization as email-control input; no second verification link | no legal identity, authority, eligibility or external verification |
+| mandate/year | TKV 3.1.5; NEA-MAND-001-005 | exact signed mandate, issue time, permissions, EAN/location scope and one calendar year | link exact immutable mandate/snapshot to promoted case | verifier mandate check and Zakelijk/VvE authority remain later |
+| case/party | TKV 3.0.4-3.0.5, 3.1.3-3.1.5; NEA-ORG/AUD/RET | locally proven party/profile, `app_cases` and role foundations | safe reuse, one case, profile-pinned asserted roles and no `app_customer_dossiers` creation | case/account/contact never proves authority or `aangeslotene` |
+| EAN/location | TKV 3.1.4-3.1.5; NEA-EAN-001-004; NEA-VER-004 | signed declared facts; current location roots/observations/case links | retain declared EAN; create customer-declared location observation and administrative case link | no accepted EAN/allocation point, location version, `aangeslotene` or visit result |
+| evidence/MID | TKV 3.0.4, 3.1.4-3.1.5; NEA-AUD, NEA-MID, NEA-RET | confirmed quarantine bytes/hash plus signed facts | server-only durable private file/version mapping with exact provenance | upload, parser and durable version are not evidence acceptance or conformity |
+| retention/reconstruction | TKV 3.0.5; NEA-RET-001/003 | immutable signing/legal/file/audit records | stable case/source/version links and category/year anchors | five-year minimum applies to verification-related information, not all customer data indiscriminately |
+| internal review | ENVAL internal control; NEA-AUD/COR | no promoted-case workflow CURRENT | `submitted_for_review`, internal lifecycle history and targeted correction | not a verification statement or professional verifier judgment |
+| external verifier | TKV 3.1-3.3; NEA-VER-003-017 | no external-verifier process CURRENT | later pack can reference exact case, mandate, location, evidence and snapshot versions | risk, sampling, visits, findings, statement and REV management remain external |
+
+09C0 changes no requirement status to fully implemented. The separate
+email-verification promotion trigger is `SUPERSEDED`; 09C1 must rename current
+technical `pending_verification` to `submitted_for_review` without changing its
+meaning into external verification.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

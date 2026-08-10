@@ -285,6 +285,26 @@ remains open.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+## 09C0 Signed-Intake Promotion Boundary
+
+TARGET FOR 09C1 — NOT CONNECTION/CLAIM DDL AUTHORIZATION.
+
+Atomic signed-intake promotion preserves the exact signed declared EAN,
+location scope, mandate permissions and provenance for later review. It may
+create a case-scoped declaration source only under the exact 09C1 transaction;
+it may not write the old dossier-owned `app_connections`,
+`app_connection_periods`, `app_connection_ownership_periods` or
+`app_connection_declaration_sources` shapes.
+
+Promotion creates no accepted allocation-point root, accepted EAN,
+`connection_confirmed` aangesloteneclaim, external duplicate result,
+calendar-year exclusivity decision or booking eligibility. Parser/document
+values remain observations, and the administrative case/location link creates
+none of those truths. The approved WP3C replacement/external blockers remain
+unchanged.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## PILOT-SIGNUP-PARTY-NAME-CROSSCHECK-03 Connection Document Party Boundary
 
 CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF ONLY.

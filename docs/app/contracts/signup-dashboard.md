@@ -16,9 +16,9 @@ This document defines:
 
 The old `dossier.html` wizard and current `api-dossier-*` endpoints are source material only. They must not be wired directly into the new app without contract redesign.
 
-Target intake quarantine, email verification, and promotion are defined separately in `docs/app/contracts/intake-verification-promotion.md` as TARGET / NOT IMPLEMENTED. That target contract supersedes any future design that would require every customer to submit the full dossier again in the dashboard.
+The active quarantine/signing boundary and target atomic promotion are defined in `docs/app/contracts/intake-verification-promotion.md`. `typed_name_otp_v1` finalization is CURRENT PROVEN locally; the former separate email-verification promotion link is `SUPERSEDED`; case-owned promotion remains TARGET / NOT IMPLEMENTED. The target still forbids a second generic full-dossier submit in the dashboard.
 
-09B1 update: the active document-first journey now uses `api-app-signup-intake-start`, `api-app-signup-upload-url`, and `api-app-signup-upload-confirm` only for a collecting pre-auth intake and private quarantine files. It does not invoke `api-app-signup-submit`, create a dossier, or bootstrap dashboard access. Actual signing remains 09B2; verified promotion and dashboard projection remain 09C.
+The active document-first journey uses `api-app-signup-intake-start`, `api-app-signup-upload-url`, and `api-app-signup-upload-confirm` for collecting/private quarantine and the 09B2 signing endpoints for immutable finalization. It does not invoke `api-app-signup-submit`, create a customer/Auth session/dossier/case, or bootstrap dashboard access. Internal durable promotion and dashboard projection remain 09C.
 
 ## Implementation Status
 
@@ -129,7 +129,8 @@ Rules:
 - Frontend prechecks, PDOK lookup, field validation, parsing, compression, and previews are UX and cost/latency aids only.
 - Backend remains source of truth for validation, normalization, authorization, document hash confirmation, audit, and lifecycle decisions.
 - All final lifecycle decisions are backend/audit based.
-- TARGET / NOT IMPLEMENTED: `Start dossier` is the one normal full customer submission. Email verification should trigger server-side promotion, not a second manual full-dossier confirmation.
+- CURRENT / LOCAL PROOF: `typed_name_otp_v1` atomically finalizes and locks the signed intake and proves bounded control of the used email channel.
+- TARGET / NOT IMPLEMENTED: server-only atomic promotion creates one `app_cases`-owned case; there is no separate verification-link trigger or second manual full-dossier confirmation.
 - TARGET / NOT IMPLEMENTED: dashboard correction flow should use `Correcties indienen` only for targeted reopened sections.
 
 ## 3. Current Frontend Payload
@@ -621,8 +622,8 @@ Unresolved before production:
 A. Intake quarantine / verification promotion contract
 
 - Implement the TARGET / NOT IMPLEMENTED contract in `docs/app/contracts/intake-verification-promotion.md` only after schema, endpoint, and proof tasks are accepted.
-- Define intake/quarantine schema, pre-auth capability, atomic email-verification promotion, immutable snapshot, and server-derived section capabilities before charger/location edit flows.
-- Keep public `/aanmelden` upload wiring OPEN.
+- Implement the exact 09C1 case-owned atomic promotion, explicit `submitted_for_review` rename, Auth binding and server-derived section capabilities before charger/location correction flows.
+- Keep production `/aanmelden` upload/signing and promotion deployment OPEN.
 - Keep parser preview/precheck as UX support only until integrated into the authenticated card.
 
 B. Account-specific document requirements
@@ -676,8 +677,10 @@ mutation.
 The receipt contains no draft, account or document data, capability, internal
 identifier, OTP/challenge, e-mail/name/address/EAN, legal hash or snapshot. It
 is neither dashboard state nor authorization and cannot start or mutate an
-intake. Server `pending_verification` plus the immutable signing records remain
-authoritative. The safe reference alone is never a lookup credential. A new
+intake. Server-finalized intake status plus the immutable signing records remain
+authoritative. CURRENT `pending_verification` means only finalized/locked and
+09C1 replaces it with `submitted_for_review`; neither means external
+inboekverificatie. The safe reference alone is never a lookup credential. A new
 annual/dossier signup remains a later account/dashboard flow; this
 confirmation has no general reset action.
 
@@ -756,7 +759,8 @@ readiness false.
 
 09A performs no signing, submit, dossier start, persistence, promotion, audit
 write, backend call or remote action. 09B owns immutable snapshot/hash, OTP and
-finalization; 09C owns verified promotion/dashboard projection.
+finalization; 09C owns internal durable promotion/dashboard projection, never
+external inboekverificatie.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 

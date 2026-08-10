@@ -161,7 +161,7 @@ No target status may combine different meanings. Each lifecycle below is provisi
 
 | lifecycle | provisional states | forbidden conflation |
 |---|---|---|
-| intake | draft_client_only -> submitted_quarantine -> email_or_identity_pending -> verification_ready -> rejected -> expired -> promoted | submitted is not verified; promoted is not accepted evidence |
+| signed intake | collecting -> submitted_for_review -> promoting -> promoted / rejected / expired | `submitted_for_review` is the 09C1 internal rename for CURRENT finalized/locked `pending_verification`; it is not external verification, and promoted is not accepted evidence |
 | promotion | queued -> validated -> blocked -> promoted_to_case -> failed_retryable -> failed_terminal | promotion does not approve NEa eligibility |
 | dossier/case | opened -> intake_review -> evidence_collection -> ops_review -> booking_candidate -> booked -> verification_pending -> settled -> closed -> paused/rejected | case status is not mandate, evidence, kWh, REV, or settlement status |
 | mandate | drafted -> signed -> active_for_calendar_year -> expiring -> withdrawn -> superseded -> expired | consent checkbox is not signed mandate |
@@ -977,5 +977,56 @@ foundation.
 Q01-Q24 prove local replay, payload conflict, genuine concurrency, full
 failure rollback, fresh apply, protected equality and cleanup. Remote,
 browser and production remain open.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 09C0 Post-Signing Lifecycle And Atomic Promotion Target
+
+TARGET CONTRACT FOR 09C1 DESIGN — NOT IMPLEMENTED.
+
+The exact contract is owned by
+`contracts/intake-verification-promotion.md`; this section is the architecture
+overlay and creates no second promotion model.
+
+CURRENT `typed_name_otp_v1` finalization proves a bounded signing act plus
+control of the used email channel. It atomically creates one immutable signing
+snapshot, three legal acceptances, one mandate and one signature-evidence row,
+consumes the challenge and management capability, locks the intake/files and
+returns a safe receipt. It creates no customer, Auth session, dossier or case.
+
+The previous separate email-verification promotion trigger is `SUPERSEDED`.
+CURRENT `pending_verification` means only finalized/locked and waiting for
+ENVAL internal handling; 09C1 must rename it to `submitted_for_review` across
+schema, RPC, client, receipt schema and proofs. Neither value is an external
+inboekverificatie status.
+
+09C1 target is one server-only, idempotent promotion boundary into
+`app_cases`-owned durable state. It safely creates/reuses customer, unbound
+login identity, parties/profiles and account relationships; creates one case,
+asserted case roles, internal lifecycle state, declared location observations
+and case-location links; links the immutable signing/mandate evidence; and
+creates case-owned durable evidence file/version metadata after server-side
+private object preparation. It must not create `app_customer_dossiers` as a
+parallel owner.
+
+Particulier acting for themself creates no representation-authority fiction.
+Zakelijk/VvE may create an organization service-recipient assertion and a
+natural-person case-contact assertion, but keeps
+`authority_review_status=required_not_completed` and creates no authority
+truth. Promotion creates no accepted EAN/`aangeslotene`, location version,
+charger/charge-point, MID/conformity, evidence decision, eligibility, booking,
+REV, verifier or settlement truth.
+
+Signing OTP is not Supabase Auth. A post-commit Auth invitation may bind the
+promoted identity later; bootstrap and dashboard must reuse the customer,
+party and case. Customer journey copy is `Ondertekend en ingediend` -> `In
+behandeling` -> optionally `Actie nodig` -> targeted correction -> `Gereed
+voor de volgende procesfase`. It must never imply NEa/verifier approval.
+
+Database promotion, audit and idempotency commit in one transaction. Durable
+storage objects may be prepared beforehand only under deterministic private
+keys that are invisible until the transaction links them; failure leaves the
+intake retryable and at most an inaccessible cleanup orphan, never partial
+customer-visible promotion.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

@@ -91,8 +91,8 @@ All listed active `app_*` tables enable RLS, deny `anon` and `authenticated`, re
 | `app_dossier_locations` | Address/location snapshot under a dossier; signup writes and dashboard reads. Unique client location per dossier; status and normalized address fields; lookup metadata. | Dossier ownership and provider metadata are embedded; address is not party residence/establishment, connection, EAN, or accepted evidence. | CURRENT PROVEN for current local location facts. | Reuse normalization, stable client ID, and address fields. WP3 decides target location migration. | REFACTOR; final disposition in WP3 |
 | `app_dossier_chargers` | Charger snapshot under dossier/location; signup writes, dashboard/documents read. Unique client charger per dossier, required MID, status/year checks. | Charger, charge point, meter/MID, and evidence are collapsed. Not party/case identity truth. | CURRENT PROVEN for current local submitted facts. | Reuse stable ID and submitted asset facts only. | REFACTOR; final disposition in WP4 |
 | `app_dossier_legal_acceptances` | Versioned terms/consent acceptances called by signup/dashboard; type/version/status checks and hashed request metadata. | `mandate_authorization` label can be mistaken for a signed mandate; no signer, authority, clauses, EAN, or calendar-year scope. | CURRENT PROVEN for current local acceptance records. | Reuse version/hash/provenance pattern for commercial/legal acceptance only. | KEEP for terms; REPLACE for mandate truth |
-| `app_signup_intakes` | Additive pre-dossier submitted payload, hash, precheck, legal versions, verification/promotion timestamps and target dossier link. Finalized facts are trigger-immutable. No runtime endpoint currently calls it. | Intended promotion still targets current dossier and stores a broad JSON payload. `client_precheck` is non-authoritative. | PROOF ONLY for local schema/proof foundation; runtime and remote state UNKNOWN. | Reuse quarantine, hash, immutable-finalization, verification-before-promotion, expiry. Promotion mapper must target party/case contracts. | REFACTOR before runtime use |
-| `app_signup_intake_files` / capabilities | Quarantine file metadata and hashed one-time capabilities with guarded transitions, expiry, and service-role-only access. No runtime caller. | Useful transport/security foundation, but not accepted evidence or authority. | PROOF ONLY; runtime and remote state UNKNOWN. | Reuse transition, hash, expiry, single-use capability patterns. | KEEP / EXTEND in later evidence batch |
+| `app_signup_intakes` | CURRENT local runtime source for collecting quarantine, immutable signed payload/hash/legal/mandate/signature set, `finalized_at`, technical `pending_verification` and locks. It creates no customer/dossier/case. | Status name is ambiguous beside formal verification; old promotion foundations target dossiers/broad JSON. `client_precheck` remains non-authoritative. | CURRENT PROVEN — LOCAL for the bounded quarantine/signing lifecycle; promotion and remote remain unproven. | Reuse quarantine, hash, immutable finalization, expiry and locks; 09C1 renames status to `submitted_for_review` and targets the party/case contract. | EXTEND for case-owned promotion |
+| `app_signup_intake_files` / capabilities | CURRENT local quarantine metadata and hashed scoped capabilities with guarded transitions, expiry, consumption and finalized mutation locks. | Transport/security foundation only; not accepted evidence, Auth or authority. | CURRENT PROVEN — LOCAL for bounded quarantine/signing callers; remote unknown. | Reuse transition, hash, expiry, single-use capability and immutable-source patterns. | KEEP / EXTEND in case-owned evidence batch |
 | `app_audit_events` / `app_intake_audit_events` | Internal and pre-dossier audit rows used by app endpoints/RPCs; actor/scope checks, request/idempotency refs, hashed request metadata. | Scope taxonomy lacks party, representation, authority, case role, and supersession; fail-open is unsafe for material authority decisions. | CURRENT PROVEN for current local technical audit primitives. | Reuse append-oriented shape and minimized metadata. | EXTEND |
 | `app_idempotency_keys` | Scoped key/payload hash/replay record used by signup, bootstrap, and connection RPCs. Unique scope/key and response-status constraints. | Generic technical primitive; cleanup/retention remains open. | CURRENT PROVEN for current local write paths. | Reuse unchanged pattern with party/case-specific scopes. | KEEP / EXTEND |
 | `app_connections`, periods, ownership periods | Adjacent WP3 foundation linking customer/dossier/location/EAN with declared/observed source, decision metadata, periods, overlap/boundary/transition guards, and supersession. | Uses current customer/dossier/location FKs; an ownership claim is not party/representation or mandate authority. | CURRENT PROVEN only as local Gate-1 source/proof foundation; external/remote truth UNKNOWN. | Reuse provenance, temporal, decision, overlap, boundary, and supersession patterns. Rebind later through approved migration. | REUSE LOGIC; structural disposition in WP3 |
@@ -663,6 +663,37 @@ No customer, party, case-role or representation row was converted into
 workforce authority. Bootstrap, population, assignment authority, authorized
 caller runtime, Edge Function, UI, remote and production remain not
 implemented or unproven.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 09C0 Signed-Intake Promotion Mapping
+
+TARGET FOR 09C1 — NOT IMPLEMENTED.
+
+`app_cases` is the sole target service-case owner for signed-intake promotion.
+09C1 must create a case directly from the immutable signed intake source and
+must not create `app_customer_dossiers` merely to reuse dossier-bound callers
+or foreign keys. Retry reuses the one intake-to-case promotion relation.
+
+Safe account-type mapping:
+
+- Particulier: one natural-person party/profile may be both asserted
+  `service_recipient` and asserted `case_contact`; acting for oneself creates
+  no representation-authority record.
+- Zakelijk: organization party/profile is asserted `service_recipient`; the
+  signed natural person is a separate asserted `case_contact`.
+- VvE: the VvE organization is asserted `service_recipient`; the signed natural
+  person is a separate asserted `case_contact`.
+
+Promotion writes only `asserted` case roles. It never writes
+`case_confirmed`, never derives authority from signature/contact/account/Auth,
+and leaves Zakelijk/VvE
+`authority_review_status=required_not_completed`. A safe current
+customer-to-`account_owner` party is reused when unambiguous and kind-correct;
+name, email, title or parser output never authorizes a global party merge.
+
+Exact atomic promotion, Auth/dashboard and evidence mapping is owned by
+`intake-verification-promotion.md`.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 

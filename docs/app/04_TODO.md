@@ -49,7 +49,8 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
 - Document aggregate status semantics are locally and browser-proven.
 - Browser-reachable local download origin correction is locally and browser-proven.
 - Shared dashboard document card UI is locally and browser-proven.
-- Target intake verification/promotion contract is documented as TARGET / NOT IMPLEMENTED.
+- Pre-auth quarantine, `typed_name_otp_v1` finalization, immutable signing evidence, finalized mutation locks, safe receipt and server-authoritative recovery are CURRENT PROVEN locally within their explicit local/legal gates.
+- Post-signing atomic promotion contract is documented as TARGET / NOT IMPLEMENTED. The former separate email-verification promotion trigger is `SUPERSEDED`.
 - Gate 1 EAN and electricity connection domain objects are observed locally, not CURRENT PROVEN:
   - `app_connections`
   - `app_connection_periods`
@@ -421,11 +422,11 @@ Local proof is not production proof. Remote migration/function deploy, productio
 
 - Define intake/quarantine schema and expiry boundary.
 - Define pre-auth capability and anti-abuse contract.
-- Define atomic email-verification promotion RPC/endpoint.
+- Implement server-only atomic signed-intake promotion RPC/endpoint into `app_cases`-owned state.
 - Define initial intake/submission snapshot schema.
 - Define server-derived section capabilities.
 - Build public Start dossier quarantine flow.
-- Build verification-link promotion flow.
+- Rename technical `pending_verification` to `submitted_for_review` and build internal promotion/retry plus later Supabase Auth binding; do not build a second verification-link trigger.
 - Build targeted charger/location correction forms using shared signup form modules.
 - Reuse parser/precheck for authenticated document corrections.
 - Build Correcties indienen revision flow.
@@ -956,8 +957,8 @@ CURRENT PROVEN — LOCAL FRONTEND CONTRACT/PRESENTATION ONLY.
 - [ ] 09B: approve final legal copy and hashes; implement server-side OTP,
       immutable snapshot/hash, server timestamp, atomic signing/mandate
       finalization, authority-review linkage, idempotency and audit evidence.
-- [ ] 09C: implement verified promotion/dashboard projection only after 09B
-      evidence and persistence contracts are proven.
+- [ ] 09C1: implement server-only case-owned promotion/dashboard projection;
+      internal review is not external verification.
 - [ ] Post-MVP: jurisdiction-aware foreign trade-register document support and
       separately approved drawn/advanced/qualified method adapters if needed.
 
@@ -1012,7 +1013,8 @@ CURRENT PROVEN — LOCAL RUNTIME/SOURCE ONLY.
 - [x] Immutable revisions, atomic replacement/removal, one current revision, no file-history DELETE grant and stable account/location/charger binding isolation.
 - [x] Shared dashboard/signup transport primitives and document-first gating on current `confirmed_quarantine` plus fact resolution.
 - [ ] 09B2: legal versions, OTP, canonical signing snapshot/hash, atomic legal/mandate/signing evidence and authority-review linkage.
-- [ ] 09C: verified promotion and customer-safe dashboard projection.
+- [ ] 09C1: server-only atomic case promotion and customer-safe dashboard
+      projection; do not create external-verification semantics.
 - [ ] OPEN: production TTL/rate-limit/retention settings, remote migration/deploy, production Storage and interactive browser acceptance.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
@@ -1171,5 +1173,35 @@ EXTERNAL LIVE GATES OPEN.
 - [ ] IMPLEMENTATION: registry promotion, effective dates, hashes, OTP,
       signing, mandate, authority review, withdrawal, settlement and atomic
       finalization remain separately authorized future work.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 09C0 post-signing lifecycle convergence checkpoint
+
+DOCS / ARCHITECTURE COMPLETE — 09C1 IMPLEMENTATION TODO.
+
+- [x] Map the CURRENT signed-intake flow from intake start through quarantine,
+      challenge, OTP/email control, finalization, lock and refresh recovery.
+- [x] Mark the separate email-verification promotion link `SUPERSEDED` because
+      `typed_name_otp_v1` already proves bounded email control.
+- [x] Separate signing/email control, ENVAL internal review and external
+      inboekverificatie canonically.
+- [x] Define CURRENT `pending_verification` as finalized/locked only and choose
+      exact 09C1 replacement `submitted_for_review`.
+- [x] Define one server-only atomic/idempotent promotion with `app_cases` as
+      owner and no new `app_customer_dossiers` row.
+- [x] Define Particulier, Zakelijk and VvE party/role mappings without deriving
+      representation authority from signature, account or case role.
+- [x] Define server-only quarantine-to-durable file/version mapping without
+      automatic evidence acceptance.
+- [x] Keep declared/parser EAN, location, charger and MID facts separate from
+      accepted operational truth.
+- [x] Keep signing OTP separate from Supabase Auth and require later bootstrap
+      to reuse promoted customer/party/case state.
+- [x] Map the promotion boundary to TKV mandate, EAN, location-control,
+      provenance, MID, retention, correction and later verifier-pack needs.
+- [ ] 09C1: implement the exact scope and focused proof gates in
+      `contracts/intake-verification-promotion.md`; runtime/schema/frontend,
+      remote and deploy work require their own authorization.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

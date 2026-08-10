@@ -110,25 +110,25 @@ Rules:
 - The client does not poll, reload the page, or automatically retry blindly.
 - No account-type-specific upload transport exists.
 
-## Target Intake Verification Path
+## Signed Intake And Target Promotion Path
 
-Status: TARGET / NOT IMPLEMENTED. See `docs/app/contracts/intake-verification-promotion.md`.
+Status: SIGNED INTAKE CURRENT PROVEN LOCALLY; CASE PROMOTION TARGET / NOT IMPLEMENTED. See `docs/app/contracts/intake-verification-promotion.md`.
 
 ```text
 public form and local parser
-→ pre-auth pending intake
+→ collecting pre-auth intake
 → private quarantine upload
-→ Start dossier/finalize intake
-→ email verification
-→ atomic promotion
-→ submitted/under-review dossier
+→ typed-name + OTP email-control challenge
+→ atomic signing finalization and locked receipt
+→ server-only atomic promotion
+→ case-owned internal review
 ```
 
 Alternative promotion result:
 
 ```text
-atomic promotion
-→ needs_customer_action
+internal review
+→ action_needed
 → targeted editable section
 → Correcties indienen
 → immutable correction revision
@@ -136,10 +136,12 @@ atomic promotion
 
 Rules:
 
-- `Start dossier` is the one normal full customer submission.
-- Email verification validates identity/email control and triggers server-side promotion.
+- `typed_name_otp_v1` finalization is the one signed submission and proves bounded email control; a second email-verification promotion link is `SUPERSEDED`.
+- Promotion is server-only, atomic and idempotent; the receipt, safe reference, OTP and consumed management capability cannot authorize it.
 - Pre-auth quarantine upload must use a separate private capability lane, not authenticated `api-app-document-*`.
 - Parser/precheck may warn or prefill but may not approve evidence.
+- `app_cases` is the target owner; promotion must not create a parallel `app_customer_dossiers` core.
+- Internal review and external inboekverificatie are separate concepts and statuses.
 - A successful promoted dashboard must not show a generic `Dossier indienen` button.
 
 ## Backend Data Expectations

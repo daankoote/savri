@@ -10,7 +10,7 @@ Implementation status:
 - CURRENT / LOCAL PROOF: shared frontend upload transport.
 - CURRENT / LOCAL PROOF: reusable authenticated dashboard document card for MID and invoice evidence, download, replacement, and withdrawal.
 - OPEN: parser/precheck integration, production storage bucket/policies, remote deploy, and production browser QA.
-- CURRENT / LOCAL PROOF: public pre-auth quarantine upload is defined in `signup-quarantine-upload.md`; verification and promotion remain TARGET / NOT IMPLEMENTED in `intake-verification-promotion.md`.
+- CURRENT / LOCAL PROOF: public pre-auth quarantine plus signing finalization/lock are defined in the signup quarantine and signing contracts. Server-only atomic case promotion remains TARGET / NOT IMPLEMENTED in `intake-verification-promotion.md`; a confirmed upload is never accepted evidence.
 
 ## 1. Current Truth
 

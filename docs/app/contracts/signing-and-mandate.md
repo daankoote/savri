@@ -1,6 +1,6 @@
 # Signing And Mandate Contract
 
-Status: TARGET — MODULAR ELECTRONIC SIGNING — PERSISTENCE NOT IMPLEMENTED
+Status: MIXED — `typed_name_otp_v1` SIGNING PERSISTENCE CURRENT PROVEN LOCALLY; PRODUCTION LEGAL/OTP AND 09C PROMOTION NOT CURRENT
 
 ## Bounded 09A decision
 
@@ -16,9 +16,11 @@ The reserved identifiers `drawn_signature_v1`,
 `external_advanced_signature_v1` and `qualified_signature_v1` document only the
 extension boundary. They have no adapter, provider, UI or registry entry.
 
-09A is frontend contract and presentation only. It sends no OTP, accepts no OTP,
-creates no evidence, signs no mandate, submits no signup, starts no dossier and
-persists nothing.
+09A remains the historical frontend composition boundary. Later 09B2B/09B2C
+runtime now sends and verifies OTP locally, creates the immutable signing record
+set, finalizes/locks the intake and restores a customer-safe receipt. It still
+creates no customer, Auth session, dossier or case and does not make the legal
+bundle or production OTP CURRENT.
 
 ## Method port and registry
 
@@ -117,7 +119,10 @@ expiry/replay/rate limits, server-side canonicalization and hashes, CURRENT
 legal-version enforcement, server issue time, atomic signature/mandate
 finalization, authority-review linkage, idempotency and audit evidence.
 
-09C owns verified promotion and dashboard projection. Foreign trade-register
+09C owns internal durable promotion and dashboard projection. The word
+`verified` is not used for that internal lifecycle: `typed_name_otp_v1` proves
+signing intent and bounded email control, while external inboekverificatie
+remains a separate verifier-owned process. Foreign trade-register
 documents and their jurisdiction-specific authority/evidence rules are
 post-MVP. No provider adapter, persistence, submit, database, remote or
 production behavior is approved by 09A.
@@ -152,6 +157,34 @@ audit event agree. Finalized intake-file rows are database-trigger locked.
 
 This local receipt behavior does not promote the validation-candidate legal
 bundle to CURRENT and does not configure or approve production OTP delivery.
+
+## 09C0 post-signing verification boundaries
+
+`typed_name_otp_v1` proves the signing act and control of the email channel
+used for that act. It proves no material eligibility, representation authority,
+accepted EAN/location/MID/evidence or NEa inboekverificatie. Zakelijk/VvE keeps
+`authority_review_status=required_not_completed`; Particulier acting for
+themself needs no fictitious representation-authority row.
+
+The former separate one-time email-verification promotion link is
+`SUPERSEDED`. Durable promotion is server-only and is never authorized by the
+receipt, safe reference, OTP, signing challenge or consumed management
+capability. Supabase Auth verification/login remains a separate post-promotion
+account-access boundary and signing OTP creates no Auth session.
+
+CURRENT `pending_verification` means only finalized, locked and awaiting ENVAL
+internal handling. Because it is ambiguous beside the formal TKV verification
+concept, 09C1 must rename it to `submitted_for_review` across database, RPC,
+client, receipt schema and proofs. Customer copy remains `Ondertekend en
+ingediend` followed by `In behandeling`; external verifier states remain in a
+separate future bounded context.
+
+The exact atomic case-owned promotion and evidence/Auth/dashboard boundaries
+are canonical in `intake-verification-promotion.md`. Signing snapshots, legal
+acceptances, mandate and signature evidence are linked by promotion and never
+rewritten or duplicated.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
 ## 09B2C-R2 local signing runtime
 

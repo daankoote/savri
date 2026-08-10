@@ -1,6 +1,6 @@
 # Signup Quarantine Upload Contract
 
-Status: CURRENT PROVEN — LOCAL ONLY for PILOT-SIGNUP-QUARANTINE-UPLOAD-09B1. No remote apply, deploy, production, browser acceptance, evidence acceptance, promotion, or signing proof.
+Status: CURRENT PROVEN — LOCAL ONLY for the bounded 09B1 quarantine lane. Later 09B2 proofs establish signing separately. This contract itself claims no remote apply, deploy, production, evidence acceptance or promotion.
 
 ## Purpose And Boundary
 
@@ -8,7 +8,7 @@ Every required document selected in the document-first signup journey must have 
 
 `confirmed_quarantine` is transport proof. It is not document approval, accepted evidence, NEa conformity, verifier acceptance, legal acceptance, a mandate, or signing evidence. Client parser observations remain derived guidance and never replace server upload confirmation.
 
-09B1 creates no customer, identity, case, dossier, database location, database charger, legal acceptance, mandate, signing evidence, or OTP. Actual signing remains 09B2. Verified promotion and dashboard projection remain 09C. `api-app-signup-submit` is not part of this transport.
+09B1 itself creates no customer, identity, case, dossier, database location, database charger, legal acceptance, mandate, signing evidence or OTP. Later `typed_name_otp_v1` signing uses the intake but remains a distinct authority boundary. Server-only atomic case promotion and dashboard projection remain 09C1 TARGET; no separate email-verification trigger remains. `api-app-signup-submit` is not part of this transport.
 
 ## Data Model
 
@@ -58,4 +58,4 @@ Required organization, per-location energy, and per-charger installation binding
 
 The destructive local proof marker is `signup-quarantine-runtime-09b1-proof-ok`. It covers idempotency replay/conflict, capability hashing/expiry/consumption, real private signed upload, server confirmation, mismatch and missing-object rejection, immutable replacement, concurrency, binding isolation, RLS, and no customer/identity/dossier creation.
 
-Remaining OPEN: production TTL and rate-limit settings, retention/minimization cleanup, remote migration/deploy, production Storage configuration, interactive browser acceptance, email verification, promotion, evidence acceptance, 09B2 signing, and 09C dashboard projection.
+Remaining OPEN: production TTL and rate-limit settings, retention/minimization cleanup, remote migration/deploy, production Storage configuration, interactive browser acceptance, production legal/OTP gates, 09C atomic case promotion and dashboard projection, and evidence acceptance. The former separate email-verification promotion trigger is `SUPERSEDED`; current local `typed_name_otp_v1` signing is documented separately.

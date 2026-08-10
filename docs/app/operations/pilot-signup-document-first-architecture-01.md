@@ -8,12 +8,18 @@ Date: 2026-08-04.
 
 ## 0. Authority, Scope And Truth Boundary
 
-This document remains the executable target architecture. The bounded five-step
+This document remains the executable document-first UI target architecture. The bounded five-step
 frontend state, selectors, composition, confirmation matrix and gap rendering
 are `CURRENT PROVEN — LOCAL ONLY` through
 `pilot-signup-document-first-ui-01-local-proof.md`. Persistence, finalization,
 promotion, signing and every backend, remote, legal or verifier outcome remain
 `TARGET` or open unless a narrower owning contract says otherwise.
+
+09C0 convergence override: quarantine and `typed_name_otp_v1` finalization are
+now CURRENT PROVEN locally under their narrower owning contracts. The exact
+post-signing target is `contracts/intake-verification-promotion.md`; its
+server-only case promotion and `SUPERSEDED` separate email-verification trigger
+override older persistence/endpoint wording below.
 
 The source order is:
 
@@ -231,7 +237,7 @@ No `ORPHAN` row is a target-visible field. An ORPHAN must either receive the com
 | target field | status | source | parser observation | customer confirmation | draft path | validator | mapper/payload | Edge/RPC | database | dashboard | mandate | audit | correction/supersession |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | account type | PARTIAL | customer | none | direct declaration | `DF.account.type` | enum | `account.type` | intake finalize/promotion | intake -> customer/case composition; current dossier type is legacy | safe account route | selects mandate form only | intake/party event | new declaration version before signing; post-signing case correction |
-| account email | PARTIAL | customer | none | email verification, not document confirmation | `DF.account.email` | normalized email | `account.email` | intake + email verify/promote | `app_signup_intakes` -> `app_customer_identities` | masked contact | none | request, verification, identity binding | identity change/rebind event; no party mutation |
+| account email | PARTIAL | customer | none | `typed_name_otp_v1` email control, not document confirmation or Auth login | `DF.account.email` | normalized email | `account.email` | signing finalize; later server-only promote | `app_signup_intakes` -> promoted `app_customer_identities` -> later Auth bind | masked contact | none | signing proof, promotion, identity binding | identity change/rebind event; no party mutation |
 | private party name | PARTIAL | energy document or gap | `contractHolderName` | required | `DF.party.name` | bounded natural-person name | `declarations.party` | finalize/promote | party/profile claim; current declaration source is partial | safe party summary | mandating party/signer candidate | observed + confirmed events | new claim/profile version |
 | organization legal name | PARTIAL | Step 1 plus document comparison | holder/buyer candidate | Step 1 declaration; explicit mismatch resolution | `DF.organization.legalName` | bounded legal name | `declarations.organization` | finalize/promote | party/profile claim -> legal-entity decision | safe organization summary | mandating party | declaration/comparison/decision | new profile/decision version |
 | KvK number | PARTIAL | Step 1; document only if actually present | TARGET extractor only | declaration and mismatch resolution | `DF.organization.kvkNumber` | 8 digits | `declarations.organization` | finalize/promote + later KvK adapter | party/profile claim -> `app_external_references`/legal entity decision | masked/safe organization summary | enterprise party field | declaration/source/review | new source and decision; never overwrite |
@@ -343,7 +349,7 @@ Explicitly forbidden: large marketing headings, long helper text, duplicate titl
 | signup files remain local while submit creates expected document slots | UI can select/parse but no byte/version roundtrip exists | pre-auth quarantine transport, promotion and evidence version linkage |
 | current mapper intentionally excludes parser observations/files | most shown facts have no payload/database/audit trail | OBS manifest + explicit DECL only; never send raw parser internals as core fields |
 | general consent checkbox precedes `Ondertekenen en dossier starten` | button/checkbox does not produce a signed exact mandate snapshot | independent commercial acceptances plus separately blocked signing contract |
-| current direct submit creates customer/dossier immediately | conflicts with target quarantined intake + email-verification promotion | reuse atomic/idempotent patterns, not current lifecycle semantics |
+| current direct submit creates customer/dossier immediately | conflicts with CURRENT signed quarantine plus TARGET case-owned server promotion | reuse atomic/idempotent patterns, not current lifecycle semantics |
 | `app_dossier_locations` and `app_dossier_chargers` are mutable dossier snapshots | they are not accepted location/asset/MID target truth | promotion bridge only; target versioned domain entities/decisions remain separate |
 
 ### Module disposition
@@ -370,16 +376,16 @@ Explicitly forbidden: large marketing headings, long helper text, duplicate titl
 
 ### Persistence and signing blockers
 
-- public pre-auth upload capability endpoints, retention enforcement, malware/content checks and promotion runtime are not implemented;
+- production retention enforcement, malware/content checks and promotion runtime are not implemented;
 - observed-fact persistence and confirmation audit schema/contract are not implemented;
 - target location/charger/charge-point/MID splits and evidence decisions are incomplete;
 - representation authority is `NOT SCHEMA READY`;
-- target mandate/version/scope/signature entities and services are not implemented;
+- production legal/OTP approval remains open although bounded local signing entities/services are proven;
 - current document upload requires authenticated dossier scope;
-- email verification/promotion is target-only;
+- a separate email-verification promotion trigger is `SUPERSEDED`; server-only case promotion remains target-only;
 - KvK, CAR/DSO, MID/certificate, energy supplier, external verifier and REV ports are absent or blocked;
 - customer-safe dashboard projections for declarations versus decisions do not exist;
-- final Dutch legal copy, version hashes, e-sign evidence and calendar-year behavior remain open.
+- production Dutch legal approval/versions and OTP delivery remain open; bounded local e-sign evidence and one-year behavior are proven only within their owning contracts.
 
 ## 7. Implementatieplan — maximaal drie batches
 
@@ -426,14 +432,14 @@ Exact file scope:
 
 - modify `app/src/features/signup/signupSubmitMapper.ts`, `signupSubmitClient.ts`, `signupSubmitConfig.ts`, `SignupPageShell.tsx`, `documentFirstSignupModel.ts`, `documentFirstSignupReducer.ts`, `ConsentSignatureSection.tsx` and their existing proof files;
 - reuse/extend `app/src/features/documents/documentUploadClient.ts`, `documentUploadTypes.ts` and the existing upload/confirm/download/withdraw transport contracts without calling authenticated endpoints pre-auth;
-- add `supabase/functions/api-app-signup-intake-upload-url/index.ts`, `api-app-signup-intake-upload-confirm/index.ts`, `api-app-signup-intake-finalize/index.ts`, `api-app-signup-intake-verify-promote/index.ts`, `api-app-signup-mandate-sign/index.ts`;
+- reuse the implemented quarantine/signing endpoints; add only the internal `api-app-signup-promote` boundary specified by the canonical 09C1 contract;
 - modify `supabase/functions/api-app-signup-submit/index.ts` only as an explicit compatibility/retirement adapter, never as a second truth path;
-- add `supabase/migrations/20260805090000_app_document_first_signup_observations_declarations.sql`, `20260805091000_app_document_first_signup_promotion.sql`, `20260805092000_app_mandate_versions_and_signing_snapshot.sql` and purpose-specific local proof scripts/docs;
+- add only forward 09C1 promotion/status/evidence responsibilities from the canonical contract and purpose-specific local proofs; do not recreate implemented signing/quarantine schema;
 - update dashboard projection types/components only for safe declared/decision statuses after the backend contract is green.
 
-Reuse intake quarantine tables, document slot/file/version primitives, idempotency/audit patterns, party/case activation patterns and current customer-confirmed EAN declaration source. New endpoints are required because public scoped capabilities, finalization, verification/promotion and signing have different authority and replay boundaries. New additive schema is required for immutable observations, declarations/confirmations, promotion linkage and signed mandate versions; generic JSON or legal acceptance rows cannot substitute.
+Reuse intake quarantine/signing tables and endpoints, idempotency/audit patterns, party/case foundations and current customer-confirmed EAN declaration-source logic. 09C1 requires one internal promotion endpoint because promotion has a distinct service-only authority and replay boundary. New additive schema is limited to the canonical promotion, case-lifecycle and case-owned durable-evidence responsibilities; generic JSON or legal-acceptance rows cannot substitute.
 
-Tests: payload allowlist and raw-parser exclusion; capability expiry/replay; hash/file confirmation; one-time promotion; atomic rollback; exact party/location/charger bindings; observation-to-declaration separation; evidence decision separation; safe errors; signing snapshot/hash/version; withdrawal/supersession; no Auth/account/contact/role shortcut to authority. Browser checks: complete document-first happy path, every fallback family, email-verification resume, promotion, signed-copy/dashboard roundtrip and no duplicate re-entry. Database checks: fresh local apply, grants/RLS, negative anon/auth access, constraints, idempotency/concurrency, audit completeness, immutable version history and rollback injection. Blockers: approved retention/security contract, email provider, party/location/asset target-governance decisions, legal/verifier authority answers, final mandate clauses/hashes, e-sign standard, calendar-year/renewal rule and external source contracts. Docs impact: update `07`, `08`, database target appendix, signup/document/intake/party/connection/mandate contracts, roadmap and proof index only to the exact proven local boundary.
+Tests: payload allowlist and raw-parser exclusion; capability expiry/replay; hash/file confirmation; one-time promotion; atomic rollback; exact party/location/charger bindings; observation-to-declaration separation; evidence decision separation; safe errors; signing snapshot/hash/version; withdrawal/supersession; no Auth/account/contact/role shortcut to authority. Browser checks: complete document-first happy path, every fallback family, signed receipt/status recovery, internal promotion, signed-copy/dashboard roundtrip and no duplicate re-entry. Database checks: fresh local apply, grants/RLS, negative anon/auth access, constraints, idempotency/concurrency, audit completeness, immutable version history and rollback injection. Blockers: approved retention/security contract, production OTP/email provider, party/location/asset target-governance decisions, legal/verifier authority answers and external source contracts. The exact 09C1 docs/proof impact is owned by `contracts/intake-verification-promotion.md`.
 
 ## 8. Open Source, Legal And Verifier Decisions
 

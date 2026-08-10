@@ -112,7 +112,7 @@ Status: CURRENT PROVEN — LOCAL ONLY for 09B1.
 
 `intake_manage` is an opaque pre-auth capability, not an Auth session, identity, customer, dossier token, email proof, or authorization outside one collecting intake. Its raw value exists only in the central signup `sessionStorage` helper and expires server-side; only its SHA-256 is persisted. The file-scoped `quarantine_upload` capability is one-time and is not browser-persisted. Neither capability is placed in a URL query parameter, React state, logs, audit metadata, or customer-facing errors.
 
-Email verification, Auth binding, customer creation, dossier promotion, OTP, password recovery, and dashboard authorization remain separate flows. 09B1 grants none of them.
+09B1 grants no signing/email-control proof, Auth binding, customer/case promotion, password recovery or dashboard authorization. Later `typed_name_otp_v1` signing/email control remains distinct from Supabase Auth and from server-only 09C1 case promotion.
 
 ### Current App Auth Foundation
 
@@ -180,16 +180,18 @@ Behavior:
 
 Not all Auth errors sign the user out. Only terminal ENVAL bootstrap binding failures use this cleanup path.
 
-### Target Email Verification Promotion Boundary
+### Target Signed-Intake Promotion Boundary
 
 Status: TARGET / NOT IMPLEMENTED. Detailed contract: `docs/app/contracts/intake-verification-promotion.md`.
 
-Email verification in the target public intake flow:
+The CURRENT `typed_name_otp_v1` finalization:
 
-- validates control of the submitted email identity;
-- triggers server-side promotion of a finalized pre-auth intake;
+- validates bounded control of the submitted email channel together with signing intent;
+- leaves a finalized, mutation-locked intake for server-only promotion;
 - does not approve documents, evidence, eligibility, ERE result, or fees;
 - does not replace backend validation, audit, idempotency, or server-side promotion checks.
+
+The former separate one-time email-verification promotion link is `SUPERSEDED`. No browser link, receipt, safe reference, OTP or consumed intake capability authorizes promotion. A later Supabase Auth verification/login email is an account-access step only and does not repeat signing or trigger promotion.
 
 Pre-auth intake and quarantine boundaries:
 
@@ -200,12 +202,13 @@ Pre-auth intake and quarantine boundaries:
 
 ### Customer Identity
 
-Target customer identity:
+Target customer identity after promotion:
 
 - `customers`: ENVAL customer record.
 - `customer_identities`: links a customer to Supabase Auth user ID, verified email, phone if later used, and identity metadata.
-- A customer can have multiple dossiers over time.
-- A dossier belongs to one customer, with explicit future support for delegated access if needed.
+- A customer can have multiple `app_cases` over time.
+- Promotion creates or safely reuses an active identity row with `auth_user_id=null`; verified Supabase Auth later binds that exact identity.
+- `app_cases` is the target service owner; promotion does not create a parallel `app_customer_dossiers` core.
 
 Identity rules:
 
@@ -217,11 +220,11 @@ Identity rules:
 
 Recommended login flow:
 
-1. Customer submits `/aanmelden`.
-2. Backend creates or matches customer and creates dossier.
-3. Backend sends dashboard access email.
-4. Link signs the customer into Supabase Auth or exchanges through a narrow ENVAL auth bootstrap endpoint that creates a Supabase Auth session.
-5. Dashboard reads through app-specific Edge Functions.
+1. Customer completes `typed_name_otp_v1`; signing finalization proves bounded email control but creates no Auth session.
+2. Internal server promotion creates or matches customer/identity and creates the case atomically.
+3. A post-commit outbox sends the normal Supabase Auth dashboard-access route.
+4. Supabase Auth verifies/signs in the user; narrow ENVAL auth bootstrap binds the existing identity and reuses customer/party/case.
+5. Dashboard reads a case-owned projection through app-specific Edge Functions.
 
 Recovery:
 

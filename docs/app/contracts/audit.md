@@ -73,7 +73,7 @@ Future app work must define app-specific events for:
 - auth bootstrap/login/recovery
 - intake finalization / `Start dossier`
 - legal acceptance during public intake
-- verification-link consumption
+- signing challenge delivery/consumption and atomic signing finalization
 - pre-auth intake promotion
 - immutable initial intake/submission snapshot creation
 - quarantine evidence promotion
@@ -97,9 +97,9 @@ Status: TARGET / NOT IMPLEMENTED. Detailed contract: `docs/app/contracts/intake-
 
 Audit-required target events include:
 
-- `Start dossier` / intake finalization;
+- atomic signing finalization and locked signed-intake state;
 - accepted legal versions;
-- verification-link consumption;
+- signing challenge consumption and bounded email-control proof;
 - atomic promotion;
 - customer/dossier creation from promotion;
 - initial immutable intake/submission snapshot;
