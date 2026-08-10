@@ -213,6 +213,19 @@ begin
     raise exception 'invalid signing challenge input';
   end if;
 
+  select * into v_intake from public.app_signup_intakes where id = p_intake_id for update;
+  if not found or v_intake.status <> 'collecting' or v_intake.expires_at <= v_now then
+    raise exception 'signup intake unavailable';
+  end if;
+  select * into v_manage from public.app_signup_intake_capabilities
+  where intake_id = p_intake_id and intake_file_id is null
+    and capability_type = 'intake_manage' and token_sha256 = p_manage_token_sha256
+  for update;
+  if not found or v_manage.consumed_at is not null or v_manage.invalidated_at is not null
+     or v_manage.expires_at <= v_now then
+    raise exception 'signup intake capability unavailable';
+  end if;
+
   insert into public.app_idempotency_keys (scope, key, payload_hash, locked_at, expires_at)
   values (v_scope, p_idempotency_key, p_payload_hash, v_now, v_now + interval '24 hours')
   on conflict (scope, key) do nothing;
@@ -228,19 +241,6 @@ begin
   end if;
   if v_inserted = 0 then
     return jsonb_build_object('ok', false, 'status', 409, 'code', 'request_in_progress', 'error', 'Code wordt al aangevraagd.');
-  end if;
-
-  select * into v_intake from public.app_signup_intakes where id = p_intake_id for update;
-  if not found or v_intake.status <> 'collecting' or v_intake.expires_at <= v_now then
-    raise exception 'signup intake unavailable';
-  end if;
-  select * into v_manage from public.app_signup_intake_capabilities
-  where intake_id = p_intake_id and intake_file_id is null
-    and capability_type = 'intake_manage' and token_sha256 = p_manage_token_sha256
-  for update;
-  if not found or v_manage.consumed_at is not null or v_manage.invalidated_at is not null
-     or v_manage.expires_at <= v_now then
-    raise exception 'signup intake capability unavailable';
   end if;
 
   select count(*) into v_recent from public.app_signup_signing_challenges

@@ -273,11 +273,21 @@ async function main(): Promise<void> {
       owner.managementCapability,
       challengeIdempotencyKey,
     );
+    const deniedReplay = await challenge(
+      config,
+      owner.intakeReference,
+      otherOwner.managementCapability,
+      challengeIdempotencyKey,
+    );
     const messages = await mailpitMessages(config.mailpitUrl);
     assert(
       response.status === 201 && response.body.ok === true &&
         response.body.replayed === true &&
         response.body.challenge_reference === challengeReference &&
+        deniedReplay.status === 403 &&
+        deniedReplay.body.code === "challenge_unavailable" &&
+        deniedReplay.body.ok !== true &&
+        !Object.hasOwn(deniedReplay.body, "challenge_reference") &&
         messages.total === firstMailpitTotal,
       "challenge_replay_invalid",
     );

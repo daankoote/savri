@@ -500,6 +500,18 @@ async function main(): Promise<void> {
       "app_signup_signing_challenge_issue_v1",
       request,
     );
+    const wrongCapabilityReplay = await service.rpc(
+      "app_signup_signing_challenge_issue_v1",
+      { ...request, p_manage_token_sha256: "f".repeat(64) },
+    );
+    const invalidated = await service.from("app_signup_intake_capabilities")
+      .update({ invalidated_at: new Date().toISOString() })
+      .eq("intake_id", fixture.intakeId)
+      .eq("capability_type", "intake_manage");
+    const staleCapabilityReplay = await service.rpc(
+      "app_signup_signing_challenge_issue_v1",
+      request,
+    );
     assert(
       !limited.error && (limited.data as Json).code === "rate_limited",
       "rate_limit_missing",
@@ -507,6 +519,11 @@ async function main(): Promise<void> {
     assert(
       !replay.error && (replay.data as Json).replayed === true,
       "challenge_replay_missing",
+    );
+    assert(
+      Boolean(wrongCapabilityReplay.error) && !invalidated.error &&
+        Boolean(staleCapabilityReplay.error),
+      "challenge_replay_capability_auth_missing",
     );
   });
 

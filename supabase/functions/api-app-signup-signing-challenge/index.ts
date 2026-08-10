@@ -9,6 +9,7 @@ import {
   payloadHash,
 } from "../_shared/app_foundation.ts";
 import {
+  capabilityHash,
   isRecord,
   parseRecordBody,
   publicRpcBody,
@@ -119,13 +120,7 @@ serve(async (req) => {
     method_version: "1",
     channel_reference_sha256: channelHash,
   });
-  const capabilityHash = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(capability),
-  );
-  const manageHash = Array.from(new Uint8Array(capabilityHash)).map((byte) =>
-    byte.toString(16).padStart(2, "0")
-  ).join("");
+  const manageHash = await capabilityHash(capability);
   const issued = await SB.rpc("app_signup_signing_challenge_issue_v1", {
     p_intake_id: intakeId,
     p_manage_token_sha256: manageHash,

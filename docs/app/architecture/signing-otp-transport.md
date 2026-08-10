@@ -152,7 +152,7 @@ for the browser to select a driver or provider parameters.
 | Replay | Rejected for consumed, expired, replaced or wrong-intake challenges. |
 | Resend | Creates or rotates under a deterministic policy; old active secrets become unusable. |
 | Rate limit | Intake, verified-channel reference and privacy-safe request metadata; no raw e-mail key in audit output. |
-| Idempotency | Same key and same normalized issue request replays safely; changed payload conflicts. |
+| Idempotency | A current capability for the exact intake is authenticated before replay lookup; same key and same normalized issue request then replays safely, while changed payload conflicts. |
 | Logs | No OTP, e-mail address, capability, legal text, snapshot content or raw provider response. |
 | URL | No OTP, e-mail address or capability in query/path fragments. |
 | Browser writes | Forbidden; challenge persistence and verification are server-owned. |
