@@ -527,9 +527,9 @@ Current verdict: `LOCAL RECOVERY CONTROL PASS — REMOTE WAVE 1 BLOCKED BY POSTG
 
 | item | current status |
 |---|---|
-| functional PostgREST request path | PARTIAL PROVEN |
+| functional PostgREST request path | PROVEN for controlled read-only requests |
 | dashboard/platform PostgREST health | UNHEALTHY / UNRESOLVED |
-| classification | `B. POSTGREST DEGRADED BUT REQUEST PATH AVAILABLE` |
+| classification | `PGR-B — FUNCTIONAL BUT PLATFORM HEALTHCHECK UNRESOLVED` |
 | remote mutation effect | NO-GO |
 | recovery recipient | PASS |
 | public DB backup/restore | PASS for user-created public DB objects |
@@ -581,6 +581,28 @@ The original root probes returned repeated 401 responses and were initially over
 | publishable | zero-row legacy read | 401 / 401 / 401 | request processed and denied by access boundary |
 
 Keys, JWTs, response bodies, request-id values, secrets, and connection strings were not logged. Functional request-path evidence does not supersede the unresolved dashboard/platform health signal.
+
+#### Supabase Support Evidence — 2026-08-10
+
+Classification: `PGR-B — FUNCTIONAL BUT PLATFORM HEALTHCHECK UNRESOLVED`.
+
+| evidence | safe support summary |
+|---|---|
+| project / region | `yzngrurkpfuqgexbhzgl` / `eu-west-2` |
+| dashboard window | circa 16:00–16:27 CEST on 2026-08-10 |
+| component health | overall `Unhealthy`; PostgREST `Unhealthy`; Database, Auth, Realtime, Storage, and Edge Functions `Healthy` |
+| dashboard resources | CPU circa 5%; disk circa 11%; RAM circa 64%; connection indicator circa 8/60; last backup `No backups` |
+| controlled HTTP proof | 24 read-only GET requests, 33–290 ms, with request IDs/metadata present; observed statuses were expected 401 and 404 responses; zero timeout/network failures and zero 5xx/54x responses |
+| route behavior | existing `dossiers` route: expected 401 / database SQLSTATE `42501`; absent `app_customers` route: 404; `/rest/v1/`: 401 gateway behavior |
+| database aggregate | 15/60 connections during SQL proof; no waiting locks, blocked backends, active queries over 60 seconds, transactions over 5 minutes, idle-in-transaction sessions, deadlocks, or conflicts; cache hit 99.98%; database size circa 284 MB |
+| correlated log window | exactly 12 visible Postgres `ERROR` events from 15:16:43 through 15:18:11 CEST; all SQLSTATE `42501`, generic `permission denied for table dossiers`, `application_name=postgrest`, database user `authenticator`; API Gateway showed matching 401/404 requests and no 5xx; the PostgREST log source returned no relevant events |
+| mutation effect | none; the probes and consolidation were read-only and made no remote mutation |
+
+The twelve SQLSTATE `42501` events are `PROOF ONLY — EXPECTED SECURITY DENIALS`: they correlate with the controlled PGR1 requests and demonstrate that PostgREST table requests reached Postgres and were rejected by the intended permission boundary. They must not be classified or cited as the cause of the PostgREST `Unhealthy` component state.
+
+No ENVAL-side permission, RLS, gateway, authentication, or configuration weakening is justified by this evidence. Supabase Support/platform inspection is required to identify the internal component-healthcheck failure.
+
+Question for Supabase Support: why does the internal PostgREST component health remain `Unhealthy` while real PostgREST table requests reach Postgres normally and no resource or service failure is observable?
 
 ### Managed Backup Decision And Coverage
 
