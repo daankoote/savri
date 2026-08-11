@@ -3,9 +3,9 @@ import {
   type SupabaseClient,
 } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
-type Json = Record<string, unknown>;
-type AccountType = "particulier" | "zakelijk" | "vve";
-type Fixture = {
+export type Json = Record<string, unknown>;
+export type AccountType = "particulier" | "zakelijk" | "vve";
+export type Fixture = {
   intakeId: string;
   fileId: string;
   snapshotId: string;
@@ -14,12 +14,26 @@ type Fixture = {
   email: string;
   accountType: AccountType;
   sourceHash: string;
+  fileHash: string;
+  fileSize: number;
+  storageBucket: string;
+  storagePath: string;
+};
+
+export type FixtureOptions = {
+  fileHash?: string;
+  fileSize?: number;
+  storageBucket?: string;
+  storagePath?: string;
+  useCanonicalSourcePath?: boolean;
+  fileStatus?: "uploaded_pending_confirm" | "confirmed_quarantine";
+  mandatePermissions?: string[];
 };
 
 const HASH = "a".repeat(64);
 const results: Array<{ id: string; ok: boolean; detail: string }> = [];
 
-function assert(value: unknown, message: string): asserts value {
+export function assert(value: unknown, message: string): asserts value {
   if (!value) throw new Error(message);
 }
 
@@ -27,7 +41,7 @@ function key(label: string): string {
   return `09c1a-${label}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 }
 
-async function sha256(value: string): Promise<string> {
+export async function sha256(value: string): Promise<string> {
   const digest = await crypto.subtle.digest(
     "SHA-256",
     new TextEncoder().encode(value),
@@ -50,7 +64,7 @@ async function run(id: string, fn: () => Promise<void>): Promise<void> {
   }
 }
 
-async function localConfig() {
+export async function localConfig() {
   assert(
     Deno.env.get("ENVAL_ALLOW_DESTRUCTIVE_LOCAL_PROOF") === "YES",
     "destructive_local_proof_not_enabled",
@@ -108,11 +122,12 @@ function legalDocuments() {
   );
 }
 
-async function createFixture(
+export async function createFixture(
   service: SupabaseClient,
   accountType: AccountType,
   label: string,
   acceptanceCount = 3,
+  options: FixtureOptions = {},
 ): Promise<Fixture> {
   const now = new Date().toISOString();
   const future = new Date(Date.now() + 60 * 60_000).toISOString();
@@ -123,6 +138,9 @@ async function createFixture(
   const mandateId = crypto.randomUUID();
   const signatureId = crypto.randomUUID();
   const challengeId = crypto.randomUUID();
+  const storagePath = options.useCanonicalSourcePath
+    ? `signup-quarantine/${intakeId}/${fileId}/document.pdf`
+    : options.storagePath ?? `proof/${intakeId}/${fileId}`;
   const email = `${key(label)}@example.invalid`;
   const serviceName = accountType === "particulier"
     ? `Proof Person ${label}`
@@ -181,7 +199,7 @@ async function createFixture(
       eans: ["871687400000000001"],
       addresses: [`Proofstraat 1, 1000 AA Proofstad ${label}`],
     }],
-    permissions: [
+    permissions: options.mandatePermissions ?? [
       "nea_dso_connection_data_request",
       "verifier_location_inspection",
     ],
@@ -240,13 +258,13 @@ async function createFixture(
       original_filename: "proof.pdf",
       declared_mime_type: "application/pdf",
       detected_mime_type: "application/pdf",
-      size_bytes: 64,
-      sha256: HASH,
-      server_size_bytes: 64,
-      server_sha256: HASH,
-      storage_bucket: "app-signup-quarantine",
-      storage_path: `proof/${intakeId}/${fileId}`,
-      status: "confirmed_quarantine",
+      size_bytes: options.fileSize ?? 64,
+      sha256: options.fileHash ?? HASH,
+      server_size_bytes: options.fileSize ?? 64,
+      server_sha256: options.fileHash ?? HASH,
+      storage_bucket: options.storageBucket ?? "app-signup-quarantine",
+      storage_path: storagePath,
+      status: options.fileStatus ?? "confirmed_quarantine",
       confirmed_at: now,
       expires_at: future,
     })).error,
@@ -356,6 +374,10 @@ async function createFixture(
     email,
     accountType,
     sourceHash: snapshotHash,
+    fileHash: options.fileHash ?? HASH,
+    fileSize: options.fileSize ?? 64,
+    storageBucket: options.storageBucket ?? "app-signup-quarantine",
+    storagePath,
   };
 }
 
@@ -386,7 +408,7 @@ async function requestFor(
   return request;
 }
 
-async function count(
+export async function count(
   service: SupabaseClient,
   table: string,
   column?: string,
@@ -836,4 +858,7 @@ async function main() {
   console.log("app-signup-promotion-runtime-09c1a-proof-ok");
 }
 
-if (import.meta.main) await main();
+if (import.meta.main) {
+  await main();
+  Deno.exit(0);
+}

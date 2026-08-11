@@ -6,9 +6,9 @@ Status: CURRENT PROVEN — LOCAL ONLY for the bounded 09B1 quarantine lane. Late
 
 Every required document selected in the document-first signup journey must have a current `confirmed_quarantine` revision before the customer can reach Ondertekenen. This status proves only that the server found the private object and confirmed its PDF signature, byte size, and SHA-256 against the immutable upload intent.
 
-`confirmed_quarantine` is transport proof. It is not document approval, accepted evidence, NEa conformity, verifier acceptance, legal acceptance, a mandate, or signing evidence. Client parser observations remain derived guidance and never replace server upload confirmation.
+`confirmed_quarantine` is transport proof. It is not document approval, accepted evidence, NEa conformity, verifier acceptance, legal acceptance, a mandate, or signing evidence. Client parser observations remain derived guidance and never replace server upload confirmation. The separate locally proven 09C1B internal promotion caller may copy only these server-confirmed bytes to deterministic private durable evidence and must reverify size, PDF MIME and SHA-256; that later copy does not change this status meaning.
 
-09B1 itself creates no customer, identity, case, dossier, database location, database charger, legal acceptance, mandate, signing evidence or OTP. Later `typed_name_otp_v1` signing uses the intake but remains a distinct authority boundary. Server-only atomic case promotion and dashboard projection remain 09C1 TARGET; no separate email-verification trigger remains. `api-app-signup-submit` is not part of this transport.
+09B1 itself creates no customer, identity, case, dossier, database location, database charger, legal acceptance, mandate, signing evidence or OTP. Later `typed_name_otp_v1` signing uses the intake but remains a distinct authority boundary. Separate 09C1A/09C1B local proof now covers server-only atomic case promotion and deterministic private Storage preparation; browser triggering, dashboard projection, Auth and production deployment remain TARGET. No separate email-verification trigger remains. `api-app-signup-submit` is not part of this transport.
 
 ## Data Model
 
@@ -58,4 +58,4 @@ Required organization, per-location energy, and per-charger installation binding
 
 The destructive local proof marker is `signup-quarantine-runtime-09b1-proof-ok`. It covers idempotency replay/conflict, capability hashing/expiry/consumption, real private signed upload, server confirmation, mismatch and missing-object rejection, immutable replacement, concurrency, binding isolation, RLS, and no customer/identity/dossier creation.
 
-Remaining OPEN: production TTL and rate-limit settings, retention/minimization cleanup, remote migration/deploy, production Storage configuration, interactive browser acceptance, production legal/OTP gates, 09C atomic case promotion and dashboard projection, and evidence acceptance. The former separate email-verification promotion trigger is `SUPERSEDED`; current local `typed_name_otp_v1` signing is documented separately.
+Remaining OPEN: production TTL and rate-limit settings, retention/minimization cleanup, remote migration/deploy, production Storage/internal-secret configuration, interactive browser acceptance, production legal/OTP gates, frontend promotion/status cutover, dashboard projection, Auth binding and evidence acceptance. The former separate email-verification promotion trigger is `SUPERSEDED`; current local `typed_name_otp_v1` signing and 09C1 server-only promotion are documented separately.

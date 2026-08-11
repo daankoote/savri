@@ -180,9 +180,9 @@ Behavior:
 
 Not all Auth errors sign the user out. Only terminal ENVAL bootstrap binding failures use this cleanup path.
 
-### Target Signed-Intake Promotion Boundary
+### Signed-Intake Promotion Boundary
 
-Status: TARGET / NOT IMPLEMENTED. Detailed contract: `docs/app/contracts/intake-verification-promotion.md`.
+Status: 09C1A DATABASE/RPC AND 09C1B INTERNAL SERVER CALLER CURRENT PROVEN — LOCAL ONLY; FRONTEND/AUTH/DASHBOARD CUTOVER TARGET. Detailed contract: `docs/app/contracts/intake-verification-promotion.md`.
 
 The CURRENT `typed_name_otp_v1` finalization:
 
@@ -192,6 +192,8 @@ The CURRENT `typed_name_otp_v1` finalization:
 - does not replace backend validation, audit, idempotency, or server-side promotion checks.
 
 The former separate one-time email-verification promotion link is `SUPERSEDED`. No browser link, receipt, safe reference, OTP or consumed intake capability authorizes promotion. A later Supabase Auth verification/login email is an account-access step only and does not repeat signing or trigger promotion.
+
+`api-app-signup-promote` is not a customer API. It requires a service-role bearer and a separately configured internal secret; the service-role local fallback is accepted only when the existing helper detects a loopback Supabase runtime. Production without the internal secret fails closed. Its body accepts only the internal intake reference, so browser-controlled Storage paths, buckets, hashes or evidence identifiers cannot cross the authorization boundary.
 
 Pre-auth intake and quarantine boundaries:
 

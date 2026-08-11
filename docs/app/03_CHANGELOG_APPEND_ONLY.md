@@ -1483,3 +1483,24 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   cutover, remote apply or deploy was performed.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-08-11 — 09C1B server-only quarantine-to-durable promotion orchestration
+
+- Added internal-only `api-app-signup-promote` above the existing 09C1A atomic
+  RPC. Production requires service-role authorization plus a separate internal
+  secret; browser/customer auth, safe references, OTP and capabilities fail
+  closed.
+- Reused private `app-documents` for both server-owned quarantine source and a
+  deterministic UUID-only `case-evidence/signed-signup/...` destination. The
+  server derives every coordinate and reverifies bytes, PDF MIME, size and
+  SHA-256 before database commit.
+- Added `upsert=false` preparation, exact existing-object reuse, bounded
+  concurrent-create handling, creator-only best-effort cleanup and safe private
+  deterministic orphan reuse. No source quarantine object is removed.
+- Local Q01-Q30 proves authorization, readiness/integrity rejection, one
+  promotion/case/evidence result, replay/concurrency, cleanup, source retention,
+  non-accepted domain truth and secret-free response/output.
+- No schema/migration, frontend/CSS, Auth invitation/binding, dashboard cutover,
+  remote action, deploy, commit, push or merge was performed.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

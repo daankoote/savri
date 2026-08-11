@@ -7,7 +7,8 @@ export const SIGNUP_QUARANTINE_BUCKET = "app-documents";
 export const SIGNUP_QUARANTINE_PREFIX = "signup-quarantine/";
 export const SIGNUP_MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
 
-export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+export const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const SHA256_RE = /^[0-9a-f]{64}$/;
 
 export type UnknownRecord = Record<string, unknown>;
@@ -20,7 +21,9 @@ export function stringField(record: UnknownRecord, key: string): string {
   return typeof record[key] === "string" ? String(record[key]).trim() : "";
 }
 
-export async function parseRecordBody(req: Request): Promise<UnknownRecord | null> {
+export async function parseRecordBody(
+  req: Request,
+): Promise<UnknownRecord | null> {
   try {
     const body = await req.json();
     return isRecord(body) ? body : null;
@@ -39,7 +42,10 @@ export function signupServiceClient() {
 function base64Url(bytes: Uint8Array): string {
   let binary = "";
   bytes.forEach((byte) => binary += String.fromCharCode(byte));
-  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll(
+    "=",
+    "",
+  );
 }
 
 export class SignupCapabilityConfigurationError extends Error {
@@ -68,7 +74,9 @@ export async function deriveCapabilityToken(
   const signature = await crypto.subtle.sign(
     "HMAC",
     cryptoKey,
-    new TextEncoder().encode(`${purpose}:${idempotencyKey}:${normalizedPayloadHash}`),
+    new TextEncoder().encode(
+      `${purpose}:${idempotencyKey}:${normalizedPayloadHash}`,
+    ),
   );
   return `sq_${base64Url(new Uint8Array(signature))}`;
 }
@@ -81,13 +89,23 @@ export function minutesFromNow(minutes: number): string {
   return new Date(Date.now() + minutes * 60 * 1000).toISOString();
 }
 
-export function configuredMinutes(name: string, fallback: number, minimum: number, maximum: number): number {
+export function configuredMinutes(
+  name: string,
+  fallback: number,
+  minimum: number,
+  maximum: number,
+): number {
   const configured = Number(Deno.env.get(name) || fallback);
-  if (!Number.isInteger(configured) || configured < minimum || configured > maximum) return fallback;
+  if (
+    !Number.isInteger(configured) || configured < minimum ||
+    configured > maximum
+  ) return fallback;
   return configured;
 }
 
-export function publicRpcBody(value: unknown): { status: number; body: UnknownRecord } | null {
+export function publicRpcBody(
+  value: unknown,
+): { status: number; body: UnknownRecord } | null {
   if (!isRecord(value)) return null;
   const status = Number(value.status);
   if (!Number.isInteger(status) || status < 100 || status > 599) return null;
@@ -100,7 +118,10 @@ export async function createSignupSignedUpload(
   bucket: string,
   path: string,
 ): Promise<{ signed_upload_url: string; upload_token: string } | null> {
-  if (bucket !== SIGNUP_QUARANTINE_BUCKET || !path.startsWith(SIGNUP_QUARANTINE_PREFIX)) return null;
+  if (
+    bucket !== SIGNUP_QUARANTINE_BUCKET ||
+    !path.startsWith(SIGNUP_QUARANTINE_PREFIX)
+  ) return null;
   const { data, error } = await SB.storage.from(bucket).createSignedUploadUrl(
     path,
     { upsert: false },
@@ -117,27 +138,71 @@ export async function downloadSignupObject(
   bucket: string,
   path: string,
 ): Promise<
-  | { ok: true; sizeBytes: number; detectedMimeType: string; serverSha256: string }
+  | {
+    ok: true;
+    sizeBytes: number;
+    detectedMimeType: string;
+    serverSha256: string;
+  }
   | { ok: false; failureCode: "object_missing" | "object_read_failed" }
 > {
-  if (bucket !== SIGNUP_QUARANTINE_BUCKET || !path.startsWith(SIGNUP_QUARANTINE_PREFIX)) {
+  if (
+    bucket !== SIGNUP_QUARANTINE_BUCKET ||
+    !path.startsWith(SIGNUP_QUARANTINE_PREFIX)
+  ) {
     return { ok: false, failureCode: "object_missing" };
   }
+  const stored = await downloadPrivateStorageObject(SB, bucket, path);
+  if (!stored.ok) return stored;
+  return {
+    ok: true,
+    sizeBytes: stored.sizeBytes,
+    detectedMimeType: stored.detectedMimeType,
+    serverSha256: stored.serverSha256,
+  };
+}
+
+export type PrivateStorageObject = {
+  bytes: ArrayBuffer;
+  sizeBytes: number;
+  detectedMimeType: string;
+  serverSha256: string;
+};
+
+export async function inspectPrivateStorageBytes(
+  bytes: ArrayBuffer,
+): Promise<PrivateStorageObject> {
+  const view = new Uint8Array(bytes);
+  const detectedMimeType = view.length >= 5 &&
+      view[0] === 0x25 && view[1] === 0x50 && view[2] === 0x44 &&
+      view[3] === 0x46 && view[4] === 0x2d
+    ? "application/pdf"
+    : "application/octet-stream";
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  const serverSha256 = Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+  return {
+    bytes,
+    sizeBytes: view.byteLength,
+    detectedMimeType,
+    serverSha256,
+  };
+}
+
+export async function downloadPrivateStorageObject(
+  SB: any,
+  bucket: string,
+  path: string,
+): Promise<
+  | ({ ok: true } & PrivateStorageObject)
+  | { ok: false; failureCode: "object_missing" | "object_read_failed" }
+> {
   const { data, error } = await SB.storage.from(bucket).download(path);
   if (error || !data) return { ok: false, failureCode: "object_missing" };
   try {
     const bytes = await data.arrayBuffer();
-    const view = new Uint8Array(bytes);
-    const detectedMimeType = view.length >= 5 &&
-        view[0] === 0x25 && view[1] === 0x50 && view[2] === 0x44 &&
-        view[3] === 0x46 && view[4] === 0x2d
-      ? "application/pdf"
-      : "application/octet-stream";
-    const digest = await crypto.subtle.digest("SHA-256", bytes);
-    const serverSha256 = Array.from(new Uint8Array(digest))
-      .map((byte) => byte.toString(16).padStart(2, "0"))
-      .join("");
-    return { ok: true, sizeBytes: view.byteLength, detectedMimeType, serverSha256 };
+    return { ok: true, ...await inspectPrivateStorageBytes(bytes) };
   } catch (_error) {
     return { ok: false, failureCode: "object_read_failed" };
   }
@@ -145,13 +210,19 @@ export async function downloadSignupObject(
 
 export function sanitizeFilename(value: string): string | null {
   const name = value.trim();
-  if (!name || name.length > 180 || name.includes("/") || name.includes("\\") || name.includes("..")) return null;
+  if (
+    !name || name.length > 180 || name.includes("/") || name.includes("\\") ||
+    name.includes("..")
+  ) return null;
   if (/[\u0000-\u001f\u007f]/.test(name)) return null;
   return name;
 }
 
 export function normalizeEmail(value: string): string | null {
   const email = value.trim().toLowerCase();
-  if (email.length < 3 || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
+  if (
+    email.length < 3 || email.length > 254 ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  ) return null;
   return email;
 }

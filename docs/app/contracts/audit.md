@@ -93,7 +93,7 @@ Do not copy legacy `dossier_*` event names as CURRENT app truth without adaptati
 
 ## Intake Promotion Audit Boundary
 
-Status: 09C1A DATABASE/RPC COMPLETION EVENT CURRENT PROVEN — LOCAL ONLY; EDGE/STORAGE/AUTH/DASHBOARD EVENTS TARGET. Detailed contract: `docs/app/contracts/intake-verification-promotion.md`.
+Status: 09C1A DATABASE/RPC COMPLETION EVENT AND 09C1B SAFE EDGE/STORAGE STAGES CURRENT PROVEN — LOCAL ONLY; AUTH/DASHBOARD EVENTS TARGET. Detailed contract: `docs/app/contracts/intake-verification-promotion.md`.
 
 Audit-required target events include:
 
@@ -103,7 +103,7 @@ Audit-required target events include:
 - atomic service-only promotion completion;
 - customer/party/case creation or safe reuse from promotion; no legacy dossier creation;
 - initial immutable intake/submission snapshot;
-- immutable case-owned evidence metadata linkage from confirmed quarantine; no Storage copy or acceptance;
+- immutable case-owned evidence metadata linkage from confirmed quarantine plus server-only deterministic private Storage preparation/reverification; no evidence acceptance;
 - targeted unlock;
 - replacement evidence;
 - `Correcties indienen`;
@@ -116,6 +116,8 @@ Not every browser-side action is an immutable compliance revision. These are not
 - ordinary field edits before the customer clicks `Correcties indienen`.
 
 The target flow must preserve enough server-side evidence to reconstruct promotion and correction decisions without exposing raw audit rows, storage paths, raw parser text, raw hashes, or internal payloads to customers.
+
+09C1B Edge logs are operational only and contain the component, one of `source_validated`, `durable_prepared`, `promotion_committed`, `cleanup_attempted` or `cleanup_failed`, and the validated request ID. They contain no raw secret, PII, capability, OTP, Storage path, bucket or hash. `signup_promotion_completed` in the atomic database transaction remains core business truth; an Edge stage never fabricates successful promotion.
 
 ## Document Withdrawal Boundary
 

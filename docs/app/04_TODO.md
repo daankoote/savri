@@ -50,7 +50,7 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
 - Browser-reachable local download origin correction is locally and browser-proven.
 - Shared dashboard document card UI is locally and browser-proven.
 - Pre-auth quarantine, `typed_name_otp_v1` finalization, immutable signing evidence, finalized mutation locks, safe receipt and server-authoritative recovery are CURRENT PROVEN locally within their explicit local/legal gates.
-- Post-signing atomic promotion contract is documented as TARGET / NOT IMPLEMENTED. The former separate email-verification promotion trigger is `SUPERSEDED`.
+- Post-signing 09C1A atomic promotion and 09C1B internal-only private Storage/Edge orchestration are CURRENT PROVEN locally; frontend/Auth/dashboard cutover remains TARGET. The former separate email-verification promotion trigger is `SUPERSEDED`.
 - Gate 1 EAN and electricity connection domain objects are observed locally, not CURRENT PROVEN:
   - `app_connections`
   - `app_connection_periods`
@@ -1176,9 +1176,9 @@ EXTERNAL LIVE GATES OPEN.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## 09C0/09C1A post-signing lifecycle convergence checkpoint
+## 09C0/09C1A/09C1B post-signing lifecycle convergence checkpoint
 
-09C1A DATABASE/RPC FOUNDATION CURRENT PROVEN — LOCAL ONLY.
+09C1A DATABASE/RPC FOUNDATION AND 09C1B SERVER-ONLY STORAGE/EDGE ORCHESTRATION CURRENT PROVEN — LOCAL ONLY.
 
 - [x] Map the CURRENT signed-intake flow from intake start through quarantine,
       challenge, OTP/email control, finalization, lock and refresh recovery.
@@ -1204,8 +1204,12 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
       immutable promotion owner, service-only atomic/idempotent RPC, one
       `app_cases` root, asserted roles, declared location observations,
       non-accepted evidence metadata, audit and focused Q01-Q24 local proof.
-- [ ] 09C1B/09C1C: implement server-side Storage preparation/copy and Edge
-      caller, then the receipt/frontend status cutover, Auth invitation/binding
-      and case-dashboard journey. Remote apply/deploy require separate authority.
+- [x] 09C1B: add internal-only `api-app-signup-promote`, server-derived private
+      quarantine-to-durable preparation in existing `app-documents`, exact
+      byte/MIME/size/SHA-256 reverification, deterministic retry/concurrency,
+      creator-only cleanup and focused local Q01-Q30 proof without schema work.
+- [ ] 09C1C+: implement the separately authorized receipt/frontend status
+      cutover, Auth invitation/binding and case-dashboard journey. Production
+      secret configuration and remote apply/deploy require separate authority.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

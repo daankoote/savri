@@ -1115,9 +1115,9 @@ this batch.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-### 09C0/09C1A Post-Signing Lifecycle Convergence
+### 09C0/09C1A/09C1B Post-Signing Lifecycle Convergence
 
-09C1A DATABASE/RPC FOUNDATION CURRENT PROVEN — LOCAL ONLY.
+09C1A DATABASE/RPC FOUNDATION AND 09C1B SERVER-ONLY STORAGE/EDGE ORCHESTRATION CURRENT PROVEN — LOCAL ONLY.
 
 - CURRENT flow is mapped from intake start through quarantine, challenge,
   OTP/email control, atomic signing finalization, locked refresh recovery and
@@ -1134,6 +1134,17 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   asserted roles, internal lifecycle state, declared location observations and
   case links, and durable private evidence versions linked to immutable signing
   evidence.
+- 09C1B adds internal-only `api-app-signup-promote`. It requires service-role
+  bearer plus a separately configured internal secret, derives all Storage
+  coordinates from the locked intake, reuses private `app-documents`, and
+  verifies source and durable destination bytes, PDF MIME, size and SHA-256.
+- Durable keys are deterministic UUID-only keys. Existing exact objects are
+  reused; mismatches fail closed. New objects are creator-tracked for safe
+  best-effort cleanup after DB failure, while a private orphan remains
+  verifiable/reusable on retry. No cleanup table or migration was required.
+- Local Q01-Q30 proves denial of browser/customer/safe-reference/OTP/capability
+  authorization, exact replay, concurrent convergence, cleanup/non-deletion,
+  source retention, non-accepted evidence and minimized output.
 - Particulier gets no fictitious authority record. Zakelijk/VvE stays asserted
   with `required_not_completed` authority review.
 - Declared/parser EAN, charger, MID and document facts remain source material;
@@ -1146,8 +1157,9 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   separate external boundary.
 
 Exact implementation and remaining scope is in
-`contracts/intake-verification-promotion.md#15-exact-09c1a-foundation-and-remaining-scope`.
-09C1A performs no Storage copy, Edge/browser promotion, Auth invitation,
-dashboard cutover, remote apply or deployment.
+`contracts/intake-verification-promotion.md#15-exact-09c1a09c1b-foundation-and-remaining-scope`.
+09C1B performs no frontend/browser trigger, Auth invitation/binding, dashboard
+cutover, remote apply, function deploy, secret configuration or production
+Storage-policy change.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
