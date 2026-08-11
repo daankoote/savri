@@ -208,8 +208,8 @@ Signed-intake and promotion lifecycle:
 
 - Collecting pre-auth quarantine, `typed_name_otp_v1`, immutable signing finalization, finalized server locks, safe receipt and server-authoritative same-tab recovery are CURRENT PROVEN locally as bounded source/runtime proofs.
 - `typed_name_otp_v1` proves signing intent plus control of the used email channel; the former separate email-verification promotion trigger is `SUPERSEDED` and must not be rebuilt without a new hard requirement.
-- Atomic durable promotion into `app_cases`-owned state remains TARGET / NOT IMPLEMENTED and is defined in `docs/app/contracts/intake-verification-promotion.md`.
-- CURRENT `pending_verification` means only finalized/locked and waiting for ENVAL internal handling. 09C1 must explicitly rename it to `submitted_for_review`; neither name is formal NEa inboekverificatie.
+- 09C1A database/RPC promotion into `app_cases`-owned state is CURRENT PROVEN — LOCAL ONLY: one service-only atomic/idempotent promotion, immutable provenance, internal lifecycle, asserted party roles, declared location observations and non-accepted evidence metadata. Storage preparation/copy, an Edge caller, Auth invitation and dashboard cutover remain TARGET.
+- CURRENT database truth after signing is `submitted_for_review`: finalized/locked and waiting for ENVAL internal handling. The unchanged 09B2 frontend temporarily receives the legacy `pending_verification` response discriminator until its separately authorized cutover; neither value is formal NEa inboekverificatie.
 - Current authenticated dashboard/document behavior remains dossier-shaped until the separately proven case-owned promotion/Auth/dashboard cutover is complete.
 
 ## Source-Of-Truth Order

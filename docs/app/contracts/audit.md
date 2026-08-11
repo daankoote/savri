@@ -91,19 +91,19 @@ Future app work must define app-specific events for:
 
 Do not copy legacy `dossier_*` event names as CURRENT app truth without adaptation.
 
-## Target Intake Promotion Audit Boundary
+## Intake Promotion Audit Boundary
 
-Status: TARGET / NOT IMPLEMENTED. Detailed contract: `docs/app/contracts/intake-verification-promotion.md`.
+Status: 09C1A DATABASE/RPC COMPLETION EVENT CURRENT PROVEN — LOCAL ONLY; EDGE/STORAGE/AUTH/DASHBOARD EVENTS TARGET. Detailed contract: `docs/app/contracts/intake-verification-promotion.md`.
 
 Audit-required target events include:
 
 - atomic signing finalization and locked signed-intake state;
 - accepted legal versions;
 - signing challenge consumption and bounded email-control proof;
-- atomic promotion;
-- customer/dossier creation from promotion;
+- atomic service-only promotion completion;
+- customer/party/case creation or safe reuse from promotion; no legacy dossier creation;
 - initial immutable intake/submission snapshot;
-- document/evidence promotion from quarantine;
+- immutable case-owned evidence metadata linkage from confirmed quarantine; no Storage copy or acceptance;
 - targeted unlock;
 - replacement evidence;
 - `Correcties indienen`;

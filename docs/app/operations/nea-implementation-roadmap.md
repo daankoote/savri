@@ -8,7 +8,7 @@ Architecture decision: TARGET — approved by Daan on 2026-07-22; not CURRENT PR
 
 Signup lane note: PILOT-SIGNUP-QUARANTINE-UPLOAD-09B1 is CURRENT PROVEN — LOCAL ONLY for collecting intake, capability-scoped private upload, server byte/hash confirmation, immutable replacement and document-first gating. It is transport proof, not regulatory/evidence acceptance. 09B2 signing finalization is now CURRENT PROVEN locally within its explicit legal/runtime gates; internal promotion/dashboard projection remains 09C. Remote, deploy and production remain open.
 
-Signup convergence note: 09B2 signing finalization, lock, receipt and status recovery are CURRENT PROVEN locally. `typed_name_otp_v1` already supplies bounded email control, so the former separate email-verification promotion trigger is `SUPERSEDED`. 09C1 is the next server-only case-owned promotion target; it is not implemented and is never external inboekverificatie.
+Signup convergence note: 09B2 signing finalization, lock, receipt and status recovery are CURRENT PROVEN locally. `typed_name_otp_v1` already supplies bounded email control, so the former separate email-verification promotion trigger is `SUPERSEDED`. 09C1A service-only case-owned database/RPC promotion is CURRENT PROVEN locally and is never external inboekverificatie; Storage/Edge/Auth/dashboard integration remains TARGET.
 
 Next bounded gates: WP3M-D01 through WP3M-D18 are APPROVED TARGET. WP3N
 commit `6705fa3baf046510d70b8502da6058009b30b2f3` now proves exactly four
@@ -1115,21 +1115,21 @@ this batch.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-### 09C0 Post-Signing Lifecycle Convergence
+### 09C0/09C1A Post-Signing Lifecycle Convergence
 
-DOCS / ARCHITECTURE COMPLETE — 09C1 IMPLEMENTATION NOT STARTED.
+09C1A DATABASE/RPC FOUNDATION CURRENT PROVEN — LOCAL ONLY.
 
 - CURRENT flow is mapped from intake start through quarantine, challenge,
   OTP/email control, atomic signing finalization, locked refresh recovery and
   the waiting intake state.
 - Separate one-time email-verification as promotion trigger is `SUPERSEDED`;
   later Supabase Auth email is login/account access only.
-- CURRENT `pending_verification` is API/database-internal finalized/locked
-  state with no verifier meaning. 09C1 must rename it exactly to
-  `submitted_for_review`, including receipt schema and proofs.
-- 09C1 target uses `app_cases` as the sole core owner and creates no new
+- CURRENT stored `submitted_for_review` is database-internal finalized/locked
+  state with no verifier meaning. The 09B2 client response remains temporarily
+  `pending_verification` until the later receipt/frontend cutover.
+- 09C1A uses `app_cases` as the sole core owner and creates no new
   `app_customer_dossiers` row.
-- Promotion is internal server-only, atomic and idempotent. It safely
+- 09C1A promotion is service-role-only, atomic and idempotent. It safely
   creates/reuses customer/identity/party/profile roots, creates one case,
   asserted roles, internal lifecycle state, declared location observations and
   case links, and durable private evidence versions linked to immutable signing
@@ -1145,8 +1145,9 @@ DOCS / ARCHITECTURE COMPLETE — 09C1 IMPLEMENTATION NOT STARTED.
   findings, statement, five-year verification dossier and REV result remain a
   separate external boundary.
 
-Exact implementation and proof scope is in
-`contracts/intake-verification-promotion.md#15-exact-09c1-implementation-scope`.
-No runtime, schema, frontend, remote or deployment work follows from 09C0.
+Exact implementation and remaining scope is in
+`contracts/intake-verification-promotion.md#15-exact-09c1a-foundation-and-remaining-scope`.
+09C1A performs no Storage copy, Edge/browser promotion, Auth invitation,
+dashboard cutover, remote apply or deployment.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

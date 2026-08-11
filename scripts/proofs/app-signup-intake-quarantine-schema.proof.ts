@@ -337,7 +337,7 @@ export async function runAppSignupIntakeQuarantineSchemaProof(): Promise<void> {
 
     await runCase(ctx, "Q7", async () => {
       const res = await ctx.service.from("app_signup_intakes").update({
-        status: "pending_verification",
+        status: "submitted_for_review",
         finalized_at: new Date().toISOString(),
         verification_sent_at: new Date().toISOString(),
       }).eq("id", mainIntakeId);
@@ -386,7 +386,7 @@ export async function runAppSignupIntakeQuarantineSchemaProof(): Promise<void> {
     await runCase(ctx, "Q13", async () => {
       const expiredId = await createIntake(ctx);
       const pending = await ctx.service.from("app_signup_intakes").update({
-        status: "pending_verification",
+        status: "submitted_for_review",
         finalized_at: new Date().toISOString(),
       }).eq("id", expiredId);
       if (pending.error) throw new Error("prepare_expired_failed");

@@ -91,7 +91,7 @@ All listed active `app_*` tables enable RLS, deny `anon` and `authenticated`, re
 | `app_dossier_locations` | Address/location snapshot under a dossier; signup writes and dashboard reads. Unique client location per dossier; status and normalized address fields; lookup metadata. | Dossier ownership and provider metadata are embedded; address is not party residence/establishment, connection, EAN, or accepted evidence. | CURRENT PROVEN for current local location facts. | Reuse normalization, stable client ID, and address fields. WP3 decides target location migration. | REFACTOR; final disposition in WP3 |
 | `app_dossier_chargers` | Charger snapshot under dossier/location; signup writes, dashboard/documents read. Unique client charger per dossier, required MID, status/year checks. | Charger, charge point, meter/MID, and evidence are collapsed. Not party/case identity truth. | CURRENT PROVEN for current local submitted facts. | Reuse stable ID and submitted asset facts only. | REFACTOR; final disposition in WP4 |
 | `app_dossier_legal_acceptances` | Versioned terms/consent acceptances called by signup/dashboard; type/version/status checks and hashed request metadata. | `mandate_authorization` label can be mistaken for a signed mandate; no signer, authority, clauses, EAN, or calendar-year scope. | CURRENT PROVEN for current local acceptance records. | Reuse version/hash/provenance pattern for commercial/legal acceptance only. | KEEP for terms; REPLACE for mandate truth |
-| `app_signup_intakes` | CURRENT local runtime source for collecting quarantine, immutable signed payload/hash/legal/mandate/signature set, `finalized_at`, technical `pending_verification` and locks. It creates no customer/dossier/case. | Status name is ambiguous beside formal verification; old promotion foundations target dossiers/broad JSON. `client_precheck` remains non-authoritative. | CURRENT PROVEN — LOCAL for the bounded quarantine/signing lifecycle; promotion and remote remain unproven. | Reuse quarantine, hash, immutable finalization, expiry and locks; 09C1 renames status to `submitted_for_review` and targets the party/case contract. | EXTEND for case-owned promotion |
+| `app_signup_intakes` | CURRENT local runtime source for collecting quarantine, immutable signed payload/hash/legal/mandate/signature set, `finalized_at`, stored `submitted_for_review` and locks. Signing itself creates no customer/dossier/case. | The unchanged 09B2 frontend temporarily retains the old response discriminator; `client_precheck` remains non-authoritative. | CURRENT PROVEN — LOCAL for quarantine/signing and 09C1A service-only database promotion; remote/Edge journey remain unproven. | Reuse quarantine, hash, immutable finalization, expiry and locks; one immutable promotion targets the party/case contract. | EXTENDED for case-owned promotion foundation |
 | `app_signup_intake_files` / capabilities | CURRENT local quarantine metadata and hashed scoped capabilities with guarded transitions, expiry, consumption and finalized mutation locks. | Transport/security foundation only; not accepted evidence, Auth or authority. | CURRENT PROVEN — LOCAL for bounded quarantine/signing callers; remote unknown. | Reuse transition, hash, expiry, single-use capability and immutable-source patterns. | KEEP / EXTEND in case-owned evidence batch |
 | `app_audit_events` / `app_intake_audit_events` | Internal and pre-dossier audit rows used by app endpoints/RPCs; actor/scope checks, request/idempotency refs, hashed request metadata. | Scope taxonomy lacks party, representation, authority, case role, and supersession; fail-open is unsafe for material authority decisions. | CURRENT PROVEN for current local technical audit primitives. | Reuse append-oriented shape and minimized metadata. | EXTEND |
 | `app_idempotency_keys` | Scoped key/payload hash/replay record used by signup, bootstrap, and connection RPCs. Unique scope/key and response-status constraints. | Generic technical primitive; cleanup/retention remains open. | CURRENT PROVEN for current local write paths. | Reuse unchanged pattern with party/case-specific scopes. | KEEP / EXTEND |
@@ -666,12 +666,12 @@ implemented or unproven.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## 09C0 Signed-Intake Promotion Mapping
+## 09C0/09C1A Signed-Intake Promotion Mapping
 
-TARGET FOR 09C1 — NOT IMPLEMENTED.
+09C1A DATABASE/RPC FOUNDATION CURRENT PROVEN — LOCAL ONLY.
 
 `app_cases` is the sole target service-case owner for signed-intake promotion.
-09C1 must create a case directly from the immutable signed intake source and
+09C1A creates a case directly from the immutable signed intake source and
 must not create `app_customer_dossiers` merely to reuse dossier-bound callers
 or foreign keys. Retry reuses the one intake-to-case promotion relation.
 
@@ -692,8 +692,9 @@ and leaves Zakelijk/VvE
 customer-to-`account_owner` party is reused when unambiguous and kind-correct;
 name, email, title or parser output never authorizes a global party merge.
 
-Exact atomic promotion, Auth/dashboard and evidence mapping is owned by
-`intake-verification-promotion.md`.
+Exact atomic promotion and remaining Storage/Edge/Auth/dashboard mapping is
+owned by `intake-verification-promotion.md`. The latter integrations remain
+TARGET and are not implied by the local database proof.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 

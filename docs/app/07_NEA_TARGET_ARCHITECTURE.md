@@ -980,9 +980,9 @@ browser and production remain open.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## 09C0 Post-Signing Lifecycle And Atomic Promotion Target
+## 09C0/09C1A Post-Signing Lifecycle And Atomic Promotion
 
-TARGET CONTRACT FOR 09C1 DESIGN — NOT IMPLEMENTED.
+09C1A DATABASE/RPC FOUNDATION CURRENT PROVEN — LOCAL ONLY. STORAGE/EDGE/AUTH/DASHBOARD TARGET.
 
 The exact contract is owned by
 `contracts/intake-verification-promotion.md`; this section is the architecture
@@ -995,19 +995,20 @@ consumes the challenge and management capability, locks the intake/files and
 returns a safe receipt. It creates no customer, Auth session, dossier or case.
 
 The previous separate email-verification promotion trigger is `SUPERSEDED`.
-CURRENT `pending_verification` means only finalized/locked and waiting for
-ENVAL internal handling; 09C1 must rename it to `submitted_for_review` across
-schema, RPC, client, receipt schema and proofs. Neither value is an external
-inboekverificatie status.
+CURRENT stored lifecycle truth is `submitted_for_review`: finalized/locked and
+waiting for ENVAL internal handling. The unchanged 09B2 frontend temporarily
+receives legacy discriminator `pending_verification` until its separately
+authorized receipt/client cutover. Neither value is an external
+inboekverificatie status or promotion credential.
 
-09C1 target is one server-only, idempotent promotion boundary into
+09C1A proves one service-role-only, atomic and idempotent promotion boundary into
 `app_cases`-owned durable state. It safely creates/reuses customer, unbound
 login identity, parties/profiles and account relationships; creates one case,
 asserted case roles, internal lifecycle state, declared location observations
 and case-location links; links the immutable signing/mandate evidence; and
-creates case-owned durable evidence file/version metadata after server-side
-private object preparation. It must not create `app_customer_dossiers` as a
-parallel owner.
+creates case-owned durable evidence file/version metadata from a strictly
+server-supplied manifest. It performs no Storage copy and must not create
+`app_customer_dossiers` as a parallel owner.
 
 Particulier acting for themself creates no representation-authority fiction.
 Zakelijk/VvE may create an organization service-recipient assertion and a
@@ -1027,6 +1028,7 @@ Database promotion, audit and idempotency commit in one transaction. Durable
 storage objects may be prepared beforehand only under deterministic private
 keys that are invisible until the transaction links them; failure leaves the
 intake retryable and at most an inaccessible cleanup orphan, never partial
-customer-visible promotion.
+customer-visible promotion. The Storage preparation/copy, internal Edge caller,
+Auth invitation/binding and case-dashboard cutover remain TARGET.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

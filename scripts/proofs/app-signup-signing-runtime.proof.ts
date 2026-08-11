@@ -609,7 +609,7 @@ async function main(): Promise<void> {
         successFixture.intakeId,
       ).single();
     assert(
-      !intake.error && intake.data.status === "pending_verification",
+      !intake.error && intake.data.status === "submitted_for_review",
       "intake_not_finalized",
     );
     assert(

@@ -172,17 +172,18 @@ receipt, safe reference, OTP, signing challenge or consumed management
 capability. Supabase Auth verification/login remains a separate post-promotion
 account-access boundary and signing OTP creates no Auth session.
 
-CURRENT `pending_verification` means only finalized, locked and awaiting ENVAL
-internal handling. Because it is ambiguous beside the formal TKV verification
-concept, 09C1 must rename it to `submitted_for_review` across database, RPC,
-client, receipt schema and proofs. Customer copy remains `Ondertekend en
-ingediend` followed by `In behandeling`; external verifier states remain in a
+CURRENT database truth is `submitted_for_review`: finalized, locked and awaiting
+ENVAL internal handling. 09C1A migrated old stored rows and all new database
+writes; the unchanged 09B2 client/receipt temporarily retains the legacy
+`pending_verification` response discriminator until its own cutover. Customer
+copy remains `Ondertekend en ingediend`; external verifier states remain in a
 separate future bounded context.
 
 The exact atomic case-owned promotion and evidence/Auth/dashboard boundaries
 are canonical in `intake-verification-promotion.md`. Signing snapshots, legal
-acceptances, mandate and signature evidence are linked by promotion and never
-rewritten or duplicated.
+acceptances, mandate and signature evidence are linked by the CURRENT local
+09C1A service-only promotion RPC and never rewritten or duplicated. Storage,
+Edge, Auth and dashboard integration remain TARGET.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 

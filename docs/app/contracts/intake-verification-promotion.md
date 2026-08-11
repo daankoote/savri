@@ -1,6 +1,6 @@
 # Intake Verification Promotion Contract
 
-Status: MIXED — SIGNED INTAKE CURRENT PROVEN LOCALLY; ATOMIC CASE PROMOTION TARGET FOR 09C1 / NOT IMPLEMENTED.
+Status: MIXED — SIGNED INTAKE AND 09C1A DATABASE/RPC PROMOTION FOUNDATION CURRENT PROVEN LOCALLY; STORAGE/EDGE/AUTH/DASHBOARD CUTOVER TARGET.
 
 This is the canonical post-signing convergence contract. It replaces the stale target in which a signed submission waited for a separate one-time email-verification link before promotion. It does not change runtime, schema, production or regulatory status by documentation alone.
 
@@ -41,11 +41,11 @@ Only current source/schema/proof establishes this matrix.
 | 3. upload confirm | browser uploads to the signed private URL and asks the server to confirm | `api-app-signup-upload-confirm` / `app_signup_quarantine_confirm_v1` | server downloads bytes, validates MIME/size/hash, consumes upload capability and records `confirmed_quarantine` or rejection | file-scoped upload capability; no dossier or evidence authority | `signup_quarantine_upload_confirmed` or `signup_quarantine_upload_rejected` | confirmed quarantine transport only; not accepted evidence |
 | 4. signing challenge | customer requests the six-digit code after Step 3 readiness | `api-app-signup-signing-challenge` / `app_signup_signing_challenge_issue_v1` | one delivered, expiring `typed_name_otp_v1` challenge; older active challenge is replaced | valid `intake_manage`; server binds challenge to a hashed normalized-email channel | `signup_signing_challenge_issued` plus delivery audit | intake remains `collecting`; no signature yet |
 | 5. OTP/email-control proof | customer submits the delivered OTP together with typed signer input | no independent verification endpoint; proof is evaluated inside finalize | delivered challenge, channel hash, OTP verifier, expiry and attempts are checked atomically | OTP plus the matching intake/challenge/capability proves control of the used email channel for this signing act | failed attempts stay bounded; successful proof becomes part of signature evidence | no standalone account, Auth session, authority or external-verification state |
-| 6. signing finalization | customer confirms the canonical facts, legal actions, one mandate year and typed signature | `api-app-signup-signing-finalize` / `app_signup_signing_finalize_v1` | exactly one immutable signing snapshot, three legal acceptances, one mandate, one signature-evidence row; challenge and management capability consumed; `finalized_at` set | capability ownership plus delivered OTP challenge; service-role-only RPC; idempotent | exactly one `signup_signing_finalized` event | CURRENT database status `pending_verification`; all intake/file mutation routes reject the finalized intake |
+| 6. signing finalization | customer confirms the canonical facts, legal actions, one mandate year and typed signature | `api-app-signup-signing-finalize` / `app_signup_signing_finalize_v1` | exactly one immutable signing snapshot, three legal acceptances, one mandate, one signature-evidence row; challenge and management capability consumed; `finalized_at` set | capability ownership plus delivered OTP challenge; service-role-only RPC; idempotent | exactly one `signup_signing_finalized` event | CURRENT database status `submitted_for_review`; all intake/file mutation routes reject the finalized intake. The unchanged 09B2 frontend response remains temporarily `pending_verification` until its own cutover |
 | 7. finalized refresh/status | same-tab page bootstraps through the existing intake session; receipt is presentation cache only | `api-app-signup-signing-finalize` with `operation=status` / `app_signup_signing_status_v1` | server checks finalized intake, consumed challenge/capability, one snapshot, three acceptances, one mandate, one signature evidence and one audit event | existing hashed `intake_manage` proves scoped status ownership only; safe reference alone is not a credential | reads existing finalization audit; no mutation event | server returns `finalized`, `locked`, safe reference and `finalized_at`; no new intake/upload/signing call |
-| 8. waiting after signing | customer sees `Je dossier is ondertekend en ingediend.` and the safe reference | no promotion endpoint exists CURRENT | signed intake remains separate from customer, identity, case and dossier records | receipt grants no rights; consumed capability cannot authorize promotion | immutable signing/audit set only | technically waiting for ENVAL internal durable promotion/review; no NEa verification has started or completed |
+| 8. waiting after signing | customer sees `Je dossier is ondertekend en ingediend.` and the safe reference | no browser/Edge promotion endpoint exists CURRENT; 09C1A supplies only service-role RPC `app_promote_signed_signup_v1` | a server caller can atomically create/reuse customer/identity/party state and create one `app_cases` root; no `app_customer_dossiers` row | receipt grants no rights; consumed capability cannot authorize promotion | immutable signing source plus minimized promotion/lifecycle/audit provenance | internal review only; no NEa verification has started or completed |
 
-CURRENT proof also establishes that successful signing creates no `app_customers`, `app_customer_identities`, `app_customer_dossiers` or `app_cases` row.
+CURRENT proof also establishes that signing itself creates no `app_customers`, `app_customer_identities`, `app_customer_dossiers` or `app_cases` row. Only the separate service-only 09C1A promotion transaction may create/reuse the first three target families, and it never creates `app_customer_dossiers`.
 
 ## 3. Superseded Separate Email-Verification Trigger
 
@@ -89,18 +89,18 @@ ENVAL internal review is an operational assessment of a promoted signed case: co
 
 External inboekverificatie is performed by the inboekverificateur under the approved protocol. It includes professional risk analysis, sampling, location visits, mandate checks, quantity/administration controls, findings, the verification dossier and any verification statement. Verification-related information must remain reconstructable for at least five years after the end of the verification calendar year under TKV 3.0.5. ENVAL onboarding, promotion or internal-review status never silently claims these external acts or outcomes.
 
-## 5. `pending_verification` Meaning And Replacement
+## 5. `submitted_for_review` Database Meaning And Compatibility Projection
 
 CURRENT exact meaning:
 
 | context | CURRENT meaning |
 |---|---|
-| API-internal | successful signing finalization response and status-recovery discriminator |
-| database lifecycle | finalized/locked intake with consumed signing challenge/capability and complete immutable signing record set |
+| API-internal | the unchanged 09B2 frontend temporarily receives legacy discriminator `pending_verification`; it grants no promotion authority |
+| database lifecycle | `submitted_for_review`: finalized/locked intake with consumed signing challenge/capability and complete immutable signing record set |
 | customer-facing | not shown as raw copy; projected as `Je dossier is ondertekend en ingediend.` |
 | external/verifier | none; it does not mean external verification is pending, started or assigned |
 
-Because the name conflicts with the formal TKV meaning of verification, 09C1 must replace it with the exact internal value `submitted_for_review`.
+Because the old name conflicts with the formal TKV meaning of verification, 09C1A replaced stored lifecycle truth and all new database writes with the exact internal value `submitted_for_review`.
 
 The rename is semantic and explicit, not silent:
 
@@ -108,19 +108,18 @@ The rename is semantic and explicit, not silent:
 - customer copy remains `Ondertekend en ingediend` followed by `In behandeling` after promotion;
 - external-verifier states must live only in the later verifier bounded context.
 
-09C1 callers/schema to migrate together:
+09C1A migrated together:
 
 - `app_signup_intakes.status` check and transition guard in a forward migration based on `20260716100000_app_signup_intake_quarantine_schema.sql`;
 - finalize/status functions and audit `next_status` derived from `20260806160000_app_signup_signing_runtime.sql`;
-- `signupSigningClient.ts` response types and validators;
-- `signupSubmissionReceiptStore.ts` receipt status and a new receipt schema version so stale v1 values fail closed;
-- `SignupPageShell.tsx` hydration/finalization type flow;
-- signing-runtime, signed-receipt and quarantine status proofs;
-- active contracts, system map, roadmap and TODO references.
+- signing-runtime and quarantine schema expectations for stored database truth;
+- existing finalized local rows, without changing `finalized_at`, signing evidence or safe references.
 
-No compatibility layer may interpret either name as external verification. A forward migration may temporarily accept/read the old stored value only to transform it transactionally; all new writes use `submitted_for_review`.
+Still TARGET for a separately authorized frontend/Edge batch: `signupSigningClient.ts`, `signupSubmissionReceiptStore.ts`, `SignupPageShell.tsx`, receipt schema/copy and the public API projection. The compatibility response may not be interpreted as external verification or promotion authority.
 
-## 6. TARGET Atomic Promotion Boundary
+No compatibility layer may interpret either name as external verification. The forward migration transformed old stored rows transactionally; all new database writes use `submitted_for_review`.
+
+## 6. CURRENT 09C1A Atomic Database Promotion Boundary / TARGET Caller
 
 TARGET flow:
 
@@ -294,22 +293,22 @@ There is no second generic full submit in the dashboard. Later corrections are t
 | correction history | immutable source, versions, roles and later supersession/correction events | no historical truth is deleted on rollback or correction |
 | verifier pack | stable case, party/profile, mandate, location, evidence-version and snapshot references | risk, sample, visits, findings and statement remain verifier-owned |
 
-## 15. Exact 09C1 Implementation Scope
+## 15. Exact 09C1A Foundation And Remaining Scope
 
-One bounded implementation batch must include together:
+09C1A CURRENT PROVEN — LOCAL ONLY includes:
 
-1. forward status rename to `submitted_for_review`, including receipt schema revision and all named callers/proofs;
+1. forward database status rename to `submitted_for_review`, with a temporary legacy frontend response discriminator;
 2. one immutable `app_signup_promotions` mapping and one append-only internal case-lifecycle responsibility;
-3. case-owned durable evidence file/version minimum with private server-prepared object mapping and no acceptance row;
-4. service-role-only `app_promote_signed_signup_v1` plus internal `api-app-signup-promote` caller;
+3. case-owned durable evidence file/version metadata from a server-supplied deterministic manifest, with no Storage copy and no acceptance row;
+4. service-role-only `app_promote_signed_signup_v1`; no Edge caller yet;
 5. direct `app_cases` creation/reuse from signed intake, never `app_customer_dossiers` creation;
 6. safe customer/identity/party/profile/relationship reuse and account-type mappings above;
 7. asserted case roles only, with Zakelijk/VvE authority incomplete;
 8. `app_locations` customer-declared observations plus `app_case_location_relations`, without accepted location versions;
 9. signed EAN/charger/MID facts retained for review without writing blocked canonical connection/asset truth;
-10. revised Auth bootstrap that binds the promoted identity and reuses customer/party/case;
-11. case-owned dashboard projection and post-commit Auth invitation/outbox boundary;
-12. transactional audit/idempotency, concurrency, rollback and customer-safe response.
+10. transactional audit/idempotency, concurrency, rollback and minimized service response.
+
+Still TARGET for 09C1B/09C1C: server-side Storage preparation/copy, `api-app-signup-promote`, frontend/receipt status cutover, post-commit Auth invitation/binding, case-owned dashboard projection and browser journey proof.
 
 Do not split the core database creation into multiple visible transactions. Storage preparation may precede the transaction only under the inaccessible deterministic-orphan rule above.
 
@@ -338,6 +337,6 @@ Required focused proof:
 
 ## 17. Non-Claims
 
-This contract does not implement 09C1, approve production legal/OTP delivery, establish representation authority, accept evidence/EAN/MID, perform external verification, create a verification statement, authorize REV/booking, or grant remote/deploy permission.
+09C1A implements only the local database/RPC foundation. It does not implement Storage copy, an Edge/browser caller, Auth invitation/binding, dashboard cutover or the full 09C1 journey; approve production legal/OTP delivery; establish representation authority; accept evidence/EAN/MID; perform external verification; create a verification statement; authorize REV/booking; or grant remote/deploy permission.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

@@ -1176,9 +1176,9 @@ EXTERNAL LIVE GATES OPEN.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## 09C0 post-signing lifecycle convergence checkpoint
+## 09C0/09C1A post-signing lifecycle convergence checkpoint
 
-DOCS / ARCHITECTURE COMPLETE — 09C1 IMPLEMENTATION TODO.
+09C1A DATABASE/RPC FOUNDATION CURRENT PROVEN — LOCAL ONLY.
 
 - [x] Map the CURRENT signed-intake flow from intake start through quarantine,
       challenge, OTP/email control, finalization, lock and refresh recovery.
@@ -1200,8 +1200,12 @@ DOCS / ARCHITECTURE COMPLETE — 09C1 IMPLEMENTATION TODO.
       to reuse promoted customer/party/case state.
 - [x] Map the promotion boundary to TKV mandate, EAN, location-control,
       provenance, MID, retention, correction and later verifier-pack needs.
-- [ ] 09C1: implement the exact scope and focused proof gates in
-      `contracts/intake-verification-promotion.md`; runtime/schema/frontend,
-      remote and deploy work require their own authorization.
+- [x] 09C1A: migrate stored lifecycle truth to `submitted_for_review`; add one
+      immutable promotion owner, service-only atomic/idempotent RPC, one
+      `app_cases` root, asserted roles, declared location observations,
+      non-accepted evidence metadata, audit and focused Q01-Q24 local proof.
+- [ ] 09C1B/09C1C: implement server-side Storage preparation/copy and Edge
+      caller, then the receipt/frontend status cutover, Auth invitation/binding
+      and case-dashboard journey. Remote apply/deploy require separate authority.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

@@ -1462,3 +1462,24 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   performed.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-08-10 — 09C1A signed-intake case promotion foundation
+
+- Migrated stored finalized signup state from `pending_verification` to internal
+  `submitted_for_review` without changing finalization evidence, safe references
+  or mutation locks. The unchanged 09B2 frontend response remains temporarily
+  compatible until its separately authorized cutover.
+- Added immutable one-per-intake promotion provenance and a service-role-only,
+  atomic/idempotent `app_promote_signed_signup_v1` transaction with row/advisory
+  locking, conflict detection and full rollback.
+- Promotion creates or safely reuses customer/identity/party state, creates one
+  `app_cases` root with asserted roles and internal lifecycle, records declared
+  location observations, and binds non-accepted evidence metadata to exact
+  confirmed quarantine and immutable signing/mandate sources.
+- Local Q01-Q24 proof covers Particulier/Zakelijk/VvE, authority boundaries,
+  replay/concurrency, deliberate failure rollback, RLS/grants and absence of
+  legacy dossier or accepted EAN/location/MID/evidence truth.
+- No frontend, Storage copy, Edge promotion caller, Auth invitation, dashboard
+  cutover, remote apply or deploy was performed.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

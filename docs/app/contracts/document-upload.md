@@ -10,7 +10,7 @@ Implementation status:
 - CURRENT / LOCAL PROOF: shared frontend upload transport.
 - CURRENT / LOCAL PROOF: reusable authenticated dashboard document card for MID and invoice evidence, download, replacement, and withdrawal.
 - OPEN: parser/precheck integration, production storage bucket/policies, remote deploy, and production browser QA.
-- CURRENT / LOCAL PROOF: public pre-auth quarantine plus signing finalization/lock are defined in the signup quarantine and signing contracts. Server-only atomic case promotion remains TARGET / NOT IMPLEMENTED in `intake-verification-promotion.md`; a confirmed upload is never accepted evidence.
+- CURRENT / LOCAL PROOF: public pre-auth quarantine plus signing finalization/lock are defined in the signup quarantine and signing contracts. 09C1A adds service-only atomic case-owned evidence metadata with exact source-file/hash provenance; it performs no Storage copy and creates no acceptance decision. The Edge/copy journey remains TARGET in `intake-verification-promotion.md`.
 
 ## 1. Current Truth
 
@@ -33,7 +33,7 @@ Implementation status:
 - Reusable authenticated dashboard document UI is CURRENT / LOCAL PROOF for MID evidence and installation/acquisition invoice evidence.
 - Production bucket/policy/deploy proof remains OPEN.
 - New upload behavior must use new `api-app-*` endpoints and `app_*` tables.
-- Promoted pre-auth quarantine documents must enter the immutable app document lifecycle server-side after accepted promotion; the browser must not choose storage paths, file IDs, version IDs, or final evidence status.
+- 09C1A may bind only a server-supplied deterministic durable-file manifest to immutable case-owned metadata. The browser must not choose storage paths, file IDs, version IDs, or final evidence status; actual private Storage preparation/copy remains TARGET.
 - Raw capability values such as signed upload URLs, upload tokens, storage paths, and storage internals must not be persisted by the browser, copied into docs, exposed in customer-safe results, or treated as durable authority.
 - Legacy upload endpoints are frozen/reference only:
   - `api-dossier-upload-url`
