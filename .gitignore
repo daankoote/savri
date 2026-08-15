@@ -46,6 +46,8 @@ docs/Facturen/
 # Supabase local state
 supabase/.branches
 supabase/.temp/
+/platform/control-plane/supabase/.branches/
+/platform/control-plane/supabase/.temp/
 
 # dotenvx / local env overlays
 .env.keys

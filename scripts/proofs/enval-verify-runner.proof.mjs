@@ -14,6 +14,7 @@ import {
   verify,
 } from "../tools/enval-verify.mjs";
 import { SAFETY, VERIFY_MANIFEST } from "../tools/enval-verify-manifest.mjs";
+import { resolveSupabaseTarget } from "../tools/enval-supabase-target.mjs";
 import {
   parseCliArgs,
   redactSecrets,
@@ -90,6 +91,58 @@ assert(
     !localService.selected.some((check) => check.mutatesState),
   "local_service_selected_unsafe_check",
 );
+
+const controlPlaneLocalService = buildPlan({
+  paths: [
+    "platform/control-plane/supabase/config.toml",
+    "platform/control-plane/supabase/migrations/20260815120000_platform_control_plane_foundation.sql",
+    "platform/runtime/tenant-resolution/tenant_resolution.ts",
+    "scripts/proofs/platform-control-plane-foundation.proof.ts",
+  ],
+  mode: "LOCAL_SERVICE",
+});
+assert(
+  controlPlaneLocalService.selected.filter((check) =>
+    check.commandId === "control-plane-foundation-local"
+  ).length === 1 &&
+    controlPlaneLocalService.selected.some((check) =>
+      check.safety === SAFETY.SAFE_LOCAL_CONTROL_PLANE_WRITE &&
+      check.mutatesState && !check.remote && !check.destructive
+    ),
+  "control_plane_local_transaction_not_classified_or_deduplicated",
+);
+
+for (const fixture of [
+  { target: null, operation: "inspect", expected: "target_required" },
+  { target: "UNKNOWN", operation: "inspect", expected: "unknown_target" },
+  { target: "CONTROL_PLANE", operation: "link", expected: "remote_operation_not_supported" },
+  { target: "TENANT_ENVAL", operation: "db-reset", expected: "tenant_enval_mutation_not_authorized" },
+]) {
+  let failure = "";
+  try {
+    resolveSupabaseTarget({ ...fixture, cwd: ROOT, env: {} });
+  } catch (error) {
+    failure = String(error);
+  }
+  assert(failure.includes(fixture.expected), `target_guard_failed:${fixture.expected}`);
+}
+let ambiguousCredentialsRejected = false;
+try {
+  resolveSupabaseTarget({
+    target: "CONTROL_PLANE",
+    operation: "start",
+    cwd: ROOT,
+    env: {
+      ENVAL_CONTROL_PLANE_DATABASE_URL: "present-not-printed",
+      ENVAL_TENANT_ENVAL_DATABASE_URL: "present-not-printed",
+    },
+  });
+} catch (error) {
+  ambiguousCredentialsRejected = String(error).includes(
+    "ambiguous_credential_namespaces",
+  );
+}
+assert(ambiguousCredentialsRejected, "ambiguous_target_did_not_fail_closed");
 
 const deduplicated = buildPlan({
   paths: [
@@ -202,9 +255,18 @@ const releaseEvidence = verify({
   },
 });
 assert(
-  releaseEvidence.status === "GATED_REQUIRED" &&
-    releaseEvidence.preCommitGate === "GATED_REQUIRED" &&
-    statusExitCode(releaseEvidence) === 3,
+  releaseEvidence.status ===
+    (releaseEvidence.migrationGitInclusionRequired.length > 0
+      ? "FAIL"
+      : "GATED_REQUIRED") &&
+    releaseEvidence.preCommitGate === releaseEvidence.status &&
+    releaseEvidence.requiredReleaseGates.length === 3 &&
+    releaseEvidence.planErrors.length === 0 &&
+    releaseEvidence.unclassifiedPaths.length === 0 &&
+    releaseEvidence.migrationOmissions.length === 0 &&
+    releaseEvidence.failed ===
+      releaseEvidence.migrationGitInclusionRequired.length &&
+    statusExitCode(releaseEvidence) !== 0,
   "release_silently_passed_required_gates",
 );
 
@@ -417,6 +479,7 @@ const migrationStatusBefore = git([
   "--ignored",
   "--",
   "supabase/migrations",
+  "platform/control-plane/supabase/migrations",
 ]);
 const repositoryStatusBefore = git([
   "status",
@@ -432,7 +495,12 @@ assert(
   baselineBefore.exceptions.length === 2 &&
     baselineBefore.unresolved.length === 0 &&
     baselineBefore.omissions.length === 0 &&
-    baselineBefore.gitInclusionRequired.length === 0,
+    baselineBefore.gitInclusionRequired.every((item) =>
+      item.path ===
+        "platform/control-plane/supabase/migrations/20260815120000_platform_control_plane_foundation.sql"
+    ) &&
+    baselineBefore.inventories.map((item) => item.target).sort().join("|") ===
+      "CONTROL_PLANE|TENANT_ENVAL",
   "migration_baseline_classification_changed",
 );
 assert(
@@ -449,39 +517,56 @@ assert(
   "migration_ignore_policy_baseline_failed",
 );
 
-const probePath =
+const tenantProbePath =
   `supabase/migrations/99991231235959_enval_verify_probe_${process.pid}.sql`;
-const probeAbsolute = resolve(ROOT, probePath);
-assert(!existsSync(probeAbsolute), "migration_probe_preexists");
-let probeCreated = false;
+const controlPlaneProbePath =
+  `platform/control-plane/supabase/migrations/99991231235959_enval_verify_probe_${process.pid}.sql`;
+const probePaths = [tenantProbePath, controlPlaneProbePath];
+const probeAbsolutes = probePaths.map((path) => resolve(ROOT, path));
+assert(probeAbsolutes.every((path) => !existsSync(path)), "migration_probe_preexists");
+const createdProbes = [];
 try {
-  writeFileSync(probeAbsolute, "-- transient H3A omission probe\n", {
-    flag: "wx",
-  });
-  probeCreated = true;
+  for (const probeAbsolute of probeAbsolutes) {
+    writeFileSync(probeAbsolute, "-- transient migration omission probe\n", {
+      flag: "wx",
+    });
+    createdProbes.push(probeAbsolute);
+  }
   const withProbe = inspectMigrationOmissions();
   const simulatedIgnored = inspectMigrationOmissions({
     ignoredPaths: [
       ...Object.keys(VERIFY_MANIFEST.migrationBaseline.exceptions),
-      probePath,
+      tenantProbePath,
+      controlPlaneProbePath,
     ],
     untrackedPaths: baselineBefore.gitInclusionRequired.map((item) =>
       item.path
     ),
   });
+  const ambiguousWorkdir = inspectMigrationOmissions({
+    ignoredPaths: Object.keys(VERIFY_MANIFEST.migrationBaseline.exceptions),
+    untrackedPaths: baselineBefore.gitInclusionRequired.map((item) => item.path),
+    changedPaths: [
+      "platform/ambiguous/supabase/migrations/99991231235959_probe.sql",
+    ],
+  });
   assert(
-    withProbe.gitInclusionRequired.some((item) => item.path === probePath) &&
-      git(["status", "--short", "--ignored", "--", probePath]).startsWith(
-        "?? ",
-      ) &&
+    probePaths.every((probePath) =>
+      withProbe.gitInclusionRequired.some((item) => item.path === probePath) &&
+      git(["status", "--short", "--ignored", "--", probePath]).startsWith("?? ") &&
       simulatedIgnored.omissions.some((item) =>
-      item.path === probePath &&
-      item.reason === "new_ignored_migration"
-    ),
-    "new_ignored_migration_not_detected",
+        item.path === probePath && item.reason === "new_ignored_migration"
+      )
+    ) &&
+      ambiguousWorkdir.omissions.some((item) =>
+        item.reason === "ambiguous_migration_workdir"
+      ),
+    "migration_inventory_or_ambiguous_workdir_guard_failed",
   );
 } finally {
-  if (probeCreated && existsSync(probeAbsolute)) unlinkSync(probeAbsolute);
+  for (const probeAbsolute of createdProbes) {
+    if (existsSync(probeAbsolute)) unlinkSync(probeAbsolute);
+  }
 }
 
 const migrationStatusAfter = git([
@@ -490,6 +575,7 @@ const migrationStatusAfter = git([
   "--ignored",
   "--",
   "supabase/migrations",
+  "platform/control-plane/supabase/migrations",
 ]);
 const repositoryStatusAfter = git([
   "status",
@@ -506,7 +592,7 @@ assert(
     baselineAfter.candidates.every((path) =>
       baselineHashesBefore[path] === hash(path)
     ) &&
-    !existsSync(probeAbsolute),
+    probeAbsolutes.every((path) => !existsSync(path)),
   "migration_probe_did_not_preserve_baseline_integrity",
 );
 

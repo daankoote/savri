@@ -105,6 +105,9 @@ function executableSafety(mode, safety, modes = MODES) {
   if (safety === SAFETY.SAFE_LOCAL_READ) {
     return modeRank(mode, modes) >= modeRank("LOCAL_SERVICE", modes);
   }
+  if (safety === SAFETY.SAFE_LOCAL_CONTROL_PLANE_WRITE) {
+    return modeRank(mode, modes) >= modeRank("LOCAL_SERVICE", modes);
+  }
   if (safety === SAFETY.SAFE_GENERATED_WRITE) {
     return modeRank(mode, modes) >= modeRank("INTEGRATION", modes);
   }
@@ -113,6 +116,8 @@ function executableSafety(mode, safety, modes = MODES) {
 
 export function validateManifest(manifest = VERIFY_MANIFEST) {
   const errors = [];
+  const inventoryTargets = new Set();
+  const inventoryRoots = new Set();
   const requiredFields = [
     "id",
     "runner",
@@ -143,6 +148,32 @@ export function validateManifest(manifest = VERIFY_MANIFEST) {
     if (command.destructive && command.safety !== SAFETY.DESTRUCTIVE_GATED) {
       errors.push(`manifest_destructive_not_gated:${id}`);
     }
+    if (
+      command.safety === SAFETY.SAFE_LOCAL_CONTROL_PLANE_WRITE &&
+      (!command.mutatesState || command.remote || command.destructive)
+    ) {
+      errors.push(`manifest_control_plane_write_invalid:${id}`);
+    }
+  }
+  for (const inventory of manifest.migrationInventories ?? []) {
+    if (
+      !inventory?.target || !isSafeRepoPath(inventory?.root) ||
+      !inventory.root.endsWith("supabase/migrations")
+    ) {
+      errors.push("manifest_migration_inventory_invalid");
+      continue;
+    }
+    if (
+      inventoryTargets.has(inventory.target) ||
+      inventoryRoots.has(inventory.root)
+    ) {
+      errors.push("manifest_migration_inventory_duplicate");
+    }
+    inventoryTargets.add(inventory.target);
+    inventoryRoots.add(inventory.root);
+  }
+  if (inventoryTargets.size < 1) {
+    errors.push("manifest_migration_inventory_missing");
   }
   return [...new Set(errors)].sort();
 }
@@ -235,9 +266,15 @@ function fileSha256(path, cwd = ROOT) {
 export function inspectMigrationOmissions({
   cwd = ROOT,
   baseline = VERIFY_MANIFEST.migrationBaseline,
+  inventories = VERIFY_MANIFEST.migrationInventories,
   ignoredPaths = null,
   untrackedPaths = null,
+  changedPaths = null,
 } = {}) {
+  const migrationPathspecs = [
+    ":(glob)**/supabase/migrations/*.sql",
+    ":(glob)**/supabase/migrations/**/*.sql",
+  ];
   const ignored = ignoredPaths ?? nulList(git([
     "ls-files",
     "--others",
@@ -245,7 +282,7 @@ export function inspectMigrationOmissions({
     "--exclude-standard",
     "-z",
     "--",
-    "supabase/migrations",
+    ...migrationPathspecs,
   ], cwd));
   const untracked = untrackedPaths ?? nulList(git([
     "ls-files",
@@ -253,8 +290,9 @@ export function inspectMigrationOmissions({
     "--exclude-standard",
     "-z",
     "--",
-    "supabase/migrations",
+    ...migrationPathspecs,
   ], cwd));
+  const changed = changedPaths ?? collectChangedPaths(cwd);
   const ignoredCandidates = [...new Set(ignored)]
     .filter((path) => path.endsWith(".sql"))
     .sort();
@@ -271,7 +309,33 @@ export function inspectMigrationOmissions({
   const gitInclusionRequired = [];
   const unresolvedBaseline = baseline.unresolved ?? {};
 
+  const matchingInventories = (path) => inventories.filter((inventory) => {
+    const prefix = `${inventory.root}/`;
+    if (!path.startsWith(prefix)) return false;
+    const relativePath = path.slice(prefix.length);
+    return relativePath.length > 0 && !relativePath.includes("/");
+  });
+  const ambiguousCandidates = new Set(candidates.filter((path) =>
+    matchingInventories(path).length !== 1
+  ));
+  for (const path of ambiguousCandidates) {
+    omissions.push({ path, reason: "ambiguous_migration_workdir" });
+  }
+
+  const migrationShaped = changed.filter((path) =>
+    /(?:^|\/)supabase\/migrations\/.*\.sql$/.test(path)
+  );
+  for (const path of migrationShaped) {
+    if (
+      matchingInventories(path).length !== 1 &&
+      !ambiguousCandidates.has(path)
+    ) {
+      omissions.push({ path, reason: "ambiguous_migration_workdir" });
+    }
+  }
+
   for (const path of ignoredCandidates) {
+    if (ambiguousCandidates.has(path)) continue;
     const hash = fileSha256(path, cwd);
     const exception = baseline.exceptions[path];
     if (exception) {
@@ -295,6 +359,7 @@ export function inspectMigrationOmissions({
   }
 
   for (const path of untrackedCandidates) {
+    if (ambiguousCandidates.has(path)) continue;
     if (ignoredCandidates.includes(path)) continue;
     if (baseline.exceptions[path]) {
       omissions.push({ path, reason: "baseline_exception_not_ignored" });
@@ -332,6 +397,7 @@ export function inspectMigrationOmissions({
   }
 
   return {
+    inventories,
     candidates,
     exceptions,
     unresolved,

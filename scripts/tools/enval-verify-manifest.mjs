@@ -9,6 +9,7 @@ export const MODES = Object.freeze([
 export const SAFETY = Object.freeze({
   SAFE_PURE: "SAFE_PURE",
   SAFE_LOCAL_READ: "SAFE_LOCAL_READ",
+  SAFE_LOCAL_CONTROL_PLANE_WRITE: "SAFE_LOCAL_CONTROL_PLANE_WRITE",
   SAFE_GENERATED_WRITE: "SAFE_GENERATED_WRITE",
   LOCAL_MUTATING_GATED: "LOCAL_MUTATING_GATED",
   DESTRUCTIVE_GATED: "DESTRUCTIVE_GATED",
@@ -153,6 +154,33 @@ const CHECK_LIST = [
     serviceRequirements: ["ENVAL PostgreSQL on configured loopback db.port"],
     expectedDurationMs: 500,
     expectedMarker: "ENVAL_LOCAL_READONLY_CATALOG_OK",
+  }),
+  check({
+    id: "control-plane-foundation-local",
+    argv: [
+      "deno",
+      "run",
+      "--cached-only",
+      "--allow-read",
+      "--allow-run=node,psql",
+      "scripts/proofs/platform-control-plane-foundation.proof.ts",
+    ],
+    domain: "isolated-control-plane-foundation",
+    applicablePaths: [
+      "platform/control-plane/**",
+      "platform/runtime/tenant-resolution/**",
+      "scripts/tools/enval-supabase-target.mjs",
+      "scripts/proofs/platform-control-plane-foundation.proof.ts",
+    ],
+    safety: SAFETY.SAFE_LOCAL_CONTROL_PLANE_WRITE,
+    minimumMode: "LOCAL_SERVICE",
+    serviceRequirements: [
+      "CONTROL_PLANE PostgreSQL on loopback port 56322",
+      "TENANT_ENVAL PostgreSQL read-only on loopback port 54322",
+    ],
+    mutatesState: true,
+    expectedDurationMs: 2_500,
+    expectedMarker: "CONTROL_PLANE_FOUNDATION_Q01_Q18=PASS",
   }),
   check({
     id: "app-typecheck-build",
@@ -386,6 +414,58 @@ export const GLOBAL_CHECKS = Object.freeze([
 
 export const PATH_RULES = Object.freeze([
   Object.freeze({
+    id: "control-plane-foundation-proof",
+    match: Object.freeze({
+      type: "exact",
+      value: "scripts/proofs/platform-control-plane-foundation.proof.ts",
+    }),
+    checks: Object.freeze([
+      "deno-check-changed",
+      "control-plane-foundation-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "control-plane-target-guard",
+    match: Object.freeze({
+      type: "exact",
+      value: "scripts/tools/enval-supabase-target.mjs",
+    }),
+    checks: Object.freeze([
+      "node-check-changed",
+      "control-plane-foundation-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "control-plane-runtime",
+    match: Object.freeze({
+      type: "prefix",
+      value: "platform/runtime/tenant-resolution/",
+    }),
+    checks: Object.freeze([
+      "deno-check-changed",
+      "control-plane-foundation-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "control-plane-migration",
+    match: Object.freeze({
+      type: "prefix",
+      value: "platform/control-plane/supabase/migrations/",
+    }),
+    checks: Object.freeze([
+      "migration-or-sql-review",
+      "control-plane-foundation-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "control-plane-config",
+    match: Object.freeze({
+      type: "exact",
+      value: "platform/control-plane/supabase/config.toml",
+    }),
+    checks: Object.freeze(["control-plane-foundation-local"]),
+  }),
+  Object.freeze({
     id: "local-readonly-sql-fixture",
     match: Object.freeze({
       type: "exact",
@@ -543,10 +623,22 @@ export const MIGRATION_BASELINE = Object.freeze({
   }),
 });
 
+export const MIGRATION_INVENTORIES = Object.freeze([
+  Object.freeze({
+    target: "TENANT_ENVAL",
+    root: "supabase/migrations",
+  }),
+  Object.freeze({
+    target: "CONTROL_PLANE",
+    root: "platform/control-plane/supabase/migrations",
+  }),
+]);
+
 export const VERIFY_MANIFEST = Object.freeze({
   modes: MODES,
   commands: COMMANDS,
   globalChecks: GLOBAL_CHECKS,
   pathRules: PATH_RULES,
   migrationBaseline: MIGRATION_BASELINE,
+  migrationInventories: MIGRATION_INVENTORIES,
 });
