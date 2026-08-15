@@ -62,6 +62,20 @@ isolated in separate data planes.
 12. `CURRENT PROVEN`, `TARGET`, and `DEFERRED / UNKNOWN` remain explicit. A
     TARGET boundary never proves runtime, remote, production or regulatory
     acceptance.
+13. One ENVAL software core serves managed-service, digital-administration
+    SaaS and full white-label/standalone packaging. Commercial packaging never
+    selects a code fork.
+14. Tenant/operator, deployment ownership, branding, support model and
+    conflict-registry participation are orthogonal configuration dimensions;
+    none is a combined tenant type.
+15. Branding is presentation only and grants no identity, routing, Auth,
+    customer/case ownership or legal authority.
+16. Physical support is an explicit tenant-scoped service relationship, not
+    tenant ownership, platform administration, customer identity or
+    representation authority.
+17. A standalone single-tenant deployment can resolve its fixed tenant and
+    data plane from trusted deployment-local server configuration. Ordinary
+    tenant-local workflows do not require live ENVAL control-plane access.
 
 ## B. CURRENT Single-Tenant State
 
@@ -131,6 +145,35 @@ The minimum control plane contains no customer directory, central customer
 login, party index, case index, evidence index, signing record, mandate,
 settlement ledger or tenant operational audit mirror.
 
+## D1. One Core And Orthogonal Operating Dimensions
+
+The same core contracts and business modules support all three approved
+commercial/deployment models:
+
+| operating model | tenant/operator | deployment and presentation | optional relationships |
+|---|---|---|---|
+| LabelUP managed service | the actual inboekdienstverlener operating the service; LabelUP is not automatically the tenant | normally ENVAL-managed dedicated; ENVAL, LabelUP or co-brand presentation as configured | LabelUP digital/physical support only through explicit tenant-scoped authorization |
+| SaaS for an existing inboeker | each inboeker is its own isolated tenant/operator | ENVAL-managed dedicated data plane; tenant-owned presentation | digital administration by default; physical support optional and separately contracted |
+| full white-label / standalone package | the purchasing inboeker is its own isolated tenant/operator | ENVAL-managed dedicated or customer-managed/self-hosted; customer brand allowed | support and connected conflict participation independently selectable |
+
+The independent dimensions are:
+
+- operator/tenant: who operates the inbooking service;
+- deployment ownership: at least `ENVAL_MANAGED_DEDICATED` or
+  `CUSTOMER_MANAGED_SELF_HOSTED`;
+- branding mode: ENVAL, LabelUP/co-brand or customer-owned presentation;
+- support model: `DIGITAL_ONLY`, `DIGITAL_PLUS_PHYSICAL`,
+  `EXTERNAL_SUPPORT_PROVIDER`, or `NONE_CUSTOMER_OPERATED` where applicable;
+  and
+- conflict-registry participation: connected opt-in/eligible participation or
+  no platform-wide participation, independent of deployment ownership.
+
+These dimensions may constrain compatible adapters/capabilities, but no value
+creates Auth, tenant identity, dossier access, case ownership or legal
+authority. SLA and license packaging compose configuration, capabilities and
+optional integrations around the shared core; they do not copy the app,
+database domain or business rules.
+
 ## E. Identity And Access Separation
 
 | concept | owning plane | responsibility | must not imply |
@@ -153,12 +196,15 @@ Customer federation or cross-tenant SSO is DEFERRED. If later approved, it is
 an explicit federation layer mapping independently owned tenant identities; it
 may not create shared customer, party or case truth.
 
-## F. Trusted Routing Boundary
+## F. Trusted Routing Boundary And Adapters
 
 TARGET conceptual route:
 
 ```text
-trusted host/domain
+trusted server/deployment routing context
+-> TenantResolutionAdapter
+   -> platform_control_plane_v1
+   or static_single_tenant_v1
 -> TenantResolverPort
 -> opaque resolved tenant reference
 -> TenantDataPlaneLocator
@@ -166,10 +212,21 @@ trusted host/domain
 -> tenant-local Auth and data-plane services
 ```
 
+`platform_control_plane_v1` resolves trusted managed routing through the
+separate ENVAL control plane. `static_single_tenant_v1` resolves exactly one
+fixed tenant/data-plane context from trusted deployment-local server
+configuration. The static adapter accepts no browser tenant/project/URL
+override and fails closed if its fixed configuration is absent, invalid or
+ambiguous. It does not require live ENVAL control-plane availability.
+
+The core application receives the same opaque resolved tenant/data-plane
+context from either adapter. Business modules do not branch on commercial
+package, brand, LabelUP involvement, deployment owner or adapter kind.
+
 `TenantResolverPort` owns the deterministic, fail-closed mapping from trusted
-server-observed host/domain context to one active tenant reference. It does not
-authenticate customers, return credentials or accept a browser-supplied
-project/database choice.
+server-observed or deployment-local routing context to one active tenant
+reference. It does not authenticate customers, return credentials or accept a
+browser-supplied project/database choice.
 
 `TenantDataPlaneLocator` owns the restricted mapping from one already-resolved
 active tenant reference to its approved application/data-plane destination and
@@ -181,9 +238,9 @@ trusted resolution or through a tenant-specific deployment. Request payload,
 query string, local storage, JWT custom input or arbitrary browser configuration
 cannot override the resolved data plane.
 
-Unknown hosts, inactive tenants, ambiguous mappings, locator mismatch and
-unavailable destinations fail closed without falling back to ENVAL or another
-tenant.
+Unknown hosts, inactive tenants, ambiguous managed mappings, invalid fixed
+standalone context, locator mismatch and unavailable destinations fail closed
+without falling back to ENVAL or another tenant.
 
 ## G. Storage And Evidence Isolation
 
@@ -238,12 +295,24 @@ Future support elevation must be a separate TARGET capability that is:
 Approval counts, tenant participation, emergency/break-glass policy and exact
 retention remain DEFERRED. None may weaken the non-access invariant.
 
+LabelUP physical/on-site support is an optional support-provider relationship,
+not a special tenant type. LabelUP may serve one or more tenants only through
+separate tenant-scoped workforce/support authorization with exact capability,
+purpose, time and audit boundaries. LabelUP involvement implies neither tenant
+identity nor platform admin, customer identity, case role or representation
+authority. Evidence created during physical/on-site work belongs to the
+relevant tenant data plane and case lineage; it is not copied into a central
+LabelUP dossier database merely because LabelUP performed the work.
+
 ## J. Conflict-Registry Seam Only
 
 `ConflictCheckPort` is a future tenant-side boundary for asking a
 provider-independent platform service whether a purpose-specific equality
 signal conflicts with an existing signal. No implementation or interface is
-approved in WL02.
+approved in WL02. Participation is independent of deployment ownership:
+separate ENVAL-managed databases and explicitly participating
+customer-managed/self-hosted deployments may use the same seam while retaining
+all raw truth locally.
 
 The later platform adapter/service may store only purpose-limited keyed or
 pseudonymized matching signals and minimal workflow state. It must:
@@ -260,6 +329,12 @@ pseudonymized matching signals and minimal workflow state. It must:
 
 Exact MID/EAN/year matching, normalization, false-positive handling, HMAC key
 ownership and rotation, legal basis and retention are DEFERRED / UNKNOWN.
+
+A fully disconnected/offline standalone deployment cannot receive
+platform-wide cross-tenant matching while disconnected. The core must surface
+that check as unavailable/not performed, never infer `no conflict`. Tenant-local
+workflows may continue only under their separately approved policy; offline
+operation does not weaken or fabricate conflict evidence.
 
 ## K. ENVAL As Tenant/Data-Plane #1
 
@@ -307,6 +382,11 @@ WL02 creates no:
 - settlement/payment implementation; or
 - remote migration, deployment or production-readiness claim.
 
+WL02 also creates no LabelUP, SaaS or white-label code fork. Commercial/SLA
+differences must later compose the shared core through a deployment adapter,
+configuration, presentation branding, explicit capabilities and optional
+service integrations.
+
 ## M. Traceability Expectations
 
 Every later implementation batch must trace one approved platform requirement
@@ -327,6 +407,10 @@ to its component, owning plane, security boundary and deterministic proof.
 | `WL-AUTHZ-001` authority separation | identity/access/role/authority domains | tenant data plane | no grant inference across concepts | no-inference contract and negative authorization tests |
 | `WL-CONFLICT-001` derived conflict seam | `ConflictCheckPort` plus future adapter | tenant/control boundary | pseudonymized signal only; no disclosure or truth ownership | raw-data rejection, tenant non-disclosure and local-truth invariants |
 | `WL-DEPLOY-001` controlled fleet operations | migration/deployment/schema-state tooling | control plane operations | one explicitly selected tenant and audited action | drift, partial rollout, rollback and wrong-tenant denial |
+| `WL-CORE-001` one core across commercial models | shared tenant-local business modules/contracts | tenant data plane | package/brand/support values grant no authority and select no fork | identical core-contract and no-package-branch proof |
+| `WL-RESOLVE-002` provider-independent resolution | managed and static single-tenant adapters behind the same ports | deployment boundary | trusted server/deployment config only; no browser override | adapter contract parity, standalone control-plane-outage operation and fail-closed config tests |
+| `WL-SUPPORT-002` optional external physical support | tenant-local support/workforce authorization | tenant data plane | explicit tenant/capability/purpose/time scope; evidence stays tenant-local | LabelUP non-authority and cross-tenant denial proofs |
+| `WL-CONFLICT-002` deployment-independent participation | future `ConflictCheckPort` adapter | tenant/platform boundary | connected opt-in only; unavailable is not no-conflict | managed/self-hosted parity and offline-unavailable proof |
 
 Proof for one layer never substitutes for another: control-plane routing proof
 does not prove tenant RLS; tenant RLS does not prove Storage isolation;
@@ -341,6 +425,7 @@ Still DEFERRED / UNKNOWN:
 - tenant provisioning, billing and lifecycle automation;
 - trusted domain ownership and certificate workflow detail;
 - tenant branding schema and which non-secret values may be centrally cached;
+- standalone deployment packaging, update and support lifecycle;
 - platform-principal Auth provider and membership administration workflow;
 - support approval counts, tenant participation, emergency use and retention;
 - migration-fleet rollout, rollback and compatibility policy;

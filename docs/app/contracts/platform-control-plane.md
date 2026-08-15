@@ -289,19 +289,51 @@ authorized owning plane.
    future control plane. Existing ENVAL tenant-local identifiers and rows are
    not rewritten.
 
+### 5.1 Orthogonal Operating Configuration
+
+Commercial/deployment packaging is not a tenant type. These dimensions remain
+independent and do not change the stable `tenant_id`:
+
+| dimension | minimum TARGET values/shape | classification and authority limit |
+|---|---|---|
+| operator/tenant | one stable inboekdienstverlener tenant identity | `AUTHORITATIVE_PLATFORM_CONFIG`; not customer, support provider or represented organization |
+| deployment ownership | `ENVAL_MANAGED_DEDICATED` or `CUSTOMER_MANAGED_SELF_HOSTED` | `AUTHORITATIVE_PLATFORM_CONFIG`; selects compatible deployment adapter/operations, never Auth or tenant identity |
+| branding mode | ENVAL, LabelUP/co-brand or customer-owned presentation | `PUBLIC_PRESENTATION_CONFIG`; never routing, identity, authorization, ownership or legal authority |
+| support model | `DIGITAL_ONLY`, `DIGITAL_PLUS_PHYSICAL`, `EXTERNAL_SUPPORT_PROVIDER` or `NONE_CUSTOMER_OPERATED` where applicable | `AUTHORITATIVE_PLATFORM_CONFIG`; names service shape only, while every actual access grant remains separate `AUTHORITATIVE_PLATFORM_ACCESS` |
+| conflict-registry participation | connected eligible/opt-in participation or no platform-wide participation | `AUTHORITATIVE_PLATFORM_CONFIG`; independent of deployment owner and never evidence of no conflict |
+
+The LabelUP managed bundle, digital-administration SaaS and full white-label
+license/deployment are compositions of these dimensions over one core. They do
+not create separate table families, contracts, business modules or code forks.
+Branding never supplies an identifier to `RoutingIdentity`, and support model
+never supplies an authorization grant.
+
 ## 6. Trusted Routing Contract
 
 TARGET conceptual flow:
 
 ```text
-server-observed trusted host/domain
--> normalize and look up active RoutingIdentity
--> resolve exactly one active Tenant
--> resolve exactly one active compatible DataPlaneLocator
+trusted server/deployment routing context
+-> selected trusted TenantResolutionAdapter
+   -> platform_control_plane_v1: active RoutingIdentity -> active Tenant
+   or static_single_tenant_v1: one fixed deployment-local Tenant context
+-> resolve exactly one active compatible DataPlaneLocator/context
 -> resolve server-side route/config and secrets as separately authorized
 -> start the selected tenant application/bootstrap
 -> initialize tenant-local customer Auth and data-plane services
 ```
+
+Both adapters implement the same provider-independent `TenantResolverPort` and
+`TenantDataPlaneLocator` outcomes. The core application receives only the
+opaque resolved context and does not know which adapter, commercial package,
+brand, support provider or deployment owner produced it.
+
+`platform_control_plane_v1` uses the authoritative control-plane records in
+this contract. `static_single_tenant_v1` uses trusted, immutable-at-runtime
+deployment-local server configuration for exactly one tenant/data plane. It
+requires no live ENVAL control-plane connection for tenant-local business
+workflows, exposes no central credentials and cannot accept browser-selected
+tenant, project, URL, locator or credential input.
 
 Resolution fails closed without fallback to ENVAL or another tenant when:
 
@@ -314,6 +346,11 @@ Resolution fails closed without fallback to ENVAL or another tenant when:
 - observed configuration is stale/unknown where policy requires freshness, or
   schema/application/function drift is incompatible; or
 - the server-side locator/secret boundary cannot resolve safely.
+
+For static resolution, absent, multiple, mutable/untrusted or incompatible
+fixed contexts fail closed. Managed-mode control-plane failure cannot cause
+fallback to static mode; adapter selection is trusted deployment
+configuration, not runtime browser input.
 
 A browser may never submit or override a tenant UUID, Supabase URL, provider
 project reference, database target, locator or credential and thereby obtain a
@@ -363,6 +400,15 @@ be enforced through tenant-local authorization, recorded in immutable platform
 audit and applicable tenant audit, and must not expose a service role or create
 customer access. Approval count, tenant participation, emergency policy,
 resource vocabulary, execution channel and retention remain DEFERRED.
+
+An external physical support organization such as LabelUP is neither a
+platform principal category nor a tenant type. Each future support relationship
+and use requires one explicit tenant, provider organization reference,
+capability/scope, actor, purpose, validity and tenant-side authorization.
+LabelUP status grants no platform administration, tenant ownership, customer
+identity, case role or representation authority. Physical/on-site evidence is
+created in the owning tenant data plane and case lineage, not a central support
+provider dossier store.
 
 ## 9. Control-Plane Security Boundary
 
@@ -448,6 +494,18 @@ created or provisioned by WL03.
 matching identifiers, normalization, methods, HMAC/key design, legal basis,
 retention or implementation.
 
+The future seam may connect isolated ENVAL-managed data planes and explicitly
+participating customer-managed/self-hosted deployments to one
+purpose-specific pseudonymized/keyed registry. Raw customer, case, EAN and MID
+truth remains tenant-local, and a result reveals no other tenant, customer or
+dossier. Participation does not require a shared customer database and is
+independent of deployment ownership.
+
+A disconnected/offline standalone deployment has no platform-wide conflict
+result. It must record/report the check as unavailable/not performed rather
+than interpreting absence of connectivity as `no conflict`. Exact policy for
+whether other tenant-local work may continue remains DEFERRED.
+
 ## 13. Explicitly Deferred / Not Implemented
 
 WL03 does not select, design or implement:
@@ -458,6 +516,8 @@ WL03 does not select, design or implement:
 - centralized customer SSO or federation;
 - platform support/break-glass workflow implementation;
 - tenant administration, branding or other UI;
+- separate LabelUP, SaaS or white-label application/business-code forks;
+- standalone packaging, update distribution or support lifecycle;
 - billing, settlement, payment or cross-tenant analytics;
 - a second tenant/data plane;
 - conflict-registry implementation, MID/EAN/year matching, HMAC/key design,
