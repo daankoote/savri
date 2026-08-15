@@ -360,6 +360,12 @@ Local proof is not production proof. Remote migration/function deploy, productio
   - Overall recommendation: HYBRID PARALLEL REBUILD.
   - Electricity-TKV verifier detail is mapped and no longer source-blocked. The architecture is TARGET — APPROVED, NOT CURRENT PROVEN; blanket implementation authorization remains NO.
   - Target-only internal support controls are separated from external verifier location visits; approval of the direction gives neither implementation permission nor external professional authority.
+- White-label / multi-tenant target architecture:
+  - WL02 TARGET is approved and recorded in `docs/app/architecture/white-label-control-plane.md`; no implementation is authorized.
+  - Future service providers use separate tenant customer Auth/Postgres/Storage/Edge/workforce data planes; ENVAL is tenant/data-plane #1 and current isolated core tables gain no convenience `tenant_id`.
+  - The separate minimum control plane owns only tenant routing/configuration, platform identity/membership, deployment state, platform audit and secret references; it owns no ordinary customer/case/signing/evidence/settlement truth.
+  - `HYBRID PARALLEL REBUILD` describes ENVAL's current internal rebuild strategy and does not mean shared-database tenant truth.
+  - OPEN: physical control-plane provider/hosting, provisioning/fleet operations, support-elevation detail, federation, and conflict-signal policy/key/legal/retention decisions.
 - Database Retirement Phase 1A - Evidence Completion:
   - DONE on 2026-07-19; unique operational content is consolidated in `docs/app/operations/remote-baseline-and-retirement.md`.
   - The WP3D read-only catalog inventory observes 24 `app_*` public tables and substantial app data; the earlier retirement evidence recorded zero local legacy tables and 7 `app-documents` Storage objects.
