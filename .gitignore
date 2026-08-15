@@ -59,8 +59,9 @@ scripts/analysis_worker/convert_pdf_tests_to_jpg.py
 scripts/analysis_worker/run_pdf_derived_image_batch.py
 scripts/analysis_worker/run_pdf_batch.py
 
-# migrations
-supabase/migrations/
+# legacy migration sources retained until replacement proof; exact paths only
+/supabase/migrations/20260720120000_app_ean_connection_domain_foundation.sql
+/supabase/migrations/20260720143000_app_connection_write_rpcs.sql
 
 # images
 docs/images/big_images

@@ -1,0 +1,499 @@
+#!/usr/bin/env node
+
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { basename, extname, resolve } from "node:path";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { SAFETY, VERIFY_MANIFEST } from "./enval-verify-manifest.mjs";
+
+const ROOT = resolve(fileURLToPath(new URL("../../", import.meta.url)));
+const MAX_DIAGNOSTIC_CHARS = 4_000;
+const MAX_DIAGNOSTIC_LINES = 20;
+
+function git(args, cwd = ROOT) {
+  const result = spawnSync("git", args, {
+    cwd,
+    encoding: "utf8",
+    maxBuffer: 4 * 1024 * 1024,
+  });
+  if (result.status !== 0) {
+    throw new Error(`git_${args[0]}_failed:${result.status ?? "signal"}`);
+  }
+  return result.stdout;
+}
+
+function nulList(value) {
+  return value.split("\0").filter(Boolean);
+}
+
+export function collectChangedPaths(cwd = ROOT) {
+  const paths = new Set([
+    ...nulList(git(["diff", "--name-only", "-z"], cwd)),
+    ...nulList(git(["diff", "--cached", "--name-only", "-z"], cwd)),
+    ...nulList(git([
+      "ls-files",
+      "--others",
+      "--exclude-standard",
+      "-z",
+    ], cwd)),
+  ]);
+  return [...paths].sort();
+}
+
+function isSafeRepoPath(path) {
+  return typeof path === "string" && path.length > 0 &&
+    !path.startsWith("/") && path !== ".." && !path.startsWith("../") &&
+    !path.includes("/../") && !path.includes("\0") &&
+    !path.includes("\n") && !path.includes("\r");
+}
+
+function matches(path, matcher) {
+  switch (matcher.type) {
+    case "exact":
+      return path === matcher.value;
+    case "prefix":
+      return path.startsWith(matcher.value);
+    case "suffix":
+      return path.endsWith(matcher.value);
+    case "oneOf":
+      return matcher.value.includes(path);
+    case "basenameOneOf":
+      return matcher.value.includes(basename(path));
+    case "extensions":
+      return matcher.value.includes(extname(path).toLowerCase());
+    default:
+      return false;
+  }
+}
+
+function materializeCommand(commandId, command, path) {
+  const needsPath = command.argv?.some((part) => part === "{path}") ?? false;
+  if (needsPath && !path) return null;
+  const argv = command.argv?.map((part) => part === "{path}" ? path : part) ??
+    null;
+  return {
+    id: command.perPath ? `${commandId}:${path}` : commandId,
+    commandId,
+    path: command.perPath ? path : null,
+    safety: command.safety,
+    argv,
+  };
+}
+
+export function buildPlan({
+  paths,
+  mode,
+  manifest = VERIFY_MANIFEST,
+}) {
+  if (!new Set(["QUICK", "TARGETED"]).has(mode)) {
+    throw new Error(`unsupported_mode:${mode}`);
+  }
+
+  const selected = new Map();
+  const gated = new Map();
+  const unclassifiedPaths = [];
+  const errors = [];
+
+  const addCommand = (commandId, path = null) => {
+    const command = manifest.commands[commandId];
+    if (!command) {
+      errors.push(`unknown_check:${commandId}${path ? `:${path}` : ""}`);
+      return;
+    }
+    const instance = materializeCommand(commandId, command, path);
+    if (!instance) {
+      errors.push(`invalid_check_template:${commandId}`);
+      return;
+    }
+    if (command.safety !== SAFETY.SAFE_PURE) {
+      gated.set(instance.id, instance);
+      return;
+    }
+    if (!instance.argv?.length) {
+      errors.push(`safe_check_has_no_command:${commandId}`);
+      return;
+    }
+    selected.set(instance.id, instance);
+  };
+
+  for (const commandId of manifest.always ?? []) addCommand(commandId);
+
+  for (const path of paths) {
+    if (!isSafeRepoPath(path)) {
+      unclassifiedPaths.push(path || "<empty>");
+      continue;
+    }
+    const rule = manifest.pathRules.find((candidate) =>
+      matches(path, candidate.match)
+    );
+    if (!rule) {
+      unclassifiedPaths.push(path);
+      continue;
+    }
+    const commandIds = mode === "QUICK" ? rule.quick : rule.targeted;
+    if (!Array.isArray(commandIds)) {
+      errors.push(`invalid_rule_commands:${rule.id}:${mode}`);
+      continue;
+    }
+    for (const commandId of commandIds) addCommand(commandId, path);
+  }
+
+  return {
+    mode,
+    paths: [...paths],
+    selected: [...selected.values()],
+    gated: [...gated.values()],
+    unclassifiedPaths: [...new Set(unclassifiedPaths)].sort(),
+    errors: [...new Set(errors)].sort(),
+  };
+}
+
+function fileSha256(path, cwd = ROOT) {
+  const bytes = readFileSync(resolve(cwd, path));
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+export function inspectMigrationOmissions({
+  cwd = ROOT,
+  baseline = VERIFY_MANIFEST.migrationBaseline,
+  ignoredPaths = null,
+  untrackedPaths = null,
+} = {}) {
+  const ignored = ignoredPaths ?? nulList(git([
+    "ls-files",
+    "--others",
+    "--ignored",
+    "--exclude-standard",
+    "-z",
+    "--",
+    "supabase/migrations",
+  ], cwd));
+  const untracked = untrackedPaths ?? nulList(git([
+    "ls-files",
+    "--others",
+    "--exclude-standard",
+    "-z",
+    "--",
+    "supabase/migrations",
+  ], cwd));
+  const ignoredCandidates = [...new Set(ignored)]
+    .filter((path) => path.endsWith(".sql"))
+    .sort();
+  const untrackedCandidates = [...new Set(untracked)]
+    .filter((path) => path.endsWith(".sql"))
+    .sort();
+  const candidates = [...new Set([
+    ...ignoredCandidates,
+    ...untrackedCandidates,
+  ])].sort();
+  const exceptions = [];
+  const unresolved = [];
+  const omissions = [];
+  const gitInclusionRequired = [];
+  const unresolvedBaseline = baseline.unresolved ?? {};
+
+  for (const path of ignoredCandidates) {
+    const hash = fileSha256(path, cwd);
+    const exception = baseline.exceptions[path];
+    if (exception) {
+      if (hash === exception.sha256) {
+        exceptions.push({ path, reason: exception.reason });
+      } else {
+        omissions.push({ path, reason: "baseline_exception_hash_changed" });
+      }
+      continue;
+    }
+    const open = unresolvedBaseline[path];
+    if (open) {
+      if (hash === open.sha256) {
+        unresolved.push({ path, reason: open.reason });
+      } else {
+        omissions.push({ path, reason: "unresolved_baseline_hash_changed" });
+      }
+      continue;
+    }
+    omissions.push({ path, reason: "new_ignored_migration" });
+  }
+
+  for (const path of untrackedCandidates) {
+    if (ignoredCandidates.includes(path)) continue;
+    if (baseline.exceptions[path]) {
+      omissions.push({ path, reason: "baseline_exception_not_ignored" });
+      continue;
+    }
+    const open = unresolvedBaseline[path];
+    if (open) {
+      const hash = fileSha256(path, cwd);
+      if (hash === open.sha256) {
+        unresolved.push({ path, reason: open.reason });
+      } else {
+        omissions.push({ path, reason: "unresolved_baseline_hash_changed" });
+      }
+      continue;
+    }
+    gitInclusionRequired.push({
+      path,
+      reason: "untracked migration requires Git inclusion",
+    });
+  }
+
+  for (const [path, expected] of Object.entries(baseline.exceptions)) {
+    if (!ignoredCandidates.includes(path)) {
+      omissions.push({ path, reason: "baseline_exception_missing" });
+    } else if (!expected.reason) {
+      omissions.push({ path, reason: "baseline_exception_reason_missing" });
+    }
+  }
+  for (const [path, expected] of Object.entries(unresolvedBaseline)) {
+    if (!candidates.includes(path)) {
+      omissions.push({ path, reason: "unresolved_baseline_missing" });
+    } else if (!expected.reason) {
+      omissions.push({ path, reason: "unresolved_baseline_reason_missing" });
+    }
+  }
+
+  return {
+    candidates,
+    exceptions,
+    unresolved,
+    omissions,
+    gitInclusionRequired,
+  };
+}
+
+export function computeDiffHash(paths, cwd = ROOT) {
+  const digest = createHash("sha256");
+  for (const path of [...paths].sort()) {
+    digest.update(`${path}\0`);
+    try {
+      digest.update(readFileSync(resolve(cwd, path)));
+    } catch (error) {
+      if (error?.code !== "ENOENT") throw error;
+      digest.update("<deleted>");
+    }
+    digest.update("\0");
+  }
+  return digest.digest("hex");
+}
+
+export function boundDiagnostic(value) {
+  const lines = String(value ?? "")
+    .replaceAll(ROOT, "<repo>")
+    .split(/\r?\n/)
+    .slice(0, MAX_DIAGNOSTIC_LINES)
+    .join("\n");
+  if (lines.length <= MAX_DIAGNOSTIC_CHARS) return lines;
+  return `${lines.slice(0, MAX_DIAGNOSTIC_CHARS)}\n<diagnostic-truncated>`;
+}
+
+function defaultExecutor(check, cwd = ROOT) {
+  const started = performance.now();
+  const [command, ...args] = check.argv;
+  const result = spawnSync(command, args, {
+    cwd,
+    encoding: "utf8",
+    maxBuffer: 1024 * 1024,
+    env: process.env,
+  });
+  return {
+    exitCode: result.status ?? 1,
+    signal: result.signal ?? null,
+    stdout: result.stdout ?? "",
+    stderr: result.stderr ?? "",
+    durationMs: Math.max(0, Math.round(performance.now() - started)),
+  };
+}
+
+export function runChecks(plan, {
+  cwd = ROOT,
+  executor = defaultExecutor,
+  dryRun = false,
+} = {}) {
+  const results = [];
+  if (dryRun) return results;
+  for (const check of plan.selected) {
+    if (check.safety !== SAFETY.SAFE_PURE || !check.argv?.length) {
+      results.push({
+        id: check.id,
+        status: "FAIL",
+        exitCode: 96,
+        durationMs: 0,
+        diagnostic: "executor_rejected_non_safe_check",
+      });
+      break;
+    }
+    const result = executor(check, cwd);
+    const passed = result.exitCode === 0;
+    results.push({
+      id: check.id,
+      status: passed ? "PASS" : "FAIL",
+      exitCode: result.exitCode,
+      durationMs: result.durationMs,
+      diagnostic: passed
+        ? ""
+        : boundDiagnostic(result.stderr || result.stdout || result.signal),
+    });
+    if (!passed) break;
+  }
+  return results;
+}
+
+function compactItems(items, formatter) {
+  return items.length ? items.map(formatter).join(",") : "NONE";
+}
+
+export function statusExitCode(evidence) {
+  return evidence.status === "PASS" ? 0 : 1;
+}
+
+export function formatEvidence(evidence, { json = false } = {}) {
+  if (json) return `${JSON.stringify(evidence)}\n`;
+  const lines = [
+    `ENVAL_VERIFY_MODE=${evidence.mode}`,
+    `ENVAL_VERIFY_STATUS=${evidence.status}`,
+    `H3A_STATUS=${evidence.h3aStatus}`,
+    `HEAD=${evidence.head}`,
+    `DIFF_HASH=${evidence.diffHash}`,
+    `SELECTED_CHECK_COUNT=${evidence.selectedCheckCount}`,
+    `PASSED=${evidence.passed}`,
+    `FAILED=${evidence.failed}`,
+    `SKIPPED_GATED=${evidence.skippedGated}`,
+    `UNCLASSIFIED_PATHS=${compactItems(evidence.unclassifiedPaths, (x) => x)}`,
+    `MIGRATION_OMISSION=${evidence.migrationOmission}`,
+    `MIGRATION_BASELINE_UNRESOLVED=${
+      compactItems(
+        evidence.migrationBaselineUnresolved,
+        (x) => `${x.path}:${x.reason}`,
+      )
+    }`,
+    `MIGRATION_BASELINE_EXCEPTIONS=${
+      compactItems(
+        evidence.migrationBaselineExceptions,
+        (x) => `${x.path}:${x.reason}`,
+      )
+    }`,
+    `MIGRATION_GIT_INCLUSION_REQUIRED=${compactItems(
+      evidence.migrationGitInclusionRequired,
+      (x) => `${x.path}:${x.reason}`,
+    )}`,
+    `DURATION_MS=${evidence.durationMs}`,
+  ];
+  const displayedChecks = evidence.status === "FAIL"
+    ? evidence.checks.filter((check) => check.status === "FAIL")
+    : evidence.checks;
+  for (const check of displayedChecks) {
+    if (check.status === "PASS") {
+      lines.push(`${check.id} | PASS | ${check.durationMs}ms`);
+    } else {
+      lines.push(`${check.id} | FAIL | exit=${check.exitCode}`);
+      if (check.diagnostic) lines.push(check.diagnostic);
+    }
+  }
+  if (evidence.planErrors.length) {
+    lines.push(`PLAN_FAILURE=${evidence.planErrors.join(",")}`);
+  }
+  if (evidence.migrationOmissions.length) {
+    lines.push(`MIGRATION_FAILURE=${
+      compactItems(
+        evidence.migrationOmissions,
+        (x) => `${x.path}:${x.reason}`,
+      )
+    }`);
+  }
+  return `${lines.join("\n")}\n`;
+}
+
+function parseArgs(argv) {
+  const parsed = { mode: null, dryRun: false, json: false };
+  for (let index = 0; index < argv.length; index += 1) {
+    const argument = argv[index];
+    if (argument === "--mode") {
+      parsed.mode = argv[index + 1]?.toUpperCase() ?? null;
+      index += 1;
+    } else if (argument === "--dry-run") {
+      parsed.dryRun = true;
+    } else if (argument === "--json") {
+      parsed.json = true;
+    } else {
+      throw new Error(`unknown_argument:${argument}`);
+    }
+  }
+  if (!new Set(["QUICK", "TARGETED"]).has(parsed.mode)) {
+    throw new Error("--mode must be QUICK or TARGETED");
+  }
+  return parsed;
+}
+
+export function verify({
+  mode,
+  dryRun = false,
+  cwd = ROOT,
+  manifest = VERIFY_MANIFEST,
+  executor = defaultExecutor,
+} = {}) {
+  const started = performance.now();
+  const paths = collectChangedPaths(cwd);
+  const plan = buildPlan({ paths, mode, manifest });
+  const migration = inspectMigrationOmissions({
+    cwd,
+    baseline: manifest.migrationBaseline,
+  });
+  const checks = runChecks(plan, { cwd, executor, dryRun });
+  const failedChecks = checks.filter((check) => check.status === "FAIL");
+  const failed = plan.unclassifiedPaths.length > 0 || plan.errors.length > 0 ||
+    migration.omissions.length > 0 || failedChecks.length > 0;
+  return {
+    mode,
+    status: failed ? "FAIL" : "PASS",
+    h3aStatus: failed
+      ? "FAIL"
+      : migration.unresolved.length > 0
+      ? "PARTIAL"
+      : "PASS",
+    head: git(["rev-parse", "--short", "HEAD"], cwd).trim(),
+    diffHash: computeDiffHash(paths, cwd),
+    selectedCheckCount: plan.selected.length,
+    passed: checks.filter((check) => check.status === "PASS").length,
+    failed: failedChecks.length + plan.unclassifiedPaths.length +
+      plan.errors.length + migration.omissions.length,
+    skippedGated: plan.gated.length,
+    unclassifiedPaths: plan.unclassifiedPaths,
+    migrationOmission: migration.omissions.length
+      ? "FAIL"
+      : migration.unresolved.length
+      ? "BASELINE_UNRESOLVED"
+      : migration.gitInclusionRequired.length
+      ? "GIT_INCLUSION_REQUIRED"
+      : "PASS",
+    migrationBaselineUnresolved: migration.unresolved,
+    migrationBaselineExceptions: migration.exceptions,
+    migrationGitInclusionRequired: migration.gitInclusionRequired,
+    migrationOmissions: migration.omissions,
+    planErrors: plan.errors,
+    checks,
+    dryRun,
+    durationMs: Math.max(0, Math.round(performance.now() - started)),
+  };
+}
+
+export function main(argv = process.argv.slice(2)) {
+  try {
+    const options = parseArgs(argv);
+    const evidence = verify(options);
+    process.stdout.write(formatEvidence(evidence, options));
+    return statusExitCode(evidence);
+  } catch (error) {
+    process.stderr.write(
+      `ENVAL_VERIFY_STATUS=FAIL\n${boundDiagnostic(error)}\n`,
+    );
+    return 2;
+  }
+}
+
+const invokedPath = process.argv[1]
+  ? pathToFileURL(resolve(process.argv[1])).href
+  : null;
+if (invokedPath === import.meta.url) process.exitCode = main();
+
+export { ROOT };
