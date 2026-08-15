@@ -205,6 +205,54 @@ const CHECK_LIST = [
     expectedMarker: "TENANT_RESOLUTION_COMPOSITION_Q01_Q14=PASS",
   }),
   check({
+    id: "app-tenant-resolution-shadow-pure",
+    argv: [
+      "deno",
+      "run",
+      "--cached-only",
+      "--allow-read",
+      "--allow-env=ENVIRONMENT,ENV,APP_ENV,ALLOWED_ORIGINS,ALLOWED_ORIGIN",
+      "scripts/proofs/app-tenant-resolution-shadow.proof.ts",
+    ],
+    domain: "app-server-tenant-resolution-shadow",
+    applicablePaths: [
+      "supabase/functions/_shared/app_foundation.ts",
+      "supabase/functions/_shared/app_tenant_resolution_shadow.ts",
+      "scripts/proofs/app-tenant-resolution-shadow.proof.ts",
+    ],
+    safety: SAFETY.SAFE_PURE,
+    minimumMode: "TARGETED",
+    expectedDurationMs: 1_000,
+    expectedMarker: "TENANT_RESOLUTION_SHADOW_Q01_Q14=PASS",
+  }),
+  check({
+    id: "app-tenant-resolution-shadow-local",
+    argv: [
+      "deno",
+      "run",
+      "--cached-only",
+      "--allow-read",
+      "--allow-env=ENVIRONMENT,ENV,APP_ENV,ALLOWED_ORIGINS,ALLOWED_ORIGIN",
+      "--allow-run=psql",
+      "scripts/proofs/app-tenant-resolution-shadow.proof.ts",
+      "--local-control-plane",
+    ],
+    domain: "local-control-plane-tenant-resolution-shadow",
+    applicablePaths: [
+      "supabase/functions/_shared/app_foundation.ts",
+      "supabase/functions/_shared/app_tenant_resolution_shadow.ts",
+      "scripts/proofs/app-tenant-resolution-shadow.proof.ts",
+    ],
+    safety: SAFETY.SAFE_LOCAL_READ,
+    minimumMode: "INTEGRATION",
+    serviceRequirements: [
+      "CONTROL_PLANE PostgreSQL read-only on loopback port 56322",
+      "TENANT_ENVAL PostgreSQL read-only on loopback port 54322",
+    ],
+    expectedDurationMs: 1_500,
+    expectedMarker: "TENANT_RESOLUTION_SHADOW_LOCAL_Q15_Q18=PASS",
+  }),
+  check({
     id: "app-typecheck-build",
     argv: ["npm", "--prefix", "app", "run", "build"],
     domain: "frontend-typecheck-build",
@@ -435,6 +483,22 @@ export const GLOBAL_CHECKS = Object.freeze([
 ]);
 
 export const PATH_RULES = Object.freeze([
+  Object.freeze({
+    id: "app-tenant-resolution-shadow",
+    match: Object.freeze({
+      type: "oneOf",
+      value: Object.freeze([
+        "supabase/functions/_shared/app_foundation.ts",
+        "supabase/functions/_shared/app_tenant_resolution_shadow.ts",
+        "scripts/proofs/app-tenant-resolution-shadow.proof.ts",
+      ]),
+    }),
+    checks: Object.freeze([
+      "deno-check-changed",
+      "app-tenant-resolution-shadow-pure",
+      "app-tenant-resolution-shadow-local",
+    ]),
+  }),
   Object.freeze({
     id: "tenant-resolution-composition",
     match: Object.freeze({

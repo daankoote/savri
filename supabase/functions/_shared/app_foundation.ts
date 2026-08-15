@@ -6,6 +6,11 @@
 // This file intentionally creates no endpoint and performs no DB work at module
 // load time. The app foundation migration may not be applied in a local DB yet.
 
+import {
+  type AppTenantResolutionShadowObservationOptions,
+  observeAppTenantResolutionShadow,
+} from "./app_tenant_resolution_shadow.ts";
+
 export type AppActorType =
   | "anonymous"
   | "customer"
@@ -156,12 +161,15 @@ export async function hashNullableInput(input: string | null): Promise<string | 
   return await sha256Hex(value);
 }
 
-export async function getAppRequestMeta(req: Request): Promise<AppRequestMeta> {
+export async function getAppRequestMeta(
+  req: Request,
+  tenantShadowOptions: AppTenantResolutionShadowObservationOptions = {},
+): Promise<AppRequestMeta> {
   const parsedUrl = new URL(req.url);
   const ipInput = getForwardedIpInput(req);
   const uaInput = getUserAgentInput(req);
 
-  return {
+  const meta = {
     request_id: getAppRequestId(req),
     idempotency_key: getAppIdempotencyKey(req),
     ip_hash: await hashNullableInput(ipInput),
@@ -173,6 +181,12 @@ export async function getAppRequestMeta(req: Request): Promise<AppRequestMeta> {
     timestamp: new Date().toISOString(),
     environment: getEnvironment(),
   };
+  await observeAppTenantResolutionShadow(
+    meta.environment,
+    meta.request_id,
+    tenantShadowOptions,
+  );
+  return meta;
 }
 
 function parseAllowedOrigins(): string[] {
