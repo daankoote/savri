@@ -1,6 +1,8 @@
 import { useAuth } from "../auth/AuthProvider";
 import type { AppNavigate } from "../../routes/types";
 import { clearDashboardReadCache } from "./dashboardReadCache";
+import { clearSignupIntakeSession } from "../signup/signupIntakeCapabilityStore";
+import { clearSignupSubmissionReceipt } from "../signup/signupSubmissionReceiptStore";
 
 type DashboardSidebarProps = {
   activeSection: "active" | "history" | "contact";
@@ -14,6 +16,12 @@ export function DashboardSidebar({ activeSection, navigate, onSelectSection }: D
   function handleLogout() {
     clearDashboardReadCache();
     void auth.signOut().then(() => navigate("/account"));
+  }
+
+  function handleNewApplication() {
+    clearSignupIntakeSession();
+    clearSignupSubmissionReceipt();
+    navigate("/aanmelden");
   }
 
   return (
@@ -32,7 +40,11 @@ export function DashboardSidebar({ activeSection, navigate, onSelectSection }: D
       </div>
 
       <nav className="portal-nav" aria-label="Portaal menu">
-        <button className="button button-primary portal-primary-action" type="button">
+        <button
+          className="button button-primary portal-primary-action"
+          onClick={handleNewApplication}
+          type="button"
+        >
           Nieuwe aanvraag
         </button>
         <button

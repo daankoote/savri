@@ -205,6 +205,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const retryBootstrap = useCallback<AuthContextValue["retryBootstrap"]>(async () => {
     if (!session) return { ok: false, error: safeAuthError("invalid_response") };
     bootstrapAttemptRef.current = null;
+    readyUserIdRef.current = null;
+    summaryRef.current = null;
+    setSummary(null);
     return bootstrapSession(session);
   }, [bootstrapSession, session]);
 

@@ -11,7 +11,7 @@ function modeCopy(mode: AuthMode) {
   if (mode === "activate") {
     return {
       action: "Account aanmaken",
-      helper: "Maak een account aan met het e-mailadres van uw ENVAL-aanmelding.",
+      helper: "Maak een account aan voor het ENVAL-klantportaal. Een aanvraag kan daarna worden gestart.",
       submit: "Account aanmaken",
     };
   }
@@ -29,7 +29,9 @@ function safeErrorText(error: AuthSafeError | null) {
 
 export function AccountPageContent({ navigate }: AccountPageContentProps) {
   const auth = useAuth();
-  const [mode, setMode] = useState<AuthMode>("signin");
+  const [mode, setMode] = useState<AuthMode>(() =>
+    window.location.hash === "#activeren" ? "activate" : "signin"
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
@@ -56,6 +58,14 @@ export function AccountPageContent({ navigate }: AccountPageContentProps) {
     setSubmitting(false);
 
     if (!result.ok) {
+      if (mode === "activate" && result.error.code === "account_already_exists") {
+        setMode("signin");
+        setFeedback({
+          kind: "info",
+          message: "Dit account bestaat al. Log in om verder te gaan.",
+        });
+        return;
+      }
       setFeedback({ kind: "error", message: result.error.message });
       return;
     }

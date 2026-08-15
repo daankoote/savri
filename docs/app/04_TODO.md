@@ -1176,9 +1176,9 @@ EXTERNAL LIVE GATES OPEN.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## 09C0/09C1A/09C1B post-signing lifecycle convergence checkpoint
+## 09C0/09C1A/09C1B/09C1C post-signing lifecycle convergence checkpoint
 
-09C1A DATABASE/RPC FOUNDATION AND 09C1B SERVER-ONLY STORAGE/EDGE ORCHESTRATION CURRENT PROVEN — LOCAL ONLY.
+09C1A DATABASE/RPC FOUNDATION, 09C1B SERVER-ONLY STORAGE/EDGE ORCHESTRATION AND 09C1C CUSTOMER HANDOFF CURRENT PROVEN — LOCAL ONLY.
 
 - [x] Map the CURRENT signed-intake flow from intake start through quarantine,
       challenge, OTP/email control, finalization, lock and refresh recovery.
@@ -1208,8 +1208,50 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
       quarantine-to-durable preparation in existing `app-documents`, exact
       byte/MIME/size/SHA-256 reverification, deterministic retry/concurrency,
       creator-only cleanup and focused local Q01-Q30 proof without schema work.
-- [ ] 09C1C+: implement the separately authorized receipt/frontend status
-      cutover, Auth invitation/binding and case-dashboard journey. Production
-      secret configuration and remote apply/deploy require separate authority.
+- [x] 09C1C: version receipt semantics and remove active frontend
+      `pending_verification`; orchestrate bounded server-owned promotion after
+      finalize/status; reuse `/account` and verified Supabase Auth v5 to bind
+      the existing promoted identity/customer/case; project the signed case in
+      the existing customer dashboard without a new `app_customer_dossiers` row.
+- [x] 09C1C-R1: classify post-finalization account handoff server-side; use
+      login for an existing account, activation for a new account and direct
+      portal access only for an exactly matching verified session. No account
+      existence is exposed before consumed signing OTP/finalization.
+- [x] 09C1C-R1: treat account and case as separate roots; reuse the existing
+      compatible identity/customer for a new application, create one new case,
+      and normalize lineage-backed legacy dossiers plus signed cases without
+      e-mail/name/address dedupe.
+- [x] 09C1C-R1: route authenticated `Nieuwe aanvraag` to the existing
+      `/aanmelden` flow; existing-case correction/document update remains a
+      separate intent.
+- [x] 09C1C-R5: treat verified Auth with no compatible customer/case as
+      `unbound_no_cases`; open a customer-safe zero-case portal without
+      creating business truth.
+- [x] 09C1C-R5: reuse canonical `/aanmelden` for account-first applications,
+      derive authenticated e-mail from verified server context, preserve
+      signing/OTP, and prove zero→one→two isolated cases in Q113-Q145.
+- [x] 09C1C-R5-R1: persist immutable intake-specific verified Auth provenance,
+      keep customer/case creation out of account creation and intake start,
+      and atomically create/bind the first compatible customer, identity and
+      signed case for a zero-case Auth user.
+- [x] 09C1C-R5-R1: recover the retained signed account-first fixture through
+      the normal verified bearer status route; preserve activation/login paths
+      and route `promoted` + `already_authenticated` directly to `/dashboard`.
+- [x] 09C1C-R6: keep Auth principal, customer/service context, party, case and
+      authority separate; add immutable server-owned multi-context access,
+      preserve distinct Particulier/Zakelijk/VvE customers and keep account
+      type context-scoped.
+- [x] 09C1C-R6: aggregate all explicitly accessible legacy/signed cases and
+      invalidate only the current principal's dashboard/bootstrap cache after
+      authenticated promotion; keep Zakelijk/VvE authority review incomplete.
+- [ ] Post-MVP polish: visually integrate authenticated `Nieuwe aanvraag`
+      inside the portal shell. Keep canonical `/aanmelden` as the single shared
+      intake flow; do not build a second portal-native application flow.
+- [ ] 09C1C-R1 browser acceptance: manually verify existing-account login,
+      new-account activation, already-authenticated portal handoff,
+      back/forward receipt recovery and multi-case switching in a real browser.
+- [ ] 09C1C+: production legal/OTP/Auth configuration and browser acceptance,
+      operations review, authority/evidence decisions, external verifier,
+      remote apply and deploy require separate authority.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

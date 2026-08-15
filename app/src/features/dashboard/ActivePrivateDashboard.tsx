@@ -23,6 +23,7 @@ type AccordionSection =
   | "kwh";
 
 type InfoRow = {
+  identity: string;
   label: string;
   value: string;
   status?: string;
@@ -41,6 +42,7 @@ type ActivePrivateDashboardProps = {
   dossierOptions: AuthDossierSummary[];
   onSelectDossier: (dossierId: string) => void;
   onRefreshSelectedDossier: () => Promise<boolean>;
+  onStartNewApplication: () => void;
   selectedDossierId: string | null;
 };
 
@@ -50,6 +52,7 @@ export function ActivePrivateDashboard({
   dossierOptions,
   onSelectDossier,
   onRefreshSelectedDossier,
+  onStartNewApplication,
   selectedDossierId,
 }: ActivePrivateDashboardProps) {
   const [selectedChargerId, setSelectedChargerId] = useState<string | null>(
@@ -66,6 +69,32 @@ export function ActivePrivateDashboard({
   const chargerRows = useMemo(() => (model ? buildPortalChargers(model) : []), [
     model,
   ]);
+
+  if (dossierOptions.length === 0) {
+    return (
+      <div className="portal-content-stack">
+        <header className="portal-content-header">
+          <div>
+            <h1>Klantportaal</h1>
+            <p>0 dossiers</p>
+          </div>
+        </header>
+        <DashboardNotice
+          action={
+            <button
+              className="button button-primary"
+              onClick={onStartNewApplication}
+              type="button"
+            >
+              Nieuwe aanvraag
+            </button>
+          }
+          note="Je geverifieerde account is klaar. Start je eerste aanvraag wanneer het jou uitkomt."
+          title="Nog geen dossiers"
+        />
+      </div>
+    );
+  }
 
   function toggleCharger(chargerId: string) {
     setSelectedChargerId((
@@ -177,20 +206,24 @@ export function ActivePrivateDashboard({
               <ReadOnlyInfoRows
                 rows={[
                   {
+                    identity: "dossier-summary",
                     label: "Dossier",
                     value: dossierLabel(model.selected_dossier),
                   },
                   {
+                    identity: "case-reference",
                     label: "Zaakreferentie",
                     value: model.selected_dossier.case_reference,
                   },
                   {
+                    identity: "account-type",
                     label: "Type",
                     value: accountTypeLabel(
                       model.selected_dossier.account_type,
                     ),
                   },
                   {
+                    identity: "case-status",
                     label: "Status",
                     value: statusLabel(model.selected_dossier.status),
                     status: statusLabel(model.selected_dossier.status),
@@ -198,6 +231,43 @@ export function ActivePrivateDashboard({
                 ]}
               />
             </section>
+
+            {model.locations.length
+              ? (
+                <section className="portal-card-compact" aria-label="Locaties">
+                  <h2>Locaties</h2>
+                  <ReadOnlyInfoRows
+                    rows={model.locations.map((location, index) => ({
+                      identity: location.location_id,
+                      label: location.label || `Locatie ${index + 1}`,
+                      value: formatLocationLine(location),
+                      status: statusLabel(location.status),
+                    }))}
+                  />
+                </section>
+              )
+              : null}
+
+            {model.document_slots.some((slot) => !slot.charger_id)
+              ? (
+                <section
+                  className="portal-card-compact"
+                  aria-label="Documenten"
+                >
+                  <h2>Documenten</h2>
+                  <ReadOnlyInfoRows
+                    rows={model.document_slots.filter((slot) =>
+                      !slot.charger_id
+                    ).map((slot) => ({
+                      identity: slot.document_slot_id,
+                      label: getDocumentSlotCustomerTitle(slot),
+                      value: statusLabel(slot.status),
+                      status: statusLabel(slot.status),
+                    }))}
+                  />
+                </section>
+              )
+              : null}
 
             {chargerRows.length
               ? (
@@ -405,22 +475,33 @@ function AccordionRow({
 function ChargerSection({ row }: { row: PortalCharger }) {
   const charger = row.charger;
   const rows: InfoRow[] = [
-    { label: "Merk", value: charger.brand || "-" },
-    { label: "Model", value: charger.model || "-" },
+    { identity: "brand", label: "Merk", value: charger.brand || "-" },
+    { identity: "model", label: "Model", value: charger.model || "-" },
     {
+      identity: "mid-identifier",
       label: "MID-nummer",
-      value: charger.mid_number,
+      value: charger.mid_number || "-",
       status: statusLabel(charger.mid_status),
     },
-    { label: "Serienummer", value: charger.serial_number || "-" },
     {
+      identity: "serial-number",
+      label: "Serienummer",
+      value: charger.serial_number || "-",
+    },
+    {
+      identity: "installation-year",
       label: "Jaar installatie",
       value: charger.installation_year
         ? String(charger.installation_year)
         : "-",
     },
-    { label: "Back-end leverancier", value: charger.backend_supplier || "-" },
     {
+      identity: "backend-supplier",
+      label: "Back-end leverancier",
+      value: charger.backend_supplier || "-",
+    },
+    {
+      identity: "solar-export",
       label: "Zonnepanelen",
       value: solarStatusLabel(charger.solar_export_status),
     },
@@ -443,14 +524,44 @@ function LocationSection({ location }: { location: DashboardLocation | null }) {
     );
   }
 
-  const rows: InfoRow[] = [
-    { label: "Adres", value: location.address.street || "-" },
-    { label: "Huisnummer", value: location.address.house_number },
-    { label: "Suffix", value: location.address.suffix || "-" },
-    { label: "Postcode", value: location.address.postcode },
-    { label: "Stad", value: location.address.city || "-" },
-    { label: "Land", value: location.address.country },
-  ];
+  const rows: InfoRow[] = location.declared_address
+    ? [{
+      identity: "declared-address",
+      label: "Aangegeven adres",
+      value: location.declared_address,
+    }]
+    : [
+      {
+        identity: "street",
+        label: "Adres",
+        value: location.address.street || "-",
+      },
+      {
+        identity: "house-number",
+        label: "Huisnummer",
+        value: location.address.house_number,
+      },
+      {
+        identity: "suffix",
+        label: "Suffix",
+        value: location.address.suffix || "-",
+      },
+      {
+        identity: "postcode",
+        label: "Postcode",
+        value: location.address.postcode,
+      },
+      {
+        identity: "city",
+        label: "Stad",
+        value: location.address.city || "-",
+      },
+      {
+        identity: "country",
+        label: "Land",
+        value: location.address.country,
+      },
+    ];
 
   return (
     <ReadOnlyOverview status={statusLabel(location.status)}>
@@ -556,7 +667,7 @@ function ReadOnlyInfoRows({ rows }: { rows: InfoRow[] }) {
   return (
     <dl className="portal-info-rows">
       {rows.map((row) => (
-        <div className="portal-info-row" key={row.label}>
+        <div className="portal-info-row" key={row.identity}>
           <dt>{row.label}</dt>
           <dd>{row.value}</dd>
           {row.status && row.status !== "Akkoord"
@@ -636,12 +747,14 @@ function statusLabel(status: string): string {
     accepted: "Akkoord",
     active: "Actief",
     confirmed: "Akkoord",
+    confirmed_awaiting_review: "In behandeling",
     current: "Akkoord",
     expected: "Ontbreekt",
     issued: "In review",
     processing: "In review",
     rejected: "Afgewezen",
     submitted: "Ingediend",
+    submitted_for_review: "In behandeling",
     uploaded: "Geupload",
   };
 
@@ -685,6 +798,7 @@ function buildPortalChargers(model: DashboardReadModel): PortalCharger[] {
 
 function formatLocationLine(location: DashboardLocation | null): string {
   if (!location) return "Locatie onbekend";
+  if (location.declared_address) return location.declared_address;
   const houseNumber = `${location.address.house_number}${
     location.address.suffix || ""
   }`;

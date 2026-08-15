@@ -8,6 +8,8 @@ import {
 } from "react";
 import type { RoutedPageProps } from "../../routes/types";
 import { AppHeader } from "../../shared/components/AppHeader";
+import { useAuth } from "../auth/AuthProvider";
+import { clearDashboardReadCache } from "../dashboard/dashboardReadCache";
 import { parseInvoicePdfInput } from "../invoice-analysis/invoicePdfParserAdapter";
 import { DocumentFirstCheckMatrix } from "./DocumentFirstCheckMatrix";
 import { DocumentFirstDocumentsStep } from "./DocumentFirstDocumentsStep";
@@ -74,6 +76,7 @@ function stepIndex(step: DocumentFirstStepId): number {
 }
 
 export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
+  const auth = useAuth();
   const [draft, dispatch] = useReducer(
     documentFirstSignupReducer,
     "particulier",
@@ -102,6 +105,7 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
   const organizationAttemptsRef = useRef(0);
   const organizationAbortRef = useRef<AbortController | null>(null);
   const recoveryBootstrapStartedRef = useRef(false);
+  const dashboardHandoffStartedRef = useRef(false);
   const signingCustomerDraftRef = useRef(draft);
   const legacyDraft = useMemo(() => selectMapperCompatibleDraft(draft), [
     draft,
@@ -116,6 +120,13 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
     () => selectUnifiedFactPresentation(draft),
     [draft],
   );
+  const verifiedAccountEmail = useMemo(() => {
+    const user = auth.session?.user;
+    if (!user?.email || !(user.email_confirmed_at || user.confirmed_at)) {
+      return "";
+    }
+    return user.email.trim().toLowerCase();
+  }, [auth.session]);
   const changeActiveStep = useCallback(
     (step: DocumentFirstStepId) => transitionSignupStep(step, setActiveStep),
     [],
@@ -127,8 +138,8 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
     if (!session) {
       if (cachedReceipt) {
         setSignupLocked(true);
-        setRecoveryMessage("Deze aanmelding kan niet veilig worden hersteld.");
-        setRecoveryStatus("error");
+        setSubmissionReceipt(cachedReceipt);
+        setRecoveryStatus("ready");
       } else {
         setSignupLocked(false);
         setRecoveryStatus("ready");
@@ -156,6 +167,8 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
     const receipt = writeSignupSubmissionReceipt({
       safeReference: result.value.safeReference,
       status: result.value.intakeStatus,
+      promotionState: result.value.promotionState,
+      accountHandoff: result.value.accountHandoff,
     });
     if (!receipt) {
       setRecoveryMessage("Deze aanmelding kan niet veilig worden hersteld.");
@@ -174,6 +187,33 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
   }, [hydrateSigningState]);
 
   useEffect(() => {
+    if (
+      submissionReceipt?.promotionState !== "promoted" ||
+      submissionReceipt.accountHandoff !== "already_authenticated"
+    ) return;
+    const authUserId = auth.session?.user.id;
+    if (!authUserId || dashboardHandoffStartedRef.current) return;
+    dashboardHandoffStartedRef.current = true;
+    let active = true;
+    clearDashboardReadCache(authUserId);
+    void auth.retryBootstrap().then((result) => {
+      if (!active) return;
+      if (!result.ok || result.status !== "ready") {
+        dashboardHandoffStartedRef.current = false;
+        setRecoveryMessage("Het klantportaal kon niet worden vernieuwd.");
+        setRecoveryStatus("error");
+        return;
+      }
+      clearSignupIntakeSession();
+      clearSignupSubmissionReceipt();
+      navigate("/dashboard");
+    });
+    return () => {
+      active = false;
+    };
+  }, [auth.retryBootstrap, auth.session?.user.id, navigate, submissionReceipt]);
+
+  useEffect(() => {
     if (!draft.locationOrder.includes(activeLocationId)) {
       setActiveLocationId(draft.locationOrder[0]);
     }
@@ -186,6 +226,29 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
       createSigningCustomerState(draft.accountBasis.accountType),
     );
   }, [draft]);
+
+  useEffect(() => {
+    if (!verifiedAccountEmail) return;
+    const intakeSession = readSignupIntakeSession();
+    if (intakeSession && intakeSession.email !== verifiedAccountEmail) {
+      clearSignupIntakeSession();
+      clearSignupSubmissionReceipt();
+      setSubmissionReceipt(null);
+      setSignupLocked(false);
+    }
+    if (draft.accountBasis.email === verifiedAccountEmail) return;
+    dispatch({
+      type: "update_account_basis",
+      value: {
+        accountType: draft.accountBasis.accountType,
+        email: verifiedAccountEmail,
+      },
+    });
+  }, [
+    draft.accountBasis.accountType,
+    draft.accountBasis.email,
+    verifiedAccountEmail,
+  ]);
 
   useEffect(() => {
     if (stepIndex(activeStep) > maximumReachableStepIndex) {
@@ -291,14 +354,17 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
   };
 
   const updateAccount = (next: PersonalInfoDraft) => {
-    if (next.accountType !== draft.accountBasis.accountType) {
+    const authoritativeNext = verifiedAccountEmail
+      ? { ...next, email: verifiedAccountEmail }
+      : next;
+    if (authoritativeNext.accountType !== draft.accountBasis.accountType) {
       const confirmationRequired = hasMeaningfulSignupDraft(legacyDraft) ||
         Object.keys(draft.customerConfirmations).length > 0 ||
         Object.keys(draft.manualCorrections).length > 0;
       if (confirmationRequired && !confirmSignupAccountTypeReset()) return;
       const transition = transitionSignupAccountType(
         legacyDraft,
-        next.accountType,
+        authoritativeNext.accountType,
         true,
       );
       if (transition.changed) {
@@ -309,7 +375,7 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
       return;
     }
     if (
-      next.email.trim().toLowerCase() !==
+      authoritativeNext.email.trim().toLowerCase() !==
         draft.accountBasis.email.trim().toLowerCase()
     ) {
       draftGenerationRef.current += 1;
@@ -320,7 +386,10 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
     }
     dispatch({
       type: "update_account_basis",
-      value: { accountType: next.accountType, email: next.email },
+      value: {
+        accountType: authoritativeNext.accountType,
+        email: authoritativeNext.email,
+      },
     });
   };
 
@@ -500,6 +569,7 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
     ? (
       <>
         <PersonalInfoSection
+          authoritativeEmail={verifiedAccountEmail || null}
           fieldErrors={{}}
           onChange={updateAccount}
           value={personalInfo}
@@ -648,6 +718,75 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
                     Referentie:{" "}
                     <strong>{submissionReceipt.safeReference}</strong>
                   </p>
+                  {submissionReceipt.promotionState === "pending"
+                    ? <p role="status">Je dossier wordt verwerkt.</p>
+                    : null}
+                  {submissionReceipt.promotionState === "blocked"
+                    ? (
+                      <p role="alert">
+                        De verwerking vraagt aandacht. Je ondertekening blijft
+                        geldig.
+                      </p>
+                    )
+                    : null}
+                  {submissionReceipt.accountHandoff === "blocked"
+                    ? (
+                      <p role="alert">
+                        We kunnen de accountkoppeling niet automatisch afronden.
+                      </p>
+                    )
+                    : null}
+                  <div className="section-actions">
+                    {submissionReceipt.promotionState === "promoted" &&
+                        submissionReceipt.accountHandoff ===
+                          "existing_account_login_required"
+                      ? (
+                        <button
+                          className="button button-primary"
+                          onClick={() => navigate("/account#inloggen")}
+                          type="button"
+                        >
+                          Inloggen naar klantportaal
+                        </button>
+                      )
+                      : submissionReceipt.promotionState === "promoted" &&
+                          submissionReceipt.accountHandoff ===
+                            "account_activation_available"
+                      ? (
+                        <button
+                          className="button button-primary"
+                          onClick={() => navigate("/account#activeren")}
+                          type="button"
+                        >
+                          Account aanmaken
+                        </button>
+                      )
+                      : submissionReceipt.promotionState === "promoted" &&
+                          submissionReceipt.accountHandoff ===
+                            "already_authenticated"
+                      ? (
+                        <button
+                          className="button button-primary"
+                          onClick={() => navigate("/dashboard")}
+                          type="button"
+                        >
+                          Naar klantportaal
+                        </button>
+                      )
+                      : submissionReceipt.promotionState === "pending" &&
+                          submissionReceipt.accountHandoff !== "blocked" &&
+                          readSignupIntakeSession()
+                      ? (
+                        <button
+                          className="button button-secondary"
+                          onClick={() => void hydrateSigningState()}
+                          type="button"
+                        >
+                          Status opnieuw ophalen
+                        </button>
+                      )
+                      : null}
+                  </div>
                 </header>
               </article>
             </section>

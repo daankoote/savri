@@ -56,7 +56,7 @@ export async function signUpWithSupabasePassword(
   });
 
   if (error) {
-    return { ok: false, result: { ok: false, error: mapSupabaseAuthError(error.message) } };
+    return { ok: false, result: { ok: false, error: mapSupabaseAuthError(error.message, error.code) } };
   }
 
   return { ok: true, session: data.session ?? null };
@@ -75,7 +75,7 @@ export async function signInWithSupabasePassword(
   });
 
   if (error || !data.session) {
-    return { ok: false, result: { ok: false, error: error ? mapSupabaseAuthError(error.message) : safeAuthError("invalid_credentials") } };
+    return { ok: false, result: { ok: false, error: error ? mapSupabaseAuthError(error.message, error.code) : safeAuthError("invalid_credentials") } };
   }
 
   return { ok: true, session: data.session };

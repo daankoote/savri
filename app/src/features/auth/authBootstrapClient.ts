@@ -10,15 +10,46 @@ export type AuthBootstrapClientConfig = {
 
 export type AuthBootstrapResult =
   | { ok: true; summary: AuthBootstrapSummary }
-  | { ok: false; error: AuthSafeError; status?: number };
+  | {
+    ok: false;
+    error: AuthSafeError;
+    status?: number;
+    bindingStatus?: "blocked";
+  };
 
 type UnknownJsonObject = Record<string, unknown>;
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CASE_REFERENCE_RE =
-  /^CASE-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-const SHA256_RE = /^[0-9a-f]{64}$/;
+  /^CASE-(?:[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+const MODE = "auth_bootstrap_browser";
+const SCHEMA_VERSION = "auth_bootstrap_browser_v2";
+const SUCCESS_FIELDS = [
+  "authenticated",
+  "binding_status",
+  "dossiers",
+  "mode",
+  "ok",
+  "schema_version",
+] as const;
+const DOSSIER_FIELDS = [
+  "account_type",
+  "case_id",
+  "case_reference",
+  "dossier_id",
+  "dossier_number",
+  "status",
+] as const;
+const BLOCKED_FIELDS = [
+  "authenticated",
+  "binding_status",
+  "code",
+  "dossiers",
+  "mode",
+  "ok",
+  "schema_version",
+] as const;
 
 function isRecord(value: unknown): value is UnknownJsonObject {
   return !!value && typeof value === "object" && !Array.isArray(value);
@@ -28,8 +59,13 @@ function stringField(body: UnknownJsonObject, key: string): string {
   return typeof body[key] === "string" ? body[key].trim() : "";
 }
 
-function booleanField(body: UnknownJsonObject, key: string): boolean {
-  return body[key] === true;
+function hasExactFields(
+  body: UnknownJsonObject,
+  expected: readonly string[],
+): boolean {
+  const actual = Object.keys(body).sort();
+  return actual.length === expected.length &&
+    actual.every((key, index) => key === expected[index]);
 }
 
 function isUuid(value: string): boolean {
@@ -42,13 +78,23 @@ function isAccountType(
   return value === "particulier" || value === "zakelijk" || value === "vve";
 }
 
+function nullableStringField(
+  body: UnknownJsonObject,
+  key: string,
+): string | null | undefined {
+  if (body[key] === null) return null;
+  if (typeof body[key] !== "string") return undefined;
+  return body[key].trim() || null;
+}
+
 function parseDossiers(
   value: unknown,
+  allowEmpty = false,
 ): AuthBootstrapSummary["dossiers"] | null {
   if (!Array.isArray(value)) return null;
 
   const dossiers = value.map((item) => {
-    if (!isRecord(item)) return null;
+    if (!isRecord(item) || !hasExactFields(item, DOSSIER_FIELDS)) return null;
 
     const accountType = stringField(item, "account_type");
     if (!isAccountType(accountType)) return null;
@@ -56,17 +102,20 @@ function parseDossiers(
     const dossierId = stringField(item, "dossier_id");
     const caseId = stringField(item, "case_id");
     const caseReference = stringField(item, "case_reference");
+    const dossierNumber = nullableStringField(item, "dossier_number");
     if (
       !isUuid(dossierId) ||
       !isUuid(caseId) ||
-      !CASE_REFERENCE_RE.test(caseReference)
+      !CASE_REFERENCE_RE.test(caseReference) ||
+      dossierNumber === undefined ||
+      !stringField(item, "status")
     ) {
       return null;
     }
 
     return {
       dossier_id: dossierId,
-      dossier_number: stringField(item, "dossier_number"),
+      dossier_number: dossierNumber,
       account_type: accountType,
       status: stringField(item, "status"),
       case_id: caseId,
@@ -74,35 +123,56 @@ function parseDossiers(
     };
   });
 
-  if (!dossiers.length || dossiers.some((item) => !item)) return null;
+  if ((!allowEmpty && !dossiers.length) || dossiers.some((item) => !item)) {
+    return null;
+  }
 
   return dossiers as AuthBootstrapSummary["dossiers"];
 }
 
-function validateSuccessBody(body: UnknownJsonObject): AuthBootstrapResult {
-  const dossiers = parseDossiers(body.dossiers);
+export function decodeAuthBootstrapResponse(
+  body: unknown,
+): AuthBootstrapResult {
+  if (
+    isRecord(body) && hasExactFields(body, BLOCKED_FIELDS) &&
+    body.ok === false && body.mode === MODE &&
+    body.schema_version === SCHEMA_VERSION && body.authenticated === true &&
+    body.binding_status === "blocked" && Array.isArray(body.dossiers) &&
+    body.dossiers.length === 0
+  ) {
+    return {
+      ok: false,
+      error: mapBootstrapErrorCode(stringField(body, "code")),
+      bindingStatus: "blocked",
+    };
+  }
+
+  if (!isRecord(body) || !hasExactFields(body, SUCCESS_FIELDS)) {
+    return { ok: false, error: safeAuthError("invalid_response") };
+  }
+  const bindingStatus = stringField(body, "binding_status");
+  const dossiers = parseDossiers(
+    body.dossiers,
+    bindingStatus === "unbound_no_cases",
+  );
 
   const summary: AuthBootstrapSummary = {
-    customer_id: stringField(body, "customer_id"),
-    identity_id: stringField(body, "identity_id"),
-    identity_status: "active",
-    binding_status: "bound",
+    schema_version: SCHEMA_VERSION,
+    authenticated: true,
+    binding_status: bindingStatus === "unbound_no_cases"
+      ? "unbound_no_cases"
+      : "bound",
     dossiers: dossiers ?? [],
-    payload_hash: stringField(body, "payload_hash"),
-    request_id: stringField(body, "request_id"),
-    replayed: booleanField(body, "replayed"),
   };
 
   if (
     body.ok !== true ||
-    body.mode !== "auth_bootstrap_v2" ||
-    body.identity_status !== "active" ||
-    body.binding_status !== "bound" ||
-    !isUuid(summary.customer_id) ||
-    !isUuid(summary.identity_id) ||
-    !SHA256_RE.test(summary.payload_hash) ||
-    !summary.request_id ||
-    !dossiers
+    body.mode !== MODE ||
+    body.schema_version !== SCHEMA_VERSION ||
+    body.authenticated !== true ||
+    !["bound", "unbound_no_cases"].includes(bindingStatus) || !dossiers ||
+    (bindingStatus === "bound" && dossiers.length === 0) ||
+    (bindingStatus === "unbound_no_cases" && dossiers.length !== 0)
   ) {
     return { ok: false, error: safeAuthError("invalid_response") };
   }
@@ -163,7 +233,11 @@ export async function bootstrapAppCustomerAuth({
     };
   }
 
+  const decoded = decodeAuthBootstrapResponse(parsed.body);
   if (!response.ok) {
+    if (!decoded.ok && decoded.bindingStatus === "blocked") {
+      return { ...decoded, status: response.status };
+    }
     return {
       ok: false,
       error: mapBootstrapErrorCode(stringField(parsed.body, "code")),
@@ -171,5 +245,5 @@ export async function bootstrapAppCustomerAuth({
     };
   }
 
-  return validateSuccessBody(parsed.body);
+  return decoded;
 }

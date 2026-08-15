@@ -14,6 +14,7 @@ export type DashboardLocation = {
   location_id: string;
   label: string | null;
   status: string;
+  declared_address: string | null;
   address: {
     postcode: string;
     house_number: string;
@@ -31,7 +32,7 @@ export type DashboardCharger = {
   brand: string | null;
   model: string | null;
   serial_number: string | null;
-  mid_number: string;
+  mid_number: string | null;
   mid_status: string;
   installation_year: number | null;
   backend_supplier: string | null;

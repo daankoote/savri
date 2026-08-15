@@ -21,6 +21,7 @@ export type Fixture = {
 };
 
 export type FixtureOptions = {
+  email?: string;
   fileHash?: string;
   fileSize?: number;
   storageBucket?: string;
@@ -28,6 +29,7 @@ export type FixtureOptions = {
   useCanonicalSourcePath?: boolean;
   fileStatus?: "uploaded_pending_confirm" | "confirmed_quarantine";
   mandatePermissions?: string[];
+  serviceName?: string;
 };
 
 const HASH = "a".repeat(64);
@@ -141,10 +143,11 @@ export async function createFixture(
   const storagePath = options.useCanonicalSourcePath
     ? `signup-quarantine/${intakeId}/${fileId}/document.pdf`
     : options.storagePath ?? `proof/${intakeId}/${fileId}`;
-  const email = `${key(label)}@example.invalid`;
-  const serviceName = accountType === "particulier"
+  const email = options.email?.trim().toLowerCase() ||
+    `${key(label)}@example.invalid`;
+  const serviceName = options.serviceName || (accountType === "particulier"
     ? `Proof Person ${label}`
-    : `Proof Organization ${label}`;
+    : `Proof Organization ${label}`);
   const contactName = accountType === "particulier"
     ? serviceName
     : `Proof Contact ${label}`;
@@ -536,16 +539,43 @@ async function main() {
     sharedCollisionPath = String(
       (particulierRequest.durable_files as Json[])[0].storage_path,
     );
-    const rpc = await service.rpc("app_promote_signed_signup_v1", {
-      p_request: particulierRequest,
+    const preexistingAuth = await service.auth.admin.createUser({
+      email: particulier.email,
+      password: `Aa1!${crypto.randomUUID()}x`,
+      email_confirm: true,
     });
     assert(
-      !rpc.error && (rpc.data as Json).ok === true,
-      `particulier_promotion_failed:${
-        rpc.error?.message ?? JSON.stringify(rpc.data)
-      }`,
+      !preexistingAuth.error && preexistingAuth.data.user?.id,
+      "preexisting_auth_user_create_failed",
     );
-    particulierResponse = rpc.data as Json;
+    const preexistingAuthUserId = String(preexistingAuth.data.user.id);
+    try {
+      const rpc = await service.rpc("app_promote_signed_signup_v1", {
+        p_request: particulierRequest,
+      });
+      assert(
+        !rpc.error && (rpc.data as Json).ok === true,
+        `particulier_promotion_failed:${
+          rpc.error?.message ?? JSON.stringify(rpc.data)
+        }`,
+      );
+      particulierResponse = rpc.data as Json;
+      const sameAuth = await service.auth.admin.getUserById(
+        preexistingAuthUserId,
+      );
+      const identity = await service.from("app_customer_identities")
+        .select("id,auth_user_id")
+        .eq("email_normalized", particulier.email)
+        .eq("status", "active");
+      assert(
+        !sameAuth.error && sameAuth.data.user?.id === preexistingAuthUserId &&
+          !identity.error && identity.data.length === 1 &&
+          identity.data[0].auth_user_id === null,
+        "existing_auth_user_was_duplicated_or_unsafely_bound",
+      );
+    } finally {
+      await service.auth.admin.deleteUser(preexistingAuthUserId);
+    }
   });
 
   await run("Q07_particulier_case_and_asserted_roles", async () => {

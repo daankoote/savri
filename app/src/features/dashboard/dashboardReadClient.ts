@@ -37,7 +37,7 @@ type UnknownRecord = Record<string, unknown>;
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CASE_REFERENCE_RE =
-  /^CASE-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+  /^CASE-(?:[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 
 function isRecord(value: unknown): value is UnknownRecord {
   return !!value && typeof value === "object" && !Array.isArray(value);
@@ -146,7 +146,11 @@ function parseLocation(value: unknown): DashboardLocation | null {
   const postcode = stringField(value.address, "postcode");
   const houseNumber = stringField(value.address, "house_number");
   const country = stringField(value.address, "country");
-  if (!locationId || !status || !postcode || !houseNumber || !country) {
+  const declaredAddress = nullableStringField(value, "declared_address");
+  if (
+    !locationId || !status || !country ||
+    (!declaredAddress && (!postcode || !houseNumber))
+  ) {
     return null;
   }
 
@@ -154,6 +158,7 @@ function parseLocation(value: unknown): DashboardLocation | null {
     location_id: locationId,
     label: nullableStringField(value, "label"),
     status,
+    declared_address: declaredAddress,
     address: {
       postcode,
       house_number: houseNumber,
@@ -170,9 +175,9 @@ function parseCharger(value: unknown): DashboardCharger | null {
   const chargerId = stringField(value, "charger_id");
   const locationId = stringField(value, "location_id");
   const status = stringField(value, "status");
-  const midNumber = stringField(value, "mid_number");
+  const midNumber = nullableStringField(value, "mid_number");
   const midStatus = stringField(value, "mid_status");
-  if (!chargerId || !locationId || !status || !midNumber || !midStatus) {
+  if (!chargerId || !locationId || !status || !midStatus) {
     return null;
   }
 

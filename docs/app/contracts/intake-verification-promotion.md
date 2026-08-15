@@ -1,6 +1,6 @@
 # Intake Verification Promotion Contract
 
-Status: MIXED — SIGNED INTAKE, 09C1A DATABASE/RPC PROMOTION AND 09C1B SERVER-ONLY STORAGE/EDGE ORCHESTRATION CURRENT PROVEN LOCALLY; FRONTEND/AUTH/DASHBOARD CUTOVER TARGET.
+Status: CURRENT PROVEN — LOCAL ONLY through 09C1C-R6 authenticated intake provenance, multi-context Auth access and fresh post-promotion dashboard handoff. Production/remote acceptance remains separate.
 
 This is the canonical post-signing convergence contract. It replaces the stale target in which a signed submission waited for a separate one-time email-verification link before promotion. It does not change runtime, schema, production or regulatory status by documentation alone.
 
@@ -36,14 +36,14 @@ Only current source/schema/proof establishes this matrix.
 
 | step | frontend action | server endpoint / RPC | database truth | capability / auth | audit evidence | resulting state |
 |---|---|---|---|---|---|---|
-| 1. intake start | first required document upload causes the signup upload client to ensure an intake session | `api-app-signup-intake-start` / `app_signup_quarantine_start_v1` | one `app_signup_intakes` row and one hashed `intake_manage` capability | raw management capability exists only in same-tab `sessionStorage`; email is not authority | `signup_intake_collecting_started`; request/idempotency and hashed request metadata | intake `collecting` |
+| 1. intake start | first required document upload causes the signup upload client to ensure an intake session | `api-app-signup-intake-start` / `app_signup_quarantine_start_v2` | one `app_signup_intakes` row, one hashed `intake_manage` capability and, only for verified Auth, one immutable `app_signup_authenticated_intake_provenance` row | raw management capability exists only in same-tab `sessionStorage`; verified Auth JWT is validated server-side, e-mail is derived server-side and no token is persisted | `signup_intake_collecting_started`; request/idempotency and hashed request metadata; typed Auth provenance contains subject, verified-at and e-mail hash only | intake `collecting`; no customer, identity or case |
 | 2. quarantine upload issue | customer selects a required PDF | `api-app-signup-upload-url` / `app_signup_quarantine_issue_v1` | immutable intake-file revision with server-chosen private bucket/path plus one hashed file-scoped upload capability | valid unconsumed `intake_manage`; returned upload capability is narrow and one-file scoped | `signup_quarantine_upload_issued` | file `upload_issued` |
 | 3. upload confirm | browser uploads to the signed private URL and asks the server to confirm | `api-app-signup-upload-confirm` / `app_signup_quarantine_confirm_v1` | server downloads bytes, validates MIME/size/hash, consumes upload capability and records `confirmed_quarantine` or rejection | file-scoped upload capability; no dossier or evidence authority | `signup_quarantine_upload_confirmed` or `signup_quarantine_upload_rejected` | confirmed quarantine transport only; not accepted evidence |
 | 4. signing challenge | customer requests the six-digit code after Step 3 readiness | `api-app-signup-signing-challenge` / `app_signup_signing_challenge_issue_v1` | one delivered, expiring `typed_name_otp_v1` challenge; older active challenge is replaced | valid `intake_manage`; server binds challenge to a hashed normalized-email channel | `signup_signing_challenge_issued` plus delivery audit | intake remains `collecting`; no signature yet |
 | 5. OTP/email-control proof | customer submits the delivered OTP together with typed signer input | no independent verification endpoint; proof is evaluated inside finalize | delivered challenge, channel hash, OTP verifier, expiry and attempts are checked atomically | OTP plus the matching intake/challenge/capability proves control of the used email channel for this signing act | failed attempts stay bounded; successful proof becomes part of signature evidence | no standalone account, Auth session, authority or external-verification state |
-| 6. signing finalization | customer confirms the canonical facts, legal actions, one mandate year and typed signature | `api-app-signup-signing-finalize` / `app_signup_signing_finalize_v1` | exactly one immutable signing snapshot, three legal acceptances, one mandate, one signature-evidence row; challenge and management capability consumed; `finalized_at` set | capability ownership plus delivered OTP challenge; service-role-only RPC; idempotent | exactly one `signup_signing_finalized` event | CURRENT database status `submitted_for_review`; all intake/file mutation routes reject the finalized intake. The unchanged 09B2 frontend response remains temporarily `pending_verification` until its own cutover |
-| 7. finalized refresh/status | same-tab page bootstraps through the existing intake session; receipt is presentation cache only | `api-app-signup-signing-finalize` with `operation=status` / `app_signup_signing_status_v1` | server checks finalized intake, consumed challenge/capability, one snapshot, three acceptances, one mandate, one signature evidence and one audit event | existing hashed `intake_manage` proves scoped status ownership only; safe reference alone is not a credential | reads existing finalization audit; no mutation event | server returns `finalized`, `locked`, safe reference and `finalized_at`; no new intake/upload/signing call |
-| 8. waiting after signing | customer sees `Je dossier is ondertekend en ingediend.` and the safe reference | no browser promotion trigger exists CURRENT; the internal-only `api-app-signup-promote` prepares durable bytes and calls `app_promote_signed_signup_v1` | the server can atomically create/reuse customer/identity/party state and create one `app_cases` root; no `app_customer_dossiers` row | service-role bearer plus separately configured internal secret; local fallback is accepted only on detected local runtime. Receipt, safe reference, OTP and capability grant no promotion rights | safe Edge stages plus authoritative immutable promotion/lifecycle/audit provenance | internal review only; no NEa verification has started or completed |
+| 6. signing finalization | customer confirms the canonical facts, legal actions, one mandate year and typed signature | `api-app-signup-signing-finalize` / `app_signup_signing_finalize_v2` followed by bounded server-owned promotion | exactly one immutable signing snapshot, three legal acceptances, one mandate and one signature-evidence row; challenge and management capability consumed; `finalized_at` set | capability ownership plus delivered OTP challenge; verified Auth is a separate optional account anchor | exactly one `signup_signing_finalized` event | database status `submitted_for_review`; signing remains valid if later promotion/binding must retry |
+| 7. finalized refresh/status | same-tab page bootstraps through the existing intake session; receipt is presentation cache only | `api-app-signup-signing-finalize` with `operation=status` / `app_signup_signing_status_v2` | server rechecks finalization; a verified matching bearer may append the narrowly labeled recovery provenance for an older signed intake; promotion retries are bounded and idempotent | hashed `intake_manage` proves scoped status ownership; verified Auth JWT is validated independently; wrong Auth subject fails closed | immutable Auth recovery provenance only when needed; no second intake or signing act | server returns `finalized`, `locked`, safe reference, `promotion_state` and `account_handoff` |
+| 8. post-signing handoff | customer sees the confirmation while promotion is pending | server prepares durable bytes and calls `app_promote_signed_signup_v3`, which runs context-scoped v1 promotion plus Auth access synchronization in one transaction | zero-case verified Auth creates exactly one compatible customer, one bound identity and one `app_cases` root; later account types create separate contexts and explicit access without customer merge | receipt, safe reference, OTP, e-mail equality and capability grant no promotion/access rights by themselves; the browser receives no internal secret | safe Edge stages plus immutable promotion/lifecycle/Auth-access provenance | pending stays temporary with bounded retry; activation/login paths remain; `promoted` + `already_authenticated` clears current-principal dashboard/bootstrap cache before `/dashboard` |
 
 CURRENT proof also establishes that signing itself creates no `app_customers`, `app_customer_identities`, `app_customer_dossiers` or `app_cases` row. Only the separate service-only 09C1A promotion transaction may create/reuse the first three target families, and it never creates `app_customer_dossiers`.
 
@@ -126,10 +126,12 @@ TARGET flow:
 ```text
 finalized signed intake (`submitted_for_review`)
 -> server-only durable-file preparation
--> one `app_promote_signed_signup_v1` database transaction
+-> one `app_promote_signed_signup_v3` database transaction
 -> `app_cases`-owned durable case + internal review state
 -> intake `promoted`
 ```
+
+`app_promote_signed_signup_v3` preserves the v1 promotion transaction, scopes customer compatibility to the signed account type and, when immutable verified Auth provenance exists, safely binds the first compatible identity or synchronizes explicit access to a later separate context. These operations share one database transaction: a later promotion, binding or access failure rolls back newly created business truth while leaving finalized signing valid. Anonymous promotion still requires the unchanged signing and promotion lineage.
 
 The Edge/worker entry point is `api-app-signup-promote`. It is an internal server caller only. The browser, receipt, safe reference, signing OTP and consumed management capability cannot call or authorize promotion.
 
@@ -185,9 +187,10 @@ Party reuse is narrower:
 | internal lifecycle | create initial append-only `app_case_lifecycle_events` value `submitted_for_review` | customer projection maps this to `In behandeling`; no verifier semantics |
 | location | create/reuse only a safely mapped `app_locations` root; record signed address as `customer_declared` observation and link through `app_case_location_relations` | do not auto-create accepted `app_location_versions`; address/parser output is not location acceptance |
 | EAN/connection | retain signed declared EAN and scope in the immutable snapshot/mandate and a case-scoped declaration source when the 09C1 schema defines it | do not write old `app_connections`/ownership tables or create accepted allocation-point/`aangeslotene` truth |
-| charger/charge point/MID | retain exact signed declared/observed facts and provenance for review | target asset/MID foundation is not DDL-ready; no accepted charger, charge-point or conformity truth is created |
+| charger/charge point/MID | create one immutable case-owned `app_chargers` root per signed charger plus one `app_charger_declarations` observation preserving the signed location binding and available brand, model, serial, declared MID, explicit installation date/year, backend supplier and solar/export declaration | every value remains `confirmed_awaiting_review`; no accepted charger, charge-point, MID or conformity truth is created |
 | mandate/signing | link existing immutable `app_signup_mandates`, snapshot, acceptances and signature evidence through promotion provenance | never copy/rewrite the canonical content; Zakelijk/VvE authority remains incomplete |
 | documents | server prepares durable private bytes and creates case-owned `app_evidence_files` and immutable `app_evidence_versions` from exact confirmed quarantine revisions | no browser promotion; `confirmed_quarantine` is not `accepted`; no `app_evidence_decisions` row is created automatically |
+| document declaration context | preserve document type plus a hashed source-slot reference and only a deterministic signed location/charger association in `app_evidence_declaration_contexts` | filename, hash, storage path and source-slot identity are not customer projection; ambiguous multi-subject scope remains unlinked rather than inferred |
 | quarantine source | retain immutable intake-file metadata and its source-to-durable mapping | no finalized-file mutation is required; cleanup follows separate retention and successful durable mapping |
 | audit/idempotency | write promotion success/failure boundary, created/reused outcomes and exact source/version refs | no raw OTP, capability, document contents or customer-facing internal payload |
 
@@ -255,13 +258,13 @@ Promotion creates durable account/case state but no Supabase Auth session.
 
 After promotion:
 
-1. a post-commit outbox may issue the existing Supabase Auth account/login route;
+1. the signed receipt links to the existing Supabase Auth account/login route after server-owned promotion succeeds;
 2. verified Supabase Auth later binds to the unique existing `app_customer_identity`;
 3. Auth bootstrap must reuse the promoted customer, party and case and must not create a dossier or second case;
 4. dashboard reads a case-owned customer-safe projection;
 5. signing OTP, safe reference, receipt and management capability never authorize dashboard reads or mutations.
 
-09C1 therefore replaces the dossier-creating v2/v3 bootstrap assumption with a case-reusing bootstrap revision and updates `api-app-dashboard-get` away from `app_customer_dossiers` as core owner. No custom login/session architecture is introduced.
+09C1C implements that case-reusing bootstrap revision and the signed-case branch of `api-app-dashboard-get`. The response retains the existing safe dashboard summary shape for renderer/cache reuse, but its compatibility selector equals the case UUID for signed cases; no dossier row exists or is created. No custom login/session architecture is introduced.
 
 ## 13. Customer Journey And Copy
 
@@ -313,6 +316,17 @@ There is no second generic full submit in the dashboard. Later corrections are t
 9. signed EAN/charger/MID facts retained for review without writing blocked canonical connection/asset truth;
 10. transactional audit/idempotency, concurrency, rollback and minimized service response.
 
+09C1C-R4 CURRENT PROVEN — LOCAL ONLY adds forward-only declared-data parity:
+
+- a signed charger becomes a case-owned immutable root linked to the already
+  declared location and an immutable `confirmed_awaiting_review` declaration;
+- signed document classification remains source-authored, with an opaque
+  source-slot hash and only deterministic declared subject context;
+- the dashboard projects declared chargers and meaningful safe document
+  vocabulary using existing opaque charger/evidence UUIDs as UI identity;
+- MID, charger, location and evidence remain declared/review-input truth, never
+  accepted or eligible truth.
+
 09C1B CURRENT PROVEN — LOCAL ONLY adds:
 
 1. internal-only `api-app-signup-promote` with fail-closed service-role plus internal-secret authorization and local-only detected-runtime fallback;
@@ -322,7 +336,9 @@ There is no second generic full submit in the dashboard. Later corrections are t
 5. minimized internal response and safe stage logging with request ID only; the database completion event remains authoritative business audit;
 6. Q01-Q30 local runtime proof for authorization, integrity, replay, concurrency, cleanup, source retention, non-claims and secret-free output.
 
-Still TARGET for a later separately authorized batch: frontend/receipt status cutover, any browser promotion trigger, post-commit Auth invitation/binding, case-owned dashboard projection and browser journey proof.
+09C1C CURRENT PROVEN — LOCAL ONLY adds the frontend/receipt `submitted_for_review` cutover, server-owned promotion attempt after finalize and on bounded status hydration, receipt/account CTA, verified Auth binding to the existing promoted identity/customer/case, and the case-owned customer-safe dashboard projection. Promotion failure never rolls back signing; safe retry is bounded and reuses the 09C1B idempotency owner. The browser never receives promotion authority or an internal secret.
+
+Still TARGET: production Auth/redirect acceptance, production legal and OTP delivery, operations review UI, authority/evidence acceptance, EAN/aangeslotene/MID decisions, external verifier, REV/inboeking, remote apply and deploy.
 
 Do not split the core database creation into multiple visible transactions. Storage preparation may precede the transaction only under the inaccessible deterministic-orphan rule above.
 
@@ -351,6 +367,57 @@ Required focused proof:
 
 ## 17. Non-Claims
 
-09C1A/09C1B implement only the local database/RPC foundation and internal server-only Storage/Edge orchestration. They do not implement a frontend/browser promotion trigger, frontend status cutover, Auth invitation/binding, dashboard cutover or the full customer journey; approve production legal/OTP delivery; establish representation authority; accept evidence/EAN/MID; perform external verification; create a verification statement; authorize REV/booking; or grant remote/deploy permission. No remote function, secret, Storage policy or schema was changed by 09C1B.
+09C1A/09C1B/09C1C implement the complete local signed-submission to verified-Auth customer-dashboard boundary. They do not approve production legal/OTP/Auth configuration; establish representation authority; accept evidence/EAN/MID; implement operations review or an external verifier; create a verification statement; authorize REV/booking; or grant remote/deploy permission. No remote function, secret or Storage policy was changed by 09C1C.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 18. 09C1C-R1 Existing-Account Convergence
+
+Promotion may reuse exactly one compatible active customer identity after the
+same e-mail channel has been controlled, including when a Supabase Auth user
+already exists. It creates no Auth user and never merges cases on e-mail,
+address, name or document content. A new signed intake remains a new
+`app_cases` root; replay/refresh creates no second case.
+
+Incompatible customer type, inactive/multiple identities, conflicting binding
+or customer-level party/profile mismatch fail closed. Signature and OTP do not
+prove representation authority. The post-finalization account handoff is safe
+guidance only and is never emitted by the pre-OTP collecting response.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 19. 09C1C-R2 On-Demand Legacy Profile Convergence
+
+CURRENT PROVEN — LOCAL ONLY.
+
+R2 is not a backfill. It runs only while atomically promoting a new finalized
+immutable signed intake. E-mail is only the routing handle inside an already
+proved chain: one normalized signing channel, one active identity, one active
+customer, one verified Auth binding, compatible account type, no competing
+customer/identity claim, one compatible account-owner party and no conflicting
+current profile truth. Missing, ambiguous or cross-user links fail closed.
+
+Repeated presentation rows with the same trimmed signed declaration value are
+one value; different values remain ambiguous. If the compatible owner party has
+no current profile, promotion appends one immutable
+`source_type=signed_signup_intake` person or organization version anchored to
+the signing snapshot. It is declared truth only. Auth, OTP and e-mail control
+do not independently verify a person, organization, representation or
+authority. An exactly matching current profile is reused; a conflicting
+current profile is never overwritten or superseded.
+
+Particulier pins that natural-person version to asserted `service_recipient`
+and `case_contact` on the new case and creates no representation authority.
+Zakelijk/VvE preserve organization/contact separation and
+`required_not_completed` authority review. All database profile,
+relationship, role, promotion, evidence metadata and case writes remain inside
+the existing locked/idempotent promotion transaction. Deterministic private
+Storage preparation remains the separately documented inaccessible-orphan
+boundary.
+
+The existing case is not a merge candidate. It remains present, the signed
+intake creates exactly one new `app_cases` root, and evidence from that intake
+stays on that new case. One account may therefore expose both cases through the
+unified authenticated dashboard.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

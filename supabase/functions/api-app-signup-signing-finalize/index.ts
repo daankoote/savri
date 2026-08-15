@@ -28,6 +28,10 @@ import {
   signingVerifierSecret,
   validUuid,
 } from "../_shared/signup_signing.ts";
+import { attemptSignupPromotion } from "../_shared/signup_promotion.ts";
+import {
+  requireVerifiedSupabaseAuthUser,
+} from "../_shared/app_customer_auth.ts";
 
 type SafeFact = {
   fact_id: string;
@@ -110,6 +114,83 @@ function connectionScope(facts: SafeFact[]) {
   })).filter((scope) => scope.eans.length > 0);
 }
 
+async function postSigningProjection(
+  req: Request,
+  intakeId: string,
+  meta: Awaited<ReturnType<typeof getAppRequestMeta>>,
+  body: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const SB = signupServiceClient();
+  let authenticatedAuthUserId: string | null = null;
+  const bearer = req.headers.get("authorization")?.trim().match(
+    /^Bearer\s+([^\s]+)$/i,
+  )?.[1];
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")?.trim() || "";
+  if (SB && bearer && bearer !== anonKey) {
+    const verifiedAuth = await requireVerifiedSupabaseAuthUser(req, SB);
+    if (!verifiedAuth.ok) {
+      return {
+        ...body,
+        intake_status: "submitted_for_review",
+        promotion_state: "blocked",
+        account_handoff: "blocked",
+      };
+    }
+    authenticatedAuthUserId = verifiedAuth.context.authUserId;
+    const provenance = await SB.rpc(
+      "app_signup_authenticated_intake_claim_v1",
+      {
+        p_intake_id: intakeId,
+        p_authenticated_auth_user_id: authenticatedAuthUserId,
+        p_request_id: meta.request_id,
+      },
+    );
+    if (
+      provenance.error || !isRecord(provenance.data) ||
+      provenance.data.ok !== true
+    ) {
+      return {
+        ...body,
+        intake_status: "submitted_for_review",
+        promotion_state: "blocked",
+        account_handoff: "blocked",
+      };
+    }
+  }
+
+  const promotionMeta = {
+    ...meta,
+    idempotency_key: `signup-promotion:${intakeId}`,
+  };
+  let attempt = await attemptSignupPromotion(intakeId, promotionMeta);
+  for (const delayMs of [100, 300]) {
+    if (attempt.ok || attempt.state !== "pending") break;
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+    attempt = await attemptSignupPromotion(intakeId, promotionMeta);
+  }
+  const handoffResult = SB
+    ? await SB.rpc("app_signup_account_handoff_v2", {
+      p_intake_id: intakeId,
+      p_authenticated_auth_user_id: authenticatedAuthUserId,
+    })
+    : { data: null, error: true };
+  const handoff = isRecord(handoffResult.data) &&
+      [
+        "existing_account_login_required",
+        "account_activation_available",
+        "already_authenticated",
+        "blocked",
+      ].includes(stringField(handoffResult.data, "account_handoff"))
+    ? stringField(handoffResult.data, "account_handoff")
+    : "blocked";
+  return {
+    ...body,
+    intake_status: "submitted_for_review",
+    promotion_state: attempt.state,
+    account_handoff: handoff,
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return appOptionsResponse(req);
   if (req.method !== "POST") {
@@ -152,7 +233,7 @@ serve(async (req) => {
         "service_unavailable",
       );
     }
-    const result = await SB.rpc("app_signup_signing_status_v1", {
+    const result = await SB.rpc("app_signup_signing_status_v2", {
       p_intake_id: intakeId,
       p_manage_token_sha256: await sha256Hex(capability),
     });
@@ -165,11 +246,21 @@ serve(async (req) => {
       );
     }
     const rpc = publicRpcBody(result.data);
-    return rpc ? appJsonResponse(req, rpc.status, rpc.body) : appErrorResponse(
+    if (!rpc) {
+      return appErrorResponse(
+        req,
+        503,
+        "Ondertekenen is tijdelijk niet beschikbaar.",
+        "service_unavailable",
+      );
+    }
+    if (rpc.body.signing_state !== "finalized") {
+      return appJsonResponse(req, rpc.status, rpc.body);
+    }
+    return appJsonResponse(
       req,
-      503,
-      "Ondertekenen is tijdelijk niet beschikbaar.",
-      "service_unavailable",
+      rpc.status,
+      await postSigningProjection(req, intakeId, meta, rpc.body),
     );
   }
 
@@ -342,7 +433,7 @@ serve(async (req) => {
     required_file_references: [...requiredFileIds].sort(),
     legal_actions: snapshot.legal_actions,
   });
-  const result = await SB.rpc("app_signup_signing_finalize_v1", {
+  const result = await SB.rpc("app_signup_signing_finalize_v2", {
     p_intake_id: intakeId,
     p_manage_token_sha256: manageHash,
     p_challenge_id: challengeId,
@@ -375,10 +466,20 @@ serve(async (req) => {
     );
   }
   const rpc = publicRpcBody(result.data);
-  return rpc ? appJsonResponse(req, rpc.status, rpc.body) : appErrorResponse(
+  if (!rpc) {
+    return appErrorResponse(
+      req,
+      503,
+      "Ondertekenen is tijdelijk niet beschikbaar.",
+      "service_unavailable",
+    );
+  }
+  if (rpc.body.ok !== true) {
+    return appJsonResponse(req, rpc.status, rpc.body);
+  }
+  return appJsonResponse(
     req,
-    503,
-    "Ondertekenen is tijdelijk niet beschikbaar.",
-    "service_unavailable",
+    rpc.status,
+    await postSigningProjection(req, intakeId, meta, rpc.body),
   );
 });

@@ -182,7 +182,7 @@ Not all Auth errors sign the user out. Only terminal ENVAL bootstrap binding fai
 
 ### Signed-Intake Promotion Boundary
 
-Status: 09C1A DATABASE/RPC AND 09C1B INTERNAL SERVER CALLER CURRENT PROVEN — LOCAL ONLY; FRONTEND/AUTH/DASHBOARD CUTOVER TARGET. Detailed contract: `docs/app/contracts/intake-verification-promotion.md`.
+Status: 09C1A DATABASE/RPC, 09C1B INTERNAL SERVER CALLER AND 09C1C FRONTEND/AUTH/DASHBOARD CUTOVER CURRENT PROVEN — LOCAL ONLY. Detailed contract: `docs/app/contracts/intake-verification-promotion.md`.
 
 The CURRENT `typed_name_otp_v1` finalization:
 
@@ -204,7 +204,7 @@ Pre-auth intake and quarantine boundaries:
 
 ### Customer Identity
 
-Target customer identity after promotion:
+Current local customer identity after promotion:
 
 - `customers`: ENVAL customer record.
 - `customer_identities`: links a customer to Supabase Auth user ID, verified email, phone if later used, and identity metadata.
@@ -215,7 +215,7 @@ Target customer identity after promotion:
 Identity rules:
 
 - Normalized email is not enough as auth truth.
-- Supabase Auth user ID should be the durable login identity once backend is implemented.
+- Verified Supabase Auth user ID is the durable login identity after v5 binding.
 - Customer records must not be created repeatedly on duplicate/retried signup submit.
 
 ### Login And Recovery
@@ -946,6 +946,153 @@ mandate or workforce authorization. Browser-live, remote and production
 proof remain OPEN.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+## 09C1C-R1 Account Handoff And Multi-Case Auth Binding
+
+CURRENT PROVEN — LOCAL ONLY.
+
+`api-app-auth-bootstrap` calls service-role-only
+`app_bootstrap_customer_auth_v5`. Account and case are different roots: one
+verified Supabase Auth account can access multiple ENVAL cases owned by the
+same safely resolved customer. For a signed-signup customer v5 requires the
+verified Supabase Auth UUID and normalized verified Auth email, exactly one
+active matching identity, an active compatible customer, and existing
+promotion-owned `app_cases`. It binds only an unbound identity or refreshes the
+same Auth UUID; ambiguity and a different existing binding fail closed.
+
+The v5 signed branch creates no Auth user, customer, identity, party, case,
+dossier or evidence. It returns one normalized lineage-backed collection of
+legacy/current `app_customer_dossiers` and signed-signup `app_cases` for the
+same customer. Legacy-only customers retain v4 activation; a mixed customer
+runs that activation idempotently before the union when lineage is still
+missing. No item is merged by e-mail, name or address.
+
+After consumed signing OTP and finalization, the service-role-only handoff
+projection returns `existing_account_login_required`,
+`account_activation_available`, `already_authenticated` or `blocked`. It is
+access guidance only, not ownership proof. No pre-OTP response exposes account
+existence. An authenticated session is accepted only after the server verifies
+the Auth user and exact controlled e-mail; wrong-user and ambiguity paths fail
+closed.
+Signing OTP, safe reference and receipt are never account credentials or claim
+authority. Production Auth URLs, redirects, email delivery and browser
+acceptance remain OPEN.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 09C1C-R2 Existing Auth-Bound Customer Eligibility
+
+CURRENT PROVEN — LOCAL ONLY.
+
+Promotion may append a missing declared profile to an existing customer only
+when the active identity is already bound to exactly one verified, non-deleted
+Supabase Auth user whose normalized Auth e-mail matches the controlled signing
+channel. The customer must be active and account-type-compatible; all identity
+rows for that e-mail must be unambiguous, the customer may have only one active
+Auth binding, and no other active customer may claim the same primary e-mail
+projection. These predicates are server-side compatibility checks, not
+e-mail-only ownership or legal-identity evidence.
+
+No Auth user, identity or customer is created for this convergence path. The
+existing binding remains unchanged. Before the missing profile converges,
+handoff fails closed. After successful promotion it returns
+`existing_account_login_required` without a session and
+`already_authenticated` only for the exact verified existing Auth user.
+Handoff remains UX/access guidance and grants no customer, case, party or
+representation authority.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 09C1C-R3 Stable Browser Auth Bootstrap Contract
+
+CURRENT PROVEN — LOCAL ONLY.
+
+`api-app-auth-bootstrap` is the adapter between internal customer-bootstrap
+RPCs and the browser. Internal v4, v5 or later implementation selection is not
+a browser contract. A successful request returns only the versioned
+`auth_bootstrap_browser_v1` schema: authenticated/bound state plus the existing
+customer-safe accessible dossier/case summaries required to open the unified
+dashboard. Internal RPC mode, Auth/customer/identity IDs, request and audit
+metadata, payload hashes and replay details are not returned.
+
+The production browser uses one runtime decoder in `authBootstrapClient.ts`.
+It accepts nullable legacy dossier numbers and case-insensitive hexadecimal
+case references, but requires the exact schema and safe field set. Unknown,
+malformed or incompatible responses fail closed. AccountPage, AuthProvider and
+dashboard do not branch on internal RPC version.
+
+Executable local Q79-Q92 sends real legacy-only, signed-case-only and mixed
+v5 Edge responses through that exact production decoder. The mixed fixture
+includes a null legacy dossier number, proving the regression that previously
+caused Edge `invalid_bootstrap_response`. Q90 continues through the unified
+dashboard without dropping either case.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 09C1C-R5 Account-First And Zero-Case Auth Contract
+
+CURRENT PROVEN — LOCAL ONLY.
+
+Auth account, customer identity, customer and case are separate roots. A
+verified Supabase Auth account with no compatible `app_customer_identities`
+row and no accessible case is a legitimate `unbound_no_cases` state, not a
+generic bootstrap failure. Account creation alone creates no customer,
+business identity binding, case, party, mandate, evidence or legal acceptance.
+
+Because extending the strict R3 enum would break v1 decoder semantics, the
+canonical browser boundary is versioned to `auth_bootstrap_browser_v2`.
+`bound` requires one or more safe case summaries; `unbound_no_cases` requires
+an empty collection and returns HTTP 200; `blocked` is reserved for explicit
+identity/customer conflict. Internal RPC mode and internal identifiers remain
+browser-hidden. Anonymous and unverified callers do not receive zero-case
+portal access.
+
+Account-first and signup-first converge only after signed promotion. The
+authenticated `/aanmelden` flow reuses the canonical form, derives its
+account-contact e-mail from verified Auth on both browser and server, and does
+not create another Auth user. Signing snapshot, legal intents, typed full name
+and `typed_name_otp_v1` remain required. Promotion creates or safely reuses one
+compatible customer/identity and creates exactly one new case per application;
+the next bootstrap binds the exact Auth user. Existing-case correction remains
+a separate intent.
+
+Local Q113-Q145 proves zero-case success, no account-creation business truth,
+real Edge-to-production-decoder parity, zero-to-one-to-two cases, isolated
+evidence, anonymous/wrong-user denial, no e-mail spoof claim, no pre-OTP
+enumeration and browser secret absence.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 09C1C-R6 Multi-Context Auth Access
+
+CURRENT PROVEN — LOCAL ONLY.
+
+Auth principal, customer/service context, party, case and representation
+authority are separate roots. `app_customer_identities` remains the single
+customer-bound login identity. The service-owned
+`app_customer_access_grants` relation gives one verified Auth principal
+explicit access to zero or more separate customer contexts without merging
+customers by Auth UUID or e-mail. Each grant has immutable source provenance,
+is unique per Auth principal/customer pair, has RLS enabled, grants browsers no
+write and grants `service_role` SELECT only.
+
+`app_bootstrap_customer_auth_v6` materializes eligible access from an existing
+bound identity or immutable signed-promotion lineage and returns all accessible
+legacy and signed cases. `app_promote_signed_signup_v3` scopes customer
+compatibility to the signed context's account type; account type is never a
+principal property. Particulier, Zakelijk and VvE customers stay separate.
+Signing OTP, e-mail equality or safe reference alone cannot create access, and
+wrong-user or ambiguous-principal paths fail closed.
+
+For Zakelijk/VvE, the signed natural person may receive case-contact access to
+the separate organization context while
+`authority_review_status=required_not_completed` remains unchanged. Access is
+not representation authority. After authenticated promotion the existing
+dashboard cache for that principal and the Auth bootstrap summary are cleared
+before `/dashboard` navigation; the first read therefore uses current server
+truth without a reload workaround.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## PILOT-SIGNUP-ATOMIC-01 Pre-Auth Transaction Boundary
 
 CURRENT PROVEN — LOCAL ONLY.

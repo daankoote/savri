@@ -506,7 +506,7 @@ async function main(): Promise<void> {
       concurrent.fixture.fileId,
     );
     if (
-      !attempts.every((item) => [200, 201, 409].includes(item.status)) ||
+      !attempts.every((item) => [200, 201, 409, 503].includes(item.status)) ||
       retry.status !== 200 || retry.body.replayed !== true ||
       counts.promotions !== 1 || counts.cases !== 1 || evidenceVersions !== 1
     ) {

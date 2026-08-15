@@ -663,6 +663,134 @@ claim is made.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+## 09C1C-R5 account-first, zero-case and new-application convergence
+
+CURRENT PROVEN — LOCAL ONLY.
+
+Two entry journeys use the same foundations:
+
+1. signup-first: `/aanmelden` → signing → promotion → account activation →
+   Auth binding;
+2. account-first: verified Auth → zero-case portal → `Nieuwe aanvraag` → the
+   same `/aanmelden` flow → signing → promotion → Auth binding.
+
+The zero-case portal shows `Klantportaal`, `0 dossiers` and a primary `Nieuwe
+aanvraag` action using the existing shell, sidebar, panels, buttons and CSS. It
+does not fabricate a customer, dossier or case. Starting a new application
+clears only the browser presentation/capability state for the previous signup;
+it never edits an existing case.
+
+For an authenticated application, the verified Auth e-mail is prefilled,
+read-only and re-derived by `api-app-signup-intake-start`; the verified subject
+is stored once as immutable, intake-specific provenance with an e-mail hash and
+no bearer token. Changing an account e-mail is a separate account intent.
+Anonymous signup retains its existing anti-enumeration response. Auth never
+substitutes for signing, legal acceptances or `typed_name_otp_v1`, and no
+customer is created at account creation or intake start.
+
+Each successful new application creates one new signed case. The same bound
+account and compatible customer are reused for first, second and later cases;
+case evidence stays isolated by explicit promotion/case lineage. No heuristic
+case merge is allowed.
+
+For the first signed application of a zero-case verified account, promotion
+creates exactly one compatible customer and identity, binds that identity to
+the already proven Auth subject and creates one case in the same transaction.
+Failure rolls those business writes back without invalidating signing. Pending
+promotion receives bounded server-owned retry. A promoted activation or login
+journey keeps its existing CTA; `already_authenticated` clears only completed
+browser intake state and routes directly to `/dashboard`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 09C1C-R4 signed-case declared asset projection
+
+CURRENT PROVEN — LOCAL ONLY.
+
+Signed promotion preserves one case-owned immutable charger root per signed
+charger and one immutable declared observation with its signed location
+association. Available brand, model, serial, declared MID, explicit
+installation date/year, backend supplier and solar/export declaration remain
+`confirmed_awaiting_review`; absence in the signed snapshot remains absence.
+
+Promoted evidence keeps its source-authored document type. The dashboard maps
+the existing vocabulary to customer-safe titles such as `Energiecontract of
+-nota` and `Installatiefactuur laadpaal`; it does not infer a classification
+from bytes or filename. The opaque evidence UUID is the React identity. Display
+title, filename, MID, hash and storage path are never list identity.
+
+No accepted charger, location, MID, conformity, evidence or eligibility truth
+is created. Legacy dossier-owned charger/document projection remains on its
+existing path and the unified account collection remains lineage-based.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 09C1C-R1 new application and existing-case intent
+
+CURRENT PROVEN — LOCAL ONLY.
+
+`Nieuwe aanvraag` reuses `/aanmelden` and the existing modular document-first
+flow. A retained verified Auth session may be presented server-side, but it
+does not create ownership and does not remove signing requirements. A safely
+matched existing identity/customer is reused and successful promotion creates
+exactly one new `app_cases` root. It does not create another Auth account,
+overwrite an old case or attach new documents to an old case.
+
+`Bestaande case bijwerken` is a separate correction/document intent and stays
+on the existing case flow. E-mail, name, address and document similarity never
+select or deduplicate a case. During the transition the dashboard combines
+customer-owned legacy dossiers and signed-signup cases only through explicit
+source lineage. Records without proven shared lineage remain separate and both
+count toward `Klantportaal — N dossiers`; the existing selector represents
+multiple active cases without choosing one as the only truth.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 09C1C-R6 explicit multi-context dashboard access
+
+CURRENT PROVEN — LOCAL ONLY.
+
+One verified Auth principal may access separate Particulier, Zakelijk and VvE
+customer/service contexts through immutable server-owned access grants. The
+customers, parties and cases remain separate and each context retains its own
+account type. No e-mail, Auth UUID, name, address, MID or safe-reference
+heuristic merges contexts or creates access.
+
+Bootstrap and dashboard reads aggregate only cases reached through those
+explicit grants, including supported legacy lineage. A signed business/VvE
+contact can see the submitted case while authority review remains
+`required_not_completed`; visibility is not representation authority. On
+`promoted` plus `already_authenticated`, the existing current-principal cache
+and bootstrap summary are invalidated before dashboard navigation. The first
+read therefore fetches current server truth without `window.location.reload`.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 09C1C Signed Receipt, Account Handoff And Case Dashboard
+
+CURRENT PROVEN — LOCAL ONLY.
+
+The active signing response and receipt use only `submitted_for_review`.
+Receipt schema v2 stores in `sessionStorage` only the safe `SIG-...` reference,
+that status and `pending|promoted|blocked` presentation state. It is never core
+truth and contains no intake/customer/case ID, capability, OTP, email, hash,
+storage metadata or Auth token.
+
+After durable signing, the signing Edge route makes one server-owned promotion
+attempt. A failure leaves signing finalized and locked. Refresh or an explicit
+status retry makes at most one new server-owned attempt with the deterministic
+09C1B idempotency key; there is no polling loop. Only `promoted` shows the CTA
+to the existing `/account` route.
+
+Verified Supabase Auth bootstrap binds the existing promoted identity and
+returns the existing case. The signed branch of `api-app-dashboard-get` reads
+`app_cases`, latest internal lifecycle, linked declared locations and safe
+evidence/acceptance summaries. It excludes raw audit, actor/authority internals,
+Storage coordinates and hashes, and creates no `app_customer_dossiers` row.
+The existing dashboard renderer, cache, route guard and CSS are reused.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## Signed receipt-09B2C customer boundary
 
 After successful server finalization, the signup surface shows

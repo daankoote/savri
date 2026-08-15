@@ -1115,18 +1115,17 @@ this batch.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-### 09C0/09C1A/09C1B Post-Signing Lifecycle Convergence
+### 09C0/09C1A/09C1B/09C1C Post-Signing Lifecycle Convergence
 
-09C1A DATABASE/RPC FOUNDATION AND 09C1B SERVER-ONLY STORAGE/EDGE ORCHESTRATION CURRENT PROVEN — LOCAL ONLY.
+09C1A DATABASE/RPC FOUNDATION, 09C1B SERVER-ONLY STORAGE/EDGE ORCHESTRATION AND 09C1C CUSTOMER HANDOFF CURRENT PROVEN — LOCAL ONLY.
 
 - CURRENT flow is mapped from intake start through quarantine, challenge,
   OTP/email control, atomic signing finalization, locked refresh recovery and
   the waiting intake state.
 - Separate one-time email-verification as promotion trigger is `SUPERSEDED`;
   later Supabase Auth email is login/account access only.
-- CURRENT stored `submitted_for_review` is database-internal finalized/locked
-  state with no verifier meaning. The 09B2 client response remains temporarily
-  `pending_verification` until the later receipt/frontend cutover.
+- `submitted_for_review` is the single active finalized/locked customer/runtime
+  status with no verifier meaning; receipt v2 preserves immutable versioning.
 - 09C1A uses `app_cases` as the sole core owner and creates no new
   `app_customer_dossiers` row.
 - 09C1A promotion is service-role-only, atomic and idempotent. It safely
@@ -1150,16 +1149,20 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 - Declared/parser EAN, charger, MID and document facts remain source material;
   promotion creates no accepted connection, `aangeslotene`, location, asset,
   conformity or evidence-decision truth.
-- Signing OTP creates no Supabase Auth session. Auth bootstrap/dashboard must
-  later bind and reuse the promoted customer/party/case.
+- Signing OTP creates no Supabase Auth session. 09C1C uses the existing account
+  route; verified Supabase Auth v5 binds the existing promoted identity and
+  dashboard-get safely projects its `app_cases` truth without a dossier row.
+- Finalize and bounded status hydration attempt promotion server-side with one
+  deterministic idempotency key. Transient failure leaves signing valid and
+  requires no re-sign; the browser receives no promotion secret or authority.
 - External verifier risk analysis, sampling, location visits, mandate check,
   findings, statement, five-year verification dossier and REV result remain a
   separate external boundary.
 
 Exact implementation and remaining scope is in
 `contracts/intake-verification-promotion.md#15-exact-09c1a09c1b-foundation-and-remaining-scope`.
-09C1B performs no frontend/browser trigger, Auth invitation/binding, dashboard
-cutover, remote apply, function deploy, secret configuration or production
-Storage-policy change.
+09C1C performs no remote apply, function deploy, production secret/configuration
+change, operations review, external verification or production Storage-policy
+change.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

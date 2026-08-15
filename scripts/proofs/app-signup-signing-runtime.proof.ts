@@ -859,7 +859,7 @@ async function main(): Promise<void> {
   });
 
   await run("Q13_server_authoritative_resume", async () => {
-    const status = await service.rpc("app_signup_signing_status_v1", {
+    const status = await service.rpc("app_signup_signing_status_v2", {
       p_intake_id: successFixture.intakeId,
       p_manage_token_sha256: successFixture.manageHash,
     });
@@ -867,7 +867,7 @@ async function main(): Promise<void> {
     const body = status.data as Json;
     assert(
       body.signing_state === "finalized" && body.locked === true &&
-        body.intake_status === "pending_verification" &&
+        body.intake_status === "submitted_for_review" &&
         body.safe_reference === successSafeReference && body.finalized_at,
       "finalized_status_projection_invalid",
     );
@@ -887,7 +887,7 @@ async function main(): Promise<void> {
         "status_secret_leak",
       );
     }
-    const wrongOwner = await service.rpc("app_signup_signing_status_v1", {
+    const wrongOwner = await service.rpc("app_signup_signing_status_v2", {
       p_intake_id: successFixture.intakeId,
       p_manage_token_sha256: "d".repeat(64),
     });

@@ -80,6 +80,20 @@ type PromotionFailureCode =
   | "promotion_in_progress"
   | "promotion_failed";
 
+export type SignupPromotionAttempt =
+  | {
+    ok: true;
+    state: "promoted";
+    replayed: boolean;
+    promotionReference: string;
+    caseReference: string;
+  }
+  | {
+    ok: false;
+    state: "pending" | "blocked";
+    code: PromotionFailureCode;
+  };
+
 class PromotionError extends Error {
   constructor(
     readonly status: number,
@@ -549,13 +563,64 @@ export async function handleSignupPromotion(req: Request): Promise<Response> {
     );
   }
 
-  const SB = serviceClient();
-  if (!SB) return errorResponse(new PromotionError(503, "service_unavailable"));
   let intakeId = "";
+  try {
+    intakeId = await parseInternalRequest(req);
+  } catch (error) {
+    return errorResponse(
+      error instanceof PromotionError
+        ? error
+        : new PromotionError(400, "invalid_request"),
+    );
+  }
+
+  const attempt = await attemptSignupPromotion(intakeId, meta);
+  if (!attempt.ok) {
+    const status = attempt.code === "service_unavailable" ||
+        attempt.code === "durable_prepare_failed"
+      ? 503
+      : attempt.code === "invalid_request"
+      ? 400
+      : 409;
+    return errorResponse(new PromotionError(status, attempt.code));
+  }
+  return response(attempt.replayed ? 200 : 201, {
+    ok: true,
+    mode: SIGNUP_PROMOTION_MODE,
+    status: "promoted",
+    replayed: attempt.replayed,
+    promotion_reference: attempt.promotionReference,
+    case_reference: attempt.caseReference,
+  });
+}
+
+function failureState(
+  code: PromotionFailureCode,
+): "pending" | "blocked" {
+  return [
+      "source_object_missing",
+      "source_integrity_mismatch",
+      "durable_object_conflict",
+      "promotion_conflict",
+    ].includes(code)
+    ? "blocked"
+    : "pending";
+}
+
+export async function attemptSignupPromotion(
+  intakeId: string,
+  meta: AppRequestMeta,
+): Promise<SignupPromotionAttempt> {
+  if (!UUID_RE.test(intakeId)) {
+    return { ok: false, state: "blocked", code: "invalid_request" };
+  }
+  const SB = serviceClient();
+  if (!SB) {
+    return { ok: false, state: "pending", code: "service_unavailable" };
+  }
   const created: CreatedDestination[] = [];
   let cleanupOnFailure = true;
   try {
-    intakeId = await parseInternalRequest(req);
     const source = await loadPromotionSource(SB, intakeId);
     safeStage("source_validated", meta.request_id);
     const manifest = await prepareDurableManifest(SB, source, created);
@@ -565,7 +630,7 @@ export async function handleSignupPromotion(req: Request): Promise<Response> {
       intake_id: intakeId,
       durable_files: manifest,
     });
-    const rpcResult = await SB.rpc("app_promote_signed_signup_v1", {
+    const rpcResult = await SB.rpc("app_promote_signed_signup_v3", {
       p_request: {
         intake_id: intakeId,
         request_id: meta.request_id,
@@ -593,21 +658,24 @@ export async function handleSignupPromotion(req: Request): Promise<Response> {
       );
     }
     safeStage("promotion_committed", meta.request_id);
-    return response(Number(rpc.status) === 201 ? 201 : 200, {
+    return {
       ok: true,
-      mode: SIGNUP_PROMOTION_MODE,
-      status: "promoted",
+      state: "promoted",
       replayed: rpc.replayed === true,
-      promotion_reference: stringField(rpc, "promotion_reference"),
-      case_reference: stringField(rpc, "case_reference"),
-    });
+      promotionReference: stringField(rpc, "promotion_reference"),
+      caseReference: stringField(rpc, "case_reference"),
+    };
   } catch (error) {
     if (intakeId && cleanupOnFailure) {
       await cleanupCreatedDestinations(SB, intakeId, created, meta);
     }
     if (error instanceof PromotionError) {
-      return errorResponse(error);
+      return {
+        ok: false,
+        state: failureState(error.code),
+        code: error.code,
+      };
     }
-    return errorResponse(new PromotionError(500, "service_unavailable"));
+    return { ok: false, state: "pending", code: "service_unavailable" };
   }
 }

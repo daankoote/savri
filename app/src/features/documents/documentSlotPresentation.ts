@@ -54,6 +54,10 @@ export function getDocumentSlotStatusPresentation(
 ): DocumentSlotStatusPresentation {
   const status = slot.status.trim().toLowerCase();
 
+  if (status === "confirmed_awaiting_review") {
+    return { label: "In beoordeling", tone: "warning" };
+  }
+
   if (!slot.current_file_name) {
     return slot.required
       ? { label: "Nog doen", tone: "danger" }

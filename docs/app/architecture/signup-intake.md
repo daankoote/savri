@@ -1,6 +1,6 @@
 # Signup Intake Architecture
 
-Status: MIXED. The active document-first journey, pre-auth quarantine, `typed_name_otp_v1` finalization, locked receipt and server-authoritative recovery are CURRENT PROVEN locally. The older direct `api-app-signup-submit` path remains proven source but is not the active signed-intake owner. Atomic case promotion, Auth binding/cutover and production deployment remain TARGET / NOT IMPLEMENTED.
+Status: MIXED. The active document-first journey, pre-auth quarantine, `typed_name_otp_v1` finalization, receipt v2, server-owned promotion, verified Auth binding and case-owned customer dashboard are CURRENT PROVEN locally. The older direct `api-app-signup-submit` path remains proven source but is not the active signed-intake owner. Production deployment, legal/OTP/Auth acceptance and review/verifier workflow remain TARGET / NOT IMPLEMENTED.
 
 ## Scope
 
@@ -17,7 +17,7 @@ The authenticated shared document module remains separate. `/aanmelden` uses the
 
 Pre-auth signup must not call authenticated upload endpoints. Quarantine confirmation proves only server-observed bytes/MIME/size/hash and never evidence acceptance. Parser/precheck output remains observed/derived and cannot silently overwrite declared state.
 
-The converged lifecycle is documented in `docs/app/contracts/intake-verification-promotion.md`. A separate email-verification promotion link is `SUPERSEDED`; the CURRENT signing OTP already proves bounded email control. Server-only atomic promotion into `app_cases`-owned durable state remains TARGET / NOT IMPLEMENTED.
+The converged lifecycle is documented in `docs/app/contracts/intake-verification-promotion.md`. A separate email-verification promotion link is `SUPERSEDED`; the CURRENT signing OTP already proves bounded email control. Server-only atomic promotion into `app_cases`-owned durable state and its Auth/dashboard handoff are CURRENT PROVEN locally in 09C1A/B/C.
 
 ## Old Flow Inventory
 
@@ -524,7 +524,6 @@ It created the dossier-shaped records listed above without the later signed-inta
 
 Still open:
 
-- dashboard bootstrap/redirect directly from signup success
 - public signup document upload to storage
 - customer-readable timeline
 - support/messages
@@ -534,18 +533,30 @@ Final submit must be idempotent and audit-worthy. It must not depend on hidden b
 
 ## Target Post-Signing Promotion Model
 
-Status: TARGET / NOT IMPLEMENTED. Exact contract: `docs/app/contracts/intake-verification-promotion.md`.
+Status: CURRENT PROVEN — LOCAL ONLY through the 09C1C customer boundary. Exact contract: `docs/app/contracts/intake-verification-promotion.md`.
 
 Future public intake should move toward:
 
 1. Customer completes public form, parser-assisted review, quarantine documents and legal/signing actions.
 2. `typed_name_otp_v1` proves signing intent and control of the used email channel and atomically finalizes the intake.
-3. CURRENT status `pending_verification` means finalized/locked only; 09C1 renames it to `submitted_for_review` to avoid TKV ambiguity.
+3. The active status `submitted_for_review` means finalized/locked and awaiting internal ENVAL review; it has no external-verifier meaning.
 4. A server-only caller prepares durable private file copies and invokes one idempotent promotion transaction.
-5. Promotion safely creates/reuses customer, unbound login identity and parties, creates one `app_cases` root, asserted case roles, declared location observations/links, durable evidence versions and internal-review state.
+5. Promotion safely creates/reuses customer, identity and parties, creates one `app_cases` root, asserted case roles, declared location observations/links, durable evidence versions and internal-review state. Anonymous intake leaves the identity unbound; verified Auth provenance binds the compatible identity to the already proven Auth subject inside that same transaction.
 6. Promotion never creates an `app_customer_dossiers` core, authority truth, accepted EAN/location/MID/evidence or external-verifier state.
-7. Supabase Auth binding and dashboard access happen after promotion through the existing Auth product route, not through signing OTP.
+7. Supabase Auth remains separate from signing OTP. A verified account may
+   already exist and safely show a zero-case portal. Its server-validated
+   intake start stores immutable, intake-specific Auth provenance without a
+   raw token; successful promotion binds exactly one identity atomically and
+   the already-authenticated handoff routes directly to the existing portal.
 8. Later correctable issues expose only targeted server-authorized correction actions.
+
+Account-first does not introduce a second intake. Authenticated
+`Nieuwe aanvraag` uses this same flow. The verified Auth e-mail is the
+authoritative account-contact e-mail, is not freely editable in the application
+form and is re-derived server-side at intake start. `app_signup_quarantine_start_v2`
+adds no customer/case truth; it records only the intake-specific Auth subject,
+verified-at timestamp and e-mail hash. Anonymous intake retains its existing
+pre-OTP anti-enumeration boundary.
 
 Parser/precheck may warn, block locally, or prefill. It may not approve evidence, lock lifecycle state, or replace backend validation.
 
@@ -573,7 +584,9 @@ Current backend contract status:
 - The proven upload backend is separate: `api-app-document-upload-url` and `api-app-document-upload-confirm`.
 - Authenticated dashboard document upload/download/withdrawal wiring is implemented through the reusable document module.
 - Public `/aanmelden` upload wiring remains open.
-- Customer-facing Auth/dashboard bootstrap is implemented through `/account` and the protected dashboard, but `/aanmelden` does not redirect/bootstrap directly after submit.
+- Customer-facing Auth/dashboard bootstrap is implemented through `/account`
+  and the protected dashboard. `/aanmelden` recognizes a retained verified Auth
+  session but still requires the complete signing contract before promotion.
 
 Later backend review must still decide how to:
 

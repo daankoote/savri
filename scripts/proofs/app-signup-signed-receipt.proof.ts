@@ -49,7 +49,9 @@ Object.defineProperty(globalThis, "window", {
 const safeReference = "SIG-5B457BDED316";
 const written = writeSignupSubmissionReceipt({
   safeReference,
-  status: "pending_verification",
+  status: "submitted_for_review",
+  promotionState: "pending",
+  accountHandoff: "existing_account_login_required",
 });
 assert(written, "safe_receipt_not_written");
 assert(sessionStorage.length === 1, "receipt_not_session_scoped");
@@ -62,10 +64,12 @@ assert(raw, "receipt_storage_value_missing");
 const parsed = JSON.parse(raw) as Record<string, unknown>;
 assert(
   Object.keys(parsed).sort().join("|") ===
-      "safeReference|schemaVersion|status" &&
+      "accountHandoff|promotionState|safeReference|schemaVersion|status" &&
     parsed.schemaVersion === SIGNUP_SUBMISSION_RECEIPT_SCHEMA_VERSION &&
     parsed.safeReference === safeReference &&
-    parsed.status === "pending_verification",
+    parsed.status === "submitted_for_review" &&
+    parsed.promotionState === "pending" &&
+    parsed.accountHandoff === "existing_account_login_required",
   "receipt_shape_not_exact",
 );
 
@@ -76,7 +80,6 @@ const forbiddenKeys = [
   "idempotency",
   "email",
   "name",
-  "account",
   "address",
   "ean",
   "document",
@@ -100,14 +103,20 @@ assert(
 );
 clearSignupSubmissionReceipt();
 assert(readSignupSubmissionReceipt() === null, "receipt_not_cleared");
-writeSignupSubmissionReceipt({ safeReference, status: "pending_verification" });
+writeSignupSubmissionReceipt({
+  safeReference,
+  status: "submitted_for_review",
+  promotionState: "promoted",
+  accountHandoff: "already_authenticated",
+});
 
 sessionStorage.setItem(
   storageKey,
   JSON.stringify({
     schemaVersion: "unknown-receipt-v9",
     safeReference,
-    status: "pending_verification",
+    status: "submitted_for_review",
+    promotionState: "pending",
   }),
 );
 assert(readSignupSubmissionReceipt() === null, "unknown_schema_not_ignored");
@@ -139,7 +148,7 @@ const hydrationEnd = shellSource.indexOf(
 );
 const hydrationSource = shellSource.slice(hydrationStart, hydrationEnd);
 const migrationSource = await source(
-  "supabase/migrations/20260806160000_app_signup_signing_runtime.sql",
+  "supabase/migrations/20260811100000_app_post_signing_customer_convergence.sql",
 );
 
 assert(
@@ -167,7 +176,7 @@ assert(
   shellSource.includes("const [submissionReceipt, setSubmissionReceipt]") &&
     shellSource.includes(">(null);") &&
     shellSource.includes("if (cachedReceipt)") &&
-    !shellSource.includes("setSubmissionReceipt(cachedReceipt)") &&
+    shellSource.includes("setSubmissionReceipt(cachedReceipt)") &&
     !hydrationSource.includes("ensureIntake") &&
     !hydrationSource.includes("uploadSignupDocument") &&
     !hydrationSource.includes("requestSignupSigningChallenge") &&
@@ -180,7 +189,7 @@ assert(
       "management_capability: session.managementCapability",
     ) &&
     endpointSource.includes('operation === "status"') &&
-    endpointSource.includes('SB.rpc("app_signup_signing_status_v1"') &&
+    endpointSource.includes('SB.rpc("app_signup_signing_status_v2"') &&
     endpointSource.indexOf('operation === "status"') <
       endpointSource.indexOf("signingLegalBundleAllowed(environment)"),
   "existing_owned_status_chain_missing",
@@ -197,11 +206,10 @@ assert(
   "receipt_store_restores_draft_or_authorizes_api",
 );
 assert(
-  migrationSource.includes("v_intake.status <> 'collecting'") &&
-    migrationSource.includes("v_manage.consumed_at is not null") &&
-    migrationSource.includes("set status = 'pending_verification'") &&
-    migrationSource.includes("set consumed_at = v_now") &&
-    migrationSource.includes("app_signup_signing_status_v1") &&
+  migrationSource.includes("v_intake.status <> 'promoted'") &&
+    migrationSource.includes("v_manage.consumed_at is null") &&
+    migrationSource.includes("'intake_status', 'submitted_for_review'") &&
+    migrationSource.includes("app_signup_signing_status_v2") &&
     migrationSource.includes("p_manage_token_sha256") &&
     migrationSource.includes("v_snapshot_count <> 1") &&
     migrationSource.includes("v_acceptance_count <> 3") &&
@@ -210,7 +218,7 @@ assert(
     migrationSource.includes("'signing_state', 'finalized'") &&
     migrationSource.includes("'locked', true") &&
     migrationSource.includes(
-      "revoke all on function public.app_signup_signing_status_v1(uuid, text) from public, anon, authenticated",
+      "revoke all on function public.app_signup_signing_status_v2(uuid, text)",
     ),
   "server_mutation_lock_not_leading",
 );

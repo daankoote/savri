@@ -7,12 +7,14 @@ import type {
 import { firstSignupFieldError, signupFieldErrorId } from "./signupValidation";
 
 type PersonalInfoSectionProps = {
+  authoritativeEmail?: string | null;
   fieldErrors: SignupFieldErrors;
   value: PersonalInfoDraft;
   onChange: (value: PersonalInfoDraft) => void;
 };
 
 export function PersonalInfoSection({
+  authoritativeEmail = null,
   fieldErrors,
   onChange,
   value,
@@ -81,12 +83,21 @@ export function PersonalInfoSection({
             aria-invalid={emailError ? true : undefined}
             autoComplete="email"
             inputMode="email"
+            readOnly={Boolean(authoritativeEmail)}
             onBlur={(event) =>
               update("email", normalizeEmail(event.target.value))}
             onChange={(event) => update("email", event.target.value)}
             type="email"
             value={value.email}
           />
+          {authoritativeEmail
+            ? (
+              <small className="field-message">
+                Dit e-mailadres komt uit je geverifieerde account. Wijzigen
+                doe je via je accountinstellingen.
+              </small>
+            )
+            : null}
           {emailError
             ? (
               <small

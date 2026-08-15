@@ -18,6 +18,7 @@ import {
   getAppRequestMeta,
 } from "../_shared/app_foundation.ts";
 import {
+  requireAppCaseAccess,
   requireAppCustomer,
   requireAppDossierAccess,
 } from "../_shared/app_customer_auth.ts";
@@ -131,6 +132,7 @@ type SafeLocation = {
   location_id: string;
   label: string | null;
   status: string;
+  declared_address: string | null;
   address: {
     postcode: string;
     house_number: string;
@@ -148,7 +150,7 @@ type SafeCharger = {
   brand: string | null;
   model: string | null;
   serial_number: string | null;
-  mid_number: string;
+  mid_number: string | null;
   mid_status: string;
   installation_year: number | null;
   backend_supplier: string | null;
@@ -319,6 +321,335 @@ function mapDossier(
   };
 }
 
+async function loadAccessibleCaseSummaries(
+  SB: any,
+  customerIds: string[],
+): Promise<SafeDossier[]> {
+  const [dossiersResult, casesResult, promotionsResult] = await Promise.all([
+    SB.from("app_customer_dossiers")
+      .select("id,dossier_number,account_type,status,locked_at,created_at")
+      .in("customer_id", customerIds)
+      .is("minimized_at", null)
+      .neq("status", "expired_minimized")
+      .order("created_at", { ascending: true }),
+    SB.from("app_cases")
+      .select(
+        "id,customer_id,case_reference,source_class,source_ref,created_at",
+      )
+      .in("customer_id", customerIds)
+      .order("created_at", { ascending: true }),
+    SB.from("app_signup_promotions")
+      .select("case_id,intake_id,account_type")
+      .in("customer_id", customerIds),
+  ]);
+  if (dossiersResult.error || casesResult.error || promotionsResult.error) {
+    throw new Error("normalized_case_read_failed");
+  }
+
+  const caseRows = rows(casesResult.data);
+  const supportedCases = caseRows.filter((row) =>
+    ["app_customer_dossier", "signed_signup_intake"].includes(
+      getString(row.source_class),
+    )
+  );
+  const caseIds = supportedCases.map((row) => getString(row.id)).filter(isUuid);
+  const lifecycleResult = caseIds.length
+    ? await SB.from("app_case_lifecycle_events")
+      .select("id,case_id,lifecycle_state,event_at")
+      .in("case_id", caseIds)
+      .order("event_at", { ascending: false })
+    : { data: [], error: null };
+  if (lifecycleResult.error) {
+    throw new Error("normalized_lifecycle_read_failed");
+  }
+
+  const casesByDossierId = new Map<string, CaseRow[]>();
+  for (const row of supportedCases) {
+    if (getString(row.source_class) !== "app_customer_dossier") continue;
+    const sourceRef = getString(row.source_ref);
+    if (
+      !isUuid(sourceRef) ||
+      !customerIds.includes(getString(row.customer_id))
+    ) {
+      throw new Error("legacy_case_lineage_failed");
+    }
+    const matches = casesByDossierId.get(sourceRef) ?? [];
+    matches.push(row as CaseRow);
+    casesByDossierId.set(sourceRef, matches);
+  }
+
+  const dossierRows = rows(dossiersResult.data) as DossierRow[];
+  const legacy = dossierRows.map((row) => mapDossier(row, casesByDossierId));
+  if (legacy.some((row) => !row)) {
+    throw new Error("legacy_case_projection_failed");
+  }
+
+  const promotions = rows(promotionsResult.data);
+  const lifecycleRows = rows(lifecycleResult.data);
+  const signed = supportedCases.filter((row) =>
+    getString(row.source_class) === "signed_signup_intake"
+  ).map((row): SafeDossier => {
+    const caseId = getString(row.id);
+    const promotion = promotions.find((item) =>
+      getString(item.case_id) === caseId &&
+      getString(item.intake_id) === getString(row.source_ref)
+    );
+    const lifecycle = lifecycleRows.find((item) =>
+      getString(item.case_id) === caseId
+    );
+    const accountType = getString(promotion?.account_type);
+    const caseReference = getString(row.case_reference);
+    const status = getString(lifecycle?.lifecycle_state);
+    if (
+      !isUuid(caseId) || !promotion || !ACCOUNT_TYPES.has(accountType) ||
+      !caseReference || !status
+    ) throw new Error("signed_case_projection_failed");
+    return {
+      dossier_id: caseId,
+      dossier_number: caseReference,
+      account_type: accountType as SafeDossier["account_type"],
+      status,
+      document_changes_allowed: false,
+      case_id: caseId,
+      case_reference: caseReference,
+    };
+  });
+
+  const normalized = [
+    ...(legacy.filter(Boolean) as SafeDossier[]),
+    ...signed,
+  ];
+  if (
+    new Set(normalized.map((item) => item.case_id)).size !== normalized.length
+  ) {
+    throw new Error("normalized_case_duplicate_lineage");
+  }
+  return normalized;
+}
+
+async function loadSignedCaseReadModel(
+  SB: any,
+  customerIds: string[],
+  customerId: string,
+  caseId: string,
+): Promise<Omit<DashboardResponse, "ok" | "mode" | "request_id">> {
+  const [summaries, promotionsResult] = await Promise.all([
+    loadAccessibleCaseSummaries(SB, customerIds),
+    SB.from("app_signup_promotions")
+      .select("case_id,intake_id,account_type")
+      .eq("customer_id", customerId)
+      .eq("case_id", caseId)
+      .maybeSingle(),
+  ]);
+  if (promotionsResult.error) {
+    throw new Error("signed_case_read_failed");
+  }
+
+  const selectedIntakeId = getString(promotionsResult.data?.intake_id);
+  const selected = summaries.find((item) => item.case_id === caseId);
+  if (!selected || !isUuid(selectedIntakeId)) {
+    throw new Error("selected_signed_case_projection_failed");
+  }
+
+  const [relationsResult, evidenceResult, acceptancesResult] = await Promise
+    .all([
+      SB.from("app_case_location_relations")
+        .select("id,relation_id,location_id,event_type,recorded_at")
+        .eq("case_id", caseId)
+        .order("recorded_at", { ascending: false }),
+      SB.from("app_evidence_files")
+        .select("id,case_id,document_type,created_at")
+        .eq("case_id", caseId)
+        .order("created_at", { ascending: true }),
+      SB.from("app_signup_legal_acceptances")
+        .select("action_type,document_version,accepted_at")
+        .eq("intake_id", selectedIntakeId)
+        .order("accepted_at", { ascending: true }),
+    ]);
+  if (
+    relationsResult.error || evidenceResult.error || acceptancesResult.error
+  ) {
+    throw new Error("signed_case_detail_read_failed");
+  }
+
+  const currentRelations = new Map<string, JsonObject>();
+  for (const relation of rows(relationsResult.data)) {
+    const relationId = getString(relation.relation_id);
+    if (relationId && !currentRelations.has(relationId)) {
+      currentRelations.set(relationId, relation);
+    }
+  }
+  const locationIds = [...currentRelations.values()]
+    .filter((relation) => getString(relation.event_type) === "linked")
+    .map((relation) => getString(relation.location_id))
+    .filter(isUuid);
+  const observationsResult = locationIds.length
+    ? await SB.from("app_location_address_observations")
+      .select("id,location_id,declared_address_text,recorded_at")
+      .in("location_id", locationIds)
+      .eq("observation_kind", "customer_declared")
+      .order("recorded_at", { ascending: false })
+    : { data: [], error: null };
+  if (observationsResult.error) throw new Error("signed_location_read_failed");
+  const observations = rows(observationsResult.data);
+  const locations: SafeLocation[] = locationIds.map((locationId) => {
+    const observation = observations.find((item) =>
+      getString(item.location_id) === locationId
+    );
+    const declaredAddress = getString(observation?.declared_address_text);
+    if (!declaredAddress) throw new Error("signed_location_projection_failed");
+    return {
+      location_id: locationId,
+      label: null,
+      status: "submitted_for_review",
+      declared_address: declaredAddress,
+      address: {
+        postcode: "",
+        house_number: "",
+        suffix: null,
+        street: null,
+        city: null,
+        country: "Nederland",
+      },
+    };
+  });
+
+  const chargerRootsResult = await SB.from("app_chargers")
+    .select("id,location_id")
+    .eq("case_id", caseId)
+    .order("created_at", { ascending: true });
+  if (chargerRootsResult.error) throw new Error("signed_charger_read_failed");
+  const chargerRoots = rows(chargerRootsResult.data);
+  const chargerIds = chargerRoots.map((item) => getString(item.id)).filter(
+    isUuid,
+  );
+  const declarationsResult = chargerIds.length
+    ? await SB.from("app_charger_declarations")
+      .select(
+        "charger_id,brand,model,serial_number,mid_identifier,installation_year,backend_supplier,solar_export_declaration,declaration_status",
+      )
+      .in("charger_id", chargerIds)
+    : { data: [], error: null };
+  if (declarationsResult.error) {
+    throw new Error("signed_charger_declaration_read_failed");
+  }
+  const declarationRows = rows(declarationsResult.data);
+  const chargers: SafeCharger[] = chargerRoots.map((root) => {
+    const chargerId = getString(root.id);
+    const locationId = getString(root.location_id);
+    const declaration = declarationRows.find((item) =>
+      getString(item.charger_id) === chargerId
+    );
+    const declarationStatus = getString(declaration?.declaration_status);
+    if (
+      !isUuid(chargerId) || !locationIds.includes(locationId) ||
+      !declaration || declarationStatus !== "confirmed_awaiting_review"
+    ) {
+      throw new Error("signed_charger_projection_failed");
+    }
+    const installationYear = Number(declaration.installation_year);
+    return {
+      charger_id: chargerId,
+      location_id: locationId,
+      status: "submitted_for_review",
+      brand: nullString(declaration.brand),
+      model: nullString(declaration.model),
+      serial_number: nullString(declaration.serial_number),
+      mid_number: nullString(declaration.mid_identifier),
+      mid_status: "submitted_for_review",
+      installation_year: Number.isInteger(installationYear)
+        ? installationYear
+        : null,
+      backend_supplier: nullString(declaration.backend_supplier),
+      solar_export_status: nullString(declaration.solar_export_declaration),
+    };
+  });
+
+  const evidenceRows = rows(evidenceResult.data);
+  const evidenceIds = evidenceRows.map((item) => getString(item.id)).filter(
+    isUuid,
+  );
+  const [versionsResult, contextsResult] = evidenceIds.length
+    ? await Promise.all([
+      SB.from("app_evidence_versions")
+        .select("evidence_file_id,version_number,status")
+        .in("evidence_file_id", evidenceIds),
+      SB.from("app_evidence_declaration_contexts")
+        .select("evidence_file_id,location_id,charger_id,association_basis")
+        .in("evidence_file_id", evidenceIds),
+    ])
+    : [{ data: [], error: null }, { data: [], error: null }];
+  if (versionsResult.error || contextsResult.error) {
+    throw new Error("signed_evidence_read_failed");
+  }
+  const versions = rows(versionsResult.data);
+  const contexts = rows(contextsResult.data);
+  const documentSlots: SafeDocumentSlot[] = evidenceRows.map((evidence) => {
+    const evidenceId = getString(evidence.id);
+    const version = versions.find((item) =>
+      getString(item.evidence_file_id) === evidenceId
+    );
+    const documentType = getString(evidence.document_type);
+    const context = contexts.find((item) =>
+      getString(item.evidence_file_id) === evidenceId
+    );
+    if (!isUuid(evidenceId) || !version || !context || !documentType) {
+      throw new Error("signed_evidence_projection_failed");
+    }
+    return {
+      document_slot_id: evidenceId,
+      location_id: isUuid(context.location_id)
+        ? String(context.location_id)
+        : null,
+      charger_id: isUuid(context.charger_id)
+        ? String(context.charger_id)
+        : null,
+      document_type: documentType,
+      required: true,
+      title: signedDocumentTitle(documentType),
+      status: getString(version.status),
+      current_version_number: Number(version.version_number),
+      current_file_name: null,
+    };
+  });
+
+  const legalAcceptances: SafeLegalAcceptance[] = rows(acceptancesResult.data)
+    .map((acceptance) => ({
+      acceptance_type: getString(acceptance.action_type),
+      version: getString(acceptance.document_version),
+      status: "accepted",
+      accepted_at: nullString(acceptance.accepted_at),
+      active: true,
+    }))
+    .filter((item) => item.acceptance_type && item.version);
+
+  return {
+    dossiers: summaries,
+    selected_dossier: selected,
+    locations,
+    chargers,
+    document_slots: documentSlots,
+    legal_acceptances: legalAcceptances,
+  };
+}
+
+function signedDocumentTitle(documentType: string): string {
+  const titles: Record<string, string> = {
+    organization_extract: "KvK-uittreksel",
+    energy_bill_or_contract: "Energiecontract of -nota",
+    installation_invoice: "Installatiefactuur laadpaal",
+  };
+  return titles[documentType] || "Ingediend document";
+}
+
+type JsonObject = Record<string, unknown>;
+
+function rows(value: unknown): JsonObject[] {
+  return Array.isArray(value) && value.every(isRecord)
+    ? value as JsonObject[]
+    : [];
+}
+
 function mapLocation(row: LocationRow): SafeLocation | null {
   const id = getString(row.id);
   const status = getString(row.status);
@@ -331,6 +662,7 @@ function mapLocation(row: LocationRow): SafeLocation | null {
     location_id: id,
     label: nullString(row.label),
     status,
+    declared_address: null,
     address: {
       postcode,
       house_number: houseNumber,
@@ -489,19 +821,12 @@ async function loadCurrentFileNamesByVersionId(
 
 async function loadDashboardReadModel(
   SB: any,
+  customerIds: string[],
   customerId: string,
   dossierId: string,
 ): Promise<Omit<DashboardResponse, "ok" | "mode" | "request_id">> {
   const dossierSelect =
     "id,dossier_number,account_type,status,locked_at,created_at";
-
-  const allDossiersPromise = SB
-    .from("app_customer_dossiers")
-    .select(dossierSelect)
-    .eq("customer_id", customerId)
-    .is("minimized_at", null)
-    .neq("status", "expired_minimized")
-    .order("created_at", { ascending: false });
 
   const selectedDossierPromise = SB
     .from("app_customer_dossiers")
@@ -542,75 +867,35 @@ async function loadDashboardReadModel(
     .eq("dossier_id", dossierId)
     .order("created_at", { ascending: true });
 
-  const casesPromise = SB
-    .from("app_cases")
-    .select("id,customer_id,case_reference,source_class,source_ref")
-    .eq("customer_id", customerId)
-    .eq("source_class", "app_customer_dossier");
-
   const [
-    allDossiersResult,
+    dossiers,
     selectedDossierResult,
     locationsResult,
     chargersResult,
     slotsResult,
     acceptancesResult,
-    casesResult,
   ] = await Promise.all([
-    allDossiersPromise,
+    loadAccessibleCaseSummaries(SB, customerIds),
     selectedDossierPromise,
     locationsPromise,
     chargersPromise,
     slotsPromise,
     acceptancesPromise,
-    casesPromise,
   ]);
 
   if (
-    allDossiersResult.error ||
     selectedDossierResult.error ||
     locationsResult.error ||
     chargersResult.error ||
     slotsResult.error ||
-    acceptancesResult.error ||
-    casesResult.error
+    acceptancesResult.error
   ) {
     throw new Error("dashboard_read_failed");
   }
 
-  const casesByDossierId = new Map<string, CaseRow[]>();
-  for (
-    const caseRow
-      of (Array.isArray(casesResult.data) ? casesResult.data : []) as CaseRow[]
-  ) {
-    const sourceRef = getString(caseRow.source_ref);
-    const caseCustomerId = getString(caseRow.customer_id);
-    if (!isUuid(sourceRef) || caseCustomerId !== customerId) {
-      throw new Error("case_projection_failed");
-    }
-    const rows = casesByDossierId.get(sourceRef) ?? [];
-    rows.push(caseRow);
-    casesByDossierId.set(sourceRef, rows);
-  }
-
-  const dossierRows =
-    (Array.isArray(allDossiersResult.data)
-      ? allDossiersResult.data
-      : []) as DossierRow[];
-  const dossiers =
-    ((Array.isArray(allDossiersResult.data)
-      ? allDossiersResult.data
-      : []) as DossierRow[])
-      .map((row) => mapDossier(row, casesByDossierId))
-      .filter((row): row is SafeDossier => !!row);
-
-  if (dossiers.length !== dossierRows.length) {
-    throw new Error("case_projection_failed");
-  }
-
-  const selectedDossier = mapDossier(
-    (selectedDossierResult.data || {}) as DossierRow,
-    casesByDossierId,
+  const selectedDossier = dossiers.find((item) =>
+    item.dossier_id === dossierId &&
+    getString(selectedDossierResult.data?.id) === dossierId
   );
   if (!selectedDossier) throw new Error("selected_dossier_projection_failed");
 
@@ -709,26 +994,34 @@ serve(async (req) => {
     );
   }
 
-  const accessResult = await requireAppDossierAccess(
-    SB,
-    authResult.context,
-    normalized.payload.dossier_id,
-  );
-  if (!accessResult.ok) {
-    return appErrorResponse(
-      req,
-      accessResult.status,
-      accessResult.message,
-      accessResult.code,
-    );
-  }
-
   try {
-    const readModel = await loadDashboardReadModel(
+    const caseAccess = await requireAppCaseAccess(
       SB,
-      authResult.context.customerId,
-      accessResult.dossier.dossierId,
+      authResult.context,
+      normalized.payload.dossier_id,
     );
+    const readModel = caseAccess.ok &&
+        caseAccess.appCase.sourceClass === "signed_signup_intake"
+      ? await loadSignedCaseReadModel(
+        SB,
+        authResult.context.customerIds,
+        caseAccess.appCase.customerId,
+        caseAccess.appCase.caseId,
+      )
+      : await (async () => {
+        const accessResult = await requireAppDossierAccess(
+          SB,
+          authResult.context,
+          normalized.payload.dossier_id,
+        );
+        if (!accessResult.ok) throw accessResult;
+        return await loadDashboardReadModel(
+          SB,
+          authResult.context.customerIds,
+          accessResult.dossier.customerId,
+          accessResult.dossier.dossierId,
+        );
+      })();
 
     const response: DashboardResponse = {
       ok: true,
@@ -738,7 +1031,17 @@ serve(async (req) => {
     };
 
     return appJsonResponse(req, 200, response);
-  } catch (_error) {
+  } catch (error) {
+    if (isRecord(error) && error.ok === false) {
+      return appErrorResponse(
+        req,
+        Number(error.status) || 404,
+        typeof error.message === "string" && error.message.trim()
+          ? error.message.trim()
+          : "Dossier niet gevonden.",
+        getString(error.code) || "dossier_not_found_or_forbidden",
+      );
+    }
     return appErrorResponse(
       req,
       503,

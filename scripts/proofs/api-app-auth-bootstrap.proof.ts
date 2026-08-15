@@ -381,9 +381,10 @@ async function bootstrapSuccess(ctx: ProofContext, fixture: Fixture, key = proof
     }));
   }
   assert(res.body?.ok === true, "bootstrap expected ok true");
-  assert(res.body?.mode === "auth_bootstrap_v1", "bootstrap mode mismatch");
-  assert(res.body?.customer_id === fixture.customerId, "bootstrap customer mismatch");
-  assert(res.body?.identity_id === fixture.identityId, "bootstrap identity mismatch");
+  assert(res.body?.mode === "auth_bootstrap_browser", "bootstrap mode mismatch");
+  assert(res.body?.schema_version === "auth_bootstrap_browser_v2", "bootstrap schema mismatch");
+  assert(res.body?.authenticated === true, "bootstrap auth state missing");
+  assert(res.body?.binding_status === "bound", "bootstrap binding missing");
   assert(Array.isArray(res.body?.dossiers), "bootstrap dossiers missing");
   assert(
     res.body.dossiers.some((row: any) =>
@@ -391,7 +392,11 @@ async function bootstrapSuccess(ctx: ProofContext, fixture: Fixture, key = proof
     ),
     "bootstrap dossier summary mismatch",
   );
-  assert(typeof res.body?.payload_hash === "string", "bootstrap payload hash missing");
+  assert(
+    !("customer_id" in res.body || "identity_id" in res.body || "payload_hash" in res.body ||
+      "request_id" in res.body || "replayed" in res.body),
+    "internal bootstrap fields leaked",
+  );
   return res;
 }
 
@@ -635,8 +640,8 @@ async function main() {
     });
 
     await runCase(ctx, "B12 Response returns customer and dossier summary", async () => {
-      assert(primarySuccess?.body?.customer_id === primary.customerId, "customer_id mismatch");
-      assert(primarySuccess?.body?.identity_id === primary.identityId, "identity_id mismatch");
+      assert(primarySuccess?.body?.authenticated === true, "authenticated state missing");
+      assert(primarySuccess?.body?.binding_status === "bound", "binding state missing");
       assert(Array.isArray(primarySuccess?.body?.dossiers), "dossiers missing");
     });
 
@@ -664,8 +669,7 @@ async function main() {
     await runCase(ctx, "B16 Same key/same payload replays", async () => {
       const replay = await postBootstrap(ctx, primary.token, primaryKey);
       assert(replay.status === 200, `expected 200 got ${replay.status}`);
-      assert(replay.body?.replayed === true, "expected replayed true");
-      assert(replay.body?.customer_id === primary.customerId, "replay customer mismatch");
+      assert(JSON.stringify(replay.body) === JSON.stringify(primarySuccess?.body), "replay browser contract mismatch");
     });
 
     await runCase(ctx, "B17 Same key/different payload conflicts", async () => {
@@ -675,7 +679,7 @@ async function main() {
 
     await runCase(ctx, "B18 Identity already bound to same Auth user succeeds safely", async () => {
       const res = await bootstrapSuccess(ctx, primary, proofId());
-      assert(res.body?.customer_id === primary.customerId, "same-user customer mismatch");
+      assert(res.body?.binding_status === "bound", "same-user binding mismatch");
     });
 
     await runCase(ctx, "B19 Identity bound to another Auth user rejects", async () => {
@@ -816,8 +820,8 @@ async function main() {
       ]);
       assert(a.status !== 500 && b.status !== 500, "unexpected 500");
       assert(a.status === 200 && b.status === 200, `expected two safe successes got ${a.status}/${b.status}`);
-      assert(a.body?.customer_id === fixture.customerId, "a customer mismatch");
-      assert(b.body?.customer_id === fixture.customerId, "b customer mismatch");
+      assert(a.body?.binding_status === "bound" && a.body?.dossiers?.some((item: any) => item.dossier_id === fixture.dossierId), "a binding summary mismatch");
+      assert(b.body?.binding_status === "bound" && b.body?.dossiers?.some((item: any) => item.dossier_id === fixture.dossierId), "b binding summary mismatch");
     });
 
     await runCase(ctx, "B25 Public/anon/authenticated cannot execute RPC", async () => {

@@ -12,7 +12,7 @@ export type AuthStatus =
 
 export type AuthDossierSummary = {
   dossier_id: string;
-  dossier_number: string;
+  dossier_number: string | null;
   account_type: "particulier" | "zakelijk" | "vve";
   status: string;
   case_id: string;
@@ -20,14 +20,10 @@ export type AuthDossierSummary = {
 };
 
 export type AuthBootstrapSummary = {
-  customer_id: string;
-  identity_id: string;
-  identity_status: "active";
-  binding_status: "bound";
+  schema_version: "auth_bootstrap_browser_v2";
+  authenticated: true;
+  binding_status: "bound" | "unbound_no_cases";
   dossiers: AuthDossierSummary[];
-  payload_hash: string;
-  request_id: string;
-  replayed: boolean;
 };
 
 export type AuthSafeErrorCode =
@@ -35,6 +31,7 @@ export type AuthSafeErrorCode =
   | "invalid_credentials"
   | "password_mismatch"
   | "password_too_short"
+  | "account_already_exists"
   | "auth_email_not_verified"
   | "customer_identity_not_found"
   | "customer_identity_already_bound"

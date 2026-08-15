@@ -1,5 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getSupabaseBrowserClient } from "../auth/authClient.ts";
+import {
+  getCurrentAuthSession,
+  getSupabaseBrowserClient,
+} from "../auth/authClient.ts";
 import { resolveAuthRuntimeConfig } from "../auth/authRuntimeConfig.ts";
 import {
   createUploadIdempotencyKey,
@@ -38,6 +41,11 @@ export type SignupQuarantineResult =
   | { ok: false; aborted: boolean };
 
 type Dependencies = {
+  authSession?: {
+    accessToken: string;
+    email: string;
+    verified: boolean;
+  } | null;
   fetchImpl?: typeof fetch;
   runtimeConfig?: RuntimeConfig;
   supabaseClient?: Pick<SupabaseClient, "storage">;
@@ -76,11 +84,28 @@ async function ensureIntake(
   email: string,
   config: RuntimeConfig,
   fetchImpl: typeof fetch,
+  injectedAuthSession?: Dependencies["authSession"],
   signal?: AbortSignal,
 ): Promise<SignupIntakeSession | null> {
+  const currentSession = injectedAuthSession === undefined
+    ? await getCurrentAuthSession()
+    : null;
+  const verifiedAccountEmail = injectedAuthSession?.verified &&
+      injectedAuthSession.email
+    ? injectedAuthSession.email.trim().toLowerCase()
+    : currentSession?.user.email &&
+        (currentSession.user.email_confirmed_at ||
+          currentSession.user.confirmed_at)
+    ? currentSession.user.email.trim().toLowerCase()
+    : "";
+  const authenticatedAccessToken = injectedAuthSession?.verified
+    ? injectedAuthSession.accessToken
+    : currentSession?.access_token || "";
+  const normalizedEmail = verifiedAccountEmail || email.trim().toLowerCase();
   const existing = readSignupIntakeSession();
-  if (existing && sameSignupBasis(existing, accountType, email)) return existing;
-  const normalizedEmail = email.trim().toLowerCase();
+  if (existing && sameSignupBasis(existing, accountType, normalizedEmail)) {
+    return existing;
+  }
   if (!normalizedEmail) return null;
   const pending = readSignupIntakeStartAttempt();
   const startIdempotencyKey = pending?.accountType === accountType && pending.email === normalizedEmail
@@ -90,7 +115,9 @@ async function ensureIntake(
   const response = await postUploadJson({
     endpointUrl: config.startEndpointUrl,
     anonKey: config.anonKey,
-    accessToken: config.anonKey,
+    accessToken: verifiedAccountEmail && authenticatedAccessToken
+      ? authenticatedAccessToken
+      : config.anonKey,
     idempotencyKey: startIdempotencyKey,
     body: { account_type: accountType, email: normalizedEmail },
     fetchImpl,
@@ -129,7 +156,14 @@ export async function uploadSignupDocument(input: {
     if (!clientSha256 || !SHA256_RE.test(clientSha256) || input.signal?.aborted) {
       return { ok: false, aborted: !!input.signal?.aborted };
     }
-    const intake = await ensureIntake(input.accountType, input.email, config, fetchImpl, input.signal);
+    const intake = await ensureIntake(
+      input.accountType,
+      input.email,
+      config,
+      fetchImpl,
+      dependencies.authSession,
+      input.signal,
+    );
     if (!intake || input.signal?.aborted) return { ok: false, aborted: !!input.signal?.aborted };
     const issue = await postUploadJson({
       endpointUrl: config.issueEndpointUrl,

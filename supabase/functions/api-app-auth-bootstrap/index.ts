@@ -1,6 +1,6 @@
 // supabase/functions/api-app-auth-bootstrap/index.ts
 //
-// Auth bootstrap v2 for the new /app customer dashboard boundary.
+// Stable browser Auth bootstrap adapter for the /app customer dashboard.
 // Frontend may assist; backend decides.
 //
 // This endpoint binds a verified Supabase Auth user to an existing active
@@ -37,10 +37,44 @@ type BootstrapRpcResponse = {
   replayed?: unknown;
 };
 
-const MODE = "auth_bootstrap_v2";
-const IDEMPOTENCY_SCOPE_PREFIX = "api-app-auth-bootstrap:v2";
+type BrowserDossierSummary = {
+  dossier_id: string;
+  dossier_number: string | null;
+  account_type: "particulier" | "zakelijk" | "vve";
+  status: string;
+  case_id: string;
+  case_reference: string;
+};
+
+type BrowserBootstrapResponse = {
+  ok: true;
+  mode: "auth_bootstrap_browser";
+  schema_version: "auth_bootstrap_browser_v2";
+  authenticated: true;
+  binding_status: "bound" | "unbound_no_cases";
+  dossiers: BrowserDossierSummary[];
+};
+
+type BrowserBlockedResponse = {
+  ok: false;
+  mode: "auth_bootstrap_browser";
+  schema_version: "auth_bootstrap_browser_v2";
+  authenticated: true;
+  binding_status: "blocked";
+  dossiers: [];
+  code:
+    | "customer_identity_already_bound"
+    | "customer_identity_binding_ambiguous"
+    | "customer_inactive";
+};
+
+const MODE = "auth_bootstrap_browser";
+const SCHEMA_VERSION = "auth_bootstrap_browser_v2";
+const IDEMPOTENCY_SCOPE_PREFIX = "api-app-auth-bootstrap:v3";
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const CASE_REFERENCE_RE =
+  /^CASE-(?:[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 const SHA256_RE = /^[0-9a-f]{64}$/i;
 const ACCOUNT_TYPES = new Set(["particulier", "zakelijk", "vve"]);
 
@@ -87,43 +121,103 @@ async function parseEmptyJsonBody(
   }
 }
 
-function dossierSummaryIsValid(value: unknown): boolean {
-  if (!Array.isArray(value) || value.length < 1) return false;
-  return value.every((item) => {
-    if (!isRecord(item)) return false;
+function normalizeDossierSummaries(
+  value: unknown,
+  allowEmpty = false,
+): BrowserDossierSummary[] | null {
+  if (!Array.isArray(value) || (!allowEmpty && value.length < 1)) return null;
+  const dossiers = value.map((item): BrowserDossierSummary | null => {
+    if (!isRecord(item)) return null;
     const dossierId = getString(item.dossier_id);
+    const caseId = getString(item.case_id);
     const caseReference = getString(item.case_reference);
-    return isUuid(dossierId) &&
-      getString(item.dossier_number).length > 0 &&
-      ACCOUNT_TYPES.has(getString(item.account_type)) &&
-      getString(item.status).length > 0 &&
-      isUuid(item.case_id) &&
-      caseReference === `CASE-${dossierId}`;
+    const accountType = getString(item.account_type);
+    const status = getString(item.status);
+    if (
+      !isUuid(dossierId) || !isUuid(caseId) ||
+      !ACCOUNT_TYPES.has(accountType) || !status ||
+      !CASE_REFERENCE_RE.test(caseReference) ||
+      (dossierId === getString(item.case_id) ||
+          caseReference === `CASE-${dossierId}`) !== true
+    ) return null;
+    return {
+      dossier_id: dossierId,
+      dossier_number: getString(item.dossier_number) || null,
+      account_type: accountType as BrowserDossierSummary["account_type"],
+      status,
+      case_id: caseId,
+      case_reference: caseReference,
+    };
   });
+  if (dossiers.some((item) => item === null)) return null;
+  return dossiers as BrowserDossierSummary[];
 }
 
-function validateSuccessBody(body: BootstrapRpcResponse): body is {
-  ok: true;
-  mode: "auth_bootstrap_v2";
-  request_id: string;
-  customer_id: string;
-  identity_id: string;
-  identity_status: "active";
-  binding_status: "bound";
-  dossiers: unknown[];
-  payload_hash: string;
-  replayed: boolean;
-} {
-  return body.ok === true &&
-    body.mode === MODE &&
-    getString(body.request_id).length > 0 &&
-    isUuid(body.customer_id) &&
-    isUuid(body.identity_id) &&
-    body.identity_status === "active" &&
-    body.binding_status === "bound" &&
-    dossierSummaryIsValid(body.dossiers) &&
-    isSha256(body.payload_hash) &&
-    typeof body.replayed === "boolean";
+function adaptSuccessBody(
+  body: BootstrapRpcResponse,
+): BrowserBootstrapResponse | null {
+  const dossiers = normalizeDossierSummaries(body.dossiers);
+  if (
+    body.ok !== true ||
+    getString(body.request_id).length === 0 ||
+    !isUuid(body.customer_id) || !isUuid(body.identity_id) ||
+    body.identity_status !== "active" || body.binding_status !== "bound" ||
+    !isSha256(body.payload_hash) || typeof body.replayed !== "boolean" ||
+    dossiers === null
+  ) return null;
+
+  return {
+    ok: true,
+    mode: MODE,
+    schema_version: SCHEMA_VERSION,
+    authenticated: true,
+    binding_status: "bound",
+    dossiers: dossiers as BrowserDossierSummary[],
+  };
+}
+
+function adaptUnboundBody(
+  body: BootstrapRpcResponse,
+): BrowserBootstrapResponse | null {
+  const code = getString(body.code);
+  if (
+    body.ok !== false ||
+    (code !== "customer_identity_not_found" &&
+      code !== "customer_dossier_not_found")
+  ) return null;
+
+  return {
+    ok: true,
+    mode: MODE,
+    schema_version: SCHEMA_VERSION,
+    authenticated: true,
+    binding_status: "unbound_no_cases",
+    dossiers: [],
+  };
+}
+
+function adaptBlockedBody(
+  body: BootstrapRpcResponse,
+): BrowserBlockedResponse | null {
+  const code = getString(body.code);
+  if (
+    body.ok !== false ||
+    ![
+      "customer_identity_already_bound",
+      "customer_identity_binding_ambiguous",
+      "customer_inactive",
+    ].includes(code)
+  ) return null;
+
+  return {
+    ok: false,
+    mode: MODE,
+    schema_version: SCHEMA_VERSION,
+    authenticated: true,
+    binding_status: "blocked",
+    dossiers: [],
+    code: code as BrowserBlockedResponse["code"],
+  };
 }
 
 function statusFromRpcBody(body: BootstrapRpcResponse): number {
@@ -238,7 +332,7 @@ serve(async (req) => {
     );
   }
 
-  const { data, error } = await SB.rpc("app_bootstrap_customer_auth_v4", {
+  const { data, error } = await SB.rpc("app_bootstrap_customer_auth_v6", {
     p_auth_user_id: verifiedAuth.context.authUserId,
     p_email_normalized: verifiedAuth.context.emailNormalized,
     p_actor_ref: actorRef,
@@ -262,6 +356,14 @@ serve(async (req) => {
 
   const body = data as BootstrapRpcResponse;
   if (body.ok !== true) {
+    const unboundBody = adaptUnboundBody(body);
+    if (unboundBody) return appJsonResponse(req, 200, unboundBody);
+
+    const blockedBody = adaptBlockedBody(body);
+    if (blockedBody) {
+      return appJsonResponse(req, statusFromRpcBody(body), blockedBody);
+    }
+
     return appErrorResponse(
       req,
       statusFromRpcBody(body),
@@ -270,7 +372,8 @@ serve(async (req) => {
     );
   }
 
-  if (!validateSuccessBody(body)) {
+  const browserBody = adaptSuccessBody(body);
+  if (!browserBody) {
     return appErrorResponse(
       req,
       503,
@@ -279,5 +382,5 @@ serve(async (req) => {
     );
   }
 
-  return appJsonResponse(req, 200, body);
+  return appJsonResponse(req, 200, browserBody);
 });

@@ -6,6 +6,8 @@ import { DashboardSidebar } from "./DashboardSidebar";
 import { TodoPlaceholderPanel } from "./TodoPlaceholderPanel";
 import { useDashboardRead } from "./useDashboardRead";
 import type { AppNavigate } from "../../routes/types";
+import { clearSignupIntakeSession } from "../signup/signupIntakeCapabilityStore";
+import { clearSignupSubmissionReceipt } from "../signup/signupSubmissionReceiptStore";
 
 type PortalSection = "active" | "history" | "contact";
 
@@ -16,8 +18,14 @@ export function DashboardPageShell({ navigate }: { navigate: AppNavigate }) {
   const authDossiers = auth.summary?.dossiers ?? [];
   const selectedDossierExists = authDossiers.some((dossier) => dossier.dossier_id === selectedDossierId);
   const effectiveDossierId = selectedDossierExists ? selectedDossierId : authDossiers[0]?.dossier_id ?? null;
-  const cacheScope = auth.session && auth.summary ? `${auth.session.user.id}:${auth.summary.customer_id}` : null;
+  const cacheScope = auth.session && auth.summary ? auth.session.user.id : null;
   const dashboardRead = useDashboardRead(auth.session?.access_token ?? null, cacheScope, effectiveDossierId);
+
+  function startNewApplication() {
+    clearSignupIntakeSession();
+    clearSignupSubmissionReceipt();
+    navigate("/aanmelden");
+  }
 
   useEffect(() => {
     if (!selectedDossierExists) {
@@ -38,6 +46,7 @@ export function DashboardPageShell({ navigate }: { navigate: AppNavigate }) {
             dossierOptions={dossierOptions}
             onSelectDossier={setSelectedDossierId}
             onRefreshSelectedDossier={dashboardRead.refreshSelectedDossier}
+            onStartNewApplication={startNewApplication}
             selectedDossierId={effectiveDossierId}
           />
         ) : null}

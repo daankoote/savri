@@ -1504,3 +1504,183 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   remote action, deploy, commit, push or merge was performed.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-08-11 — 09C1C customer post-signing convergence
+
+- Replaced the active frontend/runtime `pending_verification` discriminator with
+  `submitted_for_review` and versioned the presentation-only session receipt to
+  v2 with only safe reference, status and safe promotion presentation state.
+- Reused the signing finalize/status route to attempt internal promotion after
+  durable finalization and on bounded hydration with one deterministic
+  idempotency key. Promotion failure never invalidates signing or requires a
+  re-sign; the browser receives no internal promotion secret.
+- Added service-role-only Auth bootstrap v5 for exact verified-email binding to
+  the existing promoted identity/customer/case, with ambiguity/cross-user and
+  account-type mismatch fail-closed behavior and legacy v4 delegation.
+- Extended the existing dashboard read projection/renderer/cache for
+  `app_cases`-owned signed cases, safe lifecycle/location/evidence summaries and
+  internal-review copy. No `app_customer_dossiers` row is created.
+- Added local Q01-Q30 convergence proof plus promoted Auth/dashboard runtime
+  proof; signing, promotion, Auth, dashboard, frontend and build gates are green.
+- Added one forward migration containing RPC versions only; no new table or
+  column. No CSS/new stylesheet, remote apply, deploy, commit, push or merge.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-08-11 — 09C1C-R1 existing-account handoff and unified multi-case journey
+
+- Diagnosed the local browser user without PII output: its old dossier, customer
+  and identity remained present and linked; no duplicate existed. The newest
+  signed intake was not promoted because its customer-level declared profile
+  was incompatible, so the safe handoff is `blocked` rather than an unsafe
+  e-mail-only merge.
+- Added a service-only post-finalization handoff projection with login,
+  activation, already-authenticated and blocked states. Collecting/pre-OTP
+  responses expose no account-existence state; receipt v3 stores only the safe
+  presentation guidance alongside the existing public receipt fields.
+- Replaced the v4-or-v5 dashboard selection with one lineage-backed normalized
+  collection across supported legacy dossiers and signed-signup cases. Legacy
+  activation remains idempotently reusable; e-mail, name and address are never
+  dedupe keys.
+- Wired `Nieuwe aanvraag` to the existing `/aanmelden` flow and added safe
+  `user_already_exists` recovery to login. No second signup form, component or
+  stylesheet was added.
+- Extended convergence coverage through Q50 and reran focused local signing,
+  promotion, Auth, dashboard, receipt, journey, session and client proofs. No
+  remote action, deploy, commit, push or merge was performed.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-08-12 — 09C1C-R2 existing verified customer profile convergence
+
+- Proved the existing local blocker without PII: one verified Auth user, one
+  active Auth-bound identity, one compatible customer and one account-owner
+  party existed, but no current person profile. Duplicate identical
+  `partyName` presentation rows were also treated as ambiguous. Promotion
+  therefore stayed pending and account handoff stayed blocked.
+- Added a new forward-only replacement of
+  `app_promote_signed_signup_v1`; the applied 09C1C migration remains
+  byte-identical. Identical signed declaration values are deduplicated while
+  different values remain ambiguous and fail closed.
+- On a new finalized immutable signed intake, only one uniquely Auth-bound,
+  active and account-type-compatible legacy customer may append a missing
+  declared profile to its existing account-owner party. Existing exact current
+  profile truth is reused; any current person/organization conflict fails
+  closed and no profile is updated or superseded.
+- The profile, relationships, asserted case roles, promotion and exactly one
+  new case remain in the existing atomic transaction. The legacy dossier/case
+  and Auth binding are preserved; durable evidence stays scoped to the new
+  case. Retry and concurrent database calls converge on the same records.
+- Particulier reuses the owner party as asserted service recipient and case
+  contact without representation authority. Zakelijk/VvE append only declared
+  organization/contact structure supported by the existing foundation and
+  retain `authority_review_status=required_not_completed`.
+- After promotion, logged-out handoff is
+  `existing_account_login_required`; the correctly authenticated existing
+  user receives `already_authenticated`. No Auth user, identity, customer or
+  re-signing is created.
+- Local Q51-Q78 and the focused signing, promotion, Auth, dashboard, receipt,
+  journey, session, client, Deno, build, bundle-secret and diff gates are green.
+  No remote action, deploy, commit, push or merge was performed.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-08-12 — 09C1C-R3 stable Auth bootstrap browser contract
+
+- Traced the recurring login failure through real local Auth and Edge without
+  PII: internal v4/v5 success allowed a nullable legacy `dossier_number`, while
+  the Edge validator required a non-empty value; the browser decoder also used
+  a stricter case-sensitive case-reference expression than Edge.
+- Made `api-app-auth-bootstrap` the stable adapter. It now returns versioned
+  browser schema `auth_bootstrap_browser_v1` with authenticated/bound state and
+  safe accessible dossier/case summaries, independent of internal RPC mode.
+  Customer, identity and Auth IDs, payload hash, request/audit and replay
+  internals no longer cross the browser boundary.
+- Centralized strict runtime validation in the existing production
+  `authBootstrapClient.ts`; AccountPage, AuthProvider and dashboard contain no
+  v4/v5 response branching. Nullable legacy numbers and hexadecimal case
+  references are normalized consistently; unknown schemas and fields fail
+  closed.
+- Added live Q79-Q92 parity coverage: verified Auth login, real local Edge
+  response, exact production decoder, legacy-only, signed-only and mixed
+  account collections, malformed-response rejection, safe output and unified
+  dashboard handoff. Existing Q01-Q78 and targeted regressions remain green.
+- Added no migration, table, column, component, dependency or CSS. No commit,
+  push, merge, deploy or remote action was performed.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-08-14 — 09C1C-R4 signed declared-data parity and evidence identity
+
+- Traced the unique current mixed local fixture without printing customer or
+  source identifiers: the signed snapshot contained one location, one charger
+  and two classified documents; promotion retained one location and both
+  evidence items but no case-owned charger.
+- Added a forward-only case-owned charger root plus immutable declared charger
+  observation. Brand, model, serial, declared MID and any supplied explicit
+  installation/backend/solar fields remain `confirmed_awaiting_review` and are
+  linked to the exact signed location provenance.
+- Preserved hashed source-slot context and only deterministic evidence subject
+  links. Existing `energy_bill_or_contract` and `installation_invoice`
+  classifications now project meaningful customer-safe titles.
+- Replaced display-label React keys with stable opaque row identities; promoted
+  evidence uses its existing evidence UUID. Legacy dossier charger/document
+  reads remain on the existing path and the mixed collection remains two cases.
+- Added Q93-Q112 to the existing convergence gate. No accepted domain truth,
+  new CSS, dependency, remote action, deploy, commit, push or merge was added.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-08-14 — 09C1C-R5 account-first and zero-case convergence
+
+- Proved the clean-sheet local state without PII: a verified Auth user existed
+  without customer identity binding or accessible case; internal v5 returned
+  `customer_identity_not_found`. Classified it as
+  `LEGITIMATE_ZERO_CASE_ACCOUNT`, not a generic bootstrap failure.
+- Versioned the strict browser adapter to `auth_bootstrap_browser_v2`.
+  `unbound_no_cases` is HTTP 200 with an empty case collection; `blocked`
+  remains limited to explicit conflict states. Internal RPC mode and internal
+  IDs remain hidden.
+- Added a zero-case portal using the existing dashboard shell/sidebar/panels
+  and CSS, with `0 dossiers` and primary `Nieuwe aanvraag`. Account creation
+  alone creates no ENVAL customer, identity binding, case, party, mandate,
+  evidence or legal acceptance.
+- Wrapped canonical `/aanmelden` in the existing AuthProvider. Verified Auth
+  e-mail is prefilled/read-only and re-derived server-side at intake start;
+  anonymous anti-enumeration and all signing/legal/`typed_name_otp_v1` gates
+  remain unchanged.
+- Added retained-fixture Q113-Q145 proof: real local Edge response through the
+  production decoder, zero→one→two cases on one Auth user/customer, evidence
+  isolation, wrong-user denial, no e-mail spoof claim and browser secret scan.
+  No migration, new CSS, Auth-user deletion, cleanup, remote action, deploy,
+  commit, push or merge was performed.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-08-14 — 09C1C-R6 multi-context Auth access and fresh dashboard handoff
+
+- Proved the prior cardinality block: the active Auth-user identity constraint
+  and global promotion compatibility guard allowed one active customer context
+  per Auth principal and rejected a different signed account type.
+- Added forward-only `app_customer_access_grants` as an immutable,
+  provenance-backed, server-owned Auth-principal-to-customer-context relation.
+  It is unique per pair, has RLS enabled, no anonymous/authenticated write and
+  only service-role SELECT.
+- Kept the customer-bound login identity singular while allowing one verified
+  principal explicit access to separate Particulier, Zakelijk and VvE
+  customers/cases. No customer is merged by e-mail, Auth UUID, address, MID or
+  safe reference; account type remains context-scoped.
+- Preserved asserted Zakelijk/VvE contact access independently of
+  representation authority. Access synchronization does not mutate mandate or
+  authority review; `required_not_completed` remains leading.
+- Recovered the retained signed business fixture without re-signing, OTP or
+  cleanup. Added retained VvE and wrong-user proof fixtures and proved access,
+  denial, replay and concurrency behavior without deleting them.
+- Reused the existing dashboard cache API and Auth bootstrap retry path. After
+  authenticated promotion, only the current principal's dashboard cache and
+  bootstrap summary are invalidated before navigation, so the first dashboard
+  read observes the new case without manual refresh.
+- Local Q171-Q199 is green. No CSS, dependency, cleanup, Auth-user deletion,
+  remote action, deploy, commit, push or merge was performed.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

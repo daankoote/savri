@@ -220,13 +220,14 @@ Rules:
 
 ## 7A. Target Signed-Intake Promotion And Correction Model
 
-Status: TARGET / NOT IMPLEMENTED. Detailed contract: `docs/app/contracts/intake-verification-promotion.md`.
+Status: CURRENT PROVEN — LOCAL ONLY for the signed-case customer projection; later operational lifecycle remains TARGET. Detailed contract: `docs/app/contracts/intake-verification-promotion.md`.
 
 Target rules:
 
 - `typed_name_otp_v1` finalization is the signed public submission and proves bounded email-channel control; a separate email-verification promotion link is `SUPERSEDED`.
 - Server-only atomic promotion creates/reuses durable customer/party roots and creates one `app_cases` root; it does not create a parallel `app_customer_dossiers` owner.
-- CURRENT intake `pending_verification` means finalized/locked only. 09C1 replaces it with `submitted_for_review`; customer copy is `Ondertekend en ingediend` and then `In behandeling`.
+- The active intake/case projection is `submitted_for_review`; customer copy is `Ondertekend en ingediend` and then `In behandeling`.
+- 09C1C reuses the existing dashboard renderer/cache. Signed-case reads use `app_cases`, lifecycle, case locations and evidence; the compatibility selector equals the case UUID and no `app_customer_dossiers` row is created.
 - A correctable internal-review result projects `Actie nodig` and targeted edit capability.
 - Valid unaffected sections remain fixed.
 - Only affected sections or records become editable.
@@ -431,6 +432,39 @@ Phase 5: dashboard read-only MVP
 
 - Customer can log in and see factual app-backed dossier, location, charger, document-slot, and legal-acceptance data. CURRENT / LOCAL PROOF.
 - Requests, support, timeline, kWh, results, fees, payouts, reports, and exports remain OPEN.
+
+09C1C-R1 transition rule:
+
+- Account is not case; one verified account may access multiple customer-owned cases.
+- The CURRENT read model normalizes supported legacy dossiers and signed-signup cases into one collection.
+- Deduplication requires explicit source lineage/foreign-key provenance; e-mail, name and address are forbidden heuristics.
+- A new application creates a new case. Updating documents or correcting an existing case remains a separate intent.
+- Server customer/case ownership remains authoritative; the receipt and account handoff are presentation only.
+
+09C1C-R5 account-first rule:
+
+- Verified Auth may open the portal with zero customers/cases through
+  `unbound_no_cases`; this state is HTTP success and never creates business
+  truth merely to satisfy authorization.
+- The empty portal shows zero dossiers and starts canonical `/aanmelden`.
+- Authenticated e-mail is verified-session/server context, not a freely
+  claimable application field.
+- Signing and OTP remain required before promotion; only promotion may create
+  or reuse the compatible customer and create one new case.
+- One account may access zero, one or multiple cases. `Nieuwe aanvraag` adds a
+  new case; existing-case correction remains separate.
+
+09C1C-R6 multi-context rule:
+
+- Auth principal is an access identity, not customer/service recipient, party,
+  case, account type or representation authority.
+- One principal may have explicit server-owned access to zero or more separate
+  customer contexts and their cases; customer context owns account type.
+- Dashboard aggregation follows only access-grant and case lineage. E-mail,
+  Auth UUID, address, MID and safe reference are not merge/access heuristics.
+- Zakelijk/VvE case visibility leaves authority review incomplete.
+- Authenticated promotion clears the current principal's dashboard/bootstrap
+  cache before navigation, so the first dashboard read returns current truth.
 
 Phase 6: customer document module
 

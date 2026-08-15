@@ -109,6 +109,7 @@ export async function runSignupQuarantineUploadClientProof(): Promise<void> {
     },
   };
   const dependencies = {
+    authSession: null,
     fetchImpl,
     supabaseClient: supabaseClient as never,
     digestImpl: async () => new Uint8Array(Array.from({ length: 32 }, () => 0xaa)).buffer,

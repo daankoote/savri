@@ -666,6 +666,27 @@ implemented or unproven.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+## 09C1C-R2 Existing Account Party/Profile Compatibility
+
+CURRENT PROVEN — LOCAL ONLY.
+
+An eligible legacy customer reuses its one stable current `account_owner`
+party. A missing profile is appended from the exact new signing snapshot as
+declared truth; it is not identity-verified or accepted external truth. One
+matching current profile is reused. A current profile of the wrong kind,
+multiple current profiles, or different person/organization facts fail closed.
+No existing version is updated, ended or superseded.
+
+For Particulier the owner party is pinned to the new case as asserted service
+recipient and case contact, without an authority row. Zakelijk/VvE retain an
+organization service recipient and separate natural-person contact; signing
+and account ownership do not complete representation authority. The existing
+case remains unchanged and the signed intake owns exactly one additional case.
+Account is therefore not case, and one account may own multiple independently
+provenanced cases.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## 09C0/09C1A Signed-Intake Promotion Mapping
 
 09C1A DATABASE/RPC FOUNDATION CURRENT PROVEN — LOCAL ONLY.
@@ -692,9 +713,9 @@ and leaves Zakelijk/VvE
 customer-to-`account_owner` party is reused when unambiguous and kind-correct;
 name, email, title or parser output never authorizes a global party merge.
 
-Exact atomic promotion and remaining Storage/Edge/Auth/dashboard mapping is
-owned by `intake-verification-promotion.md`. The latter integrations remain
-TARGET and are not implied by the local database proof.
+Exact atomic promotion and Storage/Edge/Auth/dashboard mapping is owned by
+`intake-verification-promotion.md`. 09C1B/09C1C prove those integrations locally;
+production and authority/verifier meaning remain TARGET.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 

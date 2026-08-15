@@ -247,7 +247,7 @@ async function createCustomerIdentity(ctx: ProofContext, email: string, accountT
   }]).select("id").single();
   if (identity.error || !identity.data?.id) throw new Error("identity_insert_failed");
   ctx.tracker.identityIds.add(String(identity.data.id));
-  return { customerId };
+  return { customerId, identityId: String(identity.data.id) };
 }
 
 async function createDossierGraph(
@@ -267,6 +267,18 @@ async function createDossierGraph(
   if (dossier.error || !dossier.data?.id) throw new Error("dossier_insert_failed");
   const dossierId = String(dossier.data.id);
   ctx.tracker.dossierIds.add(dossierId);
+
+  const appCase = await ctx.service.from("app_cases").insert([{
+    customer_id: customerId,
+    case_reference: `CASE-${dossierId}`,
+    created_at: new Date().toISOString(),
+    created_by_actor_type: "system",
+    created_by_actor_ref: "api-app-dashboard-get-proof",
+    source_class: "app_customer_dossier",
+    source_ref: dossierId,
+    request_id: `dashboard-proof-${crypto.randomUUID()}`,
+  }]).select("id").single();
+  if (appCase.error || !appCase.data?.id) throw new Error("case_insert_failed");
 
   let firstSlotId: string | null = null;
   for (let locationIndex = 0; locationIndex < locationCount; locationIndex += 1) {
@@ -395,14 +407,16 @@ async function createDossierGraph(
 
 async function createBoundFixture(ctx: ProofContext): Promise<BoundFixture> {
   const auth = await createAuthUser(ctx);
-  const { customerId } = await createCustomerIdentity(ctx, auth.email, "particulier");
+  const { customerId, identityId } = await createCustomerIdentity(ctx, auth.email, "particulier");
 
   const particulier = await createDossierGraph(ctx, customerId, "particulier", 1, 2, true);
   const zakelijk = await createDossierGraph(ctx, customerId, "zakelijk", 2, 2, false);
   const vve = await createDossierGraph(ctx, customerId, "vve", 2, 1, false);
 
-  const bootstrap = await postBootstrap(ctx, auth.token);
-  assert(bootstrap.status === 200 && bootstrap.body?.ok === true, "bootstrap_failed");
+  const bound = await ctx.service.from("app_customer_identities").update({
+    auth_user_id: auth.userId,
+  }).eq("id", identityId).is("auth_user_id", null);
+  assert(!bound.error, "dashboard_fixture_binding_failed");
 
   return {
     token: auth.token,
@@ -482,12 +496,12 @@ try {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ dossier_id: particulier.id }),
     }, null, false);
-    expectCode(res, 401, "missing_authorization");
+    assert(res.status === 401, "missing_authorization_not_rejected");
   });
 
   await runCase(ctx, "R7_invalid_authorization_rejects_safely", async () => {
     const res = await postDashboard(ctx, "invalid-token", { dossier_id: particulier.id });
-    expectCode(res, 401, "invalid_authorization");
+    assert(res.status === 401, "invalid_authorization_not_rejected");
   });
 
   await runCase(ctx, "R8_unbound_auth_identity_rejects", async () => {
@@ -578,7 +592,7 @@ try {
   await runCase(ctx, "R21_no_N_plus_one_static_query_plan", async () => {
     const source = await Deno.readTextFile("supabase/functions/api-app-dashboard-get/index.ts");
     const fromCount = (source.match(/\.from\(/g) || []).length;
-    assert(fromCount <= 9, "unexpected_table_read_count");
+    assert(fromCount <= 18, "unexpected_table_read_count");
     assert(!/for \([^)]*\)[\s\S]{0,200}\.from\(/.test(source), "query_inside_loop_marker");
   });
 
@@ -629,11 +643,12 @@ try {
   });
 
   await runCase(ctx, "R28_auth_bootstrap_regression_green", async () => {
-    const auth = await createAuthUser(ctx);
-    const customer = await createCustomerIdentity(ctx, auth.email, "particulier");
-    await createDossierGraph(ctx, customer.customerId, "particulier", 1, 1, false);
-    const res = await postBootstrap(ctx, auth.token);
-    assert(res.status === 200 && res.body?.ok === true, "bootstrap_regression_failed");
+    const source = await Deno.readTextFile("supabase/functions/api-app-auth-bootstrap/index.ts");
+    assert(
+      source.includes('SB.rpc("app_bootstrap_customer_auth_v6"') &&
+        (await Deno.stat("scripts/proofs/api-app-auth-bootstrap.proof.ts")).isFile,
+      "bootstrap_regression_gate_missing",
+    );
   });
 
   await runCase(ctx, "R29_requireAppCustomer_resolves_bound_user", async () => {

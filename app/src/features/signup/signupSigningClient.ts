@@ -1,4 +1,5 @@
 import { resolveAuthRuntimeConfig } from "../auth/authRuntimeConfig.ts";
+import { getCurrentAuthSession } from "../auth/authClient.ts";
 import { createUploadIdempotencyKey } from "../documents/documentUploadTransport.ts";
 import type { CanonicalSigningFact } from "./signing/canonicalSigningFacts.ts";
 import { readSignupIntakeSession } from "./signupIntakeCapabilityStore.ts";
@@ -17,8 +18,16 @@ export type SigningChallengeReceipt = {
 
 export type SigningFinalizeReceipt = {
   safeReference: string;
-  status: "pending_verification";
+  status: "submitted_for_review";
+  promotionState: "pending" | "promoted" | "blocked";
+  accountHandoff: SignupAccountHandoff;
 };
+
+export type SignupAccountHandoff =
+  | "existing_account_login_required"
+  | "account_activation_available"
+  | "already_authenticated"
+  | "blocked";
 
 export type SignupSigningStatus =
   | {
@@ -29,9 +38,11 @@ export type SignupSigningStatus =
   | {
     signingState: "finalized";
     locked: true;
-    intakeStatus: "pending_verification";
+    intakeStatus: "submitted_for_review";
     safeReference: string;
     finalizedAt: string;
+    promotionState: "pending" | "promoted" | "blocked";
+    accountHandoff: SignupAccountHandoff;
   };
 
 export type SigningClientResult<T> =
@@ -57,10 +68,11 @@ async function postJson(
   body: Record<string, unknown>,
 ): Promise<{ ok: boolean; body: Record<string, unknown> }> {
   try {
+    const session = await getCurrentAuthSession();
     const response = await fetch(endpointUrl, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${anonKey}`,
+        "Authorization": `Bearer ${session?.access_token || anonKey}`,
         "apikey": anonKey,
         "Content-Type": "application/json",
         "Idempotency-Key": createUploadIdempotencyKey(),
@@ -119,9 +131,18 @@ export async function readSignupSigningStatus(): Promise<
   }
   const safeReference = String(response.body.safe_reference || "");
   const finalizedAt = String(response.body.finalized_at || "");
+  const promotionState = String(response.body.promotion_state || "");
+  const accountHandoff = String(response.body.account_handoff || "");
   if (
     response.ok && signingState === "finalized" && locked === true &&
-    intakeStatus === "pending_verification" &&
+    intakeStatus === "submitted_for_review" &&
+    ["pending", "promoted", "blocked"].includes(promotionState) &&
+    [
+      "existing_account_login_required",
+      "account_activation_available",
+      "already_authenticated",
+      "blocked",
+    ].includes(accountHandoff) &&
     /^SIG-[A-F0-9]{12}$/.test(safeReference) &&
     Number.isFinite(new Date(finalizedAt).getTime())
   ) {
@@ -130,9 +151,11 @@ export async function readSignupSigningStatus(): Promise<
       value: {
         signingState: "finalized",
         locked: true,
-        intakeStatus: "pending_verification",
+        intakeStatus: "submitted_for_review",
         safeReference,
         finalizedAt,
+        promotionState: promotionState as "pending" | "promoted" | "blocked",
+        accountHandoff: accountHandoff as SignupAccountHandoff,
       },
     };
   }
@@ -218,9 +241,18 @@ export async function finalizeSignupSigning(input: {
   });
   const safeReference = String(response.body.safe_reference || "");
   const status = String(response.body.intake_status || "");
+  const promotionState = String(response.body.promotion_state || "");
+  const accountHandoff = String(response.body.account_handoff || "");
   if (
     !response.ok || !/^SIG-[A-F0-9]{12}$/.test(safeReference) ||
-    status !== "pending_verification"
+    status !== "submitted_for_review" ||
+    !["pending", "promoted", "blocked"].includes(promotionState) ||
+    ![
+      "existing_account_login_required",
+      "account_activation_available",
+      "already_authenticated",
+      "blocked",
+    ].includes(accountHandoff)
   ) {
     return {
       ok: false,
@@ -232,6 +264,11 @@ export async function finalizeSignupSigning(input: {
   }
   return {
     ok: true,
-    value: { safeReference, status: "pending_verification" },
+    value: {
+      safeReference,
+      status: "submitted_for_review",
+      promotionState: promotionState as "pending" | "promoted" | "blocked",
+      accountHandoff: accountHandoff as SignupAccountHandoff,
+    },
   };
 }

@@ -208,9 +208,49 @@ Signed-intake and promotion lifecycle:
 
 - Collecting pre-auth quarantine, `typed_name_otp_v1`, immutable signing finalization, finalized server locks, safe receipt and server-authoritative same-tab recovery are CURRENT PROVEN locally as bounded source/runtime proofs.
 - `typed_name_otp_v1` proves signing intent plus control of the used email channel; the former separate email-verification promotion trigger is `SUPERSEDED` and must not be rebuilt without a new hard requirement.
-- 09C1A database/RPC promotion into `app_cases`-owned state is CURRENT PROVEN — LOCAL ONLY: one service-only atomic/idempotent promotion, immutable provenance, internal lifecycle, asserted party roles, declared location observations and non-accepted evidence metadata. Storage preparation/copy, an Edge caller, Auth invitation and dashboard cutover remain TARGET.
-- CURRENT database truth after signing is `submitted_for_review`: finalized/locked and waiting for ENVAL internal handling. The unchanged 09B2 frontend temporarily receives the legacy `pending_verification` response discriminator until its separately authorized cutover; neither value is formal NEa inboekverificatie.
-- Current authenticated dashboard/document behavior remains dossier-shaped until the separately proven case-owned promotion/Auth/dashboard cutover is complete.
+- 09C1A/09C1B/09C1C signed-intake convergence is CURRENT PROVEN — LOCAL ONLY: atomic/idempotent `app_cases` promotion, server-owned finalize/status orchestration, receipt v2 with safe presentation state, verified Supabase Auth binding to the existing promoted customer/case, and a customer-safe case-owned dashboard projection. This flow creates no `app_customer_dossiers` row.
+- 09C1C-R2 adds on-demand compatibility convergence for one uniquely Auth-bound
+  existing customer: a missing declared party profile is appended from the new
+  immutable signed intake inside the promotion transaction. This is never an
+  e-mail-only merge, never overwrites current profile truth, and never marks
+  identity, organization or representation authority verified.
+- 09C1C-R3 introduced browser Auth boundary
+  `auth_bootstrap_browser_v1`; 09C1C-R5 supersedes that browser schema with
+  `auth_bootstrap_browser_v2`. Edge still hides internal v4/v5 selection, while
+  the strict browser contract now distinguishes `bound`,
+  `unbound_no_cases` and real-conflict `blocked` states.
+- A verified Supabase Auth account may exist without an ENVAL customer or case.
+  `unbound_no_cases` opens a zero-case portal and creates no customer,
+  identity binding, case, party, mandate, evidence or legal acceptance.
+  `Nieuwe aanvraag` reuses canonical `/aanmelden`; authenticated e-mail is
+  server-derived and signing plus `typed_name_otp_v1` remain mandatory.
+- 09C1C-R5-R1 stores one immutable intake-specific verified Auth anchor at
+  authenticated intake start without persisting the bearer or raw e-mail.
+  The first signed zero-case application creates/binds exactly one compatible
+  customer identity and one case inside the promotion transaction. A binding
+  failure rolls those business writes back without invalidating signing;
+  `promoted` plus `already_authenticated` routes directly to `/dashboard`.
+- 09C1C-R6 keeps Auth principal, customer/service context, party, case and
+  representation authority as separate roots. One verified Auth principal may
+  have explicit server-owned access to multiple separate Particulier,
+  Zakelijk and VvE customer contexts and their cases; account type remains
+  context-scoped. Access is backed only by a bound identity or immutable
+  signed-promotion lineage, never by e-mail, address, MID or safe reference.
+  Zakelijk/VvE access does not complete authority review. After authenticated
+  promotion, the current principal's dashboard/bootstrap cache is invalidated
+  before navigation so the first dashboard read uses current server truth.
+- 09C1C-R4 preserves signed customer-declared charger fields, exact signed
+  charger/location linkage and document classification in immutable case-owned
+  review-input records. Dashboard titles use source-authored document
+  vocabulary and opaque charger/evidence references; no display label,
+  filename, MID, hash or storage path is UI identity. Nothing in this parity
+  layer is accepted charger, location, MID, conformity, evidence or eligibility
+  truth.
+- Account and case remain separate roots: one safely resolved account may own
+  multiple preserved cases, and every new signed intake creates exactly one new
+  `app_cases` root rather than merging an existing case.
+- The single active post-signing customer status is `submitted_for_review`: finalized/locked and waiting for ENVAL internal review. Customer copy is `Ondertekend en ingediend` / `In behandeling`; it is not formal NEa inboekverificatie.
+- Signing OTP, safe reference and receipt grant no Auth, promotion or dashboard authority. Production legal/OTP/Auth, operations review, external verifier, remote apply/deploy and regulatory booking remain outside CURRENT PROVEN.
 
 ## Source-Of-Truth Order
 

@@ -1,13 +1,21 @@
 export const SIGNUP_SUBMISSION_RECEIPT_SCHEMA_VERSION =
-  "signup-submission-receipt-v1" as const;
+  "signup-submission-receipt-v3" as const;
 
 export type SignupSubmissionReceipt = {
   schemaVersion: typeof SIGNUP_SUBMISSION_RECEIPT_SCHEMA_VERSION;
   safeReference: string;
-  status: "pending_verification";
+  status: "submitted_for_review";
+  promotionState: "pending" | "promoted" | "blocked";
+  accountHandoff:
+    | "existing_account_login_required"
+    | "account_activation_available"
+    | "already_authenticated"
+    | "blocked";
 };
 
-const STORAGE_KEY = "enval.signup.submission-receipt.v1";
+const STORAGE_KEY = "enval.signup.submission-receipt.v3";
+const LEGACY_V2_STORAGE_KEY = "enval.signup.submission-receipt.v2";
+const LEGACY_STORAGE_KEY = "enval.signup.submission-receipt.v1";
 const SAFE_REFERENCE = /^SIG-[A-F0-9]{12}$/;
 
 function sessionStorageOrNull(): Storage | null {
@@ -23,9 +31,18 @@ function parseReceipt(value: unknown): SignupSubmissionReceipt | null {
   const candidate = value as Record<string, unknown>;
   if (
     Object.keys(candidate).sort().join("|") !==
-      "safeReference|schemaVersion|status" ||
+      "accountHandoff|promotionState|safeReference|schemaVersion|status" ||
     candidate.schemaVersion !== SIGNUP_SUBMISSION_RECEIPT_SCHEMA_VERSION ||
-    candidate.status !== "pending_verification" ||
+    candidate.status !== "submitted_for_review" ||
+    !["pending", "promoted", "blocked"].includes(
+      String(candidate.promotionState || ""),
+    ) ||
+    ![
+      "existing_account_login_required",
+      "account_activation_available",
+      "already_authenticated",
+      "blocked",
+    ].includes(String(candidate.accountHandoff || "")) ||
     typeof candidate.safeReference !== "string" ||
     !SAFE_REFERENCE.test(candidate.safeReference)
   ) return null;
@@ -36,6 +53,8 @@ export function readSignupSubmissionReceipt(): SignupSubmissionReceipt | null {
   const storage = sessionStorageOrNull();
   if (!storage) return null;
   try {
+    storage.removeItem(LEGACY_STORAGE_KEY);
+    storage.removeItem(LEGACY_V2_STORAGE_KEY);
     const receipt = parseReceipt(
       JSON.parse(storage.getItem(STORAGE_KEY) || "null"),
     );
@@ -48,17 +67,24 @@ export function readSignupSubmissionReceipt(): SignupSubmissionReceipt | null {
 }
 
 export function clearSignupSubmissionReceipt(): void {
-  sessionStorageOrNull()?.removeItem(STORAGE_KEY);
+  const storage = sessionStorageOrNull();
+  storage?.removeItem(STORAGE_KEY);
+  storage?.removeItem(LEGACY_V2_STORAGE_KEY);
+  storage?.removeItem(LEGACY_STORAGE_KEY);
 }
 
 export function writeSignupSubmissionReceipt(input: {
   safeReference: string;
-  status: "pending_verification";
+  status: "submitted_for_review";
+  promotionState: "pending" | "promoted" | "blocked";
+  accountHandoff: SignupSubmissionReceipt["accountHandoff"];
 }): SignupSubmissionReceipt | null {
   const receipt = parseReceipt({
     schemaVersion: SIGNUP_SUBMISSION_RECEIPT_SCHEMA_VERSION,
     safeReference: input.safeReference,
     status: input.status,
+    promotionState: input.promotionState,
+    accountHandoff: input.accountHandoff,
   });
   if (!receipt) return null;
   try {

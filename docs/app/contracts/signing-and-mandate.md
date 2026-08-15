@@ -1,6 +1,6 @@
 # Signing And Mandate Contract
 
-Status: MIXED — `typed_name_otp_v1` SIGNING PERSISTENCE CURRENT PROVEN LOCALLY; PRODUCTION LEGAL/OTP AND 09C PROMOTION NOT CURRENT
+Status: MIXED — `typed_name_otp_v1` SIGNING AND 09C1A/B/C POST-SIGNING HANDOFF CURRENT PROVEN LOCALLY; PRODUCTION LEGAL/OTP NOT CURRENT
 
 ## Bounded 09A decision
 
@@ -129,12 +129,23 @@ production behavior is approved by 09A.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+## 09C1C-R1 post-signing account guidance
+
+CURRENT PROVEN — LOCAL ONLY. Only after the signing challenge is delivered,
+consumed and bound to immutable finalization may the server project whether
+the controlled e-mail should log in, activate an account, continue directly
+with an already verified session or stop on ambiguity. Collecting/challenge
+responses expose no account-existence signal. This guidance grants no customer,
+case, mandate or representation authority and is presentation-cached only.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## 09B2C signed submission receipt
 
 The atomic server finalization and immutable records remain the only core
-truth. A successful `pending_verification` response may create one same-tab
-presentation receipt with schema `signup-submission-receipt-v1`, the safe
-public `SIG-...` reference and status only. The receipt grants no capability
+truth. A successful `submitted_for_review` response may create one same-tab
+presentation receipt with schema `signup-submission-receipt-v2`, the safe
+public `SIG-...` reference, status and safe promotion presentation state only. The receipt grants no capability
 and cannot authorize intake, upload, signing, verification or dashboard work.
 
 On refresh, the existing scoped intake session calls the existing signing
@@ -148,7 +159,7 @@ idempotency key, request ID, OTP/challenge, e-mail, signer/party data,
 EAN/address, document data, legal/snapshot hash or canonical snapshot may
 enter the receipt cache.
 
-`app_signup_signing_status_v1` is service-role-only and requires both the
+`app_signup_signing_status_v2` is service-role-only and requires both the
 intake UUID and hash of the existing `intake_manage` ownership capability. It
 does not support lookup by safe reference. Finalized status is returned only
 when the intake, consumed challenge/capability, one snapshot, three legal
@@ -174,16 +185,17 @@ account-access boundary and signing OTP creates no Auth session.
 
 CURRENT database truth is `submitted_for_review`: finalized, locked and awaiting
 ENVAL internal handling. 09C1A migrated old stored rows and all new database
-writes; the unchanged 09B2 client/receipt temporarily retains the legacy
-`pending_verification` response discriminator until its own cutover. Customer
+writes; 09C1C removes the temporary frontend discriminator and versions the
+presentation receipt instead of silently changing v1. Customer
 copy remains `Ondertekend en ingediend`; external verifier states remain in a
 separate future bounded context.
 
 The exact atomic case-owned promotion and evidence/Auth/dashboard boundaries
 are canonical in `intake-verification-promotion.md`. Signing snapshots, legal
 acceptances, mandate and signature evidence are linked by the CURRENT local
-09C1A service-only promotion RPC and never rewritten or duplicated. Storage,
-Edge, Auth and dashboard integration remain TARGET.
+09C1A service-only promotion RPC and never rewritten or duplicated. 09C1B
+Storage/Edge orchestration and 09C1C Auth/dashboard handoff are CURRENT PROVEN
+locally; production configuration, review and external verification remain TARGET.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 

@@ -27,7 +27,6 @@ function normalizePath(pathname: string) {
 
 const routes = {
   "/": HomePage,
-  "/aanmelden": SignupPage,
   "/upload": UploadPage,
   "/ere": EreInfoPage,
   "/contact": ContactPage,
@@ -80,6 +79,16 @@ export function App() {
       <Suspense fallback={<RouteLoading />}>
         <AuthProvider>
           <DashboardPage navigate={navigate} currentPath={path} />
+        </AuthProvider>
+      </Suspense>
+    );
+  }
+
+  if (path === "/aanmelden") {
+    return (
+      <Suspense fallback={<RouteLoading />}>
+        <AuthProvider>
+          <SignupPage navigate={navigate} currentPath={path} />
         </AuthProvider>
       </Suspense>
     );

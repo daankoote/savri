@@ -5,6 +5,7 @@ const errorMessages: Record<AuthSafeErrorCode, string> = {
   invalid_credentials: "Controleer uw e-mailadres en wachtwoord.",
   password_mismatch: "De wachtwoorden komen niet overeen.",
   password_too_short: "Gebruik minimaal 8 tekens.",
+  account_already_exists: "Dit account bestaat al. Log in om verder te gaan.",
   auth_email_not_verified: "Controleer eerst uw e-mail om het account te bevestigen.",
   customer_identity_not_found: "We konden geen passende ENVAL-aanmelding koppelen. Neem contact op met ENVAL.",
   customer_identity_already_bound: "Dit account vraagt om ondersteuning. Neem contact op met ENVAL.",
@@ -20,8 +21,20 @@ export function safeAuthError(code: AuthSafeErrorCode): AuthSafeError {
   return { code, message: errorMessages[code] };
 }
 
-export function mapSupabaseAuthError(message: string): AuthSafeError {
+export function mapSupabaseAuthError(
+  message: string,
+  code = "",
+): AuthSafeError {
   const normalized = message.toLowerCase();
+  const normalizedCode = code.toLowerCase();
+
+  if (
+    normalizedCode === "user_already_exists" ||
+    normalized.includes("already registered") ||
+    normalized.includes("already exists")
+  ) {
+    return safeAuthError("account_already_exists");
+  }
 
   if (
     normalized.includes("invalid login") ||
