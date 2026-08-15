@@ -1,0 +1,30 @@
+# ENVAL project-local defaults. Effective loading requires a fresh trusted session.
+approval_policy = "on-request"
+default_permissions = "enval-dev"
+
+[features]
+network_proxy = true
+
+[permissions.enval-dev]
+description = "ENVAL local development: project writes, temp and loopback; no public network or Git mutation."
+extends = ":workspace"
+
+[permissions.enval-dev.filesystem.":workspace_roots"]
+".git" = "read"
+".codex" = "read"
+
+[permissions.enval-dev.network]
+enabled = true
+allow_local_binding = false
+allow_upstream_proxy = false
+dangerously_allow_non_loopback_proxy = false
+dangerously_allow_all_unix_sockets = false
+
+[permissions.enval-dev.network.domains]
+"localhost" = "allow"
+"127.0.0.1" = "allow"
+
+[shell_environment_policy]
+inherit = "core"
+experimental_use_profile = false
+ignore_default_excludes = false

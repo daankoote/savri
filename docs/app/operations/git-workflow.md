@@ -6,7 +6,12 @@ Status: CURRENT app workflow.
 
 Active development branch: `main`.
 
-Do not switch, merge, rebase, cherry-pick, push, deploy, or amend unless the current task explicitly asks for it.
+Codex may inspect Git read-only with `status`, `diff`, `diff --stat`,
+`diff --check`, `log`, `show`, `branch`, and `rev-parse`.
+
+Codex does not autonomously stage, commit, push, merge, rebase, cherry-pick,
+revert, reset, clean, stash, amend, deploy, or otherwise mutate Git history.
+Daan owns staging decisions, commits, pushes, and consequential history changes.
 
 ## Before Edits
 
@@ -36,17 +41,19 @@ Confirm:
 
 `supabase/migrations/` may be ignored locally.
 
-When a task explicitly asks to stage one migration under an ignored path, use:
+When Daan chooses to stage one migration under an ignored path, Daan may use:
 
 ```bash
 git add -f path/to/intended_migration.sql
 ```
 
-Only add the intended migration. Do not change `.gitignore` for that reason.
+Only Daan stages the intended migration. Codex does not run this command and does
+not change `.gitignore` for that reason.
 
 ## Commits
 
-Commit only after requested validation passes.
+Daan commits only after requested validation passes. Codex leaves the worktree
+unstaged and reports the validation and diff evidence.
 
 Before commit:
 
@@ -65,4 +72,5 @@ git status --short --untracked-files=all
 
 ## Push And Deploy
 
-No push or deploy unless explicitly requested.
+Daan owns push. Deploy remains consequential and human-controlled; Codex does not
+push or deploy autonomously.
