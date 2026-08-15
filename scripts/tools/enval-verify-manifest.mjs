@@ -183,6 +183,28 @@ const CHECK_LIST = [
     expectedMarker: "CONTROL_PLANE_FOUNDATION_Q01_Q18=PASS",
   }),
   check({
+    id: "tenant-resolution-composition-pure",
+    argv: [
+      "deno",
+      "run",
+      "--cached-only",
+      "--allow-read",
+      "scripts/proofs/tenant-resolution-composition.proof.ts",
+    ],
+    domain: "provider-neutral-tenant-resolution",
+    applicablePaths: [
+      "platform/runtime/tenant-resolution/tenant_resolution.ts",
+      "platform/runtime/tenant-resolution/tenant_resolution_composition.ts",
+      "platform/runtime/tenant-resolution/adapters/platform_control_plane_v1.ts",
+      "platform/runtime/tenant-resolution/adapters/static_single_tenant_v1.ts",
+      "scripts/proofs/tenant-resolution-composition.proof.ts",
+    ],
+    safety: SAFETY.SAFE_PURE,
+    minimumMode: "TARGETED",
+    expectedDurationMs: 1_000,
+    expectedMarker: "TENANT_RESOLUTION_COMPOSITION_Q01_Q14=PASS",
+  }),
+  check({
     id: "app-typecheck-build",
     argv: ["npm", "--prefix", "app", "run", "build"],
     domain: "frontend-typecheck-build",
@@ -413,6 +435,23 @@ export const GLOBAL_CHECKS = Object.freeze([
 ]);
 
 export const PATH_RULES = Object.freeze([
+  Object.freeze({
+    id: "tenant-resolution-composition",
+    match: Object.freeze({
+      type: "oneOf",
+      value: Object.freeze([
+        "platform/runtime/tenant-resolution/tenant_resolution.ts",
+        "platform/runtime/tenant-resolution/tenant_resolution_composition.ts",
+        "platform/runtime/tenant-resolution/adapters/platform_control_plane_v1.ts",
+        "platform/runtime/tenant-resolution/adapters/static_single_tenant_v1.ts",
+        "scripts/proofs/tenant-resolution-composition.proof.ts",
+      ]),
+    }),
+    checks: Object.freeze([
+      "deno-check-changed",
+      "tenant-resolution-composition-pure",
+    ]),
+  }),
   Object.freeze({
     id: "control-plane-foundation-proof",
     match: Object.freeze({

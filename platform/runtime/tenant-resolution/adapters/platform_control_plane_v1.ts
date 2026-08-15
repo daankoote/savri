@@ -1,10 +1,12 @@
-import type {
-  DeploymentEnvironment,
-  ResolutionResult,
-  ResolvedDataPlaneLocation,
-  ResolvedTenantReference,
-  TenantResolutionAdapter,
-  TrustedTenantRoutingContext,
+import {
+  type DeploymentEnvironment,
+  isValidResolvedDataPlaneLocation,
+  isValidTenantReference,
+  type ResolutionResult,
+  type ResolvedDataPlaneLocation,
+  type ResolvedTenantReference,
+  type TenantResolutionAdapter,
+  type TrustedTenantRoutingContext,
 } from "../tenant_resolution.ts";
 
 export type PlatformRoutingRecord = Readonly<{
@@ -36,14 +38,6 @@ export interface PlatformControlPlaneReader {
 }
 
 const HOST_PATTERN = /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/;
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-const TOKEN_PATTERN = /^[a-z][a-z0-9_-]{1,63}$/;
-const DEPLOYMENT_OWNERSHIP = new Set([
-  "ENVAL_MANAGED_DEDICATED",
-  "CUSTOMER_MANAGED_SELF_HOSTED",
-]);
-
 export function normalizeTrustedHost(value: string): string | null {
   const normalized = String(value ?? "").trim().toLowerCase().replace(
     /\.$/,
@@ -63,19 +57,16 @@ function validLocator(
     | "ENVAL_MANAGED_DEDICATED"
     | "CUSTOMER_MANAGED_SELF_HOSTED";
 } {
-  return UUID_PATTERN.test(record.locatorId) &&
-    UUID_PATTERN.test(record.tenantId) &&
-    UUID_PATTERN.test(record.secretReferenceId) &&
-    DEPLOYMENT_OWNERSHIP.has(record.deploymentOwnership) &&
-    TOKEN_PATTERN.test(record.environment) &&
-    TOKEN_PATTERN.test(record.providerType) &&
-    record.dataPlaneReference.trim() === record.dataPlaneReference &&
-    record.dataPlaneReference.length > 0 &&
-    record.dataPlaneReference.length <= 200 &&
-    record.applicationRouteReference.trim() ===
-      record.applicationRouteReference &&
-    record.applicationRouteReference.length > 0 &&
-    record.applicationRouteReference.length <= 500;
+  return isValidTenantReference(record.tenantId) &&
+    isValidResolvedDataPlaneLocation({
+      locatorId: record.locatorId,
+      deploymentOwnership: record.deploymentOwnership,
+      environment: record.environment,
+      providerType: record.providerType,
+      dataPlaneReference: record.dataPlaneReference,
+      applicationRouteReference: record.applicationRouteReference,
+      secretReferenceId: record.secretReferenceId,
+    });
 }
 
 export class PlatformControlPlaneV1Adapter implements TenantResolutionAdapter {
@@ -109,7 +100,7 @@ export class PlatformControlPlaneV1Adapter implements TenantResolutionAdapter {
     if (activeRoutes[0].tenantLifecycleStatus !== "active") {
       return { ok: false, code: "inactive_tenant" };
     }
-    if (!UUID_PATTERN.test(activeRoutes[0].tenantId)) {
+    if (!isValidTenantReference(activeRoutes[0].tenantId)) {
       return { ok: false, code: "ambiguous_routing_identity" };
     }
     return {
