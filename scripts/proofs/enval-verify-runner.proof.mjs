@@ -10,9 +10,17 @@ import {
   ROOT,
   runChecks,
   statusExitCode,
+  validateManifest,
   verify,
 } from "../tools/enval-verify.mjs";
 import { SAFETY, VERIFY_MANIFEST } from "../tools/enval-verify-manifest.mjs";
+import {
+  parseCliArgs,
+  redactSecrets,
+  resolveLocalConnection,
+  runReadOnlySqlProof,
+  validateReadOnlySql,
+} from "../tools/enval-readonly-sql.mjs";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -33,6 +41,20 @@ function hash(path) {
     .digest("hex");
 }
 
+function hashText(value) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+assert(validateManifest().length === 0, "manifest_metadata_invalid");
+for (const id of ["deno-check-changed", "edge-static-check"]) {
+  assert(
+    VERIFY_MANIFEST.commands[id].argv.slice(0, 2).join(" ") ===
+      "deno check" &&
+      !VERIFY_MANIFEST.commands[id].argv.includes("--cached-only"),
+    `deno_check_command_invalid:${id}`,
+  );
+}
+
 const currentPaths = [
   "scripts/tools/enval-verify.mjs",
   "scripts/tools/enval-verify-manifest.mjs",
@@ -48,6 +70,25 @@ assert(
     quick.selected.every((check) => check.safety === SAFETY.SAFE_PURE) &&
     quick.gated.length === 0 && quick.errors.length === 0,
   "quick_selected_non_safe_or_unexpected_checks",
+);
+
+const localService = buildPlan({
+  paths: [
+    ...currentPaths,
+    "scripts/tools/enval-readonly-sql.mjs",
+    "scripts/proofs/enval-local-readonly-catalog.proof.sql",
+  ],
+  mode: "LOCAL_SERVICE",
+});
+assert(
+  localService.selected.filter((check) =>
+    check.commandId === "local-readonly-catalog"
+  ).length === 1 &&
+    localService.selected.every((check) =>
+      [SAFETY.SAFE_PURE, SAFETY.SAFE_LOCAL_READ].includes(check.safety)
+    ) &&
+    !localService.selected.some((check) => check.mutatesState),
+  "local_service_selected_unsafe_check",
 );
 
 const deduplicated = buildPlan({
@@ -72,13 +113,19 @@ const gated = buildPlan({
     "scripts/proofs/in-place-baseline-phase0-proof.mjs",
     "scripts/proofs/postgrest-authorized-health.proof.mjs",
     "supabase/baseline-proposals/wave-1/001_app_identity_audit_idempotency.sql",
+    "scripts/proofs/local-mutation-fixture.sql",
   ],
   mode: "TARGETED",
 });
 assert(
-  gated.gated.some((check) => check.safety === SAFETY.REMOTE) &&
-    gated.gated.some((check) => check.safety === SAFETY.LOCAL_MUTATING),
-  "remote_or_mutating_check_not_gated",
+  gated.gated.some((check) => check.safety === SAFETY.REMOTE_GATED) &&
+    gated.gated.some((check) =>
+      check.safety === SAFETY.DESTRUCTIVE_GATED
+    ) &&
+    gated.gated.some((check) =>
+      check.safety === SAFETY.LOCAL_MUTATING_GATED
+    ),
+  "remote_destructive_or_mutating_check_not_gated",
 );
 const executed = [];
 runChecks(gated, {
@@ -94,14 +141,148 @@ assert(
   "gated_check_reached_executor",
 );
 
+const integration = buildPlan({
+  paths: [
+    "app/src/features/signup/SignupPageShell.tsx",
+    "app/src/features/signup/SignupFlowNavigation.tsx",
+  ],
+  mode: "INTEGRATION",
+});
+assert(
+  integration.selected.some((check) => check.id === "local-readonly-catalog") &&
+    integration.selected.some((check) => check.id === "app-typecheck-build") &&
+    integration.selected.some((check) =>
+      check.id === "git-diff-cached-check"
+    ) &&
+    integration.selected.some((check) => check.id === "edge-static-check") &&
+    integration.selected.filter((check) =>
+      check.commandId === "signup-journey-pure"
+    ).length === 1 &&
+    new Set(integration.selected.map((check) => check.dedupeKey)).size ===
+      integration.selected.length,
+  "integration_breadth_or_deduplication_failed",
+);
+
+const release = buildPlan({ paths: [], mode: "RELEASE" });
+const releaseExecuted = [];
+runChecks(release, {
+  executor(check) {
+    releaseExecuted.push(check.id);
+    return {
+      exitCode: 0,
+      durationMs: 0,
+      stdout: check.expectedMarker ?? "",
+      stderr: "",
+    };
+  },
+});
+assert(
+  release.gated.some((check) =>
+    check.safety === SAFETY.LOCAL_MUTATING_GATED
+  ) &&
+    release.gated.some((check) =>
+      check.safety === SAFETY.DESTRUCTIVE_GATED
+    ) &&
+    release.gated.some((check) => check.safety === SAFETY.REMOTE_GATED) &&
+    release.gated.filter((check) => check.requiredForRelease).length === 3 &&
+    releaseExecuted.every((id) =>
+      !release.gated.some((check) => check.id === id)
+    ),
+  "release_gated_check_executed_or_missing",
+);
+const releaseEvidence = verify({
+  mode: "RELEASE",
+  executor(check) {
+    return {
+      exitCode: 0,
+      durationMs: 0,
+      stdout: check.expectedMarker ?? "",
+      stderr: "",
+    };
+  },
+});
+assert(
+  releaseEvidence.status === "GATED_REQUIRED" &&
+    releaseEvidence.preCommitGate === "GATED_REQUIRED" &&
+    statusExitCode(releaseEvidence) === 3,
+  "release_silently_passed_required_gates",
+);
+
+const sqlFixture = readFileSync(
+  resolve(ROOT, "scripts/proofs/enval-local-readonly-catalog.proof.sql"),
+  "utf8",
+);
+assert(validateReadOnlySql(sqlFixture), "readonly_sql_fixture_rejected");
+const connection = resolveLocalConnection(
+  readFileSync(resolve(ROOT, "supabase/config.toml"), "utf8"),
+);
+assert(
+  connection.projectId === "enval" &&
+    connection.host === "127.0.0.1" && connection.port === 54322,
+  "local_sql_connection_not_enval_loopback",
+);
+let remoteArgumentRejected = false;
+try {
+  parseCliArgs(["--database-url", "postgresql://remote.example/postgres"]);
+} catch {
+  remoteArgumentRejected = true;
+}
+assert(remoteArgumentRejected, "remote_database_argument_accepted");
+const secretDiagnostic = redactSecrets(
+  "DATABASE_URL=postgresql://user:secret@remote/db PGPASSWORD=secret",
+  ["secret"],
+);
+assert(
+  !secretDiagnostic.includes("postgresql://") &&
+    !secretDiagnostic.includes("secret"),
+  "sql_diagnostic_exposed_credentials",
+);
+const mutationSql =
+  "BEGIN TRANSACTION READ ONLY; DELETE FROM public.fixture; ROLLBACK;";
+let mutationExecutorCalled = false;
+let mutationRejected = false;
+try {
+  runReadOnlySqlProof({
+    proofId: "mutation-fixture",
+    definitions: {
+      "mutation-fixture": {
+        path: "scripts/proofs/enval-local-readonly-catalog.proof.sql",
+        sha256: hashText(mutationSql),
+        marker: "NEVER",
+      },
+    },
+    readFile(path) {
+      return String(path).endsWith(".sql") ? mutationSql : "";
+    },
+    executor() {
+      mutationExecutorCalled = true;
+      return { status: 0, stdout: "NEVER", stderr: "" };
+    },
+  });
+} catch (error) {
+  mutationRejected = String(error).includes("sql_mutation_keyword_rejected");
+}
+assert(
+  mutationRejected && !mutationExecutorCalled,
+  "sql_mutation_reached_executor",
+);
+
+const realSqlProof = runReadOnlySqlProof({
+  proofId: "enval-local-readonly-catalog",
+});
+assert(
+  realSqlProof.markerCount === 1 &&
+    realSqlProof.connection.host === "127.0.0.1",
+  "real_local_readonly_sql_proof_failed",
+);
+
 const unknownManifest = {
   ...VERIFY_MANIFEST,
-  always: [],
+  globalChecks: [],
   pathRules: [{
     id: "unknown-check-fixture",
     match: { type: "exact", value: "fixture.unknown" },
-    quick: ["not-registered"],
-    targeted: ["not-registered"],
+    checks: ["not-registered"],
   }],
 };
 const unknownCheck = buildPlan({
@@ -166,6 +347,7 @@ const boundedFailureOutput = formatEvidence({
   migrationBaselineUnresolved: [],
   migrationBaselineExceptions: [],
   migrationGitInclusionRequired: [],
+  preCommitGate: "NOT_APPLICABLE",
   durationMs: 2,
   checks: [
     { id: "earlier-pass", status: "PASS", durationMs: 1 },
@@ -173,6 +355,7 @@ const boundedFailureOutput = formatEvidence({
   ],
   planErrors: [],
   migrationOmissions: [],
+  requiredReleaseGates: [],
 });
 assert(
   boundedFailureOutput.includes("first-failure | FAIL | exit=23") &&
@@ -205,14 +388,15 @@ for (
     "SKIPPED_GATED=",
     "UNCLASSIFIED_PATHS=",
     "MIGRATION_OMISSION=",
-    "DURATION_MS=",
+    "PRE_COMMIT_GATE=",
+    "TOTAL_DURATION_MS=",
   ]
 ) {
   assert(compactOutput.includes(field), `compact_field_missing:${field}`);
 }
 assert(
   !compactOutput.includes("green-log-that-must-not-appear") &&
-    compactOutput.split("\n").length < 30,
+    compactOutput.split("\n").length < 40,
   "green_output_not_compact",
 );
 assert(
@@ -248,10 +432,7 @@ assert(
   baselineBefore.exceptions.length === 2 &&
     baselineBefore.unresolved.length === 0 &&
     baselineBefore.omissions.length === 0 &&
-    baselineBefore.gitInclusionRequired.some((item) =>
-      item.path ===
-        "supabase/migrations/20260305_0001_rls_dossier_sessions.sql"
-    ),
+    baselineBefore.gitInclusionRequired.length === 0,
   "migration_baseline_classification_changed",
 );
 assert(
@@ -261,7 +442,7 @@ assert(
     "--ignored",
     "--",
     "supabase/migrations/20260305_0001_rls_dossier_sessions.sql",
-  ]).startsWith("?? ") &&
+  ]) === "" &&
     Object.keys(VERIFY_MANIFEST.migrationBaseline.exceptions).every((path) =>
       git(["status", "--short", "--ignored", "--", path]).startsWith("!! ")
     ),

@@ -5,7 +5,11 @@ import { readFileSync } from "node:fs";
 import { basename, extname, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { SAFETY, VERIFY_MANIFEST } from "./enval-verify-manifest.mjs";
+import {
+  MODES,
+  SAFETY,
+  VERIFY_MANIFEST,
+} from "./enval-verify-manifest.mjs";
 
 const ROOT = resolve(fileURLToPath(new URL("../../", import.meta.url)));
 const MAX_DIAGNOSTIC_CHARS = 4_000;
@@ -75,10 +79,72 @@ function materializeCommand(commandId, command, path) {
   return {
     id: command.perPath ? `${commandId}:${path}` : commandId,
     commandId,
+    dedupeKey: command.dedupeKey.replaceAll("{path}", path ?? ""),
     path: command.perPath ? path : null,
     safety: command.safety,
     argv,
+    runner: command.runner,
+    domain: command.domain,
+    minimumMode: command.minimumMode,
+    serviceRequirements: command.serviceRequirements,
+    mutatesState: command.mutatesState,
+    destructive: command.destructive,
+    remote: command.remote,
+    expectedDurationMs: command.expectedDurationMs,
+    expectedMarker: command.expectedMarker,
+    requiredForRelease: command.requiredForRelease,
   };
+}
+
+function modeRank(mode, modes = MODES) {
+  return modes.indexOf(mode);
+}
+
+function executableSafety(mode, safety, modes = MODES) {
+  if (safety === SAFETY.SAFE_PURE) return true;
+  if (safety === SAFETY.SAFE_LOCAL_READ) {
+    return modeRank(mode, modes) >= modeRank("LOCAL_SERVICE", modes);
+  }
+  if (safety === SAFETY.SAFE_GENERATED_WRITE) {
+    return modeRank(mode, modes) >= modeRank("INTEGRATION", modes);
+  }
+  return false;
+}
+
+export function validateManifest(manifest = VERIFY_MANIFEST) {
+  const errors = [];
+  const requiredFields = [
+    "id",
+    "runner",
+    "domain",
+    "applicablePaths",
+    "safety",
+    "minimumMode",
+    "serviceRequirements",
+    "mutatesState",
+    "destructive",
+    "remote",
+    "expectedDurationMs",
+    "dedupeKey",
+  ];
+  for (const [id, command] of Object.entries(manifest.commands)) {
+    if (command.id !== id) errors.push(`manifest_id_mismatch:${id}`);
+    for (const field of requiredFields) {
+      if (command[field] === undefined) {
+        errors.push(`manifest_field_missing:${id}:${field}`);
+      }
+    }
+    if (!manifest.modes.includes(command.minimumMode)) {
+      errors.push(`manifest_mode_invalid:${id}:${command.minimumMode}`);
+    }
+    if (command.remote && command.safety !== SAFETY.REMOTE_GATED) {
+      errors.push(`manifest_remote_not_gated:${id}`);
+    }
+    if (command.destructive && command.safety !== SAFETY.DESTRUCTIVE_GATED) {
+      errors.push(`manifest_destructive_not_gated:${id}`);
+    }
+  }
+  return [...new Set(errors)].sort();
 }
 
 export function buildPlan({
@@ -86,38 +152,49 @@ export function buildPlan({
   mode,
   manifest = VERIFY_MANIFEST,
 }) {
-  if (!new Set(["QUICK", "TARGETED"]).has(mode)) {
+  if (!manifest.modes.includes(mode)) {
     throw new Error(`unsupported_mode:${mode}`);
   }
 
   const selected = new Map();
   const gated = new Map();
   const unclassifiedPaths = [];
-  const errors = [];
+  const errors = validateManifest(manifest);
 
-  const addCommand = (commandId, path = null) => {
+  const addCommand = (commandId, path = null, minimumMode = null) => {
     const command = manifest.commands[commandId];
     if (!command) {
       errors.push(`unknown_check:${commandId}${path ? `:${path}` : ""}`);
       return;
     }
+    const requiredMode = minimumMode &&
+        modeRank(minimumMode, manifest.modes) >
+          modeRank(command.minimumMode, manifest.modes)
+      ? minimumMode
+      : command.minimumMode;
+    if (
+      modeRank(mode, manifest.modes) < modeRank(requiredMode, manifest.modes)
+    ) return;
     const instance = materializeCommand(commandId, command, path);
     if (!instance) {
       errors.push(`invalid_check_template:${commandId}`);
       return;
     }
-    if (command.safety !== SAFETY.SAFE_PURE) {
-      gated.set(instance.id, instance);
+    if (!executableSafety(mode, command.safety, manifest.modes)) {
+      gated.set(instance.dedupeKey, instance);
       return;
     }
     if (!instance.argv?.length) {
       errors.push(`safe_check_has_no_command:${commandId}`);
       return;
     }
-    selected.set(instance.id, instance);
+    selected.set(instance.dedupeKey, instance);
   };
 
-  for (const commandId of manifest.always ?? []) addCommand(commandId);
+  for (const entry of manifest.globalChecks ?? []) {
+    if (typeof entry === "string") addCommand(entry);
+    else addCommand(entry.id, null, entry.minimumMode);
+  }
 
   for (const path of paths) {
     if (!isSafeRepoPath(path)) {
@@ -131,7 +208,8 @@ export function buildPlan({
       unclassifiedPaths.push(path);
       continue;
     }
-    const commandIds = mode === "QUICK" ? rule.quick : rule.targeted;
+    const commandIds = rule.checks ??
+      (mode === "QUICK" ? rule.quick : rule.targeted);
     if (!Array.isArray(commandIds)) {
       errors.push(`invalid_rule_commands:${rule.id}:${mode}`);
       continue;
@@ -280,6 +358,8 @@ export function computeDiffHash(paths, cwd = ROOT) {
 export function boundDiagnostic(value) {
   const lines = String(value ?? "")
     .replaceAll(ROOT, "<repo>")
+    .replace(/postgres(?:ql)?:\/\/[^\s'"<>]+/gi, "[REDACTED_DATABASE_URL]")
+    .replace(/\b(PGPASSWORD|DATABASE_URL|SUPABASE_SERVICE_ROLE_KEY|JWT|TOKEN)\s*=\s*[^\s]+/gi, "$1=[REDACTED]")
     .split(/\r?\n/)
     .slice(0, MAX_DIAGNOSTIC_LINES)
     .join("\n");
@@ -313,7 +393,7 @@ export function runChecks(plan, {
   const results = [];
   if (dryRun) return results;
   for (const check of plan.selected) {
-    if (check.safety !== SAFETY.SAFE_PURE || !check.argv?.length) {
+    if (!executableSafety(plan.mode, check.safety) || !check.argv?.length) {
       results.push({
         id: check.id,
         status: "FAIL",
@@ -324,15 +404,23 @@ export function runChecks(plan, {
       break;
     }
     const result = executor(check, cwd);
-    const passed = result.exitCode === 0;
+    const markerCount = check.expectedMarker
+      ? String(result.stdout ?? "").split(check.expectedMarker).length - 1
+      : null;
+    const passed = result.exitCode === 0 &&
+      (markerCount === null || markerCount > 0);
     results.push({
       id: check.id,
       status: passed ? "PASS" : "FAIL",
       exitCode: result.exitCode,
       durationMs: result.durationMs,
+      markerCount,
       diagnostic: passed
         ? ""
-        : boundDiagnostic(result.stderr || result.stdout || result.signal),
+        : boundDiagnostic(
+          result.stderr || result.stdout || result.signal ||
+            (markerCount === 0 ? "expected_marker_missing" : "check_failed"),
+        ),
     });
     if (!passed) break;
   }
@@ -344,7 +432,9 @@ function compactItems(items, formatter) {
 }
 
 export function statusExitCode(evidence) {
-  return evidence.status === "PASS" ? 0 : 1;
+  if (evidence.status === "PASS") return 0;
+  if (evidence.status === "GATED_REQUIRED") return 3;
+  return 1;
 }
 
 export function formatEvidence(evidence, { json = false } = {}) {
@@ -353,6 +443,8 @@ export function formatEvidence(evidence, { json = false } = {}) {
     `ENVAL_VERIFY_MODE=${evidence.mode}`,
     `ENVAL_VERIFY_STATUS=${evidence.status}`,
     `H3A_STATUS=${evidence.h3aStatus}`,
+    `MODE=${evidence.mode}`,
+    `PRE_COMMIT_GATE=${evidence.preCommitGate}`,
     `HEAD=${evidence.head}`,
     `DIFF_HASH=${evidence.diffHash}`,
     `SELECTED_CHECK_COUNT=${evidence.selectedCheckCount}`,
@@ -378,13 +470,17 @@ export function formatEvidence(evidence, { json = false } = {}) {
       (x) => `${x.path}:${x.reason}`,
     )}`,
     `DURATION_MS=${evidence.durationMs}`,
+    `TOTAL_DURATION_MS=${evidence.durationMs}`,
   ];
   const displayedChecks = evidence.status === "FAIL"
     ? evidence.checks.filter((check) => check.status === "FAIL")
     : evidence.checks;
   for (const check of displayedChecks) {
     if (check.status === "PASS") {
-      lines.push(`${check.id} | PASS | ${check.durationMs}ms`);
+      const markers = check.markerCount === null
+        ? ""
+        : ` | markers=${check.markerCount}`;
+      lines.push(`${check.id} | PASS | ${check.durationMs}ms${markers}`);
     } else {
       lines.push(`${check.id} | FAIL | exit=${check.exitCode}`);
       if (check.diagnostic) lines.push(check.diagnostic);
@@ -400,6 +496,9 @@ export function formatEvidence(evidence, { json = false } = {}) {
         (x) => `${x.path}:${x.reason}`,
       )
     }`);
+  }
+  if (evidence.requiredReleaseGates.length) {
+    lines.push(`GATED_REQUIRED=${evidence.requiredReleaseGates.join(",")}`);
   }
   return `${lines.join("\n")}\n`;
 }
@@ -419,8 +518,8 @@ function parseArgs(argv) {
       throw new Error(`unknown_argument:${argument}`);
     }
   }
-  if (!new Set(["QUICK", "TARGETED"]).has(parsed.mode)) {
-    throw new Error("--mode must be QUICK or TARGETED");
+  if (!MODES.includes(parsed.mode)) {
+    throw new Error(`--mode must be one of ${MODES.join(",")}`);
   }
   return parsed;
 }
@@ -441,11 +540,30 @@ export function verify({
   });
   const checks = runChecks(plan, { cwd, executor, dryRun });
   const failedChecks = checks.filter((check) => check.status === "FAIL");
+  const preCommitMigrationFailure =
+    modeRank(mode, manifest.modes) >= modeRank("INTEGRATION", manifest.modes) &&
+    migration.gitInclusionRequired.length > 0;
   const failed = plan.unclassifiedPaths.length > 0 || plan.errors.length > 0 ||
-    migration.omissions.length > 0 || failedChecks.length > 0;
+    migration.omissions.length > 0 || failedChecks.length > 0 ||
+    preCommitMigrationFailure;
+  const requiredReleaseGates = plan.gated
+    .filter((check) => check.requiredForRelease)
+    .map((check) => check.id)
+    .sort();
+  const status = failed
+    ? "FAIL"
+    : mode === "RELEASE" && requiredReleaseGates.length > 0
+    ? "GATED_REQUIRED"
+    : "PASS";
+  const preCommitGate = mode === "INTEGRATION"
+    ? status
+    : mode === "RELEASE"
+    ? status === "PASS" ? "PASS" : status
+    : "NOT_APPLICABLE";
   return {
     mode,
-    status: failed ? "FAIL" : "PASS",
+    status,
+    preCommitGate,
     h3aStatus: failed
       ? "FAIL"
       : migration.unresolved.length > 0
@@ -456,7 +574,8 @@ export function verify({
     selectedCheckCount: plan.selected.length,
     passed: checks.filter((check) => check.status === "PASS").length,
     failed: failedChecks.length + plan.unclassifiedPaths.length +
-      plan.errors.length + migration.omissions.length,
+      plan.errors.length + migration.omissions.length +
+      (preCommitMigrationFailure ? migration.gitInclusionRequired.length : 0),
     skippedGated: plan.gated.length,
     unclassifiedPaths: plan.unclassifiedPaths,
     migrationOmission: migration.omissions.length
@@ -470,6 +589,7 @@ export function verify({
     migrationBaselineExceptions: migration.exceptions,
     migrationGitInclusionRequired: migration.gitInclusionRequired,
     migrationOmissions: migration.omissions,
+    requiredReleaseGates,
     planErrors: plan.errors,
     checks,
     dryRun,
