@@ -20,6 +20,12 @@ It is not a second primary architecture canon and grants no implementation,
 database, Auth, Storage, migration, remote, deployment or production
 permission.
 
+The focused WL03 conceptual record, field-classification, routing,
+platform-access, deployment-state and readiness refinement is
+`docs/app/contracts/platform-control-plane.md`. That contract remains TARGET
+and NOT IMPLEMENTED; it does not widen this architecture or authorize runtime
+work.
+
 The existing `HYBRID PARALLEL REBUILD` decision concerns how ENVAL rebuilds its
 own application inside the current ENVAL project. It does not select a shared
 multi-tenant database. For white-label architecture, ordinary tenant truth is
@@ -343,5 +349,5 @@ Still DEFERRED / UNKNOWN:
   retention, correction and deletion; and
 - production availability, observability, incident and disaster-recovery SLOs.
 
-The next bounded implementation gate must select one responsibility only. WL02
-does not itself authorize WL03 or any runtime work.
+The next bounded implementation gate must select one responsibility only.
+Neither WL02 nor its WL03 domain refinement authorizes runtime work.
