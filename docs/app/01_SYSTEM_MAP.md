@@ -110,9 +110,9 @@ Rules:
 - The client does not poll, reload the page, or automatically retry blindly.
 - No account-type-specific upload transport exists.
 
-## Signed Intake And Target Promotion Path
+## Current Signed Intake And Promotion Path
 
-Status: SIGNED INTAKE CURRENT PROVEN LOCALLY; CASE PROMOTION TARGET / NOT IMPLEMENTED. See `docs/app/contracts/intake-verification-promotion.md`.
+Status: CURRENT PROVEN — LOCAL ONLY through 09C1C-R6 for signed intake, server-owned atomic/idempotent promotion into `app_cases`, Auth/account handoff, and the case-owned customer-safe dashboard foundation. Remote migration/deployment and production acceptance remain unproven. See `docs/app/contracts/intake-verification-promotion.md`.
 
 ```text
 public form and local parser
@@ -121,10 +121,11 @@ public form and local parser
 → typed-name + OTP email-control challenge
 → atomic signing finalization and locked receipt
 → server-only atomic promotion
-→ case-owned internal review
+→ `app_cases`-owned durable case and initial internal-review state
+→ Auth/account handoff and case-owned dashboard when applicable
 ```
 
-Alternative promotion result:
+Later internal-review/correction path (TARGET / not implemented):
 
 ```text
 internal review
@@ -140,7 +141,7 @@ Rules:
 - Promotion is server-only, atomic and idempotent; the receipt, safe reference, OTP and consumed management capability cannot authorize it.
 - Pre-auth quarantine upload must use a separate private capability lane, not authenticated `api-app-document-*`.
 - Parser/precheck may warn or prefill but may not approve evidence.
-- `app_cases` is the target owner; promotion must not create a parallel `app_customer_dossiers` core.
+- `app_cases` is the current promotion owner; promotion does not create a parallel `app_customer_dossiers` core.
 - Internal review and external inboekverificatie are separate concepts and statuses.
 - A successful promoted dashboard must not show a generic `Dossier indienen` button.
 
