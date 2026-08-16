@@ -292,6 +292,26 @@ const CHECK_LIST = [
     expectedMarker: "TENANT_RESOLUTION_COMPOSITION_Q01_Q14=PASS",
   }),
   check({
+    id: "presentation-brand-config-pure",
+    argv: [
+      "deno",
+      "run",
+      "--cached-only",
+      "--allow-read",
+      "scripts/proofs/presentation-brand-config.proof.ts",
+    ],
+    domain: "provider-neutral-presentation-brand",
+    applicablePaths: [
+      "platform/runtime/presentation/presentation_brand_config.ts",
+      "platform/runtime/presentation/enval_presentation_defaults.ts",
+      "scripts/proofs/presentation-brand-config.proof.ts",
+    ],
+    safety: SAFETY.SAFE_PURE,
+    minimumMode: "TARGETED",
+    expectedDurationMs: 1_000,
+    expectedMarker: "PRESENTATION_BRAND_CONFIG_Q01_Q14=PASS",
+  }),
+  check({
     id: "trusted-ingress-boundary-pure",
     argv: [
       "deno",
@@ -765,6 +785,21 @@ export const PATH_RULES = Object.freeze([
       "deno-check-changed",
       "tenant-resolution-composition-pure",
       "trusted-ingress-boundary-pure",
+    ]),
+  }),
+  Object.freeze({
+    id: "presentation-brand-config",
+    match: Object.freeze({
+      type: "oneOf",
+      value: Object.freeze([
+        "platform/runtime/presentation/presentation_brand_config.ts",
+        "platform/runtime/presentation/enval_presentation_defaults.ts",
+        "scripts/proofs/presentation-brand-config.proof.ts",
+      ]),
+    }),
+    checks: Object.freeze([
+      "deno-check-changed",
+      "presentation-brand-config-pure",
     ]),
   }),
   Object.freeze({
