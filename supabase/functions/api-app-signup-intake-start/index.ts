@@ -35,6 +35,7 @@ serve(async (req) => {
   }
 
   const meta = await getAppRequestMeta(req);
+  if (meta instanceof Response) return meta;
   if (!meta.idempotency_key) {
     return appErrorResponse(
       req,

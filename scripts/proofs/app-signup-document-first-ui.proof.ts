@@ -7,7 +7,7 @@ import {
   DOCUMENT_FIRST_ACCOUNT_TYPE_CONFIG,
   DOCUMENT_FIRST_STEPS,
   selectPersonalInfoAdapter,
-  selectSigningReadiness,
+  selectSigningFileReadiness,
 } from "../../app/src/features/signup/documentFirstSignupSelectors.ts";
 
 const ROOT = new URL("../../", import.meta.url);
@@ -140,8 +140,45 @@ assert(
 );
 pass();
 
-const draft = createFreshDocumentFirstSignupDraft("particulier");
+let draft = createFreshDocumentFirstSignupDraft("particulier");
 const locationId = draft.locationOrder[0];
+const chargerId = draft.chargerOrderByLocationId[locationId]?.[0];
+const chargerDocument = chargerId
+  ? draft.chargerDocumentsByChargerId[chargerId]?.find((document) =>
+    document.documentType === "installation_invoice"
+  )
+  : null;
+assert(chargerDocument, "required_charger_document_fixture_missing");
+draft = documentFirstSignupReducer(draft, {
+  type: "update_energy_document",
+  document: {
+    ...draft.energyDocumentsByLocationId[locationId],
+    file: new File(["%PDF energy proof"], "energy.pdf", {
+      type: "application/pdf",
+    }),
+    status: "selected",
+    quarantineStatus: "confirmed_quarantine",
+    quarantineFileReference: "11111111-1111-4111-8111-111111111111",
+  },
+});
+draft = documentFirstSignupReducer(draft, {
+  type: "update_charger_document",
+  document: {
+    ...chargerDocument,
+    file: new File(["%PDF charger proof"], "charger.pdf", {
+      type: "application/pdf",
+    }),
+    status: "selected",
+    quarantineStatus: "confirmed_quarantine",
+    quarantineFileReference: "22222222-2222-4222-8222-222222222222",
+  },
+});
+assert(
+  selectSigningFileReadiness(draft).ready,
+  "confirmed_required_files_not_signing_ready",
+);
+pass();
+
 const holderKey = locationFactKey(locationId, "energy:contractHolder");
 const corrected = documentFirstSignupReducer(draft, {
   type: "set_manual_correction",
@@ -179,17 +216,33 @@ assert(
 );
 pass();
 
-const replaced = documentFirstSignupReducer(confirmed, {
+const noopUpdate = documentFirstSignupReducer(confirmed, {
+  type: "update_energy_document",
+  document: { ...confirmed.energyDocumentsByLocationId[locationId] },
+});
+assert(
+  noopUpdate.customerConfirmations[holderKey] &&
+    noopUpdate.manualCorrections[holderKey] &&
+    selectSigningFileReadiness(noopUpdate).ready,
+  "noop_document_update_invalidated_current_state",
+);
+pass();
+
+const replaced = documentFirstSignupReducer(noopUpdate, {
   type: "update_energy_document",
   document: {
-    ...confirmed.energyDocumentsByLocationId[locationId],
+    ...noopUpdate.energyDocumentsByLocationId[locationId],
     file: null,
     status: "empty",
+    quarantineStatus: "idle",
+    quarantineFileReference: null,
+    quarantineRevision: null,
   },
 });
 assert(
   !replaced.customerConfirmations[holderKey] &&
-    !replaced.manualCorrections[holderKey],
+    !replaced.manualCorrections[holderKey] &&
+    !selectSigningFileReadiness(replaced).ready,
   "document_dependency_invalidation_missing",
 );
 pass();
@@ -216,7 +269,7 @@ assert(
     !shell.includes("ConsentSignatureSection") &&
     !shell.includes("Dossier starten") &&
     !shell.includes("submitSignupPayload") &&
-    selectSigningReadiness(draft).ready === false,
+    selectSigningFileReadiness(replaced).ready === false,
   "confirmed_summary_or_signing_fail_closed_missing",
 );
 pass();
@@ -285,7 +338,7 @@ for (
     ],
     [
       "supabase/functions/api-app-signup-submit/index.ts",
-      "fd4516c31328eb81b8904be4b5594218faed59d6133340c58a85e5dec4106be3",
+      "97f9afe03ac39dc4dfde89d4906432c06c79397be33a649f90160bae6a718b01",
     ],
   ] as const
 ) {

@@ -90,6 +90,8 @@ const CHECK_LIST = [
     argv: [
       "deno",
       "check",
+      "--deny-import",
+      "--no-lock",
       "--unstable-sloppy-imports",
       "{path}",
     ],
@@ -99,6 +101,28 @@ const CHECK_LIST = [
     minimumMode: "QUICK",
     expectedDurationMs: 800,
     dedupeKey: "deno-check:{path}",
+    perPath: true,
+  }),
+  check({
+    id: "deno-check-browser-proof",
+    argv: [
+      "deno",
+      "check",
+      "--deny-import",
+      "--no-lock",
+      "--config",
+      "scripts/tools/deno-browser-proof.json",
+      "--unstable-sloppy-imports",
+      "{path}",
+    ],
+    domain: "browser-proof-typescript-static",
+    applicablePaths: [
+      "scripts/proofs/app-signup-signing-kiss.proof.ts",
+    ],
+    safety: SAFETY.SAFE_PURE,
+    minimumMode: "QUICK",
+    expectedDurationMs: 800,
+    dedupeKey: "deno-browser-proof:{path}",
     perPath: true,
   }),
   check({
@@ -223,7 +247,7 @@ const CHECK_LIST = [
     safety: SAFETY.SAFE_PURE,
     minimumMode: "TARGETED",
     expectedDurationMs: 1_000,
-    expectedMarker: "TENANT_RESOLUTION_SHADOW_Q01_Q14=PASS",
+    expectedMarker: "TENANT_RESOLUTION_AUTHORITY_Q19_Q43=PASS",
   }),
   check({
     id: "app-tenant-resolution-shadow-local",
@@ -250,7 +274,7 @@ const CHECK_LIST = [
       "TENANT_ENVAL PostgreSQL read-only on loopback port 54322",
     ],
     expectedDurationMs: 1_500,
-    expectedMarker: "TENANT_RESOLUTION_SHADOW_LOCAL_Q15_Q18=PASS",
+    expectedMarker: "TENANT_RESOLUTION_AUTHORITY_LOCAL_Q44_Q46=PASS",
   }),
   check({
     id: "app-typecheck-build",
@@ -269,6 +293,8 @@ const CHECK_LIST = [
     argv: [
       "deno",
       "check",
+      "--deny-import",
+      "--no-lock",
       "--config",
       "supabase/functions/deno.json",
       "supabase/functions/api-app-auth-bootstrap/index.ts",
@@ -483,6 +509,14 @@ export const GLOBAL_CHECKS = Object.freeze([
 ]);
 
 export const PATH_RULES = Object.freeze([
+  Object.freeze({
+    id: "browser-webapi-proof",
+    match: Object.freeze({
+      type: "exact",
+      value: "scripts/proofs/app-signup-signing-kiss.proof.ts",
+    }),
+    checks: Object.freeze(["deno-check-browser-proof"]),
+  }),
   Object.freeze({
     id: "app-tenant-resolution-shadow",
     match: Object.freeze({

@@ -11,6 +11,7 @@ import { serve } from "jsr:@std/http@0.224.0/server";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 import {
+  type AppRequestMeta,
   appAuditRow,
   appErrorResponse,
   appJsonResponse,
@@ -481,7 +482,7 @@ async function insertAppAuditStrict(SB: any, input: Parameters<typeof appAuditRo
 async function rejectWithAudit(
   req: Request,
   SB: any,
-  meta: Awaited<ReturnType<typeof getAppRequestMeta>>,
+  meta: AppRequestMeta,
   authContext: AppCustomerAuthContext,
   payload: NormalizedUploadUrlPayload,
   status: number,
@@ -643,7 +644,7 @@ function normalizeDocumentFile(data: Record<string, unknown>): DocumentFile {
 async function createDocumentFile(
   SB: any,
   payload: NormalizedUploadUrlPayload,
-  meta: Awaited<ReturnType<typeof getAppRequestMeta>>,
+  meta: AppRequestMeta,
   payload_hash: string,
 ): Promise<{ ok: true; file: DocumentFile } | { ok: false }> {
   const documentFileId = crypto.randomUUID();
@@ -716,7 +717,7 @@ async function signUploadUrl(SB: any, file: DocumentFile): Promise<{ ok: true; s
 
 function storedResponseFromFile(
   file: DocumentFile,
-  meta: Awaited<ReturnType<typeof getAppRequestMeta>>,
+  meta: AppRequestMeta,
   payload_hash: string,
 ): StoredUploadResponse {
   return {
@@ -781,7 +782,7 @@ async function replayStoredUpload(
 async function handleSigningFailure(
   req: Request,
   SB: any,
-  meta: Awaited<ReturnType<typeof getAppRequestMeta>>,
+  meta: AppRequestMeta,
   authContext: AppCustomerAuthContext,
   payload: NormalizedUploadUrlPayload,
   file: DocumentFile,
@@ -833,6 +834,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return appOptionsResponse(req);
 
   const meta = await getAppRequestMeta(req);
+  if (meta instanceof Response) return meta;
 
   if (req.method !== "POST") {
     return appErrorResponse(req, 405, "Methode niet toegestaan.", "method_not_allowed");

@@ -43,7 +43,7 @@ async function source(path: string): Promise<string> {
   return await Deno.readTextFile(new URL(`../../${path}`, import.meta.url));
 }
 
-async function digest(bytes: Uint8Array): Promise<string> {
+async function digest(bytes: Uint8Array<ArrayBuffer>): Promise<string> {
   const hash = await crypto.subtle.digest("SHA-256", bytes);
   return Array.from(new Uint8Array(hash))
     .map((byte) => byte.toString(16).padStart(2, "0"))
@@ -550,7 +550,7 @@ const protectedHashes = {
   "supabase/migrations/20260730170000_app_assisted_connection_capture_correction.sql":
     "561a80fee5c04cc073d8c099e54b7ad721abff021b23522d4cfa8588f4afcb25",
   "supabase/functions/api-app-signup-submit/index.ts":
-    "fd4516c31328eb81b8904be4b5594218faed59d6133340c58a85e5dec4106be3",
+    "97f9afe03ac39dc4dfde89d4906432c06c79397be33a649f90160bae6a718b01",
 } as const;
 for (const [path, expected] of Object.entries(protectedHashes)) {
   assert(

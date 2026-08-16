@@ -474,7 +474,7 @@ for (
     ],
     [
       "supabase/functions/api-app-signup-submit/index.ts",
-      "fd4516c31328eb81b8904be4b5594218faed59d6133340c58a85e5dec4106be3",
+      "97f9afe03ac39dc4dfde89d4906432c06c79397be33a649f90160bae6a718b01",
     ],
   ] as const
 ) {

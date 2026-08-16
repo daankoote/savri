@@ -31,6 +31,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return appOptionsResponse(req);
   if (req.method !== "POST") return appErrorResponse(req, 405, "Methode niet toegestaan.", "method_not_allowed");
   const meta = await getAppRequestMeta(req);
+  if (meta instanceof Response) return meta;
   if (!meta.idempotency_key) return appErrorResponse(req, 400, "Aanvraagcode ontbreekt.", "missing_idempotency_key");
   const body = await parseRecordBody(req);
   if (!body) return appErrorResponse(req, 400, "Controleer de aanvraag.", "invalid_json");

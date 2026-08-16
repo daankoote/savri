@@ -548,7 +548,9 @@ export async function handleSignupPromotion(req: Request): Promise<Response> {
   let meta: AppRequestMeta;
   try {
     await requireInternalAuthorization(req);
-    meta = await getAppRequestMeta(req);
+    const metaResult = await getAppRequestMeta(req);
+    if (metaResult instanceof Response) return metaResult;
+    meta = metaResult;
     if (
       !meta.idempotency_key || meta.idempotency_key.length > 200 ||
       /\s/.test(meta.idempotency_key) || meta.request_id.length > 96

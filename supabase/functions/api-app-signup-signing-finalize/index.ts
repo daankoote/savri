@@ -1,6 +1,7 @@
 import { serve } from "jsr:@std/http@0.224.0/server";
 
 import {
+  type AppRequestMeta,
   appErrorResponse,
   appJsonResponse,
   appOptionsResponse,
@@ -117,7 +118,7 @@ function connectionScope(facts: SafeFact[]) {
 async function postSigningProjection(
   req: Request,
   intakeId: string,
-  meta: Awaited<ReturnType<typeof getAppRequestMeta>>,
+  meta: AppRequestMeta,
   body: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   const SB = signupServiceClient();
@@ -202,6 +203,7 @@ serve(async (req) => {
     );
   }
   const meta = await getAppRequestMeta(req);
+  if (meta instanceof Response) return meta;
   const body = await parseRecordBody(req);
   if (!body) {
     return appErrorResponse(

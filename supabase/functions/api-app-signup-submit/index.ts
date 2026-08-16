@@ -732,6 +732,7 @@ export async function handleSignupSubmit(
   if (req.method === "OPTIONS") return appOptionsResponse(req);
 
   const meta = await getAppRequestMeta(req);
+  if (meta instanceof Response) return meta;
 
   if (req.method !== "POST") {
     return appErrorResponse(

@@ -47,14 +47,38 @@ function hashText(value) {
 }
 
 assert(validateManifest().length === 0, "manifest_metadata_invalid");
-for (const id of ["deno-check-changed", "edge-static-check"]) {
+for (
+  const id of [
+    "deno-check-changed",
+    "deno-check-browser-proof",
+    "edge-static-check",
+  ]
+) {
   assert(
     VERIFY_MANIFEST.commands[id].argv.slice(0, 2).join(" ") ===
       "deno check" &&
-      !VERIFY_MANIFEST.commands[id].argv.includes("--cached-only"),
+      !VERIFY_MANIFEST.commands[id].argv.includes("--cached-only") &&
+      VERIFY_MANIFEST.commands[id].argv.includes("--deny-import") &&
+      VERIFY_MANIFEST.commands[id].argv.includes("--no-lock"),
     `deno_check_command_invalid:${id}`,
   );
 }
+
+const browserProofPlan = buildPlan({
+  paths: ["scripts/proofs/app-signup-signing-kiss.proof.ts"],
+  mode: "QUICK",
+});
+assert(
+  browserProofPlan.selected.length === 2 &&
+    browserProofPlan.selected.some((check) =>
+      check.commandId === "deno-check-browser-proof" &&
+      check.argv.includes("scripts/tools/deno-browser-proof.json")
+    ) &&
+    !browserProofPlan.selected.some((check) =>
+      check.commandId === "deno-check-changed"
+    ),
+  "browser_proof_typecheck_profile_not_isolated",
+);
 
 const currentPaths = [
   "scripts/tools/enval-verify.mjs",
@@ -458,7 +482,7 @@ for (
 }
 assert(
   !compactOutput.includes("green-log-that-must-not-appear") &&
-    compactOutput.split("\n").length < 40,
+    compactOutput.split("\n").length <= compactRun.selectedCheckCount + 22,
   "green_output_not_compact",
 );
 assert(

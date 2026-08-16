@@ -8,7 +8,7 @@
 
 import {
   type AppTenantResolutionShadowObservationOptions,
-  observeAppTenantResolutionShadow,
+  enforceAppTenantResolutionGate,
 } from "./app_tenant_resolution_shadow.ts";
 
 export type AppActorType =
@@ -164,7 +164,7 @@ export async function hashNullableInput(input: string | null): Promise<string | 
 export async function getAppRequestMeta(
   req: Request,
   tenantShadowOptions: AppTenantResolutionShadowObservationOptions = {},
-): Promise<AppRequestMeta> {
+): Promise<AppRequestMeta | Response> {
   const parsedUrl = new URL(req.url);
   const ipInput = getForwardedIpInput(req);
   const uaInput = getUserAgentInput(req);
@@ -181,11 +181,19 @@ export async function getAppRequestMeta(
     timestamp: new Date().toISOString(),
     environment: getEnvironment(),
   };
-  await observeAppTenantResolutionShadow(
+  const tenantGate = await enforceAppTenantResolutionGate(
     meta.environment,
     meta.request_id,
     tenantShadowOptions,
   );
+  if (!tenantGate.ok) {
+    return appErrorResponse(
+      req,
+      503,
+      "Deze dienst is tijdelijk niet beschikbaar.",
+      "service_unavailable",
+    );
+  }
   return meta;
 }
 

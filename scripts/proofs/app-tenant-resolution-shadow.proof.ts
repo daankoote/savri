@@ -4,6 +4,9 @@ import {
 import {
   type AppTenantResolutionShadowDiagnostic,
   type AppTenantResolutionShadowExecution,
+  type AppTenantResolutionShadowObservationOptions,
+  type CurrentAuthoritativeTenantRuntimeContext,
+  enforceAppTenantResolutionGate,
 } from "../../supabase/functions/_shared/app_tenant_resolution_shadow.ts";
 import type {
   PlatformControlPlaneReader,
@@ -21,14 +24,18 @@ const TENANT_ID = "51000000-0000-4000-8000-000000000001";
 const ROUTING_ID = "52000000-0000-4000-8000-000000000001";
 const LOCATOR_ID = "53000000-0000-4000-8000-000000000001";
 const SECRET_REFERENCE_ID = "54000000-0000-4000-8000-000000000001";
+const OTHER_TENANT_ID = "51000000-0000-4000-8000-000000000002";
+const OTHER_LOCATOR_ID = "53000000-0000-4000-8000-000000000002";
 const TRUSTED_HOST = "enval.localhost";
 const STATIC_ROUTING_KEY = "deployment:enval-local";
 const REQUEST_ID = "wl07-safe-correlation";
 
-const current = Object.freeze({
+const current: CurrentAuthoritativeTenantRuntimeContext = Object.freeze({
   tenantId: TENANT_ID,
   environment: "local",
   locatorId: LOCATOR_ID,
+  deploymentOwnership: "ENVAL_MANAGED_DEDICATED" as const,
+  providerType: "supabase",
   dataPlaneReference: "enval",
 });
 const route: PlatformRoutingRecord = Object.freeze({
@@ -64,9 +71,10 @@ function managedExecution(
 
 function staticExecution(
   dataPlaneReference = "enval",
+  expectedOverrides: Partial<CurrentAuthoritativeTenantRuntimeContext> = {},
 ): AppTenantResolutionShadowExecution {
   return Object.freeze({
-    current,
+    current: Object.freeze({ ...current, ...expectedOverrides }),
     trustedRoutingKey: STATIC_ROUTING_KEY,
     composition: {
       deploymentMode: "static_single_tenant_v1",
@@ -87,27 +95,38 @@ function staticExecution(
   });
 }
 
-function syntheticManagedReader(): PlatformControlPlaneReader {
+function syntheticManagedReader(
+  environment = "local",
+): PlatformControlPlaneReader {
   return {
     async findRoutingIdentities(host) {
       return host === TRUSTED_HOST ? [route] : [];
     },
     async findDataPlaneLocators(tenantId) {
-      return tenantId === TENANT_ID ? [locator] : [];
+      return tenantId === TENANT_ID ? [{ ...locator, environment }] : [];
     },
   };
 }
 
 function requestWithBrowserTargetInjection(): Request {
   return new Request(
-    "https://api.enval.local/functions/v1/api-app-dashboard-get?tenant_id=browser&project=other",
+    "https://api.enval.local/functions/v1/api-app-dashboard-get?tenant_id=browser&project=other&tenant_resolution_authority_mode=SHADOW&tenant_resolution_adapter=browser",
     {
       method: "POST",
       headers: {
+        "Content-Type": "application/json",
         "X-Request-Id": REQUEST_ID,
         "X-Tenant-Id": "browser-selected-tenant",
         "X-Data-Plane": "postgresql://browser:secret@other/database",
+        "X-Tenant-Resolution-Authority-Mode": "SHADOW",
+        "X-Tenant-Resolution-Adapter": "browser",
       },
+      body: JSON.stringify({
+        tenant_id: "browser-selected-tenant",
+        data_plane_locator: "browser-selected-locator",
+        tenant_resolution_authority_mode: "SHADOW",
+        tenant_resolution_adapter: "browser",
+      }),
     },
   );
 }
@@ -118,6 +137,7 @@ async function observe(
 ) {
   const diagnostics: AppTenantResolutionShadowDiagnostic[] = [];
   const meta = await getAppRequestMeta(requestWithBrowserTargetInjection(), {
+    authorityMode: "SHADOW",
     execution,
     timeoutMs: options.timeoutMs,
     sink(value) {
@@ -126,7 +146,51 @@ async function observe(
     },
   });
   assert(diagnostics.length === 1, "shadow_diagnostic_not_emitted_once");
+  assert(!(meta instanceof Response), "shadow_request_was_blocked");
   return { meta, diagnostic: diagnostics[0] };
+}
+
+async function requestThroughGate(
+  options: AppTenantResolutionShadowObservationOptions,
+) {
+  const diagnostics: AppTenantResolutionShadowDiagnostic[] = [];
+  const result = await getAppRequestMeta(requestWithBrowserTargetInjection(), {
+    ...options,
+    sink(value) {
+      diagnostics.push(value);
+    },
+  });
+  assert(diagnostics.length === 1, "tenant_gate_diagnostic_not_emitted_once");
+  return { result, diagnostic: diagnostics[0] };
+}
+
+function environmentReader(values: Readonly<Record<string, string>>) {
+  return {
+    get(name: string) {
+      return values[name];
+    },
+  };
+}
+
+function tenantOneServerEnvironment(
+  adapter: "platform_control_plane_v1" | "static_single_tenant_v1",
+  overrides: Readonly<Record<string, string>> = {},
+) {
+  return environmentReader({
+    ENVAL_TENANT_RESOLUTION_AUTHORITY_MODE: "AUTHORITATIVE",
+    ENVAL_TENANT_RESOLUTION_SHADOW_MODE: adapter,
+    ENVAL_TENANT_REFERENCE: TENANT_ID,
+    ENVAL_TRUSTED_TENANT_ROUTING_KEY: adapter === "platform_control_plane_v1"
+      ? TRUSTED_HOST
+      : STATIC_ROUTING_KEY,
+    ENVAL_DATA_PLANE_LOCATOR_ID: LOCATOR_ID,
+    ENVAL_DATA_PLANE_DEPLOYMENT_OWNERSHIP: "ENVAL_MANAGED_DEDICATED",
+    ENVAL_DATA_PLANE_PROVIDER_TYPE: "supabase",
+    ENVAL_DATA_PLANE_REFERENCE: "enval",
+    ENVAL_APPLICATION_ROUTE_REFERENCE: "http://127.0.0.1:54321",
+    ENVAL_DATA_PLANE_SECRET_REFERENCE_ID: SECRET_REFERENCE_ID,
+    ...overrides,
+  });
 }
 
 const managed = await observe(managedExecution(syntheticManagedReader()));
@@ -170,6 +234,186 @@ assert(
     !Object.hasOwn(managed.meta, "dataPlane") &&
     !Object.hasOwn(managed.meta, "shadow"),
   "shadow_changed_authoritative_request_context",
+);
+
+const authoritativeManaged = await requestThroughGate({
+  serverEnvironment: tenantOneServerEnvironment("platform_control_plane_v1"),
+  managedReader: syntheticManagedReader("unknown"),
+});
+const authoritativeStatic = await requestThroughGate({
+  serverEnvironment: tenantOneServerEnvironment("static_single_tenant_v1"),
+});
+assert(
+  !(authoritativeManaged.result instanceof Response) &&
+    authoritativeManaged.diagnostic.authorityMode === "AUTHORITATIVE" &&
+    authoritativeManaged.diagnostic.parityStatus === "pass",
+  "managed_authoritative_tenant_one_failed",
+);
+assert(
+  !(authoritativeStatic.result instanceof Response) &&
+    authoritativeStatic.diagnostic.authorityMode === "AUTHORITATIVE" &&
+    authoritativeStatic.diagnostic.parityStatus === "pass",
+  "static_authoritative_tenant_one_failed",
+);
+assert(
+  authoritativeManaged.diagnostic.tenantReferenceHash ===
+    authoritativeStatic.diagnostic.tenantReferenceHash,
+  "authoritative_adapter_normalization_parity_failed",
+);
+
+const blockedBodies: string[] = [];
+async function assertGenericBlock(
+  result: Response | typeof managed.meta,
+  code: string,
+) {
+  assert(result instanceof Response, `${code}:request_not_blocked`);
+  assert(result.status === 503, `${code}:wrong_status`);
+  const body = await result.text();
+  blockedBodies.push(body);
+  const parsed = JSON.parse(body);
+  assert(
+    Object.keys(parsed).sort().join("|") === "code|error|ok" &&
+      parsed.ok === false && parsed.code === "service_unavailable" &&
+      parsed.error === "Deze dienst is tijdelijk niet beschikbaar.",
+    `${code}:unsafe_customer_failure_contract`,
+  );
+}
+
+const unknownAuthority = await requestThroughGate({
+  authorityMode: "BROWSER_SELECTED",
+  execution: staticExecution(),
+});
+await assertGenericBlock(unknownAuthority.result, "unknown_authority_mode");
+
+const unreadableServerConfiguration = await requestThroughGate({
+  serverEnvironment: {
+    get() {
+      throw new Error("server_configuration_unavailable");
+    },
+  },
+});
+await assertGenericBlock(
+  unreadableServerConfiguration.result,
+  "unreadable_server_configuration",
+);
+
+const unknownRouting = await requestThroughGate({
+  authorityMode: "AUTHORITATIVE",
+  execution: managedExecution({
+    async findRoutingIdentities() {
+      return [];
+    },
+    async findDataPlaneLocators() {
+      throw new Error("must_not_run");
+    },
+  }),
+});
+await assertGenericBlock(unknownRouting.result, "unknown_managed_routing");
+
+const inactiveManaged = await requestThroughGate({
+  authorityMode: "AUTHORITATIVE",
+  execution: managedExecution({
+    async findRoutingIdentities() {
+      return [{ ...route, routingLifecycleStatus: "inactive" }];
+    },
+    async findDataPlaneLocators() {
+      throw new Error("must_not_run");
+    },
+  }),
+});
+await assertGenericBlock(inactiveManaged.result, "inactive_managed_routing");
+
+const tenantMismatch = await requestThroughGate({
+  authorityMode: "AUTHORITATIVE",
+  execution: staticExecution("enval", { tenantId: OTHER_TENANT_ID }),
+});
+await assertGenericBlock(tenantMismatch.result, "tenant_mismatch");
+
+const environmentMismatch = await requestThroughGate({
+  authorityMode: "AUTHORITATIVE",
+  execution: staticExecution("enval", { environment: "staging" }),
+});
+await assertGenericBlock(environmentMismatch.result, "environment_mismatch");
+
+const locatorMismatch = await requestThroughGate({
+  authorityMode: "AUTHORITATIVE",
+  execution: staticExecution("enval", { locatorId: OTHER_LOCATOR_ID }),
+});
+await assertGenericBlock(locatorMismatch.result, "locator_mismatch");
+
+const providerMismatch = await requestThroughGate({
+  authorityMode: "AUTHORITATIVE",
+  execution: staticExecution("enval", { providerType: "postgres" }),
+});
+await assertGenericBlock(providerMismatch.result, "provider_mismatch");
+
+const missingStaticConfiguration = await requestThroughGate({
+  authorityMode: "AUTHORITATIVE",
+  execution: {
+    current,
+    trustedRoutingKey: STATIC_ROUTING_KEY,
+    composition: {
+      deploymentMode: "static_single_tenant_v1",
+      staticSingleTenantConfigurations: null,
+    },
+  },
+});
+await assertGenericBlock(
+  missingStaticConfiguration.result,
+  "missing_static_configuration",
+);
+
+const malformedExpectedRuntime = await requestThroughGate({
+  authorityMode: "AUTHORITATIVE",
+  execution: staticExecution("enval", { providerType: "SUPABASE" }),
+});
+await assertGenericBlock(
+  malformedExpectedRuntime.result,
+  "malformed_expected_runtime",
+);
+
+const mismatchTaxonomy = await enforceAppTenantResolutionGate(
+  "local",
+  REQUEST_ID,
+  {
+    authorityMode: "AUTHORITATIVE",
+    execution: staticExecution("enval", { locatorId: OTHER_LOCATOR_ID }),
+    sink: null,
+  },
+);
+const unavailableTaxonomy = await enforceAppTenantResolutionGate(
+  "local",
+  REQUEST_ID,
+  {
+    authorityMode: "AUTHORITATIVE",
+    execution: managedExecution({
+      async findRoutingIdentities() {
+        return [];
+      },
+      async findDataPlaneLocators() {
+        return [];
+      },
+    }),
+    sink: null,
+  },
+);
+const invalidTaxonomy = await enforceAppTenantResolutionGate(
+  "local",
+  REQUEST_ID,
+  {
+    authorityMode: "invalid",
+    execution: staticExecution(),
+    sink: null,
+  },
+);
+assert(
+  !mismatchTaxonomy.ok &&
+    mismatchTaxonomy.code === "tenant_resolution_mismatch" &&
+    !unavailableTaxonomy.ok &&
+    unavailableTaxonomy.code === "tenant_resolution_unavailable" &&
+    !invalidTaxonomy.ok &&
+    invalidTaxonomy.code === "tenant_resolution_configuration_invalid",
+  "tenant_resolution_failure_taxonomy_failed",
 );
 
 const mismatch = await observe(staticExecution("different-data-plane"));
@@ -232,6 +476,18 @@ assert(
 const serializedDiagnostics = JSON.stringify([
   managed.diagnostic,
   staticResult.diagnostic,
+  authoritativeManaged.diagnostic,
+  authoritativeStatic.diagnostic,
+  unknownAuthority.diagnostic,
+  unreadableServerConfiguration.diagnostic,
+  unknownRouting.diagnostic,
+  inactiveManaged.diagnostic,
+  tenantMismatch.diagnostic,
+  environmentMismatch.diagnostic,
+  locatorMismatch.diagnostic,
+  providerMismatch.diagnostic,
+  missingStaticConfiguration.diagnostic,
+  malformedExpectedRuntime.diagnostic,
   mismatch.diagnostic,
   unknownTenant.diagnostic,
   throwingResolver.diagnostic,
@@ -242,8 +498,11 @@ assert(
     !serializedDiagnostics.includes(LOCATOR_ID) &&
     !serializedDiagnostics.includes(SECRET_REFERENCE_ID) &&
     !serializedDiagnostics.includes(REQUEST_ID) &&
+    !blockedBodies.join("\n").includes(TENANT_ID) &&
+    !blockedBodies.join("\n").includes(LOCATOR_ID) &&
+    !blockedBodies.join("\n").includes(SECRET_REFERENCE_ID) &&
     !/(password|service.?role|database.?url|raw.?secret|credential|access.?token)/i
-      .test(serializedDiagnostics),
+      .test(`${serializedDiagnostics}\n${blockedBodies.join("\n")}`),
   "shadow_diagnostic_contains_sensitive_material",
 );
 
@@ -260,7 +519,8 @@ const foundationSource = Deno.readTextFileSync(
   ),
 );
 assert(
-  foundationSource.includes("observeAppTenantResolutionShadow(") &&
+  foundationSource.includes("enforceAppTenantResolutionGate(") &&
+    foundationSource.includes("if (!tenantGate.ok)") &&
     !/(createClient|SUPABASE_URL|SUPABASE_SERVICE_ROLE_KEY|fetch\s*\()/
       .test(shadowSource) &&
     !/(customer_id|case_id|dossier_id|auth_user|access_grant)/
@@ -268,23 +528,130 @@ assert(
   "shadow_runtime_switched_data_plane_or_entered_business_authority",
 );
 
-for (
-  const endpoint of [
-    "api-app-auth-bootstrap",
-    "api-app-signup-submit",
-    "api-app-signup-signing-finalize",
-    "api-app-dashboard-get",
-  ]
-) {
+const coveredEntrypoints = [
+  "api-app-auth-bootstrap",
+  "api-app-dashboard-get",
+  "api-app-document-download-url",
+  "api-app-document-upload-confirm",
+  "api-app-document-upload-url",
+  "api-app-document-withdraw-current",
+  "api-app-signup-intake-start",
+  "api-app-signup-signing-challenge",
+  "api-app-signup-signing-finalize",
+  "api-app-signup-submit",
+  "api-app-signup-upload-confirm",
+  "api-app-signup-upload-url",
+] as const;
+const uncoveredCurrentEntrypoints = [
+  "api-app-ops-location-observation-record",
+  "api-app-ops-location-root-create",
+  "api-app-ops-location-version-accept",
+  "api-app-ops-location-version-correct",
+] as const;
+const legacyFallbackEntrypoints = [
+  "api-dossier-access-save",
+  "api-dossier-access-update",
+  "api-dossier-address-save",
+  "api-dossier-address-verify",
+  "api-dossier-charger-delete",
+  "api-dossier-charger-save",
+  "api-dossier-consents-save",
+  "api-dossier-dev-unlock",
+  "api-dossier-doc-delete",
+  "api-dossier-doc-download-url",
+  "api-dossier-evaluate",
+  "api-dossier-export",
+  "api-dossier-get",
+  "api-dossier-login-request",
+  "api-dossier-observed-source-upsert",
+  "api-dossier-upload-confirm",
+  "api-dossier-upload-url",
+  "api-dossier-verify",
+  "api-lead-submit",
+] as const;
+const tenantScopedWorkerEntrypoints = [
+  "locked-unpaid-reminder-worker",
+  "mail-worker",
+  "retention-worker",
+] as const;
+
+for (const endpoint of coveredEntrypoints) {
   const source = Deno.readTextFileSync(
     new URL(`../../supabase/functions/${endpoint}/index.ts`, import.meta.url),
   );
   assert(
     source.includes("getAppRequestMeta") &&
-      source.includes('from "../_shared/app_foundation.ts"'),
+      source.includes('from "../_shared/app_foundation.ts"') &&
+      /const meta = await getAppRequestMeta\(req\);\s*if \(meta instanceof Response\) return meta;/
+        .test(
+          source,
+        ),
     `shared_shadow_runtime_path_missing:${endpoint}`,
   );
 }
+
+for (const endpoint of uncoveredCurrentEntrypoints) {
+  const source = Deno.readTextFileSync(
+    new URL(`../../supabase/functions/${endpoint}/index.ts`, import.meta.url),
+  );
+  assert(
+    !source.includes("getAppRequestMeta"),
+    `coverage_inventory_stale:${endpoint}`,
+  );
+}
+
+const promotionEntrypointSource = Deno.readTextFileSync(
+  new URL(
+    "../../supabase/functions/api-app-signup-promote/index.ts",
+    import.meta.url,
+  ),
+);
+const promotionHandlerSource = Deno.readTextFileSync(
+  new URL(
+    "../../supabase/functions/_shared/signup_promotion.ts",
+    import.meta.url,
+  ),
+);
+assert(
+  promotionEntrypointSource.includes("handleSignupPromotion") &&
+    /const metaResult = await getAppRequestMeta\(req\);\s*if \(metaResult instanceof Response\) return metaResult;/
+      .test(
+        promotionHandlerSource,
+      ),
+  "delegated_signup_promotion_gate_missing",
+);
+
+const functionsRoot = new URL("../../supabase/functions/", import.meta.url);
+const discoveredEntrypoints = Array.from(Deno.readDirSync(functionsRoot))
+  .filter((entry) => entry.isDirectory)
+  .filter((entry) => {
+    try {
+      return Deno.statSync(new URL(`${entry.name}/index.ts`, functionsRoot))
+        .isFile;
+    } catch {
+      return false;
+    }
+  })
+  .map((entry) => entry.name)
+  .sort();
+const classifiedEntrypoints = [
+  ...coveredEntrypoints,
+  "api-app-signup-promote",
+  ...uncoveredCurrentEntrypoints,
+  ...legacyFallbackEntrypoints,
+  ...tenantScopedWorkerEntrypoints,
+].sort();
+assert(
+  discoveredEntrypoints.join("|") === classifiedEntrypoints.join("|") &&
+    new Set(classifiedEntrypoints).size === classifiedEntrypoints.length,
+  "edge_entrypoint_coverage_inventory_incomplete",
+);
+
+assert(
+  !/(createClient|SUPABASE_URL|SUPABASE_SERVICE_ROLE_KEY)/.test(shadowSource) &&
+    !shadowSource.includes("new SupabaseClient"),
+  "dynamic_data_plane_switching_detected",
+);
 
 type CommandResult = Readonly<{ code: number; stdout: string; stderr: string }>;
 
@@ -430,15 +797,33 @@ function localControlPlaneReader(): PlatformControlPlaneReader {
 
 if (Deno.args.includes("--local-control-plane")) {
   const before = await rootFingerprint();
-  const localManaged = await observe(
+  const localManagedShadow = await observe(
     managedExecution(localControlPlaneReader()),
+  );
+  const localManagedAuthoritative = await enforceAppTenantResolutionGate(
+    "local",
+    REQUEST_ID,
+    {
+      serverEnvironment: tenantOneServerEnvironment(
+        "platform_control_plane_v1",
+      ),
+      managedReader: localControlPlaneReader(),
+      sink: null,
+    },
   );
   const after = await rootFingerprint();
   assert(
-    localManaged.diagnostic.parityStatus === "pass" && before === after,
-    "local_managed_shadow_or_tenant_nonmutation_failed",
+    localManagedShadow.diagnostic.parityStatus === "pass" &&
+      localManagedAuthoritative.ok &&
+      localManagedAuthoritative.authorityMode === "AUTHORITATIVE" &&
+      localManagedAuthoritative.diagnostic.parityStatus === "pass" &&
+      before === after,
+    "local_managed_authority_or_tenant_nonmutation_failed",
   );
   console.log("TENANT_RESOLUTION_SHADOW_LOCAL_Q15_Q18=PASS");
+  console.log("TENANT_RESOLUTION_AUTHORITY_LOCAL_Q44_Q46=PASS");
 }
 
 console.log("TENANT_RESOLUTION_SHADOW_Q01_Q14=PASS");
+console.log("TENANT_RESOLUTION_AUTHORITY_Q19_Q43=PASS");
+console.log("DYNAMIC_DATA_PLANE_SWITCHING=NO");
