@@ -108,6 +108,9 @@ function executableSafety(mode, safety, modes = MODES) {
   if (safety === SAFETY.SAFE_LOCAL_CONTROL_PLANE_WRITE) {
     return modeRank(mode, modes) >= modeRank("LOCAL_SERVICE", modes);
   }
+  if (safety === SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE) {
+    return modeRank(mode, modes) >= modeRank("LOCAL_SERVICE", modes);
+  }
   if (safety === SAFETY.SAFE_GENERATED_WRITE) {
     return modeRank(mode, modes) >= modeRank("INTEGRATION", modes);
   }
@@ -153,6 +156,12 @@ export function validateManifest(manifest = VERIFY_MANIFEST) {
       (!command.mutatesState || command.remote || command.destructive)
     ) {
       errors.push(`manifest_control_plane_write_invalid:${id}`);
+    }
+    if (
+      command.safety === SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE &&
+      (!command.mutatesState || command.remote || command.destructive)
+    ) {
+      errors.push(`manifest_tenant_ephemeral_write_invalid:${id}`);
     }
   }
   for (const inventory of manifest.migrationInventories ?? []) {

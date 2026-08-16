@@ -136,6 +136,24 @@ assert(
   "control_plane_local_transaction_not_classified_or_deduplicated",
 );
 
+const tenantEphemeralLocalService = buildPlan({
+  paths: [
+    "supabase/migrations/20260816160000_app_workforce_policy_foundation.sql",
+    "scripts/proofs/app-workforce-policy-foundation.proof.ts",
+  ],
+  mode: "LOCAL_SERVICE",
+});
+assert(
+  tenantEphemeralLocalService.selected.filter((check) =>
+    check.commandId === "workforce-policy-foundation-local"
+  ).length === 1 &&
+    tenantEphemeralLocalService.selected.some((check) =>
+      check.safety === SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE &&
+      check.mutatesState && !check.remote && !check.destructive
+    ),
+  "tenant_ephemeral_local_proof_not_classified_or_deduplicated",
+);
+
 for (const fixture of [
   { target: null, operation: "inspect", expected: "target_required" },
   { target: "UNKNOWN", operation: "inspect", expected: "unknown_target" },
@@ -515,17 +533,15 @@ const baselineHashesBefore = Object.fromEntries(
   baselineBefore.candidates.map((path) => [path, hash(path)]),
 );
 assert(
-  baselineBefore.exceptions.length === 2 &&
+    baselineBefore.exceptions.length === 2 &&
     baselineBefore.unresolved.length === 0 &&
     baselineBefore.omissions.length === 0 &&
     baselineBefore.gitInclusionRequired.length === 0 &&
-    baselineBefore.gitVisibleCandidates.some((item) =>
-      item.path ===
-          "platform/control-plane/supabase/migrations/20260816120000_platform_tenant_presentation_configs.sql" &&
-      item.target === "CONTROL_PLANE"
-    ) &&
     baselineBefore.trackedMigrations.includes(
       "platform/control-plane/supabase/migrations/20260815120000_platform_control_plane_foundation.sql",
+    ) &&
+    baselineBefore.trackedMigrations.includes(
+      "platform/control-plane/supabase/migrations/20260816120000_platform_tenant_presentation_configs.sql",
     ) &&
     baselineBefore.inventories.map((item) => item.target).sort().join("|") ===
       "CONTROL_PLANE|TENANT_ENVAL",
@@ -543,12 +559,8 @@ assert(
     preCommitOnlyEvidence.preCommitGate === "PASS" &&
     preCommitOnlyEvidence.preCommitOnly &&
     preCommitOnlyEvidence.checks.length === 0 &&
-    preCommitOnlyEvidence.migrationGitVisibleCandidates.some((item) =>
-      item.path ===
-          "platform/control-plane/supabase/migrations/20260816120000_platform_tenant_presentation_configs.sql" &&
-      item.target === "CONTROL_PLANE"
-    ),
-  "visible_untracked_candidate_did_not_pass_pre_commit_only_gate",
+    preCommitOnlyEvidence.migrationGitInclusionRequired.length === 0,
+  "valid_visible_untracked_candidate_did_not_pass_pre_commit_gate",
 );
 assert(
   git([
@@ -636,7 +648,16 @@ try {
       "platform/ambiguous/supabase/migrations/99991231235959_probe.sql",
     ],
   });
+  const controlPlaneMissingPath =
+    `platform/control-plane/supabase/migrations/99991231235957_required_${process.pid}.sql`;
+  const tenantCannotSatisfyControlPlane = inspectMigrationOmissions({
+    ignoredPaths: Object.keys(VERIFY_MANIFEST.migrationBaseline.exceptions),
+    untrackedPaths: [tenantProbePath],
+    missingPaths: [controlPlaneMissingPath],
+    inventoryPaths: [tenantProbePath],
+  });
   assert(
+    withProbe.gitInclusionRequired.length === 0 &&
     probePaths.every((probePath) =>
       withProbe.gitVisibleCandidates.some((item) =>
         item.path === probePath &&
@@ -675,6 +696,13 @@ try {
       ) &&
       ambiguousWorkdir.omissions.some((item) =>
         item.reason === "ambiguous_migration_workdir"
+      ) &&
+      tenantCannotSatisfyControlPlane.gitVisibleCandidates.some((item) =>
+        item.path === tenantProbePath && item.target === "TENANT_ENVAL"
+      ) &&
+      tenantCannotSatisfyControlPlane.omissions.some((item) =>
+        item.path === controlPlaneMissingPath &&
+        item.target === "CONTROL_PLANE" && item.reason === "missing_migration"
       ),
     "migration_inventory_or_ambiguous_workdir_guard_failed",
   );

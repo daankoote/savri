@@ -10,6 +10,7 @@ export const SAFETY = Object.freeze({
   SAFE_PURE: "SAFE_PURE",
   SAFE_LOCAL_READ: "SAFE_LOCAL_READ",
   SAFE_LOCAL_CONTROL_PLANE_WRITE: "SAFE_LOCAL_CONTROL_PLANE_WRITE",
+  SAFE_LOCAL_TENANT_EPHEMERAL_WRITE: "SAFE_LOCAL_TENANT_EPHEMERAL_WRITE",
   SAFE_GENERATED_WRITE: "SAFE_GENERATED_WRITE",
   LOCAL_MUTATING_GATED: "LOCAL_MUTATING_GATED",
   DESTRUCTIVE_GATED: "DESTRUCTIVE_GATED",
@@ -291,6 +292,31 @@ const CHECK_LIST = [
     mutatesState: true,
     expectedDurationMs: 2_500,
     expectedMarker: "CONTROL_PLANE_FOUNDATION_Q01_Q18=PASS",
+  }),
+  check({
+    id: "workforce-policy-foundation-local",
+    argv: [
+      "deno",
+      "run",
+      "--cached-only",
+      "--allow-read=supabase/migrations/20260816160000_app_workforce_policy_foundation.sql",
+      "--allow-run=docker",
+      "scripts/proofs/app-workforce-policy-foundation.proof.ts",
+    ],
+    domain: "tenant-workforce-policy-foundation",
+    applicablePaths: [
+      "supabase/migrations/20260816160000_app_workforce_policy_foundation.sql",
+      "scripts/proofs/app-workforce-policy-foundation.proof.ts",
+    ],
+    safety: SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE,
+    minimumMode: "LOCAL_SERVICE",
+    serviceRequirements: [
+      "TENANT_ENVAL PostgreSQL available through local Docker",
+      "disposable proof database create/drop authority",
+    ],
+    mutatesState: true,
+    expectedDurationMs: 15_000,
+    expectedMarker: "WORKFORCE_POLICY_FOUNDATION_Q01_Q14=PASS",
   }),
   check({
     id: "tenant-resolution-composition-pure",
@@ -761,6 +787,28 @@ export const GLOBAL_CHECKS = Object.freeze([
 ]);
 
 export const PATH_RULES = Object.freeze([
+  Object.freeze({
+    id: "workforce-policy-foundation-proof",
+    match: Object.freeze({
+      type: "exact",
+      value: "scripts/proofs/app-workforce-policy-foundation.proof.ts",
+    }),
+    checks: Object.freeze([
+      "deno-check-changed",
+      "workforce-policy-foundation-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "workforce-policy-foundation-migration",
+    match: Object.freeze({
+      type: "exact",
+      value: "supabase/migrations/20260816160000_app_workforce_policy_foundation.sql",
+    }),
+    checks: Object.freeze([
+      "migration-or-sql-review",
+      "workforce-policy-foundation-local",
+    ]),
+  }),
   Object.freeze({
     id: "legacy-dev-unlock-caller-html",
     match: Object.freeze({
