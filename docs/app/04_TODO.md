@@ -1,8 +1,27 @@
 # ENVAL App TODO
 
-Status: CURRENT app-only TODO.
+Status: CURRENT app/MVP TODO — reconciled through commit `e076a23`.
 
-This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. Removed legacy documentation and external historical copies do not drive new app implementation.
+This queue is primarily for the new `/app`, `api-app-*`, and `app_*`
+implementation. Bounded legacy-caller cutover and white-label foundation status
+are recorded only where they affect the current product/MVP boundary. Removed
+legacy documentation and external historical copies do not drive new app
+implementation.
+
+## Single Current NEXT
+
+- NEXT — resolve `REG-CONFLICT-001` from current official Wet/NEa sources:
+  distinguish the prior-year inbooking deadline, possession/submission of the
+  verification statement, REV verification-result registration and year-end
+  closure; then reconcile `NEA-VER-002`, `NEA-OPS-001` and traceability without
+  implementing runtime.
+  - Priority: WET + OFFICIAL NEA.
+  - Reason: the unresolved 1 April versus 1 May model is a P0 source conflict
+    that blocks an authoritative pilot calendar, verifier timing and later REV
+    runbook; the source review is executable now and does not require a future
+    observation date.
+  - Boundary: source/requirements/traceability decision only; no booking, REV,
+    verifier automation, remote action or production claim.
 
 ## Current / Locally Proven
 
@@ -50,7 +69,12 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
 - Browser-reachable local download origin correction is locally and browser-proven.
 - Shared dashboard document card UI is locally and browser-proven.
 - Pre-auth quarantine, `typed_name_otp_v1` finalization, immutable signing evidence, finalized mutation locks, safe receipt and server-authoritative recovery are CURRENT PROVEN locally within their explicit local/legal gates.
-- Post-signing 09C1A atomic promotion and 09C1B internal-only private Storage/Edge orchestration are CURRENT PROVEN locally; frontend/Auth/dashboard cutover remains TARGET. The former separate email-verification promotion trigger is `SUPERSEDED`.
+- Post-signing 09C1A/09C1B/09C1C through R6 are CURRENT PROVEN LOCAL for
+  atomic case-owned promotion, internal private Storage/Edge orchestration,
+  verified Auth/account handoff and customer-safe multi-case dashboard
+  convergence. Remote deployment, production Auth/OTP/legal configuration and
+  browser acceptance remain open. The former separate email-verification
+  promotion trigger is `SUPERSEDED`.
 - Gate 1 EAN and electricity connection domain objects are observed locally, not CURRENT PROVEN:
   - `app_connections`
   - `app_connection_periods`
@@ -84,7 +108,7 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - contract status is exactly `TARGET — WP3C INTERNAL DOMAIN DECISIONS APPROVED — EXTERNAL BLOCKERS OPEN / NOT DDL READY`;
   - this approves no candidate schema, DDL, implementation, proof, retirement, cleanup or execution;
   - existing connection tables, functions, triggers, policies, grants, migrations and proofs remain intact; old migrations are conflicting source material and old proofs remain `PROVE AGAIN`;
-  - first next bounded context was locationfoundation readiness;
+  - historical successor at that checkpoint was locationfoundation readiness;
   - only after separate location approval and proof: limited connection-root/claim DDL-readiness assessment, still without automatic implementation authority;
   - external blockers remain CAR/DSO/register semantics, evidence categories/acceptance/freshness/conflicts, secondary/MLOEA, year duplicate/fallback, verifier acceptance, representation authority and mandate validation;
   - representation authority continues independently and remains `NOT SCHEMA READY`.
@@ -108,7 +132,7 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - `TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE` records that roots, immutable versions, RLS and grants are internal ENVAL controls supporting reconstruction, not literal NEa database requirements or verifier acceptance;
   - OPEN remain PDOK/BAG source/freshness, reliable physical-site matching, verifier location-evidence acceptance, DSO/CAR, primary/secondary/MLOEA, visit procedure/evidence, evidence categories/acceptance, privacy/minimization, retention beyond the explicit TKV minimum, 44-row mapping and remote catalog/caller truth;
   - implementation is `NOT IMPLEMENTED`, proof `NOT PROVEN`, and DDL, data migration and retirement are `NOT AUTHORIZED`;
-  - next: attributable blocker resolution, an exact separately approved replacement contract and later bounded proof; connection DDL remains dependent on a proven locationfoundation;
+  - historical successor at that checkpoint was attributable blocker resolution, an exact separately approved replacement contract and later bounded proof; connection DDL remained dependent on a proven locationfoundation;
   - no migration, proof, proof execution, SQL, database write, runtime, Edge Function, frontend, CSS, inline CSS, remote action, staging, commit, push, deploy or retirement occurred.
 - WP3F location DDL-readiness and 44-row classification audit is proof-only and committed in `c5a46faa26d94ad22adbd2b3748f411e1b37e51e`:
   - `docs/app/operations/wp3f-location-ddl-readiness-audit.md`;
@@ -134,7 +158,7 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - implementation is `NOT IMPLEMENTED`, proof `NOT PROVEN`, migration/data population/retirement `NOT AUTHORIZED`, caller cutover `BLOCKED`, and external blockers `OPEN`;
   - the first future migration must be empty and additive but is not authorized; none of the 44 current rows may be copied, accepted or changed;
   - OPEN remain 44-row mapping, physical-site matching, PDOK/BAG, verifier acceptance, relation links, split/merge, customer-safe projection, write-RPC, caller cutover, current-table retirement, privacy and final retention;
-  - next: seek separate explicit migration/proof authorization; do not create migration, SQL or proof automatically.
+  - historical successor at that checkpoint was separate explicit migration/proof authorization; no migration, SQL or proof followed automatically.
 - WP3G bounded location foundation implementation-readiness and proof contract are PROOF ONLY / DOCS ONLY:
   - WP3F-B is committed in HEAD `e6aac0119c5e545673a07c6a985e1921a663ba49`;
   - readiness status is exactly `PROOF ONLY — WP3G BOUNDED LOCATION FOUNDATION IMPLEMENTATION READINESS`;
@@ -147,7 +171,7 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - proof contract Q01-Q42 covers exact catalog/additivity/emptiness, immutable root/observation/version behavior, vocabularies/descriptors/hashes, sequential temporal/supersession checks, RLS/grants, isolation, rollback and protected counts/hashes;
   - operationele advisory-lock and true two-transaction concurrency proof are explicitly deferred to a separately approved write-RPC;
   - operationele write-RPC, 44-row mapping/population, physical-site matching, PDOK/BAG, verifier acceptance, relation tables, customer-safe projection, caller cutover, retirement, privacy and final retention remain BLOCKED;
-  - next: approve the exact physical observation/descriptor/acceptance catalog in a separate docs-only decision, then separately authorize migration/proof implementation;
+  - historical successor at that checkpoint was approval of the exact physical observation/descriptor/acceptance catalog and then separate migration/proof authorization;
   - no migration, proof, SQL, database write, runtime, Edge Function, frontend, CSS, staging, commit, push, deploy or remote action occurred.
 - WP3G-B exact physical location schema decisions package 1–8 is APPROVED TARGET — DOCS ONLY:
   - WP3G is committed in HEAD `c021d57aacc5d8beb4aa2043bc963839fa38da07`; its readiness verdict and proof contract remain unchanged historical evidence;
@@ -159,7 +183,7 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - `TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE`;
   - implementation is `NOT IMPLEMENTED`, proof is `NOT PROVEN`, migration and database writes are `NOT AUTHORIZED`, operational write-RPC/data population/caller cutover are `BLOCKED`, retirement is `NOT AUTHORIZED`, and external blockers are `OPEN`;
   - operationele write-RPC, advisory-lock concurrency, true two-transaction concurrency proof, 44-row mapping/population, physical-site matching, PDOK/BAG source, verifier acceptance, case/allocation-point/charge-point links, split/merge, customer-safe projection, caller cutover, current-table retirement, privacy and final retention remain blocked/open;
-  - next: perform a new bounded docs-only implementation-readiness reconciliation, then seek separate explicit migration/proof authorization; do not create migration, SQL or proof automatically;
+  - historical successor at that checkpoint was bounded docs-only implementation-readiness reconciliation and then separate migration/proof authorization;
   - no migration, proof, SQL, database write, runtime, Edge Function, frontend, CSS, package/config, staging, commit, push, deploy or remote action occurred.
 - WP3G-C bounded location foundation readiness reconciliation is PROOF ONLY / DOCS ONLY:
   - WP3G-B is committed in HEAD `98f7aa5007a458115afab1f2c3b2333862411250`;
@@ -182,7 +206,7 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - all fixture groups rolled back, all TARGET tables ended empty, protected counts/hashes were equal before and after, and `app_dossier_locations` remained at 44 rows;
   - the migration was applied directly locally; no migration-history record, remote apply, push or deploy exists;
   - docs proof registration is in `docs/app/operations/wp3h-location-foundation-local-proof.md`;
-  - NEXT: separately authorize an operational write-RPC/idempotency/advisory-lock/two-transaction concurrency batch;
+  - historical successor at that checkpoint was the separately authorized WP3J operational write-RPC/idempotency/advisory-lock/concurrency batch;
   - BLOCKED separately: 44-row mapping/population, physical-site matching, PDOK/BAG, verifier acceptance, relations, customer-safe projection, caller cutover and current-table retirement;
   - no EAN, connection, aangeslotene, charge-point, case/allocation-point relationship, remote, production or regulatory claim follows from WP3H.
 - WP3I operational location-write readiness is DRAFT / DECISION REQUIRED:
@@ -192,7 +216,7 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - twelve explicit choices cover RPC shape, server provenance, shared idempotency, canonical hashing/replay, fail-closed audit, root locking, observation/acceptance separation, decision references, immutable correction, safe errors, service-role security and true concurrency proof;
   - every recommended choice remains `NOT APPROVED`; READY FOR DECISION is not implementation authorization;
   - proposed free paths are `supabase/migrations/20260728140000_app_location_write_rpcs.sql` and `scripts/proofs/app-location-write-rpcs.proof.ts`; neither exists;
-  - NEXT: Daan explicitly decides the complete twelve-choice package, including idempotency expiry/cleanup and the server-role boundary;
+  - historical successor at that checkpoint was Daan's decision on the complete twelve-choice package, including idempotency expiry/cleanup and the server-role boundary;
   - operational writes remain `NOT IMPLEMENTED`; population, links, projection, caller cutover, retirement, remote and production remain blocked;
   - WP3H remains `CURRENT PROVEN — LOCAL ONLY`; no migration, proof, SQL write, database change, runtime, frontend, CSS, staging, commit, push, deploy or remote action occurred.
 - WP3J operational location write RPCs are CURRENT PROVEN — LOCAL ONLY:
@@ -208,7 +232,7 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - real local counts remain `app_locations=0`, `app_location_address_observations=0`, `app_location_versions=0`, `app_dossier_locations=44`, `app_audit_events=753`, and `app_idempotency_keys=306`; disposable database count ends at 0;
   - the local direct apply is absent from remote migration history; no remote apply, push or deploy occurred;
   - docs proof registration is `docs/app/operations/wp3j-location-write-rpcs-local-proof.md`;
-  - NEXT: `WP3K — authorized operational location caller boundary`;
+  - historical successor at that checkpoint was `WP3K — authorized operational location caller boundary`;
   - WP3K must decide human/operations roles, trusted server-derived `actor_ref`, required case/dossier/party/authority context, four-eyes decisions, caller-to-RPC mapping, safe error mapping and audit correlation;
   - Edge Function/runtimecaller, browser-direct calls, population, 44-row mapping, relation links, projection, cutover, retirement, remote and production remain blocked or unproven.
 - WP3K authorized operational location caller boundary readiness is committed; D01-D12 are APPROVED TARGET:
@@ -217,11 +241,18 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - customer Auth, customer identity, dossier ownership, case roles and representation authority cannot be reused as internal location-review authority;
   - representation authority remains `NOT SCHEMA READY`; the existing simple pilot perimeter and manual-escalation exclusions remain unchanged;
   - Daan approves the twelve TARGET decisions covering specific callers, principal, workforce foundation, capabilities, object scope, representation separation, ingestion, maker/checker, actor provenance, audit/idempotency correlation, safe errors and proof;
-  - the approved TARGET caller shape uses the `api-app-ops-location-*` family; a focused `_shared/app_workforce_authorization.ts` helper and `scripts/proofs/api-app-ops-location-callers.proof.ts` remain not implemented;
+  - at this historical checkpoint the approved TARGET caller shape used the
+    `api-app-ops-location-*` family while the focused
+    `_shared/app_workforce_authorization.ts` helper and
+    `scripts/proofs/api-app-ops-location-callers.proof.ts` were not yet
+    implemented; WP3N and commit `25b033f` later implement/prove the shared
+    caller foundation and authoritative tenant-gate propagation;
   - root creation and observation registration remain non-accepting; initial acceptance and correction require four-eyes;
   - no emergency override is approved;
-  - WP3L-B later implements/proves the bounded empty foundation; this does not implement the WP3K caller family;
-  - no Edge Function, helper, authorized caller, UI, population, remote apply, production, cutover or retirement is implemented or authorized.
+  - WP3L-B later implements/proves the bounded empty foundation; WP3N later
+    implements the four caller families and bridge locally;
+  - operations UI, population, remote apply, production, cutover and retirement
+    remain unimplemented or unauthorized.
 - WP3L-B workforce authorization foundation is CURRENT PROVEN — LOCAL ONLY:
   - WP3L-D01 through WP3L-D18 are APPROVED TARGET;
   - implementation commit is `6485dad9a1cc481efc3f17095f90df72a219b315`, parent `1baaef4174df7a002c8a3bebd1b526d68c7f1d1c`, subject `Add WP3L workforce authorization foundation`;
@@ -238,7 +269,7 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - AUTHORIZED CALLER: NOT IMPLEMENTED;
   - WP3J EXECUTION BRIDGE: NOT IMPLEMENTED;
   - REMOTE APPLY / CUTOVER: OPEN/BLOCKED;
-  - NEXT: `WP3M — authorized operational location callers and WP3J execution bridge readiness`;
+  - historical successor at that checkpoint was `WP3M — authorized operational location callers and WP3J execution bridge readiness`;
   - WP3M is readiness/decision work only and grants no implementation authorization.
 - WP3M authorized caller and execution-bridge readiness is DRAFT / DECISION REQUIRED:
   - evidence is `docs/app/operations/wp3m-location-callers-execution-bridge-readiness.md`;
@@ -251,7 +282,7 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - WP3J EXECUTION BRIDGE: NOT IMPLEMENTED;
   - BOOTSTRAP / POPULATION / ASSIGNMENT AUTHORITY: NOT IMPLEMENTED;
   - OPERATIONS UI / REMOTE APPLY / CUTOVER: OPEN/BLOCKED;
-  - NEXT: Daan explicitly decides the complete eighteen-choice WP3M package; no implementation starts automatically.
+  - historical successor at that checkpoint was Daan's decision on the complete eighteen-choice WP3M package; no implementation started automatically.
 - WP3N authorized operation callers and atomic WP3J execution bridge are
   CURRENT PROVEN — LOCAL ONLY:
   - WP3M-D01 through WP3M-D18 are APPROVED TARGET;
@@ -275,7 +306,9 @@ This queue is only for the new `/app`, `api-app-*`, and `app_*` implementation. 
   - ASSIGNMENT AUTHORITY: NOT IMPLEMENTED;
   - OPERATIONS UI: NOT IMPLEMENTED;
   - REMOTE APPLY / CUTOVER: OPEN/BLOCKED;
-  - NEXT: `WP3O — controlled pilot workforce bootstrap and assignment authority readiness`;
+  - PENDING after the current official-source priority: decide the prepared
+    `WP3O — controlled pilot workforce bootstrap and assignment authority`
+    package before any bootstrap/population implementation;
   - WP3O must decide bootstrap custody, designated executor and independent
     checker, first identity lifecycle, initial capabilities/scopes,
     assignment/revocation authority, dual customer/workforce-binding
@@ -360,15 +393,39 @@ Local proof is not production proof. Remote migration/function deploy, productio
   - Overall recommendation: HYBRID PARALLEL REBUILD.
   - Electricity-TKV verifier detail is mapped and no longer source-blocked. The architecture is TARGET — APPROVED, NOT CURRENT PROVEN; blanket implementation authorization remains NO.
   - Target-only internal support controls are separated from external verifier location visits; approval of the direction gives neither implementation permission nor external professional authority.
-- White-label / multi-tenant architecture and local foundation:
+- White-label / multi-tenant architectural foundation: DONE — CURRENT PROVEN
+  LOCAL; the commercial white-label product remains TARGET:
   - [x] WL02-WL04 approved the TARGET boundaries recorded in `docs/app/architecture/white-label-control-plane.md`, `docs/app/contracts/platform-control-plane.md` and `docs/app/architecture/platform-control-plane-physical-foundation.md`.
   - [x] WL05-WL11E implement and deterministically prove the bounded local foundation through commit `8b47126`: physically separate control-plane workdir/migrations, explicit fail-closed target selection, tenant/routing/locator/platform-audit records, provider-neutral managed/static tenant resolution, trusted ingress, authoritative gating of the inventoried CURRENT `api-app-*` surface, versioned presentation configuration, managed/static presentation sources, safe public presentation bootstrap and React provider consumption.
   - [x] ENVAL remains tenant/data-plane #1 without customer/case copies or a convenience tenant-local `tenant_id` backfill. The control plane owns only platform routing/configuration, locator/secret references and platform audit; it owns no ordinary customer/case/signing/evidence/settlement truth.
   - [x] One core supports ENVAL SaaS, managed white-label, customer-owned cloud and contractually agreed standalone/self-hosted/source-license deployment through orthogonal operator, deployment ownership, branding, support and conflict-participation dimensions; these modes do not create code forks or authority by inference.
   - [x] Tenant identity, presentation brand, legal operator and support provider remain separate. LabelUP is only a conceptual optional support-provider relationship unless separately authorized; it is not automatically tenant, contracting entity, platform admin or representation authority.
   - [x] Current local routing does not switch the tenant data-plane client dynamically: `DYNAMIC_DATA_PLANE_SWITCHING=NO`. Browser-controlled host/payload/query/storage/config values cannot select tenant, locator, source mode or brand authority.
+  - [x] Canon/system-map/architecture/contract status promotion is committed in
+    `e076a23`; it promotes only local code/proof facts and keeps remote and
+    production unproven.
   - [ ] TARGET/DEFERRED: real tenant #2 and customer onboarding; live control-plane bootstrap/deployment; production custom domains, ownership verification and trusted proxy topology; dynamic data-plane switching; provisioning/fleet/customer-cloud/self-host automation; tenant/domain/brand administration UI; uploaded assets/themes; legal/support authority configuration; central conflict registry; and remote/production white-label proof.
   - [ ] UNKNOWN until separately evidenced: remote control-plane provider/project/region/recovery, production ingress authority and live white-label operational readiness.
+- Legacy caller retirement and live-cutover separation:
+  - DONE — LOCAL SOURCE: commit `cf226df` removes the shipped static
+    `api-dossier-dev-unlock` UI/caller while intentionally retaining its Edge
+    Function source and historical data.
+  - PENDING OBSERVATION: the 14-calendar-day dev-unlock caller-removal window
+    started at commit time `2026-08-16 11:25:35 CEST`; earliest review remains
+    `2026-08-30 11:25:35 CEST`. This date does not make retirement the current
+    priority.
+  - DONE — LOCAL SOURCE: commit `08462c8` removes only the secondary
+    `api-dossier-access-update` retry; normal `api-dossier-access-save` and both
+    legacy function source trees remain present.
+  - DONE — LOCAL SOURCE: commit `bcdfe25` removes every shipped static
+    `ev_direct` application caller, routes EV application actions to canonical
+    `/aanmelden`, and preserves the ordinary `contact` lead flow plus retained
+    `api-lead-submit`/legacy dossier function sources.
+  - PARKED/BLOCKED: remote legacy function retirement, old live
+    `www.enval.nl` static cutover, traffic/usage confirmation, legacy data and
+    Storage retirement remain gated on fresh live evidence and explicit
+    authorization. Local source state does not prove the current live
+    deployment, and no remote function deletion is claimed.
 - Database Retirement Phase 1A - Evidence Completion:
   - DONE on 2026-07-19; unique operational content is consolidated in `docs/app/operations/remote-baseline-and-retirement.md`.
   - The WP3D read-only catalog inventory observes 24 `app_*` public tables and substantial app data; the earlier retirement evidence recorded zero local legacy tables and 7 `app-documents` Storage objects.
@@ -427,15 +484,13 @@ Local proof is not production proof. Remote migration/function deploy, productio
 - Verifier/inboeking integration boundary.
 - Rotate any previously exposed token/key-like value before production or deploy use.
 
-## P1
+## P1 — Remaining
 
-- Define intake/quarantine schema and expiry boundary.
-- Define pre-auth capability and anti-abuse contract.
-- Implement server-only atomic signed-intake promotion RPC/endpoint into `app_cases`-owned state.
-- Define initial intake/submission snapshot schema.
-- Define server-derived section capabilities.
-- Build public Start dossier quarantine flow.
-- Rename technical `pending_verification` to `submitted_for_review` and build internal promotion/retry plus later Supabase Auth binding; do not build a second verification-link trigger.
+Collecting quarantine/capability transport, the public document-first flow,
+`submitted_for_review`, atomic case-owned promotion, internal retry,
+Supabase-Auth binding and dashboard convergence are no longer P1 TODOs; they
+are CURRENT PROVEN LOCAL in the bounded 09B/09C evidence above.
+
 - Build targeted charger/location correction forms using shared signup form modules.
 - Reuse parser/precheck for authenticated document corrections.
 - Build Correcties indienen revision flow.
@@ -473,6 +528,11 @@ Local proof is not production proof. Remote migration/function deploy, productio
 - Do not use legacy `dossier_sessions` as app auth.
 - Do not treat a particulier-only mock as a global account-type rule.
 - Do not expose raw audit rows directly to customers.
+
+The dated checkpoint sections below are append-only status snapshots. Their
+historical `OPEN`, `NOT IMPLEMENTED` or successor wording records the state at
+that checkpoint and is superseded only by a later explicit CURRENT/P0 entry
+above; it is not a second current-priority queue.
 
 ## PILOT-CASE-01 checkpoint — 2026-07-29
 
@@ -716,7 +776,7 @@ WITH MANUAL FALLBACK
       mandate/calendar-year validity remains separate future truth.
 - [x] Q01-Q24 cover deferred/manual/parser-candidate boundaries, all account
       types, replay, conflict, concurrency, rollback/retry and cleanup.
-- [ ] NEXT BOUNDED BATCH: authenticated energy-bill/contract intake, EAN
+- [ ] HISTORICAL SUCCESSOR AT THIS CHECKPOINT: authenticated energy-bill/contract intake, EAN
       candidate extraction/preview and explicit confirmation through the CURRENT
       document transport.
 - [ ] OPEN: CAR/DSO derivation, accepted canonical connection/allocation point,
