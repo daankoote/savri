@@ -279,17 +279,13 @@ const releaseEvidence = verify({
   },
 });
 assert(
-  releaseEvidence.status ===
-    (releaseEvidence.migrationGitInclusionRequired.length > 0
-      ? "FAIL"
-      : "GATED_REQUIRED") &&
+  releaseEvidence.status === "GATED_REQUIRED" &&
     releaseEvidence.preCommitGate === releaseEvidence.status &&
     releaseEvidence.requiredReleaseGates.length === 3 &&
     releaseEvidence.planErrors.length === 0 &&
     releaseEvidence.unclassifiedPaths.length === 0 &&
     releaseEvidence.migrationOmissions.length === 0 &&
-    releaseEvidence.failed ===
-      releaseEvidence.migrationGitInclusionRequired.length &&
+    releaseEvidence.failed === 0 &&
     statusExitCode(releaseEvidence) !== 0,
   "release_silently_passed_required_gates",
 );
@@ -433,7 +429,10 @@ const boundedFailureOutput = formatEvidence({
   migrationBaselineUnresolved: [],
   migrationBaselineExceptions: [],
   migrationGitInclusionRequired: [],
+  migrationGitVisibleCandidates: [],
+  migrationStagedCandidates: [],
   preCommitGate: "NOT_APPLICABLE",
+  preCommitOnly: false,
   durationMs: 2,
   checks: [
     { id: "earlier-pass", status: "PASS", durationMs: 1 },
@@ -519,13 +518,37 @@ assert(
   baselineBefore.exceptions.length === 2 &&
     baselineBefore.unresolved.length === 0 &&
     baselineBefore.omissions.length === 0 &&
-    baselineBefore.gitInclusionRequired.every((item) =>
+    baselineBefore.gitInclusionRequired.length === 0 &&
+    baselineBefore.gitVisibleCandidates.some((item) =>
       item.path ===
-        "platform/control-plane/supabase/migrations/20260815120000_platform_control_plane_foundation.sql"
+          "platform/control-plane/supabase/migrations/20260816120000_platform_tenant_presentation_configs.sql" &&
+      item.target === "CONTROL_PLANE"
+    ) &&
+    baselineBefore.trackedMigrations.includes(
+      "platform/control-plane/supabase/migrations/20260815120000_platform_control_plane_foundation.sql",
     ) &&
     baselineBefore.inventories.map((item) => item.target).sort().join("|") ===
       "CONTROL_PLANE|TENANT_ENVAL",
   "migration_baseline_classification_changed",
+);
+const preCommitOnlyEvidence = verify({
+  mode: "INTEGRATION",
+  preCommitOnly: true,
+  executor() {
+    throw new Error("pre_commit_only_executed_a_verification_command");
+  },
+});
+assert(
+  preCommitOnlyEvidence.status === "PASS" &&
+    preCommitOnlyEvidence.preCommitGate === "PASS" &&
+    preCommitOnlyEvidence.preCommitOnly &&
+    preCommitOnlyEvidence.checks.length === 0 &&
+    preCommitOnlyEvidence.migrationGitVisibleCandidates.some((item) =>
+      item.path ===
+          "platform/control-plane/supabase/migrations/20260816120000_platform_tenant_presentation_configs.sql" &&
+      item.target === "CONTROL_PLANE"
+    ),
+  "visible_untracked_candidate_did_not_pass_pre_commit_only_gate",
 );
 assert(
   git([
@@ -546,6 +569,10 @@ const tenantProbePath =
 const controlPlaneProbePath =
   `platform/control-plane/supabase/migrations/99991231235959_enval_verify_probe_${process.pid}.sql`;
 const probePaths = [tenantProbePath, controlPlaneProbePath];
+const missingProbePaths = [
+  `supabase/migrations/99991231235958_missing_${process.pid}.sql`,
+  `platform/control-plane/supabase/migrations/99991231235958_missing_${process.pid}.sql`,
+];
 const probeAbsolutes = probePaths.map((path) => resolve(ROOT, path));
 assert(probeAbsolutes.every((path) => !existsSync(path)), "migration_probe_preexists");
 const createdProbes = [];
@@ -563,25 +590,89 @@ try {
       tenantProbePath,
       controlPlaneProbePath,
     ],
-    untrackedPaths: baselineBefore.gitInclusionRequired.map((item) =>
+    untrackedPaths: baselineBefore.gitVisibleCandidates.map((item) =>
       item.path
     ),
   });
+  const simulatedStaged = inspectMigrationOmissions({
+    ignoredPaths: Object.keys(VERIFY_MANIFEST.migrationBaseline.exceptions),
+    untrackedPaths: baselineBefore.gitVisibleCandidates.map((item) =>
+      item.path
+    ),
+    stagedPaths: probePaths,
+    inventoryPaths: [
+      ...baselineBefore.trackedMigrations,
+      ...baselineBefore.gitVisibleCandidates.map((item) => item.path),
+      ...Object.keys(VERIFY_MANIFEST.migrationBaseline.exceptions),
+      ...probePaths,
+    ],
+  });
+  const simulatedMissing = inspectMigrationOmissions({
+    ignoredPaths: Object.keys(VERIFY_MANIFEST.migrationBaseline.exceptions),
+    untrackedPaths: baselineBefore.gitVisibleCandidates.map((item) =>
+      item.path
+    ),
+    missingPaths: missingProbePaths,
+  });
+  const invalidCandidateName =
+    `supabase/migrations/not_ordered_probe_${process.pid}.sql`;
+  const simulatedInvalidName = inspectMigrationOmissions({
+    ignoredPaths: Object.keys(VERIFY_MANIFEST.migrationBaseline.exceptions),
+    untrackedPaths: [invalidCandidateName],
+    inventoryPaths: [invalidCandidateName],
+  });
+  const simulatedVersionCollision = inspectMigrationOmissions({
+    ignoredPaths: Object.keys(VERIFY_MANIFEST.migrationBaseline.exceptions),
+    untrackedPaths: [tenantProbePath],
+    inventoryPaths: [
+      tenantProbePath,
+      "supabase/migrations/99991231235959_existing_migration.sql",
+    ],
+  });
   const ambiguousWorkdir = inspectMigrationOmissions({
     ignoredPaths: Object.keys(VERIFY_MANIFEST.migrationBaseline.exceptions),
-    untrackedPaths: baselineBefore.gitInclusionRequired.map((item) => item.path),
+    untrackedPaths: baselineBefore.gitVisibleCandidates.map((item) => item.path),
     changedPaths: [
       "platform/ambiguous/supabase/migrations/99991231235959_probe.sql",
     ],
   });
   assert(
     probePaths.every((probePath) =>
-      withProbe.gitInclusionRequired.some((item) => item.path === probePath) &&
+      withProbe.gitVisibleCandidates.some((item) =>
+        item.path === probePath &&
+        item.target === (probePath.startsWith("platform/")
+          ? "CONTROL_PLANE"
+          : "TENANT_ENVAL")
+      ) &&
       git(["status", "--short", "--ignored", "--", probePath]).startsWith("?? ") &&
       simulatedIgnored.omissions.some((item) =>
         item.path === probePath && item.reason === "new_ignored_migration"
       )
     ) &&
+      probePaths.every((probePath) =>
+        simulatedStaged.stagedMigrationCandidates.some((item) =>
+          item.path === probePath &&
+          item.target === (probePath.startsWith("platform/")
+            ? "CONTROL_PLANE"
+            : "TENANT_ENVAL")
+        )
+      ) &&
+      missingProbePaths.every((probePath) =>
+        simulatedMissing.omissions.some((item) =>
+          item.path === probePath && item.reason === "missing_migration" &&
+          item.target === (probePath.startsWith("platform/")
+            ? "CONTROL_PLANE"
+            : "TENANT_ENVAL")
+        )
+      ) &&
+      simulatedInvalidName.omissions.some((item) =>
+        item.path === invalidCandidateName &&
+        item.reason === "invalid_migration_candidate_name"
+      ) &&
+      simulatedVersionCollision.omissions.some((item) =>
+        item.path === tenantProbePath &&
+        item.reason === "migration_version_collision"
+      ) &&
       ambiguousWorkdir.omissions.some((item) =>
         item.reason === "ambiguous_migration_workdir"
       ),

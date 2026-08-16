@@ -276,6 +276,10 @@ const CHECK_LIST = [
     applicablePaths: [
       "platform/control-plane/**",
       "platform/runtime/tenant-resolution/**",
+      "platform/runtime/presentation/presentation_brand_source.ts",
+      "platform/runtime/presentation/presentation_source_composition.ts",
+      "platform/runtime/presentation/adapters/platform_control_plane_presentation_v1.ts",
+      "platform/runtime/presentation/adapters/static_presentation_config_v1.ts",
       "scripts/tools/enval-supabase-target.mjs",
       "scripts/proofs/platform-control-plane-foundation.proof.ts",
     ],
@@ -331,6 +335,28 @@ const CHECK_LIST = [
     minimumMode: "TARGETED",
     expectedDurationMs: 1_000,
     expectedMarker: "PRESENTATION_BRAND_CONFIG_Q01_Q14=PASS",
+  }),
+  check({
+    id: "presentation-brand-sources-pure",
+    argv: [
+      "deno",
+      "run",
+      "--cached-only",
+      "--allow-read",
+      "scripts/proofs/presentation-brand-sources.proof.ts",
+    ],
+    domain: "provider-neutral-presentation-brand-source",
+    applicablePaths: [
+      "platform/runtime/presentation/presentation_brand_source.ts",
+      "platform/runtime/presentation/presentation_source_composition.ts",
+      "platform/runtime/presentation/adapters/platform_control_plane_presentation_v1.ts",
+      "platform/runtime/presentation/adapters/static_presentation_config_v1.ts",
+      "scripts/proofs/presentation-brand-sources.proof.ts",
+    ],
+    safety: SAFETY.SAFE_PURE,
+    minimumMode: "TARGETED",
+    expectedDurationMs: 1_000,
+    expectedMarker: "PRESENTATION_BRAND_SOURCES_Q01_Q12=PASS",
   }),
   check({
     id: "presentation-brand-consumers-pure",
@@ -851,6 +877,24 @@ export const PATH_RULES = Object.freeze([
     ]),
   }),
   Object.freeze({
+    id: "presentation-brand-sources",
+    match: Object.freeze({
+      type: "oneOf",
+      value: Object.freeze([
+        "platform/runtime/presentation/presentation_brand_source.ts",
+        "platform/runtime/presentation/presentation_source_composition.ts",
+        "platform/runtime/presentation/adapters/platform_control_plane_presentation_v1.ts",
+        "platform/runtime/presentation/adapters/static_presentation_config_v1.ts",
+        "scripts/proofs/presentation-brand-sources.proof.ts",
+      ]),
+    }),
+    checks: Object.freeze([
+      "deno-check-changed",
+      "presentation-brand-sources-pure",
+      "control-plane-foundation-local",
+    ]),
+  }),
+  Object.freeze({
     id: "presentation-brand-consumers",
     match: Object.freeze({
       type: "oneOf",
@@ -1082,10 +1126,14 @@ export const MIGRATION_INVENTORIES = Object.freeze([
   Object.freeze({
     target: "TENANT_ENVAL",
     root: "supabase/migrations",
+    candidateFilenamePattern:
+      "^[0-9]{14}_[a-z0-9][a-z0-9_]*\\.sql$",
   }),
   Object.freeze({
     target: "CONTROL_PLANE",
     root: "platform/control-plane/supabase/migrations",
+    candidateFilenamePattern:
+      "^[0-9]{14}_[a-z0-9][a-z0-9_]*\\.sql$",
   }),
 ]);
 

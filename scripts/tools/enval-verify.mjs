@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { basename, extname, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -158,10 +158,19 @@ export function validateManifest(manifest = VERIFY_MANIFEST) {
   for (const inventory of manifest.migrationInventories ?? []) {
     if (
       !inventory?.target || !isSafeRepoPath(inventory?.root) ||
-      !inventory.root.endsWith("supabase/migrations")
+      !inventory.root.endsWith("supabase/migrations") ||
+      typeof inventory.candidateFilenamePattern !== "string"
     ) {
       errors.push("manifest_migration_inventory_invalid");
       continue;
+    }
+    try {
+      const pattern = new RegExp(inventory.candidateFilenamePattern);
+      if (!pattern.test("20991231235959_valid_migration.sql")) {
+        errors.push("manifest_migration_candidate_pattern_invalid");
+      }
+    } catch {
+      errors.push("manifest_migration_candidate_pattern_invalid");
     }
     if (
       inventoryTargets.has(inventory.target) ||
@@ -269,6 +278,10 @@ export function inspectMigrationOmissions({
   inventories = VERIFY_MANIFEST.migrationInventories,
   ignoredPaths = null,
   untrackedPaths = null,
+  trackedPaths = null,
+  stagedPaths = null,
+  missingPaths = null,
+  inventoryPaths = null,
   changedPaths = null,
 } = {}) {
   const migrationPathspecs = [
@@ -292,6 +305,41 @@ export function inspectMigrationOmissions({
     "--",
     ...migrationPathspecs,
   ], cwd));
+  const tracked = trackedPaths ?? nulList(git([
+    "ls-files",
+    "--cached",
+    "-z",
+    "--",
+    ...migrationPathspecs,
+  ], cwd));
+  const staged = stagedPaths ?? nulList(git([
+    "diff",
+    "--cached",
+    "--name-only",
+    "--diff-filter=A",
+    "-z",
+    "--",
+    ...migrationPathspecs,
+  ], cwd));
+  const missing = missingPaths ?? [...new Set([
+    ...nulList(git([
+      "diff",
+      "--name-only",
+      "--diff-filter=D",
+      "-z",
+      "--",
+      ...migrationPathspecs,
+    ], cwd)),
+    ...nulList(git([
+      "diff",
+      "--cached",
+      "--name-only",
+      "--diff-filter=D",
+      "-z",
+      "--",
+      ...migrationPathspecs,
+    ], cwd)),
+  ])];
   const changed = changedPaths ?? collectChangedPaths(cwd);
   const ignoredCandidates = [...new Set(ignored)]
     .filter((path) => path.endsWith(".sql"))
@@ -299,6 +347,22 @@ export function inspectMigrationOmissions({
   const untrackedCandidates = [...new Set(untracked)]
     .filter((path) => path.endsWith(".sql"))
     .sort();
+  const trackedCandidates = [...new Set(tracked)]
+    .filter((path) => path.endsWith(".sql"))
+    .sort();
+  const stagedCandidates = [...new Set(staged)]
+    .filter((path) => path.endsWith(".sql"))
+    .sort();
+  const missingCandidates = [...new Set(missing)]
+    .filter((path) => path.endsWith(".sql"))
+    .sort();
+  const inventoriedPaths = [...new Set(
+    inventoryPaths ?? [
+      ...trackedCandidates,
+      ...untrackedCandidates,
+      ...ignoredCandidates,
+    ],
+  )].filter((path) => path.endsWith(".sql")).sort();
   const candidates = [...new Set([
     ...ignoredCandidates,
     ...untrackedCandidates,
@@ -307,6 +371,8 @@ export function inspectMigrationOmissions({
   const unresolved = [];
   const omissions = [];
   const gitInclusionRequired = [];
+  const gitVisibleCandidates = [];
+  const stagedMigrationCandidates = [];
   const unresolvedBaseline = baseline.unresolved ?? {};
 
   const matchingInventories = (path) => inventories.filter((inventory) => {
@@ -333,6 +399,76 @@ export function inspectMigrationOmissions({
       omissions.push({ path, reason: "ambiguous_migration_workdir" });
     }
   }
+
+  for (const path of missingCandidates) {
+    const matches = matchingInventories(path);
+    if (matches.length !== 1) {
+      if (!ambiguousCandidates.has(path)) {
+        omissions.push({ path, reason: "ambiguous_migration_workdir" });
+      }
+      continue;
+    }
+    omissions.push({
+      path,
+      target: matches[0].target,
+      reason: "missing_migration",
+    });
+  }
+
+  const validateCommitCandidate = (path, inclusion) => {
+    const matches = matchingInventories(path);
+    if (matches.length !== 1) {
+      if (!ambiguousCandidates.has(path)) {
+        omissions.push({ path, reason: "ambiguous_migration_workdir" });
+      }
+      return;
+    }
+    const inventory = matches[0];
+    const filename = basename(path);
+    const filenamePattern = new RegExp(inventory.candidateFilenamePattern);
+    if (!filenamePattern.test(filename)) {
+      omissions.push({
+        path,
+        target: inventory.target,
+        reason: "invalid_migration_candidate_name",
+      });
+      return;
+    }
+    if (inclusion === "UNTRACKED_VISIBLE" && !existsSync(resolve(cwd, path))) {
+      omissions.push({
+        path,
+        target: inventory.target,
+        reason: "missing_migration",
+      });
+      return;
+    }
+    const version = filename.slice(0, 14);
+    const prefix = `${inventory.root}/`;
+    const collisions = inventoriedPaths.filter((candidate) =>
+      candidate !== path && candidate.startsWith(prefix) &&
+      basename(candidate).startsWith(version)
+    );
+    if (collisions.length > 0) {
+      omissions.push({
+        path,
+        target: inventory.target,
+        reason: "migration_version_collision",
+      });
+      return;
+    }
+    const evidence = {
+      path,
+      target: inventory.target,
+      reason: inclusion === "STAGED_NEW"
+        ? "staged migration candidate"
+        : "Git-visible untracked migration candidate",
+    };
+    if (inclusion === "STAGED_NEW") {
+      stagedMigrationCandidates.push(evidence);
+    } else {
+      gitVisibleCandidates.push(evidence);
+    }
+  };
 
   for (const path of ignoredCandidates) {
     if (ambiguousCandidates.has(path)) continue;
@@ -375,10 +511,15 @@ export function inspectMigrationOmissions({
       }
       continue;
     }
-    gitInclusionRequired.push({
-      path,
-      reason: "untracked migration requires Git inclusion",
-    });
+    validateCommitCandidate(path, "UNTRACKED_VISIBLE");
+  }
+
+  for (const path of stagedCandidates) {
+    if (ignoredCandidates.includes(path)) {
+      omissions.push({ path, reason: "staged_migration_is_ignored" });
+      continue;
+    }
+    validateCommitCandidate(path, "STAGED_NEW");
   }
 
   for (const [path, expected] of Object.entries(baseline.exceptions)) {
@@ -403,6 +544,9 @@ export function inspectMigrationOmissions({
     unresolved,
     omissions,
     gitInclusionRequired,
+    gitVisibleCandidates,
+    stagedMigrationCandidates,
+    trackedMigrations: trackedCandidates,
   };
 }
 
@@ -511,6 +655,7 @@ export function formatEvidence(evidence, { json = false } = {}) {
     `H3A_STATUS=${evidence.h3aStatus}`,
     `MODE=${evidence.mode}`,
     `PRE_COMMIT_GATE=${evidence.preCommitGate}`,
+    `PRE_COMMIT_ONLY=${evidence.preCommitOnly ? "YES" : "NO"}`,
     `HEAD=${evidence.head}`,
     `DIFF_HASH=${evidence.diffHash}`,
     `SELECTED_CHECK_COUNT=${evidence.selectedCheckCount}`,
@@ -534,6 +679,14 @@ export function formatEvidence(evidence, { json = false } = {}) {
     `MIGRATION_GIT_INCLUSION_REQUIRED=${compactItems(
       evidence.migrationGitInclusionRequired,
       (x) => `${x.path}:${x.reason}`,
+    )}`,
+    `MIGRATION_GIT_VISIBLE_CANDIDATES=${compactItems(
+      evidence.migrationGitVisibleCandidates,
+      (x) => `${x.path}:${x.target}`,
+    )}`,
+    `MIGRATION_STAGED_CANDIDATES=${compactItems(
+      evidence.migrationStagedCandidates,
+      (x) => `${x.path}:${x.target}`,
     )}`,
     `DURATION_MS=${evidence.durationMs}`,
     `TOTAL_DURATION_MS=${evidence.durationMs}`,
@@ -570,7 +723,12 @@ export function formatEvidence(evidence, { json = false } = {}) {
 }
 
 function parseArgs(argv) {
-  const parsed = { mode: null, dryRun: false, json: false };
+  const parsed = {
+    mode: null,
+    dryRun: false,
+    json: false,
+    preCommitOnly: false,
+  };
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
     if (argument === "--mode") {
@@ -580,6 +738,8 @@ function parseArgs(argv) {
       parsed.dryRun = true;
     } else if (argument === "--json") {
       parsed.json = true;
+    } else if (argument === "--pre-commit-only") {
+      parsed.preCommitOnly = true;
     } else {
       throw new Error(`unknown_argument:${argument}`);
     }
@@ -587,12 +747,16 @@ function parseArgs(argv) {
   if (!MODES.includes(parsed.mode)) {
     throw new Error(`--mode must be one of ${MODES.join(",")}`);
   }
+  if (parsed.preCommitOnly && parsed.mode !== "INTEGRATION") {
+    throw new Error("--pre-commit-only requires --mode INTEGRATION");
+  }
   return parsed;
 }
 
 export function verify({
   mode,
   dryRun = false,
+  preCommitOnly = false,
   cwd = ROOT,
   manifest = VERIFY_MANIFEST,
   executor = defaultExecutor,
@@ -604,14 +768,15 @@ export function verify({
     cwd,
     baseline: manifest.migrationBaseline,
   });
-  const checks = runChecks(plan, { cwd, executor, dryRun });
+  if (preCommitOnly && mode !== "INTEGRATION") {
+    throw new Error("pre_commit_only_requires_integration_mode");
+  }
+  const checks = preCommitOnly
+    ? []
+    : runChecks(plan, { cwd, executor, dryRun });
   const failedChecks = checks.filter((check) => check.status === "FAIL");
-  const preCommitMigrationFailure =
-    modeRank(mode, manifest.modes) >= modeRank("INTEGRATION", manifest.modes) &&
-    migration.gitInclusionRequired.length > 0;
   const failed = plan.unclassifiedPaths.length > 0 || plan.errors.length > 0 ||
-    migration.omissions.length > 0 || failedChecks.length > 0 ||
-    preCommitMigrationFailure;
+    migration.omissions.length > 0 || failedChecks.length > 0;
   const requiredReleaseGates = plan.gated
     .filter((check) => check.requiredForRelease)
     .map((check) => check.id)
@@ -637,11 +802,10 @@ export function verify({
       : "PASS",
     head: git(["rev-parse", "--short", "HEAD"], cwd).trim(),
     diffHash: computeDiffHash(paths, cwd),
-    selectedCheckCount: plan.selected.length,
+    selectedCheckCount: preCommitOnly ? 0 : plan.selected.length,
     passed: checks.filter((check) => check.status === "PASS").length,
     failed: failedChecks.length + plan.unclassifiedPaths.length +
-      plan.errors.length + migration.omissions.length +
-      (preCommitMigrationFailure ? migration.gitInclusionRequired.length : 0),
+      plan.errors.length + migration.omissions.length,
     skippedGated: plan.gated.length,
     unclassifiedPaths: plan.unclassifiedPaths,
     migrationOmission: migration.omissions.length
@@ -654,11 +818,14 @@ export function verify({
     migrationBaselineUnresolved: migration.unresolved,
     migrationBaselineExceptions: migration.exceptions,
     migrationGitInclusionRequired: migration.gitInclusionRequired,
+    migrationGitVisibleCandidates: migration.gitVisibleCandidates,
+    migrationStagedCandidates: migration.stagedMigrationCandidates,
     migrationOmissions: migration.omissions,
     requiredReleaseGates,
     planErrors: plan.errors,
     checks,
     dryRun,
+    preCommitOnly,
     durationMs: Math.max(0, Math.round(performance.now() - started)),
   };
 }

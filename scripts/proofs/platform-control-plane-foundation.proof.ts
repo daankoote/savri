@@ -8,6 +8,15 @@ import {
   type PlatformDataPlaneLocatorRecord,
   type PlatformRoutingRecord,
 } from "../../platform/runtime/tenant-resolution/adapters/platform_control_plane_v1.ts";
+import { ENVAL_PRESENTATION_BRAND_CONFIG_V1 } from "../../platform/runtime/presentation/enval_presentation_defaults.ts";
+import {
+  PlatformControlPlanePresentationV1Source,
+  type PlatformPresentationConfigReader,
+  type PlatformPresentationConfigRecord,
+} from "../../platform/runtime/presentation/adapters/platform_control_plane_presentation_v1.ts";
+import { createStaticPresentationConfigV1Source } from "../../platform/runtime/presentation/adapters/static_presentation_config_v1.ts";
+import { createResolvedPresentationSourceContext } from "../../platform/runtime/presentation/presentation_brand_source.ts";
+import { projectPresentationBrand } from "../../platform/runtime/presentation/presentation_brand_config.ts";
 
 const CONTROL_PLANE_PORT = 56322;
 const TENANT_ENVAL_PORT = 54322;
@@ -19,6 +28,8 @@ const ROUTING_ID = "52000000-0000-4000-8000-000000000001";
 const LOCATOR_ID = "53000000-0000-4000-8000-000000000001";
 const SECRET_REFERENCE_ID = "54000000-0000-4000-8000-000000000001";
 const AUDIT_ID = "55000000-0000-4000-8000-000000000001";
+const PRESENTATION_ID = "56000000-0000-4000-8000-000000000001";
+const PRESENTATION_AUDIT_ID = "57000000-0000-4000-8000-000000000001";
 const TRUSTED_LOCAL_HOST = "enval.localhost";
 
 class ProofFailure extends Error {}
@@ -170,6 +181,22 @@ async function bootstrapLocalTenantOne(): Promise<void> {
       'wl05-local-foundation'
     ) on conflict (id) do nothing;
 
+    insert into platform.tenant_presentation_configs (
+      id, tenant_id, environment, version_sequence, schema_version,
+      config_version, display_name, short_mark, product_label, tagline,
+      logo_ref, logo_inverse_ref, favicon_ref, social_image_ref,
+      asset_alt_text, export_basename, created_at,
+      created_by_actor_ref, created_from_request_id
+    ) values (
+      ${sqlLiteral(PRESENTATION_ID)}, ${sqlLiteral(TENANT_ID)}, 'local', 1,
+      'presentation-brand-config-v1', 'enval-presentation-v1',
+      'ENVAL', 'E', 'Klantportaal', 'ERE inboekservice',
+      '/assets/img/logo.svg', '/assets/img/logo-white.svg',
+      '/assets/img/favicon.svg', '/assets/img/og-enval.jpg', 'ENVAL',
+      'enval-aanmelddocumenten', '2026-08-16T12:00:00Z',
+      'system:wl11d-local-bootstrap', 'wl11d-local-bootstrap-v1'
+    ) on conflict (id) do nothing;
+
     insert into platform.action_audit_events (
       id, actor_kind, actor_reference, tenant_id, action_type,
       reason_or_purpose_ref, result, request_id, correlation_ref,
@@ -180,6 +207,19 @@ async function bootstrapLocalTenantOne(): Promise<void> {
       'wl05-local-foundation', 'success', 'wl05-local-bootstrap-v1',
       'wl05-local-bootstrap-v1', 'local', 'platform.bootstrap',
       'migration:20260815120000', '2026-08-15T12:00:00Z'
+    ) on conflict (id) do nothing;
+
+    insert into platform.action_audit_events (
+      id, actor_kind, actor_reference, tenant_id, action_type,
+      reason_or_purpose_ref, result, request_id, correlation_ref,
+      environment, component, provenance_ref, recorded_at
+    ) values (
+      ${sqlLiteral(PRESENTATION_AUDIT_ID)}, 'system',
+      'system:wl11d-local-bootstrap', ${sqlLiteral(TENANT_ID)},
+      'tenant.presentation.bootstrap.local', 'wl11d-presentation-source',
+      'success', 'wl11d-local-bootstrap-v1', 'wl11d-local-bootstrap-v1',
+      'local', 'platform.presentation', 'migration:20260816120000',
+      '2026-08-16T12:00:00Z'
     ) on conflict (id) do nothing;
     commit;
   `,
@@ -267,6 +307,64 @@ function databaseReader(): PlatformControlPlaneReader {
   };
 }
 
+function presentationDatabaseReader(): PlatformPresentationConfigReader {
+  return {
+    async findCurrentPresentationConfigs(
+      tenantId,
+      environment,
+    ): Promise<PlatformPresentationConfigRecord[]> {
+      const value = await psql(
+        CONTROL_PLANE_PORT,
+        `
+        begin transaction read only;
+        select tenant_id, environment, version_sequence, schema_version,
+          config_version, display_name, short_mark, product_label, tagline,
+          logo_ref, logo_inverse_ref, favicon_ref, social_image_ref,
+          asset_alt_text, export_basename
+        from platform.current_tenant_presentation_configs
+        where tenant_id = ${sqlLiteral(tenantId)}
+          and environment = ${sqlLiteral(environment)}
+        order by version_sequence desc;
+        rollback;
+      `,
+      );
+      return parseRows(value, ([
+        rowTenantId,
+        rowEnvironment,
+        versionSequence,
+        schemaVersion,
+        configVersion,
+        displayName,
+        shortMark,
+        productLabel,
+        tagline,
+        logoReference,
+        logoInverseReference,
+        faviconReference,
+        socialImageReference,
+        assetAltText,
+        exportBasename,
+      ]) => ({
+        tenantId: rowTenantId,
+        environment: rowEnvironment,
+        versionSequence: Number(versionSequence),
+        schemaVersion,
+        configVersion,
+        displayName,
+        shortMark,
+        productLabel,
+        tagline: tagline || null,
+        logoReference,
+        logoInverseReference: logoInverseReference || null,
+        faviconReference: faviconReference || null,
+        socialImageReference: socialImageReference || null,
+        assetAltText,
+        exportBasename: exportBasename || null,
+      }));
+    },
+  };
+}
+
 const controlTarget = await run("node", [
   "scripts/tools/enval-supabase-target.mjs",
   "--target",
@@ -320,6 +418,8 @@ assert(
         (to_regclass('platform.tenants')),
         (to_regclass('platform.routing_identities')),
         (to_regclass('platform.data_plane_locators')),
+        (to_regclass('platform.tenant_presentation_configs')),
+        (to_regclass('platform.current_tenant_presentation_configs')),
         (to_regclass('platform.action_audit_events'))
     ) v(regclass_value) where regclass_value is not null;
     rollback;
@@ -336,8 +436,8 @@ assert(
     join pg_catalog.pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'platform' and c.relkind = 'r';
   `,
-  ) === "4",
-  "foundation_table_count_not_four",
+  ) === "5",
+  "foundation_table_count_not_five",
 );
 assert(
   await psql(
@@ -348,10 +448,10 @@ assert(
     where n.nspname = 'platform' and c.relkind = 'r'
       and c.relname in (
         'tenants', 'routing_identities', 'data_plane_locators',
-        'action_audit_events'
+        'tenant_presentation_configs', 'action_audit_events'
       ) and c.relrowsecurity and c.relforcerowsecurity;
   `,
-  ) === "4",
+  ) === "5",
   "foundation_rls_not_forced",
 );
 assert(
@@ -360,10 +460,36 @@ assert(
     `
     select count(*) from information_schema.columns
     where table_schema = 'platform'
-      and lower(column_name) ~ '(service_role|password|credential|secret_value|customer|dossier|case_id|ean|mid)';
+      and lower(column_name) ~ '(service_role|password|credential|secret_value|customer|dossier|case_id|ean|mid|legal|support|metadata)';
   `,
   ) === "0",
   "forbidden_control_plane_column_present",
+);
+assert(
+  await psql(
+    CONTROL_PLANE_PORT,
+    `
+    select count(*) from information_schema.columns
+    where table_schema = 'platform'
+      and table_name = 'tenant_presentation_configs'
+      and data_type in ('json', 'jsonb');
+  `,
+  ) === "0",
+  "presentation_arbitrary_metadata_bag_present",
+);
+assert(
+  await psql(
+    CONTROL_PLANE_PORT,
+    `
+    select coalesce(array_to_string(c.reloptions, ','), '')
+    from pg_catalog.pg_class c
+    join pg_catalog.pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'platform'
+      and c.relname = 'current_tenant_presentation_configs'
+      and c.relkind = 'v';
+  `,
+  ) === "security_invoker=true",
+  "presentation_current_view_not_security_invoker",
 );
 assert(
   await psql(
@@ -374,10 +500,17 @@ assert(
       has_table_privilege('authenticated', 'platform.tenants', 'select,insert,update,delete'),
       has_table_privilege('service_role', 'platform.tenants', 'select'),
       has_table_privilege('service_role', 'platform.tenants', 'insert,update,delete'),
+      has_table_privilege('anon', 'platform.tenant_presentation_configs', 'select,insert,update,delete'),
+      has_table_privilege('authenticated', 'platform.tenant_presentation_configs', 'select,insert,update,delete'),
+      has_table_privilege('service_role', 'platform.tenant_presentation_configs', 'select'),
+      has_table_privilege('service_role', 'platform.tenant_presentation_configs', 'insert,update,delete'),
+      has_table_privilege('anon', 'platform.current_tenant_presentation_configs', 'select'),
+      has_table_privilege('authenticated', 'platform.current_tenant_presentation_configs', 'select'),
+      has_table_privilege('service_role', 'platform.current_tenant_presentation_configs', 'select'),
       has_table_privilege('service_role', 'platform.action_audit_events', 'select,insert,update,delete')
     );
   `,
-  ) === "f|f|t|f|f",
+  ) === "f|f|t|f|f|f|t|f|f|f|t|f",
   "foundation_privilege_boundary_failed",
 );
 
@@ -397,13 +530,55 @@ assert(
       (select count(*) from platform.data_plane_locators where id = ${
       sqlLiteral(LOCATOR_ID)
     }),
+      (select count(*) from platform.tenant_presentation_configs where id = ${
+      sqlLiteral(PRESENTATION_ID)
+    }),
       (select count(*) from platform.action_audit_events where id = ${
       sqlLiteral(AUDIT_ID)
+    }),
+      (select count(*) from platform.action_audit_events where id = ${
+      sqlLiteral(PRESENTATION_AUDIT_ID)
     })
     );
   `,
-  ) === "1|1|1|1",
+  ) === "1|1|1|1|1|1",
   "tenant_one_bootstrap_not_idempotent",
+);
+assert(
+  await psql(
+    CONTROL_PLANE_PORT,
+    `
+    begin;
+    insert into platform.tenant_presentation_configs (
+      tenant_id, environment, version_sequence, schema_version,
+      config_version, display_name, short_mark, product_label, tagline,
+      logo_ref, asset_alt_text, export_basename,
+      created_by_actor_ref, created_from_request_id
+    ) values (
+      ${sqlLiteral(TENANT_ID)}, 'local', 2,
+      'presentation-brand-config-v1', 'example-proof-v2',
+      'Example Mobility', 'EM', 'Mobility portal', 'Clean mobility service',
+      '/assets/brand/example-mobility.svg', 'Example Mobility',
+      'example-mobility-documents', 'proof:wl11d', 'wl11d-version-proof'
+    );
+    select concat_ws('|', config_version, version_sequence::text)
+    from platform.current_tenant_presentation_configs
+    where tenant_id = ${sqlLiteral(TENANT_ID)} and environment = 'local';
+    rollback;
+  `,
+  ) === "example-proof-v2|2",
+  "presentation_current_version_selection_not_deterministic",
+);
+assert(
+  await psql(
+    CONTROL_PLANE_PORT,
+    `
+    select concat_ws('|', config_version, version_sequence::text)
+    from platform.current_tenant_presentation_configs
+    where tenant_id = ${sqlLiteral(TENANT_ID)} and environment = 'local';
+  `,
+  ) === "enval-presentation-v1|1",
+  "presentation_version_probe_persisted",
 );
 
 await reject(
@@ -469,6 +644,67 @@ await reject(CONTROL_PLANE_PORT, "truncate platform.action_audit_events;");
 await reject(
   CONTROL_PLANE_PORT,
   `
+  set local role anon;
+  insert into platform.tenant_presentation_configs (
+    tenant_id, environment, version_sequence, schema_version,
+    config_version, display_name, short_mark, product_label,
+    logo_ref, asset_alt_text, created_by_actor_ref, created_from_request_id
+  ) values (
+    ${sqlLiteral(TENANT_ID)}, 'local', 2, 'presentation-brand-config-v1',
+    'browser-brand-v2', 'Browser Brand', 'BB', 'Browser portal',
+    '/assets/brand/browser.svg', 'Browser Brand', 'browser', 'browser'
+  );
+`,
+);
+await reject(
+  CONTROL_PLANE_PORT,
+  `
+  set local role authenticated;
+  select * from platform.tenant_presentation_configs;
+`,
+);
+await reject(
+  CONTROL_PLANE_PORT,
+  `
+  set local role authenticated;
+  select * from platform.current_tenant_presentation_configs;
+`,
+);
+await reject(
+  CONTROL_PLANE_PORT,
+  `
+  update platform.tenant_presentation_configs set display_name = 'Changed'
+  where id = ${sqlLiteral(PRESENTATION_ID)};
+`,
+);
+await reject(
+  CONTROL_PLANE_PORT,
+  `
+  delete from platform.tenant_presentation_configs
+  where id = ${sqlLiteral(PRESENTATION_ID)};
+`,
+);
+await reject(
+  CONTROL_PLANE_PORT,
+  "truncate platform.tenant_presentation_configs;",
+);
+await reject(
+  CONTROL_PLANE_PORT,
+  `
+  insert into platform.tenant_presentation_configs (
+    tenant_id, environment, version_sequence, schema_version,
+    config_version, display_name, short_mark, product_label,
+    logo_ref, asset_alt_text, created_by_actor_ref, created_from_request_id
+  ) values (
+    ${sqlLiteral(TENANT_ID)}, 'local', 1, 'presentation-brand-config-v1',
+    'duplicate-sequence-v1', 'Duplicate', 'D', 'Duplicate portal',
+    '/assets/brand/duplicate.svg', 'Duplicate', 'proof', 'proof'
+  );
+`,
+);
+await reject(
+  CONTROL_PLANE_PORT,
+  `
   update platform.tenants set id = gen_random_uuid()
   where id = ${sqlLiteral(TENANT_ID)};
 `,
@@ -492,6 +728,45 @@ assert(
     JSON.stringify(managedResult.value),
   ),
   "managed_resolver_exposed_credential_material",
+);
+
+const presentationContext = createResolvedPresentationSourceContext(
+  managedResult.value,
+);
+assert(
+  presentationContext.ok,
+  "managed_presentation_context_not_derived_from_resolved_tenant",
+);
+const managedPresentationSource = new PlatformControlPlanePresentationV1Source(
+  presentationDatabaseReader(),
+);
+const managedPresentation = await managedPresentationSource
+  .resolvePresentationBrand(presentationContext.value);
+const staticPresentationCreation = createStaticPresentationConfigV1Source([{
+  tenantId: TENANT_ID,
+  environment: "local",
+  presentationMode: "ENVAL_DEFAULTS",
+}]);
+assert(
+  staticPresentationCreation.ok,
+  "static_enval_presentation_source_not_created",
+);
+const staticPresentation = await staticPresentationCreation.source
+  .resolvePresentationBrand(presentationContext.value);
+assert(
+  managedPresentation.ok && staticPresentation.ok &&
+    JSON.stringify(managedPresentation.value) ===
+      JSON.stringify(ENVAL_PRESENTATION_BRAND_CONFIG_V1) &&
+    JSON.stringify(managedPresentation.value) ===
+      JSON.stringify(staticPresentation.value) &&
+    JSON.stringify(projectPresentationBrand(managedPresentation.value)) ===
+      JSON.stringify(projectPresentationBrand(staticPresentation.value)),
+  "managed_static_enval_presentation_parity_failed",
+);
+assert(
+  !/(password|service.?role|database.?url|token|credential|tenant|locator|legal|support)/i
+    .test(JSON.stringify(projectPresentationBrand(managedPresentation.value))),
+  "managed_presentation_projection_exposed_authority_material",
 );
 
 const unknown = await resolveTenantRuntimeContext(managed, {
