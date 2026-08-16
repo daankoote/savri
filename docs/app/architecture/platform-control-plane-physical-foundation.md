@@ -1,18 +1,21 @@
 # Platform Control-Plane Physical Foundation
 
-Status: TARGET — WL04 PHYSICAL FOUNDATION DESIGN — NOT IMPLEMENTED
+Status: CURRENT PROVEN LOCAL physical/runtime foundation through WL11E /
+commit `8b47126`; TARGET remote/operations; LEGACY completed WL05 plan snapshot
 
 Authority: this document selects the smallest repository-realistic physical
 foundation for the WL02 architecture in
 `docs/app/architecture/white-label-control-plane.md` and the WL03 domain
 contract in `docs/app/contracts/platform-control-plane.md`. Those documents
 remain controlling for ownership, field classification and no-inference
-rules. WL04 does not restate them and grants no code, schema, migration, local
-service, remote project, deployment or production authority.
+rules. WL04 originally granted no implementation authority; WL05 through WL11E
+subsequently implemented the bounded local foundation described below. This
+does not grant remote project, deployment or production authority.
 
 The selection is a repository and isolation boundary, not a remote hosting
-provider decision. `CURRENT PROVEN` remains limited to tenant #1 foundations;
-the control plane described here is entirely TARGET.
+provider decision. The separate local control-plane schema/runtime and tenant
+#1 parity are CURRENT PROVEN LOCAL. A live remote control plane, production
+ingress and commercial tenant-management operations remain TARGET/UNKNOWN.
 
 ## 1. Repository Evidence
 
@@ -48,7 +51,7 @@ platform credentials in the tenant #1 project.
 
 | option | repository fit | isolation | disposition |
 |---|---|---|---|
-| A. `platform/control-plane/` as a second Supabase CLI workdir in this repository | directly uses current Supabase/Deno/proof conventions and installed `--workdir` support | independent config, Postgres, Auth, Storage namespace, local ports, migrations and credentials | **SELECTED TARGET** |
+| A. `platform/control-plane/` as a second Supabase CLI workdir in this repository | directly uses current Supabase/Deno/proof conventions and installed `--workdir` support | independent config, Postgres, Auth, Storage namespace, local ports, migrations and credentials | **SELECTED — CURRENT PROVEN LOCAL** |
 | B. separate root-level database directory plus service code scattered under existing tenant directories | technically possible, but splits one plane across unrelated roots and increases wrong-workdir/import risk | can be equivalent only with extra conventions | REJECTED for first slice |
 | C. separate repository/service | strong repository isolation, but no current multi-repo build, proof or release authority exists and shared verification would be duplicated prematurely | independent | DEFERRED; not needed for the minimum foundation |
 | existing ENVAL `supabase/` with platform-prefixed tables | superficially small, but shares database/Auth/project service role and turns tenant #1 compromise or targeting mistakes into platform exposure | insufficient | REJECTED |
@@ -58,16 +61,17 @@ different Supabase project workdir and runtime boundary. A future remote
 control-plane project must also be independent; WL04 does not choose its
 provider, organization, region, billing or project reference.
 
-### 2.1 One Core Across Three Operating Models
+### 2.1 One Core Across Commercial/Deployment Models
 
 The selected managed control plane is one adapter, not the ENVAL business
 core. One unchanged core must support:
 
 | model | operator/tenant | deployment ownership | brand/support composition |
 |---|---|---|---|
-| LabelUP managed service | the actual inboekdienstverlener; LabelUP is not automatically the tenant | normally `ENVAL_MANAGED_DEDICATED` | ENVAL, LabelUP or co-brand presentation; LabelUP support only through a separate tenant-scoped service/access relationship |
-| SaaS for existing inboekers | each inboeker remains its own isolated tenant | `ENVAL_MANAGED_DEDICATED` | tenant presentation; digital administration with optional separately contracted physical support |
-| full white-label / standalone | the purchasing inboeker remains its own isolated tenant | `ENVAL_MANAGED_DEDICATED` or `CUSTOMER_MANAGED_SELF_HOSTED` | customer-owned brand allowed; support and connected conflict participation independently configured |
+| ENVAL SaaS | ENVAL | `ENVAL_MANAGED_DEDICATED` | ENVAL presentation; support remains separate |
+| managed white-label | actual inboeker/service-provider tenant | `ENVAL_MANAGED_DEDICATED` | tenant presentation; support separately contracted |
+| customer-owned cloud | actual inboeker/service-provider tenant | `CUSTOMER_MANAGED_SELF_HOSTED` | customer presentation; operational/support ownership separately contracted |
+| standalone/self-hosted/source-license where contractually agreed | actual inboeker/service-provider tenant | `CUSTOMER_MANAGED_SELF_HOSTED` | fixed trusted local resolution; updates, support and conflict participation separate |
 
 Five configuration dimensions remain orthogonal: operator/tenant, deployment
 ownership, branding mode, support model and conflict-registry participation.
@@ -78,8 +82,8 @@ business modules/contracts.
 
 Branding is presentation only. Support packaging is not access authority.
 Conflict participation is not deployment ownership. LabelUP is not tenant,
-platform admin, customer or representation authority merely because it sells
-or performs digital/physical support.
+contracting entity, platform admin, customer or representation authority
+merely because it sells or performs digital/physical support.
 
 ## 3. Exact Repository Boundary
 
@@ -88,10 +92,20 @@ The physical root is:
 ```text
 platform/
 ├── runtime/
-│   └── tenant-resolution/
-│       ├── tenant_resolution.ts
+│   ├── tenant-resolution/
+│   │   ├── tenant_resolution.ts
+│   │   ├── tenant_resolution_composition.ts
+│   │   ├── trusted_ingress.ts
+│   │   └── adapters/
+│   │       ├── platform_control_plane_v1.ts
+│   │       └── static_single_tenant_v1.ts
+│   └── presentation/
+│       ├── presentation_brand_config.ts
+│       ├── presentation_brand_source.ts
+│       ├── presentation_source_composition.ts
 │       └── adapters/
-│           └── platform_control_plane_v1.ts
+│           ├── platform_control_plane_presentation_v1.ts
+│           └── static_presentation_config_v1.ts
 └── control-plane/
     └── supabase/
         ├── config.toml
@@ -109,17 +123,21 @@ Responsibilities:
 - `platform/runtime/tenant-resolution/tenant_resolution.ts` contains only the
   provider-independent port/context contract consumed before tenant-local
   business logic;
-- `platform/runtime/tenant-resolution/adapters/platform_control_plane_v1.ts`
-  contains the managed adapter against injected control-plane reads. A future
-  sibling `static_single_tenant_v1.ts` may resolve one fixed trusted local
-  context without importing or calling the control plane;
+- `platform/runtime/tenant-resolution/` contains the provider-neutral
+  contracts, composition, trusted-ingress normalization and managed/static
+  adapters;
+- `platform/runtime/presentation/` contains the presentation contract,
+  canonical ENVAL defaults, managed/static sources and composition;
+- `supabase/functions/_shared/app_presentation_bootstrap.ts` and
+  `supabase/functions/api-app-presentation-bootstrap/` provide the safe
+  server-owned public presentation seam after tenant resolution;
 - `scripts/tools/` remains the shared home for repository-level target guards
   and verification selection; and
 - `scripts/proofs/` remains the shared evidence location so the existing ENVAL
   harness can classify and report the new plane without a second framework.
 
 No new package manager workspace or dependency is needed for the foundation.
-The first pure Deno modules use provider-neutral types and injected adapters;
+The pure Deno modules use provider-neutral types and injected adapters;
 they do not import tenant customer/Auth/audit helpers or make a network call at
 module load. Core business modules consume only the resolved context, never a
 managed/static adapter type. Generic helpers may be extracted later only when
@@ -144,11 +162,13 @@ change to its `public` schema, Auth users, Storage objects, migrations,
 customer/case rows or credentials. It adds no `tenant_id` to tenant-local core
 tables.
 
-Within the control-plane database, first-slice tables live in a non-public
-`platform` schema. Direct `anon` and `authenticated` access is absent/revoked;
-RLS and grants are deny-by-default. A later runtime may expose narrowly scoped
-service-only RPCs in an API schema, but WL05 exposes no browser endpoint and
-grants no platform operator write path.
+Within the control-plane database, current local tables live in the `platform`
+schema. Direct `anon` and `authenticated` access is absent/revoked; RLS and
+grants are deny-by-default. The schema is exposed through the control-plane
+PostgREST boundary only for server service-role reads. The tenant application
+exposes a separate safe presentation-bootstrap projection; browsers receive no
+control-plane URL/key, tenant route, locator or internal provenance. There is
+still no platform operator write path or administration UI.
 
 Control-plane Auth is physically available only in the independent project.
 Public signup is disabled. WL05 creates no platform Auth user, principal,
@@ -164,7 +184,7 @@ Both projects may run concurrently, but every command names its plane:
 | plane | Supabase workdir | project ID | reserved local ports |
 |---|---|---|---|
 | tenant #1 ENVAL data plane | repository root (`supabase/`) | `enval` | existing `54320`-`54329` assignments |
-| platform control plane | `platform/control-plane/` | `enval-control-plane` | dedicated `55320`-`55329` assignments |
+| platform control plane | `platform/control-plane/` | `enval-control-plane` | dedicated `56320`-`56329` assignments |
 
 Examples are command shapes, not execution authorization:
 
@@ -174,8 +194,8 @@ supabase --workdir platform/control-plane status
 ```
 
 Start, reset, migration apply, link and deployment remain separately gated.
-The control-plane config must assign every enabled local service a unique
-`5532x` port; copying only API/database ports is insufficient. Local container,
+The control-plane config assigns every enabled local service a unique `5632x`
+port; copying only API/database ports is insufficient. Local container,
 volume and network names must derive from `enval-control-plane`, not `enval`.
 
 No tool may infer target from the current shell directory, a generic
@@ -213,18 +233,20 @@ deployment. A tenant data-plane credential is reachable only through a
 tenant-scoped opaque secret reference and a later server-side secret adapter;
 it is never stored as an ordinary control-plane row or returned to a browser.
 
-Browser runtime configuration contains no control-plane URL, anon key, project
-reference, locator or tenant selector in WL05. Later trusted routing must begin
-from the server-observed host. Payload, query, local storage and browser env
-cannot override the resolved tenant or data plane.
+Browser runtime configuration contains no control-plane URL, key, project
+reference, locator or tenant selector. Current trusted ingress begins from a
+server/deployment-owned routing context; raw browser/request host values are
+not production authority. Payload, query, local storage and browser env cannot
+override the resolved tenant, source mode, brand or data plane. Production
+proxy/ingress topology remains UNKNOWN.
 
 Future remote commands require both an explicit plane/environment target and a
 verified expected linked-project reference. Absence or mismatch is a hard stop.
 WL04 defines no remote project and authorizes no remote command.
 
-## 7. Minimum First Schema
+## 7. Current Local Schema
 
-WL05 creates only four control-plane tables in schema `platform`:
+The local control plane has five bounded tables in schema `platform`:
 
 | table | first-slice purpose | intentionally absent/deferred |
 |---|---|---|
@@ -232,6 +254,11 @@ WL05 creates only four control-plane tables in schema `platform`:
 | `platform.routing_identities` | unique normalized trusted host/domain to tenant mapping, verification provenance and active lifecycle | wildcard fallback, browser-selected tenant and branding UI |
 | `platform.data_plane_locators` | tenant/environment to active server-only deployment ownership, provider/project/application route plus opaque `secret_reference_id` | raw secret values, customer data, observed fleet health and universal credentials |
 | `platform.action_audit_events` | append-only audit for consequential platform bootstrap/configuration actions and rejected attempts | dossier content, tenant audit mirror and mutable correction |
+| `platform.tenant_presentation_configs` | append-only, versioned public presentation configuration per tenant/environment | legal operator, support authority, tenant routing authority, secrets and customer truth |
+
+`platform.current_tenant_presentation_configs` is a security-invoker current
+view over the versioned presentation records. It does not make presentation
+identity into tenant, legal or support authority.
 
 Required database invariants include stable UUID roots; foreign keys with
 restrictive deletion; exact lifecycle/format checks; one active normalized
@@ -244,13 +271,12 @@ and not yet a resolvable secret-registry table. Secret backend integration,
 rotation state and a separate secret-reference registry are deferred until a
 runtime genuinely resolves credentials.
 
-The locator's deployment ownership is a closed independent value, initially
+The locator's deployment ownership is a closed independent value,
 `ENVAL_MANAGED_DEDICATED` or `CUSTOMER_MANAGED_SELF_HOSTED`; it is not tenant
-identity. WL05 needs only managed fixtures but must enforce/round-trip the
-field so the schema does not assume every tenant is ENVAL-hosted. Branding,
-support model and conflict participation are not needed by first resolution
-and remain later separate configuration/relationship records rather than
-columns that grant authority. No combined `tenant_type` is allowed.
+identity. Both managed and static resolution round-trip the same safe context.
+Presentation has its own versioned table; support model and conflict
+participation remain later separate configuration/relationship records rather
+than columns that grant authority. No combined `tenant_type` is allowed.
 
 Platform principals and memberships are also deferred from WL05 because there
 is no platform login, UI or human write endpoint. System/migration provenance
@@ -263,20 +289,27 @@ production traffic, so it can refuse every live activation rather than invent
 health truth. They become mandatory before any locator is eligible for live
 tenant traffic.
 
-## 8. First Runtime Seam And Adapter Independence
+## 8. Current Local Runtime Seam And Adapter Independence
 
-The provider-independent runtime seam is server-only and has no HTTP handler:
+Tenant and presentation resolution remain server-owned. The only public HTTP
+result is a validated, non-secret presentation projection:
 
 ```text
 trusted server/deployment routing context
 -> selected TenantResolutionAdapter
    -> platform_control_plane_v1
-   or future static_single_tenant_v1
+   or static_single_tenant_v1
 -> TenantResolverPort
 -> opaque active tenant reference
 -> TenantDataPlaneLocator
 -> redacted server-only locator/config reference
--> shared ENVAL application/business core
+-> authoritative tenant gate
+-> platform_control_plane_presentation_v1
+   or static_presentation_config_v1
+-> PublicPresentationBrandV1
+-> api-app-presentation-bootstrap
+-> PresentationBrandProvider
+-> shared ENVAL application/business core without dynamic client switching
 ```
 
 `tenant_resolution.ts` defines the two ports, one adapter-neutral resolved
@@ -287,10 +320,10 @@ control-plane reads. Neither initializes a browser Supabase client, reads
 tenant business data, resolves a raw secret or accepts arbitrary
 tenant/project/URL input.
 
-The later `static_single_tenant_v1` adapter will resolve exactly one fixed
-tenant/data-plane context from trusted deployment-local server configuration.
-It must fail closed on missing/multiple/invalid configuration and accept no
-browser override. It will not call the ENVAL control plane, so a
+`static_single_tenant_v1` resolves exactly one fixed tenant/data-plane context
+from trusted deployment-local server configuration. It fails closed on
+missing/multiple/invalid configuration and accepts no browser override. It
+does not call the ENVAL control plane, so a
 customer-managed/self-hosted deployment can continue its tenant-local business
 workflows while the ENVAL control plane is unavailable. Managed mode never
 silently falls back to static mode; adapter selection is fixed deployment
@@ -307,8 +340,10 @@ unknown/inactive/ambiguous host denial; inactive/missing locator denial;
 browser override rejection; secret-value absence; deduplication/uniqueness;
 append-only audit; adapter-neutral result parity through a fake fixed adapter;
 no managed dependency in the port/core contract; and unchanged tenant #1
-schema evidence. No production static adapter, tenant UI, platform UI, public
-routing endpoint or tenant #1 application wiring is part of the slice.
+schema evidence. Later proofs add static-adapter parity, trusted ingress,
+shadow/authoritative gating, presentation-source parity and safe React runtime
+consumption. There is still no tenant/platform administration UI, production
+routing proof or dynamic tenant data-plane client selection.
 
 ## 9. ENVAL Tenant #1 Future Bootstrap
 
@@ -393,78 +428,36 @@ supabase/migrations/                              # TENANT_ENVAL only
 platform/control-plane/supabase/migrations/       # CONTROL_PLANE only
 ```
 
-The future target guard must precede every migration, reset, link, deploy or
-SQL command. It verifies explicit target, fixed workdir, config `project_id`,
-expected port family for local work and expected linked project reference for
-remote work. It prints only target metadata, never credentials. Ambiguity,
-missing config, project mismatch, cross-plane migration path or simultaneous
-credential namespaces fails before execution.
+The current target guard and verification harness fail closed on ambiguous or
+cross-plane migration workdirs and independently inventory both migration
+roots. Any future migration, reset, link, deploy or SQL orchestration must keep
+that explicit target, fixed workdir, config `project_id`, local port family and
+remote linked-project verification. It may print only target metadata, never
+credentials.
 
-The verification harness must classify both migration roots independently.
-An unclassified platform migration fails closed, and migration-omission checks
-must cover the new root without weakening the exact existing tenant legacy
-exceptions. Control-plane migrations can never be applied through the tenant
-workdir, and tenant migrations can never be applied through the control-plane
+The harness classifies both migration roots independently. An unclassified,
+ignored, invalid or colliding platform migration fails closed, and omission
+checks cover the new root without weakening the exact existing tenant legacy
+exceptions. Control-plane migrations cannot be applied through the tenant
+workdir, and tenant migrations cannot be applied through the control-plane
 workdir.
 
 WL04 does not implement migration orchestration, fleet rollout, rollback,
 remote linking or deployment.
 
-## 12. Exact WL05 Foundation Scope
+## 12. LEGACY — Completed WL05 Plan Snapshot
 
-WL05 is one local-only foundation batch:
+The former file estimate and “not implemented” wording in this section were a
+WL04 planning snapshot. WL05 completed the local managed foundation; WL06-WL11E
+then added static resolution, trusted ingress, authoritative gate propagation,
+presentation contracts/sources, versioned presentation storage and the safe
+browser bootstrap/provider seam. The current implementation and evidence
+anchors are listed in `docs/app/01_SYSTEM_MAP.md`.
 
-1. add the independent `platform/control-plane/supabase/config.toml` with
-   project ID `enval-control-plane`, unique `5532x` ports, public Auth signup
-   and Storage disabled, and no remote link;
-2. add one forward-only control-plane migration creating only the four
-   `platform` tables, constraints, deny-by-default grants, append-only audit
-   guards and service-only read seams needed by the two ports;
-3. add one provider-independent server-only Deno contract defining
-   `TenantResolverPort`, `TenantDataPlaneLocator` and their single opaque
-   resolved context, plus one separate `platform_control_plane_v1` managed
-   adapter against injected control-plane reads; create no HTTP endpoint and no
-   core dependency on that adapter;
-4. add one explicit closed target/workdir guard for repository tooling;
-5. extend the existing verification manifest, runner proof and migration
-   omission guard to classify the new paths and reject cross-target execution;
-6. add one focused disposable local proof covering schema, fail-closed managed
-   routing, secret redaction, audit immutability, target ambiguity,
-   adapter-neutral context parity through a fake fixed adapter, absence of a
-   managed dependency in the port contract and tenant #1 schema preservation;
-   and
-7. add only the nested Supabase local-state ignore entries required by the new
-   workdir.
-
-Best current file estimate:
-
-```text
-NEW  platform/control-plane/supabase/config.toml
-NEW  platform/control-plane/supabase/migrations/<timestamp>_platform_control_plane_foundation.sql
-NEW  platform/runtime/tenant-resolution/tenant_resolution.ts
-NEW  platform/runtime/tenant-resolution/adapters/platform_control_plane_v1.ts
-NEW  scripts/tools/enval-supabase-target.mjs
-NEW  scripts/proofs/platform-control-plane-foundation.proof.ts
-MOD  .gitignore
-MOD  scripts/tools/enval-verify-manifest.mjs
-MOD  scripts/tools/enval-verify.mjs
-MOD  scripts/proofs/enval-verify-runner.proof.mjs
-```
-
-WL05 explicitly excludes platform/customer UI, tenant #2, real tenant #1
-bootstrap, customer-data movement, tenant schema changes, platform
-principal/membership, support elevation, secret-manager integration,
-deployment-state/health, conflict registry, remote project creation/linking,
-remote migration and production routing. It also excludes the production
-`static_single_tenant_v1` adapter, standalone packaging, branding/support
-configuration implementation and any LabelUP/SaaS/white-label code fork.
-
-WL05 must leave the provider-independent contract free of control-plane
-imports, networking and commercial/package branches. It builds the managed
-foundation and managed adapter only; later standalone work adds a fixed local
-adapter behind the same ports without changing shared customer/case business
-modules.
-
-No additional Daan decision is required for this local-only WL05 foundation.
-A remote provider/project/region decision and real ENVAL bootstrap values are
-required only before a later remote/bootstrap batch.
+The exclusions that remain current are: platform/customer administration UI,
+tenant #2, live tenant onboarding/bootstrap, customer-data movement, tenant #1
+schema rewrites, platform principal/membership administration, support
+elevation, secret-manager lifecycle, deployment-state/health orchestration,
+conflict registry, remote project creation/linking/migration and production
+routing. Remote provider/project/region and real environment bootstrap values
+require later explicit decisions and proof.

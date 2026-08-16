@@ -1,12 +1,16 @@
 # White-Label And Control-Plane Architecture
 
-Status: TARGET — APPROVED WL02 WHITE-LABEL / MULTI-TENANT ARCHITECTURE — NOT IMPLEMENTED
+Status: CURRENT PROVEN LOCAL foundation through WL11E / commit `8b47126`;
+remaining architecture TARGET; REMOTE / PRODUCTION NOT PROVEN
 
-Current-evidence status: CURRENT PROVEN — LOCAL ONLY for the existing ENVAL
-single-operator foundations cited by `docs/app/00_CANON.md`,
-`docs/app/01_SYSTEM_MAP.md`, and the current Auth, customer/party/case, signing,
-promotion and evidence contracts. Remote and production presence remain
-separate and unproven.
+Current-evidence status: CURRENT PROVEN LOCAL for the bounded separate
+control-plane workdir/schema, managed and static tenant-resolution adapters,
+trusted-ingress boundary, authoritative gate over the inventoried CURRENT
+`api-app-*` surface, provider-neutral presentation contract/sources, versioned
+local control-plane presentation configuration, safe server-issued
+presentation bootstrap and React provider consumption. Tenant #1 core rows and
+client target remain unchanged; `DYNAMIC_DATA_PLANE_SWITCHING=NO`. Remote and
+production presence remain separate and unproven.
 
 Deferred / unknown: physical control-plane provider and hosting, cross-tenant
 customer federation, support-elevation workflow detail, tenant provisioning
@@ -22,9 +26,9 @@ permission.
 
 The focused WL03 conceptual record, field-classification, routing,
 platform-access, deployment-state and readiness refinement is
-`docs/app/contracts/platform-control-plane.md`. That contract remains TARGET
-and NOT IMPLEMENTED; it does not widen this architecture or authorize runtime
-work.
+`docs/app/contracts/platform-control-plane.md`. Its implemented local subset
+is CURRENT PROVEN LOCAL; platform principal/membership administration,
+deployment orchestration and other deferred records remain TARGET.
 
 The existing `HYBRID PARALLEL REBUILD` decision concerns how ENVAL rebuilds its
 own application inside the current ENVAL project. It does not select a shared
@@ -62,9 +66,10 @@ isolated in separate data planes.
 12. `CURRENT PROVEN`, `TARGET`, and `DEFERRED / UNKNOWN` remain explicit. A
     TARGET boundary never proves runtime, remote, production or regulatory
     acceptance.
-13. One ENVAL software core serves managed-service, digital-administration
-    SaaS and full white-label/standalone packaging. Commercial packaging never
-    selects a code fork.
+13. One ENVAL software core serves ENVAL SaaS, managed white-label,
+    customer-owned cloud and contractually agreed
+    standalone/self-hosted/source-license deployment. Commercial packaging
+    never selects a code fork.
 14. Tenant/operator, deployment ownership, branding, support model and
     conflict-registry participation are orthogonal configuration dimensions;
     none is a combined tenant type.
@@ -77,9 +82,10 @@ isolated in separate data planes.
     data plane from trusted deployment-local server configuration. Ordinary
     tenant-local workflows do not require live ENVAL control-plane access.
 
-## B. CURRENT Single-Tenant State
+## B. CURRENT Tenant #1 Data-Plane State
 
-The CURRENT repository assumes one ENVAL operator and one Supabase project:
+The CURRENT tenant #1 data plane remains one ENVAL operator and one tenant
+Supabase project:
 
 - `supabase/config.toml` identifies the local project as `enval`;
 - the frontend is configured with one Supabase URL and anon key;
@@ -95,9 +101,11 @@ The CURRENT repository assumes one ENVAL operator and one Supabase project:
   pass through service-mediated, customer-safe projections; and
 - current service-role functions and background workers are project-wide.
 
-These are reusable foundations inside one isolated tenant data plane. They are
-not evidence that multiple service providers can safely share the current
-database, Auth namespace, Storage namespace or service role.
+These are reusable foundations inside one isolated tenant data plane. The
+repository now also contains a separate local control-plane workdir and
+provider-neutral resolution/presentation runtime, but no evidence supports
+multiple service providers sharing the tenant #1 database, Auth namespace,
+Storage namespace or service role.
 
 ## C. Tenant Data-Plane Responsibility
 
@@ -126,8 +134,9 @@ tenant truth for convenience, search, support, analytics or administration.
 
 ## D. Minimum Separate Control Plane
 
-The physical provider and hosting remain DEFERRED. The logical responsibility
-is approved as TARGET.
+The remote physical provider and hosting remain DEFERRED. The separate local
+Supabase workdir/schema and its bounded records are CURRENT PROVEN LOCAL; the
+broader logical responsibilities below remain TARGET where not implemented.
 
 | central domain | why central | data class and authority | security / retention boundary |
 |---|---|---|---|
@@ -147,14 +156,15 @@ settlement ledger or tenant operational audit mirror.
 
 ## D1. One Core And Orthogonal Operating Dimensions
 
-The same core contracts and business modules support all three approved
-commercial/deployment models:
+The same core contracts and business modules support the agreed
+commercial/deployment models without code forks:
 
 | operating model | tenant/operator | deployment and presentation | optional relationships |
 |---|---|---|---|
-| LabelUP managed service | the actual inboekdienstverlener operating the service; LabelUP is not automatically the tenant | normally ENVAL-managed dedicated; ENVAL, LabelUP or co-brand presentation as configured | LabelUP digital/physical support only through explicit tenant-scoped authorization |
-| SaaS for an existing inboeker | each inboeker is its own isolated tenant/operator | ENVAL-managed dedicated data plane; tenant-owned presentation | digital administration by default; physical support optional and separately contracted |
-| full white-label / standalone package | the purchasing inboeker is its own isolated tenant/operator | ENVAL-managed dedicated or customer-managed/self-hosted; customer brand allowed | support and connected conflict participation independently selectable |
+| ENVAL SaaS | ENVAL as the actual operator/tenant | ENVAL-managed dedicated data plane with ENVAL presentation | support relationships remain separate |
+| managed white-label | the actual inboeker/service provider is the tenant; ENVAL operates the deployment | ENVAL-managed dedicated data plane with tenant presentation | support and conflict participation independently selectable |
+| customer-owned cloud | the actual inboeker/service provider is the tenant | customer-owned isolated cloud boundary using the shared core | operations/support responsibilities are separately contracted |
+| standalone/self-hosted/source-license where contractually agreed | the actual inboeker/service provider is the tenant | fixed trusted deployment-local mode without required live ENVAL control-plane access | update, support and connected conflict participation remain independent |
 
 The independent dimensions are:
 
@@ -173,6 +183,12 @@ creates Auth, tenant identity, dossier access, case ownership or legal
 authority. SLA and license packaging compose configuration, capabilities and
 optional integrations around the shared core; they do not copy the app,
 database domain or business rules.
+
+LabelUP is not a commercial-mode authority value. Where contractually
+involved, it is currently only a conceptual optional support-provider
+relationship. It does not automatically become tenant/operator, contracting
+entity, platform admin, customer identity, case role or representation
+authority.
 
 ## E. Identity And Access Separation
 
@@ -198,7 +214,7 @@ may not create shared customer, party or case truth.
 
 ## F. Trusted Routing Boundary And Adapters
 
-TARGET conceptual route:
+CURRENT PROVEN LOCAL route:
 
 ```text
 trusted server/deployment routing context
@@ -209,7 +225,9 @@ trusted server/deployment routing context
 -> opaque resolved tenant reference
 -> TenantDataPlaneLocator
 -> approved tenant application/data-plane destination
--> tenant-local Auth and data-plane services
+-> authoritative app tenant gate
+-> server-owned presentation source and safe public projection
+-> tenant-local Auth and data-plane services without dynamic client switching
 ```
 
 `platform_control_plane_v1` resolves trusted managed routing through the
@@ -241,6 +259,21 @@ cannot override the resolved data plane.
 Unknown hosts, inactive tenants, ambiguous managed mappings, invalid fixed
 standalone context, locator mismatch and unavailable destinations fail closed
 without falling back to ENVAL or another tenant.
+
+Trusted ingress is server/deployment-owned. Raw browser/request `Host` and
+`X-Forwarded-Host` values are not production authority, and the production
+proxy topology remains UNKNOWN. The browser cannot choose adapter mode,
+tenant, locator, control-plane identity or presentation source. The
+authoritative gate is proven for the repository-inventoried CURRENT
+`api-app-*` surface; this is not universal proof for legacy routes, remote
+functions or future entrypoints.
+
+Presentation resolution follows tenant resolution. `PresentationBrandConfigV1`
+and the managed/static presentation adapters yield the same safe public shape;
+the control plane stores versioned public presentation configuration while
+legal operator, support provider, Auth/RLS and signing evidence remain separate
+authorities. Finalized signing/legal snapshots are never rewritten by current
+presentation configuration.
 
 ## G. Storage And Evidence Isolation
 
@@ -365,27 +398,48 @@ The historical current-project quota and in-place rebuild decisions remain
 valid for ENVAL data-plane #1. They do not authorize a second provider to share
 the ENVAL data plane.
 
-## L. Explicitly Not Built Or Authorized
+## L. Current Local Foundation And Explicitly Deferred Scope
 
-WL02 creates no:
+The original WL02 statement that no control-plane or resolver implementation
+existed is a LEGACY pre-implementation status snapshot, superseded by WL05
+through WL11E. CURRENT PROVEN LOCAL now includes:
 
-- control-plane service, database, table, API, deployment or provider choice;
-- `tenant_id` migration or shared-database tenancy;
-- second tenant/data plane or tenant provisioning automation;
-- tenant resolver, locator implementation, middleware or browser routing;
+- a separate `platform/control-plane/` Supabase workdir, migrations and
+  fail-closed target/migration verification;
+- the bounded tenant, routing, locator and append-only platform-audit schema;
+- `TenantResolverPort`, `TenantDataPlaneLocator`, managed and static adapters,
+  shared composition and trusted-ingress normalization;
+- shadow then authoritative tenant gating for the inventoried CURRENT
+  `api-app-*` runtime surface, without fallback or dynamic data-plane client
+  switching;
+- `PresentationBrandConfigV1`, managed/static presentation sources and a
+  versioned local control-plane presentation table/view;
+- a safe server-issued public presentation bootstrap and React
+  `PresentationBrandProvider`; and
+- deterministic ENVAL parity plus synthetic alternate-brand proof.
+
+Still TARGET/DEFERRED or UNKNOWN:
+
+- real tenant #2, customer onboarding and production tenant isolation proof;
+- live control-plane project/bootstrap, remote migration/deployment and
+  production readiness;
+- production domain ownership, DNS/certificate workflow and trusted proxy
+  topology;
+- dynamic tenant data-plane switching, provisioning/fleet orchestration,
+  customer-cloud automation and self-host installation automation;
 - central customer Auth, customer directory or cross-tenant SSO;
-- platform-admin dossier access or support-elevation implementation;
-- branding UI or tenant-specific customer copy;
-- shared Storage bucket, universal service role or fleet credential;
-- conflict registry, HMAC key, matching rule or conflict decision;
-- cross-tenant analytics, search, reporting or data export;
-- settlement/payment implementation; or
-- remote migration, deployment or production-readiness claim.
+- platform-admin UI, tenant/domain/brand administration, uploaded logos or
+  arbitrary theme overrides;
+- legal-operator and support-provider configuration/authority or support
+  elevation;
+- shared Storage, universal service-role/fleet credentials, conflict registry,
+  cross-tenant analytics and settlement/payment implementation.
 
-WL02 also creates no LabelUP, SaaS or white-label code fork. Commercial/SLA
-differences must later compose the shared core through a deployment adapter,
-configuration, presentation branding, explicit capabilities and optional
-service integrations.
+There is no LabelUP, SaaS or white-label business-code fork. Commercial/SLA
+differences compose the shared core through orthogonal deployment,
+presentation, support and optional-integration configuration. LabelUP does not
+become tenant identity, contracting entity, platform admin or representation
+authority by product packaging.
 
 ## M. Traceability Expectations
 
@@ -417,6 +471,16 @@ does not prove tenant RLS; tenant RLS does not prove Storage isolation;
 platform membership does not prove support elevation; and a conflict signal
 does not prove a tenant-local business decision.
 
+Current local implementation evidence is intentionally concise:
+
+| implemented boundary | component anchors | proof anchors | status limit |
+|---|---|---|---|
+| physical separation and migration targeting | `platform/control-plane/`, `enval-supabase-target.mjs`, ENVAL verifier | `platform-control-plane-foundation.proof.ts`, `enval-verify-runner.proof.mjs` | CURRENT PROVEN LOCAL; no remote project/deploy |
+| tenant resolution and ingress | `platform/runtime/tenant-resolution/`, `app_tenant_resolution_shadow.ts` | `tenant-resolution-composition.proof.ts`, `trusted-ingress-boundary.proof.ts`, `app-tenant-resolution-shadow.proof.ts` | CURRENT PROVEN LOCAL; production ingress UNKNOWN |
+| CURRENT app gate propagation | shared app foundation/workforce authorization | `api-app-ops-location-callers.proof.ts` plus tenant-gate proof | CURRENT PROVEN LOCAL for inventoried CURRENT surface |
+| presentation sources/config | `platform/runtime/presentation/`, control-plane presentation migration | `presentation-brand-config.proof.ts`, `presentation-brand-sources.proof.ts` | CURRENT PROVEN LOCAL; no brand administration |
+| public bootstrap/provider | `app_presentation_bootstrap.ts`, `api-app-presentation-bootstrap/`, `app/src/shared/presentation/` | `PresentationBrandRuntime.proof.tsx`, `PresentationBrandProvider.proof.tsx` | CURRENT PROVEN LOCAL; no remote/browser acceptance claim |
+
 ## Deferred Decisions And Next Gate
 
 Still DEFERRED / UNKNOWN:
@@ -424,7 +488,8 @@ Still DEFERRED / UNKNOWN:
 - physical control-plane provider, region, network and recovery design;
 - tenant provisioning, billing and lifecycle automation;
 - trusted domain ownership and certificate workflow detail;
-- tenant branding schema and which non-secret values may be centrally cached;
+- brand administration, uploaded/dynamic asset lifecycle, arbitrary theme
+  overrides and cache invalidation operations;
 - standalone deployment packaging, update and support lifecycle;
 - platform-principal Auth provider and membership administration workflow;
 - support approval counts, tenant participation, emergency use and retention;
@@ -434,5 +499,6 @@ Still DEFERRED / UNKNOWN:
   retention, correction and deletion; and
 - production availability, observability, incident and disaster-recovery SLOs.
 
-The next bounded implementation gate must select one responsibility only.
-Neither WL02 nor its WL03 domain refinement authorizes runtime work.
+The next bounded implementation gate must select one deferred responsibility
+only. The completed local foundation grants no blanket product, remote,
+deployment or production authorization.

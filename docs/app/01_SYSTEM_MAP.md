@@ -19,6 +19,76 @@ http://localhost:5175/
 
 Ports `5173` and `5174` are reserved for other projects.
 
+## Current White-Label And Control-Plane Foundation
+
+Status: CURRENT PROVEN LOCAL through commit `8b47126`. This is local
+architecture/runtime readiness, not a production deployment or a finished
+commercial tenant-management product.
+
+The repository now contains one provider-neutral ENVAL core boundary with two
+server-owned deployment modes:
+
+- managed resolution through `platform_control_plane_v1` and the separately
+  modeled local control plane under `platform/control-plane/`;
+- standalone resolution through `static_single_tenant_v1` and one fixed,
+  trusted deployment-local tenant/data-plane configuration.
+
+The control plane and every tenant data plane are distinct architectural
+domains. Tenant #1 remains the existing root `supabase/` data plane; its
+customer, case, signing and evidence truth was not copied and its tenant-local
+core tables received no convenience `tenant_id` backfill. The local control
+plane has independent config, migration history and credentials and currently
+models tenant, routing identity, data-plane locator, platform action audit and
+versioned presentation configuration. It contains no ordinary customer, case,
+signing or evidence truth.
+
+Current server flow:
+
+```text
+trusted server/deployment routing context
+→ TenantResolverPort / TenantDataPlaneLocator
+→ platform_control_plane_v1 or static_single_tenant_v1
+→ authoritative tenant gate for the inventoried CURRENT api-app surface
+→ server-owned presentation source composition
+→ safe PublicPresentationBrandV1 projection
+→ api-app-presentation-bootstrap
+→ PresentationBrandProvider
+→ AppHeader / DashboardSidebar / NotFoundPage
+```
+
+The trusted-ingress boundary does not treat raw browser input, `Host` or
+`X-Forwarded-Host` as production tenant authority. Browser payload, query,
+storage and runtime values cannot select a tenant, source mode, locator,
+project, credential or arbitrary brand. Production proxy/ingress topology and
+domain-ownership verification remain UNKNOWN. Current tenant routing and the
+tenant Supabase client target are unchanged; `DYNAMIC_DATA_PLANE_SWITCHING=NO`.
+
+`PresentationBrandConfigV1` is presentation-only. Tenant identity,
+presentation brand, legal operator identity and support-provider identity are
+separate concepts. Presentation values grant no Auth/RLS/customer/case access,
+platform membership, workforce capability or representation authority, and
+cannot rewrite finalized signing/legal evidence. A customer context or case
+role also does not by itself prove representation authority. Current ENVAL
+rendering parity and synthetic alternate-brand behavior are deterministic
+local proof only.
+
+Implementation and proof anchors:
+
+| boundary | implementation | deterministic evidence |
+|---|---|---|
+| isolated control plane and target guard | `platform/control-plane/`, `scripts/tools/enval-supabase-target.mjs` | `platform-control-plane-foundation.proof.ts`, verifier-runner proof |
+| provider-neutral tenant resolution | `platform/runtime/tenant-resolution/` | `tenant-resolution-composition.proof.ts` |
+| trusted ingress and authoritative gate | `trusted_ingress.ts`, `app_tenant_resolution_shadow.ts`, shared app foundation/workforce gate | `trusted-ingress-boundary.proof.ts`, `app-tenant-resolution-shadow.proof.ts`, `api-app-ops-location-callers.proof.ts` |
+| presentation contract and sources | `platform/runtime/presentation/`, versioned control-plane presentation migration | `presentation-brand-config.proof.ts`, `presentation-brand-sources.proof.ts` |
+| safe browser bootstrap and React consumption | `app_presentation_bootstrap.ts`, `api-app-presentation-bootstrap/`, `app/src/shared/presentation/` | `PresentationBrandRuntime.proof.tsx`, `PresentationBrandProvider.proof.tsx` |
+
+Still TARGET/DEFERRED: a real tenant #2, real customer white-label onboarding,
+live control-plane bootstrap/deployment, production custom domains and trusted
+proxy topology, dynamic data-plane switching, tenant/fleet provisioning,
+customer-cloud or self-host installation automation, brand/domain/admin UI,
+uploaded logos or arbitrary themes, configurable legal/support authority,
+central conflict registry and live remote white-label proof.
+
 ## Target Direction
 
 The rebuild should support ENVAL as a customer-facing commercial ERE inboekservice. The frontend should separate public commercial pages and product flows into clear modules:

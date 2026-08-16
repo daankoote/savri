@@ -1,6 +1,8 @@
 # Platform Control-Plane Domain Contract
 
-Status: TARGET — WL03 CONTROL-PLANE DOMAIN — NOT IMPLEMENTED
+Status: CURRENT PROVEN LOCAL implemented subset through WL11E / commit
+`8b47126`; remaining control-plane domain TARGET/DEFERRED; REMOTE / PRODUCTION
+NOT PROVEN
 
 Authority: this contract refines
 `docs/app/architecture/white-label-control-plane.md` within its approved WL02
@@ -9,11 +11,15 @@ separate-data-plane architecture. It is subordinate to
 database, Auth, Storage, migration, deployment, remote or production
 authority.
 
-CURRENT evidence remains limited to the existing ENVAL single-tenant
-foundations cited by `docs/app/00_CANON.md`, `docs/app/01_SYSTEM_MAP.md` and
-the current Auth, customer/party/case, signing, promotion, evidence and audit
-contracts. This document defines TARGET control-plane records and boundaries;
-none is CURRENT PROVEN.
+CURRENT PROVEN LOCAL evidence now covers the separate control-plane workdir and
+physical tenant/routing/locator/action-audit records, opaque locator secret
+reference, versioned presentation configuration/current view, managed/static
+resolver and presentation adapters, trusted ingress, authoritative tenant
+gate, safe public presentation bootstrap and React consumption. The exact
+physical migration columns remain authoritative for that implemented subset.
+Conceptual platform principals/memberships, deployment-state orchestration,
+secret-registry lifecycle, support elevation, tenant #2 and other later
+records in this contract remain TARGET/DEFERRED.
 
 ## 1. Scope And Non-Negotiable Boundary
 
@@ -247,6 +253,27 @@ only after tenant, action and authorization checks.
 No password, service-role key, private key, signing secret, provider token,
 database connection string or resolvable credential value is an allowed field.
 
+### 3.9 Tenant Presentation Configuration
+
+Status: CURRENT PROVEN LOCAL for
+`platform.tenant_presentation_configs` and its security-invoker current view.
+
+Presentation configuration is append-only and versioned per exact
+`tenant_id`/environment. The implemented bounded fields contain schema/config
+version, display name, short mark, product label, optional tagline, safe
+repository asset references/alt text and optional export basename. The
+managed and static source adapters validate the same
+`PresentationBrandConfigV1` contract and expose only
+`PublicPresentationBrandV1` to the browser.
+
+Presentation config is `PUBLIC_PRESENTATION_CONFIG`, not routing, tenant,
+Auth/RLS, customer/case, legal-operator, signing, representation or support
+authority. It stores no locator, project reference, credential, raw secret,
+customer truth or finalized signing/legal snapshot. Missing, invalid,
+ambiguous, tenant-mismatched or environment-mismatched configuration fails
+closed. Canonical ENVAL defaults are allowed only through explicit
+server-owned standalone configuration, never as a global white-label fallback.
+
 ## 4. Forbidden Central Data
 
 The following domain and field families are `FORBIDDEN_CENTRAL_DATA` in
@@ -302,15 +329,18 @@ independent and do not change the stable `tenant_id`:
 | support model | `DIGITAL_ONLY`, `DIGITAL_PLUS_PHYSICAL`, `EXTERNAL_SUPPORT_PROVIDER` or `NONE_CUSTOMER_OPERATED` where applicable | `AUTHORITATIVE_PLATFORM_CONFIG`; names service shape only, while every actual access grant remains separate `AUTHORITATIVE_PLATFORM_ACCESS` |
 | conflict-registry participation | connected eligible/opt-in participation or no platform-wide participation | `AUTHORITATIVE_PLATFORM_CONFIG`; independent of deployment owner and never evidence of no conflict |
 
-The LabelUP managed bundle, digital-administration SaaS and full white-label
-license/deployment are compositions of these dimensions over one core. They do
-not create separate table families, contracts, business modules or code forks.
-Branding never supplies an identifier to `RoutingIdentity`, and support model
-never supplies an authorization grant.
+ENVAL SaaS, managed white-label, customer-owned cloud and contractually agreed
+standalone/self-hosted/source-license deployment are compositions of these
+dimensions over one core. They do not create separate table families,
+contracts, business modules or code forks. Branding never supplies an
+identifier to `RoutingIdentity`, and support model never supplies an
+authorization grant. LabelUP remains only a possible separately contracted
+support-provider relationship; it is not automatically tenant, contracting
+entity, platform admin or representation authority.
 
 ## 6. Trusted Routing Contract
 
-TARGET conceptual flow:
+CURRENT PROVEN LOCAL flow, with production ingress/deployment still unproven:
 
 ```text
 trusted server/deployment routing context
@@ -469,7 +499,7 @@ Tenant #2 remains prohibited until deterministic evidence proves all of:
 Proof of one boundary never substitutes for another. No second tenant is
 created or provisioned by WL03.
 
-## 12. Future Port Responsibilities
+## 12. Current Resolver Ports And Future Conflict Port
 
 `TenantResolverPort`
 
@@ -508,23 +538,32 @@ whether other tenant-local work may continue remains DEFERRED.
 
 ## 13. Explicitly Deferred / Not Implemented
 
-WL03 does not select, design or implement:
+The original WL03 claim that every control-plane object was TARGET only is a
+LEGACY pre-implementation status snapshot. The implemented local subset is
+identified above and traced in `docs/app/01_SYSTEM_MAP.md`. The following
+remain TARGET/DEFERRED or UNKNOWN:
 
 - physical control-plane provider, hosting, region, network or recovery;
-- control-plane schema, service, API, Auth provider or migration;
+- live remote control-plane project/bootstrap/deployment and platform Auth
+  provider/administration;
 - tenant provisioning automation or fleet migration orchestration;
 - centralized customer SSO or federation;
 - platform support/break-glass workflow implementation;
-- tenant administration, branding or other UI;
+- tenant/domain/brand administration UI, dynamic/uploaded logos and arbitrary
+  theme overrides;
+- legal-operator and support-provider configuration/authority;
 - separate LabelUP, SaaS or white-label application/business-code forks;
-- standalone packaging, update distribution or support lifecycle;
+- customer-cloud and standalone/self-host installation, update distribution or
+  support lifecycle automation;
 - billing, settlement, payment or cross-tenant analytics;
 - a second tenant/data plane;
+- production domain ownership verification and trusted proxy/ingress topology;
+- dynamic server-side data-plane client switching;
 - conflict-registry implementation, MID/EAN/year matching, HMAC/key design,
   conflict legal basis or retention; or
 - remote deployment, production proof or regulatory acceptance.
 
 Any later implementation batch must trace an approved field and responsibility
 from this contract to its owning component, authorization boundary, migration,
-negative tests and audit evidence. Until that separately bounded approval,
-every control-plane object in this document remains TARGET only.
+negative tests and audit evidence. The current local foundation grants no
+blanket product, remote, deployment or production authorization.

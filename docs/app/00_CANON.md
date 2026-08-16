@@ -126,9 +126,9 @@ Supporting documents have one responsibility each and do not compete with the pr
 | `docs/app/06A_NEA_REGULATORY_COMPLETENESS_AUDIT.md` | official source coverage and source blockers | PROOF ONLY |
 | `docs/app/06B_CURRENT_IMPLEMENTATION_ASSESSMENT.md` | current code/database/function/proof assessment | PROOF ONLY |
 | `docs/app/architecture/database-target-model.md` | technical data entities, relations, history, constraints, RLS intent, object dispositions | DRAFT — AWAITING DAAN APPROVAL; APPENDIX, NOT PRIMARY ARCHITECTURE |
-| `docs/app/architecture/white-label-control-plane.md` | focused separate-tenant-data-plane and minimum-control-plane boundary, subordinate to the primary target architecture | TARGET — APPROVED WL02; NOT IMPLEMENTED; REMOTE / PRODUCTION NOT PROVEN |
-| `docs/app/contracts/platform-control-plane.md` | WL03 minimum control-plane records, field classifications, routing, platform access, deployment state, audit and tenant-readiness contract | TARGET — WL03; NOT IMPLEMENTED; REMOTE / PRODUCTION NOT PROVEN |
-| `docs/app/architecture/platform-control-plane-physical-foundation.md` | WL04 repository, project, local-targeting, first-schema/runtime and WL05 implementation boundary for the separate control plane | TARGET — WL04; NOT IMPLEMENTED; REMOTE PROVIDER / PRODUCTION NOT SELECTED |
+| `docs/app/architecture/white-label-control-plane.md` | focused separate-tenant-data-plane and minimum-control-plane boundary, subordinate to the primary target architecture | CURRENT PROVEN LOCAL foundation through WL11E; remaining sections TARGET; REMOTE / PRODUCTION NOT PROVEN |
+| `docs/app/contracts/platform-control-plane.md` | minimum control-plane records, field classifications, routing, platform access, deployment state, audit and tenant-readiness contract | CURRENT PROVEN LOCAL implemented subset; remaining domain TARGET/DEFERRED; REMOTE / PRODUCTION NOT PROVEN |
+| `docs/app/architecture/platform-control-plane-physical-foundation.md` | repository, project, local-targeting, schema/runtime and presentation-bootstrap boundary for the separate control plane | CURRENT PROVEN LOCAL foundation plus TARGET remote/operations and LEGACY completed-plan snapshot; REMOTE PROVIDER / PRODUCTION NOT SELECTED |
 | `docs/app/decisions/architecture-and-environment-decisions.md` | historical/current architecture and environment strategy decisions | DECISION RECORD — BOUNDED INTERNAL FOUNDATION GO; EXCLUDED SCOPES NO-GO |
 | `docs/app/operations/remote-baseline-and-retirement.md` | legacy freeze, baseline waves, cutover, rollback, retirement conditions, execution prerequisites, abort criteria | TARGET — EXECUTION NOT APPROVED |
 | `docs/app/operations/nea-implementation-roadmap.md` | compact daily sequence, progress, evidence, blockers, and internal/external work tracks; subordinate to requirements, traceability, target architecture, and MVP gates | TARGET — LIVE EXECUTION TRACKER |
@@ -192,6 +192,19 @@ Current technical primitives retained as proven or partially proven where code/p
 - `api-app-document-withdraw-current`
 - `api-app-dashboard-get`
 - no legacy dossier dependency in app endpoints
+- provider-neutral managed and static tenant resolution behind
+  `TenantResolverPort` / `TenantDataPlaneLocator`
+- local isolated control-plane schema, migration/target guard and versioned
+  public presentation configuration
+- trusted-ingress and authoritative tenant gate coverage for the inventoried
+  CURRENT `api-app-*` runtime surface
+- server-owned presentation source composition, safe public bootstrap and
+  React `PresentationBrandProvider` consumption
+
+These white-label foundations are CURRENT PROVEN LOCAL through commit
+`8b47126`. They do not prove tenant #2, live control-plane bootstrap,
+production ingress/domain ownership, remote deployment, dynamic data-plane
+switching, provisioning, administration UI or a finished white-label product.
 
 The recent app frontend Auth/session flow is retained as local proof:
 
