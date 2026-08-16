@@ -100,7 +100,7 @@ const OTHER_TENANT_ID = "51000000-0000-4000-8000-000000000002";
 const LOCATOR_ID = "53000000-0000-4000-8000-000000000001";
 const OTHER_LOCATOR_ID = "53000000-0000-4000-8000-000000000002";
 const SECRET_REFERENCE_ID = "54000000-0000-4000-8000-000000000001";
-const STATIC_ROUTING_KEY = "deployment:enval-local";
+const STATIC_ROUTING_KEY = "static.enval.localhost";
 
 class ProofFailure extends Error {}
 type CommandResult = { code: number; stdout: string; stderr: string };
@@ -684,7 +684,11 @@ function staticTenantExecution(
       ...CURRENT_TENANT_CONTEXT,
       ...currentOverrides,
     }),
-    trustedRoutingKey,
+    trustedRoutingContext: Object.freeze({
+      trustedRoutingKey,
+      environment: "local",
+      provenance: "DEPLOYMENT_FIXED" as const,
+    }),
     composition: {
       deploymentMode: "static_single_tenant_v1" as const,
       staticSingleTenantConfigurations: [{

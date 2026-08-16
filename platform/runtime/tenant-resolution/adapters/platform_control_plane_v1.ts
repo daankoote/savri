@@ -8,6 +8,7 @@ import {
   type TenantResolutionAdapter,
   type TrustedTenantRoutingContext,
 } from "../tenant_resolution.ts";
+import { normalizeTrustedRoutingIdentity } from "../trusted_ingress.ts";
 
 export type PlatformRoutingRecord = Readonly<{
   routingIdentityId: string;
@@ -35,19 +36,6 @@ export interface PlatformControlPlaneReader {
   findDataPlaneLocators(
     tenantId: string,
   ): Promise<readonly PlatformDataPlaneLocatorRecord[]>;
-}
-
-const HOST_PATTERN = /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/;
-export function normalizeTrustedHost(value: string): string | null {
-  const normalized = String(value ?? "").trim().toLowerCase().replace(
-    /\.$/,
-    "",
-  );
-  if (
-    normalized.length < 1 || normalized.length > 253 ||
-    normalized.includes("..") || !HOST_PATTERN.test(normalized)
-  ) return null;
-  return normalized;
 }
 
 function validLocator(
@@ -79,8 +67,13 @@ export class PlatformControlPlaneV1Adapter implements TenantResolutionAdapter {
   async resolveTenant(
     context: TrustedTenantRoutingContext,
   ): Promise<ResolutionResult<ResolvedTenantReference>> {
-    const normalizedHost = normalizeTrustedHost(context.trustedRoutingKey);
-    if (!normalizedHost) {
+    const normalizedHost = normalizeTrustedRoutingIdentity(
+      context.trustedRoutingKey,
+    );
+    if (
+      context.provenance !== "MANAGED_LOCAL_PROOF" || !normalizedHost ||
+      normalizedHost !== context.trustedRoutingKey
+    ) {
       return { ok: false, code: "invalid_trusted_routing_context" };
     }
 

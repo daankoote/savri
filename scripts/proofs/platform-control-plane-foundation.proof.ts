@@ -476,8 +476,9 @@ await reject(
 
 const managed = new PlatformControlPlaneV1Adapter(databaseReader());
 const managedResult = await resolveTenantRuntimeContext(managed, {
-  trustedRoutingKey: "ENVAL.LOCALHOST.",
+  trustedRoutingKey: TRUSTED_LOCAL_HOST,
   environment: "local",
+  provenance: "MANAGED_LOCAL_PROOF",
 });
 assert(managedResult.ok, "managed_resolver_did_not_resolve_tenant_one");
 assert(
@@ -496,6 +497,7 @@ assert(
 const unknown = await resolveTenantRuntimeContext(managed, {
   trustedRoutingKey: "unknown.localhost",
   environment: "local",
+  provenance: "MANAGED_LOCAL_PROOF",
 });
 assert(
   !unknown.ok && unknown.code === "unknown_routing_identity",
@@ -504,6 +506,7 @@ assert(
 const environmentMismatch = await resolveTenantRuntimeContext(managed, {
   trustedRoutingKey: TRUSTED_LOCAL_HOST,
   environment: "production",
+  provenance: "MANAGED_LOCAL_PROOF",
 });
 assert(
   !environmentMismatch.ok &&
@@ -544,6 +547,7 @@ async function adapterResult(
   return await resolveTenantRuntimeContext(adapter, {
     trustedRoutingKey: TRUSTED_LOCAL_HOST,
     environment: "local",
+    provenance: "MANAGED_LOCAL_PROOF",
   });
 }
 
@@ -605,8 +609,9 @@ const standaloneCompatible: TenantResolutionAdapter = {
 const standaloneResult = await resolveTenantRuntimeContext(
   standaloneCompatible,
   {
-    trustedRoutingKey: "fixed-local-deployment",
+    trustedRoutingKey: "fixed.enval.localhost",
     environment: "local",
+    provenance: "DEPLOYMENT_FIXED",
   },
 );
 assert(

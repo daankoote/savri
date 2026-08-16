@@ -2,6 +2,10 @@ import {
   isValidTenantReference,
   resolveTenantRuntimeContext,
 } from "../../../platform/runtime/tenant-resolution/tenant_resolution.ts";
+import {
+  buildTrustedTenantRoutingContext,
+  type TrustedTenantRoutingContext,
+} from "../../../platform/runtime/tenant-resolution/trusted_ingress.ts";
 import type { PlatformControlPlaneReader } from "../../../platform/runtime/tenant-resolution/adapters/platform_control_plane_v1.ts";
 import type { ServerOwnedStaticSingleTenantConfiguration } from "../../../platform/runtime/tenant-resolution/adapters/static_single_tenant_v1.ts";
 import {
@@ -31,7 +35,7 @@ export type AppTenantResolutionAuthorityMode =
 
 export type AppTenantResolutionShadowExecution = Readonly<{
   current: CurrentAuthoritativeTenantRuntimeContext;
-  trustedRoutingKey: string;
+  trustedRoutingContext: TrustedTenantRoutingContext;
   composition: ServerOwnedTenantResolutionComposition;
 }>;
 
@@ -184,10 +188,10 @@ export async function runAppTenantResolutionShadow(
         authorityMode,
       );
     }
-    const resolved = await resolveTenantRuntimeContext(composition.adapter, {
-      trustedRoutingKey: execution.trustedRoutingKey,
-      environment: current.environment,
-    });
+    const resolved = await resolveTenantRuntimeContext(
+      composition.adapter,
+      execution.trustedRoutingContext,
+    );
     if (!resolved.ok) {
       return await diagnostic(
         mode,
@@ -255,6 +259,19 @@ export function buildAppTenantResolutionShadowFromServerEnvironment(
     environment,
     "ENVAL_TRUSTED_TENANT_ROUTING_KEY",
   );
+  const provenance = mode === "static_single_tenant_v1"
+    ? "DEPLOYMENT_FIXED"
+    : environmentValue(environment, "ENVAL_TRUSTED_INGRESS_PROVENANCE");
+  const trustedRoutingContext = buildTrustedTenantRoutingContext({
+    provenance,
+    selectedRoutingIdentity: trustedRoutingKey,
+    environment: runtimeEnvironment,
+    allowedRoutes: [{
+      routingIdentity: trustedRoutingKey,
+      environment: runtimeEnvironment,
+    }],
+  });
+  if (!trustedRoutingContext.ok) return null;
   const locatorId = environmentValue(
     environment,
     "ENVAL_DATA_PLANE_LOCATOR_ID",
@@ -318,7 +335,11 @@ export function buildAppTenantResolutionShadowFromServerEnvironment(
   } else {
     composition = { deploymentMode: mode };
   }
-  return Object.freeze({ current, trustedRoutingKey, composition });
+  return Object.freeze({
+    current,
+    trustedRoutingContext: trustedRoutingContext.value,
+    composition,
+  });
 }
 
 function defaultServerEnvironment(): ServerEnvironmentReader {

@@ -31,7 +31,7 @@ const SECRET_REFERENCE_ID = "54000000-0000-4000-8000-000000000001";
 const OTHER_TENANT_ID = "51000000-0000-4000-8000-000000000002";
 const OTHER_LOCATOR_ID = "53000000-0000-4000-8000-000000000002";
 const TRUSTED_HOST = "enval.localhost";
-const STATIC_ROUTING_KEY = "deployment:enval-local";
+const STATIC_ROUTING_KEY = "static.enval.localhost";
 const REQUEST_ID = "wl07-safe-correlation";
 
 const current: CurrentAuthoritativeTenantRuntimeContext = Object.freeze({
@@ -65,7 +65,11 @@ function managedExecution(
 ): AppTenantResolutionShadowExecution {
   return Object.freeze({
     current,
-    trustedRoutingKey: TRUSTED_HOST,
+    trustedRoutingContext: Object.freeze({
+      trustedRoutingKey: TRUSTED_HOST,
+      environment: "local",
+      provenance: "MANAGED_LOCAL_PROOF" as const,
+    }),
     composition: {
       deploymentMode: "platform_control_plane_v1",
       platformControlPlaneReader: reader,
@@ -79,7 +83,11 @@ function staticExecution(
 ): AppTenantResolutionShadowExecution {
   return Object.freeze({
     current: Object.freeze({ ...current, ...expectedOverrides }),
-    trustedRoutingKey: STATIC_ROUTING_KEY,
+    trustedRoutingContext: Object.freeze({
+      trustedRoutingKey: STATIC_ROUTING_KEY,
+      environment: "local",
+      provenance: "DEPLOYMENT_FIXED" as const,
+    }),
     composition: {
       deploymentMode: "static_single_tenant_v1",
       staticSingleTenantConfigurations: [{
@@ -187,6 +195,10 @@ function tenantOneServerEnvironment(
     ENVAL_TRUSTED_TENANT_ROUTING_KEY: adapter === "platform_control_plane_v1"
       ? TRUSTED_HOST
       : STATIC_ROUTING_KEY,
+    ENVAL_TRUSTED_INGRESS_PROVENANCE: adapter ===
+        "platform_control_plane_v1"
+      ? "MANAGED_LOCAL_PROOF"
+      : "DEPLOYMENT_FIXED",
     ENVAL_DATA_PLANE_LOCATOR_ID: LOCATOR_ID,
     ENVAL_DATA_PLANE_DEPLOYMENT_OWNERSHIP: "ENVAL_MANAGED_DEDICATED",
     ENVAL_DATA_PLANE_PROVIDER_TYPE: "supabase",
@@ -355,7 +367,11 @@ const missingStaticConfiguration = await requestThroughGate({
   authorityMode: "AUTHORITATIVE",
   execution: {
     current,
-    trustedRoutingKey: STATIC_ROUTING_KEY,
+    trustedRoutingContext: {
+      trustedRoutingKey: STATIC_ROUTING_KEY,
+      environment: "local",
+      provenance: "DEPLOYMENT_FIXED",
+    },
     composition: {
       deploymentMode: "static_single_tenant_v1",
       staticSingleTenantConfigurations: null,
@@ -848,7 +864,11 @@ if (Deno.args.includes("--local-control-plane")) {
   );
   const localResolved = await resolveTenantRuntimeContext(
     new PlatformControlPlaneV1Adapter(reader),
-    { trustedRoutingKey: TRUSTED_HOST, environment: "local" },
+    {
+      trustedRoutingKey: TRUSTED_HOST,
+      environment: "local",
+      provenance: "MANAGED_LOCAL_PROOF",
+    },
   );
   assert(
     localResolved.ok && localResolved.value.tenantId === TENANT_ID,

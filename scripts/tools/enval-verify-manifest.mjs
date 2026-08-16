@@ -281,6 +281,7 @@ const CHECK_LIST = [
     applicablePaths: [
       "platform/runtime/tenant-resolution/tenant_resolution.ts",
       "platform/runtime/tenant-resolution/tenant_resolution_composition.ts",
+      "platform/runtime/tenant-resolution/trusted_ingress.ts",
       "platform/runtime/tenant-resolution/adapters/platform_control_plane_v1.ts",
       "platform/runtime/tenant-resolution/adapters/static_single_tenant_v1.ts",
       "scripts/proofs/tenant-resolution-composition.proof.ts",
@@ -289,6 +290,29 @@ const CHECK_LIST = [
     minimumMode: "TARGETED",
     expectedDurationMs: 1_000,
     expectedMarker: "TENANT_RESOLUTION_COMPOSITION_Q01_Q14=PASS",
+  }),
+  check({
+    id: "trusted-ingress-boundary-pure",
+    argv: [
+      "deno",
+      "run",
+      "--cached-only",
+      "--allow-read",
+      "--allow-env=ENVIRONMENT,ENV,APP_ENV,ALLOWED_ORIGINS,ALLOWED_ORIGIN",
+      "scripts/proofs/trusted-ingress-boundary.proof.ts",
+    ],
+    domain: "server-owned-trusted-tenant-ingress",
+    applicablePaths: [
+      "platform/runtime/tenant-resolution/trusted_ingress.ts",
+      "platform/runtime/tenant-resolution/tenant_resolution.ts",
+      "supabase/functions/_shared/app_foundation.ts",
+      "supabase/functions/_shared/app_tenant_resolution_shadow.ts",
+      "scripts/proofs/trusted-ingress-boundary.proof.ts",
+    ],
+    safety: SAFETY.SAFE_PURE,
+    minimumMode: "TARGETED",
+    expectedDurationMs: 1_000,
+    expectedMarker: "TRUSTED_INGRESS_BOUNDARY_Q01_Q18=PASS",
   }),
   check({
     id: "app-tenant-resolution-shadow-pure",
@@ -692,6 +716,23 @@ export const PATH_RULES = Object.freeze([
     ]),
   }),
   Object.freeze({
+    id: "trusted-ingress-boundary",
+    match: Object.freeze({
+      type: "oneOf",
+      value: Object.freeze([
+        "platform/runtime/tenant-resolution/trusted_ingress.ts",
+        "platform/runtime/tenant-resolution/tenant_resolution.ts",
+        "supabase/functions/_shared/app_foundation.ts",
+        "supabase/functions/_shared/app_tenant_resolution_shadow.ts",
+        "scripts/proofs/trusted-ingress-boundary.proof.ts",
+      ]),
+    }),
+    checks: Object.freeze([
+      "deno-check-changed",
+      "trusted-ingress-boundary-pure",
+    ]),
+  }),
+  Object.freeze({
     id: "app-tenant-resolution-shadow",
     match: Object.freeze({
       type: "oneOf",
@@ -714,6 +755,7 @@ export const PATH_RULES = Object.freeze([
       value: Object.freeze([
         "platform/runtime/tenant-resolution/tenant_resolution.ts",
         "platform/runtime/tenant-resolution/tenant_resolution_composition.ts",
+        "platform/runtime/tenant-resolution/trusted_ingress.ts",
         "platform/runtime/tenant-resolution/adapters/platform_control_plane_v1.ts",
         "platform/runtime/tenant-resolution/adapters/static_single_tenant_v1.ts",
         "scripts/proofs/tenant-resolution-composition.proof.ts",
@@ -722,6 +764,7 @@ export const PATH_RULES = Object.freeze([
     checks: Object.freeze([
       "deno-check-changed",
       "tenant-resolution-composition-pure",
+      "trusted-ingress-boundary-pure",
     ]),
   }),
   Object.freeze({

@@ -54,6 +54,7 @@ function validConfiguration(
     validateTrustedRoutingContext({
       trustedRoutingKey,
       environment: dataPlane.environment,
+      provenance: "DEPLOYMENT_FIXED",
     }).ok;
 }
 
@@ -99,7 +100,10 @@ export class StaticSingleTenantV1Adapter implements TenantResolutionAdapter {
   async resolveTenant(
     context: TrustedTenantRoutingContext,
   ): Promise<ResolutionResult<ResolvedTenantReference>> {
-    if (context.trustedRoutingKey !== this.#configuration.trustedRoutingKey) {
+    if (
+      context.provenance !== "DEPLOYMENT_FIXED" ||
+      context.trustedRoutingKey !== this.#configuration.trustedRoutingKey
+    ) {
       return { ok: false, code: "unknown_routing_identity" };
     }
     return {

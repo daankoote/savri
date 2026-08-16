@@ -1,12 +1,13 @@
+import {
+  isTrustedTenantRoutingContext,
+  type TrustedTenantRoutingContext,
+} from "./trusted_ingress.ts";
+export type { TrustedTenantRoutingContext } from "./trusted_ingress.ts";
+
 export type DeploymentEnvironment = string;
 export type TenantReference = string;
 export type DataPlaneLocatorReference = string;
 export type SecretReference = string;
-
-export type TrustedTenantRoutingContext = Readonly<{
-  trustedRoutingKey: string;
-  environment: DeploymentEnvironment;
-}>;
 
 export type ResolvedTenantReference = Readonly<{
   tenantId: TenantReference;
@@ -126,12 +127,7 @@ export function isValidResolvedDataPlaneLocation(
 export function validateTrustedRoutingContext(
   context: TrustedTenantRoutingContext,
 ): ResolutionResult<TrustedTenantRoutingContext> {
-  if (
-    !context ||
-    !validBoundedValue(context.trustedRoutingKey, 500) ||
-    !validBoundedValue(context.environment, 64) ||
-    context.environment !== context.environment.toLowerCase()
-  ) {
+  if (!isTrustedTenantRoutingContext(context)) {
     return { ok: false, code: "invalid_trusted_routing_context" };
   }
   return { ok: true, value: context };

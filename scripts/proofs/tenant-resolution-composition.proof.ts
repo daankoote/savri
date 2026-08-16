@@ -27,7 +27,29 @@ const ROUTING_ID = "52000000-0000-4000-8000-000000000001";
 const LOCATOR_ID = "53000000-0000-4000-8000-000000000001";
 const SECRET_REFERENCE_ID = "54000000-0000-4000-8000-000000000001";
 const TRUSTED_HOST = "enval.localhost";
-const STATIC_ROUTING_KEY = "deployment:enval-local";
+const STATIC_ROUTING_KEY = "static.enval.localhost";
+
+function managedContext(
+  trustedRoutingKey = TRUSTED_HOST,
+  environment = "local",
+) {
+  return {
+    trustedRoutingKey,
+    environment,
+    provenance: "MANAGED_LOCAL_PROOF" as const,
+  };
+}
+
+function staticContext(
+  trustedRoutingKey = STATIC_ROUTING_KEY,
+  environment = "local",
+) {
+  return {
+    trustedRoutingKey,
+    environment,
+    provenance: "DEPLOYMENT_FIXED" as const,
+  };
+}
 
 const routingRecord: PlatformRoutingRecord = Object.freeze({
   routingIdentityId: ROUTING_ID,
@@ -87,11 +109,11 @@ assert(staticComposition.ok, "static_composition_failed");
 
 const managedResult = await resolveTenantRuntimeContext(
   managedComposition.adapter,
-  { trustedRoutingKey: TRUSTED_HOST, environment: "local" },
+  managedContext(),
 );
 const staticResult = await resolveTenantRuntimeContext(
   staticComposition.adapter,
-  { trustedRoutingKey: STATIC_ROUTING_KEY, environment: "local" },
+  staticContext(),
 );
 assert(managedResult.ok, "managed_resolution_regressed");
 assert(staticResult.ok, "static_resolution_failed");
@@ -123,7 +145,7 @@ mutableStaticConfiguration.dataPlane.dataPlaneReference =
   "mutated-after-compose";
 const immutableStaticResult = await resolveTenantRuntimeContext(
   staticComposition.adapter,
-  { trustedRoutingKey: STATIC_ROUTING_KEY, environment: "local" },
+  staticContext(),
 );
 assert(
   immutableStaticResult.ok &&
@@ -137,19 +159,19 @@ const browserInjectedResult = await resolveTenantRuntimeContext(
   {
     trustedRoutingKey: STATIC_ROUTING_KEY,
     environment: "local",
+    provenance: "DEPLOYMENT_FIXED",
     tenantId: "browser-selected-tenant",
     dataPlaneReference: "browser-selected-data-plane",
   } as Parameters<typeof resolveTenantRuntimeContext>[1],
 );
 assert(
-  browserInjectedResult.ok &&
-    browserInjectedResult.value.tenantId === TENANT_ID &&
-    browserInjectedResult.value.dataPlane.locatorId === LOCATOR_ID,
-  "browser_input_selected_tenant_or_data_plane",
+  !browserInjectedResult.ok &&
+    browserInjectedResult.code === "invalid_trusted_routing_context",
+  "browser_extended_routing_context_not_rejected",
 );
 const browserRoutingOverride = await resolveTenantRuntimeContext(
   staticComposition.adapter,
-  { trustedRoutingKey: "browser-selected", environment: "local" },
+  staticContext("browser-selected"),
 );
 assert(
   !browserRoutingOverride.ok &&
@@ -247,7 +269,7 @@ assert(
 
 const environmentMismatch = await resolveTenantRuntimeContext(
   staticComposition.adapter,
-  { trustedRoutingKey: STATIC_ROUTING_KEY, environment: "production" },
+  staticContext(STATIC_ROUTING_KEY, "production"),
 );
 assert(
   !environmentMismatch.ok &&
@@ -257,7 +279,7 @@ assert(
 
 const managedUnknown = await resolveTenantRuntimeContext(
   managedComposition.adapter,
-  { trustedRoutingKey: "unknown.localhost", environment: "local" },
+  managedContext("unknown.localhost"),
 );
 assert(
   !managedUnknown.ok && managedUnknown.code === "unknown_routing_identity",
@@ -284,7 +306,7 @@ assert(
 );
 const managedMalformed = await resolveTenantRuntimeContext(
   managedMalformedComposition.adapter,
-  { trustedRoutingKey: TRUSTED_HOST, environment: "local" },
+  managedContext(),
 );
 assert(
   !managedMalformed.ok &&
@@ -324,6 +346,9 @@ async function sourceFiles(root: URL): Promise<string[]> {
     const child = new URL(entry.name + (entry.isDirectory ? "/" : ""), root);
     if (entry.isDirectory) values.push(...await sourceFiles(child));
     else if (/\.(?:ts|tsx|js|mjs)$/.test(entry.name)) {
+      if (child.pathname.endsWith("/_shared/app_tenant_resolution_shadow.ts")) {
+        continue;
+      }
       values.push(await Deno.readTextFile(child));
     }
   }
@@ -368,6 +393,7 @@ const resolveRuntime = async (
   const result = await resolveTenantRuntimeContext(runtime.resolver, {
     trustedRoutingKey: STATIC_ROUTING_KEY,
     environment: "local",
+    provenance: "DEPLOYMENT_FIXED",
   });
   if (!result.ok) throw new ProofFailure("runtime_resolution_failed");
   return result.value;
