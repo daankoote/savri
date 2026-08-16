@@ -194,8 +194,7 @@ const CHECK_LIST = [
     safety: SAFETY.SAFE_PURE,
     minimumMode: "TARGETED",
     expectedDurationMs: 150,
-    expectedMarker:
-      "LEGACY_ACCESS_UPDATE_CALLER_REMOVED_PRIMARY_RETAINED=PASS",
+    expectedMarker: "LEGACY_ACCESS_UPDATE_CALLER_REMOVED_PRIMARY_RETAINED=PASS",
   }),
   check({
     id: "legacy-ev-direct-caller-retirement-pure",
@@ -386,6 +385,37 @@ const CHECK_LIST = [
     expectedMarker: "PRESENTATION_BRAND_CONSUMERS_Q01_Q12=PASS",
   }),
   check({
+    id: "app-presentation-runtime-pure",
+    argv: [
+      "deno",
+      "run",
+      "--cached-only",
+      "--allow-read",
+      "--allow-env=NODE_ENV",
+      "--node-modules-dir=manual",
+      "--config",
+      "app/tsconfig.json",
+      "app/src/shared/presentation/PresentationBrandRuntime.proof.tsx",
+    ],
+    domain: "server-owned-app-presentation-bootstrap",
+    applicablePaths: [
+      "platform/control-plane/supabase/config.toml",
+      "supabase/functions/_shared/app_control_plane_runtime_reader.ts",
+      "supabase/functions/_shared/app_presentation_bootstrap.ts",
+      "supabase/functions/api-app-presentation-bootstrap/index.ts",
+      "app/src/features/auth/authRuntimeConfig.ts",
+      "app/src/main.tsx",
+      "app/src/shared/presentation/PresentationBrandProvider.tsx",
+      "app/src/shared/presentation/PresentationBrandRuntime.tsx",
+      "app/src/shared/presentation/presentationBootstrapClient.ts",
+      "app/src/shared/presentation/PresentationBrandRuntime.proof.tsx",
+    ],
+    safety: SAFETY.SAFE_PURE,
+    minimumMode: "TARGETED",
+    expectedDurationMs: 1_500,
+    expectedMarker: "APP_PRESENTATION_RUNTIME_Q01_Q18=PASS",
+  }),
+  check({
     id: "trusted-ingress-boundary-pure",
     argv: [
       "deno",
@@ -503,6 +533,7 @@ const CHECK_LIST = [
       "--config",
       "supabase/functions/deno.json",
       "supabase/functions/api-app-auth-bootstrap/index.ts",
+      "supabase/functions/api-app-presentation-bootstrap/index.ts",
       "supabase/functions/api-app-dashboard-get/index.ts",
       "supabase/functions/api-app-signup-submit/index.ts",
       "supabase/functions/api-app-signup-signing-finalize/index.ts",
@@ -706,14 +737,26 @@ export const GLOBAL_CHECKS = Object.freeze([
     id: "signup-unified-presentation-pure",
     minimumMode: "INTEGRATION",
   }),
-  Object.freeze({ id: "signup-signature-core-pure", minimumMode: "INTEGRATION" }),
-  Object.freeze({ id: "signup-signed-receipt-pure", minimumMode: "INTEGRATION" }),
+  Object.freeze({
+    id: "signup-signature-core-pure",
+    minimumMode: "INTEGRATION",
+  }),
+  Object.freeze({
+    id: "signup-signed-receipt-pure",
+    minimumMode: "INTEGRATION",
+  }),
   Object.freeze({
     id: "post-signing-convergence-pure",
     minimumMode: "INTEGRATION",
   }),
-  Object.freeze({ id: "release-local-mutating-proofs", minimumMode: "RELEASE" }),
-  Object.freeze({ id: "release-destructive-db-proofs", minimumMode: "RELEASE" }),
+  Object.freeze({
+    id: "release-local-mutating-proofs",
+    minimumMode: "RELEASE",
+  }),
+  Object.freeze({
+    id: "release-destructive-db-proofs",
+    minimumMode: "RELEASE",
+  }),
   Object.freeze({ id: "release-remote-evidence", minimumMode: "RELEASE" }),
 ]);
 
@@ -909,6 +952,39 @@ export const PATH_RULES = Object.freeze([
     }),
     checks: Object.freeze([
       "deno-check-app-changed",
+      "presentation-brand-consumers-pure",
+    ]),
+  }),
+  Object.freeze({
+    id: "app-presentation-server-runtime",
+    match: Object.freeze({
+      type: "oneOf",
+      value: Object.freeze([
+        "platform/control-plane/supabase/config.toml",
+        "supabase/functions/_shared/app_control_plane_runtime_reader.ts",
+        "supabase/functions/_shared/app_presentation_bootstrap.ts",
+        "supabase/functions/api-app-presentation-bootstrap/index.ts",
+      ]),
+    }),
+    checks: Object.freeze([
+      "deno-check-changed",
+      "app-presentation-runtime-pure",
+    ]),
+  }),
+  Object.freeze({
+    id: "app-presentation-browser-runtime",
+    match: Object.freeze({
+      type: "oneOf",
+      value: Object.freeze([
+        "app/src/features/auth/authRuntimeConfig.ts",
+        "app/src/shared/presentation/PresentationBrandRuntime.tsx",
+        "app/src/shared/presentation/presentationBootstrapClient.ts",
+        "app/src/shared/presentation/PresentationBrandRuntime.proof.tsx",
+      ]),
+    }),
+    checks: Object.freeze([
+      "deno-check-app-changed",
+      "app-presentation-runtime-pure",
       "presentation-brand-consumers-pure",
     ]),
   }),
@@ -1126,14 +1202,12 @@ export const MIGRATION_INVENTORIES = Object.freeze([
   Object.freeze({
     target: "TENANT_ENVAL",
     root: "supabase/migrations",
-    candidateFilenamePattern:
-      "^[0-9]{14}_[a-z0-9][a-z0-9_]*\\.sql$",
+    candidateFilenamePattern: "^[0-9]{14}_[a-z0-9][a-z0-9_]*\\.sql$",
   }),
   Object.freeze({
     target: "CONTROL_PLANE",
     root: "platform/control-plane/supabase/migrations",
-    candidateFilenamePattern:
-      "^[0-9]{14}_[a-z0-9][a-z0-9_]*\\.sql$",
+    candidateFilenamePattern: "^[0-9]{14}_[a-z0-9][a-z0-9_]*\\.sql$",
   }),
 ]);
 

@@ -105,6 +105,8 @@ assert(
 
 const [
   providerSource,
+  runtimeSource,
+  bootstrapClientSource,
   mainSource,
   appSource,
   headerSource,
@@ -116,6 +118,8 @@ const [
   signingFinalizeSource,
 ] = await Promise.all([
   source("app/src/shared/presentation/PresentationBrandProvider.tsx"),
+  source("app/src/shared/presentation/PresentationBrandRuntime.tsx"),
+  source("app/src/shared/presentation/presentationBootstrapClient.ts"),
   source("app/src/main.tsx"),
   source("app/src/App.tsx"),
   source("app/src/shared/components/AppHeader.tsx"),
@@ -128,16 +132,21 @@ const [
 ]);
 
 assert(
-  mainSource.includes("<PresentationBrandProvider>") &&
-    !mainSource.includes("presentation=") &&
-    (mainSource.match(/<PresentationBrandProvider/g) || []).length === 1 &&
+  mainSource.includes("<PresentationBrandRuntime>") &&
+    (mainSource.match(/<PresentationBrandRuntime/g) || []).length === 1 &&
+    runtimeSource.includes(
+      "<PresentationBrandProvider presentation={state.presentation}>",
+    ) &&
     (providerSource.match(/createContext<\s*PublicPresentationBrandV1/g) || [])
         .length === 1 &&
-    providerSource.includes("ENVAL_PRESENTATION_BRAND_CONFIG_V1"),
-  "Q05_production_does_not_have_one_enval_presentation_source",
+    !providerSource.includes("ENVAL_PRESENTATION_BRAND_CONFIG_V1") &&
+    providerSource.includes("presentation: PublicPresentationBrandV1"),
+  "Q05_production_not_wired_to_server_presentation_runtime",
 );
 assert(
-  [providerSource, mainSource].every((value) =>
+  [providerSource, runtimeSource, bootstrapClientSource, mainSource].every((
+    value,
+  ) =>
     !/(URLSearchParams|location\.search|localStorage|sessionStorage|document\.cookie)/
       .test(value)
   ),
@@ -179,8 +188,11 @@ assert(
     !providerSource.includes("useEffect") &&
     !providerSource.includes("fetch(") &&
     !providerSource.includes("window") &&
-    !providerSource.includes("document"),
-  "Q11_presentation_config_persisted_or_runtime_fetched",
+    !providerSource.includes("document") &&
+    runtimeSource.includes("loadPresentationBootstrap") &&
+    bootstrapClientSource.includes("api-app-presentation-bootstrap") &&
+    bootstrapClientSource.includes("validatePresentationBrandConfigV1"),
+  "Q11_runtime_bootstrap_or_provider_boundary_invalid",
 );
 assert(
   !headerSource.includes(">ENVAL</strong>") &&
