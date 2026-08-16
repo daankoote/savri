@@ -1,6 +1,7 @@
 # ENVAL App TODO
 
-Status: CURRENT app/MVP TODO — reconciled through commit `da9ea74`; `REG-CONFLICT-001` source decision updated 2026-08-16.
+Status: CURRENT app/MVP TODO — reconciled through commit `95ac548` and the
+subsequent local migration-ledger reconciliation on 2026-08-16.
 
 This queue is primarily for the new `/app`, `api-app-*`, and `app_*`
 implementation. Bounded legacy-caller cutover and white-label foundation status
@@ -10,17 +11,17 @@ implementation.
 
 ## Single Current NEXT
 
-- NEXT — decide the prepared `WP3O — controlled pilot workforce bootstrap and
-  assignment authority` package before any bootstrap or workforce population.
-  - Priority: AUDIT.
-  - Reason: `REG-CONFLICT-001` is source-resolved and WP3O is the highest
-    executable prepared decision gate already identified after that official-source
-    priority.
-  - Boundary: decide bootstrap custody, designated executor and independent
-    checker, first identity lifecycle, minimal capabilities/scopes,
-    assignment/revocation authority, conflict handling, single-use idempotent
-    runbook and audit/rollback evidence; no population, remote action or runtime
-    implementation follows automatically.
+- NEXT — `REG02 — delivery-year compliance event/state contract and pure
+  fail-closed state-machine foundation` for `NEA-VER-002` and `NEA-OPS-001`.
+  - Priority: NEA.
+  - Reason: REG01 resolved the official timeline into distinct compliance
+    events, making this the highest-priority executable pilot correctness seam
+    and the prerequisite for later reminders, verifier handoff and REV runbook
+    work.
+  - Boundary: model prior-year inbooking cutoff, verification-statement
+    possession, 1 April year-end, statement submission and verifier REV-result
+    events with explicit unknown/invalid transitions; no reminders, verifier
+    integration, REV adapter, UI, remote action or production claim.
 
 ## Completed Regulatory Source Decision
 
@@ -92,17 +93,27 @@ implementation.
   - `app_connections`
   - `app_connection_periods`
   - `app_connection_ownership_periods`
-  - ignored migration and untracked proof source exist; historical marker `app-ean-connection-domain-foundation-proof-ok` is documented but not reproducible from committed evidence.
+  - the historical migration source is preserved under
+    `supabase/migration-archive/replaced-connection/`; its material current
+    catalog is represented by the committed baseline, while the historical
+    proof marker `app-ean-connection-domain-foundation-proof-ok` is not current
+    acceptance evidence.
 - Gate 1 connection write RPC objects are observed locally, not CURRENT PROVEN:
   - `app_declare_connection_v1`
   - `app_declare_connection_ownership_v1`
   - `app_decide_connection_ownership_v1`
   - `app_supersede_connection_ownership_v1`
-  - ignored migration and untracked proof source exist; historical marker `app-connection-write-rpcs-proof-ok` is documented but not reproducible from committed evidence.
+  - the historical migration source is preserved under
+    `supabase/migration-archive/replaced-connection/`; its material current
+    catalog is represented by the committed baseline, while the historical
+    proof marker `app-connection-write-rpcs-proof-ok` is not current acceptance
+    evidence.
 - WP3A connection/EAN current-truth readiness audit is committed proof-only evidence in `f3b39aafb2e6817e64401ccb2c47eed285552869`:
   - `docs/app/operations/wp3a-connection-ean-current-truth-readiness-audit.md`;
   - verdict: `BLOCKED — CURRENT OBJECTS CONFLICT WITH CANON`;
-  - local catalog has three empty tables, eight guards, one audit helper and four write RPCs, while migration history has zero rows and no current runtime caller exists;
+  - at that historical checkpoint the local catalog had three empty tables,
+    eight guards, one audit helper and four write RPCs while migration history
+    had zero rows and no current runtime caller existed;
   - direct customer/dossier ownership, absent party/profile/case links, incomplete evidence/history/concurrency and status-based EAN uniqueness block target acceptance;
   - existing proof files cannot be reused unchanged;
   - no DDL or connection/EAN implementation is authorized.
@@ -271,31 +282,33 @@ implementation.
   - implementation commit is `6485dad9a1cc481efc3f17095f90df72a219b315`, parent `1baaef4174df7a002c8a3bebd1b526d68c7f1d1c`, subject `Add WP3L workforce authorization foundation`;
   - migration SHA-256 is `e29f0576be4b13cb4250f9e0e931b895e1fa02723b8d8cdac2cffa96006319ac`;
   - proof SHA-256 is `f451ab67902ebe1a2612ebc4ab23e4a8777fed95b376fa4936942e1e46d55acb`;
-  - exactly seven empty tables implement workforce roots, lifecycle events, capability events, case/location relation events, workforce scope events, maker requests and checker reviews;
+  - the WP3L-B checkpoint created seven initially empty tables for workforce
+    roots, lifecycle events, capability events, case/location relation events,
+    workforce scope events, maker requests and checker reviews;
   - exact codes are `location.root.create`, `location.observation.record`, `location.version.accept.prepare`, `location.version.accept.approve`, `location.version.correct.prepare` and `location.version.correct.approve`;
   - `WP3L-B-Q01` through `WP3L-B-Q48` pass with marker `app-workforce-location-authorization-foundation-proof-ok`;
   - definitive fresh apply exits `0`; true two-process review and execution races each leave at most one result;
   - a real `SET LOCAL ROLE service_role` trigger route is green and rolled back;
-  - all seven real local tables remain empty; protected counts/WP3J fingerprints are unchanged and no disposable database remains;
+  - at that checkpoint all seven real local tables were empty; protected
+    counts/WP3J fingerprints were unchanged and no disposable database remained;
   - operation-request eligibility is locally proven, without calling WP3J;
-  - BOOTSTRAP / POPULATION: NOT IMPLEMENTED;
-  - AUTHORIZED CALLER: NOT IMPLEMENTED;
-  - WP3J EXECUTION BRIDGE: NOT IMPLEMENTED;
+  - bootstrap/population, authorized callers and the execution bridge were not
+    implemented at that checkpoint; WP3N and WP3P/WP3Q supersede those status
+    lines below;
   - REMOTE APPLY / CUTOVER: OPEN/BLOCKED;
   - historical successor at that checkpoint was `WP3M — authorized operational location callers and WP3J execution bridge readiness`;
   - WP3M is readiness/decision work only and grants no implementation authorization.
-- WP3M authorized caller and execution-bridge readiness is DRAFT / DECISION REQUIRED:
+- WP3M authorized caller and execution-bridge readiness is a completed
+  historical decision input:
   - evidence is `docs/app/operations/wp3m-location-callers-execution-bridge-readiness.md`;
   - exact verdict is `READY FOR DECISION — CALLER AND EXECUTION BRIDGE PACKAGE CAN BE APPROVED`;
-  - all eighteen WP3M recommendations remain NOT APPROVED and grant no implementation authorization;
+  - all eighteen WP3M recommendations were later approved as TARGET and
+    implemented/proven by WP3N;
   - recommendation is exactly four operation-family Edge callers with closed actions above eight purpose-specific service-role-only bridge RPCs;
   - hard requirement is one database transaction for workforce resolution/revalidation, request/review locks, exact WP3J call, WP3L execution marking, idempotency completion and correlated audit;
-  - proposed four Edge paths, shared helper, bridge migration, eight public RPCs, one private authorization resolver and proof path are free but not created;
-  - AUTHORIZED CALLER: NOT IMPLEMENTED;
-  - WP3J EXECUTION BRIDGE: NOT IMPLEMENTED;
-  - BOOTSTRAP / POPULATION / ASSIGNMENT AUTHORITY: NOT IMPLEMENTED;
-  - OPERATIONS UI / REMOTE APPLY / CUTOVER: OPEN/BLOCKED;
-  - historical successor at that checkpoint was Daan's decision on the complete eighteen-choice WP3M package; no implementation started automatically.
+  - at that readiness checkpoint the proposed sources did not yet exist;
+    WP3N is the controlling current caller/bridge status below;
+  - operations UI, remote apply and cutover remain open/blocked.
 - WP3N authorized operation callers and atomic WP3J execution bridge are
   CURRENT PROVEN — LOCAL ONLY:
   - WP3M-D01 through WP3M-D18 are APPROVED TARGET;
@@ -313,39 +326,49 @@ implementation.
   - fresh apply exactly once, function-body equality, real review race, real
     execution race, real revocation-versus-execution race, protected equality
     and complete disposable cleanup are proven;
-  - all seven real local WP3L tables remain empty;
-  - WORKFORCE BOOTSTRAP: NOT IMPLEMENTED;
-  - WORKFORCE POPULATION: NOT IMPLEMENTED;
-  - ASSIGNMENT AUTHORITY: NOT IMPLEMENTED;
+  - the later WP3P/WP3Q activation leaves this caller/bridge proof intact and
+    adds one approved local admin plus central policy/assignment authority;
   - OPERATIONS UI: NOT IMPLEMENTED;
   - REMOTE APPLY / CUTOVER: OPEN/BLOCKED;
-  - CURRENT NEXT after closure of the official-source priority: decide the prepared
-    `WP3O — controlled pilot workforce bootstrap and assignment authority`
-    package before any bootstrap/population implementation;
-  - WP3O must decide bootstrap custody, designated executor and independent
-    checker, first identity lifecycle, initial capabilities/scopes,
-    assignment/revocation authority, dual customer/workforce-binding
-    conflicts, single-use idempotent runbook and audit/rollback evidence;
-  - browser self-enrollment is forbidden and no remote execution follows
+  - browser self-enrollment remains forbidden and no remote execution follows
     without separate approval.
-- WP3O workforce bootstrap and assignment-authority readiness is DECISION
-  REQUIRED:
-  - exact verdict is `READY FOR DECISION — BOOTSTRAP AND ASSIGNMENT AUTHORITY PACKAGE CAN BE APPROVED`; this is not implementation or execution approval;
-  - all eighteen proposed decisions remain not approved;
-  - recommended genesis route is a single-use environment-specific
-    CLI/runbook ceremony with designated executor, independent checker,
-    verified Auth checks and an atomic minimal split governance pair;
-  - recommended structural route is purpose-specific
-    prepare/review/execute governance with at most two new governance tables
-    and six narrow prepare/approve capabilities;
-  - WORKFORCE BOOTSTRAP: NOT IMPLEMENTED;
-  - WORKFORCE POPULATION: NOT IMPLEMENTED;
-  - ASSIGNMENT / REVOCATION AUTHORITY: NOT IMPLEMENTED;
-  - PROPOSED MANIFEST / MIGRATION / RPC / OPS SCRIPT / PROOF: NOT APPROVED;
-  - connected-party conflict policy, operator/secret/recovery custody,
-    last-authority recovery and real pilot targets remain decision blockers;
-  - LOCAL PROOF / REAL POPULATION / REMOTE APPLY / DEPLOY / OPERATIONS UI /
-    CUTOVER remain separate open gates.
+- WP3O/WP3P/WP3Q workforce policy and activation sequence is reconciled:
+  - WP3O decision audit is DONE and supplied the approved bounded policy and
+    bootstrap decisions;
+  - WP3P is CURRENT PROVEN — LOCAL ONLY through commit `4a5d219`: the fixed
+    nine-capability catalogue, `member < reviewer < admin` seniority, central
+    database-authoritative evaluator, admin-only workforce/policy/assignment
+    authority, immutable versioned organization policy and non-bypassable
+    software/security floors are active;
+  - default policy requires distinct maker/checker actors as an ENVAL
+    security/process rule. No general Wet/NEa seniority or two-eyes requirement
+    is claimed. A proven solo-policy variant may relax that organization rule
+    while capability, membership, seniority, scope, environment and Auth floors
+    remain fail-closed;
+  - WP3Q local activation and first-admin bootstrap are DONE — LOCAL: one
+    explicitly approved verified local Auth principal is the sole active
+    workforce member and admin; retry is idempotent, genesis is closed and a
+    second/different principal is denied;
+  - customer access, case participation, representation authority and
+    signing/legal authority remain separate;
+  - PARKED: workforce/policy management UI, additional population, recovery
+    ceremony, production activation, remote apply/deploy and speculative
+    capabilities.
+- MIG01/MIG02 tenant migration-chain sequence is reconciled:
+  - MIG01 audit is DONE;
+  - MIG02A is DONE in commit `95ac548`: the executable root is baseline
+    `20260816150000_app_current_baseline.sql` plus forward tail
+    `20260816160000_app_workforce_policy_foundation.sql`; historical sources
+    are preserved under non-executable `supabase/migration-archive/`;
+  - clean disposable rebuild, current app-schema parity, RLS/privilege parity
+    and behavioral parity PASS;
+  - MIG02B is DONE — LOCAL: the active ledger contains exactly those two
+    versions, pending active tenant migrations are zero and local
+    migration-history drift is resolved without schema or business-data change;
+  - future tenant migrations are forward-only after the current tail;
+  - REMOTE migration/schema/ledger state remains UNKNOWN/PARKED. A separate
+    approved read-only cutover audit must compare remote schema, ledger and
+    baseline-material parity before any remote registration or apply.
 - WP2A party directory and customer-party binding is CURRENT PROVEN — LOCAL:
   - `app_parties`
   - `app_party_person_versions`
@@ -368,7 +391,9 @@ implementation.
   - deterministic case advisory locking and deferred transaction-end checks proved that at most one simultaneous overlapping service-recipient transaction commits;
   - exact authority is the reconciled existing `contracts/customer-party-representation-case.md`; evidence is in `proofs/wp2b-i-case-party-role-foundation.md`; no change to the historical PROOF ONLY audit;
   - API/runtime/customer projection is NOT IMPLEMENTED; remote/production and NEa/verifier acceptance are NOT PROVEN;
-  - migration and proof are committed in `5a5265adc516e8198cc25757654920d4aa3316bd`, while version `20260724110000` remains absent from local migration history;
+  - migration and proof are committed in `5a5265adc516e8198cc25757654920d4aa3316bd`;
+    its material current state is represented by the current baseline rather
+    than an individual active-ledger row, by design;
   - representation authority remains `NOT SCHEMA READY`; mandates, EAN, kWh, verification and settlement remain outside WP2B-I.
 - WP2B-II representation-authority readiness and domain-decision audit is COMPLETE — CURRENT PROVEN with artifact status `PROOF ONLY — WP2B-II REPRESENTATION AUTHORITY READINESS AUDIT`:
   - `docs/app/operations/wp2b-ii-representation-authority-readiness-audit.md`;
@@ -391,7 +416,9 @@ Local proof is not production proof. Remote migration/function deploy, productio
 
 - WP2 customer/person/organization/representation/case:
   - WP2 remains IN PROGRESS; WP2A four-table and WP2B-I two-table foundations are CURRENT PROVEN — LOCAL within their cited proof boundaries.
-  - WP2A and WP2B-I migration/proof sources are committed; normal migration-tooling proof, local migration-history reconciliation through an approved forward process, remote apply, and parity remain open.
+  - WP2A and WP2B-I migration/proof sources are committed; their material
+    current state is represented by the proven current baseline. The local
+    active ledger is reconciled; remote apply and remote parity remain open.
   - Representation authority, authority evidence, Auth/customer-safe projection, intake/backfill/cutover, and external KvK, DSO/CAR, and verifier boundaries remain open; applicable items remain TARGET, TODO, UNKNOWN, NOT SCHEMA READY, or BLOCKED — EXTERNAL.
   - WP2B audit result: representation authority is not schema-ready because target vocabulary, external authority evidence, qualified review/four-eyes, conflict/withdrawal history, and safe projection remain unresolved.
   - WP2B-I is committed and CURRENT PROVEN — LOCAL; WP2B-II readiness evidence is complete.
@@ -442,7 +469,9 @@ Local proof is not production proof. Remote migration/function deploy, productio
 - Database Retirement Phase 1A - Evidence Completion:
   - DONE on 2026-07-19; unique operational content is consolidated in `docs/app/operations/remote-baseline-and-retirement.md`.
   - The WP3D read-only catalog inventory observes 24 `app_*` public tables and substantial app data; the earlier retirement evidence recorded zero local legacy tables and 7 `app-documents` Storage objects.
-  - Local migration history is incomplete: `supabase_migrations.schema_migrations` exists but has zero rows.
+  - The former empty local migration ledger has been reconciled to the current
+    baseline plus workforce-policy tail; local migration-history drift is
+    RESOLVED and pending active tenant migrations are zero.
   - Legacy runtime/repository objects remain present and remote status remains UNKNOWN.
 - Remote Schema and Deployment Inventory:
   - DONE on 2026-07-19; dated evidence is consolidated as PROOF ONLY in `docs/app/proofs/remote-baseline-and-recovery-gate.md`.
@@ -470,7 +499,11 @@ Local proof is not production proof. Remote migration/function deploy, productio
   - Remote Wave 1 remains blocked on PostgREST dashboard/platform health.
   - Gate 1 connection/EAN and write-RPC objects are observed locally; historical proof runs are documented but are not CURRENT PROVEN under WP3A.
   - WP3C connection and WP3E location internal TARGET directions are approved without DDL authority; WP3D current-object conflict remains evidence, and open external/source/mapping blockers plus exact replacement contract and proof keep location and dependent connection schema/read-projection implementation unauthorized.
-  - Do not start deployment, database drops, migration squash/baseline, runtime removals, function deletion, cron changes, Storage cleanup, Auth mutation, or remote SQL until recovery readiness is proven and Daan approves the exact mutation batch.
+  - The local baseline/archive reconciliation is complete. Do not start remote
+    baseline registration/apply, deployment, database drops, further migration
+    squash, runtime removals, function deletion, cron changes, Storage cleanup,
+    Auth mutation or remote SQL until a read-only remote cutover comparison is
+    complete and Daan approves the exact mutation batch.
 - Settlement & Payouts TARGET contract:
   - DONE documentair: provider-independent boundary from bruto verkoopopbrengst through direct external transaction costs, netto gerealiseerde verkoopopbrengst, 10% ENVAL-succesfee, 90% klantaandeel, settlement, payout, reconciliation, correction, reversal and bounded clawback;
   - F-01 through F-15 are `APPROVED COMMERCIAL DIRECTION — LEGAL, TAX AND PAYMENT-REGULATORY VALIDATION REQUIRED`;

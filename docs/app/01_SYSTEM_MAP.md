@@ -89,6 +89,59 @@ customer-cloud or self-host installation automation, brand/domain/admin UI,
 uploaded logos or arbitrary themes, configurable legal/support authority,
 central conflict registry and live remote white-label proof.
 
+## Current Workforce Authorization Foundation
+
+Status: CURRENT PROVEN — LOCAL ONLY through commits `4a5d219` and `95ac548`
+plus the approved local first-admin activation. This is not remote or
+production workforce activation.
+
+The tenant data plane has one central database-authoritative workforce policy
+foundation with a closed nine-capability catalogue and the seniority order
+`member < reviewer < admin`. Workforce, policy and assignment governance are
+admin-only. Organization policy is immutable and versioned; it may configure
+bounded process rules but cannot bypass capability, active-membership,
+seniority, scope, environment, Auth or other software/security floors.
+
+The default ENVAL policy requires distinct maker/checker actors. A separately
+proven one-person-compatible policy may disable that organization rule while
+all hard floors remain enforced. No general Wet/NEa seniority or two-eyes rule
+has been proven for these actions: maker/checker separation here is an ENVAL
+security/process default, not attributed regulatory law.
+
+Exactly one explicitly approved, verified local Auth principal is active as
+the first local admin. Bootstrap replay is idempotent, genesis is closed and a
+second or different principal cannot use genesis. Customer access, case
+participation, representation authority and signing/legal authority remain
+separate from workforce membership.
+
+Still TARGET/DEFERRED: workforce and policy management UI, more workforce
+population, recovery ceremony, production activation and remote proof.
+
+## Current Tenant Migration Chain
+
+Status: CURRENT PROVEN — LOCAL ONLY through commit `95ac548` and the subsequent
+transactional local-ledger reconciliation.
+
+The executable `TENANT_ENVAL` chain is:
+
+```text
+20260816150000_app_current_baseline.sql
+→ 20260816160000_app_workforce_policy_foundation.sql
+→ future forward-only tenant migrations
+```
+
+`supabase/migration-archive/` preserves pre-baseline source provenance and is
+not an executable migration root. A clean local rebuild from the baseline and
+tail, current app-schema parity, RLS/privilege parity and behavioral parity are
+proven. The active local ledger contains exactly those two versions, has zero
+pending active tenant migrations and no longer has local migration-history
+drift. The ledger reconciliation changed no schema or business data.
+
+Remote schema, baseline-material parity and migration-ledger state remain
+UNKNOWN/PARKED. Before any remote registration or apply, a separately approved
+read-only cutover audit must compare all three; no remote action follows from
+the local proof.
+
 ## Target Direction
 
 The rebuild should support ENVAL as a customer-facing commercial ERE inboekservice. The frontend should separate public commercial pages and product flows into clear modules:

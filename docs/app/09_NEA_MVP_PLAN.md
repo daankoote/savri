@@ -100,6 +100,17 @@ It does not prove CAR access, REV field compatibility, legal mandate wording, cu
 
 Next local execution work package:
 
-Written legal and external-verifier validation of the simple-majority representation-authority pilot brief.
+`REG02 — delivery-year compliance event/state contract and pure fail-closed
+state-machine foundation` for `NEA-VER-002` and `NEA-OPS-001`.
 
-The brief is `DRAFT — PENDING LEGAL AND VERIFIER VALIDATION`. It records a product proposal and fillable questions, not legal advice, contract approval or schema authorization. Representation authority remains `NOT SCHEMA READY`; no contract or DDL follows until written answers are recorded and Daan explicitly approves the bounded contract. This work package authorizes no remote deployment, CAR/EAN/KvK/MID/CPO/energy-provider adapter, REV submission, official verifier automation, booking/settlement execution, production, or push.
+REG01 resolved the official timeline into distinct prior-year inbooking cutoff,
+verification-statement possession, 1 April year-end, statement submission and
+verifier REV-result events. REG02 is the smallest executable NEa-priority seam:
+it must model those events and unknown/invalid transitions without conflating
+dates or claiming external outcomes. It is prerequisite to later reminders,
+verifier handoff and the REV runbook.
+
+This batch does not include reminders, verifier integration, a REV adapter,
+UI, remote action or production acceptance. The representation-authority
+validation brief remains separately parked as `DRAFT — PENDING LEGAL AND
+VERIFIER VALIDATION`; representation authority remains `NOT SCHEMA READY`.
