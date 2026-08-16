@@ -3,6 +3,7 @@ import type { AppNavigate } from "../../routes/types";
 import { clearDashboardReadCache } from "./dashboardReadCache";
 import { clearSignupIntakeSession } from "../signup/signupIntakeCapabilityStore";
 import { clearSignupSubmissionReceipt } from "../signup/signupSubmissionReceiptStore";
+import { usePresentationBrand } from "../../shared/presentation/PresentationBrandProvider";
 
 type DashboardSidebarProps = {
   activeSection: "active" | "history" | "contact";
@@ -12,6 +13,7 @@ type DashboardSidebarProps = {
 
 export function DashboardSidebar({ activeSection, navigate, onSelectSection }: DashboardSidebarProps) {
   const auth = useAuth();
+  const presentation = usePresentationBrand();
 
   function handleLogout() {
     clearDashboardReadCache();
@@ -27,15 +29,15 @@ export function DashboardSidebar({ activeSection, navigate, onSelectSection }: D
   return (
     <aside className="portal-sidebar" aria-label="Dashboard navigatie">
       <div className="portal-sidebar-brand">
-        <span className="brand-symbol" aria-hidden="true">E</span>
+        <span className="brand-symbol" aria-hidden="true">{presentation.shortMark}</span>
         <div>
-          <strong>ENVAL</strong>
-          <small>Klantportaal</small>
+          <strong>{presentation.displayName}</strong>
+          <small>{presentation.productLabel}</small>
         </div>
       </div>
 
       <div className="portal-user-block">
-        <strong>Klantportaal</strong>
+        <strong>{presentation.productLabel}</strong>
         <span>{auth.summary ? `${auth.summary.dossiers.length} dossier${auth.summary.dossiers.length === 1 ? "" : "s"}` : "Account"}</span>
       </div>
 

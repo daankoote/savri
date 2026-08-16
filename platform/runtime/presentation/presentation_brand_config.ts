@@ -91,11 +91,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     !Array.isArray(value);
 }
 
+function hasOwn(value: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(value, key);
+}
+
 function hasRequiredKeys(
   value: Record<string, unknown>,
   required: readonly string[],
 ): boolean {
-  return required.every((key) => Object.hasOwn(value, key));
+  return required.every((key) => hasOwn(value, key));
 }
 
 function hasOnlyKeys(
@@ -118,9 +122,7 @@ function optionalText(
   key: string,
   maxLength: number,
 ): string | null | undefined {
-  return Object.hasOwn(value, key)
-    ? normalizedText(value[key], maxLength)
-    : undefined;
+  return hasOwn(value, key) ? normalizedText(value[key], maxLength) : undefined;
 }
 
 function safeAssetReference(value: unknown): string | null {
@@ -139,9 +141,7 @@ function optionalAssetReference(
   assets: Record<string, unknown>,
   key: string,
 ): string | null | undefined {
-  return Object.hasOwn(assets, key)
-    ? safeAssetReference(assets[key])
-    : undefined;
+  return hasOwn(assets, key) ? safeAssetReference(assets[key]) : undefined;
 }
 
 function freezeAssets(input: {

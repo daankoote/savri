@@ -104,6 +104,27 @@ const CHECK_LIST = [
     perPath: true,
   }),
   check({
+    id: "deno-check-app-changed",
+    argv: [
+      "deno",
+      "check",
+      "--deny-import",
+      "--no-lock",
+      "--node-modules-dir=manual",
+      "--config",
+      "app/tsconfig.json",
+      "--unstable-sloppy-imports",
+      "{path}",
+    ],
+    domain: "react-typescript-static",
+    applicablePaths: ["app/src/**/*.ts", "app/src/**/*.tsx"],
+    safety: SAFETY.SAFE_PURE,
+    minimumMode: "QUICK",
+    expectedDurationMs: 1_500,
+    dedupeKey: "deno-check-app:{path}",
+    perPath: true,
+  }),
+  check({
     id: "deno-check-browser-proof",
     argv: [
       "deno",
@@ -310,6 +331,33 @@ const CHECK_LIST = [
     minimumMode: "TARGETED",
     expectedDurationMs: 1_000,
     expectedMarker: "PRESENTATION_BRAND_CONFIG_Q01_Q14=PASS",
+  }),
+  check({
+    id: "presentation-brand-consumers-pure",
+    argv: [
+      "deno",
+      "run",
+      "--cached-only",
+      "--allow-read",
+      "--allow-env=NODE_ENV",
+      "--node-modules-dir=manual",
+      "--config",
+      "app/tsconfig.json",
+      "app/src/shared/presentation/PresentationBrandProvider.proof.tsx",
+    ],
+    domain: "react-presentation-brand-consumers",
+    applicablePaths: [
+      "app/src/main.tsx",
+      "app/src/shared/presentation/PresentationBrandProvider.tsx",
+      "app/src/shared/presentation/PresentationBrandProvider.proof.tsx",
+      "app/src/shared/components/AppHeader.tsx",
+      "app/src/features/dashboard/DashboardSidebar.tsx",
+      "app/src/pages/NotFoundPage.tsx",
+    ],
+    safety: SAFETY.SAFE_PURE,
+    minimumMode: "TARGETED",
+    expectedDurationMs: 1_500,
+    expectedMarker: "PRESENTATION_BRAND_CONSUMERS_Q01_Q12=PASS",
   }),
   check({
     id: "trusted-ingress-boundary-pure",
@@ -800,6 +848,24 @@ export const PATH_RULES = Object.freeze([
     checks: Object.freeze([
       "deno-check-changed",
       "presentation-brand-config-pure",
+    ]),
+  }),
+  Object.freeze({
+    id: "presentation-brand-consumers",
+    match: Object.freeze({
+      type: "oneOf",
+      value: Object.freeze([
+        "app/src/main.tsx",
+        "app/src/shared/presentation/PresentationBrandProvider.tsx",
+        "app/src/shared/presentation/PresentationBrandProvider.proof.tsx",
+        "app/src/shared/components/AppHeader.tsx",
+        "app/src/features/dashboard/DashboardSidebar.tsx",
+        "app/src/pages/NotFoundPage.tsx",
+      ]),
+    }),
+    checks: Object.freeze([
+      "deno-check-app-changed",
+      "presentation-brand-consumers-pure",
     ]),
   }),
   Object.freeze({

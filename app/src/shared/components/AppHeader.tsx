@@ -1,4 +1,5 @@
 import type { MouseEvent } from "react";
+import { usePresentationBrand } from "../presentation/PresentationBrandProvider";
 
 const navItems = [
   { label: "Home", href: "/" },
@@ -28,6 +29,7 @@ function isActiveNavItem(href: string, currentPath: string) {
 }
 
 export function AppHeader({ currentPath, navigate }: AppHeaderProps) {
+  const presentation = usePresentationBrand();
   const handleClick = (href: string) => (event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
     navigate(href);
@@ -36,11 +38,20 @@ export function AppHeader({ currentPath, navigate }: AppHeaderProps) {
   return (
     <header className="app-header">
       <div className="container header-inner">
-        <a className="brand-mark" href="/" aria-label="ENVAL home" onClick={handleClick("/")}>
-          <span className="brand-symbol" aria-hidden="true">E</span>
+        <a
+          className="brand-mark"
+          href="/"
+          aria-label={`${presentation.displayName} home`}
+          onClick={handleClick("/")}
+        >
+          <span className="brand-symbol" aria-hidden="true">
+            {presentation.shortMark}
+          </span>
           <span>
-            <strong>ENVAL</strong>
-            <small>ERE inboekservice</small>
+            <strong>{presentation.displayName}</strong>
+            {presentation.tagline
+              ? <small>{presentation.tagline}</small>
+              : null}
           </span>
         </a>
 

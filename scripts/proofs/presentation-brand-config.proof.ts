@@ -49,10 +49,14 @@ const appHeaderSource = await Deno.readTextFile(
 const dashboardSidebarSource = await Deno.readTextFile(
   "app/src/features/dashboard/DashboardSidebar.tsx",
 );
+const providerSource = await Deno.readTextFile(
+  "app/src/shared/presentation/PresentationBrandProvider.tsx",
+);
 assert(
-  appHeaderSource.includes(">ENVAL<") &&
-    appHeaderSource.includes(">ERE inboekservice<") &&
-    dashboardSidebarSource.includes(">Klantportaal<") &&
+  providerSource.includes("ENVAL_PRESENTATION_BRAND_CONFIG_V1") &&
+    providerSource.includes("projectPresentationBrand") &&
+    appHeaderSource.includes("usePresentationBrand") &&
+    dashboardSidebarSource.includes("usePresentationBrand") &&
     (await Promise.all([
       ENVAL_PRESENTATION_BRAND_CONFIG_V1.assets.logo,
       ENVAL_PRESENTATION_BRAND_CONFIG_V1.assets.logoInverse,

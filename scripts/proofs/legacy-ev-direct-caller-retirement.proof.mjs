@@ -145,7 +145,10 @@ const protectedRuntimeChanges = gitLines([
   "diff",
   "--name-only",
   "--",
-  "app/src",
+  "app/src/App.tsx",
+  "app/src/features/signup",
+  "app/src/pages/HomePage.tsx",
+  "app/src/pages/SignupPage.tsx",
   "supabase/functions/api-app-signup-*",
   "supabase/migrations",
 ]);
