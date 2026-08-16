@@ -143,6 +143,23 @@ const CHECK_LIST = [
     expectedMarker: "signup-journey-proof-ok",
   }),
   check({
+    id: "legacy-dev-unlock-caller-retirement-pure",
+    argv: [
+      "node",
+      "scripts/proofs/legacy-dev-unlock-caller-retirement.proof.mjs",
+    ],
+    domain: "legacy-dev-unlock-caller-retirement",
+    applicablePaths: [
+      "dossier.html",
+      "assets/js/pages/dossier.js",
+      "scripts/proofs/legacy-dev-unlock-caller-retirement.proof.mjs",
+    ],
+    safety: SAFETY.SAFE_PURE,
+    minimumMode: "TARGETED",
+    expectedDurationMs: 150,
+    expectedMarker: "LEGACY_DEV_UNLOCK_CALLER_REMOVED_SOURCE_RETAINED=PASS",
+  }),
+  check({
     id: "signup-unified-presentation-pure",
     argv: [
       "deno",
@@ -538,6 +555,28 @@ export const GLOBAL_CHECKS = Object.freeze([
 ]);
 
 export const PATH_RULES = Object.freeze([
+  Object.freeze({
+    id: "legacy-dev-unlock-caller-html",
+    match: Object.freeze({
+      type: "exact",
+      value: "dossier.html",
+    }),
+    checks: Object.freeze(["legacy-dev-unlock-caller-retirement-pure"]),
+  }),
+  Object.freeze({
+    id: "legacy-dev-unlock-caller-javascript",
+    match: Object.freeze({
+      type: "oneOf",
+      value: Object.freeze([
+        "assets/js/pages/dossier.js",
+        "scripts/proofs/legacy-dev-unlock-caller-retirement.proof.mjs",
+      ]),
+    }),
+    checks: Object.freeze([
+      "node-check-changed",
+      "legacy-dev-unlock-caller-retirement-pure",
+    ]),
+  }),
   Object.freeze({
     id: "browser-webapi-proof",
     match: Object.freeze({
