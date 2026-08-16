@@ -366,6 +366,25 @@ const CHECK_LIST = [
     expectedMarker: "TENANT_RESOLUTION_COMPOSITION_Q01_Q14=PASS",
   }),
   check({
+    id: "delivery-year-compliance-pure",
+    argv: [
+      "deno",
+      "run",
+      "--cached-only",
+      "--allow-read=platform/runtime/compliance/delivery_year_compliance.ts",
+      "scripts/proofs/delivery-year-compliance.proof.ts",
+    ],
+    domain: "provider-neutral-delivery-year-compliance",
+    applicablePaths: [
+      "platform/runtime/compliance/delivery_year_compliance.ts",
+      "scripts/proofs/delivery-year-compliance.proof.ts",
+    ],
+    safety: SAFETY.SAFE_PURE,
+    minimumMode: "TARGETED",
+    expectedDurationMs: 1_000,
+    expectedMarker: "DELIVERY_YEAR_COMPLIANCE_Q01_Q20=PASS",
+  }),
+  check({
     id: "presentation-brand-config-pure",
     argv: [
       "deno",
@@ -1007,6 +1026,20 @@ export const PATH_RULES = Object.freeze([
       "deno-check-changed",
       "app-tenant-resolution-shadow-pure",
       "app-tenant-resolution-shadow-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "delivery-year-compliance",
+    match: Object.freeze({
+      type: "oneOf",
+      value: Object.freeze([
+        "platform/runtime/compliance/delivery_year_compliance.ts",
+        "scripts/proofs/delivery-year-compliance.proof.ts",
+      ]),
+    }),
+    checks: Object.freeze([
+      "deno-check-changed",
+      "delivery-year-compliance-pure",
     ]),
   }),
   Object.freeze({
