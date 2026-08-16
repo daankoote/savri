@@ -2709,7 +2709,6 @@ function renderConsents() {
 /**
  * onAccessSave(e)
  * Doel: opslaan stap 1.
- * Let op: endpoint fallback blijft bewust aanwezig (safety).
  */
 async function onAccessSave(e) {
   e.preventDefault();
@@ -2745,21 +2744,12 @@ async function onAccessSave(e) {
   lockSubmit(btn, true, "Opslaan…");
 
   try {
-    try {
-      await apiAuthed("api-dossier-access-save", {
-        first_name,
-        last_name,
-        customer_phone: customer_phone || null,
-        charger_count,
-      });
-    } catch (e1) {
-      await apiAuthed("api-dossier-access-update", {
-        first_name,
-        last_name,
-        customer_phone: customer_phone || null,
-        charger_count,
-      });
-    }
+    await apiAuthed("api-dossier-access-save", {
+      first_name,
+      last_name,
+      customer_phone: customer_phone || null,
+      charger_count,
+    });
 
     const inFirst = f.querySelector('[name="first_name"]');
     const inLast  = f.querySelector('[name="last_name"]');

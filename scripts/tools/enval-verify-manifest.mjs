@@ -160,6 +160,23 @@ const CHECK_LIST = [
     expectedMarker: "LEGACY_DEV_UNLOCK_CALLER_REMOVED_SOURCE_RETAINED=PASS",
   }),
   check({
+    id: "legacy-access-update-caller-retirement-pure",
+    argv: [
+      "node",
+      "scripts/proofs/legacy-access-update-caller-retirement.proof.mjs",
+    ],
+    domain: "legacy-access-update-caller-retirement",
+    applicablePaths: [
+      "assets/js/pages/dossier.js",
+      "scripts/proofs/legacy-access-update-caller-retirement.proof.mjs",
+    ],
+    safety: SAFETY.SAFE_PURE,
+    minimumMode: "TARGETED",
+    expectedDurationMs: 150,
+    expectedMarker:
+      "LEGACY_ACCESS_UPDATE_CALLER_REMOVED_PRIMARY_RETAINED=PASS",
+  }),
+  check({
     id: "signup-unified-presentation-pure",
     argv: [
       "deno",
@@ -570,11 +587,13 @@ export const PATH_RULES = Object.freeze([
       value: Object.freeze([
         "assets/js/pages/dossier.js",
         "scripts/proofs/legacy-dev-unlock-caller-retirement.proof.mjs",
+        "scripts/proofs/legacy-access-update-caller-retirement.proof.mjs",
       ]),
     }),
     checks: Object.freeze([
       "node-check-changed",
       "legacy-dev-unlock-caller-retirement-pure",
+      "legacy-access-update-caller-retirement-pure",
     ]),
   }),
   Object.freeze({
