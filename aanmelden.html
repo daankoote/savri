@@ -10,14 +10,14 @@
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <title>Start dossier – aanmelden privé-laadpaal (NL + MID)</title>
+    <title>Aanmelden – start uw ENVAL-aanvraag</title>
     <meta name="robots" content="index,follow,max-image-preview:large">
 
     <meta
       name="description"
-      content="Start uw dossier voor een privé-laadpaal (NL + MID). Aanmelding duurt 1 minuut. U ontvangt een dossierlink per e-mail."
+      content="Start uw aanvraag in de huidige ENVAL-aanmeldomgeving."
     />
-    <link rel="canonical" href="https://www.enval.nl/aanmelden.html" />
+    <link rel="canonical" href="https://www.enval.nl/aanmelden" />
 
     <!-- Flavicon -->
     <link rel="icon" href="/favicon.ico" sizes="any" />
@@ -27,15 +27,15 @@
     <!-- Open Graph -->
     <meta property="og:site_name" content="Enval" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Start dossier – aanmelden privé-laadpaal (NL + MID)" />
-    <meta property="og:description" content="Start uw dossier voor een privé-laadpaal (NL + MID). Aanmelding duurt 1 minuut. U ontvangt een dossierlink per e-mail." />
-    <meta property="og:url" content="https://www.enval.nl/aanmelden.html" />
+    <meta property="og:title" content="Aanmelden – start uw ENVAL-aanvraag" />
+    <meta property="og:description" content="Start uw aanvraag in de huidige ENVAL-aanmeldomgeving." />
+    <meta property="og:url" content="https://www.enval.nl/aanmelden" />
     <meta property="og:image" content="https://www.enval.nl/assets/img/og-enval.jpg" />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Start dossier – aanmelden privé-laadpaal (NL + MID)" />
-    <meta name="twitter:description" content="Start uw dossier voor een privé-laadpaal (NL + MID). Aanmelding duurt 1 minuut. U ontvangt een dossierlink per e-mail." />
+    <meta name="twitter:title" content="Aanmelden – start uw ENVAL-aanvraag" />
+    <meta name="twitter:description" content="Start uw aanvraag in de huidige ENVAL-aanmeldomgeving." />
     <meta name="twitter:image" content="https://www.enval.nl/assets/img/og-enval.jpg" />
 
     <link rel="stylesheet" href="/assets/css/style.css" />
@@ -62,7 +62,7 @@
 
         <nav id="siteNav">
           <a href="/index.html">Home</a>
-          <a href="/aanmelden.html">Start Dossier</a>
+          <a href="/aanmelden">Start Dossier</a>
           <!--<a href="/pricing.html">Tarieven</a>-->
 
           <div class="nav-dd" role="none">
@@ -83,9 +83,9 @@
     <!-- PAGE HERO -->
     <section class="page-hero">
       <div class="container">
-        <h1>Start uw dossier</h1>
+        <h1>Start uw aanvraag</h1>
         <p class="lead">
-          Vul uw gegevens in. U ontvangt daarna een persoonlijke link om uw dossier af te maken.
+          Ga verder via de huidige ENVAL-aanmeldomgeving.
         </p>
       </div>
     </section>
@@ -93,76 +93,15 @@
     <section class="section section-alt">
       <div class="container">
         <div class="card card--wide">
-          <form class="form form--ev" name="evrijder" method="post" novalidate>
-            <div class="ev-form-grid">
-              <!-- PANEL LINKS -->
-              <div class="form-panel">
-                <h4 class="ev-form-title">Persoon</h4>
-
-                <label><span>Voornaam</span><input type="text" name="first_name" required /></label>
-                <label><span>Achternaam</span><input type="text" name="last_name" required /></label>
-                <label><span>E-mailadres</span><input type="email" name="email" required /></label>
-                <label><span>Mobiel nummer (optioneel)</span><input type="tel" name="telefoon" placeholder="06xxxxxxxx of +316xxxxxxxx" /></label>
-              </div>
-
-              <!-- PANEL RECHTS -->
-              <div class="form-panel">
-                <h4 class="ev-form-title">Laadpunt</h4>
-
-                <label>
-                  <span>Aantal laadpunten op locatie</span>
-                  <select name="charger_count" required>
-                    <option value="">Selecteer aantal laadpunten</option>
-                    <option value="1">1 laadpunt</option>
-                    <option value="2">2 laadpunten</option>
-                    <option value="3">3 laadpunten</option>
-                    <option value="4">4 laadpunten</option>
-                  </select>
-                </label>
-
-                <label>
-                  <span>Staat de laadpaal op eigen terrein?</span>
-                  <select name="own_premises" required>
-                    <option value="">Maak een keuze</option>
-                    <option value="ja">Ja</option>
-                    <option value="nee">Nee</option>
-                    <option value="onzeker">Onzeker</option>
-                  </select>
-                </label>
-
-                <label>
-                  <span>Staat uw laadpaal in Nederland?</span>
-                  <select name="in_nl" required>
-                    <option value="">Maak een keuze</option>
-                    <option value="ja">Ja</option>
-                    <option value="nee">Nee</option>
-                  </select>
-                </label>
-
-                <label>
-                  <span>Heeft uw laadpaal een MID-meter?</span>
-                  <select name="has_mid" required>
-                    <option value="">Maak een keuze</option>
-                    <option value="ja">Ja</option>
-                    <option value="nee">Nee</option>
-                  </select>
-                </label>
-              </div>
-            </div>
-
-            <div class="callout mt-14">
-              <div class="checkbox-row checkbox-row--roomy">
-                <input type="checkbox" id="akkoord_ev" name="akkoord" required />
-                <label for="akkoord_ev">
-                  Ik begrijp dat Enval mijn dossier helpt voorbereiden. Enval boekt niets zelf in en geeft geen garantie op acceptatie of vergoeding.
-                </label>
-              </div>
-            </div>
-
+          <div class="form form--ev">
+            <h2>Verder in de huidige aanmeldomgeving</h2>
+            <p>
+              Nieuwe aanvragen starten in de actuele ENVAL-aanmeldomgeving.
+            </p>
             <div class="form-actions-inline">
-              <button type="submit" class="btn primary">Start dossier</button>
+              <a class="btn primary" href="/aanmelden">Ga naar aanmelden</a>
             </div>
-          </form>
+          </div>
         </div>
       </div>
     </section>

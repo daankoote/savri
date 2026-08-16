@@ -7,8 +7,6 @@ const SUPABASE_URL = window.ENVAL?.SUPABASE_URL;
 const SUPABASE_ANON_KEY = window.ENVAL?.SUPABASE_ANON_KEY;
 const API_BASE = window.ENVAL?.API_BASE;
 
-const UI_MAX_CHARGERS = Number(window.ENVAL?.UI_MAX_CHARGERS || 4);
-
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !API_BASE) {
   console.error("ENVAL config ontbreekt. Laad eerst /assets/js/config.runtime.js + /assets/js/config.js vóór script.js");
 }
@@ -51,17 +49,6 @@ function newIdempotencyKey() {
  */
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((email || "").trim());
-}
-
-/**
- * isValidMobile(phone)
- * Doel: NL mobiel (06xxxxxxxx / +316xxxxxxxx). Leeg = ok (optioneel veld).
- */
-function isValidMobile(phone) {
-  if (!phone) return true;
-
-  const p = String(phone).trim().replace(/[\s\-().]/g, "");
-  return /^06\d{8}$/.test(p) || /^\+316\d{8}$/.test(p);
 }
 
 /**
@@ -280,46 +267,6 @@ function initMobileNav() {
 document.addEventListener("DOMContentLoaded", () => {
   initMobileNav();
 
-  // prefill aanmelden via query params
-  const qs = new URLSearchParams(window.location.search);
-  const evForm = document.querySelector('form[name="evrijder"]');
-
-  if (evForm) {
-    const charger = qs.get("charger_count");
-    const terrein = qs.get("own_premises");
-    const inNl = qs.get("in_nl");
-    const hasMid = qs.get("has_mid");
-
-
-    if (charger) {
-      const sel = evForm.querySelector('[name="charger_count"]');
-      if (sel && [...sel.options].some(o => o.value === charger)) {
-        sel.value = charger;
-      }
-    }
-
-    if (terrein) {
-      const sel = evForm.querySelector('[name="own_premises"]');
-      if (sel && [...sel.options].some(o => o.value === terrein)) {
-        sel.value = terrein;
-      }
-    }
-
-    if (inNl) {
-      const sel = evForm.querySelector('[name="in_nl"]');
-      if (sel && [...sel.options].some(o => o.value === inNl)) {
-        sel.value = inNl;
-      }
-    }
-
-    if (hasMid) {
-      const sel = evForm.querySelector('[name="has_mid"]');
-      if (sel && [...sel.options].some(o => o.value === hasMid)) {
-        sel.value = hasMid;
-      }
-    }
-  }
-
   // footer year
   const year = document.getElementById("year");
   if (year) year.textContent = new Date().getFullYear();
@@ -337,9 +284,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Bind forms (fail-safe: 1 kapot form mag de rest niet breken)
-  try { document.querySelector('form[name="evrijder"]')?.addEventListener("submit", handleEvForm); }
-  catch (e) { console.error("bind evrijder failed", e); }
-
   try { document.querySelector('form[name="contact"]')?.addEventListener("submit", handleContactForm); }
   catch (e) { console.error("bind contact failed", e); }
 });
@@ -347,112 +291,6 @@ document.addEventListener("DOMContentLoaded", () => {
 // ======================================================
 // 7) Handlers
 // ======================================================
-
-/**
- * handleEvForm(e)
- * Flow: ev_direct → api-lead-submit
- */
-async function handleEvForm(e) {
-  e.preventDefault();
-  const form = e.target;
-  clearAllFieldErrors(form);
-
-  const btn = form.querySelector('button[type="submit"]');
-  if (btn?.disabled) return;
-
-  const first = form.querySelector('[name="first_name"]');
-  const last = form.querySelector('[name="last_name"]');
-  const email = form.querySelector('[name="email"]');
-  const phone = form.querySelector('[name="telefoon"]');
-  const chargers = form.querySelector('[name="charger_count"]');
-  const terrein = form.querySelector('[name="own_premises"]');
-  const inNl = form.querySelector('[name="in_nl"]');
-  const hasMid = form.querySelector('[name="has_mid"]');
-  const akkoord = form.querySelector('[name="akkoord"]');
-
-  let hasError = false;
-
-  const firstNorm = normalizePersonName(first?.value || "");
-  const lastNorm = normalizePersonName(last?.value || "");
-
-  if (!firstNorm) { showFieldError(first, "Vul uw voornaam in."); hasError = true; }
-  if (!lastNorm) { showFieldError(last, "Vul uw achternaam in."); hasError = true; }
-
-  if (!email?.value?.trim()) { showFieldError(email, "Geldig e-mailadres verplicht."); hasError = true; }
-  else if (!isValidEmail(email.value)) { showFieldError(email, "Controleer uw e-mailadres."); hasError = true; }
-
-  if (phone?.value && !isValidMobile(phone.value)) {
-    showFieldError(phone, "Vul een geldig mobiel nummer in (06 of +316).");
-    hasError = true;
-  }
-
-  if (!chargers?.value) { showFieldError(chargers, "Selecteer het aantal laadpunten."); hasError = true; }
-  else {
-    const n = parseInt(chargers.value, 10);
-    if (!Number.isInteger(n) || n < 1) { showFieldError(chargers, "Ongeldig aantal laadpunten."); hasError = true; }
-    else if (n > UI_MAX_CHARGERS) { showFieldError(chargers, `Maximaal ${UI_MAX_CHARGERS} laadpunten (self-serve).`); hasError = true; }
-  }
-
-  
-
-
-  // Hard gates: NL + MID + eigen grond must be "ja"
-  if (!terrein?.value) { showFieldError(terrein, "Maak een keuze."); hasError = true;
-  } else if (terrein.value !== "ja") { showFieldError(terrein, "Aanmelding is alleen beschikbaar als de laadpaal op eigen terrein staat."); hasError = true;}
-
-  if (!inNl?.value) { showFieldError(inNl, "Maak een keuze."); hasError = true; }
-  else if (inNl.value !== "ja") { showFieldError(inNl, "Aanmelding is alleen beschikbaar voor laadpalen in Nederland."); hasError = true; }
-
-  if (!hasMid?.value) { showFieldError(hasMid, "Maak een keuze."); hasError = true; }
-  else if (hasMid.value !== "ja") { showFieldError(hasMid, "Aanmelding vereist een laadpaal met MID-meter."); hasError = true; }
-
-  if (!akkoord?.checked) { showFieldError(akkoord, "Akkoord is verplicht."); hasError = true; }
-
-  if (hasError) return;
-
-  // normalize terugzetten (UX)
-  if (first) first.value = firstNorm;
-  if (last) last.value = lastNorm;
-
-  lockSubmit(btn, true);
-
-  try {
-    const idem = newIdempotencyKey();
-
-    const res = await fetch(`${API_BASE}/api-lead-submit`, {
-      method: "POST",
-      headers: edgeHeaders(idem),
-      body: JSON.stringify({
-        flow: "ev_direct",
-        first_name: firstNorm,
-        last_name: lastNorm,
-        email: email.value.trim(),
-        phone: phone.value.trim() || null,
-        charger_count: parseInt(chargers.value, 10),
-        own_premises: true,     // hard gate: enforced by UI + backend
-        in_nl: true,            // hard gate: enforced by UI + backend
-        has_mid: true,          // hard gate: enforced by UI + backend
-      }),
-    });
-
-    const json = await res.json().catch(() => ({}));
-
-    if (!res.ok || !json.ok) {
-      console.error("api-lead-submit ev_direct failed:", json);
-      showToast(json.error || "Opslaan mislukt. Probeer later opnieuw.", "error");
-      return;
-    }
-
-    keepAndReset(form, [], 'input[name="first_name"]');
-    showToast("Aanmelding ontvangen. U ontvangt per e-mail een dossierlink zodra de intake is geaccepteerd.", "success");
-  } catch (err) {
-    console.error("ev_direct exception:", err);
-    showToast("Er ging iets mis (netwerk). Probeer later opnieuw.", "error");
-  } finally {
-    lockSubmit(btn, false);
-  }
-}
-
 
 /**
  * handleContactForm(e)

@@ -172,7 +172,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (status === "ok") {
       actions =
         `<div class="result-actions">` +
-        `<a class="btn primary" href="/aanmelden.html">Start dossier</a>` +
+        `<a class="btn primary" href="/aanmelden">Start dossier</a>` +
         `</div>`;
     } else if (status === "maybe") {
       actions =

@@ -177,6 +177,34 @@ const CHECK_LIST = [
       "LEGACY_ACCESS_UPDATE_CALLER_REMOVED_PRIMARY_RETAINED=PASS",
   }),
   check({
+    id: "legacy-ev-direct-caller-retirement-pure",
+    argv: [
+      "node",
+      "scripts/proofs/legacy-ev-direct-caller-retirement.proof.mjs",
+    ],
+    domain: "legacy-ev-direct-caller-retirement",
+    applicablePaths: [
+      "_redirects",
+      "aanmelden.html",
+      "assets/js/eligibility.js",
+      "assets/js/script.js",
+      "dossier.html",
+      "hoe-het-werkt.html",
+      "index.html",
+      "pricing.html",
+      "privacyverklaring.html",
+      "regelgeving.html",
+      "voorwaarden.html",
+      "scripts/proofs/legacy-ev-direct-caller-retirement.proof.mjs",
+      "sitemap.xml",
+    ],
+    safety: SAFETY.SAFE_PURE,
+    minimumMode: "TARGETED",
+    expectedDurationMs: 150,
+    expectedMarker:
+      "LEGACY_EV_DIRECT_CALLER_REMOVED_CURRENT_SIGNUP_RETAINED=PASS",
+  }),
+  check({
     id: "signup-unified-presentation-pure",
     argv: [
       "deno",
@@ -578,7 +606,10 @@ export const PATH_RULES = Object.freeze([
       type: "exact",
       value: "dossier.html",
     }),
-    checks: Object.freeze(["legacy-dev-unlock-caller-retirement-pure"]),
+    checks: Object.freeze([
+      "legacy-dev-unlock-caller-retirement-pure",
+      "legacy-ev-direct-caller-retirement-pure",
+    ]),
   }),
   Object.freeze({
     id: "legacy-dev-unlock-caller-javascript",
@@ -594,6 +625,42 @@ export const PATH_RULES = Object.freeze([
       "node-check-changed",
       "legacy-dev-unlock-caller-retirement-pure",
       "legacy-access-update-caller-retirement-pure",
+    ]),
+  }),
+  Object.freeze({
+    id: "legacy-ev-direct-caller-retirement-javascript",
+    match: Object.freeze({
+      type: "oneOf",
+      value: Object.freeze([
+        "assets/js/eligibility.js",
+        "assets/js/script.js",
+        "scripts/proofs/legacy-ev-direct-caller-retirement.proof.mjs",
+        "scripts/tools/enval-verify-manifest.mjs",
+      ]),
+    }),
+    checks: Object.freeze([
+      "node-check-changed",
+      "legacy-ev-direct-caller-retirement-pure",
+    ]),
+  }),
+  Object.freeze({
+    id: "legacy-ev-direct-caller-retirement-static",
+    match: Object.freeze({
+      type: "oneOf",
+      value: Object.freeze([
+        "_redirects",
+        "aanmelden.html",
+        "hoe-het-werkt.html",
+        "index.html",
+        "pricing.html",
+        "privacyverklaring.html",
+        "regelgeving.html",
+        "voorwaarden.html",
+        "sitemap.xml",
+      ]),
+    }),
+    checks: Object.freeze([
+      "legacy-ev-direct-caller-retirement-pure",
     ]),
   }),
   Object.freeze({
