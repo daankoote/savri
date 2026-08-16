@@ -2,7 +2,7 @@
 
 Status: PROOF ONLY.
 
-Audit date: 2026-07-19; official electricity TKV completion update: 2026-07-21.
+Audit date: 2026-07-19; official electricity TKV completion update: 2026-07-21; `REG-CONFLICT-001` source reconciliation: 2026-08-16.
 
 Repo: `/Users/daankoote/dev/enval`.
 
@@ -30,13 +30,13 @@ The required order is:
 
 | source_id | official_title | publisher | publication_or_change_date | consulted_on | document_version | applicable_to_ENVAL_as_IDV | fully_read | access_gap |
 |---|---|---|---|---|---|---|---|---|
-| SRC-WM-97 | Wet milieubeheer, title 9.7 hernieuwbare energie vervoer | Overheid.nl / Wetten.nl | Current consolidated text, exact current article text to reconfirm | 2026-07-19 | Consolidated law | YES | NO | Wetten.nl current consolidated full text was not fully extracted in this tool session; official search/publication snippets were reviewed. |
-| SRC-BEV | Besluit energie vervoer | Overheid.nl / Wetten.nl / Staatsblad | Staatsblad 2026, 117; current consolidated text to reconfirm | 2026-07-19 | Consolidated AMvB plus 2026 amendment | YES | NO | Relevant electricity and IDV passages were reviewed through official publication; full consolidated current text remains to reconfirm. |
-| SRC-REV | Regeling energie vervoer including bijlagen | Overheid.nl / Wetten.nl / Staatscourant | Staatscourant 2026, 15748 | 2026-07-19 | Ministerial regulation plus 2026 amendment | YES | NO | Relevant electricity, IDV data, and inboekverificatie sections were reviewed; full consolidated current text remains to reconfirm. |
-| SRC-NEA-ELEC | Inboeken elektriciteit | Nederlandse Emissieautoriteit | Page date not visible in fetched content | 2026-07-19 | NEa web guidance | YES | YES | None in fetched content. |
+| SRC-WM-97 | Wet milieubeheer, title 9.7 hernieuwbare energie vervoer | Overheid.nl / Wetten.nl / Staatsblad | Stb. 2026, 83, effective 2026-06-20 with retroactive effect through 2026-01-01 under Stb. 2026, 137 | 2026-08-16 | Current relevant consolidated law and formal 2026 amendment/in-force decision | YES | YES — RELEVANT PROVISIONS | None for the scoped deadline model: articles 9.7.4.1(1), 9.7.4.12(1)-(3), and 9.7.5.6(1)/(4) were reconciled with the formal 2026 changes. |
+| SRC-BEV | Besluit energie vervoer | Overheid.nl / Wetten.nl / Staatsblad | Stb. 2026, 102, effective 2026-06-20 with retroactive effect through 2026-01-01 under Stb. 2026, 137 | 2026-08-16 | Current relevant consolidated AMvB and formal 2026 amendment/in-force decision | YES | YES — RELEVANT PROVISIONS | None for the scoped verification model: articles 10, 22 and 23 were reviewed. The earlier audit's `Stb. 2026, 117` citation was incorrect and is replaced by `Stb. 2026, 102`. |
+| SRC-REV | Regeling energie vervoer including bijlagen | Overheid.nl / Wetten.nl / Staatscourant | Stcrt. 2026, 15748; effective with the 2026 law package and retroactive through 2026-01-01 | 2026-08-16 | Current relevant ministerial regulation plus formal 2026 amendment | YES | YES — RELEVANT PROVISIONS | None for the scoped model: articles 9, 17 and 18(4) and Bijlage 8 part E were reviewed. |
+| SRC-NEA-ELEC | Inboeken elektriciteit | Nederlandse Emissieautoriteit | Page date not visible in fetched content | 2026-08-16 | Current NEa web guidance | YES | YES | None in fetched content. |
 | SRC-NEA-IDV | Inboekdienstverleners | Nederlandse Emissieautoriteit | Page date not visible in fetched content | 2026-07-19 | NEa web guidance | YES | YES | None in fetched content. |
 | SRC-NEA-PART | Inboeken elektriciteit particulieren | Nederlandse Emissieautoriteit | 2026-02-02 | 2026-07-19 | NEa hulpdocument | YES | YES | None in fetched content. |
-| SRC-NEA-VER | Informatie voor verificateurs | Nederlandse Emissieautoriteit | Page date not visible in fetched content | 2026-07-19 | NEa web guidance | YES | YES | None in fetched content. |
+| SRC-NEA-VER | Informatie voor verificateurs | Nederlandse Emissieautoriteit | Page date not visible in fetched content | 2026-08-16 | Current NEa web guidance | YES | YES | None in fetched content. |
 | SRC-NEA-TKV | Toetsingskader verificatieprotocol: Inboekverificatie elektriciteit | Nederlandse Emissieautoriteit | 2026-07-09 | 2026-07-21 | Immutable official 10-page repository snapshot at `docs/app/sources/official/nea/2026-07-09_toetsingskader-verificatieprotocol_inboekverificatie_elektriciteit.pdf`; 832788 bytes; SHA-256 `f08ae9cc56d7145f8962e9e0930f0e9b8676a55e73437aba4f0193b3edcc55cf` | YES | YES | None. All ten pages and all nineteen present numbered clauses were read and mapped; the source contains no 3.3.5. |
 | SRC-NEA-IDV-LIST | Lijst van inboekdienstverleners | Nederlandse Emissieautoriteit | 2026-07-02 in fetched page | 2026-07-19 | NEa publication | CONDITIONAL | YES | None in fetched content. |
 | SRC-NEA-REV | Register Energie voor Vervoer | Nederlandse Emissieautoriteit | Page date not visible in fetched content | 2026-07-19 | NEa register information | YES | YES | JavaScript REV application itself is not readable; public register information page is readable. |
@@ -47,16 +47,16 @@ The required order is:
 
 | source_id | article_chapter_section_page | normative_or_relevant_claim | applicable_to_ENVAL | existing_requirement_id | missing_requirement_id | classification | evidence | result |
 |---|---|---|---|---|---|---|---|---|
-| SRC-WM-97 | title 9.7 / inboeken | Prior-year inboekingen must respect statutory calendar deadlines. | YES | NEA-OPS-001 |  | DIRECT LAW | Official Wm source identified; exact consolidated wording to reconfirm. | PARTIAL |
+| SRC-WM-97 | articles 9.7.4.1(1), 9.7.5.6(1)/(4) | Prior-year deliveries may be booked until 1 March of `Y+1`; saving and statutory expiry apply to the account balance on 1 April. | YES | NEA-OPS-001 |  | DIRECT LAW | Current relevant provisions and Stb. 2026, 83/137 effective-date chain reviewed. | COVERED |
 | SRC-WM-97 | title 9.7 / inboekbevoegdheid electricity | Electricity delivered to transport can be booked under rules elaborated by AMvB. | YES | NEA-ELIG-001 |  | DIRECT LAW | Official Wm source identified; Besluit article 10 reviewed. | COVERED |
-| SRC-WM-97 | title 9.7 / verification coupling | Inboekverification timing must be reconciled with NEa deadline guidance. | YES | NEA-VER-001; NEA-VER-002 |  | DIRECT LAW | NEa verifier page says before 1 May; NEa electricity page says statement before 1 April. | CONFLICT |
-| SRC-BEV | article 1 definitions | `bemeterd leverpunt`, `aangeslotene`, `aansluiting`, `allocatiepunt`, ERE-E, and reasonable assurance are defined in the system context. | YES | NEA-EAN-001; NEA-MID-001; NEA-VER-007 |  | DIRECT LAW | Staatsblad 2026, 117 relevant definitions reviewed. | COVERED |
-| SRC-BEV | article 10 electricity | Electricity booking requires eligible delivery via allowed electricity constructs and measured delivery point. | YES | NEA-MID-001; NEA-ELIG-001 |  | DIRECT LAW | Staatsblad 2026, 117 article 10 explanation and NEa electricity page reviewed. | COVERED |
+| SRC-WM-97 | article 9.7.4.12(1)-(3) / verification coupling | The inboeker submits the verifier statement to the NEa before 1 May `Y+1`; no statement is issued when requirements are unmet; verifier records are retained for at least five years after the verification year. This is distinct from the explanatory 1 April possession/year-end rule and the verifier's REV-result registration. | YES | NEA-VER-001; NEA-VER-002 |  | DIRECT LAW | Current law, current NEa electricity/verifier guidance, Regeling article 17 and TKV statement clauses reconciled. | COVERED |
+| SRC-BEV | article 1 definitions | `bemeterd leverpunt`, `aangeslotene`, `aansluiting`, `allocatiepunt`, ERE-E, and reasonable assurance are defined in the system context. | YES | NEA-EAN-001; NEA-MID-001; NEA-VER-007 |  | DIRECT LAW | Current Besluit and Stb. 2026, 102 relevant definitions reviewed. | COVERED |
+| SRC-BEV | article 10 electricity | Electricity booking requires eligible delivery via allowed electricity constructs and measured delivery point. | YES | NEA-MID-001; NEA-ELIG-001 |  | DIRECT LAW | Current Besluit article 10, Stb. 2026, 102 and NEa electricity page reviewed. | COVERED |
 | SRC-BEV | article 10 IDV explanation | IDV is not the customer-side aangeslotene; customer-side delivery requirements remain applicable to the mandating customer. | YES | NEA-ORG-006; NEA-EAN-001 |  | DIRECT LAW | 2026 Besluit explanation explicitly addresses IDV role. | COVERED |
 | SRC-BEV | article 10 destinations | Rail is excluded; walstroom expires from 2030; eligible scope includes specified transport contexts. | YES | NEA-ELIG-005 |  | DIRECT LAW | Besluit explanation and NEa electricity destination list reviewed. | COVERED |
 | SRC-BEV | article 10 renewable/direct line | 100% renewable electricity requires same-address generation or direct-line conditions and excludes biomass/biogas sources. | CONDITIONAL | NEA-KWH-005 |  | DIRECT LAW | Besluit explanation and NEa renewable section reviewed. | COVERED |
 | SRC-BEV | article 10 backfeed | Electricity fed back from vehicle/vessel to grid must not be booked. | CONDITIONAL | NEA-KWH-006 |  | DIRECT LAW | Besluit explanation and Regeling electricity data fields reviewed. | COVERED |
-| SRC-BEV | articles 15 and 23 | Verifier/protocol framework governs approval and reasonable assurance for inboekverificatie. | YES | NEA-VER-006; NEA-VER-007 |  | VERIFICATION EXPECTATION | Besluit explanation and NEa verifier page reviewed. | COVERED |
+| SRC-BEV | articles 15, 22 and 23 | Protocol approval, independent/accredited verifier conduct, reasonable assurance/materiality and the findings-report fallback govern inboekverificatie. | YES | NEA-VER-006; NEA-VER-007 |  | VERIFICATION EXPECTATION | Current Besluit provisions and NEa verifier page reviewed. | COVERED |
 | SRC-REV | article 9 electricity | Quantity is determined by the meter at the measured delivery point, not by an external non-delivery-point meter. | YES | NEA-KWH-001; NEA-MID-001 |  | DIRECT LAW | Staatscourant 2026, 15748 article 9 explanation reviewed. | COVERED |
 | SRC-REV | article 9 thresholds | IDV may satisfy the alternative threshold with 200 mandates; normal electricity threshold is 2 million kWh. | YES | NEA-ORG-002 |  | DIRECT LAW | Staatscourant explanation reviewed. | COVERED |
 | SRC-REV | article 9 mandate period | IDV mandates must be for at least one full calendar year or multiples of full calendar years. | YES | NEA-MAND-004 |  | DIRECT LAW | Staatscourant explanation reviewed. | COVERED |
@@ -74,7 +74,7 @@ The required order is:
 | SRC-NEA-ELEC | transport eligibility list | Specific transport destinations are included/excluded; non-limitative doubts require NEa confirmation. | YES | NEA-ELIG-005 |  | DIRECT NEA | NEa electricity page reviewed. | COVERED |
 | SRC-NEA-ELEC | renewable share | REV calculates renewable share; grid average for 2026 is 50.5%; 100% renewable requires strict evidence. | YES | NEA-KWH-005; NEA-BOOK-003 |  | DIRECT NEA | NEa electricity page reviewed. | COVERED |
 | SRC-NEA-ELEC | REV data | REV registration requires delivery dates, type, connection name, EAN, quantity, address, explanation, and GvO where applicable. | YES | NEA-EAN-002; NEA-BOOK-005 |  | DIRECT NEA | NEa electricity page reviewed. | COVERED |
-| SRC-NEA-ELEC | deadlines | Inbooking by 1 March, verification statement before 1 April, year-end on 1 April, and corrections until 1 March are stated. | YES | NEA-OPS-001; NEA-VER-002 |  | DIRECT NEA | NEa electricity page reviewed. | PARTIAL |
+| SRC-NEA-ELEC | deadlines | Inbooking by 1 March, possession of the verification statement before 1 April, year-end on 1 April, and corrections until 1 March are separate stated events. | YES | NEA-OPS-001; NEA-VER-002 |  | EXPLANATORY DIRECT NEA | Current NEa electricity page reviewed 2026-08-16 and reconciled with law/Regeling/verifier guidance. | COVERED |
 | SRC-NEA-ELEC | correction risk | NEa can correct incorrect inbookings up to five years after the relevant calendar year. | YES | NEA-COR-001; NEA-RET-001 |  | DIRECT NEA | NEa electricity page reviewed. | PARTIAL |
 | SRC-NEA-ELEC | AO/IB examples | Permanent data, contracts, process descriptions, electricity purchase/sales records, charger kWh, and generation data may be requested. | YES | NEA-AUD-001; NEA-KWH-001; NEA-FIN-002 |  | DIRECT NEA | NEa electricity page reviewed. | COVERED |
 | SRC-NEA-IDV | definition | IDV registers electricity for others in REV and receives EREs for the booking. | YES | NEA-ORG-006 |  | DIRECT NEA | NEa IDV page reviewed. | COVERED |
@@ -212,17 +212,17 @@ Actor assignment counts count clause-to-actor mappings, so multi-actor clauses c
 
 Source anchors assessed: 77, including 19 clause-level TKV mappings.
 
-- COVERED: 70
-- PARTIAL: 5
+- COVERED: 73
+- PARTIAL: 3
 - MISSING: 0
-- CONFLICT: 1
+- CONFLICT: 0
 - NOT APPLICABLE: 1
 
-## Conflict Identification
+## Conflict Resolution
 
-| conflict_id | source_anchor | requirement | document_line_or_row | nature_of_conflict | impact | required_correction |
-|---|---|---|---|---|---|---|
-| REG-CONFLICT-001 | `SRC-WM-97` title 9.7 / verification coupling; `SRC-NEA-ELEC` deadlines; `SRC-NEA-VER` result registration | `NEA-VER-002`; `NEA-OPS-001` | Coverage rows for `SRC-WM-97`, `SRC-NEA-ELEC`, and `SRC-NEA-VER` | Official NEa electricity guidance states verification statement before 1 April, while the verifier guidance states verification results must be registered in REV before 1 May. This may be a statement-versus-registration distinction, but it is not resolved in this audit. | Year-end controls, verifier pack timing, REV runbook, customer settlement timing, and architecture gates cannot be finalized on one deadline only. | Keep both dates visible until confirmed. Requirements must distinguish inbooking deadline, possession/submission of verification statement, REV result registration, and year-end closure. |
+| conflict_id | source_anchor | requirement | verdict | resolved event model | consequence |
+|---|---|---|---|---|---|
+| REG-CONFLICT-001 | `SRC-WM-97` 9.7.4.1(1), 9.7.4.12(1)-(3), 9.7.5.6(1)/(4); `SRC-BEV` 22-23; `SRC-REV` 17/Bijlage 8 E; `SRC-NEA-ELEC` deadlines; `SRC-NEA-VER` result registration; `SRC-NEA-TKV` 3.3.1-3.3.4 | `NEA-VER-002`; `NEA-OPS-001` | RESOLVED — DOC_INTERPRETATION_ERROR; `voor 1 mei` and `30 april` are SAME DEADLINE DIFFERENT EXPRESSION | Delivery-year inbooking cutoff, verification work, statement/no-statement issuance, statement possession, 1 April year-end, inboeker statement submission and verifier REV-result registration are distinct. | Requirements and traceability now preserve each event and actor. Later runtime needs separate state/deadline evidence, reminders, verifier handoff and a REV runbook; no current product implementation is implied. |
 
 ## Requirement Corrections Made
 
@@ -245,6 +245,11 @@ Requirements materially corrected by the 2026-07-21 TKV mapping:
 - `NEA-VER-003` through `NEA-VER-007` now contain the complete evidence-pack, visit, finding/CAPA, accreditation/designation, and external-statement boundaries.
 - `NEA-RET-001` now distinguishes verification retention from category-specific customer/operational retention.
 - `NEA-OPS-004` now records a passed source-integrity/change-control gate, not a source-access blocker.
+
+Requirements materially corrected by the 2026-08-16 `REG-CONFLICT-001` reconciliation:
+
+- `NEA-VER-002` now separates verifier work, statement/no-statement outcome, statement possession, inboeker submission and verifier REV-result registration.
+- `NEA-OPS-001` now carries the source-versioned delivery-year calendar, including the concrete 2026→2027 dates, without treating 1 April and before 1 May as the same event.
 
 Reclassified requirement types:
 
@@ -270,8 +275,8 @@ These controls are retained only as: `ENVAL INTERNAL CONTROL - chosen to satisfy
 ## Open Legal Or Source Questions
 
 - `SRC-NEA-TKV` access and clause mapping are complete. Future source-version changes remain subject to `NEA-OPS-004` change control.
-- Current consolidated Wetten.nl article text for `SRC-WM-97`, `SRC-BEV`, and `SRC-REV` must be reconfirmed before implementation; official amendment publications and relevant passages were reviewed but not a full consolidated export.
-- `REG-CONFLICT-001`: the NEa electricity page mentions a verification statement before 1 April, while the verifier page states verification results before 1 May. This may be a distinction between possession of a statement and REV result registration, but must be confirmed.
+- Relevant current provisions for the deadline model in `SRC-WM-97`, `SRC-BEV`, and `SRC-REV` were confirmed on 2026-08-16 against the formal 2026 amendment and in-force chain. This scoped confirmation is not a claim that every provision in all three instruments was re-audited.
+- `REG-CONFLICT-001` is resolved: 1 April possession/year-end and before-1-May statement submission/REV-result registration are different events; `voor 1 mei` and `30 april` are the same calendar deadline expression.
 - Exact retention schedule remains partial: TKV 3.0.5 fixes the verification-data/document minimum, but legal basis, controller roles, copying, access and periods for other customer/operational categories require legal review.
 - Exact REV import/API/screen fields and operational account setup must be confirmed once REV access is available.
 - Verifier availability, ISO/IEC 17020 scope, any temporary designation, approved protocol version, RvA evaluation, ministerial decision, workpaper exchange, and professional methods remain external dependencies.
@@ -282,6 +287,6 @@ OFFICIAL ELECTRICITY TKV ACCESS VERDICT: PASS
 
 OFFICIAL ELECTRICITY TKV CLAUSE COVERAGE VERDICT: PASS
 
-REGULATORY CONFORMANCE VERDICT: PARTIAL — ELECTRICITY TKV COMPLETE; CONSOLIDATED LAW RECONFIRMATION, DEADLINE INTERPRETATION, RETENTION LEGAL ANALYSIS, REV DETAILS, AND EXTERNAL VERIFIER READINESS REMAIN OPEN
+REGULATORY CONFORMANCE VERDICT: PARTIAL — ELECTRICITY TKV AND REG-CONFLICT-001 DEADLINE MODEL COMPLETE; BROADER CONSOLIDATED-LAW COVERAGE, RETENTION LEGAL ANALYSIS, REV DETAILS, AND EXTERNAL VERIFIER READINESS REMAIN OPEN
 
-All ten official TKV pages and all nineteen present numbered clauses are mapped. The source numbering contains no 3.3.5 and no replacement clause has been invented. This closes only the electricity-TKV source-access and clause-coverage blocker. It does not approve target architecture or implementation.
+All ten official TKV pages and all nineteen present numbered clauses are mapped. The source numbering contains no 3.3.5 and no replacement clause has been invented. The TKV mapping closes its source-access/clause blocker; the separate 2026-08-16 source reconciliation closes `REG-CONFLICT-001`. Neither result approves target architecture or implementation.

@@ -1,6 +1,6 @@
 # ENVAL App TODO
 
-Status: CURRENT app/MVP TODO — reconciled through commit `e076a23`.
+Status: CURRENT app/MVP TODO — reconciled through commit `da9ea74`; `REG-CONFLICT-001` source decision updated 2026-08-16.
 
 This queue is primarily for the new `/app`, `api-app-*`, and `app_*`
 implementation. Bounded legacy-caller cutover and white-label foundation status
@@ -10,18 +10,31 @@ implementation.
 
 ## Single Current NEXT
 
-- NEXT — resolve `REG-CONFLICT-001` from current official Wet/NEa sources:
-  distinguish the prior-year inbooking deadline, possession/submission of the
-  verification statement, REV verification-result registration and year-end
-  closure; then reconcile `NEA-VER-002`, `NEA-OPS-001` and traceability without
-  implementing runtime.
-  - Priority: WET + OFFICIAL NEA.
-  - Reason: the unresolved 1 April versus 1 May model is a P0 source conflict
-    that blocks an authoritative pilot calendar, verifier timing and later REV
-    runbook; the source review is executable now and does not require a future
-    observation date.
-  - Boundary: source/requirements/traceability decision only; no booking, REV,
-    verifier automation, remote action or production claim.
+- NEXT — decide the prepared `WP3O — controlled pilot workforce bootstrap and
+  assignment authority` package before any bootstrap or workforce population.
+  - Priority: AUDIT.
+  - Reason: `REG-CONFLICT-001` is source-resolved and WP3O is the highest
+    executable prepared decision gate already identified after that official-source
+    priority.
+  - Boundary: decide bootstrap custody, designated executor and independent
+    checker, first identity lifecycle, minimal capabilities/scopes,
+    assignment/revocation authority, conflict handling, single-use idempotent
+    runbook and audit/rollback evidence; no population, remote action or runtime
+    implementation follows automatically.
+
+## Completed Regulatory Source Decision
+
+- `REG-CONFLICT-001` — RESOLVED on 2026-08-16 as a documentation
+  interpretation error, not one conflicting deadline:
+  - prior-year inbooking is due by the current NEa-published last working day
+    before 1 March; for delivery year 2026 this is 2027-02-26;
+  - the inboeker must possess the electricity verification statement before
+    1 April under current explanatory NEa guidance; NEa/REV year-end is 1 April;
+  - Wm 9.7.4.12 requires the inboeker to submit the statement before 1 May and
+    the verifier must register the result in REV before 1 May;
+  - `voor 1 mei` and `30 april` are the same calendar deadline expression;
+  - `NEA-VER-002`, `NEA-OPS-001` and traceability are reconciled; runtime state,
+    reminders, verifier handoff and the REV runbook remain unimplemented.
 
 ## Current / Locally Proven
 
@@ -306,7 +319,7 @@ implementation.
   - ASSIGNMENT AUTHORITY: NOT IMPLEMENTED;
   - OPERATIONS UI: NOT IMPLEMENTED;
   - REMOTE APPLY / CUTOVER: OPEN/BLOCKED;
-  - PENDING after the current official-source priority: decide the prepared
+  - CURRENT NEXT after closure of the official-source priority: decide the prepared
     `WP3O — controlled pilot workforce bootstrap and assignment authority`
     package before any bootstrap/population implementation;
   - WP3O must decide bootstrap custody, designated executor and independent

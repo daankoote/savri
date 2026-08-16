@@ -312,14 +312,16 @@ TKV impact delta count: `15` objects/object groups.
 
 ## Part 7 - Conflict Identification
 
-Exact conflict: `REG-CONFLICT-001`.
+2026-08-16 current-source overlay: `REG-CONFLICT-001` is RESOLVED as a documentation interpretation error in `05_NEA_COMPLIANCE_DIRECTIVE.md`, `06_NEA_REQUIREMENTS.md`, `06A_NEA_REGULATORY_COMPLETENESS_AUDIT.md`, and `08_NEA_TRACEABILITY_MATRIX.md`. The bullets below preserve the exact historical finding at this assessment date and are not current unresolved status.
+
+Historical conflict at assessment date: `REG-CONFLICT-001`.
 
 - Source anchor: `SRC-NEA-ELEC` deadlines versus `SRC-NEA-VER` result registration, also connected to `SRC-WM-97` verification coupling.
 - Requirement: `NEA-VER-002`; related: `NEA-OPS-001`.
 - Document line/row: `docs/app/06A_NEA_REGULATORY_COMPLETENESS_AUDIT.md` coverage rows for Wm verification coupling, NEa electricity deadlines, and NEa verifier result registration.
-- Nature: electricity guidance mentions verification statement before 1 April; verifier guidance mentions REV verification result before 1 May. This may be a statement-versus-registration distinction, but it is unresolved.
+- Nature at assessment date: electricity guidance mentions verification statement before 1 April; verifier guidance mentions REV verification result before 1 May. The later source reconciliation proved these are distinct possession/year-end, submission and result-registration events.
 - Impact: year-end runbook, verifier pack timing, REV submission, settlement timing, and architecture gates cannot rely on a single date.
-- Correction made: `NEA-VER-002` now explicitly distinguishes statement timing, REV result registration, and the unresolved 1 April/1 May conflict.
+- Historical correction made: `NEA-VER-002` distinguished statement timing and REV result registration while the source question remained open; the 2026-08-16 requirement update now resolves the event model.
 
 ## Part 8 - Verdict
 

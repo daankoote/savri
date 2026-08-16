@@ -12,13 +12,13 @@ It is not a replacement for law, regulation, or official NEa publications. If th
 
 ## Source Registry
 
-Consulted on: 2026-07-21.
+Consulted on: 2026-08-16 for the `REG-CONFLICT-001` deadline reconciliation.
 
 | Source ID | Title | Organization | URL | Publication / change date | Status |
 |---|---|---|---|---|---|
-| SRC-WM-97 | Wet milieubeheer, titel 9.7 hernieuwbare energie vervoer | Overheid.nl | `https://wetten.overheid.nl/BWBR0003245` | Current consolidated law to confirm before implementation | OFFICIAL / PARTIAL ACCESS IN CURRENT AUDIT |
-| SRC-BEV | Besluit energie vervoer | Overheid.nl / Staatsblad | `https://wetten.overheid.nl/BWBR0040922` and `https://zoek.officielebekendmakingen.nl/stb-2026-117.html` | Staatsblad 2026, 117; current consolidated text to confirm before implementation | OFFICIAL / PARTIAL ACCESS IN CURRENT AUDIT |
-| SRC-REV | Regeling energie vervoer, including inboekverificatie bijlage context | Overheid.nl / Staatscourant | `https://wetten.overheid.nl/BWBR0041050` and `https://zoek.officielebekendmakingen.nl/stcrt-2026-15748.html` | Staatscourant 2026, 15748; current consolidated text to confirm before implementation | OFFICIAL / PARTIAL ACCESS IN CURRENT AUDIT |
+| SRC-WM-97 | Wet milieubeheer, titel 9.7 hernieuwbare energie vervoer | Overheid.nl / Staatsblad | `https://wetten.overheid.nl/BWBR0003245`, `https://zoek.officielebekendmakingen.nl/stb-2026-83.html`, and `https://zoek.officielebekendmakingen.nl/stb-2026-137.html` | Relevant consolidated provisions as amended by Stb. 2026, 83; effective 2026-06-20 with retroactive effect through 2026-01-01 | OFFICIAL / RELEVANT PROVISIONS CONFIRMED |
+| SRC-BEV | Besluit energie vervoer | Overheid.nl / Staatsblad | `https://wetten.overheid.nl/BWBR0040922`, `https://zoek.officielebekendmakingen.nl/stb-2026-102.html`, and `https://zoek.officielebekendmakingen.nl/stb-2026-137.html` | Relevant consolidated provisions as amended by Stb. 2026, 102; effective 2026-06-20 with retroactive effect through 2026-01-01 | OFFICIAL / RELEVANT PROVISIONS CONFIRMED |
+| SRC-REV | Regeling energie vervoer, including inboekverificatie bijlage context | Overheid.nl / Staatscourant | `https://wetten.overheid.nl/BWBR0041050`, `https://zoek.officielebekendmakingen.nl/stcrt-2026-15748.html`, and `https://zoek.officielebekendmakingen.nl/stb-2026-137.html` | Relevant consolidated provisions as amended by Stcrt. 2026, 15748; effective with the 2026 law package and retroactive through 2026-01-01 | OFFICIAL / RELEVANT PROVISIONS CONFIRMED |
 | SRC-NEA-ELEC | Inboeken elektriciteit | Nederlandse Emissieautoriteit | `https://www.emissieautoriteit.nl/regelgeving/hernieuwbare-energie-voor-vervoer-eres/inboeken-hernieuwbare-energie-vervoer/inboeken-elektriciteit` | Publication date not visible in fetched page | OFFICIAL NEa GUIDANCE |
 | SRC-NEA-IDV | Inboekdienstverleners | Nederlandse Emissieautoriteit | `https://www.emissieautoriteit.nl/regelgeving/hernieuwbare-energie-voor-vervoer-eres/inboeken-hernieuwbare-energie-vervoer/inboekdienstverleners` | Publication date not visible in fetched page | OFFICIAL NEa GUIDANCE |
 | SRC-NEA-IDV-LIST | Lijst van inboekdienstverleners | Nederlandse Emissieautoriteit | `https://www.emissieautoriteit.nl/documenten/2026/02/02/lijst-van-inboekdienstverleners` | 2026-07-02 in fetched page | OFFICIAL NEa PUBLICATION |
@@ -94,6 +94,31 @@ ENVAL is not:
 ENVAL may facilitate data, evidence, scheduling, traceability, request/response handling, correction history, and safe projections. ENVAL does not independently select the verifier's sample, decide verification materiality, perform the professional risk judgment, issue the official verification statement, mark an inboeking verified without an external result, register the verifier's professional result in REV, or report fraud suspicions on behalf of the verifier.
 
 ENVAL may also perform preparatory `INTERNAL SUPPORT CONTROL` checks, selected `manual`, `random`, `risk_based`, or `verifier_request`, when they are audit-worthy and historized. An internal support control is never the external verifier's official location visit, never replaces independent verification, and never grants ENVAL the authority to set professional risk/materiality, issue a statement, or register the verifier's REV result.
+
+### Authoritative Delivery-Year And Year-End Model
+
+`REG-CONFLICT-001` is resolved as `DOC_INTERPRETATION_ERROR`, not as a conflict between two deadlines for the same event. The current authorities define separate events and actors:
+
+| event | actor | current rule | classification |
+|---|---|---|---|
+| delivery period | INBOEKER / INBOEKDIENSTVERLENER | The booked electricity belongs to delivery calendar year `Y`; the verification statement covers delivered and booked kWh for that calendar year. | DIRECT LAW / VERIFICATION FRAMEWORK |
+| inbooking window and cutoff | INBOEKER / INBOEKDIENSTVERLENER | Wm 9.7.4.1(1) permits prior-year inbooking until 1 March `Y+1`; current NEa guidance operationalizes this as the last working day before 1 March. | DIRECT LAW plus explanatory DIRECT NEA |
+| verification work | VERIFICATEUR | Independent work follows Besluit articles 22-23, Regeling article 17 and Bijlage 8 part E. | DIRECT LAW / VERIFICATION FRAMEWORK |
+| statement or no-statement outcome | VERIFICATEUR | A statement is issued to the inboeker only if the applicable requirements are met; otherwise the verifier produces a findings report. | DIRECT LAW / VERIFICATION FRAMEWORK |
+| statement possession | INBOEKER / INBOEKDIENSTVERLENER | Current NEa electricity guidance says every inboeker must possess the inboekverificatieverklaring before 1 April `Y+1`. This is an explanatory operational possession deadline, not a replacement for Wm 9.7.4.12(1). | EXPLANATORY DIRECT NEA |
+| year-end close and saving | NEa / REV | The NEa electricity guidance places year-end on 1 April `Y+1`; Wm 9.7.5.6 applies saving and statutory expiry to the account balance on that date. | DIRECT LAW plus explanatory DIRECT NEA |
+| statement submission | INBOEKER / INBOEKDIENSTVERLENER | Wm 9.7.4.12(1) requires the inboeker to submit the verifier statement to the NEa before 1 May `Y+1`. | DIRECT LAW |
+| REV result registration | VERIFICATEUR | Regeling article 17 assigns management of statements/findings reports and registration of the verification result to the verifier; current NEa verifier guidance requires the result to be registered in REV before 1 May `Y+1`. | DIRECT LAW plus explanatory DIRECT NEA |
+
+`Voor 1 mei` and `30 april` are the same calendar deadline expression. They do not create an additional event. Regeling article 18(4) describes reasonable REV availability on working days from 09:00 to 17:00; actual REV service hours and annually published operational instructions therefore remain runbook inputs and cannot extend the legal deadline.
+
+First concrete cycle:
+
+| delivery year | last NEa-published inbooking day | statement possession | year-end | statement submission and REV result |
+|---|---|---|---|---|
+| 2026 | 2027-02-26 | before 2027-04-01, therefore no later than 2027-03-31 | 2027-04-01 | before 2027-05-01, therefore no later than 2027-04-30 |
+
+The 2026-07-09 electricity TKV explains and consolidates protocol requirements and expressly adds no requirements beyond the Wm, Besluit, and Regeling. Its clauses govern verifier work, statement contents, issuance/no-issuance, findings and REV management; the TKV does not state a separate 1 April or 1 May deadline and no deadline is inferred from it.
 
 ENVAL is responsible for controlling its own inboeking chain:
 

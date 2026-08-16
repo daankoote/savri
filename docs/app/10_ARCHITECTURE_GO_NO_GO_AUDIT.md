@@ -425,7 +425,7 @@ Internal controls that are not direct legal requirements by themselves:
 | total traceability rows added/changed | 23 |
 | active TKV source blockers | 0 |
 | TKV-introduced conflicts | 0 |
-| broader active conflicts | 1 (`REG-CONFLICT-001`) |
+| broader active conflicts | 0 in current source overlay (`REG-CONFLICT-001` resolved 2026-08-16); 1 at the historical audit date |
 | implementation disposition delta rows | 15 |
 
 Actor mapping counts, counting multi-actor clauses for every assigned actor: VERIFICATEUR `19`, INBOEKER `10`, INBOEKDIENSTVERLENER `10`, ONDERNEMING/NATUURLIJKE PERSOON `3`, NEa `3`, RvA `1`, MINISTER `1`.
@@ -463,14 +463,14 @@ ENVAL internal controls, not professional verifier decisions:
 - explicit prohibition on using 2% as automatic dossier/eligibility/evidence/booking acceptance;
 - category-specific retention calculation, hold, export and minimization controls.
 
-Interpretation/review items remaining after TKV completion:
+Interpretation/review items remaining after TKV completion, with the 2026-08-16 current-source overlay applied:
 
-1. `REG-CONFLICT-001`: statement possession before 1 April versus REV result registration before 1 May.
+1. `REG-CONFLICT-001`: RESOLVED — statement possession before 1 April, 1 April year-end, inboeker submission before 1 May and verifier REV-result registration before 1 May are distinct events.
 2. Legal basis, controller/processor roles, verifier copies and non-verification category retention periods.
 3. Final Dutch mandate wording, electronic-signature evidence and VvE/representation proof.
-4. Exact current consolidated Wm/Besluit/Regeling anchors, REV interface/account operations and actual verifier/protocol/designation availability.
+4. Broader consolidated-law coverage, REV interface/account operations and actual verifier/protocol/designation availability.
 
-`TKV-DOC-CONFLICT-001` is closed on 2026-07-21. Active wording in `docs/app/00_CANON.md`, `docs/app/04_TODO.md`, and `docs/app/decisions/architecture-and-environment-decisions.md` now records electricity-TKV source access and mapping as PASS. Historical changelog/proof wording remains valid only where it is explicitly dated or marked historical. Other consolidated-law, deadline, retention, REV, legal and external-verifier gaps remain separately PARTIAL/UNKNOWN.
+`TKV-DOC-CONFLICT-001` is closed on 2026-07-21 and `REG-CONFLICT-001` is closed on 2026-08-16. Active wording in `docs/app/00_CANON.md`, `docs/app/04_TODO.md`, and `docs/app/decisions/architecture-and-environment-decisions.md` records electricity-TKV source access and mapping as PASS; the current regulatory directive/requirements/traceability carry the resolved deadline model. Historical changelog/proof wording remains valid only where it is explicitly dated or marked historical. Other broader consolidated-law, retention, REV, legal and external-verifier gaps remain separately PARTIAL/UNKNOWN.
 
 TKV-specific implementation mappings are documented but not implemented: engagement, scope, risk, plan, visit, sample, evidence pack, findings/CAPA, external statement and fraud-notification records. Current code, CSS, Supabase schema/functions, migrations and proofs were not changed.
 
