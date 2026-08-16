@@ -10,6 +10,16 @@ import {
 import {
   createHandler as createCorrectHandler,
 } from "../../supabase/functions/api-app-ops-location-version-correct/index.ts";
+import {
+  getAppRequestMeta,
+} from "../../supabase/functions/_shared/app_foundation.ts";
+import type {
+  AppTenantResolutionShadowExecution,
+  CurrentAuthoritativeTenantRuntimeContext,
+} from "../../supabase/functions/_shared/app_tenant_resolution_shadow.ts";
+import type {
+  WorkforceHandlerDependencies,
+} from "../../supabase/functions/_shared/app_workforce_authorization.ts";
 
 const CONTAINER = "supabase_db_enval";
 const MAIN_DATABASE = "postgres";
@@ -85,6 +95,12 @@ const HASH_C = "c".repeat(64);
 const EXPIRES = "2030-01-01T00:00:00Z";
 const T0 = "2025-01-01T00:00:00Z";
 const T1 = "2025-02-01T00:00:00Z";
+const TENANT_ID = "51000000-0000-4000-8000-000000000001";
+const OTHER_TENANT_ID = "51000000-0000-4000-8000-000000000002";
+const LOCATOR_ID = "53000000-0000-4000-8000-000000000001";
+const OTHER_LOCATOR_ID = "53000000-0000-4000-8000-000000000002";
+const SECRET_REFERENCE_ID = "54000000-0000-4000-8000-000000000001";
+const STATIC_ROUTING_KEY = "deployment:enval-local";
 
 class ProofFailure extends Error {}
 type CommandResult = { code: number; stdout: string; stderr: string };
@@ -645,6 +661,147 @@ async function operationHash(value: Record<string, unknown>): Promise<string> {
   return await sha256(canonical);
 }
 
+type HandlerFactory = (
+  dependencies?: Partial<WorkforceHandlerDependencies>,
+) => (req: Request) => Promise<Response>;
+
+const CURRENT_TENANT_CONTEXT: CurrentAuthoritativeTenantRuntimeContext = Object
+  .freeze({
+    tenantId: TENANT_ID,
+    environment: "local",
+    locatorId: LOCATOR_ID,
+    deploymentOwnership: "ENVAL_MANAGED_DEDICATED" as const,
+    providerType: "supabase",
+    dataPlaneReference: "enval",
+  });
+
+function staticTenantExecution(
+  currentOverrides: Partial<CurrentAuthoritativeTenantRuntimeContext> = {},
+  trustedRoutingKey = STATIC_ROUTING_KEY,
+): AppTenantResolutionShadowExecution {
+  return Object.freeze({
+    current: Object.freeze({
+      ...CURRENT_TENANT_CONTEXT,
+      ...currentOverrides,
+    }),
+    trustedRoutingKey,
+    composition: {
+      deploymentMode: "static_single_tenant_v1" as const,
+      staticSingleTenantConfigurations: [{
+        trustedRoutingKey: STATIC_ROUTING_KEY,
+        tenantId: TENANT_ID,
+        dataPlane: {
+          locatorId: LOCATOR_ID,
+          deploymentOwnership: "ENVAL_MANAGED_DEDICATED" as const,
+          environment: "local",
+          providerType: "supabase",
+          dataPlaneReference: "enval",
+          applicationRouteReference: "http://127.0.0.1:54321",
+          secretReferenceId: SECRET_REFERENCE_ID,
+        },
+      }],
+    },
+  });
+}
+
+function authoritativeRequestMeta(
+  execution: AppTenantResolutionShadowExecution,
+): typeof getAppRequestMeta {
+  return (req: Request) =>
+    getAppRequestMeta(req, {
+      authorityMode: "AUTHORITATIVE",
+      execution,
+      sink: null,
+    });
+}
+
+function request(
+  path: string,
+  body: string,
+  idempotencyKey: string,
+  bearer = "valid",
+): Request {
+  return new Request(
+    `http://local/${path}?tenant_id=browser-selected&data_plane=other&tenant_resolution_adapter=browser`,
+    {
+      method: "POST",
+      headers: {
+        ...(bearer ? { "Authorization": `Bearer ${bearer}` } : {}),
+        "Content-Type": "application/json",
+        "Idempotency-Key": idempotencyKey,
+        "X-Tenant-Id": "browser-selected",
+        "X-Data-Plane": "postgresql://browser:secret@other/database",
+        "X-Tenant-Resolution-Authority-Mode": "SHADOW",
+        "X-Tenant-Resolution-Adapter": "browser",
+      },
+      body,
+    },
+  );
+}
+
+async function assertGateFailureBeforeBusinessAccess(
+  routeName: string,
+  createHandler: HandlerFactory,
+  execution: AppTenantResolutionShadowExecution,
+  failureName: string,
+): Promise<void> {
+  let createClientCalls = 0;
+  let authCalls = 0;
+  let rpcCalls = 0;
+  let propagated: unknown = null;
+  const requestMeta: typeof getAppRequestMeta = async (req: Request) => {
+    const result = await getAppRequestMeta(req, {
+      authorityMode: "AUTHORITATIVE",
+      execution,
+      sink: null,
+    });
+    if (result instanceof Response) propagated = result;
+    return result;
+  };
+  const response = await createHandler({
+    requestMeta,
+    createServiceClient: () => {
+      createClientCalls += 1;
+      return {
+        auth: {
+          getUser: async () => {
+            authCalls += 1;
+            return { error: new Error("must_not_authorize") };
+          },
+        },
+        from: () => ({}),
+        rpc: async () => {
+          rpcCalls += 1;
+          return { data: null, error: new Error("must_not_call_rpc") };
+        },
+      };
+    },
+    idempotencyExpiresAt: () => EXPIRES,
+  })(request(routeName, "{not-valid-json", `gate:${routeName}:${failureName}`));
+  assert(
+    propagated instanceof Response && response === propagated,
+    `${routeName}:${failureName}:tenant_failure_not_propagated`,
+  );
+  assert(
+    response.status === 503 && createClientCalls === 0 && authCalls === 0 &&
+      rpcCalls === 0,
+    `${routeName}:${failureName}:business_access_before_tenant_gate`,
+  );
+  const serialized = await response.text();
+  const parsed = JSON.parse(serialized);
+  assert(
+    Object.keys(parsed).sort().join("|") === "code|error|ok" &&
+      parsed.ok === false && parsed.code === "service_unavailable" &&
+      parsed.error === "Deze dienst is tijdelijk niet beschikbaar." &&
+      !serialized.includes(TENANT_ID) &&
+      !serialized.includes(LOCATOR_ID) &&
+      !serialized.includes(SECRET_REFERENCE_ID) &&
+      !/(password|service.?role|database.?url|raw.?secret|credential|access.?token|control.?plane)/i
+        .test(serialized),
+    `${routeName}:${failureName}:unsafe_failure`,
+  );
+}
+
 async function handlerProof(): Promise<void> {
   const fakeClient = (authError: boolean, calls: string[]) => ({
     auth: {
@@ -668,6 +825,7 @@ async function handlerProof(): Promise<void> {
   const dependencies = (client: ReturnType<typeof fakeClient>) => ({
     createServiceClient: () => client,
     idempotencyExpiresAt: () => EXPIRES,
+    requestMeta: authoritativeRequestMeta(staticTenantExecution()),
   });
   const validRoot = JSON.stringify({
     action: "execute",
@@ -678,11 +836,7 @@ async function handlerProof(): Promise<void> {
   const noBearer = await createRootHandler(
     dependencies(fakeClient(false, [])),
   )(
-    new Request("http://local/root", {
-      method: "POST",
-      headers: { "Idempotency-Key": "handler:no-bearer" },
-      body: validRoot,
-    }),
+    request("root", validRoot, "handler:no-bearer", ""),
   );
   assert(
     noBearer.status === 401 &&
@@ -694,14 +848,7 @@ async function handlerProof(): Promise<void> {
   const invalid = await createRootHandler(
     dependencies(fakeClient(true, [])),
   )(
-    new Request("http://local/root", {
-      method: "POST",
-      headers: {
-        "Authorization": "Bearer invalid",
-        "Idempotency-Key": "handler:invalid",
-      },
-      body: validRoot,
-    }),
+    request("root", validRoot, "handler:invalid", "invalid"),
   );
   assert(
     invalid.status === 401 &&
@@ -717,17 +864,12 @@ async function handlerProof(): Promise<void> {
     "Idempotency-Key": "handler:mapping",
   };
   await createRootHandler(dependencies(client))(
-    new Request("http://local/root", {
-      method: "POST",
-      headers: authHeaders,
-      body: validRoot,
-    }),
+    request("root", validRoot, authHeaders["Idempotency-Key"]),
   );
   await createObservationHandler(dependencies(client))(
-    new Request("http://local/observation", {
-      method: "POST",
-      headers: authHeaders,
-      body: JSON.stringify({
+    request(
+      "observation",
+      JSON.stringify({
         action: "execute",
         case_id: CASE_1,
         location_id: LOCATION_ACCEPT,
@@ -746,7 +888,8 @@ async function handlerProof(): Promise<void> {
         city: null,
         site_reference: "bounded",
       }),
-    }),
+      authHeaders["Idempotency-Key"],
+    ),
   );
   const business = operationBusiness(
     "accept",
@@ -754,11 +897,11 @@ async function handlerProof(): Promise<void> {
     OBS_ACCEPT,
   );
   await createAcceptHandler(dependencies(client))(
-    new Request("http://local/accept", {
-      method: "POST",
-      headers: authHeaders,
-      body: JSON.stringify({ action: "prepare", ...business }),
-    }),
+    request(
+      "accept",
+      JSON.stringify({ action: "prepare", ...business }),
+      authHeaders["Idempotency-Key"],
+    ),
   );
   const correction = operationBusiness(
     "correct",
@@ -767,11 +910,11 @@ async function handlerProof(): Promise<void> {
     VERSION_BASE,
   );
   await createCorrectHandler(dependencies(client))(
-    new Request("http://local/correct", {
-      method: "POST",
-      headers: authHeaders,
-      body: JSON.stringify({ action: "prepare", ...correction }),
-    }),
+    request(
+      "correct",
+      JSON.stringify({ action: "prepare", ...correction }),
+      authHeaders["Idempotency-Key"],
+    ),
   );
   assert(
     calls.join(",") === [
@@ -782,6 +925,73 @@ async function handlerProof(): Promise<void> {
     ].join(","),
     "handler_fixed_mapping",
   );
+
+  const routes: ReadonlyArray<readonly [string, HandlerFactory]> = [
+    ["observation-record", createObservationHandler],
+    ["root-create", createRootHandler],
+    ["version-accept", createAcceptHandler],
+    ["version-correct", createCorrectHandler],
+  ];
+  const failures: ReadonlyArray<
+    readonly [string, AppTenantResolutionShadowExecution]
+  > = [
+    [
+      "tenant-mismatch",
+      staticTenantExecution({ tenantId: OTHER_TENANT_ID }),
+    ],
+    [
+      "environment-mismatch",
+      staticTenantExecution({ environment: "staging" }),
+    ],
+    [
+      "locator-mismatch",
+      staticTenantExecution({ locatorId: OTHER_LOCATOR_ID }),
+    ],
+    [
+      "unknown-tenant",
+      staticTenantExecution({}, "deployment:unknown"),
+    ],
+  ];
+  for (const [routeName, createHandler] of routes) {
+    for (const [failureName, execution] of failures) {
+      await assertGateFailureBeforeBusinessAccess(
+        routeName,
+        createHandler,
+        execution,
+        failureName,
+      );
+    }
+  }
+}
+
+async function tenantGateSourceProof(): Promise<void> {
+  const sharedPath =
+    "supabase/functions/_shared/app_workforce_authorization.ts";
+  const shared = await Deno.readTextFile(sharedPath);
+  assert(
+    /const metaResult = await deps\.requestMeta\(req\);\s*if \(metaResult instanceof Response\) return metaResult;\s*const meta = metaResult;/.test(
+      shared,
+    ) &&
+      shared.indexOf("const metaResult = await deps.requestMeta(req);") <
+        shared.indexOf("const body = await parseBody(req);") &&
+      shared.indexOf("const metaResult = await deps.requestMeta(req);") <
+        shared.indexOf("const serviceClient = deps.createServiceClient();"),
+    "shared_tenant_gate_propagation_missing",
+  );
+  const routePaths = PRODUCT_FILES.filter((path) =>
+    path.startsWith("supabase/functions/api-app-ops-location-")
+  );
+  assert(routePaths.length === 4, "workforce_route_count_changed");
+  for (const path of routePaths) {
+    const source = await Deno.readTextFile(path);
+    assert(
+      source.includes("createWorkforceLocationHandler") &&
+        source.includes('from "../_shared/app_workforce_authorization.ts"') &&
+        !/(tenant_resolution|TenantResolver|ENVAL_TENANT_REFERENCE|ENVAL_DATA_PLANE)/
+          .test(source),
+      `route_local_tenant_gate_detected:${path}`,
+    );
+  }
 }
 
 async function catalogAndSourceProof(
@@ -1882,6 +2092,12 @@ async function behaviorProof(database: string): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  if (Deno.args.includes("--tenant-gate-only")) {
+    await handlerProof();
+    await tenantGateSourceProof();
+    console.log("OPS_LOCATION_AUTHORITATIVE_GATE_Q01_Q12=PASS");
+    return;
+  }
   const migration = await Deno.readTextFile(MIGRATION);
   const migrationHash = await sha256(migration);
   const protectedBefore = await protectedFingerprint();
@@ -1910,6 +2126,7 @@ async function main(): Promise<void> {
     created = true;
     await catalogAndSourceProof(database, migration);
     await handlerProof();
+    await tenantGateSourceProof();
     await fixtures(database);
     await behaviorProof(database);
     assert(

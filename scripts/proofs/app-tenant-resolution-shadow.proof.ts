@@ -8,10 +8,14 @@ import {
   type CurrentAuthoritativeTenantRuntimeContext,
   enforceAppTenantResolutionGate,
 } from "../../supabase/functions/_shared/app_tenant_resolution_shadow.ts";
-import type {
-  PlatformControlPlaneReader,
-  PlatformDataPlaneLocatorRecord,
-  PlatformRoutingRecord,
+import {
+  resolveTenantRuntimeContext,
+} from "../../platform/runtime/tenant-resolution/tenant_resolution.ts";
+import {
+  PlatformControlPlaneV1Adapter,
+  type PlatformControlPlaneReader,
+  type PlatformDataPlaneLocatorRecord,
+  type PlatformRoutingRecord,
 } from "../../platform/runtime/tenant-resolution/adapters/platform_control_plane_v1.ts";
 
 class ProofFailure extends Error {}
@@ -518,6 +522,12 @@ const foundationSource = Deno.readTextFileSync(
     import.meta.url,
   ),
 );
+const workforceAuthorizationSource = Deno.readTextFileSync(
+  new URL(
+    "../../supabase/functions/_shared/app_workforce_authorization.ts",
+    import.meta.url,
+  ),
+);
 assert(
   foundationSource.includes("enforceAppTenantResolutionGate(") &&
     foundationSource.includes("if (!tenantGate.ok)") &&
@@ -542,7 +552,7 @@ const coveredEntrypoints = [
   "api-app-signup-upload-confirm",
   "api-app-signup-upload-url",
 ] as const;
-const uncoveredCurrentEntrypoints = [
+const sharedWorkforceEntrypoints = [
   "api-app-ops-location-observation-record",
   "api-app-ops-location-root-create",
   "api-app-ops-location-version-accept",
@@ -590,13 +600,24 @@ for (const endpoint of coveredEntrypoints) {
   );
 }
 
-for (const endpoint of uncoveredCurrentEntrypoints) {
+assert(
+  /const metaResult = await deps\.requestMeta\(req\);\s*if \(metaResult instanceof Response\) return metaResult;\s*const meta = metaResult;/.test(
+    workforceAuthorizationSource,
+  ),
+  "shared_workforce_tenant_gate_propagation_missing",
+);
+
+for (const endpoint of sharedWorkforceEntrypoints) {
   const source = Deno.readTextFileSync(
     new URL(`../../supabase/functions/${endpoint}/index.ts`, import.meta.url),
   );
   assert(
-    !source.includes("getAppRequestMeta"),
-    `coverage_inventory_stale:${endpoint}`,
+    source.includes("createWorkforceLocationHandler") &&
+      source.includes('from "../_shared/app_workforce_authorization.ts"') &&
+      !source.includes("getAppRequestMeta") &&
+      !/(tenant_resolution|TenantResolver|ENVAL_TENANT_REFERENCE|ENVAL_DATA_PLANE)/
+        .test(source),
+    `shared_workforce_runtime_path_missing:${endpoint}`,
   );
 }
 
@@ -637,7 +658,7 @@ const discoveredEntrypoints = Array.from(Deno.readDirSync(functionsRoot))
 const classifiedEntrypoints = [
   ...coveredEntrypoints,
   "api-app-signup-promote",
-  ...uncoveredCurrentEntrypoints,
+  ...sharedWorkforceEntrypoints,
   ...legacyFallbackEntrypoints,
   ...tenantScopedWorkerEntrypoints,
 ].sort();
@@ -797,8 +818,57 @@ function localControlPlaneReader(): PlatformControlPlaneReader {
 
 if (Deno.args.includes("--local-control-plane")) {
   const before = await rootFingerprint();
+  const reader = localControlPlaneReader();
+  const routes = await reader.findRoutingIdentities(TRUSTED_HOST);
+  assert(routes.length === 1, "local_routing_identity_cardinality_failed");
+  assert(
+    routes[0].routingIdentityId === ROUTING_ID &&
+      routes[0].tenantId === TENANT_ID &&
+      routes[0].routingLifecycleStatus === "active",
+    "local_routing_identity_state_failed",
+  );
+  assert(
+    routes[0].tenantLifecycleStatus === "active",
+    "local_control_plane_tenant_state_failed",
+  );
+  const locators = await reader.findDataPlaneLocators(TENANT_ID);
+  const activeLocators = locators.filter((row) =>
+    row.lifecycleStatus === "active" && row.environment === "local"
+  );
+  assert(
+    activeLocators.length === 1,
+    "local_active_locator_cardinality_failed",
+  );
+  assert(
+    activeLocators[0].locatorId === LOCATOR_ID &&
+      activeLocators[0].tenantId === TENANT_ID &&
+      activeLocators[0].providerType === "supabase" &&
+      activeLocators[0].dataPlaneReference === "enval",
+    "local_active_locator_state_failed",
+  );
+  const localResolved = await resolveTenantRuntimeContext(
+    new PlatformControlPlaneV1Adapter(reader),
+    { trustedRoutingKey: TRUSTED_HOST, environment: "local" },
+  );
+  assert(
+    localResolved.ok && localResolved.value.tenantId === TENANT_ID,
+    "local_managed_tenant_identity_failed",
+  );
+  assert(
+    localResolved.ok && localResolved.value.dataPlane.environment === "local",
+    "local_managed_environment_failed",
+  );
+  assert(
+    localResolved.ok &&
+      localResolved.value.dataPlane.locatorId === LOCATOR_ID,
+    "local_managed_locator_failed",
+  );
   const localManagedShadow = await observe(
-    managedExecution(localControlPlaneReader()),
+    managedExecution(reader),
+  );
+  assert(
+    localManagedShadow.diagnostic.parityStatus === "pass",
+    "local_managed_shadow_parity_failed",
   );
   const localManagedAuthoritative = await enforceAppTenantResolutionGate(
     "local",
@@ -807,18 +877,32 @@ if (Deno.args.includes("--local-control-plane")) {
       serverEnvironment: tenantOneServerEnvironment(
         "platform_control_plane_v1",
       ),
-      managedReader: localControlPlaneReader(),
+      managedReader: reader,
       sink: null,
     },
   );
+  assert(
+    localManagedAuthoritative.ok &&
+      localManagedAuthoritative.authorityMode === "AUTHORITATIVE" &&
+      localManagedAuthoritative.diagnostic.parityStatus === "pass",
+    "local_managed_authoritative_parity_failed",
+  );
   const after = await rootFingerprint();
   assert(
-    localManagedShadow.diagnostic.parityStatus === "pass" &&
-      localManagedAuthoritative.ok &&
-      localManagedAuthoritative.authorityMode === "AUTHORITATIVE" &&
-      localManagedAuthoritative.diagnostic.parityStatus === "pass" &&
-      before === after,
-    "local_managed_authority_or_tenant_nonmutation_failed",
+    before === after,
+    "local_tenant_enval_nonmutation_failed",
+  );
+  const localSafeEvidence = JSON.stringify([
+    localManagedShadow.diagnostic,
+    localManagedAuthoritative.diagnostic,
+  ]);
+  assert(
+    !localSafeEvidence.includes(TENANT_ID) &&
+      !localSafeEvidence.includes(LOCATOR_ID) &&
+      !localSafeEvidence.includes(SECRET_REFERENCE_ID) &&
+      !/(password|service.?role|database.?url|raw.?secret|credential|access.?token)/i
+        .test(localSafeEvidence),
+    "local_managed_diagnostic_leak_failed",
   );
   console.log("TENANT_RESOLUTION_SHADOW_LOCAL_Q15_Q18=PASS");
   console.log("TENANT_RESOLUTION_AUTHORITY_LOCAL_Q44_Q46=PASS");

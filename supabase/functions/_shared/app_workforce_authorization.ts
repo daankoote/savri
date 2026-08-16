@@ -183,7 +183,9 @@ export function createWorkforceLocationHandler(
       );
     }
 
-    const meta = await deps.requestMeta(req);
+    const metaResult = await deps.requestMeta(req);
+    if (metaResult instanceof Response) return metaResult;
+    const meta = metaResult;
     if (
       !meta.idempotency_key ||
       meta.idempotency_key.length > 200 ||
