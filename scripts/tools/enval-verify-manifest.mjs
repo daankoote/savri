@@ -1,3 +1,5 @@
+import { TENANT_ENVAL_MIGRATION_CHAIN } from "./enval-migration-chain-manifest.mjs";
+
 export const MODES = Object.freeze([
   "QUICK",
   "TARGETED",
@@ -317,6 +319,28 @@ const CHECK_LIST = [
     mutatesState: true,
     expectedDurationMs: 15_000,
     expectedMarker: "WORKFORCE_POLICY_FOUNDATION_Q01_Q14=PASS",
+  }),
+  check({
+    id: "tenant-migration-chain-local",
+    argv: ["node", "scripts/proofs/enval-migration-chain.proof.mjs"],
+    domain: "tenant-migration-chain",
+    applicablePaths: [
+      "supabase/migrations/20260816150000_app_current_baseline.sql",
+      "supabase/migrations/20260816160000_app_workforce_policy_foundation.sql",
+      "supabase/migration-archive/**",
+      "scripts/tools/enval-migration-chain-manifest.mjs",
+      "scripts/proofs/enval-migration-chain.proof.mjs",
+    ],
+    safety: SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE,
+    minimumMode: "LOCAL_SERVICE",
+    serviceRequirements: [
+      "TENANT_ENVAL PostgreSQL available through local Docker",
+      "disposable proof database create/drop authority",
+      "active TENANT_ENVAL remains read-only",
+    ],
+    mutatesState: true,
+    expectedDurationMs: 30_000,
+    expectedMarker: "MIG02_CHAIN_PROOF=PASS",
   }),
   check({
     id: "tenant-resolution-composition-pure",
@@ -788,6 +812,59 @@ export const GLOBAL_CHECKS = Object.freeze([
 
 export const PATH_RULES = Object.freeze([
   Object.freeze({
+    id: "verification-harness-javascript",
+    match: Object.freeze({
+      type: "oneOf",
+      value: Object.freeze([
+        "scripts/tools/enval-verify.mjs",
+        "scripts/tools/enval-verify-manifest.mjs",
+        "scripts/proofs/enval-verify-runner.proof.mjs",
+      ]),
+    }),
+    checks: Object.freeze(["node-check-changed"]),
+  }),
+  Object.freeze({
+    id: "tenant-migration-chain-proof",
+    match: Object.freeze({
+      type: "exact",
+      value: "scripts/proofs/enval-migration-chain.proof.mjs",
+    }),
+    checks: Object.freeze([
+      "node-check-changed",
+      "tenant-migration-chain-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "tenant-migration-chain-manifest",
+    match: Object.freeze({
+      type: "exact",
+      value: "scripts/tools/enval-migration-chain-manifest.mjs",
+    }),
+    checks: Object.freeze([
+      "node-check-changed",
+      "tenant-migration-chain-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "tenant-current-baseline",
+    match: Object.freeze({
+      type: "exact",
+      value: "supabase/migrations/20260816150000_app_current_baseline.sql",
+    }),
+    checks: Object.freeze([
+      "migration-or-sql-review",
+      "tenant-migration-chain-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "tenant-migration-archive",
+    match: Object.freeze({
+      type: "prefix",
+      value: "supabase/migration-archive/",
+    }),
+    checks: Object.freeze(["tenant-migration-chain-local"]),
+  }),
+  Object.freeze({
     id: "workforce-policy-foundation-proof",
     match: Object.freeze({
       type: "exact",
@@ -844,7 +921,6 @@ export const PATH_RULES = Object.freeze([
         "assets/js/eligibility.js",
         "assets/js/script.js",
         "scripts/proofs/legacy-ev-direct-caller-retirement.proof.mjs",
-        "scripts/tools/enval-verify-manifest.mjs",
       ]),
     }),
     checks: Object.freeze([
@@ -1230,20 +1306,7 @@ export const PATH_RULES = Object.freeze([
 ]);
 
 export const MIGRATION_BASELINE = Object.freeze({
-  exceptions: Object.freeze({
-    "supabase/migrations/20260720120000_app_ean_connection_domain_foundation.sql":
-      Object.freeze({
-        sha256:
-          "83f278d70c239e890d5892102118c20425e167a6a99b4406588521bb6398cbd4",
-        reason: "legacy RETIRE AFTER REPLACEMENT PROOF",
-      }),
-    "supabase/migrations/20260720143000_app_connection_write_rpcs.sql": Object
-      .freeze({
-        sha256:
-          "11131138f43fd0560189609160b824175549d1b9019c7781c4180dba1210b371",
-        reason: "legacy RETIRE AFTER REPLACEMENT PROOF",
-      }),
-  }),
+  exceptions: Object.freeze({}),
 });
 
 export const MIGRATION_INVENTORIES = Object.freeze([
@@ -1266,4 +1329,5 @@ export const VERIFY_MANIFEST = Object.freeze({
   pathRules: PATH_RULES,
   migrationBaseline: MIGRATION_BASELINE,
   migrationInventories: MIGRATION_INVENTORIES,
+  tenantMigrationChain: TENANT_ENVAL_MIGRATION_CHAIN,
 });

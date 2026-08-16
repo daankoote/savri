@@ -154,6 +154,26 @@ assert(
   "tenant_ephemeral_local_proof_not_classified_or_deduplicated",
 );
 
+const tenantMigrationChainLocalService = buildPlan({
+  paths: [
+    "supabase/migrations/20260816150000_app_current_baseline.sql",
+    "supabase/migration-archive/README.md",
+    "scripts/tools/enval-migration-chain-manifest.mjs",
+    "scripts/proofs/enval-migration-chain.proof.mjs",
+  ],
+  mode: "LOCAL_SERVICE",
+});
+assert(
+  tenantMigrationChainLocalService.selected.filter((check) =>
+    check.commandId === "tenant-migration-chain-local"
+  ).length === 1 &&
+    tenantMigrationChainLocalService.selected.some((check) =>
+      check.safety === SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE &&
+      check.mutatesState && !check.remote && !check.destructive
+    ),
+  "tenant_migration_chain_proof_not_classified_or_deduplicated",
+);
+
 for (const fixture of [
   { target: null, operation: "inspect", expected: "target_required" },
   { target: "UNKNOWN", operation: "inspect", expected: "unknown_target" },
@@ -533,10 +553,19 @@ const baselineHashesBefore = Object.fromEntries(
   baselineBefore.candidates.map((path) => [path, hash(path)]),
 );
 assert(
-    baselineBefore.exceptions.length === 2 &&
+    baselineBefore.exceptions.length === 0 &&
     baselineBefore.unresolved.length === 0 &&
     baselineBefore.omissions.length === 0 &&
     baselineBefore.gitInclusionRequired.length === 0 &&
+    baselineBefore.gitVisibleCandidates.some((item) =>
+      item.path === VERIFY_MANIFEST.tenantMigrationChain.baseline.path &&
+      item.target === "TENANT_ENVAL"
+    ) &&
+    VERIFY_MANIFEST.tenantMigrationChain.currentPresentAppMigrations.length ===
+      29 &&
+    VERIFY_MANIFEST.tenantMigrationChain.absentLegacyMigrations.length === 10 &&
+    VERIFY_MANIFEST.tenantMigrationChain.excludedConnectionMigrations.length ===
+      2 &&
     baselineBefore.trackedMigrations.includes(
       "platform/control-plane/supabase/migrations/20260815120000_platform_control_plane_foundation.sql",
     ) &&
@@ -545,7 +574,7 @@ assert(
     ) &&
     baselineBefore.inventories.map((item) => item.target).sort().join("|") ===
       "CONTROL_PLANE|TENANT_ENVAL",
-  "migration_baseline_classification_changed",
+  "migration_chain_classification_changed",
 );
 const preCommitOnlyEvidence = verify({
   mode: "INTEGRATION",
@@ -563,17 +592,20 @@ assert(
   "valid_visible_untracked_candidate_did_not_pass_pre_commit_gate",
 );
 assert(
-  git([
-    "status",
-    "--short",
-    "--ignored",
-    "--",
-    "supabase/migrations/20260305_0001_rls_dossier_sessions.sql",
-  ]) === "" &&
-    Object.keys(VERIFY_MANIFEST.migrationBaseline.exceptions).every((path) =>
-      git(["status", "--short", "--ignored", "--", path]).startsWith("!! ")
+  Object.keys(VERIFY_MANIFEST.migrationBaseline.exceptions).length === 0 &&
+    git([
+      "status",
+      "--short",
+      "--ignored",
+      "--",
+      VERIFY_MANIFEST.tenantMigrationChain.baseline.path,
+    ]).startsWith("?? ") &&
+    VERIFY_MANIFEST.tenantMigrationChain.excludedConnectionMigrations.every(
+      (entry) =>
+        git(["status", "--short", "--ignored", "--", entry.originalPath]) ===
+          "",
     ),
-  "migration_ignore_policy_baseline_failed",
+  "migration_chain_visibility_policy_failed",
 );
 
 const tenantProbePath =
@@ -641,6 +673,22 @@ try {
       "supabase/migrations/99991231235959_existing_migration.sql",
     ],
   });
+  const outOfOrderPath =
+    `supabase/migrations/20260816155000_out_of_order_${process.pid}.sql`;
+  const simulatedOutOfOrder = inspectMigrationOmissions({
+    ignoredPaths: [],
+    untrackedPaths: baselineBefore.gitVisibleCandidates.map((item) =>
+      item.path
+    ),
+    stagedPaths: [outOfOrderPath],
+    inventoryPaths: [
+      VERIFY_MANIFEST.tenantMigrationChain.baseline.path,
+      ...VERIFY_MANIFEST.tenantMigrationChain.forwardTail.map((entry) =>
+        entry.path
+      ),
+      outOfOrderPath,
+    ],
+  });
   const ambiguousWorkdir = inspectMigrationOmissions({
     ignoredPaths: Object.keys(VERIFY_MANIFEST.migrationBaseline.exceptions),
     untrackedPaths: baselineBefore.gitVisibleCandidates.map((item) => item.path),
@@ -693,6 +741,10 @@ try {
       simulatedVersionCollision.omissions.some((item) =>
         item.path === tenantProbePath &&
         item.reason === "migration_version_collision"
+      ) &&
+      simulatedOutOfOrder.omissions.some((item) =>
+        item.path === outOfOrderPath &&
+        item.reason === "migration_version_not_forward"
       ) &&
       ambiguousWorkdir.omissions.some((item) =>
         item.reason === "ambiguous_migration_workdir"

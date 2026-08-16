@@ -193,6 +193,70 @@ export function validateManifest(manifest = VERIFY_MANIFEST) {
   if (inventoryTargets.size < 1) {
     errors.push("manifest_migration_inventory_missing");
   }
+  const chain = manifest.tenantMigrationChain;
+  const tenantInventory = (manifest.migrationInventories ?? []).find((item) =>
+    item.target === "TENANT_ENVAL"
+  );
+  const validChainEntry = (entry, expectedRoot = null) => {
+    if (
+      !entry || !/^[0-9]{14}$/.test(entry.version ?? "") ||
+      !isSafeRepoPath(entry.path) ||
+      !/^[a-f0-9]{64}$/.test(entry.sha256 ?? "") ||
+      !basename(entry.path).startsWith(`${entry.version}_`)
+    ) return false;
+    return expectedRoot === null ||
+      entry.path.startsWith(`${expectedRoot}/`) &&
+        !entry.path.slice(expectedRoot.length + 1).includes("/");
+  };
+  if (
+    !chain || chain.target !== "TENANT_ENVAL" || !tenantInventory ||
+    chain.activeRoot !== tenantInventory.root ||
+    !validChainEntry(chain.baseline, tenantInventory.root) ||
+    !Array.isArray(chain.forwardTail) || chain.forwardTail.length < 1 ||
+    chain.forwardTail.some((entry) =>
+      !validChainEntry(entry, tenantInventory.root)
+    )
+  ) {
+    errors.push("manifest_tenant_migration_chain_invalid");
+  } else {
+    const activeEntries = [chain.baseline, ...chain.forwardTail];
+    const activeVersions = activeEntries.map((entry) => entry.version);
+    if (
+      new Set(activeVersions).size !== activeVersions.length ||
+      activeVersions.some((version, index) =>
+        index > 0 && version <= activeVersions[index - 1]
+      )
+    ) errors.push("manifest_tenant_migration_chain_order_invalid");
+
+    const archiveEntries = [
+      ...(chain.currentPresentAppMigrations ?? []),
+      ...(chain.absentLegacyMigrations ?? []),
+      ...(chain.excludedConnectionMigrations ?? []),
+    ];
+    const archivePaths = new Set();
+    const originalPaths = new Set();
+    for (const entry of archiveEntries) {
+      if (
+        !entry || !/^[0-9]{8}([0-9]{6})?$/.test(entry.version ?? "") ||
+        !isSafeRepoPath(entry.path) ||
+        !basename(entry.path).startsWith(`${entry.version}_`) ||
+        !/^[a-f0-9]{64}$/.test(entry.sha256 ?? "") ||
+        !isSafeRepoPath(entry.originalPath) ||
+        !entry.originalPath.startsWith(`${tenantInventory.root}/`) ||
+        !entry.path.startsWith("supabase/migration-archive/") ||
+        entry.path.startsWith(`${tenantInventory.root}/`) ||
+        archivePaths.has(entry.path) || originalPaths.has(entry.originalPath)
+      ) {
+        errors.push("manifest_tenant_migration_archive_invalid");
+        break;
+      }
+      archivePaths.add(entry.path);
+      originalPaths.add(entry.originalPath);
+    }
+    if (archiveEntries.length < 1) {
+      errors.push("manifest_tenant_migration_archive_missing");
+    }
+  }
   return [...new Set(errors)].sort();
 }
 
@@ -292,6 +356,7 @@ export function inspectMigrationOmissions({
   missingPaths = null,
   inventoryPaths = null,
   changedPaths = null,
+  migrationChain = VERIFY_MANIFEST.tenantMigrationChain,
 } = {}) {
   const migrationPathspecs = [
     ":(glob)**/supabase/migrations/*.sql",
@@ -383,6 +448,22 @@ export function inspectMigrationOmissions({
   const gitVisibleCandidates = [];
   const stagedMigrationCandidates = [];
   const unresolvedBaseline = baseline.unresolved ?? {};
+  const retiredMigrationEntries = [
+    ...(migrationChain?.currentPresentAppMigrations ?? []),
+    ...(migrationChain?.absentLegacyMigrations ?? []),
+    ...(migrationChain?.excludedConnectionMigrations ?? []),
+  ];
+  const retiredByOriginalPath = new Map(
+    retiredMigrationEntries.map((entry) => [entry.originalPath, entry]),
+  );
+
+  const exactFileHash = (path, expectedHash) =>
+    existsSync(resolve(cwd, path)) && fileSha256(path, cwd) === expectedHash;
+  const chainBaselineIsExact = () =>
+    migrationChain?.baseline && exactFileHash(
+      migrationChain.baseline.path,
+      migrationChain.baseline.sha256,
+    );
 
   const matchingInventories = (path) => inventories.filter((inventory) => {
     const prefix = `${inventory.root}/`;
@@ -415,6 +496,18 @@ export function inspectMigrationOmissions({
       if (!ambiguousCandidates.has(path)) {
         omissions.push({ path, reason: "ambiguous_migration_workdir" });
       }
+      continue;
+    }
+    const retired = retiredByOriginalPath.get(path);
+    if (retired) {
+      if (
+        chainBaselineIsExact() && exactFileHash(retired.path, retired.sha256)
+      ) continue;
+      omissions.push({
+        path,
+        target: matches[0].target,
+        reason: "retired_migration_archive_missing_or_changed",
+      });
       continue;
     }
     omissions.push({
@@ -452,6 +545,19 @@ export function inspectMigrationOmissions({
       return;
     }
     const version = filename.slice(0, 14);
+    const isDeclaredBaseline = inventory.target === migrationChain?.target &&
+      path === migrationChain?.baseline?.path;
+    if (
+      isDeclaredBaseline &&
+      !exactFileHash(path, migrationChain.baseline.sha256)
+    ) {
+      omissions.push({
+        path,
+        target: inventory.target,
+        reason: "migration_chain_baseline_hash_changed",
+      });
+      return;
+    }
     const prefix = `${inventory.root}/`;
     const collisions = inventoriedPaths.filter((candidate) =>
       candidate !== path && candidate.startsWith(prefix) &&
@@ -462,6 +568,21 @@ export function inspectMigrationOmissions({
         path,
         target: inventory.target,
         reason: "migration_version_collision",
+      });
+      return;
+    }
+    const otherVersions = inventoriedPaths
+      .filter((candidate) =>
+        candidate !== path && candidate.startsWith(prefix) &&
+        /^[0-9]{14}_/.test(basename(candidate))
+      )
+      .map((candidate) => basename(candidate).slice(0, 14));
+    const latestVersion = otherVersions.sort().at(-1) ?? null;
+    if (!isDeclaredBaseline && latestVersion && version <= latestVersion) {
+      omissions.push({
+        path,
+        target: inventory.target,
+        reason: "migration_version_not_forward",
       });
       return;
     }
@@ -776,6 +897,8 @@ export function verify({
   const migration = inspectMigrationOmissions({
     cwd,
     baseline: manifest.migrationBaseline,
+    inventories: manifest.migrationInventories,
+    migrationChain: manifest.tenantMigrationChain,
   });
   if (preCommitOnly && mode !== "INTEGRATION") {
     throw new Error("pre_commit_only_requires_integration_mode");
