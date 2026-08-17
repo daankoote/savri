@@ -1,7 +1,8 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import type { AppNavigate } from "../../routes/types";
 import { useAuth } from "./AuthProvider";
 import type { AuthMode, AuthSafeError } from "./authTypes";
+import { resolvePostLoginDestination } from "./postLoginNavigation";
 
 type AccountPageContentProps = {
   navigate: AppNavigate;
@@ -37,13 +38,20 @@ export function AccountPageContent({ navigate }: AccountPageContentProps) {
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [feedback, setFeedback] = useState<{ kind: "info" | "error"; message: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const hasNavigatedRef = useRef(false);
   const copy = modeCopy(mode);
+  const postLoginDestination = resolvePostLoginDestination(window.location.search);
+  const navigateAfterAuthentication = useCallback(() => {
+    if (hasNavigatedRef.current) return;
+    hasNavigatedRef.current = true;
+    navigate(postLoginDestination, { replace: true });
+  }, [navigate, postLoginDestination]);
 
   useEffect(() => {
     if (auth.status === "ready") {
-      navigate("/dashboard");
+      navigateAfterAuthentication();
     }
-  }, [auth.status, navigate]);
+  }, [auth.status, navigateAfterAuthentication]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -75,7 +83,7 @@ export function AccountPageContent({ navigate }: AccountPageContentProps) {
       return;
     }
 
-    navigate("/dashboard");
+    navigateAfterAuthentication();
   }
 
   if (auth.status === "ready") {

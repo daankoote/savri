@@ -620,6 +620,35 @@ const CHECK_LIST = [
     expectedMarker: "COMPLIANCE_WORKLIST_UI_Q01_Q18=PASS",
   }),
   check({
+    id: "authenticated-internal-navigation-pure",
+    argv: [
+      "deno",
+      "run",
+      "--cached-only",
+      "--allow-read",
+      "--allow-env=NODE_ENV",
+      "--node-modules-dir=manual",
+      "--config",
+      "app/tsconfig.json",
+      "app/src/features/auth/postLoginNavigation.proof.ts",
+    ],
+    domain: "authenticated-internal-navigation",
+    applicablePaths: [
+      "app/src/App.tsx",
+      "app/src/routes/types.ts",
+      "app/src/features/auth/AccountPage.tsx",
+      "app/src/features/auth/DashboardRouteGuard.tsx",
+      "app/src/features/auth/postLoginNavigation.ts",
+      "app/src/features/auth/postLoginNavigation.proof.ts",
+      "app/src/pages/ComplianceWorklistPage.tsx",
+      "app/src/pages/EvidenceReviewWorklistPage.tsx",
+    ],
+    safety: SAFETY.SAFE_PURE,
+    minimumMode: "TARGETED",
+    expectedDurationMs: 1_500,
+    expectedMarker: "AUTHENTICATED_INTERNAL_NAVIGATION_Q01_Q13=PASS",
+  }),
+  check({
     id: "evidence-review-worklist-ui-pure",
     argv: [
       "deno",
@@ -1483,6 +1512,26 @@ export const PATH_RULES = Object.freeze([
       "migration-or-sql-review",
       "evidence-review-worklist-read-local",
       "tenant-migration-chain-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "authenticated-internal-navigation",
+    match: Object.freeze({
+      type: "oneOf",
+      value: Object.freeze([
+        "app/src/App.tsx",
+        "app/src/routes/types.ts",
+        "app/src/features/auth/AccountPage.tsx",
+        "app/src/features/auth/DashboardRouteGuard.tsx",
+        "app/src/features/auth/postLoginNavigation.ts",
+        "app/src/features/auth/postLoginNavigation.proof.ts",
+        "app/src/pages/ComplianceWorklistPage.tsx",
+        "app/src/pages/EvidenceReviewWorklistPage.tsx",
+      ]),
+    }),
+    checks: Object.freeze([
+      "deno-check-app-changed",
+      "authenticated-internal-navigation-pure",
     ]),
   }),
   Object.freeze({

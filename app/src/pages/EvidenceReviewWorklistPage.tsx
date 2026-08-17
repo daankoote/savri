@@ -10,7 +10,7 @@ export function EvidenceReviewWorklistPage({
   return (
     <div className="site-frame">
       <AppHeader currentPath={currentPath} navigate={navigate} />
-      <DashboardRouteGuard navigate={navigate}>
+      <DashboardRouteGuard navigate={navigate} returnTo={currentPath}>
         <main className="page-shell">
           <section className="section">
             <div className="container">

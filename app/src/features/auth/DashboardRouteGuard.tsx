@@ -1,20 +1,24 @@
 import { useEffect, type ReactNode } from "react";
 import type { AppNavigate } from "../../routes/types";
 import { useAuth } from "./AuthProvider";
+import { buildInternalLoginRoute } from "./postLoginNavigation";
 
 type DashboardRouteGuardProps = {
   children: ReactNode;
   navigate: AppNavigate;
+  returnTo?: string;
 };
 
-export function DashboardRouteGuard({ children, navigate }: DashboardRouteGuardProps) {
+export function DashboardRouteGuard({ children, navigate, returnTo }: DashboardRouteGuardProps) {
   const auth = useAuth();
 
   useEffect(() => {
     if (auth.status === "signed_out") {
-      navigate("/account");
+      navigate(returnTo ? buildInternalLoginRoute(returnTo) : "/account", {
+        replace: true,
+      });
     }
-  }, [auth.status, navigate]);
+  }, [auth.status, navigate, returnTo]);
 
   if (auth.status === "initializing" || auth.status === "authenticated_unbound" || auth.status === "bootstrapping") {
     return (

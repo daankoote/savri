@@ -56,11 +56,16 @@ export function App() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
-  const navigate: AppNavigate = (href) => {
+  const navigate: AppNavigate = (href, options = {}) => {
     const target = new URL(href, window.location.origin);
     const targetPath = normalizePath(target.pathname);
+    const nextLocation = `${targetPath}${target.search}${target.hash}`;
 
-    window.history.pushState(null, "", `${targetPath}${target.hash}`);
+    if (options.replace) {
+      window.history.replaceState(null, "", nextLocation);
+    } else {
+      window.history.pushState(null, "", nextLocation);
+    }
     setPath(targetPath);
 
     if (target.hash) {
@@ -72,7 +77,7 @@ export function App() {
     }
   };
 
-  if (path === "/account") {
+  if (path === "/account" || path === "/inloggen") {
     return (
       <Suspense fallback={<RouteLoading />}>
         <AuthProvider>
