@@ -174,6 +174,28 @@ assert(
   "tenant_migration_chain_proof_not_classified_or_deduplicated",
 );
 
+const evidenceReviewLocalService = buildPlan({
+  paths: [
+    "supabase/migrations/20260817230000_app_evidence_review_foundation.sql",
+    "scripts/proofs/app-evidence-review-foundation.proof.ts",
+  ],
+  mode: "LOCAL_SERVICE",
+});
+assert(
+  evidenceReviewLocalService.selected.filter((check) =>
+    check.commandId === "evidence-review-foundation-pure"
+  ).length === 1 &&
+    evidenceReviewLocalService.selected.filter((check) =>
+      check.commandId === "evidence-review-foundation-local"
+    ).length === 1 &&
+    evidenceReviewLocalService.selected.some((check) =>
+      check.commandId === "evidence-review-foundation-local" &&
+      check.safety === SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE &&
+      check.mutatesState && !check.remote && !check.destructive
+    ),
+  "evidence_review_local_proof_not_classified_or_deduplicated",
+);
+
 for (const fixture of [
   { target: null, operation: "inspect", expected: "target_required" },
   { target: "UNKNOWN", operation: "inspect", expected: "unknown_target" },

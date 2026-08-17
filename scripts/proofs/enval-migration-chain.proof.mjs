@@ -73,9 +73,10 @@ function activeFingerprint() {
       (select count(*) from public.app_workforce_identities identity
         join current_state state on state.workforce_identity_id=identity.id and state.state='active'
         join current_seniority seniority on seniority.workforce_identity_id=identity.id and seniority.seniority='admin'),
+      (select count(*) from public.app_evidence_review_decisions),
       (select count(*) from public.app_audit_events),
       (select count(*) from public.app_idempotency_keys)
-    ); rollback;`).split("\n").find((line) => /^\d+(\|\d+){8}$/.test(line));
+    ); rollback;`).split("\n").find((line) => /^\d+(\|\d+){9}$/.test(line));
 }
 
 const catalogSql = `
@@ -238,20 +239,23 @@ try {
     (select count(*) from public.app_workforce_capability_catalog),
     (select count(*) from public.app_workforce_policy_versions),
     (select count(*) from public.app_workforce_policy_requirements),
-    (select count(*) from public.app_workforce_policy_activations)
+    (select count(*) from public.app_workforce_policy_activations),
+    (select count(*) from public.app_evidence_review_decisions)
   );`);
-  assert(empty === "0|0|0|0|0|11|3|30|3", "fresh_data_boundary_failed");
+  assert(empty === "0|0|0|0|0|13|4|43|4|0", "fresh_data_boundary_failed");
   const security = psql(DATABASE,`select (
     (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%') = 57
+      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%') = 58
     and (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%' and c.relrowsecurity) = 57
+      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%' and c.relrowsecurity) = 58
     and not exists (select 1 from information_schema.role_table_grants
       where table_schema='public' and table_name like 'app\\_%'
         and grantee in ('anon','authenticated') and privilege_type in ('INSERT','UPDATE','DELETE','TRUNCATE'))
     and not has_table_privilege('service_role','public.app_customer_access_grants','INSERT')
     and has_table_privilege('service_role','public.app_customer_access_grants','SELECT')
     and not has_table_privilege('service_role','public.app_workforce_identities','INSERT')
+    and not has_table_privilege('service_role','public.app_evidence_review_decisions','INSERT')
+    and has_table_privilege('service_role','public.app_evidence_review_decisions','SELECT')
   )::text;`);
   assert(security === "true", "rls_privilege_parity_failed");
   const foundations = psql(DATABASE,`select (
@@ -266,6 +270,12 @@ try {
     and to_regclass('public.app_workforce_tenant_scope_assignments') is not null
     and to_regclass('public.app_delivery_year_compliance_source_events') is not null
     and (select count(*) from public.app_delivery_year_compliance_source_events) = 0
+    and to_regclass('public.app_evidence_review_decisions') is not null
+    and (select count(*) from public.app_evidence_review_decisions) = 0
+    and to_regprocedure('public.app_evidence_review_decide_v1(uuid,uuid,text,text,text,text,timestamptz)') is not null
+    and to_regprocedure('public.app_evidence_review_state_v1(uuid,uuid)') is not null
+    and has_function_privilege('service_role','public.app_evidence_review_decide_v1(uuid,uuid,text,text,text,text,timestamptz)','EXECUTE')
+    and not has_function_privilege('authenticated','public.app_evidence_review_decide_v1(uuid,uuid,text,text,text,text,timestamptz)','EXECUTE')
     and to_regprocedure('public.app_compliance_source_event_capture_v1(uuid,text,text,text,timestamptz,jsonb)') is not null
     and has_function_privilege('service_role','public.app_compliance_source_event_capture_v1(uuid,text,text,text,timestamptz,jsonb)','EXECUTE')
     and not has_function_privilege('authenticated','public.app_compliance_source_event_capture_v1(uuid,text,text,text,timestamptz,jsonb)','EXECUTE')
