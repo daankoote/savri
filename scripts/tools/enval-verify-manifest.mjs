@@ -406,6 +406,29 @@ const CHECK_LIST = [
     expectedMarker: "COMPLIANCE_ACTION_PLAN_Q01_Q18=PASS",
   }),
   check({
+    id: "compliance-worklist-pure",
+    argv: [
+      "deno",
+      "run",
+      "--cached-only",
+      "--allow-read=platform/runtime/compliance/compliance_worklist.ts",
+      "scripts/proofs/compliance-worklist.proof.ts",
+    ],
+    domain: "provider-neutral-compliance-worklist",
+    applicablePaths: [
+      "platform/runtime/compliance/delivery_year_compliance.ts",
+      "platform/runtime/compliance/compliance_action_plan.ts",
+      "platform/runtime/compliance/compliance_worklist.ts",
+      "scripts/proofs/delivery-year-compliance.proof.ts",
+      "scripts/proofs/compliance-action-plan.proof.ts",
+      "scripts/proofs/compliance-worklist.proof.ts",
+    ],
+    safety: SAFETY.SAFE_PURE,
+    minimumMode: "TARGETED",
+    expectedDurationMs: 1_000,
+    expectedMarker: "COMPLIANCE_WORKLIST_Q01_Q16=PASS",
+  }),
+  check({
     id: "presentation-brand-config-pure",
     argv: [
       "deno",
@@ -1056,14 +1079,17 @@ export const PATH_RULES = Object.freeze([
       value: Object.freeze([
         "platform/runtime/compliance/delivery_year_compliance.ts",
         "platform/runtime/compliance/compliance_action_plan.ts",
+        "platform/runtime/compliance/compliance_worklist.ts",
         "scripts/proofs/delivery-year-compliance.proof.ts",
         "scripts/proofs/compliance-action-plan.proof.ts",
+        "scripts/proofs/compliance-worklist.proof.ts",
       ]),
     }),
     checks: Object.freeze([
       "deno-check-changed",
       "delivery-year-compliance-pure",
       "compliance-action-plan-pure",
+      "compliance-worklist-pure",
     ]),
   }),
   Object.freeze({
