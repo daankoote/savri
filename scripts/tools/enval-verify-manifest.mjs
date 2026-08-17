@@ -89,6 +89,24 @@ const CHECK_LIST = [
     expectedDurationMs: 50,
   }),
   check({
+    id: "archived-migration-reference-pure",
+    argv: [
+      "node",
+      "scripts/proofs/enval-archived-migration-reference.proof.mjs",
+    ],
+    domain: "tenant-migration-archive-reference-integrity",
+    applicablePaths: [
+      "scripts/proofs/**",
+      "scripts/tools/**",
+      "supabase/migrations/**",
+      "supabase/migration-archive/**",
+    ],
+    safety: SAFETY.SAFE_PURE,
+    minimumMode: "TARGETED",
+    expectedDurationMs: 300,
+    expectedMarker: "ARCHIVED_MIGRATION_REFERENCE_GATE=PASS",
+  }),
+  check({
     id: "deno-check-changed",
     argv: [
       "deno",
@@ -346,6 +364,32 @@ const CHECK_LIST = [
     expectedMarker: "COMPLIANCE_WORKFORCE_VIEW_Q01_Q16=PASS",
   }),
   check({
+    id: "compliance-source-event-ledger-local",
+    argv: [
+      "deno",
+      "run",
+      "--cached-only",
+      "--allow-read=supabase/migrations/20260816150000_app_current_baseline.sql,supabase/migrations/20260816160000_app_workforce_policy_foundation.sql,supabase/migrations/20260817120000_app_compliance_workforce_view.sql,supabase/migrations/20260817160000_app_compliance_source_event_ledger.sql,platform/runtime/compliance/delivery_year_compliance.ts,platform/runtime/compliance/delivery_year_compliance_source_event.ts,platform/runtime/compliance/compliance_action_plan.ts,platform/runtime/compliance/compliance_worklist.ts",
+      "--allow-run=docker",
+      "scripts/proofs/app-compliance-source-event-ledger.proof.ts",
+    ],
+    domain: "tenant-compliance-source-event-ledger",
+    applicablePaths: [
+      "supabase/migrations/20260817160000_app_compliance_source_event_ledger.sql",
+      "platform/runtime/compliance/delivery_year_compliance_source_event.ts",
+      "scripts/proofs/app-compliance-source-event-ledger.proof.ts",
+    ],
+    safety: SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE,
+    minimumMode: "LOCAL_SERVICE",
+    serviceRequirements: [
+      "TENANT_ENVAL PostgreSQL available through local Docker",
+      "disposable proof database create/drop authority",
+    ],
+    mutatesState: true,
+    expectedDurationMs: 20_000,
+    expectedMarker: "COMPLIANCE_SOURCE_EVENT_LEDGER_Q01_Q15=PASS",
+  }),
+  check({
     id: "tenant-migration-chain-local",
     argv: ["node", "scripts/proofs/enval-migration-chain.proof.mjs"],
     domain: "tenant-migration-chain",
@@ -353,6 +397,7 @@ const CHECK_LIST = [
       "supabase/migrations/20260816150000_app_current_baseline.sql",
       "supabase/migrations/20260816160000_app_workforce_policy_foundation.sql",
       "supabase/migrations/20260817120000_app_compliance_workforce_view.sql",
+      "supabase/migrations/20260817160000_app_compliance_source_event_ledger.sql",
       "supabase/migration-archive/**",
       "scripts/tools/enval-migration-chain-manifest.mjs",
       "scripts/proofs/enval-migration-chain.proof.mjs",
@@ -868,6 +913,10 @@ export const COMMANDS = Object.freeze(Object.fromEntries(
 export const GLOBAL_CHECKS = Object.freeze([
   Object.freeze({ id: "git-diff-check", minimumMode: "QUICK" }),
   Object.freeze({ id: "local-readonly-catalog", minimumMode: "LOCAL_SERVICE" }),
+  Object.freeze({
+    id: "archived-migration-reference-pure",
+    minimumMode: "TARGETED",
+  }),
   Object.freeze({ id: "app-typecheck-build", minimumMode: "INTEGRATION" }),
   Object.freeze({ id: "git-diff-cached-check", minimumMode: "INTEGRATION" }),
   Object.freeze({ id: "edge-static-check", minimumMode: "INTEGRATION" }),
@@ -935,6 +984,42 @@ export const PATH_RULES = Object.freeze([
     ]),
   }),
   Object.freeze({
+    id: "signup-proof-migration-provenance",
+    match: Object.freeze({
+      type: "oneOf",
+      value: Object.freeze([
+        "scripts/proofs/app-signup-document-first-ui.proof.ts",
+        "scripts/proofs/app-signup-party-name-crosscheck.proof.ts",
+        "scripts/proofs/app-signup-document-crosscheck-parity.proof.ts",
+        "scripts/proofs/app-signup-fact-resolution.proof.ts",
+        "scripts/proofs/app-signup-unified-presentation.proof.ts",
+        "scripts/proofs/app-signup-energy-document-crosscheck.proof.ts",
+        "scripts/proofs/app-signup-signing-layout.proof.ts",
+        "scripts/proofs/app-signup-signature-core.proof.ts",
+        "scripts/proofs/app-signup-organization-document-first.proof.ts",
+        "scripts/proofs/app-signup-document-decision-policy.proof.ts",
+        "scripts/proofs/app-signup-fact-applicability-summary.proof.ts",
+        "scripts/proofs/app-signup-ean-preflight.proof.ts",
+        "scripts/proofs/app-signup-document-first-review.proof.ts",
+        "scripts/proofs/app-signup-generic-document-facts.proof.ts",
+        "scripts/proofs/app-signup-signed-receipt.proof.ts",
+        "scripts/proofs/app-post-signing-convergence.proof.ts",
+      ]),
+    }),
+    checks: Object.freeze(["deno-check-changed"]),
+  }),
+  Object.freeze({
+    id: "archived-migration-reference-proof",
+    match: Object.freeze({
+      type: "exact",
+      value: "scripts/proofs/enval-archived-migration-reference.proof.mjs",
+    }),
+    checks: Object.freeze([
+      "node-check-changed",
+      "archived-migration-reference-pure",
+    ]),
+  }),
+  Object.freeze({
     id: "tenant-current-baseline",
     match: Object.freeze({
       type: "exact",
@@ -995,6 +1080,32 @@ export const PATH_RULES = Object.freeze([
     checks: Object.freeze([
       "migration-or-sql-review",
       "compliance-workforce-view-local",
+      "tenant-migration-chain-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "compliance-source-event-ledger-runtime",
+    match: Object.freeze({
+      type: "oneOf",
+      value: Object.freeze([
+        "platform/runtime/compliance/delivery_year_compliance_source_event.ts",
+        "scripts/proofs/app-compliance-source-event-ledger.proof.ts",
+      ]),
+    }),
+    checks: Object.freeze([
+      "deno-check-changed",
+      "compliance-source-event-ledger-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "compliance-source-event-ledger-migration",
+    match: Object.freeze({
+      type: "exact",
+      value: "supabase/migrations/20260817160000_app_compliance_source_event_ledger.sql",
+    }),
+    checks: Object.freeze([
+      "migration-or-sql-review",
+      "compliance-source-event-ledger-local",
       "tenant-migration-chain-local",
     ]),
   }),

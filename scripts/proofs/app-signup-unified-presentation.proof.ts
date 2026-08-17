@@ -7,6 +7,7 @@ import {
   projectFactPresentationRow,
   selectUnifiedFactPresentation,
 } from "../../app/src/features/signup/presentation/factPresentationModel.ts";
+import { resolveTenantEnvalArchivedMigrationPath } from "../tools/enval-migration-chain-manifest.mjs";
 
 const ROOT = new URL("../../", import.meta.url);
 
@@ -249,9 +250,13 @@ for (
       "d348960a22701e5baec962fdb8e8964d8025b3afa6d8f7d3b30ba5ede147ad06",
     "app/src/features/signup/signupSubmitClient.proof.ts":
       "0295f44c72c9050a30653ec812dc42b273dee3e9402999a73b9949fd4407fd9b",
-    "supabase/migrations/20260730150000_app_signup_connection_declaration_sources.sql":
+    [resolveTenantEnvalArchivedMigrationPath(
+      "supabase/migrations/20260730150000_app_signup_connection_declaration_sources.sql",
+    )]:
       "c9a82157dcc77577edf833950ee97eb886ebbaa645cfada20a98e492b2771ff8",
-    "supabase/migrations/20260730170000_app_assisted_connection_capture_correction.sql":
+    [resolveTenantEnvalArchivedMigrationPath(
+      "supabase/migrations/20260730170000_app_assisted_connection_capture_correction.sql",
+    )]:
       "561a80fee5c04cc073d8c099e54b7ad721abff021b23522d4cfa8588f4afcb25",
     "supabase/functions/api-app-signup-submit/index.ts":
       "97f9afe03ac39dc4dfde89d4906432c06c79397be33a649f90160bae6a718b01",

@@ -52,9 +52,19 @@ const dashboardSidebarSource = await Deno.readTextFile(
 const providerSource = await Deno.readTextFile(
   "app/src/shared/presentation/PresentationBrandProvider.tsx",
 );
+const runtimeSource = await Deno.readTextFile(
+  "app/src/shared/presentation/PresentationBrandRuntime.tsx",
+);
+const staticSource = await Deno.readTextFile(
+  "platform/runtime/presentation/adapters/static_presentation_config_v1.ts",
+);
 assert(
-  providerSource.includes("ENVAL_PRESENTATION_BRAND_CONFIG_V1") &&
+  !providerSource.includes("ENVAL_PRESENTATION_BRAND_CONFIG_V1") &&
     providerSource.includes("projectPresentationBrand") &&
+    runtimeSource.includes(
+      "<PresentationBrandProvider presentation={state.presentation}>",
+    ) &&
+    staticSource.includes("ENVAL_PRESENTATION_BRAND_CONFIG_V1") &&
     appHeaderSource.includes("usePresentationBrand") &&
     dashboardSidebarSource.includes("usePresentationBrand") &&
     (await Promise.all([
@@ -238,7 +248,7 @@ const finalizeSource = await Deno.readTextFile(
   "supabase/functions/api-app-signup-signing-finalize/index.ts",
 );
 const signingMigration = await Deno.readTextFile(
-  "supabase/migrations/20260806160000_app_signup_signing_runtime.sql",
+  "supabase/migrations/20260816150000_app_current_baseline.sql",
 );
 assert(
   !presentationSource.includes("tenant-resolution") &&

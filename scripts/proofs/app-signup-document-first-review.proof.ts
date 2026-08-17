@@ -1,4 +1,5 @@
 import { getConfirmableEnergyEanCandidates } from "../../app/src/features/invoice-analysis/energyEanCandidateExtractor.ts";
+import { resolveTenantEnvalArchivedMigrationPath } from "../tools/enval-migration-chain-manifest.mjs";
 import { parseInvoicePdfInput } from "../../app/src/features/invoice-analysis/invoicePdfParserAdapter.ts";
 import { selectDocumentFactApplicability } from "../../app/src/features/signup/documentFactApplicability.ts";
 import { DOCUMENT_FACT_REGISTRY } from "../../app/src/features/signup/documentFactRegistry.ts";
@@ -465,11 +466,15 @@ pass();
 for (
   const [path, expected] of [
     [
-      "supabase/migrations/20260730150000_app_signup_connection_declaration_sources.sql",
+      resolveTenantEnvalArchivedMigrationPath(
+        "supabase/migrations/20260730150000_app_signup_connection_declaration_sources.sql",
+      ),
       "c9a82157dcc77577edf833950ee97eb886ebbaa645cfada20a98e492b2771ff8",
     ],
     [
-      "supabase/migrations/20260730170000_app_assisted_connection_capture_correction.sql",
+      resolveTenantEnvalArchivedMigrationPath(
+        "supabase/migrations/20260730170000_app_assisted_connection_capture_correction.sql",
+      ),
       "561a80fee5c04cc073d8c099e54b7ad721abff021b23522d4cfa8588f4afcb25",
     ],
     [

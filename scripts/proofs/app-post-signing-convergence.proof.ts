@@ -2,6 +2,8 @@
 // Runtime/gateway/database behavior is exercised by the existing focused
 // signing, promotion, Auth and dashboard proofs run alongside this gate.
 
+import { resolveTenantEnvalArchivedMigrationPath } from "../tools/enval-migration-chain-manifest.mjs";
+
 function assert(value: unknown, label: string): asserts value {
   if (!value) throw new Error(label);
 }
@@ -48,18 +50,18 @@ const [
   read("app/src/features/dashboard/dashboardReadClient.ts"),
   read("app/src/features/dashboard/ActivePrivateDashboard.tsx"),
   read("app/src/features/documents/documentSlotPresentation.ts"),
-  read(
+  read(resolveTenantEnvalArchivedMigrationPath(
     "supabase/migrations/20260810190000_app_signed_signup_promotion_foundation.sql",
-  ),
-  read(
+  )),
+  read(resolveTenantEnvalArchivedMigrationPath(
     "supabase/migrations/20260811100000_app_post_signing_customer_convergence.sql",
-  ),
-  read(
+  )),
+  read(resolveTenantEnvalArchivedMigrationPath(
     "supabase/migrations/20260814120000_app_signed_signup_declared_asset_parity.sql",
-  ),
-  read(
+  )),
+  read(resolveTenantEnvalArchivedMigrationPath(
     "supabase/migrations/20260814220000_app_auth_customer_context_access.sql",
-  ),
+  )),
 ]);
 
 const activeFrontendRuntime = [
@@ -71,6 +73,7 @@ const activeFrontendRuntime = [
 const v5Start = migration.indexOf(
   "create or replace function public.app_bootstrap_customer_auth_v5",
 );
+assert(v5Start >= 0, "historical_v5_schema_source_missing");
 const v5 = migration.slice(v5Start);
 
 const checks: Array<[string, () => void]> = [

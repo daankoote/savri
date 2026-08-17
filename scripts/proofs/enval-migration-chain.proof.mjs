@@ -243,9 +243,9 @@ try {
   assert(empty === "0|0|0|0|0|10|2|19|2", "fresh_data_boundary_failed");
   const security = psql(DATABASE,`select (
     (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%') = 56
+      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%') = 57
     and (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%' and c.relrowsecurity) = 56
+      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%' and c.relrowsecurity) = 57
     and not exists (select 1 from information_schema.role_table_grants
       where table_schema='public' and table_name like 'app\\_%'
         and grantee in ('anon','authenticated') and privilege_type in ('INSERT','UPDATE','DELETE','TRUNCATE'))
@@ -264,6 +264,8 @@ try {
     and to_regprocedure('public.app_workforce_authorize_v1(uuid,text,uuid,uuid,timestamptz)') is not null
     and to_regprocedure('public.app_workforce_authorize_v1(uuid,text,text,uuid,uuid,timestamptz)') is not null
     and to_regclass('public.app_workforce_tenant_scope_assignments') is not null
+    and to_regclass('public.app_delivery_year_compliance_source_events') is not null
+    and (select count(*) from public.app_delivery_year_compliance_source_events) = 0
     and to_regprocedure('public.app_ops_location_authorization_resolve_v1(uuid,text,uuid,uuid,timestamptz)') is not null
     and position('app_workforce_authorize_v1' in pg_get_functiondef('public.app_ops_location_authorization_resolve_v1(uuid,text,uuid,uuid,timestamptz)'::regprocedure)) > 0
   )::text;`);

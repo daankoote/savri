@@ -20,12 +20,14 @@ import type {
 import type {
   WorkforceHandlerDependencies,
 } from "../../supabase/functions/_shared/app_workforce_authorization.ts";
+import { resolveTenantEnvalArchivedMigrationPath } from "../tools/enval-migration-chain-manifest.mjs";
 
 const CONTAINER = "supabase_db_enval";
 const MAIN_DATABASE = "postgres";
 const DATABASE_PREFIX = "enval_wp3n_proof_";
-const MIGRATION =
-  "supabase/migrations/20260728220000_app_workforce_location_operation_bridge_rpcs.sql";
+const MIGRATION = resolveTenantEnvalArchivedMigrationPath(
+  "supabase/migrations/20260728220000_app_workforce_location_operation_bridge_rpcs.sql",
+);
 const PRODUCT_FILES = [
   MIGRATION,
   "supabase/functions/_shared/app_workforce_authorization.ts",

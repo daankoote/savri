@@ -148,7 +148,7 @@ const hydrationEnd = shellSource.indexOf(
 );
 const hydrationSource = shellSource.slice(hydrationStart, hydrationEnd);
 const migrationSource = await source(
-  "supabase/migrations/20260811100000_app_post_signing_customer_convergence.sql",
+  "supabase/migrations/20260816150000_app_current_baseline.sql",
 );
 
 assert(
@@ -217,9 +217,8 @@ assert(
     migrationSource.includes("v_evidence_count <> 1") &&
     migrationSource.includes("'signing_state', 'finalized'") &&
     migrationSource.includes("'locked', true") &&
-    migrationSource.includes(
-      "revoke all on function public.app_signup_signing_status_v2(uuid, text)",
-    ),
+    /revoke all on function public\.app_signup_signing_status_v2\(p_intake_id uuid, p_manage_token_sha256 text\) from public;/i
+      .test(migrationSource),
   "server_mutation_lock_not_leading",
 );
 

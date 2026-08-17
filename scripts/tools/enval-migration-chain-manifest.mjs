@@ -17,6 +17,11 @@ export const TENANT_ENVAL_MIGRATION_CHAIN = Object.freeze({
       path: "supabase/migrations/20260817120000_app_compliance_workforce_view.sql",
       sha256: "05ff2b8d6aa0198f73dc6165fd44e3e19f9697213cd03f697e045de2a84459f1",
     }),
+    Object.freeze({
+      version: "20260817160000",
+      path: "supabase/migrations/20260817160000_app_compliance_source_event_ledger.sql",
+      sha256: "e2b48c7622689d61d406519223d1405742eab9db5f129d264e36cce044eae5e0",
+    }),
   ]),
   currentPresentAppMigrations: Object.freeze([
     ["20260707151801", "app_foundation_schema", "ce6c77d65a3b12d1254a57345b59716526de2737b7640c0eb22c404c284778c8"],
@@ -102,3 +107,27 @@ export const TENANT_ENVAL_MIGRATION_CHAIN = Object.freeze({
     "20260814220000_customer_access_backfill",
   ]),
 });
+
+export function resolveTenantEnvalArchivedMigrationPath(
+  originalPath,
+  expectedSha256 = null,
+) {
+  const entry = TENANT_ENVAL_MIGRATION_CHAIN.currentPresentAppMigrations.find(
+    (candidate) => candidate.originalPath === originalPath,
+  );
+  if (!entry) {
+    throw new Error(`protected_migration_provenance_missing:${originalPath}`);
+  }
+  if (expectedSha256 !== null && entry.sha256 !== expectedSha256) {
+    throw new Error(
+      `protected_migration_manifest_hash_mismatch:${originalPath}`,
+    );
+  }
+  if (
+    entry.path.startsWith(`${TENANT_ENVAL_MIGRATION_CHAIN.activeRoot}/`) ||
+    !entry.path.startsWith("supabase/migration-archive/")
+  ) {
+    throw new Error(`protected_migration_not_archived:${originalPath}`);
+  }
+  return entry.path;
+}

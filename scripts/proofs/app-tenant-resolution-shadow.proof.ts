@@ -561,6 +561,7 @@ const coveredEntrypoints = [
   "api-app-document-upload-confirm",
   "api-app-document-upload-url",
   "api-app-document-withdraw-current",
+  "api-app-presentation-bootstrap",
   "api-app-signup-intake-start",
   "api-app-signup-signing-challenge",
   "api-app-signup-signing-finalize",
@@ -608,7 +609,7 @@ for (const endpoint of coveredEntrypoints) {
   assert(
     source.includes("getAppRequestMeta") &&
       source.includes('from "../_shared/app_foundation.ts"') &&
-      /const meta = await getAppRequestMeta\(req\);\s*if \(meta instanceof Response\) return meta;/
+      /const meta = await getAppRequestMeta\(\s*req(?:,\s*\{\s*managedReader\s*\})?\s*\);\s*if \(meta instanceof Response\) return meta;/
         .test(
           source,
         ),
