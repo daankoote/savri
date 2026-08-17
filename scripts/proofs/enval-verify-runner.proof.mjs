@@ -220,6 +220,30 @@ assert(
   "evidence_review_worklist_proof_not_classified_or_deduplicated",
 );
 
+const evidenceReviewCaseDetailLocalService = buildPlan({
+  paths: [
+    "supabase/migrations/20260818120000_app_evidence_review_case_detail_read.sql",
+    "supabase/functions/_shared/app_evidence_review_case_detail.ts",
+    "supabase/functions/api-app-evidence-review-case-detail/index.ts",
+    "scripts/proofs/app-evidence-review-case-detail.proof.ts",
+  ],
+  mode: "LOCAL_SERVICE",
+});
+assert(
+  evidenceReviewCaseDetailLocalService.selected.filter((check) =>
+    check.commandId === "evidence-review-case-detail-pure"
+  ).length === 1 &&
+    evidenceReviewCaseDetailLocalService.selected.filter((check) =>
+      check.commandId === "evidence-review-case-detail-local"
+    ).length === 1 &&
+    evidenceReviewCaseDetailLocalService.selected.some((check) =>
+      check.commandId === "evidence-review-case-detail-local" &&
+      check.safety === SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE &&
+      check.mutatesState && !check.remote && !check.destructive
+    ),
+  "evidence_review_case_detail_proof_not_classified_or_deduplicated",
+);
+
 const evidenceReviewWorklistUiTargeted = buildPlan({
   paths: [
     "app/src/App.tsx",
