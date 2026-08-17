@@ -34,7 +34,7 @@ type RpcResult = {
   error?: unknown;
 };
 
-type ServiceClient = {
+export type ServiceClient = {
   auth: {
     getUser: (token: string) => Promise<{
       data?: {
@@ -97,7 +97,7 @@ function safeStatus(value: unknown, fallback = 500): number {
     : fallback;
 }
 
-function defaultServiceClient(): ServiceClient | null {
+export function defaultServiceClient(): ServiceClient | null {
   const url = Deno.env.get("SUPABASE_URL");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !serviceRoleKey) return null;
@@ -106,7 +106,7 @@ function defaultServiceClient(): ServiceClient | null {
   }) as unknown as ServiceClient;
 }
 
-function configuredExpiry(): string | null {
+export function configuredExpiry(): string | null {
   const seconds = Number(
     Deno.env.get("APP_OPS_LOCATION_IDEMPOTENCY_TTL_SECONDS"),
   );

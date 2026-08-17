@@ -556,6 +556,7 @@ assert(
 
 const coveredEntrypoints = [
   "api-app-auth-bootstrap",
+  "api-app-compliance-source-event",
   "api-app-dashboard-get",
   "api-app-document-download-url",
   "api-app-document-upload-confirm",
@@ -606,13 +607,18 @@ for (const endpoint of coveredEntrypoints) {
   const source = Deno.readTextFileSync(
     new URL(`../../supabase/functions/${endpoint}/index.ts`, import.meta.url),
   );
+  const directMetaGate =
+    /const meta = await getAppRequestMeta\(\s*req(?:,\s*\{\s*managedReader\s*\})?\s*\);\s*if \(meta instanceof Response\) return meta;/.test(
+      source,
+    );
+  const narrowedMetaGate =
+    /const metaResult = await deps\.requestMeta\(req\);\s*if \(metaResult instanceof Response\) return metaResult;\s*const meta = metaResult;/.test(
+      source,
+    );
   assert(
     source.includes("getAppRequestMeta") &&
       source.includes('from "../_shared/app_foundation.ts"') &&
-      /const meta = await getAppRequestMeta\(\s*req(?:,\s*\{\s*managedReader\s*\})?\s*\);\s*if \(meta instanceof Response\) return meta;/
-        .test(
-          source,
-        ),
+      (directMetaGate || narrowedMetaGate),
     `shared_shadow_runtime_path_missing:${endpoint}`,
   );
 }

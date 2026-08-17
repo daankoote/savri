@@ -17,6 +17,7 @@ export type AppActorType =
   | "system"
   | "support"
   | "admin"
+  | "workforce"
   | "edge_function"
   | "worker"
   | "provider"
