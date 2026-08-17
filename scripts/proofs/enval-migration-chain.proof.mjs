@@ -283,8 +283,12 @@ try {
     and has_function_privilege('service_role','public.app_compliance_worklist_source_events_read_v1(uuid,integer)','EXECUTE')
     and not has_function_privilege('anon','public.app_compliance_worklist_source_events_read_v1(uuid,integer)','EXECUTE')
     and not has_function_privilege('authenticated','public.app_compliance_worklist_source_events_read_v1(uuid,integer)','EXECUTE')
+    and has_function_privilege('service_role','public.app_evidence_review_worklist_source_read_v1(uuid)','EXECUTE')
+    and not has_function_privilege('anon','public.app_evidence_review_worklist_source_read_v1(uuid)','EXECUTE')
+    and not has_function_privilege('authenticated','public.app_evidence_review_worklist_source_read_v1(uuid)','EXECUTE')
     and not has_function_privilege('service_role','public.app_workforce_authorize_v1(uuid,text,text,uuid,uuid,timestamptz)','EXECUTE')
     and position('app_workforce_authorize_v1' in pg_get_functiondef('public.app_compliance_worklist_source_events_read_v1(uuid,integer)'::regprocedure)) > 0
+    and position('app_workforce_authorize_v1' in pg_get_functiondef('public.app_evidence_review_worklist_source_read_v1(uuid)'::regprocedure)) > 0
     and to_regprocedure('public.app_ops_location_authorization_resolve_v1(uuid,text,uuid,uuid,timestamptz)') is not null
     and position('app_workforce_authorize_v1' in pg_get_functiondef('public.app_ops_location_authorization_resolve_v1(uuid,text,uuid,uuid,timestamptz)'::regprocedure)) > 0
   )::text;`);

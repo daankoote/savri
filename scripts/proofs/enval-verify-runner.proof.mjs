@@ -196,6 +196,30 @@ assert(
   "evidence_review_local_proof_not_classified_or_deduplicated",
 );
 
+const evidenceReviewWorklistLocalService = buildPlan({
+  paths: [
+    "supabase/migrations/20260818090000_app_evidence_review_worklist_read.sql",
+    "supabase/functions/_shared/app_evidence_review_worklist.ts",
+    "supabase/functions/api-app-evidence-review-worklist/index.ts",
+    "scripts/proofs/app-evidence-review-worklist-read.proof.ts",
+  ],
+  mode: "LOCAL_SERVICE",
+});
+assert(
+  evidenceReviewWorklistLocalService.selected.filter((check) =>
+    check.commandId === "evidence-review-worklist-read-pure"
+  ).length === 1 &&
+    evidenceReviewWorklistLocalService.selected.filter((check) =>
+      check.commandId === "evidence-review-worklist-read-local"
+    ).length === 1 &&
+    evidenceReviewWorklistLocalService.selected.some((check) =>
+      check.commandId === "evidence-review-worklist-read-local" &&
+      check.safety === SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE &&
+      check.mutatesState && !check.remote && !check.destructive
+    ),
+  "evidence_review_worklist_proof_not_classified_or_deduplicated",
+);
+
 for (const fixture of [
   { target: null, operation: "inspect", expected: "target_required" },
   { target: "UNKNOWN", operation: "inspect", expected: "unknown_target" },

@@ -542,6 +542,57 @@ const CHECK_LIST = [
     expectedMarker: "EVIDENCE_REVIEW_FOUNDATION_Q01_Q14=PASS",
   }),
   check({
+    id: "evidence-review-worklist-read-pure",
+    argv: [
+      "deno",
+      "run",
+      "--cached-only",
+      "--allow-read",
+      "--allow-env=ALLOWED_ORIGINS,ALLOWED_ORIGIN",
+      "scripts/proofs/app-evidence-review-worklist-read.proof.ts",
+      "--endpoint-only",
+    ],
+    domain: "tenant-evidence-review-worklist-read",
+    applicablePaths: [
+      "supabase/functions/_shared/app_evidence_review_worklist.ts",
+      "supabase/functions/api-app-evidence-review-worklist/index.ts",
+      "scripts/proofs/app-evidence-review-worklist-read.proof.ts",
+    ],
+    safety: SAFETY.SAFE_PURE,
+    minimumMode: "TARGETED",
+    expectedDurationMs: 1_500,
+    expectedMarker: "EVIDENCE_REVIEW_WORKLIST_ENDPOINT=PASS",
+  }),
+  check({
+    id: "evidence-review-worklist-read-local",
+    argv: [
+      "deno",
+      "run",
+      "--cached-only",
+      "--allow-read",
+      "--allow-env=ALLOWED_ORIGINS,ALLOWED_ORIGIN",
+      "--allow-run=docker",
+      "scripts/proofs/app-evidence-review-worklist-read.proof.ts",
+    ],
+    domain: "tenant-evidence-review-worklist-read",
+    applicablePaths: [
+      "supabase/migrations/20260818090000_app_evidence_review_worklist_read.sql",
+      "supabase/functions/_shared/app_evidence_review_worklist.ts",
+      "supabase/functions/api-app-evidence-review-worklist/index.ts",
+      "scripts/proofs/app-evidence-review-worklist-read.proof.ts",
+    ],
+    safety: SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE,
+    minimumMode: "LOCAL_SERVICE",
+    serviceRequirements: [
+      "TENANT_ENVAL PostgreSQL available through local Docker",
+      "disposable proof database create/drop authority",
+      "active TENANT_ENVAL remains read-only",
+    ],
+    mutatesState: true,
+    expectedDurationMs: 25_000,
+    expectedMarker: "EVIDENCE_REVIEW_WORKLIST_READ_Q01_Q14=PASS",
+  }),
+  check({
     id: "compliance-worklist-ui-pure",
     argv: [
       "deno",
@@ -580,6 +631,7 @@ const CHECK_LIST = [
       "supabase/migrations/20260817190000_app_compliance_source_event_capture.sql",
       "supabase/migrations/20260817210000_app_compliance_worklist_read.sql",
       "supabase/migrations/20260817230000_app_evidence_review_foundation.sql",
+      "supabase/migrations/20260818090000_app_evidence_review_worklist_read.sql",
       "supabase/migration-archive/**",
       "scripts/tools/enval-migration-chain-manifest.mjs",
       "scripts/proofs/enval-migration-chain.proof.mjs",
@@ -1374,6 +1426,35 @@ export const PATH_RULES = Object.freeze([
       "migration-or-sql-review",
       "evidence-review-foundation-pure",
       "evidence-review-foundation-local",
+      "tenant-migration-chain-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "evidence-review-worklist-read-runtime",
+    match: Object.freeze({
+      type: "oneOf",
+      value: Object.freeze([
+        "supabase/functions/_shared/app_evidence_review_worklist.ts",
+        "supabase/functions/api-app-evidence-review-worklist/index.ts",
+        "scripts/proofs/app-evidence-review-worklist-read.proof.ts",
+      ]),
+    }),
+    checks: Object.freeze([
+      "deno-check-changed",
+      "evidence-review-worklist-read-pure",
+      "evidence-review-worklist-read-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "evidence-review-worklist-read-migration",
+    match: Object.freeze({
+      type: "exact",
+      value:
+        "supabase/migrations/20260818090000_app_evidence_review_worklist_read.sql",
+    }),
+    checks: Object.freeze([
+      "migration-or-sql-review",
+      "evidence-review-worklist-read-local",
       "tenant-migration-chain-local",
     ]),
   }),
