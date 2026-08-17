@@ -644,6 +644,56 @@ const CHECK_LIST = [
     expectedMarker: "EVIDENCE_REVIEW_CASE_DETAIL_Q01_Q14=PASS",
   }),
   check({
+    id: "evidence-review-preview-pure",
+    argv: [
+      "deno",
+      "run",
+      "--cached-only",
+      "--allow-read",
+      "--allow-env=ALLOWED_ORIGINS,ALLOWED_ORIGIN",
+      "scripts/proofs/app-evidence-review-preview.proof.ts",
+      "--endpoint-only",
+    ],
+    domain: "tenant-evidence-review-preview",
+    applicablePaths: [
+      "supabase/functions/_shared/app_evidence_review_preview.ts",
+      "supabase/functions/api-app-evidence-review-preview/index.ts",
+      "scripts/proofs/app-evidence-review-preview.proof.ts",
+    ],
+    safety: SAFETY.SAFE_PURE,
+    minimumMode: "TARGETED",
+    expectedDurationMs: 1_500,
+    expectedMarker: "EVIDENCE_REVIEW_PREVIEW_ENDPOINT=PASS",
+  }),
+  check({
+    id: "evidence-review-preview-local",
+    argv: [
+      "deno",
+      "run",
+      "--cached-only",
+      "--allow-read",
+      "--allow-env=ALLOWED_ORIGINS,ALLOWED_ORIGIN",
+      "--allow-run=docker,supabase",
+      "--allow-net=127.0.0.1:54321",
+      "scripts/proofs/app-evidence-review-preview.proof.ts",
+    ],
+    domain: "tenant-evidence-review-preview",
+    applicablePaths: [
+      "supabase/migrations/20260818150000_app_evidence_review_preview_read.sql",
+      "supabase/functions/_shared/app_evidence_review_preview.ts",
+      "supabase/functions/api-app-evidence-review-preview/index.ts",
+      "scripts/proofs/app-evidence-review-preview.proof.ts",
+    ],
+    safety: SAFETY.SAFE_LOCAL_READ,
+    minimumMode: "LOCAL_SERVICE",
+    serviceRequirements: [
+      "TENANT_ENVAL PostgreSQL and Storage available through local Supabase",
+      "active TENANT_ENVAL remains read-only during proof",
+    ],
+    expectedDurationMs: 5_000,
+    expectedMarker: "EVIDENCE_REVIEW_PREVIEW_Q01_Q14=PASS",
+  }),
+  check({
     id: "compliance-worklist-ui-pure",
     argv: [
       "deno",
@@ -1591,6 +1641,35 @@ export const PATH_RULES = Object.freeze([
     checks: Object.freeze([
       "migration-or-sql-review",
       "evidence-review-case-detail-local",
+      "tenant-migration-chain-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "evidence-review-preview-runtime",
+    match: Object.freeze({
+      type: "oneOf",
+      value: Object.freeze([
+        "supabase/functions/_shared/app_evidence_review_preview.ts",
+        "supabase/functions/api-app-evidence-review-preview/index.ts",
+        "scripts/proofs/app-evidence-review-preview.proof.ts",
+      ]),
+    }),
+    checks: Object.freeze([
+      "deno-check-changed",
+      "evidence-review-preview-pure",
+      "evidence-review-preview-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "evidence-review-preview-migration",
+    match: Object.freeze({
+      type: "exact",
+      value:
+        "supabase/migrations/20260818150000_app_evidence_review_preview_read.sql",
+    }),
+    checks: Object.freeze([
+      "migration-or-sql-review",
+      "evidence-review-preview-local",
       "tenant-migration-chain-local",
     ]),
   }),

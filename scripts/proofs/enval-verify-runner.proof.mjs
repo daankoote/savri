@@ -244,6 +244,30 @@ assert(
   "evidence_review_case_detail_proof_not_classified_or_deduplicated",
 );
 
+const evidenceReviewPreviewLocalService = buildPlan({
+  paths: [
+    "supabase/migrations/20260818150000_app_evidence_review_preview_read.sql",
+    "supabase/functions/_shared/app_evidence_review_preview.ts",
+    "supabase/functions/api-app-evidence-review-preview/index.ts",
+    "scripts/proofs/app-evidence-review-preview.proof.ts",
+  ],
+  mode: "LOCAL_SERVICE",
+});
+assert(
+  evidenceReviewPreviewLocalService.selected.filter((check) =>
+    check.commandId === "evidence-review-preview-pure"
+  ).length === 1 &&
+    evidenceReviewPreviewLocalService.selected.filter((check) =>
+      check.commandId === "evidence-review-preview-local"
+    ).length === 1 &&
+    evidenceReviewPreviewLocalService.selected.some((check) =>
+      check.commandId === "evidence-review-preview-local" &&
+      check.safety === SAFETY.SAFE_LOCAL_READ && !check.mutatesState &&
+      !check.remote && !check.destructive
+    ),
+  "evidence_review_preview_proof_not_classified_or_deduplicated",
+);
+
 const evidenceReviewWorklistUiTargeted = buildPlan({
   paths: [
     "app/src/App.tsx",
