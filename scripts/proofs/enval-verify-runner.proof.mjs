@@ -220,6 +220,29 @@ assert(
   "evidence_review_worklist_proof_not_classified_or_deduplicated",
 );
 
+const evidenceReviewWorklistUiTargeted = buildPlan({
+  paths: [
+    "app/src/App.tsx",
+    "app/src/features/evidence-review/EvidenceReviewWorklistPage.proof.tsx",
+    "app/src/features/evidence-review/EvidenceReviewWorklistPage.tsx",
+    "app/src/features/evidence-review/evidenceReviewWorklistClient.ts",
+    "app/src/features/evidence-review/useEvidenceReviewWorklist.ts",
+    "app/src/pages/EvidenceReviewWorklistPage.tsx",
+  ],
+  mode: "TARGETED",
+});
+assert(
+  evidenceReviewWorklistUiTargeted.selected.filter((check) =>
+    check.commandId === "evidence-review-worklist-ui-pure"
+  ).length === 1 &&
+    evidenceReviewWorklistUiTargeted.selected.some((check) =>
+      check.commandId === "evidence-review-worklist-ui-pure" &&
+      check.safety === SAFETY.SAFE_PURE && !check.mutatesState &&
+      !check.remote && !check.destructive
+    ),
+  "evidence_review_worklist_ui_not_classified_or_deduplicated",
+);
+
 for (const fixture of [
   { target: null, operation: "inspect", expected: "target_required" },
   { target: "UNKNOWN", operation: "inspect", expected: "unknown_target" },

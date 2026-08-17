@@ -620,6 +620,33 @@ const CHECK_LIST = [
     expectedMarker: "COMPLIANCE_WORKLIST_UI_Q01_Q18=PASS",
   }),
   check({
+    id: "evidence-review-worklist-ui-pure",
+    argv: [
+      "deno",
+      "run",
+      "--cached-only",
+      "--allow-read",
+      "--allow-env=NODE_ENV",
+      "--node-modules-dir=manual",
+      "--config",
+      "app/tsconfig.json",
+      "app/src/features/evidence-review/EvidenceReviewWorklistPage.proof.tsx",
+    ],
+    domain: "authenticated-evidence-review-worklist-ui",
+    applicablePaths: [
+      "app/src/App.tsx",
+      "app/src/features/evidence-review/EvidenceReviewWorklistPage.proof.tsx",
+      "app/src/features/evidence-review/EvidenceReviewWorklistPage.tsx",
+      "app/src/features/evidence-review/evidenceReviewWorklistClient.ts",
+      "app/src/features/evidence-review/useEvidenceReviewWorklist.ts",
+      "app/src/pages/EvidenceReviewWorklistPage.tsx",
+    ],
+    safety: SAFETY.SAFE_PURE,
+    minimumMode: "TARGETED",
+    expectedDurationMs: 1_500,
+    expectedMarker: "EVIDENCE_REVIEW_WORKLIST_UI_Q01_Q19=PASS",
+  }),
+  check({
     id: "tenant-migration-chain-local",
     argv: ["node", "scripts/proofs/enval-migration-chain.proof.mjs"],
     domain: "tenant-migration-chain",
@@ -1474,6 +1501,24 @@ export const PATH_RULES = Object.freeze([
     checks: Object.freeze([
       "deno-check-app-changed",
       "compliance-worklist-ui-pure",
+    ]),
+  }),
+  Object.freeze({
+    id: "evidence-review-worklist-ui",
+    match: Object.freeze({
+      type: "oneOf",
+      value: Object.freeze([
+        "app/src/App.tsx",
+        "app/src/features/evidence-review/EvidenceReviewWorklistPage.proof.tsx",
+        "app/src/features/evidence-review/EvidenceReviewWorklistPage.tsx",
+        "app/src/features/evidence-review/evidenceReviewWorklistClient.ts",
+        "app/src/features/evidence-review/useEvidenceReviewWorklist.ts",
+        "app/src/pages/EvidenceReviewWorklistPage.tsx",
+      ]),
+    }),
+    checks: Object.freeze([
+      "deno-check-app-changed",
+      "evidence-review-worklist-ui-pure",
     ]),
   }),
   Object.freeze({

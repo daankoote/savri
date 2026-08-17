@@ -16,6 +16,11 @@ const DashboardPage = lazy(() =>
 const ComplianceWorklistPage = lazy(() =>
   import("./pages/ComplianceWorklistPage").then((module) => ({ default: module.ComplianceWorklistPage })),
 );
+const EvidenceReviewWorklistPage = lazy(() =>
+  import("./pages/EvidenceReviewWorklistPage").then((module) => ({
+    default: module.EvidenceReviewWorklistPage,
+  })),
+);
 const AuthProvider = lazy(() =>
   import("./features/auth/AuthProvider").then((module) => ({ default: module.AuthProvider })),
 );
@@ -92,6 +97,16 @@ export function App() {
       <Suspense fallback={<RouteLoading />}>
         <AuthProvider>
           <ComplianceWorklistPage navigate={navigate} currentPath={path} />
+        </AuthProvider>
+      </Suspense>
+    );
+  }
+
+  if (path === "/intern/dossiers") {
+    return (
+      <Suspense fallback={<RouteLoading />}>
+        <AuthProvider>
+          <EvidenceReviewWorklistPage navigate={navigate} currentPath={path} />
         </AuthProvider>
       </Suspense>
     );
