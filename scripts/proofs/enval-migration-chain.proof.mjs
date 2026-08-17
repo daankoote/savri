@@ -240,12 +240,12 @@ try {
     (select count(*) from public.app_workforce_policy_requirements),
     (select count(*) from public.app_workforce_policy_activations)
   );`);
-  assert(empty === "0|0|0|0|0|9|1|9|1", "fresh_data_boundary_failed");
+  assert(empty === "0|0|0|0|0|10|2|19|2", "fresh_data_boundary_failed");
   const security = psql(DATABASE,`select (
     (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%') = 55
+      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%') = 56
     and (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%' and c.relrowsecurity) = 55
+      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%' and c.relrowsecurity) = 56
     and not exists (select 1 from information_schema.role_table_grants
       where table_schema='public' and table_name like 'app\\_%'
         and grantee in ('anon','authenticated') and privilege_type in ('INSERT','UPDATE','DELETE','TRUNCATE'))
@@ -262,6 +262,8 @@ try {
     and to_regclass('public.app_signup_signature_evidence') is not null
     and to_regprocedure('public.app_signup_signing_finalize_v2(uuid,text,uuid,text,text,text,jsonb,text,jsonb,uuid[],text,integer,timestamptz,jsonb,text,text,text,text,text,text,text,text)') is not null
     and to_regprocedure('public.app_workforce_authorize_v1(uuid,text,uuid,uuid,timestamptz)') is not null
+    and to_regprocedure('public.app_workforce_authorize_v1(uuid,text,text,uuid,uuid,timestamptz)') is not null
+    and to_regclass('public.app_workforce_tenant_scope_assignments') is not null
     and to_regprocedure('public.app_ops_location_authorization_resolve_v1(uuid,text,uuid,uuid,timestamptz)') is not null
     and position('app_workforce_authorize_v1' in pg_get_functiondef('public.app_ops_location_authorization_resolve_v1(uuid,text,uuid,uuid,timestamptz)'::regprocedure)) > 0
   )::text;`);
@@ -276,9 +278,14 @@ try {
     select bool_and((public.app_workforce_authorize_v1(
       '91000000-0000-4000-8000-000000000001',capability,null,null,clock_timestamp()
     )->>'ok')::boolean) from (values ('case.assignment.manage'),('workforce.member.manage'),('workforce.policy.manage')) caps(capability);
+    select (public.app_workforce_authorize_v1(
+      '91000000-0000-4000-8000-000000000001',
+      'compliance.delivery_year.view','CURRENT_TENANT_DATA_PLANE',
+      null,null,clock_timestamp()
+    )->>'ok')::boolean;
     rollback;`);
   const bootstrap = bootstrapOutput.split("\n").filter((line)=>line==="t");
-  assert(bootstrap.length === 2, `central_policy_behavior_failed:result=${bootstrapOutput}`);
+  assert(bootstrap.length === 3, `central_policy_behavior_failed:result=${bootstrapOutput}`);
   assert(psql(DATABASE,"select count(*) from public.app_workforce_identities;") === "0", "fresh_workforce_not_zero");
 
   console.log("MIG02_CHAIN_PROOF=PASS");

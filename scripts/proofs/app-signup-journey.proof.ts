@@ -1,3 +1,7 @@
+import {
+  TENANT_ENVAL_MIGRATION_CHAIN,
+} from "../tools/enval-migration-chain-manifest.mjs";
+
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
@@ -12,6 +16,21 @@ async function sha256(path: string) {
   return Array.from(new Uint8Array(digest))
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
+}
+
+function archivedMigrationSource(
+  originalPath: string,
+  expectedHash: string,
+): readonly [string, string] {
+  const entry = TENANT_ENVAL_MIGRATION_CHAIN.currentPresentAppMigrations.find(
+    (candidate) => candidate.originalPath === originalPath,
+  );
+  assert(entry, `protected_migration_provenance_missing:${originalPath}`);
+  assert(
+    entry.sha256 === expectedHash,
+    `protected_migration_manifest_hash_mismatch:${originalPath}`,
+  );
+  return [entry.path, expectedHash] as const;
 }
 
 export async function runSignupJourneyProof(): Promise<void> {
@@ -281,14 +300,14 @@ export async function runSignupJourneyProof(): Promise<void> {
   );
 
   const protectedHashes = [
-    [
+    archivedMigrationSource(
       "supabase/migrations/20260730150000_app_signup_connection_declaration_sources.sql",
       "c9a82157dcc77577edf833950ee97eb886ebbaa645cfada20a98e492b2771ff8",
-    ],
-    [
+    ),
+    archivedMigrationSource(
       "supabase/migrations/20260730170000_app_assisted_connection_capture_correction.sql",
       "561a80fee5c04cc073d8c099e54b7ad721abff021b23522d4cfa8588f4afcb25",
-    ],
+    ),
     [
       "supabase/functions/api-app-signup-submit/index.ts",
       "97f9afe03ac39dc4dfde89d4906432c06c79397be33a649f90160bae6a718b01",

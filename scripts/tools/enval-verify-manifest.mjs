@@ -321,12 +321,38 @@ const CHECK_LIST = [
     expectedMarker: "WORKFORCE_POLICY_FOUNDATION_Q01_Q14=PASS",
   }),
   check({
+    id: "compliance-workforce-view-local",
+    argv: [
+      "deno",
+      "run",
+      "--cached-only",
+      "--allow-read=supabase/migrations/20260816150000_app_current_baseline.sql,supabase/migrations/20260816160000_app_workforce_policy_foundation.sql,supabase/migrations/20260817120000_app_compliance_workforce_view.sql,platform/runtime/compliance/delivery_year_compliance.ts,platform/runtime/compliance/compliance_action_plan.ts,platform/runtime/compliance/compliance_worklist.ts",
+      "--allow-run=docker",
+      "scripts/proofs/app-compliance-workforce-view.proof.ts",
+    ],
+    domain: "tenant-compliance-workforce-view",
+    applicablePaths: [
+      "supabase/migrations/20260817120000_app_compliance_workforce_view.sql",
+      "scripts/proofs/app-compliance-workforce-view.proof.ts",
+    ],
+    safety: SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE,
+    minimumMode: "LOCAL_SERVICE",
+    serviceRequirements: [
+      "TENANT_ENVAL PostgreSQL available through local Docker",
+      "disposable proof database create/drop authority",
+    ],
+    mutatesState: true,
+    expectedDurationMs: 20_000,
+    expectedMarker: "COMPLIANCE_WORKFORCE_VIEW_Q01_Q16=PASS",
+  }),
+  check({
     id: "tenant-migration-chain-local",
     argv: ["node", "scripts/proofs/enval-migration-chain.proof.mjs"],
     domain: "tenant-migration-chain",
     applicablePaths: [
       "supabase/migrations/20260816150000_app_current_baseline.sql",
       "supabase/migrations/20260816160000_app_workforce_policy_foundation.sql",
+      "supabase/migrations/20260817120000_app_compliance_workforce_view.sql",
       "supabase/migration-archive/**",
       "scripts/tools/enval-migration-chain-manifest.mjs",
       "scripts/proofs/enval-migration-chain.proof.mjs",
@@ -947,6 +973,29 @@ export const PATH_RULES = Object.freeze([
     checks: Object.freeze([
       "migration-or-sql-review",
       "workforce-policy-foundation-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "compliance-workforce-view-proof",
+    match: Object.freeze({
+      type: "exact",
+      value: "scripts/proofs/app-compliance-workforce-view.proof.ts",
+    }),
+    checks: Object.freeze([
+      "deno-check-changed",
+      "compliance-workforce-view-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "compliance-workforce-view-migration",
+    match: Object.freeze({
+      type: "exact",
+      value: "supabase/migrations/20260817120000_app_compliance_workforce_view.sql",
+    }),
+    checks: Object.freeze([
+      "migration-or-sql-review",
+      "compliance-workforce-view-local",
+      "tenant-migration-chain-local",
     ]),
   }),
   Object.freeze({

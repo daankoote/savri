@@ -549,6 +549,10 @@ const repositoryStatusBefore = git([
   "--ignored=matching",
 ]);
 const baselineBefore = inspectMigrationOmissions();
+const activeTenantMigrationPaths = [
+  VERIFY_MANIFEST.tenantMigrationChain.baseline,
+  ...VERIFY_MANIFEST.tenantMigrationChain.forwardTail,
+].map((entry) => entry.path);
 const baselineHashesBefore = Object.fromEntries(
   baselineBefore.candidates.map((path) => [path, hash(path)]),
 );
@@ -557,9 +561,11 @@ assert(
     baselineBefore.unresolved.length === 0 &&
     baselineBefore.omissions.length === 0 &&
     baselineBefore.gitInclusionRequired.length === 0 &&
-    baselineBefore.gitVisibleCandidates.some((item) =>
-      item.path === VERIFY_MANIFEST.tenantMigrationChain.baseline.path &&
-      item.target === "TENANT_ENVAL"
+    activeTenantMigrationPaths.every((path) =>
+      baselineBefore.trackedMigrations.includes(path) ||
+      baselineBefore.gitVisibleCandidates.some((item) =>
+        item.path === path && item.target === "TENANT_ENVAL"
+      )
     ) &&
     VERIFY_MANIFEST.tenantMigrationChain.currentPresentAppMigrations.length ===
       29 &&
@@ -593,13 +599,11 @@ assert(
 );
 assert(
   Object.keys(VERIFY_MANIFEST.migrationBaseline.exceptions).length === 0 &&
-    git([
-      "status",
-      "--short",
-      "--ignored",
-      "--",
-      VERIFY_MANIFEST.tenantMigrationChain.baseline.path,
-    ]).startsWith("?? ") &&
+    baselineBefore.gitVisibleCandidates.every((item) =>
+      git(["status", "--short", "--ignored", "--", item.path]).startsWith(
+        "?? ",
+      )
+    ) &&
     VERIFY_MANIFEST.tenantMigrationChain.excludedConnectionMigrations.every(
       (entry) =>
         git(["status", "--short", "--ignored", "--", entry.originalPath]) ===
@@ -673,6 +677,42 @@ try {
       "supabase/migrations/99991231235959_existing_migration.sql",
     ],
   });
+  const currentTail = VERIFY_MANIFEST.tenantMigrationChain.forwardTail.at(-1);
+  assert(currentTail, "tenant_migration_tail_missing");
+  const activeWithoutCurrentTail = activeTenantMigrationPaths.filter((path) =>
+    path !== currentTail.path
+  );
+  const simulatedMissingActive = inspectMigrationOmissions({
+    ignoredPaths: [],
+    untrackedPaths: [],
+    trackedPaths: activeWithoutCurrentTail,
+    missingPaths: [currentTail.path],
+    inventoryPaths: activeWithoutCurrentTail,
+  });
+  const archivedActivePath = VERIFY_MANIFEST.tenantMigrationChain
+    .currentPresentAppMigrations.find((entry) =>
+      entry.originalPath.includes(
+        "20260730150000_app_signup_connection_declaration_sources.sql",
+      )
+    )?.originalPath;
+  assert(archivedActivePath, "archived_active_probe_source_missing");
+  const simulatedArchivedAsActive = inspectMigrationOmissions({
+    ignoredPaths: [],
+    untrackedPaths: [],
+    trackedPaths: activeTenantMigrationPaths,
+    stagedPaths: [archivedActivePath],
+    inventoryPaths: [...activeTenantMigrationPaths, archivedActivePath],
+  });
+  const wrongTargetPath =
+    `platform/control-plane/supabase/migrations/${currentTail.path.split("/").at(-1)}`;
+  const simulatedWrongTargetRoot = inspectMigrationOmissions({
+    ignoredPaths: [],
+    untrackedPaths: [],
+    trackedPaths: activeWithoutCurrentTail,
+    stagedPaths: [wrongTargetPath],
+    missingPaths: [currentTail.path],
+    inventoryPaths: [...activeWithoutCurrentTail, wrongTargetPath],
+  });
   const outOfOrderPath =
     `supabase/migrations/20260816155000_out_of_order_${process.pid}.sql`;
   const simulatedOutOfOrder = inspectMigrationOmissions({
@@ -741,6 +781,18 @@ try {
       simulatedVersionCollision.omissions.some((item) =>
         item.path === tenantProbePath &&
         item.reason === "migration_version_collision"
+      ) &&
+      simulatedMissingActive.omissions.some((item) =>
+        item.path === currentTail.path &&
+        item.reason === "migration_chain_entry_missing"
+      ) &&
+      simulatedArchivedAsActive.omissions.some((item) =>
+        item.path === archivedActivePath &&
+        item.reason === "migration_version_not_forward"
+      ) &&
+      simulatedWrongTargetRoot.omissions.some((item) =>
+        item.path === currentTail.path &&
+        item.reason === "migration_chain_entry_missing"
       ) &&
       simulatedOutOfOrder.omissions.some((item) =>
         item.path === outOfOrderPath &&

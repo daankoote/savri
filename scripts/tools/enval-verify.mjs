@@ -471,6 +471,40 @@ export function inspectMigrationOmissions({
     const relativePath = path.slice(prefix.length);
     return relativePath.length > 0 && !relativePath.includes("/");
   });
+  const activeChainEntries = migrationChain
+    ? [migrationChain.baseline, ...migrationChain.forwardTail]
+    : [];
+  for (const entry of activeChainEntries) {
+    const matches = matchingInventories(entry.path);
+    if (
+      matches.length !== 1 || matches[0].target !== migrationChain.target
+    ) {
+      omissions.push({
+        path: entry.path,
+        target: migrationChain.target,
+        reason: "migration_chain_wrong_target_root",
+      });
+      continue;
+    }
+    if (
+      !inventoriedPaths.includes(entry.path) ||
+      !existsSync(resolve(cwd, entry.path))
+    ) {
+      omissions.push({
+        path: entry.path,
+        target: migrationChain.target,
+        reason: "migration_chain_entry_missing",
+      });
+      continue;
+    }
+    if (fileSha256(entry.path, cwd) !== entry.sha256) {
+      omissions.push({
+        path: entry.path,
+        target: migrationChain.target,
+        reason: "migration_chain_entry_hash_changed",
+      });
+    }
+  }
   const ambiguousCandidates = new Set(candidates.filter((path) =>
     matchingInventories(path).length !== 1
   ));
