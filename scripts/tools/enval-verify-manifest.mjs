@@ -496,6 +496,33 @@ const CHECK_LIST = [
     expectedMarker: "COMPLIANCE_WORKLIST_READ_Q01_Q20=PASS",
   }),
   check({
+    id: "compliance-worklist-ui-pure",
+    argv: [
+      "deno",
+      "run",
+      "--cached-only",
+      "--allow-read",
+      "--allow-env=NODE_ENV",
+      "--node-modules-dir=manual",
+      "--config",
+      "app/tsconfig.json",
+      "app/src/features/compliance/ComplianceWorklistPage.proof.tsx",
+    ],
+    domain: "authenticated-compliance-worklist-ui",
+    applicablePaths: [
+      "app/src/App.tsx",
+      "app/src/features/compliance/ComplianceWorklistPage.proof.tsx",
+      "app/src/features/compliance/ComplianceWorklistPage.tsx",
+      "app/src/features/compliance/complianceWorklistClient.ts",
+      "app/src/features/compliance/useComplianceWorklist.ts",
+      "app/src/pages/ComplianceWorklistPage.tsx",
+    ],
+    safety: SAFETY.SAFE_PURE,
+    minimumMode: "TARGETED",
+    expectedDurationMs: 1_500,
+    expectedMarker: "COMPLIANCE_WORKLIST_UI_Q01_Q18=PASS",
+  }),
+  check({
     id: "tenant-migration-chain-local",
     argv: ["node", "scripts/proofs/enval-migration-chain.proof.mjs"],
     domain: "tenant-migration-chain",
@@ -1275,6 +1302,24 @@ export const PATH_RULES = Object.freeze([
       "migration-or-sql-review",
       "compliance-worklist-read-local",
       "tenant-migration-chain-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "compliance-worklist-ui",
+    match: Object.freeze({
+      type: "oneOf",
+      value: Object.freeze([
+        "app/src/App.tsx",
+        "app/src/features/compliance/ComplianceWorklistPage.proof.tsx",
+        "app/src/features/compliance/ComplianceWorklistPage.tsx",
+        "app/src/features/compliance/complianceWorklistClient.ts",
+        "app/src/features/compliance/useComplianceWorklist.ts",
+        "app/src/pages/ComplianceWorklistPage.tsx",
+      ]),
+    }),
+    checks: Object.freeze([
+      "deno-check-app-changed",
+      "compliance-worklist-ui-pure",
     ]),
   }),
   Object.freeze({

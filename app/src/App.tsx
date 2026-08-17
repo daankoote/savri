@@ -13,6 +13,9 @@ const AccountPage = lazy(() => import("./pages/AccountPage").then((module) => ({
 const DashboardPage = lazy(() =>
   import("./pages/DashboardPage").then((module) => ({ default: module.DashboardPage })),
 );
+const ComplianceWorklistPage = lazy(() =>
+  import("./pages/ComplianceWorklistPage").then((module) => ({ default: module.ComplianceWorklistPage })),
+);
 const AuthProvider = lazy(() =>
   import("./features/auth/AuthProvider").then((module) => ({ default: module.AuthProvider })),
 );
@@ -79,6 +82,16 @@ export function App() {
       <Suspense fallback={<RouteLoading />}>
         <AuthProvider>
           <DashboardPage navigate={navigate} currentPath={path} />
+        </AuthProvider>
+      </Suspense>
+    );
+  }
+
+  if (path === "/intern/compliance") {
+    return (
+      <Suspense fallback={<RouteLoading />}>
+        <AuthProvider>
+          <ComplianceWorklistPage navigate={navigate} currentPath={path} />
         </AuthProvider>
       </Suspense>
     );
