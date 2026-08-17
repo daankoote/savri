@@ -18,6 +18,20 @@ The 2026-07-09 `Toetsingskader verificatieprotocol inboekverificatie elektricite
 
 This assessment does not approve target architecture, does not approve a data model, and does not finalize an implementation plan.
 
+2026-08-17 current-status overlay: the dated inventory and requirement rows
+below remain the historical 2026-07-19 assessment. Subsequent REG01–REG03I
+implementation now proves a bounded delivery-year compliance runtime locally:
+pure REG02 state/replay and a 2026-only authoritative calendar, derived REG03B
+actions and REG03D worklist, separate tenant-wide view/record workforce
+authority, an immutable five-kind source-event ledger, authenticated
+server-authoritative capture and an authenticated read-only worklist endpoint.
+The current implementation status for `NEA-VER-002` and `NEA-OPS-001` is
+therefore `PARTIAL PROVEN — REG02–REG03I LOCAL FOUNDATION`; external verifier
+work, REV operations, future calendars, correction/remediation, schedulers,
+notifications, remote and production remain absent. Current traceability is
+maintained in `08_NEA_TRACEABILITY_MATRIX.md`; the historical rows and counts
+in this proof-only snapshot are not rewritten.
+
 ## Pre-Task Confirmation
 
 - `docs/legacy` does not exist.

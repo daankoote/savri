@@ -91,12 +91,13 @@ central conflict registry and live remote white-label proof.
 
 ## Current Workforce Authorization Foundation
 
-Status: CURRENT PROVEN — LOCAL ONLY through commits `4a5d219` and `95ac548`
-plus the approved local first-admin activation. This is not remote or
-production workforce activation.
+Status: CURRENT PROVEN — LOCAL ONLY through commit `be2e247`, including the
+approved local first-admin activation and later compliance capability tail.
+This is not remote or production workforce activation.
 
 The tenant data plane has one central database-authoritative workforce policy
-foundation with a closed nine-capability catalogue and the seniority order
+foundation with the original closed nine-capability catalogue plus the two
+closed compliance capabilities, for eleven total, and the seniority order
 `member < reviewer < admin`. Workforce, policy and assignment governance are
 admin-only. Organization policy is immutable and versioned; it may configure
 bounded process rules but cannot bypass capability, active-membership,
@@ -117,25 +118,90 @@ separate from workforce membership.
 Still TARGET/DEFERRED: workforce and policy management UI, more workforce
 population, recovery ceremony, production activation and remote proof.
 
+## Current Delivery-Year Compliance Foundation
+
+Status: CURRENT PROVEN — LOCAL ONLY through REG03I at commit `be2e247`.
+This is a bounded internal compliance runtime for delivery year 2026, not a
+remote deployment, external verifier workflow or production-compliance claim.
+
+```text
+accepted externally evidenced fact
+→ authenticated server-authoritative capture
+→ immutable tenant-local source-event ledger
+→ deterministic REG02 state reconstruction
+→ REG03B derived action plan (14-day INTERNAL_DEFAULT)
+→ REG03D derived worklist projection
+→ authenticated read-only api-app-compliance-worklist response
+```
+
+Runtime and data boundaries:
+
+- `delivery_year_compliance.ts` keeps delivery year `Y` separate from its
+  `Y+1` cutoff, statement-possession, year-end, statement-submission and
+  verifier REV-registration events. A verifier statement and findings report
+  are mutually distinct outcomes, and replay fails closed on malformed,
+  conflicting or unauthorized transitions.
+- `delivery_year_compliance_calendar_registry.ts` supports only delivery year
+  2026. Future calendars are not generated or inferred.
+- `app_delivery_year_compliance_source_events` is the immutable persisted
+  source-truth/provenance ledger, scoped by tenant data plane and delivery year.
+  Its five event kinds are inbooking completion, statement possession,
+  findings-report receipt, statement submission and verifier REV-result
+  registration. No derived compliance state, action plan or worklist is
+  persisted.
+- Absence of a source event means `NO_ACCEPTED_SOURCE_FACT_RECORDED` in ENVAL;
+  it does not assert that the external event did not happen.
+- REG03B's 14-calendar-day lead time is an ENVAL `INTERNAL_DEFAULT`, not a
+  regulatory deadline. REG03D separates active attention from the year-end
+  informational milestone and has no assignment, completion, dismissal,
+  snooze or acknowledgement state.
+- `compliance.delivery_year.view` and
+  `compliance.delivery_year.record` are separate `TENANT_WIDE` capabilities.
+  Their default minimum seniority is reviewer, admin inherits, and member is
+  denied by default; bounded organization policy may lower seniority only to
+  the non-bypassable member floor where permitted.
+- Regulated actor, internal recorder and workforce authorization remain
+  separate. Recording evidence of verifier REV registration does not make the
+  recorder the verifier, NEa or representation authority.
+- `api-app-compliance-worklist` is GET-only and requires trusted tenant
+  resolution, verified Auth, active workforce, the view capability and exact
+  current-tenant scope. The server owns `asOf`; the read performs zero writes.
+  The approved local first admin is authorized for this view.
+
+Implementation/proof anchors are `platform/runtime/compliance/`,
+`supabase/functions/api-app-compliance-source-event/`,
+`supabase/functions/api-app-compliance-worklist/`, migrations
+`20260817120000` through `20260817210000`, and their focused REG02/REG03
+proofs.
+
+Still TARGET/PARKED: delivery years after 2026, future calendar generation,
+source-event correction/revocation, findings remediation/closure, persisted
+tasks or acknowledgement state, scheduler/cron, mail/notification delivery,
+customer-facing compliance UX, remote cutover/deploy and production proof.
+
 ## Current Tenant Migration Chain
 
-Status: CURRENT PROVEN — LOCAL ONLY through commit `95ac548` and the subsequent
-transactional local-ledger reconciliation.
+Status: CURRENT PROVEN — LOCAL ONLY through commit `be2e247`.
 
 The executable `TENANT_ENVAL` chain is:
 
 ```text
 20260816150000_app_current_baseline.sql
 → 20260816160000_app_workforce_policy_foundation.sql
+→ 20260817120000_app_compliance_workforce_view.sql
+→ 20260817160000_app_compliance_source_event_ledger.sql
+→ 20260817190000_app_compliance_source_event_capture.sql
+→ 20260817210000_app_compliance_worklist_read.sql
 → future forward-only tenant migrations
 ```
 
 `supabase/migration-archive/` preserves pre-baseline source provenance and is
 not an executable migration root. A clean local rebuild from the baseline and
-tail, current app-schema parity, RLS/privilege parity and behavioral parity are
-proven. The active local ledger contains exactly those two versions, has zero
-pending active tenant migrations and no longer has local migration-history
-drift. The ledger reconciliation changed no schema or business data.
+all five forward migrations, current app-schema parity, RLS/privilege parity
+and behavioral parity are proven. MIG02B's earlier two-version local-ledger
+reconciliation remains historical proof for that boundary; the four committed
+REG03 migrations are now part of the guarded forward chain. No migration in
+this chain is remote/production evidence.
 
 Remote schema, baseline-material parity and migration-ledger state remain
 UNKNOWN/PARKED. Before any remote registration or apply, a separately approved

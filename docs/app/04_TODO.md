@@ -1,7 +1,7 @@
 # ENVAL App TODO
 
-Status: CURRENT app/MVP TODO — reconciled through commit `95ac548` and the
-subsequent local migration-ledger reconciliation on 2026-08-16.
+Status: CURRENT app/MVP TODO — reconciled through commit `be2e247` on
+2026-08-17.
 
 This queue is primarily for the new `/app`, `api-app-*`, and `app_*`
 implementation. Bounded legacy-caller cutover and white-label foundation status
@@ -11,17 +11,16 @@ implementation.
 
 ## Single Current NEXT
 
-- NEXT — `REG02 — delivery-year compliance event/state contract and pure
-  fail-closed state-machine foundation` for `NEA-VER-002` and `NEA-OPS-001`.
+- NEXT — `Minimal internal Compliance Worklist UI` using the existing
+  authenticated `api-app-compliance-worklist` GET endpoint.
   - Priority: NEA.
-  - Reason: REG01 resolved the official timeline into distinct compliance
-    events, making this the highest-priority executable pilot correctness seam
-    and the prerequisite for later reminders, verifier handoff and REV runbook
-    work.
-  - Boundary: model prior-year inbooking cutoff, verification-statement
-    possession, 1 April year-end, statement submission and verifier REV-result
-    events with explicit unknown/invalid transitions; no reminders, verifier
-    integration, REV adapter, UI, remote action or production claim.
+  - Reason: REG01–REG03I now provide the source semantics, immutable facts,
+    deterministic derivation, workforce authorization and authenticated
+    read-only runtime needed to expose the first useful internal projection
+    without inventing another compliance foundation.
+  - Boundary: read-only internal workforce UI in the existing
+    dashboard/backoffice shell, delivery year 2026 only; no capture form,
+    scheduler, mail, notifications, acknowledgement or task persistence.
 
 ## Completed Regulatory Source Decision
 
@@ -34,10 +33,42 @@ implementation.
   - Wm 9.7.4.12 requires the inboeker to submit the statement before 1 May and
     the verifier must register the result in REV before 1 May;
   - `voor 1 mei` and `30 april` are the same calendar deadline expression;
-  - `NEA-VER-002`, `NEA-OPS-001` and traceability are reconciled; runtime state,
-    reminders, verifier handoff and the REV runbook remain unimplemented.
+  - `NEA-VER-002`, `NEA-OPS-001` and traceability are reconciled; the bounded
+    2026 local runtime foundation is now implemented through REG03I, while
+    external verifier handoff, REV operations and the complete year-end
+    runbook remain unimplemented.
 
 ## Current / Locally Proven
+
+- REG02–REG03I compliance runtime foundation is DONE / CURRENT PROVEN — LOCAL
+  ONLY for the bounded implemented slices:
+  - REG02: pure non-linear delivery-year state/event model, fail-closed replay
+    and the authoritative 2026 calendar;
+  - REG03B: pure derived action plan with a 14-calendar-day ENVAL
+    `INTERNAL_DEFAULT`, not a regulatory deadline;
+  - REG03D: pure worklist projection with active attention separate from the
+    informational year-end milestone and no persisted task state;
+  - REG03E: separate `compliance.delivery_year.view` authority with explicit
+    `TENANT_WIDE` scope;
+  - REG03G: immutable tenant-data-plane/delivery-year source-event ledger for
+    the five accepted fact kinds, with fail-closed provenance and no mutable
+    aggregate;
+  - REG03H: authenticated server-authoritative evidence-backed capture using
+    separate `compliance.delivery_year.record` authority;
+  - REG03I: authenticated GET-only worklist read for trusted tenant, verified
+    Auth, active workforce, view capability and `TENANT_WIDE`, with server-owned
+    `asOf`, full REG02 → REG03B → REG03D derivation and zero writes.
+- Persisted immutable source events are compliance source truth/provenance;
+  REG02 state, REG03B actions and REG03D worklist items are reconstructed or
+  derived. No recorded event means no accepted ENVAL source fact, not proof
+  that the external event never occurred.
+- Regulated actor, ENVAL recorder and workforce authorization remain distinct.
+  Evidence-backed recording grants no verifier, NEa or representation
+  authority.
+- PARKED: post-2026 calendars, source-event correction/revocation, findings
+  remediation/closure, acknowledgement/dismiss/snooze, persisted tasks,
+  schedulers, mail/notifications, customer compliance UX, remote cutover/deploy
+  and production proof.
 
 - `/app` Vite rebuild foundation exists.
 - Signup/intake frontend supports particulier, zakelijk, and VVE draft flows.
@@ -362,10 +393,13 @@ implementation.
     are preserved under non-executable `supabase/migration-archive/`;
   - clean disposable rebuild, current app-schema parity, RLS/privilege parity
     and behavioral parity PASS;
-  - MIG02B is DONE — LOCAL: the active ledger contains exactly those two
-    versions, pending active tenant migrations are zero and local
-    migration-history drift is resolved without schema or business-data change;
-  - future tenant migrations are forward-only after the current tail;
+  - MIG02B is DONE — LOCAL for its point-in-time two-version reconciliation;
+    it resolved the then-current local migration-history drift without schema
+    or business-data change;
+  - the guarded forward chain now also contains the committed REG03E/G/H/I
+    migrations `20260817120000`, `20260817160000`, `20260817190000` and
+    `20260817210000`, with clean rebuild/schema/RLS/behavior proof;
+  - future tenant migrations are forward-only after `20260817210000`;
   - REMOTE migration/schema/ledger state remains UNKNOWN/PARKED. A separate
     approved read-only cutover audit must compare remote schema, ledger and
     baseline-material parity before any remote registration or apply.
@@ -417,8 +451,9 @@ Local proof is not production proof. Remote migration/function deploy, productio
 - WP2 customer/person/organization/representation/case:
   - WP2 remains IN PROGRESS; WP2A four-table and WP2B-I two-table foundations are CURRENT PROVEN — LOCAL within their cited proof boundaries.
   - WP2A and WP2B-I migration/proof sources are committed; their material
-    current state is represented by the proven current baseline. The local
-    active ledger is reconciled; remote apply and remote parity remain open.
+    current state is represented by the proven current baseline. The guarded
+    current migration chain includes the later REG03 forward tail; remote
+    apply and remote parity remain open.
   - Representation authority, authority evidence, Auth/customer-safe projection, intake/backfill/cutover, and external KvK, DSO/CAR, and verifier boundaries remain open; applicable items remain TARGET, TODO, UNKNOWN, NOT SCHEMA READY, or BLOCKED — EXTERNAL.
   - WP2B audit result: representation authority is not schema-ready because target vocabulary, external authority evidence, qualified review/four-eyes, conflict/withdrawal history, and safe projection remain unresolved.
   - WP2B-I is committed and CURRENT PROVEN — LOCAL; WP2B-II readiness evidence is complete.
@@ -469,9 +504,9 @@ Local proof is not production proof. Remote migration/function deploy, productio
 - Database Retirement Phase 1A - Evidence Completion:
   - DONE on 2026-07-19; unique operational content is consolidated in `docs/app/operations/remote-baseline-and-retirement.md`.
   - The WP3D read-only catalog inventory observes 24 `app_*` public tables and substantial app data; the earlier retirement evidence recorded zero local legacy tables and 7 `app-documents` Storage objects.
-  - The former empty local migration ledger has been reconciled to the current
-    baseline plus workforce-policy tail; local migration-history drift is
-    RESOLVED and pending active tenant migrations are zero.
+  - The former empty local migration ledger was reconciled to the then-current
+    baseline plus workforce-policy tail; later REG03 compliance migrations are
+    guarded forward-chain additions with green local rebuild/parity proof.
   - Legacy runtime/repository objects remain present and remote status remains UNKNOWN.
 - Remote Schema and Deployment Inventory:
   - DONE on 2026-07-19; dated evidence is consolidated as PROOF ONLY in `docs/app/proofs/remote-baseline-and-recovery-gate.md`.

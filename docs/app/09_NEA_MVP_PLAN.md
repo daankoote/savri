@@ -8,7 +8,7 @@ This normative gate plan permits only the bounded internal foundation scope reco
 
 Baseline evidence: commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805` (`Establish NEa documentation baseline`).
 
-Regulatory status remains: PARTIAL — ELECTRICITY TKV ACCESS AND CLAUSE COVERAGE PASS; CONSOLIDATED LAW, DEADLINE, RETENTION, REV, LEGAL, AND EXTERNAL-VERIFIER GAPS REMAIN.
+Regulatory status remains: PARTIAL — ELECTRICITY TKV ACCESS AND CLAUSE COVERAGE PASS; THE BOUNDED 2026 DELIVERY-YEAR RUNTIME FOUNDATION IS CURRENT PROVEN LOCAL; FUTURE CALENDARS, RETENTION, REV, LEGAL, REMOTE, PRODUCTION, AND EXTERNAL-VERIFIER GAPS REMAIN.
 
 This plan now sequences architecture and implementation as controlled batches. It does not drop database objects, edit SQL, change runtime code, create Edge Functions, approve production use, or claim compliance completeness.
 
@@ -30,7 +30,7 @@ This plan now sequences architecture and implementation as controlled batches. I
 | 8. booking/REV | Build reproducible batch, ERE-E calculation runs, REV input/submission/response reconciliation. | target architecture, requirements | no REV runtime deletion until batch/reconciliation replacement exists | batch replay, calculation version, REV evidence proof | REV access/workflow |
 | 9. verifier | After explicit GO, build engagement eligibility, scope, risk-input exchange, plan, visits, samples, evidence packs, findings/CAPA responses, external statement/result intake and restricted fraud-notification references. | requirements, regulatory audit, target architecture/model | no professional verifier judgment may be implemented as ENVAL logic | actor-boundary, provenance, immutability, no-self-verification, pack reconstruction, safe projection and retention proofs | explicit Daan GO; verifier/RvA/NEa/minister/REV dependencies; legal access/retention decisions |
 | 10. finance | After separate approval, build provider-independent settlement and payout controls. Pilot: ledger, statements, manual payout and manual reconciliation. Later: bank/PSP/export/import adapters. | `contracts/settlement-and-payouts`, fee-model terms, target architecture/model | old reminder/payment assumptions retired after ledger and projection proof | append-only ledger, formula/version, four-eyes, reversal/clawback, idempotent instruction/import, manual reconciliation and sensitive-data boundary proof | party/case, EAN/kWh, booking, sale proceeds, legal money flow, fee/tax, bank/PSP, safeguarding and privacy decisions |
-| 11. year-end | Build year-end runbook, deadline monitoring, source review cadence, incidents, and category-specific retention drills using the source-resolved separate 1 March/1 April/before-1-May events. | operations docs, regulatory audit | no compliance-complete claim until remaining legal/external blockers are resolved | year-end drill, verification-retention/export replay, minimization boundary, incident drill | retention legal analysis; REV availability/interface and verifier operations (`REG-CONFLICT-001` is resolved) |
+| 11. year-end | Extend the proven local 2026 calendar/state/source/action/worklist foundation into controlled UI and later year-end operations without persisting derived truth. | operations docs, regulatory audit, REG02–REG03I modules/proofs | no compliance-complete claim until remaining legal/external blockers are resolved | current local proofs plus future UI, year-end drill, verification-retention/export replay, minimization boundary and incident drill | future authoritative calendars; retention legal analysis; REV availability/interface and verifier operations (`REG-CONFLICT-001` is resolved) |
 
 ## Deletion / Retirement Gates
 
@@ -100,17 +100,19 @@ It does not prove CAR access, REV field compatibility, legal mandate wording, cu
 
 Next local execution work package:
 
-`REG02 — delivery-year compliance event/state contract and pure fail-closed
-state-machine foundation` for `NEA-VER-002` and `NEA-OPS-001`.
+`Minimal internal Compliance Worklist UI` using the existing authenticated
+`api-app-compliance-worklist` GET endpoint.
 
-REG01 resolved the official timeline into distinct prior-year inbooking cutoff,
-verification-statement possession, 1 April year-end, statement submission and
-verifier REV-result events. REG02 is the smallest executable NEa-priority seam:
-it must model those events and unknown/invalid transitions without conflating
-dates or claiming external outcomes. It is prerequisite to later reminders,
-verifier handoff and the REV runbook.
+REG01–REG03I close the bounded compliance-foundation phase locally: the 2026
+calendar and fail-closed reconstructed state, derived action/worklist,
+tenant-wide view/record authority, immutable accepted source facts, controlled
+capture and authenticated zero-write read are proven. The smallest next
+NEa-priority value slice is therefore a read-only internal workforce view in
+the existing dashboard/backoffice shell, rather than another foundation.
 
-This batch does not include reminders, verifier integration, a REV adapter,
-UI, remote action or production acceptance. The representation-authority
-validation brief remains separately parked as `DRAFT — PENDING LEGAL AND
-VERIFIER VALIDATION`; representation authority remains `NOT SCHEMA READY`.
+This UI batch is 2026-only and does not include a capture form, scheduler,
+mail, notifications, acknowledgement/dismiss/snooze, task persistence,
+verifier integration, REV adapter, remote action or production acceptance.
+The representation-authority validation brief remains separately parked as
+`DRAFT — PENDING LEGAL AND VERIFIER VALIDATION`; representation authority
+remains `NOT SCHEMA READY`.

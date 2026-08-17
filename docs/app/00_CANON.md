@@ -180,6 +180,37 @@ This applies at least to:
 
 Current local proof does not approve CAR access, REV compatibility, verifier process, AO/IB detail, CAPA detail, mandate wording, production compliance, remote deployment, or Wave 1 execution.
 
+Delivery-year compliance runtime foundation:
+
+- REG01 through REG03I are `CURRENT PROVEN — LOCAL ONLY` for the bounded
+  delivery-year foundation: the source-resolved `Y` / `Y+1` event semantics,
+  pure fail-closed REG02 reconstruction, REG03B action derivation, REG03D
+  worklist projection, explicit workforce view/record authority, immutable
+  source-event persistence, controlled capture and an authenticated read-only
+  worklist endpoint.
+- The only authoritative runtime calendar is delivery year 2026. Later years
+  and calendar generation remain TARGET/PARKED.
+- `app_delivery_year_compliance_source_events` owns accepted source facts and
+  provenance. REG02 state is reconstructed, REG03B actions are derived
+  operational attention, and the REG03D worklist is a derived presentation.
+  No mutable compliance aggregate, reminder state or worklist state is core
+  truth.
+- No recorded source event means only that ENVAL has no accepted source fact
+  for that event. It does not prove that the external event never occurred.
+- The regulated actor, ENVAL recorder and workforce authorization are separate.
+  A verifier REV registration remains a verifier action when ENVAL records its
+  external confirmation; `compliance.delivery_year.record` grants only
+  evidence-backed recording and creates no verifier, NEa or representation
+  authority.
+- The authenticated worklist read requires trusted tenant resolution, verified
+  Auth, active workforce membership, `compliance.delivery_year.view` and
+  explicit `TENANT_WIDE` scope. It uses server-owned `asOf`, replays immutable
+  facts through REG02 → REG03B → REG03D and writes zero state.
+- Correction/revocation, findings remediation/closure, acknowledgements,
+  dismissal/snooze, persisted tasks, schedulers, mail/notifications,
+  customer-facing compliance UX, remote migration/deployment and production
+  acceptance remain TARGET/PARKED.
+
 Current technical primitives retained as proven or partially proven where code/proof supports them:
 
 - app audit/idempotency
