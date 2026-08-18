@@ -672,6 +672,30 @@ const CHECK_LIST = [
     expectedMarker: "EVIDENCE_REVIEW_CASE_DETAIL_ENDPOINT=PASS",
   }),
   check({
+    id: "evidence-fact-review-round-pure",
+    argv: [
+      "deno",
+      "run",
+      "--cached-only",
+      "--allow-read",
+      "--allow-env=ALLOWED_ORIGINS,ALLOWED_ORIGIN",
+      "scripts/proofs/app-evidence-fact-review-round.proof.ts",
+    ],
+    domain: "tenant-evidence-fact-review-round",
+    applicablePaths: [
+      "supabase/migrations/20260818230000_app_evidence_fact_review_rounds.sql",
+      "supabase/functions/_shared/app_evidence_review_case_detail.ts",
+      "supabase/functions/api-app-evidence-review-case-detail/index.ts",
+      "supabase/functions/api-app-evidence-review-round-finalize/index.ts",
+      "scripts/proofs/app-evidence-review-case-detail.proof.ts",
+      "scripts/proofs/app-evidence-fact-review-round.proof.ts",
+    ],
+    safety: SAFETY.SAFE_PURE,
+    minimumMode: "TARGETED",
+    expectedDurationMs: 1_500,
+    expectedMarker: "EVIDENCE_FACT_REVIEW_ROUND_ENDPOINT_Q01_Q12=PASS",
+  }),
+  check({
     id: "evidence-review-case-detail-local",
     argv: [
       "deno",
@@ -688,9 +712,12 @@ const CHECK_LIST = [
       "supabase/migrations/20260818180000_app_signup_resolution_provenance_projection.sql",
       "supabase/migrations/20260818210000_app_evidence_review_correction_details.sql",
       "supabase/migrations/20260818220000_app_evidence_review_case_detail_decide_affordance.sql",
+      "supabase/migrations/20260818230000_app_evidence_fact_review_rounds.sql",
       "supabase/functions/_shared/app_evidence_review_case_detail.ts",
       "supabase/functions/api-app-evidence-review-case-detail/index.ts",
+      "supabase/functions/api-app-evidence-review-round-finalize/index.ts",
       "scripts/proofs/app-evidence-review-case-detail.proof.ts",
+      "scripts/proofs/app-evidence-fact-review-round.proof.ts",
     ],
     safety: SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE,
     minimumMode: "LOCAL_SERVICE",
@@ -701,7 +728,7 @@ const CHECK_LIST = [
     ],
     mutatesState: true,
     expectedDurationMs: 25_000,
-    expectedMarker: "EVIDENCE_REVIEW_CASE_DETAIL_Q01_Q14=PASS",
+    expectedMarker: "EVIDENCE_REVIEW_CASE_DETAIL_Q01_Q19=PASS",
   }),
   check({
     id: "evidence-review-preview-pure",
@@ -1815,7 +1842,37 @@ export const PATH_RULES = Object.freeze([
     checks: Object.freeze([
       "deno-check-changed",
       "evidence-review-case-detail-pure",
+      "evidence-fact-review-round-pure",
       "evidence-review-case-detail-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "evidence-fact-review-round-runtime",
+    match: Object.freeze({
+      type: "oneOf",
+      value: Object.freeze([
+        "supabase/functions/api-app-evidence-review-round-finalize/index.ts",
+        "scripts/proofs/app-evidence-fact-review-round.proof.ts",
+      ]),
+    }),
+    checks: Object.freeze([
+      "deno-check-changed",
+      "evidence-fact-review-round-pure",
+      "evidence-review-case-detail-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "evidence-fact-review-round-migration",
+    match: Object.freeze({
+      type: "exact",
+      value:
+        "supabase/migrations/20260818230000_app_evidence_fact_review_rounds.sql",
+    }),
+    checks: Object.freeze([
+      "migration-or-sql-review",
+      "evidence-fact-review-round-pure",
+      "evidence-review-case-detail-local",
+      "tenant-migration-chain-local",
     ]),
   }),
   Object.freeze({

@@ -22,6 +22,8 @@ const CORRECTION_MIGRATION =
   "supabase/migrations/20260818210000_app_evidence_review_correction_details.sql";
 const AFFORDANCE_MIGRATION =
   "supabase/migrations/20260818220000_app_evidence_review_case_detail_decide_affordance.sql";
+const ROUND_MIGRATION =
+  "supabase/migrations/20260818230000_app_evidence_fact_review_rounds.sql";
 const PILOT_CASE_REF = "CASE-7E4CC75CD19F";
 const HASH = "a".repeat(64);
 const EXPIRES = "2030-01-01T00:00:00Z";
@@ -49,6 +51,7 @@ const ENERGY_FILE = "e7000000-0000-4000-8000-000000000001";
 const INVOICE_FILE = "e7000000-0000-4000-8000-000000000002";
 const ENERGY_VERSION = "e8000000-0000-4000-8000-000000000001";
 const INVOICE_VERSION = "e8000000-0000-4000-8000-000000000002";
+const ENERGY_VERSION_V2 = "e8000000-0000-4000-8000-000000000003";
 
 type CommandResult = { code: number; stdout: string; stderr: string };
 class ProofFailure extends Error {}
@@ -159,7 +162,38 @@ function sourceEvidence(overrides: Partial<JsonObject> = {}): JsonObject {
     ...overrides,
   };
 }
+function sourceSubject(
+  evidenceVersionRef: string,
+  evidenceKind: string,
+  suffix: string,
+): JsonObject {
+  const invoice = evidenceKind === "installation_invoice";
+  return {
+    subject_ref: `FRS-${suffix.repeat(64)}`,
+    subject_kind: "FACT",
+    evidence_version_ref: evidenceVersionRef,
+    evidence_kind: evidenceKind,
+    fact_key: invoice ? "chargerBrand" : "electricityEan",
+    fact_category: invoice ? "CHARGER_BRAND" : "EAN",
+    fact_label: invoice ? "Merk" : "EAN",
+    scope_ref: `FRSCOPE-${suffix.repeat(64)}`,
+    value: invoice ? "Brand" : "871234567890123456",
+    value_status: "PRESENT",
+    required: true,
+    truth_class: "REVIEW_REQUIRED",
+    review_reason: "USER_OVERRIDE",
+    review_reason_authority: "CUSTOMER_SIGNED_RESOLUTION",
+    reviewer_suggestion: "NONE",
+  };
+}
 function rpcSuccess(evidence: readonly JsonObject[] = [sourceEvidence()]): JsonObject {
+  const reviewSubjects = evidence.map((item, index) =>
+    sourceSubject(
+      String(item.evidence_version_ref),
+      String(item.kind),
+      String((index % 9) + 1),
+    )
+  );
   return {
     ok: true,
     status: 200,
@@ -175,6 +209,9 @@ function rpcSuccess(evidence: readonly JsonObject[] = [sourceEvidence()]): JsonO
       delivery_address_truth_class: "DECLARED",
     },
     evidence,
+    review_manifest_version: "fact-review-manifest-v1",
+    review_manifest_hash: "b".repeat(64),
+    review_subjects: reviewSubjects,
   };
 }
 function mockClient(
@@ -267,7 +304,7 @@ async function endpointProof(): Promise<void> {
     onRpc: (name, args) => {
       rpcCalls += 1;
       assert(
-        name === "app_evidence_review_case_detail_read_v3" &&
+        name === "app_evidence_review_case_detail_read_v4" &&
           args.p_auth_user_id === AUTH_ADMIN && args.p_case_ref === CASE_REF_A &&
           Object.keys(args).sort().join("|") === "p_auth_user_id|p_case_ref",
         "rpc_contract_invalid",
@@ -277,11 +314,14 @@ async function endpointProof(): Promise<void> {
   const body = await responseJson(success) as unknown as EvidenceReviewCaseDetailResponseV1;
   assert(
     success.status === 200 && rpcCalls === 1 &&
-      body.schemaVersion === "evidence-review-case-detail-v1" &&
+      body.schemaVersion === "evidence-review-case-detail-v2" &&
       body.case.caseRef === CASE_REF_A &&
       body.case.partyDisplayNameTruth === "DECLARED" &&
       body.case.deliveryAddressTruth === "DECLARED" &&
       body.evidence.length === 2 &&
+      body.reviewManifestVersion === "fact-review-manifest-v1" &&
+      body.reviewManifestHash === "b".repeat(64) &&
+      body.reviewSubjects.length === 2 &&
       body.evidence.every((item) => item.reviewStatus === "PENDING") &&
       body.evidence.flatMap((item) => item.canonicalFacts)
         .filter((fact) => fact.truthClass === "REVIEW_REQUIRED")
@@ -302,7 +342,9 @@ async function endpointProof(): Promise<void> {
     "storagePath",
     "signed_url",
     "service_role",
-    "reviewer",
+    "reviewerId",
+    "reviewer_id",
+    "workforce_identity_id",
     "auth_user_id",
     "customer_id",
     "email",
@@ -340,6 +382,7 @@ async function endpointProof(): Promise<void> {
   const source = await Deno.readTextFile(MIGRATION);
   const correctionSource = await Deno.readTextFile(CORRECTION_MIGRATION);
   const affordanceSource = await Deno.readTextFile(AFFORDANCE_MIGRATION);
+  const roundSource = await Deno.readTextFile(ROUND_MIGRATION);
   assert(
     source.includes("public.app_workforce_authorize_v1(") &&
       source.includes("'evidence.review.view'") &&
@@ -357,7 +400,12 @@ async function endpointProof(): Promise<void> {
         source.replace(/^\s*--.*$/gm, ""),
       ) &&
       !source.includes("signed_url") && !source.includes("storage_path',") &&
-      !source.includes("check_execution") && !source.includes("review_task"),
+      !source.includes("check_execution") && !source.includes("review_task") &&
+      roundSource.includes("app_evidence_review_case_detail_read_v4") &&
+      roundSource.includes("app_evidence_fact_review_manifest_v1") &&
+      roundSource.includes("app_evidence_review_round_finalize_v1") &&
+      !roundSource.includes("check_execution") &&
+      !roundSource.includes("fraud_suspicion"),
     "bounded_read_source_missing",
   );
   q(7);
@@ -420,6 +468,8 @@ async function activeFingerprint(): Promise<string> {
       (select count(*) from public.app_evidence_files),
       (select count(*) from public.app_evidence_versions),
       (select count(*) from public.app_evidence_review_decisions),
+      (to_regclass('public.app_evidence_review_rounds') is not null),
+      (to_regclass('public.app_evidence_review_round_subject_decisions') is not null),
       (select count(*) from public.app_workforce_identities),
       (select count(*) from public.app_workforce_scope_assignments),
       (select count(*) from public.app_audit_events),
@@ -434,7 +484,9 @@ async function proofFingerprint(): Promise<string> {
     (select count(*) from public.app_case_lifecycle_events),
     (select count(*) from public.app_evidence_files),
     (select count(*) from public.app_evidence_versions),
-    (select count(*) from public.app_evidence_review_decisions),
+      (select count(*) from public.app_evidence_review_decisions),
+      (select count(*) from public.app_evidence_review_rounds),
+      (select count(*) from public.app_evidence_review_round_subject_decisions),
     (select count(*) from public.app_workforce_identities),
     (select count(*) from public.app_workforce_scope_assignments),
     (select count(*) from public.app_audit_events),
@@ -449,7 +501,7 @@ async function readRpc(
 ): Promise<JsonObject> {
   const output = await psql(database, `begin;
     set local role service_role;
-    select public.app_evidence_review_case_detail_read_v3(
+    select public.app_evidence_review_case_detail_read_v4(
       '${authUserId}', '${caseRef}'
     )::text;
     rollback;`);
@@ -458,15 +510,40 @@ async function readRpc(
   return JSON.parse(line) as JsonObject;
 }
 
+async function finalizeRpc(
+  database: string,
+  authUserId: string,
+  caseRef: string,
+  manifestVersion: string,
+  manifestHash: string,
+  decisions: readonly JsonObject[],
+  requestId: string,
+  idempotencyKey: string,
+  payloadSha256 = HASH,
+): Promise<JsonObject> {
+  const payload = JSON.stringify(decisions).replaceAll("'", "''");
+  const output = await psql(database, `begin;
+    set local role service_role;
+    select public.app_evidence_review_round_finalize_v1(
+      '${authUserId}', '${caseRef}', '${manifestVersion}', '${manifestHash}',
+      '${payload}'::jsonb, '${requestId}', '${idempotencyKey}',
+      '${payloadSha256}', '${EXPIRES}'
+    )::text;
+    commit;`);
+  const line = output.split("\n").find((value) => value.startsWith("{"));
+  assert(line, "finalizer_output_missing");
+  return JSON.parse(line) as JsonObject;
+}
+
 async function databaseProof(): Promise<void> {
   await setupDatabase();
   const acl = await psql(DATABASE, `select concat_ws('|',
     has_function_privilege('service_role',
-      'public.app_evidence_review_case_detail_read_v3(uuid,text)','EXECUTE'),
+      'public.app_evidence_review_case_detail_read_v4(uuid,text)','EXECUTE'),
     has_function_privilege('anon',
-      'public.app_evidence_review_case_detail_read_v3(uuid,text)','EXECUTE'),
+      'public.app_evidence_review_case_detail_read_v4(uuid,text)','EXECUTE'),
     has_function_privilege('authenticated',
-      'public.app_evidence_review_case_detail_read_v3(uuid,text)','EXECUTE'),
+      'public.app_evidence_review_case_detail_read_v4(uuid,text)','EXECUTE'),
     has_function_privilege('service_role',
       'public.app_workforce_authorize_v1(uuid,text,uuid,uuid,timestamptz)',
       'EXECUTE')
@@ -677,7 +754,7 @@ async function databaseProof(): Promise<void> {
             'value','Declared Model','resolution_state','confirmed','required',true,
             'location_id','location-1','charger_id','charger-1'),
           jsonb_build_object('fact_id','mid','fact_key','midNumber','label','MID',
-            'value','MID-DECLARED','resolution_state','review_required','required',true,
+            'value','','resolution_state','review_required','required',true,
             'location_id','location-1','charger_id','charger-1'),
           jsonb_build_object('fact_id','serial','fact_key','serialNumber','label','Serienummer',
             'value','SERIAL-DECLARED','resolution_state','review_required','required',true,
@@ -739,7 +816,10 @@ async function databaseProof(): Promise<void> {
       response.case.partyDisplayName === "Declared Person" &&
       response.case.deliveryAddress === "Declared Address" &&
       response.evidence.length === 2 &&
-      response.evidence.every((item) => item.reviewStatus === "PENDING"),
+      response.evidence.every((item) => item.reviewStatus === "PENDING") &&
+      response.reviewManifestVersion === "fact-review-manifest-v1" &&
+      /^[0-9a-f]{64}$/.test(response.reviewManifestHash) &&
+      response.reviewSubjects.length === 10,
     "authorized_projection_invalid",
   );
   const energy = response.evidence.find((item) => item.kind === "energy_bill_or_contract");
@@ -748,7 +828,7 @@ async function databaseProof(): Promise<void> {
     energy?.canonicalFacts.map((fact) => fact.category).join("|") ===
       "ADDRESS|EAN|ENERGY_SUPPLIER|PARTY_NAME" &&
       invoice?.canonicalFacts.map((fact) => fact.category).join("|") ===
-        "ADDRESS|CHARGER_BRAND|CHARGER_MODEL|MID|PARTY_NAME|SERIAL" &&
+        "ADDRESS|CHARGER_BRAND|CHARGER_MODEL|PARTY_NAME|SERIAL" &&
       response.evidence.flatMap((item) => item.canonicalFacts)
         .filter((fact) => fact.truthClass === "REVIEW_REQUIRED")
         .every((fact) => fact.reviewReason === "GENERIC_REVIEW_REQUIRED") &&
@@ -757,7 +837,27 @@ async function databaseProof(): Promise<void> {
         .every((fact) => !("reviewReasonAuthority" in fact)) &&
       response.evidence.flatMap((item) => item.canonicalFacts)
         .filter((fact) => fact.truthClass === "CUSTOMER_CONFIRMED")
-        .every((fact) => !("reviewReason" in fact)),
+        .every((fact) => !("reviewReason" in fact)) &&
+      new Set(response.reviewSubjects.map((subject) => subject.subjectRef)).size ===
+        10 &&
+      response.reviewSubjects.every((subject) =>
+        subject.subjectKind === "FACT" &&
+        /^FRS-[0-9a-f]{64}$/.test(subject.subjectRef) &&
+        /^FRSCOPE-[0-9a-f]{64}$/.test(subject.scopeRef)
+      ) &&
+      response.reviewSubjects.filter((subject) =>
+        subject.truthClass === "CUSTOMER_CONFIRMED"
+      ).every((subject) => subject.reviewerSuggestion === "ACCEPT") &&
+      response.reviewSubjects.filter((subject) =>
+        subject.truthClass === "REVIEW_REQUIRED"
+      ).every((subject) => subject.reviewerSuggestion === "NONE") &&
+      response.reviewSubjects.some((subject) =>
+        subject.factKey === "midNumber" &&
+        subject.valueStatus === "REQUIRED_MISSING" && subject.value === null &&
+        subject.required &&
+        subject.reviewReason === "REQUIRED_INFORMATION_MISSING" &&
+        subject.reviewReasonAuthority === "SERVER_REQUIRED_SLOT"
+      ),
     "canonical_fact_projection_invalid",
   );
   q(11);
@@ -901,16 +1001,343 @@ async function databaseProof(): Promise<void> {
   const after = await proofFingerprint();
   assert(postFixtureBaseline === after, "read_rpc_changed_database_state");
   const definition = await psql(DATABASE, `select pg_get_functiondef(
-    'public.app_evidence_review_case_detail_read_v3(uuid,text)'::regprocedure
+    'public.app_evidence_review_case_detail_read_v4(uuid,text)'::regprocedure
   );`);
   assert(
-    definition.includes("app_evidence_review_case_detail_read_v2") &&
-      definition.includes("app_workforce_authorize_v1") &&
-      definition.includes("'evidence.review.decide'") &&
+    definition.includes("app_evidence_review_case_detail_read_v3") &&
+      definition.includes("app_evidence_fact_review_manifest_v1") &&
       !/\binsert\b|\bupdate\b|\bdelete\b|\btruncate\b/i.test(definition),
     "read_function_contains_write_or_parallel_auth",
   );
   q(13);
+
+  const deterministicV2 = parseEvidenceReviewCaseDetailSource(
+    await readRpc(DATABASE, AUTH_VIEW_DECIDE, CASE_REF_A),
+  );
+  assert(
+    projectedV2 && deterministicV2 &&
+      response.reviewManifestHash !== projectedV2.reviewManifestHash &&
+      projectedV2.reviewManifestHash === deterministicV2.reviewManifestHash &&
+      projectedV2.reviewSubjects.map((subject) => subject.subjectRef).join("|") ===
+        deterministicV2.reviewSubjects.map((subject) => subject.subjectRef).join("|") &&
+      projectedV2.reviewSubjects.length === 10 &&
+      projectedV2.reviewSubjects.some((subject) =>
+        subject.valueStatus === "REQUIRED_MISSING" && subject.required
+      ) &&
+      projectedV2.reviewSubjects.every((subject) =>
+        [
+          "partyName",
+          "structuredAddress",
+          "electricityEan",
+          "energySupplier",
+          "chargerBrand",
+          "chargerModel",
+          "midNumber",
+          "serialNumber",
+        ].includes(subject.factKey)
+      ),
+    "manifest_determinism_or_applicability_invalid",
+  );
+  q(14);
+
+  const manifest = projectedV2;
+  const decisions = manifest.reviewSubjects.map((subject, index): JsonObject =>
+    index === 0
+      ? {
+        subjectRef: subject.subjectRef,
+        disposition: "CORRECTION_REQUIRED",
+        correctionReason: "INCORRECT_INFORMATION",
+        correctionInstruction: "Controleer en corrigeer dit gegeven.",
+      }
+      : { subjectRef: subject.subjectRef, disposition: "ACCEPTED" }
+  );
+  const missing = await finalizeRpc(
+    DATABASE,
+    AUTH_VIEW_DECIDE,
+    CASE_REF_A,
+    manifest.reviewManifestVersion,
+    manifest.reviewManifestHash,
+    decisions.slice(1),
+    "review15-missing",
+    "review15-missing",
+  );
+  const duplicate = await finalizeRpc(
+    DATABASE,
+    AUTH_VIEW_DECIDE,
+    CASE_REF_A,
+    manifest.reviewManifestVersion,
+    manifest.reviewManifestHash,
+    [...decisions, decisions[0]],
+    "review15-duplicate",
+    "review15-duplicate",
+  );
+  const extra = await finalizeRpc(
+    DATABASE,
+    AUTH_VIEW_DECIDE,
+    CASE_REF_A,
+    manifest.reviewManifestVersion,
+    manifest.reviewManifestHash,
+    [...decisions, {
+      subjectRef: `FRS-${"f".repeat(64)}`,
+      disposition: "ACCEPTED",
+    }],
+    "review15-extra",
+    "review15-extra",
+  );
+  const documentReason = await finalizeRpc(
+    DATABASE,
+    AUTH_VIEW_DECIDE,
+    CASE_REF_A,
+    manifest.reviewManifestVersion,
+    manifest.reviewManifestHash,
+    decisions.map((decision, index) => index === 0
+      ? {
+        ...decision,
+        correctionReason: "WRONG_DOCUMENT",
+      }
+      : decision),
+    "review15-document-reason",
+    "review15-document-reason",
+  );
+  const missingInstruction = await finalizeRpc(
+    DATABASE,
+    AUTH_VIEW_DECIDE,
+    CASE_REF_A,
+    manifest.reviewManifestVersion,
+    manifest.reviewManifestHash,
+    decisions.map((decision, index) => index === 0
+      ? {
+        subjectRef: decision.subjectRef,
+        disposition: "CORRECTION_REQUIRED",
+        correctionReason: "MISSING_INFORMATION",
+      }
+      : decision),
+    "review15-missing-instruction",
+    "review15-missing-instruction",
+  );
+  const adminBypass = await finalizeRpc(
+    DATABASE,
+    AUTH_ADMIN,
+    CASE_REF_A,
+    manifest.reviewManifestVersion,
+    manifest.reviewManifestHash,
+    decisions,
+    "review15-admin-bypass",
+    "review15-admin-bypass",
+  );
+  const wrongScope = await finalizeRpc(
+    DATABASE,
+    AUTH_VIEW_DECIDE,
+    CASE_REF_B,
+    manifest.reviewManifestVersion,
+    manifest.reviewManifestHash,
+    decisions,
+    "review15-wrong-scope",
+    "review15-wrong-scope",
+  );
+  const rejectedCounts = await psql(DATABASE, `select concat_ws('|',
+    (select count(*) from public.app_evidence_review_rounds),
+    (select count(*) from public.app_evidence_review_round_subject_decisions)
+  );`);
+  assert(
+    missing.code === "manifest_subjects_mismatch" &&
+      duplicate.code === "duplicate_subject" &&
+      extra.code === "manifest_subjects_mismatch" &&
+      documentReason.code === "invalid_decisions" &&
+      missingInstruction.code === "invalid_decisions" &&
+      adminBypass.code === "case_scope_denied" &&
+      wrongScope.code === "case_scope_denied" && rejectedCounts === "0|0",
+    `invalid_round_not_fail_closed:${[
+      missing.code,
+      duplicate.code,
+      extra.code,
+      documentReason.code,
+      missingInstruction.code,
+      adminBypass.code,
+      wrongScope.code,
+      rejectedCounts,
+    ].join("|")}`,
+  );
+  q(15);
+
+  const concurrent = await Promise.all([
+    finalizeRpc(
+      DATABASE,
+      AUTH_VIEW_DECIDE,
+      CASE_REF_A,
+      manifest.reviewManifestVersion,
+      manifest.reviewManifestHash,
+      decisions,
+      "review15-concurrent-a",
+      "review15-concurrent-a",
+    ),
+    finalizeRpc(
+      DATABASE,
+      AUTH_VIEW_DECIDE,
+      CASE_REF_A,
+      manifest.reviewManifestVersion,
+      manifest.reviewManifestHash,
+      decisions,
+      "review15-concurrent-b",
+      "review15-concurrent-b",
+    ),
+  ]);
+  const roundRefs = new Set(concurrent.map((result) => result.round_id));
+  const finalizedCounts = await psql(DATABASE, `select concat_ws('|',
+    (select count(*) from public.app_evidence_review_rounds),
+    (select count(*) from public.app_evidence_review_round_subject_decisions),
+    (select count(*) from public.app_evidence_review_rounds
+      where outcome='CORRECTIONS_REQUIRED'),
+    (select count(*) from public.app_evidence_review_round_subject_decisions
+      where disposition='CORRECTION_REQUIRED'
+        and correction_reason='INCORRECT_INFORMATION'
+        and correction_instruction='Controleer en corrigeer dit gegeven.'),
+    (select count(*) from public.app_audit_events
+      where event_type='evidence_fact_review_round_finalized')
+  );`);
+  const exactRetry = await finalizeRpc(
+    DATABASE,
+    AUTH_VIEW_DECIDE,
+    CASE_REF_A,
+    manifest.reviewManifestVersion,
+    manifest.reviewManifestHash,
+    decisions,
+    "review15-concurrent-a",
+    "review15-concurrent-a",
+  );
+  const equivalentRetry = await finalizeRpc(
+    DATABASE,
+    AUTH_VIEW_DECIDE,
+    CASE_REF_A,
+    manifest.reviewManifestVersion,
+    manifest.reviewManifestHash,
+    decisions,
+    "review15-equivalent-retry",
+    "review15-equivalent-retry",
+  );
+  const conflict = await finalizeRpc(
+    DATABASE,
+    AUTH_VIEW_DECIDE,
+    CASE_REF_A,
+    manifest.reviewManifestVersion,
+    manifest.reviewManifestHash,
+    decisions.map((decision) => ({
+      subjectRef: decision.subjectRef,
+      disposition: "ACCEPTED",
+    })),
+    "review15-conflict",
+    "review15-conflict",
+    "c".repeat(64),
+  );
+  assert(
+    concurrent.every((result) => result.ok === true) && roundRefs.size === 1 &&
+      new Set(concurrent.map((result) => result.code)).has("finalized") &&
+      finalizedCounts === "1|10|1|1|1" &&
+      exactRetry.round_id === concurrent[0].round_id &&
+      equivalentRetry.code === "already_finalized" &&
+      equivalentRetry.round_id === concurrent[0].round_id &&
+      conflict.code === "review_round_conflict",
+    "atomic_concurrency_or_idempotency_invalid",
+  );
+  q(16);
+
+  await psql(DATABASE, `begin;
+    set local session_replication_role = replica;
+    insert into public.app_evidence_versions (
+    id,evidence_file_id,version_number,source_intake_file_id,storage_bucket,
+    storage_path,detected_mime_type,size_bytes,sha256,status,
+    source_confirmed_at,created_at,request_id,idempotency_key
+  ) values (
+    '${ENERGY_VERSION_V2}','${ENERGY_FILE}',2,gen_random_uuid(),'proof-private',
+    'energy-v2.pdf','application/pdf',101,'${"d".repeat(64)}',
+    'confirmed_awaiting_review','2026-01-18T10:00:00Z',
+    '2026-01-18T10:00:00Z','review15-energy-v2','review15-energy-v2'
+  );
+  commit;`);
+  const manifestAfterEvidence = parseEvidenceReviewCaseDetailSource(
+    await readRpc(DATABASE, AUTH_VIEW_DECIDE, CASE_REF_A),
+  );
+  assert(manifestAfterEvidence, "new_evidence_manifest_missing");
+  const oldEnergySubjects = new Set(
+    manifest.reviewSubjects.filter((subject) =>
+      subject.evidenceVersionRef === ENERGY_VERSION
+    ).map((subject) => subject.subjectRef),
+  );
+  const newEnergySubjects = manifestAfterEvidence.reviewSubjects.filter((subject) =>
+    subject.evidenceVersionRef === ENERGY_VERSION_V2
+  );
+  const stale = await finalizeRpc(
+    DATABASE,
+    AUTH_VIEW_DECIDE,
+    CASE_REF_A,
+    manifest.reviewManifestVersion,
+    manifest.reviewManifestHash,
+    decisions,
+    "review15-stale",
+    "review15-stale",
+  );
+  const preSecondRound = await psql(DATABASE, `select concat_ws('|',
+    (select count(*) from public.app_evidence_review_rounds),
+    (select count(*) from public.app_evidence_review_round_subject_decisions)
+  );`);
+  const acceptedDecisions = manifestAfterEvidence.reviewSubjects.map((subject) => ({
+    subjectRef: subject.subjectRef,
+    disposition: "ACCEPTED",
+  }));
+  const secondRound = await finalizeRpc(
+    DATABASE,
+    AUTH_VIEW_DECIDE,
+    CASE_REF_A,
+    manifestAfterEvidence.reviewManifestVersion,
+    manifestAfterEvidence.reviewManifestHash,
+    acceptedDecisions,
+    "review15-second-round",
+    "review15-second-round",
+    "e".repeat(64),
+  );
+  const secondRoundCounts = await psql(DATABASE, `select concat_ws('|',
+    (select count(*) from public.app_evidence_review_rounds),
+    (select count(*) from public.app_evidence_review_round_subject_decisions),
+    (select count(*) from public.app_evidence_review_rounds
+      where outcome='ALL_FACTS_ACCEPTED'),
+    (select count(*) from public.app_evidence_review_round_subject_decisions
+      where round_id='${concurrent[0].round_id}')
+  );`);
+  assert(
+    manifestAfterEvidence.reviewManifestHash !== manifest.reviewManifestHash &&
+      newEnergySubjects.length === 4 &&
+      newEnergySubjects.every((subject) => !oldEnergySubjects.has(subject.subjectRef)) &&
+      stale.code === "stale_review_manifest" && preSecondRound === "1|10" &&
+      secondRound.code === "finalized" &&
+      secondRound.outcome === "ALL_FACTS_ACCEPTED" &&
+      secondRoundCounts === "2|20|1|10",
+    "new_evidence_history_or_no_carry_forward_invalid",
+  );
+  q(17);
+
+  await psql(DATABASE, `do $$
+  begin
+    begin
+      update public.app_evidence_review_rounds set outcome='ALL_FACTS_ACCEPTED'
+      where id='${concurrent[0].round_id}';
+      raise exception 'round update unexpectedly allowed';
+    exception when others then
+      if sqlerrm = 'round update unexpectedly allowed' then raise; end if;
+    end;
+    begin
+      delete from public.app_evidence_review_round_subject_decisions
+      where round_id='${concurrent[0].round_id}';
+      raise exception 'subject delete unexpectedly allowed';
+    exception when others then
+      if sqlerrm = 'subject delete unexpectedly allowed' then raise; end if;
+    end;
+  end $$;`);
+  const immutableCounts = await psql(DATABASE, `select concat_ws('|',
+    (select count(*) from public.app_evidence_review_rounds),
+    (select count(*) from public.app_evidence_review_round_subject_decisions)
+  );`);
+  assert(immutableCounts === "2|20", "review_round_history_mutable");
+  q(18);
 }
 
 async function activePilotProof(): Promise<void> {
@@ -920,11 +1347,11 @@ async function activePilotProof(): Promise<void> {
       ('20260817160000'),('20260817190000'),('20260817210000'),
       ('20260817230000'),('20260818090000'),('20260818120000'),
       ('20260818150000'),('20260818180000'),('20260818210000'),
-      ('20260818220000')
+      ('20260818220000'),('20260818230000')
     )
     select concat_ws('|',
       (select count(*) from supabase_migrations.schema_migrations
-       where version='20260818220000'),
+       where version='20260818230000'),
       (select count(*) from active_versions expected
        where not exists (select 1 from supabase_migrations.schema_migrations ledger
          where ledger.version=expected.version))
@@ -970,10 +1397,25 @@ async function activePilotProof(): Promise<void> {
       !!response.case.partyDisplayName && !!response.case.deliveryAddress &&
       response.evidence.length === 2 &&
       response.evidence.every((item) => item.reviewStatus === "PENDING") &&
+      response.reviewManifestVersion === "fact-review-manifest-v1" &&
+      response.reviewSubjects.length === 10 &&
+      new Set(response.reviewSubjects.map((subject) => subject.subjectRef)).size ===
+        10 &&
       await psql(ACTIVE_DATABASE, `begin read only;
-        select count(*) from public.app_evidence_review_decisions decision
-        join public.app_cases case_row on case_row.id=decision.case_id
-        where case_row.case_reference='${PILOT_CASE_REF}'; rollback;`) === "0",
+        select concat_ws('|',
+          (select count(*) from public.app_evidence_review_decisions decision
+            join public.app_cases case_row on case_row.id=decision.case_id
+            where case_row.case_reference='${PILOT_CASE_REF}'),
+          (select count(*) from public.app_evidence_review_rounds round_row
+            join public.app_cases case_row on case_row.id=round_row.case_id
+            where case_row.case_reference='${PILOT_CASE_REF}'),
+          (select count(*)
+            from public.app_evidence_review_round_subject_decisions subject
+            join public.app_evidence_review_rounds round_row
+              on round_row.id=subject.round_id
+            join public.app_cases case_row on case_row.id=round_row.case_id
+            where case_row.case_reference='${PILOT_CASE_REF}')
+        ); rollback;`) === "0|0|0",
     "active_pilot_projection_invalid",
   );
   const kinds = response.evidence.map((item) => item.kind).sort().join("|");
@@ -1036,13 +1478,16 @@ async function activePilotProof(): Promise<void> {
 
   const activeAfter = await activeFingerprint();
   assert(activeBefore === activeAfter, "active_pilot_read_changed_database_state");
-  q(14);
-  console.log("EVIDENCE_REVIEW_CASE_DETAIL_Q01_Q14=PASS");
+  q(19);
+  console.log("EVIDENCE_REVIEW_CASE_DETAIL_Q01_Q19=PASS");
   console.log("PRIVATE_CASE_DETAIL_RPC=PASS");
   console.log("PILOT_CASE_READ=PASS");
   console.log("PILOT_CAN_DECIDE=PASS");
   console.log("CURRENT_EVIDENCE_COUNT=2");
   console.log("BOTH_REVIEW_STATUS=PENDING");
+  console.log(`PILOT_FACT_SUBJECT_COUNT=${response.reviewSubjects.length}`);
+  console.log("PILOT_FACT_ROUND_COUNT=0");
+  console.log("PILOT_FACT_SUBJECT_DECISION_COUNT=0");
   console.log("UNASSIGNED_CASE_DENIED=PASS");
   console.log("DATABASE_WRITES_ON_GET=0");
   console.log("EXPECTED_SERVER_CALL_COUNT=1");

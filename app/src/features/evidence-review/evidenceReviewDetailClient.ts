@@ -1,4 +1,5 @@
 import type {
+  EvidenceFactReviewSubjectV1,
   EvidenceReviewCanonicalFactV1,
   EvidenceReviewCaseDetailResponseV1,
   EvidenceReviewEvidenceV1,
@@ -6,6 +7,9 @@ import type {
   EvidenceReviewFactTruthClass,
   EvidenceReviewReason,
   EvidenceReviewStatus,
+} from "../../../../supabase/functions/_shared/app_evidence_review_case_detail.ts";
+import {
+  EVIDENCE_FACT_REVIEW_MANIFEST_VERSION,
 } from "../../../../supabase/functions/_shared/app_evidence_review_case_detail.ts";
 import { normalizeSignedDownloadUrlForBrowser } from "../documents/documentDownloadClient.ts";
 import { resolvePublicApiRuntimeConfig } from "../auth/authRuntimeConfig.ts";
@@ -86,6 +90,16 @@ const REVIEW_REASONS = new Set<EvidenceReviewReason>([
   "DOCUMENT_CONFLICT_RESOLVED",
   "PROBABLE_IDENTITY_MATCH",
   "PROBABLE_ADDRESS_MATCH",
+]);
+const REVIEW_FACT_KEYS = new Set([
+  "partyName",
+  "structuredAddress",
+  "electricityEan",
+  "energySupplier",
+  "chargerBrand",
+  "chargerModel",
+  "midNumber",
+  "serialNumber",
 ]);
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -191,15 +205,126 @@ function parseEvidence(value: unknown): EvidenceReviewEvidenceV1 | null {
   });
 }
 
+function parseReviewSubject(value: unknown): EvidenceFactReviewSubjectV1 | null {
+  if (
+    !isRecord(value) ||
+    !hasExactFields(value, [
+      "evidenceKind",
+      "evidenceVersionRef",
+      "factCategory",
+      "factKey",
+      "factLabel",
+      "required",
+      "reviewerSuggestion",
+      "scopeRef",
+      "subjectKind",
+      "subjectRef",
+      "truthClass",
+      "value",
+      "valueStatus",
+      ...(value.reviewReason === undefined ? [] : ["reviewReason"]),
+      ...(value.reviewReasonAuthority === undefined
+        ? []
+        : ["reviewReasonAuthority"]),
+    ])
+  ) return null;
+  const truthClass = value.truthClass as EvidenceReviewFactTruthClass;
+  const valueStatus = String(value.valueStatus);
+  const reviewReason = value.reviewReason;
+  const reviewReasonAuthority = value.reviewReasonAuthority;
+  if (
+    typeof value.subjectRef !== "string" ||
+    !/^FRS-[0-9a-f]{64}$/.test(value.subjectRef) ||
+    value.subjectKind !== "FACT" ||
+    typeof value.evidenceVersionRef !== "string" ||
+    !UUID_RE.test(value.evidenceVersionRef) ||
+    !boundedString(value.evidenceKind, 100) ||
+    typeof value.factKey !== "string" || !REVIEW_FACT_KEYS.has(value.factKey) ||
+    !FACT_CATEGORIES.has(value.factCategory as EvidenceReviewFactCategory) ||
+    !boundedString(value.factLabel, 240) ||
+    typeof value.scopeRef !== "string" ||
+    !/^FRSCOPE-[0-9a-f]{64}$/.test(value.scopeRef) ||
+    !["PRESENT", "REQUIRED_MISSING"].includes(valueStatus) ||
+    typeof value.required !== "boolean" || !FACT_TRUTH_CLASSES.has(truthClass) ||
+    !["ACCEPT", "NONE"].includes(String(value.reviewerSuggestion)) ||
+    (valueStatus === "PRESENT" && !boundedString(value.value, 2_000)) ||
+    (valueStatus === "REQUIRED_MISSING" &&
+      (value.value !== null || value.required !== true))
+  ) return null;
+  if (
+    truthClass === "CUSTOMER_CONFIRMED" &&
+    (valueStatus !== "PRESENT" || value.reviewerSuggestion !== "ACCEPT" ||
+      reviewReason !== undefined || reviewReasonAuthority !== undefined)
+  ) return null;
+  if (truthClass === "REVIEW_REQUIRED") {
+    if (value.reviewerSuggestion !== "NONE") return null;
+    if (valueStatus === "REQUIRED_MISSING") {
+      if (
+        reviewReason !== "REQUIRED_INFORMATION_MISSING" ||
+        reviewReasonAuthority !== "SERVER_REQUIRED_SLOT"
+      ) return null;
+    } else {
+      const historical = reviewReason === "GENERIC_REVIEW_REQUIRED";
+      if (
+        !REVIEW_REASONS.has(reviewReason as EvidenceReviewReason) ||
+        (historical && reviewReasonAuthority !== undefined) ||
+        (!historical &&
+          reviewReasonAuthority !== "CUSTOMER_SIGNED_RESOLUTION")
+      ) return null;
+    }
+  }
+  return Object.freeze({
+    subjectRef: value.subjectRef,
+    subjectKind: "FACT",
+    evidenceVersionRef: value.evidenceVersionRef,
+    evidenceKind: value.evidenceKind,
+    factKey: value.factKey,
+    factCategory: value.factCategory as EvidenceReviewFactCategory,
+    factLabel: value.factLabel,
+    scopeRef: value.scopeRef,
+    value: value.value as string | null,
+    valueStatus: valueStatus as "PRESENT" | "REQUIRED_MISSING",
+    required: value.required,
+    truthClass,
+    ...(truthClass === "REVIEW_REQUIRED"
+      ? {
+        reviewReason: reviewReason as
+          | EvidenceReviewReason
+          | "REQUIRED_INFORMATION_MISSING",
+        ...(reviewReasonAuthority === undefined
+          ? {}
+          : {
+            reviewReasonAuthority: reviewReasonAuthority as
+              | "CUSTOMER_SIGNED_RESOLUTION"
+              | "SERVER_REQUIRED_SLOT",
+          }),
+      }
+      : {}),
+    reviewerSuggestion: value.reviewerSuggestion as "ACCEPT" | "NONE",
+  });
+}
+
 export function decodeEvidenceReviewCaseDetailResponse(
   body: unknown,
 ): EvidenceReviewDetailLoadResult {
   if (
     !isRecord(body) ||
-    !hasExactFields(body, ["asOf", "case", "evidence", "schemaVersion"]) ||
-    body.schemaVersion !== "evidence-review-case-detail-v1" ||
+    !hasExactFields(body, [
+      "asOf",
+      "case",
+      "evidence",
+      "reviewManifestHash",
+      "reviewManifestVersion",
+      "reviewSubjects",
+      "schemaVersion",
+    ]) ||
+    body.schemaVersion !== "evidence-review-case-detail-v2" ||
     !isIsoTimestamp(body.asOf) || !isRecord(body.case) ||
-    !Array.isArray(body.evidence) || body.evidence.length > 100
+    !Array.isArray(body.evidence) || body.evidence.length > 100 ||
+    body.reviewManifestVersion !== EVIDENCE_FACT_REVIEW_MANIFEST_VERSION ||
+    typeof body.reviewManifestHash !== "string" ||
+    !/^[0-9a-f]{64}$/.test(body.reviewManifestHash) ||
+    !Array.isArray(body.reviewSubjects) || body.reviewSubjects.length > 100
   ) return invalidResponse();
 
   const caseFields = [
@@ -234,10 +359,23 @@ export function decodeEvidenceReviewCaseDetailResponse(
       evidence.length
   ) return invalidResponse();
 
+  const reviewSubjects = body.reviewSubjects.map(parseReviewSubject);
+  const evidenceVersionRefs = new Set(
+    evidence.map((item) => item?.evidenceVersionRef),
+  );
+  if (
+    reviewSubjects.length === 0 || reviewSubjects.some((subject) => !subject) ||
+    new Set(reviewSubjects.map((subject) => subject?.subjectRef)).size !==
+      reviewSubjects.length ||
+    reviewSubjects.some((subject) =>
+      !subject || !evidenceVersionRefs.has(subject.evidenceVersionRef)
+    )
+  ) return invalidResponse();
+
   return {
     ok: true,
     value: Object.freeze({
-      schemaVersion: "evidence-review-case-detail-v1",
+      schemaVersion: "evidence-review-case-detail-v2",
       asOf: body.asOf,
       case: Object.freeze({
         caseRef: body.case.caseRef,
@@ -253,6 +391,11 @@ export function decodeEvidenceReviewCaseDetailResponse(
         }),
       }),
       evidence: Object.freeze(evidence as EvidenceReviewEvidenceV1[]),
+      reviewManifestVersion: EVIDENCE_FACT_REVIEW_MANIFEST_VERSION,
+      reviewManifestHash: body.reviewManifestHash,
+      reviewSubjects: Object.freeze(
+        reviewSubjects as EvidenceFactReviewSubjectV1[],
+      ),
     }),
   };
 }

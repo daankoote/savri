@@ -59,7 +59,7 @@ function evidence(
 }
 
 const FIXTURE: EvidenceReviewCaseDetailResponseV1 = {
-  schemaVersion: "evidence-review-case-detail-v1",
+  schemaVersion: "evidence-review-case-detail-v2",
   asOf: "2026-08-18T12:00:00.000Z",
   case: {
     caseRef: CASE_REF,
@@ -98,6 +98,42 @@ const FIXTURE: EvidenceReviewCaseDetailResponseV1 = {
         reviewReason: "GENERIC_REVIEW_REQUIRED",
       },
     ]),
+  ],
+  reviewManifestVersion: "fact-review-manifest-v1",
+  reviewManifestHash: "a".repeat(64),
+  reviewSubjects: [
+    {
+      subjectRef: `FRS-${"1".repeat(64)}`,
+      subjectKind: "FACT",
+      evidenceVersionRef: ENERGY_VERSION,
+      evidenceKind: "energy_bill_or_contract",
+      factKey: "electricityEan",
+      factCategory: "EAN",
+      factLabel: "EAN",
+      scopeRef: `FRSCOPE-${"2".repeat(64)}`,
+      value: "871234567890123456",
+      valueStatus: "PRESENT",
+      required: true,
+      truthClass: "REVIEW_REQUIRED",
+      reviewReason: "USER_OVERRIDE",
+      reviewReasonAuthority: "CUSTOMER_SIGNED_RESOLUTION",
+      reviewerSuggestion: "NONE",
+    },
+    {
+      subjectRef: `FRS-${"3".repeat(64)}`,
+      subjectKind: "FACT",
+      evidenceVersionRef: INSTALLATION_VERSION,
+      evidenceKind: "installation_invoice",
+      factKey: "chargerBrand",
+      factCategory: "CHARGER_BRAND",
+      factLabel: "Merk",
+      scopeRef: `FRSCOPE-${"4".repeat(64)}`,
+      value: "Merk",
+      valueStatus: "PRESENT",
+      required: true,
+      truthClass: "CUSTOMER_CONFIRMED",
+      reviewerSuggestion: "ACCEPT",
+    },
   ],
 };
 
@@ -659,7 +695,7 @@ assert(
     !/(role\s*===|email\s*===|caseOwner|case_owner|workforceId|workforce_id|tenantId|tenant_id)/
       .test(value)
   ) &&
-    detailEndpointSource.includes("app_evidence_review_case_detail_read_v3") &&
+    detailEndpointSource.includes("app_evidence_review_case_detail_read_v4") &&
     previewEndpointSource.includes(
       "app_evidence_review_preview_source_read_v1",
     ) &&

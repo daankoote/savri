@@ -260,9 +260,12 @@ assert(
 const evidenceReviewCaseDetailLocalService = buildPlan({
   paths: [
     "supabase/migrations/20260818120000_app_evidence_review_case_detail_read.sql",
+    "supabase/migrations/20260818230000_app_evidence_fact_review_rounds.sql",
     "supabase/functions/_shared/app_evidence_review_case_detail.ts",
     "supabase/functions/api-app-evidence-review-case-detail/index.ts",
+    "supabase/functions/api-app-evidence-review-round-finalize/index.ts",
     "scripts/proofs/app-evidence-review-case-detail.proof.ts",
+    "scripts/proofs/app-evidence-fact-review-round.proof.ts",
   ],
   mode: "LOCAL_SERVICE",
 });
@@ -271,8 +274,16 @@ assert(
     check.commandId === "evidence-review-case-detail-pure"
   ).length === 1 &&
     evidenceReviewCaseDetailLocalService.selected.filter((check) =>
+      check.commandId === "evidence-fact-review-round-pure"
+    ).length === 1 &&
+    evidenceReviewCaseDetailLocalService.selected.filter((check) =>
       check.commandId === "evidence-review-case-detail-local"
     ).length === 1 &&
+    evidenceReviewCaseDetailLocalService.selected.some((check) =>
+      check.commandId === "evidence-fact-review-round-pure" &&
+      check.safety === SAFETY.SAFE_PURE && !check.mutatesState &&
+      !check.remote && !check.destructive
+    ) &&
     evidenceReviewCaseDetailLocalService.selected.some((check) =>
       check.commandId === "evidence-review-case-detail-local" &&
       check.safety === SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE &&
