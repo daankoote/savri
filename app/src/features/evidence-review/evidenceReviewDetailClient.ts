@@ -4,12 +4,10 @@ import type {
   EvidenceReviewEvidenceV1,
   EvidenceReviewFactCategory,
   EvidenceReviewFactTruthClass,
+  EvidenceReviewReason,
   EvidenceReviewStatus,
 } from "../../../../supabase/functions/_shared/app_evidence_review_case_detail.ts";
-import {
-  normalizeSignedDownloadUrlForBrowser,
-  openBrowserUrlInNewTab,
-} from "../documents/documentDownloadClient.ts";
+import { normalizeSignedDownloadUrlForBrowser } from "../documents/documentDownloadClient.ts";
 import { resolvePublicApiRuntimeConfig } from "../auth/authRuntimeConfig.ts";
 import { isEvidenceReviewCaseRef } from "./evidenceReviewRoutes.ts";
 
@@ -35,7 +33,12 @@ export type EvidenceReviewDetailLoadResult =
   }>;
 
 export type EvidenceReviewPreviewResult =
-  | Readonly<{ ok: true; opened: true; filename: string; expiresAt: string }>
+  | Readonly<{
+    ok: true;
+    blob: Blob;
+    filename: string;
+    expiresAt: string;
+  }>
   | Readonly<
     { ok: false; error: EvidenceReviewDetailSafeError; status?: number }
   >;
@@ -52,7 +55,6 @@ type PreviewClientConfig =
   & EvidenceReviewDetailClientConfig
   & Readonly<{
     evidenceVersionRef: string;
-    openUrl?: (url: string) => void;
   }>;
 type JsonRecord = Record<string, unknown>;
 
@@ -76,6 +78,14 @@ const REVIEW_STATUSES = new Set<EvidenceReviewStatus>([
   "PENDING",
   "ACCEPTED",
   "CORRECTION_REQUIRED",
+]);
+const REVIEW_REASONS = new Set<EvidenceReviewReason>([
+  "GENERIC_REVIEW_REQUIRED",
+  "USER_OVERRIDE",
+  "USER_SUPPLIED_WITHOUT_DOCUMENT",
+  "DOCUMENT_CONFLICT_RESOLVED",
+  "PROBABLE_IDENTITY_MATCH",
+  "PROBABLE_ADDRESS_MATCH",
 ]);
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -101,17 +111,43 @@ function boundedString(value: unknown, maxLength: number): value is string {
 }
 
 function parseFact(value: unknown): EvidenceReviewCanonicalFactV1 | null {
+  if (!isRecord(value)) return null;
+  const truthClass = value.truthClass as EvidenceReviewFactTruthClass;
+  const reviewReason = value.reviewReason as EvidenceReviewReason;
+  const isHistoricalFallback = reviewReason === "GENERIC_REVIEW_REQUIRED";
+  const fields = [
+    "category",
+    "truthClass",
+    "value",
+    ...(truthClass === "REVIEW_REQUIRED" ? ["reviewReason"] : []),
+    ...(truthClass === "REVIEW_REQUIRED" && !isHistoricalFallback
+      ? ["reviewReasonAuthority"]
+      : []),
+  ];
   if (
-    !isRecord(value) ||
-    !hasExactFields(value, ["category", "truthClass", "value"]) ||
+    !hasExactFields(value, fields) ||
     !FACT_CATEGORIES.has(value.category as EvidenceReviewFactCategory) ||
-    !FACT_TRUTH_CLASSES.has(value.truthClass as EvidenceReviewFactTruthClass) ||
-    !boundedString(value.value, 2_000)
+    !FACT_TRUTH_CLASSES.has(truthClass) ||
+    !boundedString(value.value, 2_000) ||
+    (truthClass === "REVIEW_REQUIRED" && !REVIEW_REASONS.has(reviewReason)) ||
+    (truthClass === "REVIEW_REQUIRED" && !isHistoricalFallback &&
+      value.reviewReasonAuthority !== "CUSTOMER_SIGNED_RESOLUTION")
   ) return null;
   return Object.freeze({
     category: value.category as EvidenceReviewFactCategory,
     value: value.value,
-    truthClass: value.truthClass as EvidenceReviewFactTruthClass,
+    truthClass,
+    ...(truthClass === "REVIEW_REQUIRED"
+      ? {
+        reviewReason,
+        ...(isHistoricalFallback
+          ? {}
+          : {
+            reviewReasonAuthority:
+              "CUSTOMER_SIGNED_RESOLUTION" as const,
+          }),
+      }
+      : {}),
   });
 }
 
@@ -310,7 +346,7 @@ export async function loadEvidenceReviewCaseDetail(
   return decoded;
 }
 
-export async function openEvidenceReviewPreview(
+export async function loadEvidenceReviewPreview(
   config: PreviewClientConfig,
 ): Promise<EvidenceReviewPreviewResult> {
   const accessToken = config.accessToken.trim();
@@ -330,6 +366,7 @@ export async function openEvidenceReviewPreview(
       `${runtime.apiBaseUrl}/api-app-evidence-review-preview?${query}`,
       {
         method: "GET",
+        cache: "no-store",
         headers: {
           Authorization: `Bearer ${accessToken}`,
           apikey: runtime.anonKey,
@@ -380,10 +417,33 @@ export async function openEvidenceReviewPreview(
     signedUrl.toString(),
     new URL(runtime.apiBaseUrl).origin,
   );
-  (config.openUrl ?? openBrowserUrlInNewTab)(browserUrl);
+  let documentResponse: Response;
+  try {
+    documentResponse = await (config.fetchImpl ?? fetch)(browserUrl, {
+      method: "GET",
+      cache: "no-store",
+      signal: config.signal,
+    });
+  } catch (_error) {
+    return { ok: false, error: safeError("service_unavailable") };
+  }
+  const contentType = documentResponse.headers.get("content-type")
+    ?.split(";", 1)[0].trim().toLowerCase();
+  if (!documentResponse.ok || contentType !== "application/pdf") {
+    return { ok: false, error: safeError("invalid_response") };
+  }
+  let blob: Blob;
+  try {
+    blob = await documentResponse.blob();
+  } catch (_error) {
+    return { ok: false, error: safeError("invalid_response") };
+  }
+  if (blob.size === 0 || blob.type.toLowerCase() !== "application/pdf") {
+    return { ok: false, error: safeError("invalid_response") };
+  }
   return {
     ok: true,
-    opened: true,
+    blob,
     filename: body.filename,
     expiresAt: body.expiresAt,
   };

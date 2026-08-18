@@ -328,15 +328,15 @@ assert(
 for (
   const [path, expected] of Object.entries({
     "app/src/features/invoice-analysis/invoicePdfParserAdapter.ts":
-      "ff7e40cd3c638d4c3a3b1649fe017da29d3e82faa92844a543deba528d6fb352",
+      "703a31e9aabf72d64d0f5c01e0ed239a9c29077c164e16fecff2234b379f4850",
     "app/src/features/invoice-analysis/documentObservationEnvelope.ts":
       "d437a77d5e5a5f2323eaf96d126e3c6272da728bf8228a701f356757b9963323",
     "app/src/features/invoice-analysis/documentTypeClassifier.ts":
-      "f72a58e38e53cd6e769639f47412289e3a45deb4d3dc7b28982c4c1823b4986a",
+      "e1978f9be592787e4ef131b255e771f3654c7147ff630bc01e275c4804f91113",
     "app/src/features/invoice-analysis/energyEanCandidateExtractor.ts":
       "de06da71bf03185227ed563e5bfb652f804f08c739c9623851d0cf71a644577e",
     "app/src/features/invoice-analysis/energyDocumentObservation.ts":
-      "25790501d38a302cbc7bfdc590928a8dfde8cf312c58f6a09462600eeffba25b",
+      "6d591c0d392ef408239c0220615dbc5a5c5e1f92c09a26233e244e04b47f3565",
     "app/src/features/signup/documentSemanticProjector.ts":
       "39ba67165aa0bd969498e3d400d5b7c871177821c21bec096fcdef300ecbb9b8",
     "app/src/features/signup/signupSubmitMapper.ts":

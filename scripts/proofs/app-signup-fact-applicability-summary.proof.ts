@@ -438,7 +438,7 @@ for (
   const [path, expected] of [
     [
       "app/src/features/invoice-analysis/invoicePdfParserAdapter.ts",
-      "ff7e40cd3c638d4c3a3b1649fe017da29d3e82faa92844a543deba528d6fb352",
+      "703a31e9aabf72d64d0f5c01e0ed239a9c29077c164e16fecff2234b379f4850",
     ],
     [
       "app/src/features/invoice-analysis/documentObservationEnvelope.ts",
@@ -446,7 +446,7 @@ for (
     ],
     [
       "app/src/features/invoice-analysis/documentTypeClassifier.ts",
-      "f72a58e38e53cd6e769639f47412289e3a45deb4d3dc7b28982c4c1823b4986a",
+      "e1978f9be592787e4ef131b255e771f3654c7147ff630bc01e275c4804f91113",
     ],
     [
       "app/src/features/invoice-analysis/energyEanCandidateExtractor.ts",
@@ -454,7 +454,7 @@ for (
     ],
     [
       "app/src/features/invoice-analysis/energyDocumentObservation.ts",
-      "25790501d38a302cbc7bfdc590928a8dfde8cf312c58f6a09462600eeffba25b",
+      "6d591c0d392ef408239c0220615dbc5a5c5e1f92c09a26233e244e04b47f3565",
     ],
     [
       "app/src/features/signup/documentSemanticProjector.ts",

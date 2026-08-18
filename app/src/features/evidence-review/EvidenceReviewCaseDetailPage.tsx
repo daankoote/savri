@@ -1,48 +1,30 @@
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import type {
   EvidenceReviewCanonicalFactV1,
   EvidenceReviewEvidenceV1,
+  EvidenceReviewReason,
 } from "../../../../supabase/functions/_shared/app_evidence_review_case_detail.ts";
 import { useAuth } from "../auth/AuthProvider.tsx";
 import {
   type EvidenceReviewDetailSafeError,
-  type EvidenceReviewPreviewResult,
-  openEvidenceReviewPreview,
+  loadEvidenceReviewPreview,
 } from "./evidenceReviewDetailClient.ts";
+import {
+  type EvidenceReviewPreviewLoader,
+  EvidenceReviewPreviewPane,
+  type EvidenceReviewPreviewSelection,
+  useEvidenceReviewPreviewSession,
+} from "./EvidenceReviewPreviewPane.tsx";
 import type { EvidenceReviewCaseDetailReadState } from "./useEvidenceReviewCaseDetail.ts";
 import { useEvidenceReviewCaseDetail } from "./useEvidenceReviewCaseDetail.ts";
-
-type PreviewState =
-  | Readonly<{ status: "idle"; message: null }>
-  | Readonly<{ status: "loading"; message: null }>
-  | Readonly<{ status: "error"; message: string }>;
 
 type EvidenceReviewCaseDetailContentProps = Readonly<{
   caseRef: string;
   state: EvidenceReviewCaseDetailReadState;
   onBack: () => void;
-  onPreview: (
-    evidenceVersionRef: string,
-  ) => Promise<EvidenceReviewPreviewResult>;
+  loadPreview: EvidenceReviewPreviewLoader;
   onRefresh: () => void;
 }>;
-
-const IDLE_PREVIEW_STATE: PreviewState = Object.freeze({
-  status: "idle",
-  message: null,
-});
-
-export function beginEvidencePreview(): PreviewState {
-  return Object.freeze({ status: "loading", message: null });
-}
-
-export function completeEvidencePreview(
-  result: EvidenceReviewPreviewResult,
-): PreviewState {
-  return result.ok
-    ? IDLE_PREVIEW_STATE
-    : Object.freeze({ status: "error", message: result.error.message });
-}
 
 const EVIDENCE_KIND_LABELS: Readonly<Record<string, string>> = Object.freeze({
   energy_bill_or_contract: "Energiedocument",
@@ -60,6 +42,17 @@ const FACT_LABELS: Readonly<
   CHARGER_MODEL: "Model",
   MID: "MID",
   SERIAL: "Serienummer",
+});
+
+export const EVIDENCE_REVIEW_REASON_LABELS: Readonly<
+  Record<EvidenceReviewReason, string>
+> = Object.freeze({
+  USER_OVERRIDE: "Door klant aangepast",
+  USER_SUPPLIED_WITHOUT_DOCUMENT: "Door klant zelf ingevuld",
+  DOCUMENT_CONFLICT_RESOLVED: "Verschillende documentwaarden",
+  PROBABLE_IDENTITY_MATCH: "Naam komt waarschijnlijk overeen",
+  PROBABLE_ADDRESS_MATCH: "Adres komt waarschijnlijk overeen",
+  GENERIC_REVIEW_REQUIRED: "Historisch niet vastgelegd",
 });
 
 function formatServerDateTime(value: string): string {
@@ -107,13 +100,14 @@ function EvidenceFacts(
   if (facts.length === 0) return null;
   return (
     <div
-      className="fact-table fact-table--document fact-table--three-columns"
+      className="fact-table fact-table--document fact-table--evidence-review"
       role="table"
     >
       <div className="fact-table__header" role="row">
         <span role="columnheader">Gegeven</span>
         <span role="columnheader">Waarde</span>
         <span role="columnheader">Status</span>
+        <span role="columnheader">Reden</span>
       </div>
       {facts.map((fact) => {
         const state = factState(fact);
@@ -134,6 +128,11 @@ function EvidenceFacts(
                 {state.label}
               </span>
             </span>
+            <span className="fact-review-reason" data-label="Reden" role="cell">
+              {fact.truthClass === "REVIEW_REQUIRED" && fact.reviewReason
+                ? EVIDENCE_REVIEW_REASON_LABELS[fact.reviewReason]
+                : null}
+            </span>
           </div>
         );
       })}
@@ -141,56 +140,63 @@ function EvidenceFacts(
   );
 }
 
-function EvidenceCard({
+function EvidenceReviewSection({
   evidence,
-  onPreview,
+  loadPreview,
 }: Readonly<{
   evidence: EvidenceReviewEvidenceV1;
-  onPreview: (
-    evidenceVersionRef: string,
-  ) => Promise<EvidenceReviewPreviewResult>;
+  loadPreview: EvidenceReviewPreviewLoader;
 }>) {
-  const [preview, setPreview] = useState<PreviewState>(IDLE_PREVIEW_STATE);
-  const openPreview = async () => {
-    if (preview.status === "loading") return;
-    setPreview(beginEvidencePreview());
-    const result = await onPreview(evidence.evidenceVersionRef);
-    setPreview(completeEvidencePreview(result));
-  };
+  const label = EVIDENCE_KIND_LABELS[evidence.kind] ?? evidence.kind;
+  const preview = useEvidenceReviewPreviewSession(loadPreview);
+  const open = preview.state.status !== "idle";
+  const selection: EvidenceReviewPreviewSelection = Object.freeze({
+    evidenceVersionRef: evidence.evidenceVersionRef,
+    label,
+  });
   return (
-    <li>
-      <article className="portal-card-compact">
-        <div className="portal-row">
-          <div>
-            <h2>{EVIDENCE_KIND_LABELS[evidence.kind] ?? evidence.kind}</h2>
-            <p>Geüpload op {formatServerDateTime(evidence.uploadedAt)}</p>
-          </div>
+    <article className="portal-card-compact evidence-review-section">
+      <header className="portal-row evidence-review-section__header">
+        <div>
+          <h2>{label}</h2>
+          <p>Geüpload op {formatServerDateTime(evidence.uploadedAt)}</p>
+        </div>
+        <div className="portal-row-actions">
           <span className="status-pill status-pill-warning">
             {evidence.reviewStatus}
           </span>
-        </div>
-        <EvidenceFacts facts={evidence.canonicalFacts} />
-        <div className="section-actions">
           <button
             className="button button-secondary button-compact"
-            disabled={preview.status === "loading"}
-            onClick={() => void openPreview()}
+            aria-expanded={open}
+            onClick={() => {
+              if (open) {
+                preview.close();
+              } else {
+                void preview.select(selection);
+              }
+            }}
             type="button"
           >
-            {preview.status === "loading"
-              ? "Document openen..."
-              : "Document bekijken"}
+            {open ? "Document sluiten" : "Document bekijken"}
           </button>
         </div>
-        {preview.status === "error"
+      </header>
+      <div
+        className={`evidence-review-section__body${
+          open ? " evidence-review-section__body--open" : ""
+        }`}
+      >
+        <EvidenceFacts facts={evidence.canonicalFacts} />
+        {open
           ? (
-            <small className="field-message" role="alert">
-              {preview.message}
-            </small>
+            <EvidenceReviewPreviewPane
+              onRetry={() => void preview.retry()}
+              state={preview.state}
+            />
           )
           : null}
-      </article>
-    </li>
+      </div>
+    </article>
   );
 }
 
@@ -205,8 +211,8 @@ function errorTitle(error: EvidenceReviewDetailSafeError): string {
 
 export function EvidenceReviewCaseDetailContent({
   caseRef,
+  loadPreview,
   onBack,
-  onPreview,
   onRefresh,
   state,
 }: EvidenceReviewCaseDetailContentProps) {
@@ -263,7 +269,7 @@ export function EvidenceReviewCaseDetailContent({
 
   const detail = state.value;
   return (
-    <div className="portal-content-stack">
+    <div className="portal-content-stack evidence-review-detail">
       <header className="portal-content-header">
         <div>
           <h1>{detail.case.caseRef}</h1>
@@ -272,63 +278,29 @@ export function EvidenceReviewCaseDetailContent({
         <BackToWorklist onBack={onBack} />
       </header>
 
-      {(detail.case.partyDisplayName || detail.case.deliveryAddress)
+      {detail.evidence.length > 0
         ? (
-          <section
-            className="portal-card-compact"
-            aria-labelledby="case-context-title"
+          <div
+            className="evidence-review-section-list"
+            aria-label="Bewijsstukken"
           >
-            <div>
-              <h2 id="case-context-title">Aangegeven dossiercontext</h2>
-              {detail.case.partyDisplayName
-                ? (
-                  <p>
-                    <strong>Naam:</strong> {detail.case.partyDisplayName}{" "}
-                    (aangegeven)
-                  </p>
-                )
-                : null}
-              {detail.case.deliveryAddress
-                ? (
-                  <p>
-                    <strong>Adres:</strong> {detail.case.deliveryAddress}{" "}
-                    (aangegeven)
-                  </p>
-                )
-                : null}
-            </div>
-          </section>
-        )
-        : null}
-
-      <section aria-labelledby="evidence-title">
-        <div className="portal-content-header">
-          <div>
-            <h2 id="evidence-title">Bewijsstukken</h2>
-            <p>Actuele gegevens uit het geautoriseerde dossier.</p>
+            {detail.evidence.map((evidence) => (
+              <EvidenceReviewSection
+                evidence={evidence}
+                key={evidence.evidenceVersionRef}
+                loadPreview={loadPreview}
+              />
+            ))}
           </div>
-        </div>
-        {detail.evidence.length > 0
-          ? (
-            <ul className="portal-row-list" aria-label="Bewijsstukken">
-              {detail.evidence.map((evidence) => (
-                <EvidenceCard
-                  evidence={evidence}
-                  key={evidence.evidenceVersionRef}
-                  onPreview={onPreview}
-                />
-              ))}
-            </ul>
-          )
-          : (
-            <div className="review-panel" role="status">
-              <h3>Geen bewijsstukken</h3>
-              <p>
-                Voor dit dossier zijn geen actuele bewijsstukken teruggegeven.
-              </p>
-            </div>
-          )}
-      </section>
+        )
+        : (
+          <div className="review-panel" role="status">
+            <h3>Geen bewijsstukken</h3>
+            <p>
+              Voor dit dossier zijn geen actuele bewijsstukken teruggegeven.
+            </p>
+          </div>
+        )}
     </div>
   );
 }
@@ -340,20 +312,21 @@ export function EvidenceReviewCaseDetailPageContent({
   const auth = useAuth();
   const accessToken = auth.session?.access_token ?? null;
   const detail = useEvidenceReviewCaseDetail(accessToken, caseRef);
-  const preview = useCallback(
-    (evidenceVersionRef: string) =>
-      openEvidenceReviewPreview({
+  const previewLoader = useCallback(
+    (evidenceVersionRef: string, signal: AbortSignal) =>
+      loadEvidenceReviewPreview({
         accessToken: accessToken ?? "",
         caseRef,
         evidenceVersionRef,
+        signal,
       }),
     [accessToken, caseRef],
   );
   return (
     <EvidenceReviewCaseDetailContent
       caseRef={caseRef}
+      loadPreview={previewLoader}
       onBack={onBack}
-      onPreview={preview}
       onRefresh={detail.refresh}
       state={detail.state}
     />
