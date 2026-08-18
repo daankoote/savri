@@ -1,7 +1,7 @@
 import type {
   GenericDocumentFactCandidate,
   GenericDocumentTypeCandidate,
-} from "./documentObservationEnvelope";
+} from "./documentObservationEnvelope.ts";
 
 // Internal descriptive envelope metadata only. Signup display and progression
 // must never consume these scores as a document classification or gate.

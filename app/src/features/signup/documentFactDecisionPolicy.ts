@@ -2,9 +2,9 @@ import type {
   DocumentFactKey,
   DocumentFactObservation,
   DocumentSemanticRole,
-} from "./documentFactRegistry";
-import { compareBoundedPartyNameValues } from "./signupPartyNameCrossCheck";
-import { compareFormattedDutchAddresses } from "./structuredAddress";
+} from "./documentFactRegistry.ts";
+import { compareBoundedPartyNameValues } from "./signupPartyNameCrossCheck.ts";
+import { compareFormattedDutchAddresses } from "./structuredAddress.ts";
 
 export type DocumentFactDecisionStatus =
   | "clean_match"

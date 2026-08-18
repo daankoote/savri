@@ -74,15 +74,29 @@ Use this bounded recovery sequence:
    `APP_SIGNUP_CAPABILITY_SECRET`. Never print its value.
    The embedded CLI Edge container may use its strictly bounded local fallback;
    production still requires the dedicated secret.
-5. Start the ordinary local function runtime. The strict shared runtime helper
-   recognizes loopback and exact `http://kong:8000`; no ad-hoc signing or
-   capability export is required:
+5. Start the ordinary local function runtime through the target-guarded local
+   helper. It checks the CURRENT Edge entrypoints without sloppy import
+   resolution, derives the one active local ENVAL tenant/config through
+   read-only control-plane evidence, and injects secrets through a temporary
+   mode-`0600` env file that is removed when the runtime exits:
 
    ```bash
-   supabase functions serve
+   node scripts/tools/enval-local-dev.mjs --operation serve
    ```
 
-6. In a separate sequential command, run the local gateway smoke:
+6. In another terminal, require the complete local ready condition. Port 5175
+   is canonical; `--vite-url http://127.0.0.1:5174` is accepted only for the
+   reserved loopback development override:
+
+   ```bash
+   node scripts/tools/enval-local-dev.mjs --operation ready
+   ```
+
+   Readiness requires Vite and `/intern/dossiers`, both local Supabase targets,
+   presentation bootstrap, Auth health plus safe bootstrap rejection, and zero
+   pending TENANT_ENVAL migrations. It never prints credential values.
+
+7. In a separate sequential command, run the local gateway smoke:
 
    ```bash
    ENVAL_ALLOW_LOCAL_SIGNUP_QUARANTINE_PROOF=YES \

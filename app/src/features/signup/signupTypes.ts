@@ -1,9 +1,9 @@
-import type { EnergyEanCandidate } from "../invoice-analysis/energyEanCandidateExtractor";
+import type { EnergyEanCandidate } from "../invoice-analysis/energyEanCandidateExtractor.ts";
 import type {
   EnergyDocumentObservation,
-} from "../invoice-analysis/energyDocumentObservation";
-import type { ChargerDocumentObservation } from "../invoice-analysis/invoicePdfParserAdapter";
-export type { ChargerDocumentObservation } from "../invoice-analysis/invoicePdfParserAdapter";
+} from "../invoice-analysis/energyDocumentObservation.ts";
+import type { ChargerDocumentObservation } from "../invoice-analysis/invoicePdfParserAdapter.ts";
+export type { ChargerDocumentObservation } from "../invoice-analysis/invoicePdfParserAdapter.ts";
 
 export type AccountType = "particulier" | "zakelijk" | "vve";
 

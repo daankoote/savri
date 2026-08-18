@@ -2,19 +2,19 @@ import {
   type EnergyEanCandidate,
   type EnergyEanExtractionPage,
   extractEnergyEanCandidates,
-} from "./energyEanCandidateExtractor";
+} from "./energyEanCandidateExtractor.ts";
 import {
   type EnergyDocumentObservation,
   extractEnergyDocumentObservation,
   type ObservedDeliveryAddress,
   type ObservedValue,
-} from "./energyDocumentObservation";
+} from "./energyDocumentObservation.ts";
 import type {
   DocumentObservationEnvelope,
   GenericDocumentFactCandidate,
   GenericStructuredAddress,
-} from "./documentObservationEnvelope";
-import { deriveDocumentTypeCandidates } from "./documentTypeClassifier";
+} from "./documentObservationEnvelope.ts";
+import { deriveDocumentTypeCandidates } from "./documentTypeClassifier.ts";
 
 export type InvoiceObservedFields = {
   customer_name: string | null;

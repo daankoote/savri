@@ -1,7 +1,7 @@
 import type {
   EnergyEanCandidate,
   EnergyEanExtractionPage,
-} from "./energyEanCandidateExtractor";
+} from "./energyEanCandidateExtractor.ts";
 
 export type ObservationConfidence =
   | "high"

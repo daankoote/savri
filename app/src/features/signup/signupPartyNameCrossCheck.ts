@@ -1,5 +1,5 @@
-import type { ObservedValue } from "../invoice-analysis/energyDocumentObservation";
-import type { AccountType, SignupDraft } from "./signupTypes";
+import type { ObservedValue } from "../invoice-analysis/energyDocumentObservation.ts";
+import type { AccountType, SignupDraft } from "./signupTypes.ts";
 
 export type SignupPartyNameComparisonStatus =
   | "exact_full_match"
