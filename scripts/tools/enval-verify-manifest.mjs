@@ -506,6 +506,7 @@ const CHECK_LIST = [
     ],
     domain: "tenant-evidence-review-decision-runtime",
     applicablePaths: [
+      "supabase/functions/_shared/app_evidence_review_case_detail.ts",
       "supabase/functions/api-app-evidence-review-decision/index.ts",
       "scripts/proofs/app-evidence-review-decision.proof.ts",
     ],
@@ -527,6 +528,7 @@ const CHECK_LIST = [
     domain: "tenant-evidence-review-foundation",
     applicablePaths: [
       "supabase/migrations/20260817230000_app_evidence_review_foundation.sql",
+      "supabase/migrations/20260818210000_app_evidence_review_correction_details.sql",
       "scripts/proofs/app-evidence-review-foundation.proof.ts",
     ],
     safety: SAFETY.SAFE_PURE,
@@ -548,6 +550,8 @@ const CHECK_LIST = [
     domain: "tenant-evidence-review-foundation",
     applicablePaths: [
       "supabase/migrations/20260817230000_app_evidence_review_foundation.sql",
+      "supabase/migrations/20260818210000_app_evidence_review_correction_details.sql",
+      "supabase/functions/_shared/app_evidence_review_case_detail.ts",
       "supabase/functions/api-app-evidence-review-decision/index.ts",
       "scripts/proofs/app-evidence-review-decision.proof.ts",
       "scripts/proofs/app-evidence-review-foundation.proof.ts",
@@ -599,6 +603,7 @@ const CHECK_LIST = [
     domain: "tenant-evidence-review-worklist-read",
     applicablePaths: [
       "supabase/migrations/20260818090000_app_evidence_review_worklist_read.sql",
+      "supabase/migrations/20260818210000_app_evidence_review_correction_details.sql",
       "supabase/functions/_shared/app_evidence_review_worklist.ts",
       "supabase/functions/api-app-evidence-review-worklist/index.ts",
       "scripts/proofs/app-evidence-review-worklist-read.proof.ts",
@@ -679,6 +684,7 @@ const CHECK_LIST = [
     applicablePaths: [
       "supabase/migrations/20260818120000_app_evidence_review_case_detail_read.sql",
       "supabase/migrations/20260818180000_app_signup_resolution_provenance_projection.sql",
+      "supabase/migrations/20260818210000_app_evidence_review_correction_details.sql",
       "supabase/functions/_shared/app_evidence_review_case_detail.ts",
       "supabase/functions/api-app-evidence-review-case-detail/index.ts",
       "scripts/proofs/app-evidence-review-case-detail.proof.ts",
@@ -1728,6 +1734,23 @@ export const PATH_RULES = Object.freeze([
       "migration-or-sql-review",
       "evidence-review-foundation-pure",
       "evidence-review-foundation-local",
+      "tenant-migration-chain-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "evidence-review-correction-details-migration",
+    match: Object.freeze({
+      type: "exact",
+      value:
+        "supabase/migrations/20260818210000_app_evidence_review_correction_details.sql",
+    }),
+    checks: Object.freeze([
+      "migration-or-sql-review",
+      "evidence-review-decision-pure",
+      "evidence-review-foundation-pure",
+      "evidence-review-foundation-local",
+      "evidence-review-case-detail-local",
+      "evidence-review-worklist-read-local",
       "tenant-migration-chain-local",
     ]),
   }),

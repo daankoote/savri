@@ -7,6 +7,17 @@ export const EVIDENCE_REVIEW_STATUSES = Object.freeze([
   "CORRECTION_REQUIRED",
 ] as const);
 
+export const EVIDENCE_REVIEW_CORRECTION_REASONS = Object.freeze([
+  "MISSING_INFORMATION",
+  "INCORRECT_INFORMATION",
+  "INCONSISTENT_INFORMATION",
+  "UNREADABLE_DOCUMENT",
+  "WRONG_DOCUMENT",
+  "OTHER",
+] as const);
+
+export const EVIDENCE_REVIEW_CORRECTION_INSTRUCTION_MAX_LENGTH = 1_000;
+
 export const EVIDENCE_REVIEW_FACT_CATEGORIES = Object.freeze([
   "PARTY_NAME",
   "ADDRESS",
@@ -36,6 +47,8 @@ type JsonObject = Record<string, unknown>;
 
 export type EvidenceReviewStatus =
   (typeof EVIDENCE_REVIEW_STATUSES)[number];
+export type EvidenceReviewCorrectionReason =
+  (typeof EVIDENCE_REVIEW_CORRECTION_REASONS)[number];
 export type EvidenceReviewFactCategory =
   (typeof EVIDENCE_REVIEW_FACT_CATEGORIES)[number];
 export type EvidenceReviewFactTruthClass =
@@ -69,6 +82,8 @@ export type EvidenceReviewEvidenceV1 = Readonly<{
   integrityAvailable: boolean;
   reviewStatus: EvidenceReviewStatus;
   decidedAt?: string;
+  correctionReason?: EvidenceReviewCorrectionReason;
+  correctionInstruction?: string;
   canonicalFacts: readonly EvidenceReviewCanonicalFactV1[];
 }>;
 
@@ -90,6 +105,8 @@ const CASE_SOURCE_KEYS = [
 
 const EVIDENCE_SOURCE_KEYS = [
   "canonical_facts",
+  "correction_instruction",
+  "correction_reason",
   "decided_at",
   "evidence_file_ref",
   "evidence_version_ref",
@@ -154,6 +171,7 @@ function parseFact(value: unknown): EvidenceReviewCanonicalFactV1 | null {
       value.truth_class as EvidenceReviewFactTruthClass,
     )
   ) return null;
+
   const factValue = boundedString(value.value, 2_000);
   const truthClass = value.truth_class as EvidenceReviewFactTruthClass;
   const reviewReason = value.review_reason;
@@ -163,6 +181,7 @@ function parseFact(value: unknown): EvidenceReviewCanonicalFactV1 | null {
       !EVIDENCE_REVIEW_REASONS.includes(reviewReason as EvidenceReviewReason)) ||
     (truthClass === "CUSTOMER_CONFIRMED" && reviewReason !== null)
   ) return null;
+
   return Object.freeze({
     category: value.category as EvidenceReviewFactCategory,
     value: factValue,
@@ -192,6 +211,26 @@ function parseEvidence(value: unknown): EvidenceReviewEvidenceV1 | null {
     (value.review_status !== "PENDING" && value.decided_at === null)
   ) return null;
 
+  const correctionReason = value.correction_reason;
+  const correctionInstruction = value.correction_instruction;
+  const correctionDetailsAbsent = correctionReason === null &&
+    correctionInstruction === null;
+  const parsedInstruction = correctionDetailsAbsent
+    ? null
+    : boundedString(
+      correctionInstruction,
+      EVIDENCE_REVIEW_CORRECTION_INSTRUCTION_MAX_LENGTH,
+    );
+  if (
+    (value.review_status !== "CORRECTION_REQUIRED" &&
+      !correctionDetailsAbsent) ||
+    (value.review_status === "CORRECTION_REQUIRED" &&
+      !correctionDetailsAbsent &&
+      (!EVIDENCE_REVIEW_CORRECTION_REASONS.includes(
+        correctionReason as EvidenceReviewCorrectionReason,
+      ) || !parsedInstruction || !/[\p{L}\p{N}]/u.test(parsedInstruction)))
+  ) return null;
+
   const facts: EvidenceReviewCanonicalFactV1[] = [];
   const seen = new Set<string>();
   for (const rawFact of value.canonical_facts) {
@@ -212,6 +251,12 @@ function parseEvidence(value: unknown): EvidenceReviewEvidenceV1 | null {
     integrityAvailable: true,
     reviewStatus: value.review_status as EvidenceReviewStatus,
     ...(value.decided_at === null ? {} : { decidedAt: value.decided_at as string }),
+    ...(correctionDetailsAbsent
+      ? {}
+      : {
+        correctionReason: correctionReason as EvidenceReviewCorrectionReason,
+        correctionInstruction: parsedInstruction as string,
+      }),
     canonicalFacts: Object.freeze(facts),
   });
 }

@@ -176,6 +176,8 @@ assert(
 
 const evidenceReviewDecisionLocalService = buildPlan({
   paths: [
+    "supabase/migrations/20260818210000_app_evidence_review_correction_details.sql",
+    "supabase/functions/_shared/app_evidence_review_case_detail.ts",
     "supabase/functions/api-app-evidence-review-decision/index.ts",
     "scripts/proofs/app-evidence-review-decision.proof.ts",
   ],
@@ -193,6 +195,9 @@ assert(
     ).length === 1 &&
     evidenceReviewDecisionLocalService.selected.filter((check) =>
       check.commandId === "evidence-review-worklist-read-local"
+    ).length === 1 &&
+    evidenceReviewDecisionLocalService.selected.filter((check) =>
+      check.commandId === "tenant-migration-chain-local"
     ).length === 1 &&
     evidenceReviewDecisionLocalService.selected.some((check) =>
       check.commandId === "evidence-review-foundation-local" &&

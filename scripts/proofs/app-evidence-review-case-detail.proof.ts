@@ -18,6 +18,8 @@ const ACTIVE_DATABASE = "postgres";
 const DATABASE = `enval_review07_proof_${crypto.randomUUID().replaceAll("-", "")}`;
 const MIGRATION =
   "supabase/migrations/20260818180000_app_signup_resolution_provenance_projection.sql";
+const CORRECTION_MIGRATION =
+  "supabase/migrations/20260818210000_app_evidence_review_correction_details.sql";
 const PILOT_CASE_REF = "CASE-7E4CC75CD19F";
 const HASH = "a".repeat(64);
 const EXPIRES = "2030-01-01T00:00:00Z";
@@ -144,6 +146,8 @@ function sourceEvidence(overrides: Partial<JsonObject> = {}): JsonObject {
     sha256_present: true,
     review_status: "PENDING",
     decided_at: null,
+    correction_reason: null,
+    correction_instruction: null,
     canonical_facts: [
       { category: "PARTY_NAME", value: "Declared Person", truth_class: "CUSTOMER_CONFIRMED", review_reason: null },
       { category: "EAN", value: "871234567890123456", truth_class: "REVIEW_REQUIRED", review_reason: "USER_OVERRIDE" },
@@ -258,7 +262,7 @@ async function endpointProof(): Promise<void> {
     onRpc: (name, args) => {
       rpcCalls += 1;
       assert(
-        name === "app_evidence_review_case_detail_read_v1" &&
+        name === "app_evidence_review_case_detail_read_v2" &&
           args.p_auth_user_id === AUTH_ADMIN && args.p_case_ref === CASE_REF_A &&
           Object.keys(args).sort().join("|") === "p_auth_user_id|p_case_ref",
         "rpc_contract_invalid",
@@ -329,12 +333,15 @@ async function endpointProof(): Promise<void> {
   q(6);
 
   const source = await Deno.readTextFile(MIGRATION);
+  const correctionSource = await Deno.readTextFile(CORRECTION_MIGRATION);
   assert(
     source.includes("public.app_workforce_authorize_v1(") &&
       source.includes("'evidence.review.view'") &&
       source.includes("app_evidence_review_decisions") &&
       source.includes("canonical_snapshot #> '{canonical_facts,facts}'") &&
       source.includes("grant execute on function public.app_evidence_review_case_detail_read_v1") &&
+      correctionSource.includes("app_evidence_review_case_detail_read_v2") &&
+      correctionSource.includes("correction_instruction") &&
       !source.includes("grant execute on function public.app_workforce_authorize_v1") &&
       !/\binsert\b|\bupdate\b|\bdelete\b|\btruncate\b/i.test(
         source.replace(/^\s*--.*$/gm, ""),
@@ -432,7 +439,7 @@ async function readRpc(
 ): Promise<JsonObject> {
   const output = await psql(database, `begin;
     set local role service_role;
-    select public.app_evidence_review_case_detail_read_v1(
+    select public.app_evidence_review_case_detail_read_v2(
       '${authUserId}', '${caseRef}'
     )::text;
     rollback;`);
@@ -445,11 +452,11 @@ async function databaseProof(): Promise<void> {
   await setupDatabase();
   const acl = await psql(DATABASE, `select concat_ws('|',
     has_function_privilege('service_role',
-      'public.app_evidence_review_case_detail_read_v1(uuid,text)','EXECUTE'),
+      'public.app_evidence_review_case_detail_read_v2(uuid,text)','EXECUTE'),
     has_function_privilege('anon',
-      'public.app_evidence_review_case_detail_read_v1(uuid,text)','EXECUTE'),
+      'public.app_evidence_review_case_detail_read_v2(uuid,text)','EXECUTE'),
     has_function_privilege('authenticated',
-      'public.app_evidence_review_case_detail_read_v1(uuid,text)','EXECUTE'),
+      'public.app_evidence_review_case_detail_read_v2(uuid,text)','EXECUTE'),
     has_function_privilege('service_role',
       'public.app_workforce_authorize_v1(uuid,text,uuid,uuid,timestamptz)',
       'EXECUTE')
@@ -700,6 +707,39 @@ async function databaseProof(): Promise<void> {
     "historical_read_changed_database_state",
   );
 
+  const acceptedDecision = await psql(DATABASE, `select
+    public.app_evidence_review_decide_v2(
+      '${AUTH_DECIDE_ONLY}','${ENERGY_VERSION}','ACCEPTED',null,null,
+      'review12-detail-accepted','review12-detail-accepted','${HASH}',
+      '${EXPIRES}'
+    )->>'ok';`);
+  const correctionDecision = await psql(DATABASE, `select
+    public.app_evidence_review_decide_v2(
+      '${AUTH_DECIDE_ONLY}','${INVOICE_VERSION}','CORRECTION_REQUIRED',
+      'WRONG_DOCUMENT','Lever de juiste installatiefactuur aan.',
+      'review12-detail-correction','review12-detail-correction',
+      '${"b".repeat(64)}','${EXPIRES}'
+    )->>'ok';`);
+  const decidedProjection = parseEvidenceReviewCaseDetailSource(
+    await readRpc(DATABASE, AUTH_ADMIN, CASE_REF_A),
+  );
+  const acceptedEvidence = decidedProjection?.evidence.find((item) =>
+    item.evidenceVersionRef === ENERGY_VERSION
+  );
+  const correctionEvidence = decidedProjection?.evidence.find((item) =>
+    item.evidenceVersionRef === INVOICE_VERSION
+  );
+  assert(
+    acceptedDecision === "true" && correctionDecision === "true" &&
+      acceptedEvidence?.reviewStatus === "ACCEPTED" &&
+      !("correctionReason" in acceptedEvidence) &&
+      correctionEvidence?.reviewStatus === "CORRECTION_REQUIRED" &&
+      correctionEvidence.correctionReason === "WRONG_DOCUMENT" &&
+      correctionEvidence.correctionInstruction ===
+        "Lever de juiste installatiefactuur aan.",
+    "review12_correction_projection_invalid",
+  );
+
   await psql(
     DATABASE,
     `begin;
@@ -796,10 +836,10 @@ async function databaseProof(): Promise<void> {
   const after = await proofFingerprint();
   assert(postFixtureBaseline === after, "read_rpc_changed_database_state");
   const definition = await psql(DATABASE, `select pg_get_functiondef(
-    'public.app_evidence_review_case_detail_read_v1(uuid,text)'::regprocedure
+    'public.app_evidence_review_case_detail_read_v2(uuid,text)'::regprocedure
   );`);
   assert(
-    definition.includes("app_workforce_authorize_v1") &&
+    definition.includes("app_evidence_review_case_detail_read_v1") &&
       !/\binsert\b|\bupdate\b|\bdelete\b|\btruncate\b/i.test(definition),
     "read_function_contains_write_or_parallel_auth",
   );
@@ -812,7 +852,7 @@ async function activePilotProof(): Promise<void> {
       ('20260816150000'),('20260816160000'),('20260817120000'),
       ('20260817160000'),('20260817190000'),('20260817210000'),
       ('20260817230000'),('20260818090000'),('20260818120000'),
-      ('20260818150000'),('20260818180000')
+      ('20260818150000'),('20260818180000'),('20260818210000')
     )
     select concat_ws('|',
       (select count(*) from supabase_migrations.schema_migrations
@@ -860,7 +900,11 @@ async function activePilotProof(): Promise<void> {
       response.case.lifecycle === "submitted_for_review" &&
       !!response.case.partyDisplayName && !!response.case.deliveryAddress &&
       response.evidence.length === 2 &&
-      response.evidence.every((item) => item.reviewStatus === "PENDING"),
+      response.evidence.every((item) => item.reviewStatus === "PENDING") &&
+      await psql(ACTIVE_DATABASE, `begin read only;
+        select count(*) from public.app_evidence_review_decisions decision
+        join public.app_cases case_row on case_row.id=decision.case_id
+        where case_row.case_reference='${PILOT_CASE_REF}'; rollback;`) === "0",
     "active_pilot_projection_invalid",
   );
   const kinds = response.evidence.map((item) => item.kind).sort().join("|");

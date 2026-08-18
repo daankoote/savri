@@ -15,8 +15,10 @@ import {
 const CONTAINER = "supabase_db_enval";
 const MAIN_DATABASE = "postgres";
 const DATABASE_PREFIX = "enval_review02_proof_";
-const MIGRATION =
-  "supabase/migrations/20260817230000_app_evidence_review_foundation.sql";
+const MIGRATIONS = Object.freeze([
+  "supabase/migrations/20260817230000_app_evidence_review_foundation.sql",
+  "supabase/migrations/20260818210000_app_evidence_review_correction_details.sql",
+]);
 
 class ProofFailure extends Error {}
 type CommandResult = { code: number; stdout: string; stderr: string };
@@ -146,7 +148,10 @@ async function activeFingerprint() {
   return `${base}|${reviewCount}`;
 }
 
-const source = await Deno.readTextFile(MIGRATION);
+const [foundationSource, correctionSource] = await Promise.all(
+  MIGRATIONS.map((path) => Deno.readTextFile(path)),
+);
+const source = `${foundationSource}\n${correctionSource}`;
 assert(
   source.includes("app_evidence_review_decisions") &&
     source.includes("'ACCEPTED', 'CORRECTION_REQUIRED'") &&
@@ -155,14 +160,18 @@ assert(
     source.includes("scope_kind = 'case'") &&
     source.includes("app_workforce_authorize_v1") &&
     source.includes("app_evidence_review_decide_v1") &&
+    source.includes("app_evidence_review_decide_v2") &&
+    source.includes("app_evidence_review_case_detail_read_v2") &&
+    source.includes("MISSING_INFORMATION") &&
+    source.includes("correction_instruction") &&
     source.includes("app_evidence_review_state_v1") &&
     source.includes("before update or delete") &&
     source.includes("for all to anon, authenticated using (false)") &&
-    !source.includes("app_review_tasks") &&
-    !source.includes("check_execution") &&
-    !source.includes("worklist") &&
-    !source.includes("IN_REVIEW") &&
-    !source.includes("ESCALATED"),
+    !foundationSource.includes("app_review_tasks") &&
+    !foundationSource.includes("check_execution") &&
+    !foundationSource.includes("worklist") &&
+    !foundationSource.includes("IN_REVIEW") &&
+    !foundationSource.includes("ESCALATED"),
   "bounded_source_contract_missing",
 );
 console.log("EVIDENCE_REVIEW_FOUNDATION_SOURCE=PASS");
@@ -202,16 +211,18 @@ function databaseServiceClient(database: string): ServiceClient {
     from: () => ({}),
     rpc: async (name, args) => {
       let sql: string;
-      if (name === "app_evidence_review_case_detail_read_v1") {
-        sql = `select public.app_evidence_review_case_detail_read_v1(
+      if (name === "app_evidence_review_case_detail_read_v2") {
+        sql = `select public.app_evidence_review_case_detail_read_v2(
           ${sqlText(args.p_auth_user_id)}::uuid,
           ${sqlText(args.p_case_ref)}
         )::text;`;
-      } else if (name === "app_evidence_review_decide_v1") {
-        sql = `select public.app_evidence_review_decide_v1(
+      } else if (name === "app_evidence_review_decide_v2") {
+        sql = `select public.app_evidence_review_decide_v2(
           ${sqlText(args.p_auth_user_id)}::uuid,
           ${sqlText(args.p_evidence_version_id)}::uuid,
           ${sqlText(args.p_decision)},
+          ${args.p_correction_reason === null ? "null" : sqlText(args.p_correction_reason)},
+          ${args.p_correction_instruction === null ? "null" : sqlText(args.p_correction_instruction)},
           ${sqlText(args.p_request_id)},
           ${sqlText(args.p_idempotency_key)},
           ${sqlText(args.p_payload_sha256)},
@@ -237,6 +248,10 @@ function decisionRequest(
   evidenceVersionRef: string,
   decision: "ACCEPTED" | "CORRECTION_REQUIRED",
   idempotencyKey: string,
+  details: Readonly<{
+    correctionReason: string;
+    correctionInstruction: string;
+  }> | null = null,
 ): Request {
   return new Request("https://enval.local/api-app-evidence-review-decision", {
     method: "POST",
@@ -249,6 +264,7 @@ function decisionRequest(
       caseRef: CASE_REF_A,
       evidenceVersionRef,
       decision,
+      ...(details ?? {}),
     }),
   });
 }
@@ -270,10 +286,15 @@ function decisionEndpoint(database: string, authUserId: string) {
       timestamp: "2026-08-18T12:00:00.000Z",
       environment: "local",
     }),
-    hashPayload: async (payload) =>
-      JSON.stringify(payload).includes("CORRECTION_REQUIRED")
-        ? HASH_C
-        : HASH_A,
+    hashPayload: async (payload) => {
+      const digest = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(JSON.stringify(payload)),
+      );
+      return Array.from(new Uint8Array(digest))
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("");
+    },
     verifyBearer: async () => ({
       ok: true,
       context: {
@@ -377,14 +398,19 @@ try {
       and has_table_privilege(
         'service_role','public.app_evidence_review_decisions','SELECT'
       )
-      and has_function_privilege(
+      and not has_function_privilege(
         'service_role',
         'public.app_evidence_review_decide_v1(uuid,uuid,text,text,text,text,timestamptz)',
         'EXECUTE'
       )
+      and has_function_privilege(
+        'service_role',
+        'public.app_evidence_review_decide_v2(uuid,uuid,text,text,text,text,text,text,timestamptz)',
+        'EXECUTE'
+      )
       and not has_function_privilege(
         'authenticated',
-        'public.app_evidence_review_decide_v1(uuid,uuid,text,text,text,text,timestamptz)',
+        'public.app_evidence_review_decide_v2(uuid,uuid,text,text,text,text,text,text,timestamptz)',
         'EXECUTE'
       )
     )::text;
@@ -529,7 +555,7 @@ try {
 
   const adminEndpoint = decisionEndpoint(database, AUTH_ADMIN);
   const endpointDetail = JSON.parse(await psql(database, `
-    select public.app_evidence_review_case_detail_read_v1(
+    select public.app_evidence_review_case_detail_read_v2(
       '${AUTH_ADMIN}','${CASE_REF_A}'
     );
   `));
@@ -567,6 +593,10 @@ try {
       EVIDENCE_A_V2,
       "CORRECTION_REQUIRED",
       "review11-conflict-a2",
+      {
+        correctionReason: "WRONG_DOCUMENT",
+        correctionInstruction: "Lever het juiste document aan.",
+      },
     ),
   );
   const conflicting = await conflictingResponse.json() as JsonObject;
@@ -578,13 +608,14 @@ try {
     "conflicting_decision_not_denied",
   );
   const [concurrentLeftRaw, concurrentRightRaw] = await Promise.all([
-    psqlResult(database, `select public.app_evidence_review_decide_v1(
-      '${AUTH_ADMIN}','${EVIDENCE_A_V1}','ACCEPTED',
+    psqlResult(database, `select public.app_evidence_review_decide_v2(
+      '${AUTH_ADMIN}','${EVIDENCE_A_V1}','ACCEPTED',null,null,
       'review11-concurrent-left','review11-concurrent-left',
       '${HASH_A}','${EXPIRES}'
     );`),
-    psqlResult(database, `select public.app_evidence_review_decide_v1(
+    psqlResult(database, `select public.app_evidence_review_decide_v2(
       '${AUTH_ADMIN}','${EVIDENCE_A_V1}','CORRECTION_REQUIRED',
+      'INCORRECT_INFORMATION','Controleer het opgegeven gegeven.',
       'review11-concurrent-right','review11-concurrent-right',
       '${HASH_B}','${EXPIRES}'
     );`),
@@ -614,6 +645,10 @@ try {
       EVIDENCE_B_V1,
       "CORRECTION_REQUIRED",
       "review11-correction-b1",
+      {
+        correctionReason: "MISSING_INFORMATION",
+        correctionInstruction: "Voeg het ontbrekende gegeven toe.",
+      },
     ),
   );
   const correction = await correctionResponse.json() as JsonObject;
@@ -654,23 +689,44 @@ try {
     states === "ACCEPTED|PENDING|CORRECTION_REQUIRED",
     `version_state_invalid:${states}`,
   );
+  const correctionProjection = parseEvidenceReviewCaseDetailSource(
+    JSON.parse(await psql(database, `select
+      public.app_evidence_review_case_detail_read_v2(
+        '${AUTH_REVIEWER}','${CASE_REF_A}'
+      );`)),
+  );
+  const projectedCorrection = correctionProjection?.evidence.find((item) =>
+    item.evidenceVersionRef === EVIDENCE_B_V1
+  );
+  const projectedPending = correctionProjection?.evidence.find((item) =>
+    item.evidenceVersionRef === EVIDENCE_A_V3
+  );
+  assert(
+    projectedCorrection?.correctionReason === "MISSING_INFORMATION" &&
+      projectedCorrection.correctionInstruction ===
+        "Voeg het ontbrekende gegeven toe." &&
+      projectedPending?.reviewStatus === "PENDING" &&
+      !("correctionReason" in projectedPending),
+    "correction_detail_projection_failed",
+  );
   q(8);
 
   const noAuth = await psql(database, `
-    select public.app_evidence_review_decide_v1(
-      null,'${EVIDENCE_A_V2}','ACCEPTED','review02-no-auth',
+    select public.app_evidence_review_decide_v2(
+      null,'${EVIDENCE_A_V2}','ACCEPTED',null,null,'review02-no-auth',
       'review02-no-auth','${HASH_A}','${EXPIRES}'
     )->>'ok';
   `);
   const nonWorkforce = await psql(database, `
-    select public.app_evidence_review_decide_v1(
+    select public.app_evidence_review_decide_v2(
       '${AUTH_NON_WORKFORCE}','${EVIDENCE_A_V2}','ACCEPTED',
+      null,null,
       'review02-non-workforce','review02-non-workforce','${HASH_A}','${EXPIRES}'
     )->>'code';
   `);
   const insufficient = await psql(database, `
-    select public.app_evidence_review_decide_v1(
-      '${AUTH_MEMBER}','${EVIDENCE_A_V2}','ACCEPTED','review02-member-denied',
+    select public.app_evidence_review_decide_v2(
+      '${AUTH_MEMBER}','${EVIDENCE_A_V2}','ACCEPTED',null,null,'review02-member-denied',
       'review02-member-denied','${HASH_A}','${EXPIRES}'
     )->>'code';
   `);
@@ -702,14 +758,14 @@ try {
     );
   `);
   const noCapability = await psql(database, `
-    select public.app_evidence_review_decide_v1(
-      '${AUTH_NO_CAP}','${EVIDENCE_A_V2}','ACCEPTED','review02-no-cap',
+    select public.app_evidence_review_decide_v2(
+      '${AUTH_NO_CAP}','${EVIDENCE_A_V2}','ACCEPTED',null,null,'review02-no-cap',
       'review02-no-cap','${HASH_A}','${EXPIRES}'
     )->>'code';
   `);
   const wrongScope = await psql(database, `
-    select public.app_evidence_review_decide_v1(
-      '${AUTH_REVIEWER}','${EVIDENCE_OTHER}','ACCEPTED','review02-wrong-scope',
+    select public.app_evidence_review_decide_v2(
+      '${AUTH_REVIEWER}','${EVIDENCE_OTHER}','ACCEPTED',null,null,'review02-wrong-scope',
       'review02-wrong-scope','${HASH_A}','${EXPIRES}'
     )->>'code';
   `);
@@ -717,6 +773,35 @@ try {
     noCapability === "capability_not_authorized" &&
       wrongScope === "case_scope_denied",
     "capability_or_scope_failure_not_closed",
+  );
+  const invalidContracts = await psql(database, `select concat_ws('|',
+    public.app_evidence_review_decide_v2(
+      '${AUTH_ADMIN}','${EVIDENCE_A_V3}','ACCEPTED','OTHER','Niet toegestaan.',
+      'review12-invalid-accepted','review12-invalid-accepted','${HASH_A}','${EXPIRES}'
+    )->>'code',
+    public.app_evidence_review_decide_v2(
+      '${AUTH_ADMIN}','${EVIDENCE_A_V3}','CORRECTION_REQUIRED',null,
+      'Voeg informatie toe.','review12-no-reason','review12-no-reason',
+      '${HASH_A}','${EXPIRES}'
+    )->>'code',
+    public.app_evidence_review_decide_v2(
+      '${AUTH_ADMIN}','${EVIDENCE_A_V3}','CORRECTION_REQUIRED','OTHER',null,
+      'review12-no-instruction','review12-no-instruction','${HASH_A}','${EXPIRES}'
+    )->>'code',
+    public.app_evidence_review_decide_v2(
+      '${AUTH_ADMIN}','${EVIDENCE_A_V3}','CORRECTION_REQUIRED','OTHER','   ',
+      'review12-whitespace','review12-whitespace','${HASH_A}','${EXPIRES}'
+    )->>'code',
+    public.app_evidence_review_decide_v2(
+      '${AUTH_ADMIN}','${EVIDENCE_A_V3}','CORRECTION_REQUIRED','UNKNOWN',
+      'Voeg informatie toe.','review12-unknown','review12-unknown',
+      '${HASH_A}','${EXPIRES}'
+    )->>'code'
+  );`);
+  assert(
+    invalidContracts ===
+      "invalid_input|invalid_input|invalid_input|invalid_input|invalid_input",
+    `database_conditional_contract_open:${invalidContracts}`,
   );
   q(10);
 
@@ -736,8 +821,8 @@ try {
   `);
   await reject(database, `
     update public.app_evidence_review_decisions
-    set decision='CORRECTION_REQUIRED'
-    where evidence_version_id='${EVIDENCE_A_V2}';
+    set correction_instruction='Gewijzigde instructie.'
+    where evidence_version_id='${EVIDENCE_B_V1}';
   `);
   await reject(database, `
     delete from public.app_evidence_review_decisions

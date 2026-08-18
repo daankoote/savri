@@ -29,7 +29,12 @@ const DECIDED_AT = "2026-08-18T12:00:00.000Z";
 const EXPIRES = "2030-01-01T00:00:00.000Z";
 
 type Decision = "ACCEPTED" | "CORRECTION_REQUIRED";
-type DecisionRow = Readonly<{ decision: Decision; decidedAt: string }>;
+type DecisionRow = Readonly<{
+  decision: Decision;
+  decidedAt: string;
+  correctionReason: string | null;
+  correctionInstruction: string | null;
+}>;
 type RpcCall = Readonly<{ name: string; args: JsonObject }>;
 
 function sourceEvidence(
@@ -45,6 +50,8 @@ function sourceEvidence(
     sha256_present: true,
     review_status: row?.decision ?? "PENDING",
     decided_at: row?.decidedAt ?? null,
+    correction_reason: row?.correctionReason ?? null,
+    correction_instruction: row?.correctionInstruction ?? null,
     canonical_facts: [],
   };
 }
@@ -123,10 +130,10 @@ function makeHarness(authUserId = AUTH) {
           data: { ok: false, status: 403, code: "case_scope_denied" },
         };
       }
-      if (name === "app_evidence_review_case_detail_read_v1") {
+      if (name === "app_evidence_review_case_detail_read_v2") {
         return { data: detailSource(rows) };
       }
-      if (name === "app_evidence_review_decide_v1") {
+      if (name === "app_evidence_review_decide_v2") {
         if (auth === AUTH_VIEW_ONLY) {
           return {
             data: {
@@ -162,7 +169,16 @@ function makeHarness(authUserId = AUTH) {
           };
         }
         const decision = args.p_decision as Decision;
-        rows.set(evidenceVersionRef, { decision, decidedAt: DECIDED_AT });
+        const correctionReason = args.p_correction_reason as string | null;
+        const correctionInstruction = args.p_correction_instruction as
+          | string
+          | null;
+        rows.set(evidenceVersionRef, {
+          decision,
+          decidedAt: DECIDED_AT,
+          correctionReason,
+          correctionInstruction,
+        });
         const response: JsonObject = {
           ok: true,
           status: 201,
@@ -170,6 +186,8 @@ function makeHarness(authUserId = AUTH) {
           evidence_version_id: evidenceVersionRef,
           review_decision_id: "a4000000-0000-4000-8000-000000000001",
           review_state: decision,
+          correction_reason: correctionReason,
+          correction_instruction: correctionInstruction,
           reviewer_workforce_identity_id: "must-not-leak",
           payload_sha256: "must-not-leak",
         };
@@ -211,10 +229,15 @@ function makeHarness(authUserId = AUTH) {
       timestamp: "2026-08-18T12:00:00.000Z",
       environment: "local",
     }),
-    hashPayload: async (payload) =>
-      JSON.stringify(payload).includes("CORRECTION_REQUIRED")
-        ? "b".repeat(64)
-        : "a".repeat(64),
+    hashPayload: async (payload) => {
+      const digest = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(JSON.stringify(payload)),
+      );
+      return Array.from(new Uint8Array(digest))
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("");
+    },
     verifyBearer: async () => ({
       ok: true,
       context: {
@@ -239,6 +262,71 @@ try {
     })?.decision === "ACCEPTED",
     "valid_contract_rejected",
   );
+  const normalizedCorrection = normalizeEvidenceReviewDecisionRequest({
+    caseRef: CASE_REF,
+    evidenceVersionRef: EVIDENCE_CORRECT,
+    decision: "CORRECTION_REQUIRED",
+    correctionReason: "WRONG_DOCUMENT",
+    correctionInstruction: "  Lever het juiste document aan.  ",
+  });
+  assert(
+    normalizedCorrection?.correctionReason === "WRONG_DOCUMENT" &&
+      normalizedCorrection.correctionInstruction ===
+        "Lever het juiste document aan.",
+    "valid_correction_not_normalized",
+  );
+  for (
+    const invalidCorrection of [
+      {
+        correctionInstruction: "Voeg informatie toe.",
+      },
+      {
+        correctionReason: "MISSING_INFORMATION",
+      },
+      {
+        correctionReason: "MISSING_INFORMATION",
+        correctionInstruction: "   ",
+      },
+      {
+        correctionReason: "UNKNOWN",
+        correctionInstruction: "Voeg informatie toe.",
+      },
+      {
+        correctionReason: "OTHER",
+        correctionInstruction: "...",
+      },
+    ]
+  ) {
+    assert(
+      normalizeEvidenceReviewDecisionRequest({
+        caseRef: CASE_REF,
+        evidenceVersionRef: EVIDENCE_CORRECT,
+        decision: "CORRECTION_REQUIRED",
+        ...invalidCorrection,
+      }) === null,
+      "invalid_correction_contract_accepted",
+    );
+  }
+  for (
+    const acceptedDetails of [
+      { correctionReason: "OTHER" },
+      { correctionInstruction: "Niet toegestaan." },
+      {
+        correctionReason: "OTHER",
+        correctionInstruction: "Niet toegestaan.",
+      },
+    ]
+  ) {
+    assert(
+      normalizeEvidenceReviewDecisionRequest({
+        caseRef: CASE_REF,
+        evidenceVersionRef: EVIDENCE_ACCEPT,
+        decision: "ACCEPTED",
+        ...acceptedDetails,
+      }) === null,
+      "accepted_correction_details_not_denied",
+    );
+  }
   for (const decision of ["PENDING", "APPROVED", "REJECTED", "accepted", ""]) {
     assert(
       normalizeEvidenceReviewDecisionRequest({
@@ -282,7 +370,7 @@ try {
         "caseRef|decision|decisionAt|evidenceVersionRef|outcome|schemaVersion" &&
       !JSON.stringify(acceptedBody).includes("must-not-leak") &&
       acceptedHarness.calls.map((call) => call.name).join("|") ===
-        "app_evidence_review_case_detail_read_v1|app_evidence_review_decide_v1|app_evidence_review_state_v1" &&
+        "app_evidence_review_case_detail_read_v2|app_evidence_review_decide_v2|app_evidence_review_state_v1" &&
       acceptedHarness.calls[1].args.p_auth_user_id === AUTH &&
       acceptedHarness.calls[1].args.p_evidence_version_id === EVIDENCE_ACCEPT &&
       acceptedHarness.calls[1].args.p_decision === "ACCEPTED" &&
@@ -301,7 +389,10 @@ try {
     "exact_retry_not_idempotent",
   );
   const conflict = await acceptedHarness.handler(
-    request(EVIDENCE_ACCEPT, "CORRECTION_REQUIRED", "review11-conflict"),
+    request(EVIDENCE_ACCEPT, "CORRECTION_REQUIRED", "review11-conflict", {
+      correctionReason: "MISSING_INFORMATION",
+      correctionInstruction: "Voeg het ontbrekende gegeven toe.",
+    }),
   );
   assert(
     conflict.status === 409 &&
@@ -312,14 +403,56 @@ try {
 
   const correctionHarness = makeHarness();
   const correction = await correctionHarness.handler(
-    request(EVIDENCE_CORRECT, "CORRECTION_REQUIRED", "review11-correction"),
+    request(EVIDENCE_CORRECT, "CORRECTION_REQUIRED", "review12-correction", {
+      correctionReason: "MISSING_INFORMATION",
+      correctionInstruction: "  Voeg het ontbrekende gegeven toe.  ",
+    }),
   );
+  const correctionBody = await json(correction);
   assert(
     correction.status === 201 &&
-      (await json(correction)).decision === "CORRECTION_REQUIRED" &&
+      correctionBody.decision === "CORRECTION_REQUIRED" &&
       correctionHarness.rows.get(EVIDENCE_CORRECT)?.decision ===
-        "CORRECTION_REQUIRED",
+        "CORRECTION_REQUIRED" &&
+      correctionHarness.rows.get(EVIDENCE_CORRECT)?.correctionReason ===
+        "MISSING_INFORMATION" &&
+      correctionHarness.rows.get(EVIDENCE_CORRECT)?.correctionInstruction ===
+        "Voeg het ontbrekende gegeven toe.",
     "correction_runtime_contract_failed",
+  );
+  const correctionRetry = await correctionHarness.handler(
+    request(EVIDENCE_CORRECT, "CORRECTION_REQUIRED", "review12-correction", {
+      correctionReason: "MISSING_INFORMATION",
+      correctionInstruction: "Voeg het ontbrekende gegeven toe.",
+    }),
+  );
+  assert(
+    correctionRetry.status === 201 &&
+      (await json(correctionRetry)).outcome === "ALREADY_RECORDED" &&
+      correctionHarness.rows.size === 1,
+    "correction_exact_retry_not_idempotent",
+  );
+  const changedReason = await correctionHarness.handler(
+    request(EVIDENCE_CORRECT, "CORRECTION_REQUIRED", "review12-correction", {
+      correctionReason: "INCORRECT_INFORMATION",
+      correctionInstruction: "Voeg het ontbrekende gegeven toe.",
+    }),
+  );
+  assert(
+    changedReason.status === 409 &&
+      responseCode(await json(changedReason)) === "idempotency_conflict",
+    "changed_reason_replay_not_denied",
+  );
+  const changedInstruction = await correctionHarness.handler(
+    request(EVIDENCE_CORRECT, "CORRECTION_REQUIRED", "review12-correction", {
+      correctionReason: "MISSING_INFORMATION",
+      correctionInstruction: "Lever een ander document aan.",
+    }),
+  );
+  assert(
+    changedInstruction.status === 409 &&
+      responseCode(await json(changedInstruction)) === "idempotency_conflict",
+    "changed_instruction_replay_not_denied",
   );
 
   for (

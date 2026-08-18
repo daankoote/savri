@@ -11,20 +11,26 @@ import {
   requireVerifiedSupabaseAuthUser,
 } from "../_shared/app_customer_auth.ts";
 import {
+  boundedString,
   configuredExpiry,
   defaultServiceClient,
   type JsonObject,
   type ServiceClient,
 } from "../_shared/app_workforce_authorization.ts";
 import {
+  EVIDENCE_REVIEW_CORRECTION_INSTRUCTION_MAX_LENGTH,
+  EVIDENCE_REVIEW_CORRECTION_REASONS,
+  type EvidenceReviewCorrectionReason,
   parseEvidenceReviewCaseDetailSource,
 } from "../_shared/app_evidence_review_case_detail.ts";
 
-const DETAIL_RPC = "app_evidence_review_case_detail_read_v1";
-const DECIDE_RPC = "app_evidence_review_decide_v1";
+const DETAIL_RPC = "app_evidence_review_case_detail_read_v2";
+const DECIDE_RPC = "app_evidence_review_decide_v2";
 const STATE_RPC = "app_evidence_review_state_v1";
 const BODY_KEYS = Object.freeze([
   "caseRef",
+  "correctionInstruction",
+  "correctionReason",
   "decision",
   "evidenceVersionRef",
 ]);
@@ -33,6 +39,9 @@ const CASE_REFERENCE_RE =
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DECISIONS = new Set(["ACCEPTED", "CORRECTION_REQUIRED"] as const);
+const CORRECTION_REASONS = new Set(EVIDENCE_REVIEW_CORRECTION_REASONS);
+export const CORRECTION_INSTRUCTION_MAX_LENGTH =
+  EVIDENCE_REVIEW_CORRECTION_INSTRUCTION_MAX_LENGTH;
 
 type ReviewDecision = "ACCEPTED" | "CORRECTION_REQUIRED";
 type RpcResult = { data?: unknown; error?: unknown };
@@ -85,12 +94,11 @@ export function normalizeEvidenceReviewDecisionRequest(
     caseRef: string;
     evidenceVersionRef: string;
     decision: ReviewDecision;
+    correctionReason?: EvidenceReviewCorrectionReason;
+    correctionInstruction?: string;
   }>
   | null {
-  if (
-    Object.keys(body).length !== BODY_KEYS.length ||
-    Object.keys(body).some((key) => !BODY_KEYS.includes(key))
-  ) return null;
+  if (Object.keys(body).some((key) => !BODY_KEYS.includes(key))) return null;
   if (
     typeof body.caseRef !== "string" || body.caseRef !== body.caseRef.trim() ||
     !CASE_REFERENCE_RE.test(body.caseRef) ||
@@ -100,10 +108,39 @@ export function normalizeEvidenceReviewDecisionRequest(
     typeof body.decision !== "string" ||
     !DECISIONS.has(body.decision as ReviewDecision)
   ) return null;
+  const decision = body.decision as ReviewDecision;
+  const baseKeys = ["caseRef", "decision", "evidenceVersionRef"];
+  if (decision === "ACCEPTED") {
+    if (
+      Object.keys(body).length !== baseKeys.length ||
+      "correctionReason" in body || "correctionInstruction" in body
+    ) return null;
+    return Object.freeze({
+      caseRef: body.caseRef,
+      evidenceVersionRef: body.evidenceVersionRef,
+      decision,
+    });
+  }
+  if (
+    Object.keys(body).length !== BODY_KEYS.length ||
+    typeof body.correctionReason !== "string" ||
+    !CORRECTION_REASONS.has(
+      body.correctionReason as EvidenceReviewCorrectionReason,
+    )
+  ) return null;
+  const correctionInstruction = boundedString(
+    body.correctionInstruction,
+    CORRECTION_INSTRUCTION_MAX_LENGTH,
+  );
+  if (!correctionInstruction || !/[\p{L}\p{N}]/u.test(correctionInstruction)) {
+    return null;
+  }
   return Object.freeze({
     caseRef: body.caseRef,
     evidenceVersionRef: body.evidenceVersionRef,
-    decision: body.decision as ReviewDecision,
+    decision,
+    correctionReason: body.correctionReason as EvidenceReviewCorrectionReason,
+    correctionInstruction,
   });
 }
 
@@ -244,17 +281,21 @@ export function createHandler(
     }
 
     const canonicalHash = await deps.hashPayload({
-      contract_version: "review11_evidence_review_decision_v1",
+      contract_version: "review12_evidence_review_decision_v2",
       caller: "api-app-evidence-review-decision",
       auth_user_id: verified.context.authUserId,
       case_ref: request.caseRef,
       evidence_version_ref: request.evidenceVersionRef,
       decision: request.decision,
+      correction_reason: request.correctionReason ?? null,
+      correction_instruction: request.correctionInstruction ?? null,
     });
     const decisionResult = await serviceClient.rpc(DECIDE_RPC, {
       p_auth_user_id: verified.context.authUserId,
       p_evidence_version_id: request.evidenceVersionRef,
       p_decision: request.decision,
+      p_correction_reason: request.correctionReason ?? null,
+      p_correction_instruction: request.correctionInstruction ?? null,
       p_request_id: meta.request_id,
       p_idempotency_key: meta.idempotency_key,
       p_payload_sha256: canonicalHash,
@@ -273,7 +314,11 @@ export function createHandler(
     }
     if (
       decisionResult.data.evidence_version_id !== request.evidenceVersionRef ||
-      decisionResult.data.review_state !== request.decision
+      decisionResult.data.review_state !== request.decision ||
+      decisionResult.data.correction_reason !==
+        (request.correctionReason ?? null) ||
+      decisionResult.data.correction_instruction !==
+        (request.correctionInstruction ?? null)
     ) {
       return appErrorResponse(
         req,
@@ -314,7 +359,7 @@ export function createHandler(
       ? "ALREADY_RECORDED"
       : "RECORDED";
     return appJsonResponse(req, 201, {
-      schemaVersion: "evidence-review-decision-v1",
+      schemaVersion: "evidence-review-decision-v2",
       caseRef: request.caseRef,
       evidenceVersionRef: request.evidenceVersionRef,
       decision: request.decision,

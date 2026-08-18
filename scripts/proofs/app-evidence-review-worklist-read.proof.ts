@@ -685,8 +685,10 @@ async function databaseProof(): Promise<number> {
     [VERSION.correctionOld, "CORRECTION_REQUIRED", "correction-old"],
   ]) {
     const result = await psql(DATABASE, `select
-      public.app_evidence_review_decide_v1(
+      public.app_evidence_review_decide_v2(
         '${AUTH_ADMIN}','${versionId}','${decision}',
+        ${decision === "CORRECTION_REQUIRED" ? "'MISSING_INFORMATION'" : "null"},
+        ${decision === "CORRECTION_REQUIRED" ? "'Voeg het ontbrekende gegeven toe.'" : "null"},
         'review04-decision-${suffix}','review04-decision-${suffix}',
         '${HASH}','${EXPIRES}'
       )->>'ok';`);
