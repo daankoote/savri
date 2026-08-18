@@ -1,3 +1,17 @@
+import {
+  createHandler as createDecisionHandler,
+} from "../../supabase/functions/api-app-evidence-review-decision/index.ts";
+import type {
+  AppRequestMeta,
+} from "../../supabase/functions/_shared/app_foundation.ts";
+import type {
+  JsonObject,
+  ServiceClient,
+} from "../../supabase/functions/_shared/app_workforce_authorization.ts";
+import {
+  parseEvidenceReviewCaseDetailSource,
+} from "../../supabase/functions/_shared/app_evidence_review_case_detail.ts";
+
 const CONTAINER = "supabase_db_enval";
 const MAIN_DATABASE = "postgres";
 const DATABASE_PREFIX = "enval_review02_proof_";
@@ -168,12 +182,107 @@ const EVIDENCE_FILE_B = "b4000000-0000-4000-8000-000000000002";
 const EVIDENCE_FILE_OTHER = "b4000000-0000-4000-8000-000000000003";
 const EVIDENCE_A_V1 = "b5000000-0000-4000-8000-000000000001";
 const EVIDENCE_A_V2 = "b5000000-0000-4000-8000-000000000002";
+const EVIDENCE_A_V3 = "b5000000-0000-4000-8000-000000000005";
 const EVIDENCE_B_V1 = "b5000000-0000-4000-8000-000000000003";
 const EVIDENCE_OTHER = "b5000000-0000-4000-8000-000000000004";
 const HASH_A = "a".repeat(64);
 const HASH_B = "b".repeat(64);
 const HASH_C = "c".repeat(64);
 const EXPIRES = "2030-01-01T00:00:00Z";
+const CASE_REF_A = "CASE-A00000000001";
+const CASE_REF_B = "CASE-B00000000002";
+
+function sqlText(value: unknown): string {
+  return `'${String(value).replaceAll("'", "''")}'`;
+}
+
+function databaseServiceClient(database: string): ServiceClient {
+  return {
+    auth: { getUser: async () => ({ data: { user: null } }) },
+    from: () => ({}),
+    rpc: async (name, args) => {
+      let sql: string;
+      if (name === "app_evidence_review_case_detail_read_v1") {
+        sql = `select public.app_evidence_review_case_detail_read_v1(
+          ${sqlText(args.p_auth_user_id)}::uuid,
+          ${sqlText(args.p_case_ref)}
+        )::text;`;
+      } else if (name === "app_evidence_review_decide_v1") {
+        sql = `select public.app_evidence_review_decide_v1(
+          ${sqlText(args.p_auth_user_id)}::uuid,
+          ${sqlText(args.p_evidence_version_id)}::uuid,
+          ${sqlText(args.p_decision)},
+          ${sqlText(args.p_request_id)},
+          ${sqlText(args.p_idempotency_key)},
+          ${sqlText(args.p_payload_sha256)},
+          ${sqlText(args.p_idempotency_expires_at)}::timestamptz
+        )::text;`;
+      } else if (name === "app_evidence_review_state_v1") {
+        sql = `select public.app_evidence_review_state_v1(
+          ${sqlText(args.p_auth_user_id)}::uuid,
+          ${sqlText(args.p_evidence_version_id)}::uuid
+        )::text;`;
+      } else {
+        return { error: new Error("unexpected_rpc") };
+      }
+      const result = await psqlResult(database, sql);
+      return result.code === 0
+        ? { data: JSON.parse(result.stdout) }
+        : { error: new Error(scrub(result.stderr || "rpc_failed")) };
+    },
+  };
+}
+
+function decisionRequest(
+  evidenceVersionRef: string,
+  decision: "ACCEPTED" | "CORRECTION_REQUIRED",
+  idempotencyKey: string,
+): Request {
+  return new Request("https://enval.local/api-app-evidence-review-decision", {
+    method: "POST",
+    headers: {
+      authorization: "Bearer proof-token",
+      "content-type": "application/json",
+      "idempotency-key": idempotencyKey,
+    },
+    body: JSON.stringify({
+      caseRef: CASE_REF_A,
+      evidenceVersionRef,
+      decision,
+    }),
+  });
+}
+
+function decisionEndpoint(database: string, authUserId: string) {
+  const client = databaseServiceClient(database);
+  return createDecisionHandler({
+    createServiceClient: () => client,
+    idempotencyExpiresAt: () => EXPIRES,
+    requestMeta: async (req): Promise<AppRequestMeta> => ({
+      request_id: `review11:${req.headers.get("idempotency-key")}`,
+      idempotency_key: req.headers.get("idempotency-key"),
+      ip_hash: null,
+      user_agent_hash: null,
+      method: req.method,
+      path: "/api-app-evidence-review-decision",
+      url: req.url,
+      origin: null,
+      timestamp: "2026-08-18T12:00:00.000Z",
+      environment: "local",
+    }),
+    hashPayload: async (payload) =>
+      JSON.stringify(payload).includes("CORRECTION_REQUIRED")
+        ? HASH_C
+        : HASH_A,
+    verifyBearer: async () => ({
+      ok: true,
+      context: {
+        authUserId,
+        emailNormalized: "proof@example.invalid",
+      },
+    }),
+  });
+}
 
 const database = `${DATABASE_PREFIX}${crypto.randomUUID().replaceAll("-", "")}`;
 const before = await activeFingerprint();
@@ -297,10 +406,18 @@ try {
       id,customer_id,case_reference,created_at,created_by_actor_type,
       created_by_actor_ref,source_class,source_ref,request_id
     ) values
-      ('${CASE_A}','${CUSTOMER}','REVIEW02CASEA',clock_timestamp(),'system',
+      ('${CASE_A}','${CUSTOMER}','${CASE_REF_A}',clock_timestamp(),'system',
        'actor:proof','proof','review02-case-a','review02-case-a'),
-      ('${CASE_B}','${CUSTOMER}','REVIEW02CASEB',clock_timestamp(),'system',
+      ('${CASE_B}','${CUSTOMER}','${CASE_REF_B}',clock_timestamp(),'system',
        'actor:proof','proof','review02-case-b','review02-case-b');
+    insert into public.app_case_lifecycle_events (
+      case_id,promotion_id,lifecycle_state,event_at,actor_type,actor_ref,
+      source_class,source_ref,request_id,event_data
+    ) values
+      ('${CASE_A}',null,'submitted_for_review',clock_timestamp(),'system',
+       'actor:proof','proof','review02-case-a','review02-lifecycle-a','{}'),
+      ('${CASE_B}',null,'submitted_for_review',clock_timestamp(),'system',
+       'actor:proof','proof','review02-case-b','review02-lifecycle-b','{}');
     set session_replication_role = replica;
     insert into public.app_evidence_files (
       id,case_id,promotion_id,document_type,source_class,source_ref,
@@ -404,68 +521,129 @@ try {
 
   const pending = await psql(database, `
     select public.app_evidence_review_state_v1(
-      '${AUTH_MEMBER}','${EVIDENCE_A_V1}'
+      '${AUTH_MEMBER}','${EVIDENCE_A_V2}'
     )->>'review_state';
   `);
   assert(pending === "PENDING", "pending_not_derived_from_absence");
   q(5);
 
-  const acceptedRaw = await psql(database, `
-    select public.app_evidence_review_decide_v1(
-      '${AUTH_ADMIN}','${EVIDENCE_A_V1}','ACCEPTED','review02-accept-a1',
-      'review02-accept-a1','${HASH_A}','${EXPIRES}'
-    );
-  `);
-  const accepted = JSON.parse(acceptedRaw);
-  assert(
-    accepted.ok === true && accepted.review_state === "ACCEPTED" &&
-      typeof accepted.review_decision_id === "string",
-    "admin_accept_failed",
-  );
-  const replay = JSON.parse(await psql(database, `
-    select public.app_evidence_review_decide_v1(
-      '${AUTH_ADMIN}','${EVIDENCE_A_V1}','ACCEPTED','review02-accept-a1',
-      'review02-accept-a1','${HASH_A}','${EXPIRES}'
+  const adminEndpoint = decisionEndpoint(database, AUTH_ADMIN);
+  const endpointDetail = JSON.parse(await psql(database, `
+    select public.app_evidence_review_case_detail_read_v1(
+      '${AUTH_ADMIN}','${CASE_REF_A}'
     );
   `));
   assert(
-    replay.ok === true &&
-      replay.review_decision_id === accepted.review_decision_id,
+    endpointDetail.ok === true &&
+      parseEvidenceReviewCaseDetailSource(endpointDetail) !== null,
+    `endpoint_detail_invalid:${JSON.stringify(endpointDetail)}`,
+  );
+  const acceptedResponse = await adminEndpoint(
+    decisionRequest(EVIDENCE_A_V2, "ACCEPTED", "review11-accept-a2"),
+  );
+  const accepted = await acceptedResponse.json() as JsonObject;
+  assert(
+    acceptedResponse.status === 201 && accepted.decision === "ACCEPTED" &&
+      accepted.outcome === "RECORDED" &&
+      accepted.evidenceVersionRef === EVIDENCE_A_V2 &&
+      typeof accepted.decisionAt === "string",
+    `admin_accept_failed:${acceptedResponse.status}:${JSON.stringify(accepted)}`,
+  );
+  const replayResponse = await adminEndpoint(
+    decisionRequest(EVIDENCE_A_V2, "ACCEPTED", "review11-accept-a2"),
+  );
+  const replay = await replayResponse.json() as JsonObject;
+  assert(
+    replayResponse.status === 201 && replay.decision === "ACCEPTED" &&
+      replay.outcome === "ALREADY_RECORDED" &&
+      await psql(database, `select count(*) from public.app_evidence_review_decisions
+        where evidence_version_id='${EVIDENCE_A_V2}';`) === "1",
     "identical_retry_not_idempotent",
   );
   q(6);
 
-  const conflicting = JSON.parse(await psql(database, `
-    select public.app_evidence_review_decide_v1(
-      '${AUTH_ADMIN}','${EVIDENCE_A_V1}','CORRECTION_REQUIRED',
-      'review02-conflict-a1','review02-conflict-a1','${HASH_B}','${EXPIRES}'
-    );
-  `));
+  const conflictingResponse = await adminEndpoint(
+    decisionRequest(
+      EVIDENCE_A_V2,
+      "CORRECTION_REQUIRED",
+      "review11-conflict-a2",
+    ),
+  );
+  const conflicting = await conflictingResponse.json() as JsonObject;
   assert(
-    conflicting.ok === false && conflicting.status === 409 &&
-      conflicting.code === "evidence_already_decided",
+    conflictingResponse.status === 409 &&
+      conflicting.code === "evidence_already_decided" &&
+      await psql(database, `select decision from public.app_evidence_review_decisions
+        where evidence_version_id='${EVIDENCE_A_V2}';`) === "ACCEPTED",
     "conflicting_decision_not_denied",
+  );
+  const [concurrentLeftRaw, concurrentRightRaw] = await Promise.all([
+    psqlResult(database, `select public.app_evidence_review_decide_v1(
+      '${AUTH_ADMIN}','${EVIDENCE_A_V1}','ACCEPTED',
+      'review11-concurrent-left','review11-concurrent-left',
+      '${HASH_A}','${EXPIRES}'
+    );`),
+    psqlResult(database, `select public.app_evidence_review_decide_v1(
+      '${AUTH_ADMIN}','${EVIDENCE_A_V1}','CORRECTION_REQUIRED',
+      'review11-concurrent-right','review11-concurrent-right',
+      '${HASH_B}','${EXPIRES}'
+    );`),
+  ]);
+  assert(
+    concurrentLeftRaw.code === 0 && concurrentRightRaw.code === 0,
+    "concurrent_rpc_failed",
+  );
+  const concurrentResults = [
+    JSON.parse(concurrentLeftRaw.stdout),
+    JSON.parse(concurrentRightRaw.stdout),
+  ] as JsonObject[];
+  assert(
+    concurrentResults.filter((result) => result.ok === true).length === 1 &&
+      concurrentResults.filter((result) =>
+        result.ok === false && result.code === "evidence_already_decided"
+      ).length === 1 &&
+      await psql(database, `select count(*) from public.app_evidence_review_decisions
+        where evidence_version_id='${EVIDENCE_A_V1}';`) === "1",
+    "concurrent_single_truth_failed",
   );
   q(7);
 
-  const correction = JSON.parse(await psql(database, `
-    select public.app_evidence_review_decide_v1(
-      '${AUTH_REVIEWER}','${EVIDENCE_B_V1}','CORRECTION_REQUIRED',
-      'review02-correction-b1','review02-correction-b1','${HASH_C}','${EXPIRES}'
-    );
-  `));
+  const reviewerEndpoint = decisionEndpoint(database, AUTH_REVIEWER);
+  const correctionResponse = await reviewerEndpoint(
+    decisionRequest(
+      EVIDENCE_B_V1,
+      "CORRECTION_REQUIRED",
+      "review11-correction-b1",
+    ),
+  );
+  const correction = await correctionResponse.json() as JsonObject;
   assert(
-    correction.ok === true &&
-      correction.review_state === "CORRECTION_REQUIRED",
+    correctionResponse.status === 201 &&
+      correction.decision === "CORRECTION_REQUIRED" &&
+      correction.outcome === "RECORDED",
     "reviewer_correction_failed",
   );
+  await psql(database, `
+    set session_replication_role = replica;
+    insert into public.app_evidence_versions (
+      id,evidence_file_id,version_number,source_intake_file_id,
+      storage_bucket,storage_path,detected_mime_type,size_bytes,sha256,status,
+      source_confirmed_at,created_at,request_id,idempotency_key
+    ) values (
+      '${EVIDENCE_A_V3}','${EVIDENCE_FILE_A}',3,
+      'b7000000-0000-4000-8000-000000000005','proof','a-v3.pdf',
+      'application/pdf',104,'${HASH_C}','confirmed_awaiting_review',
+      clock_timestamp(),clock_timestamp(),'evidence:a:v3','evidence:a:v3'
+    );
+    set session_replication_role = origin;
+  `);
   const states = await psql(database, `
     select concat_ws('|',
       public.app_evidence_review_state_v1(
-        '${AUTH_MEMBER}','${EVIDENCE_A_V1}'
+        '${AUTH_MEMBER}','${EVIDENCE_A_V2}'
       )->>'review_state',
       public.app_evidence_review_state_v1(
-        '${AUTH_MEMBER}','${EVIDENCE_A_V2}'
+        '${AUTH_MEMBER}','${EVIDENCE_A_V3}'
       )->>'review_state',
       public.app_evidence_review_state_v1(
         '${AUTH_MEMBER}','${EVIDENCE_B_V1}'
@@ -559,11 +737,11 @@ try {
   await reject(database, `
     update public.app_evidence_review_decisions
     set decision='CORRECTION_REQUIRED'
-    where evidence_version_id='${EVIDENCE_A_V1}';
+    where evidence_version_id='${EVIDENCE_A_V2}';
   `);
   await reject(database, `
     delete from public.app_evidence_review_decisions
-    where evidence_version_id='${EVIDENCE_A_V1}';
+    where evidence_version_id='${EVIDENCE_A_V2}';
   `);
   q(11);
 
@@ -583,7 +761,7 @@ try {
       and decision.request_id<>'' and decision.idempotency_key<>''
       and scope.case_id=decision.case_id;
   `);
-  assert(provenance === "2", "review_audit_provenance_incomplete");
+  assert(provenance === "3", "review_audit_provenance_incomplete");
   q(12);
 
   const isolation = await psql(database, `
@@ -594,10 +772,10 @@ try {
       (select count(*) from public.app_case_party_roles),
       (select count(*) from public.app_evidence_review_decisions),
       (select count(*) from public.app_evidence_review_decisions
-       where evidence_version_id='${EVIDENCE_A_V1}' and decision='ACCEPTED')
+       where evidence_version_id='${EVIDENCE_A_V2}' and decision='ACCEPTED')
     );
   `);
-  assert(isolation === "4|0|0|0|2|1", `semantic_isolation_failed:${isolation}`);
+  assert(isolation === "5|0|0|0|3|1", `semantic_isolation_failed:${isolation}`);
   q(13);
 
   const closedValues = await psql(database, `
@@ -615,7 +793,7 @@ try {
 
   console.log("EVIDENCE_REVIEW_FOUNDATION_Q01_Q14=PASS");
   console.log("PENDING_DERIVED_FROM_ABSENCE=PASS");
-  console.log("V1_ACCEPTED_V2_PENDING=PASS");
+  console.log("ACCEPTED_VERSION_NEW_VERSION_PENDING=PASS");
   console.log("BROWSER_DIRECT_MUTATION_DENIED=PASS");
   console.log("SEMANTIC_ISOLATION=PASS");
 } catch (error) {

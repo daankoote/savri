@@ -496,6 +496,25 @@ const CHECK_LIST = [
     expectedMarker: "COMPLIANCE_WORKLIST_READ_Q01_Q20=PASS",
   }),
   check({
+    id: "evidence-review-decision-pure",
+    argv: [
+      "deno",
+      "run",
+      "--cached-only",
+      "--allow-env=ALLOWED_ORIGINS,ALLOWED_ORIGIN",
+      "scripts/proofs/app-evidence-review-decision.proof.ts",
+    ],
+    domain: "tenant-evidence-review-decision-runtime",
+    applicablePaths: [
+      "supabase/functions/api-app-evidence-review-decision/index.ts",
+      "scripts/proofs/app-evidence-review-decision.proof.ts",
+    ],
+    safety: SAFETY.SAFE_PURE,
+    minimumMode: "TARGETED",
+    expectedDurationMs: 1_500,
+    expectedMarker: "EVIDENCE_REVIEW_DECISION_ENDPOINT_Q01_Q18=PASS",
+  }),
+  check({
     id: "evidence-review-foundation-pure",
     argv: [
       "deno",
@@ -522,12 +541,15 @@ const CHECK_LIST = [
       "run",
       "--cached-only",
       "--allow-read=supabase/migrations",
+      "--allow-env=ALLOWED_ORIGINS,ALLOWED_ORIGIN",
       "--allow-run=docker",
       "scripts/proofs/app-evidence-review-foundation.proof.ts",
     ],
     domain: "tenant-evidence-review-foundation",
     applicablePaths: [
       "supabase/migrations/20260817230000_app_evidence_review_foundation.sql",
+      "supabase/functions/api-app-evidence-review-decision/index.ts",
+      "scripts/proofs/app-evidence-review-decision.proof.ts",
       "scripts/proofs/app-evidence-review-foundation.proof.ts",
     ],
     safety: SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE,
@@ -1666,6 +1688,23 @@ export const PATH_RULES = Object.freeze([
     ]),
   }),
   Object.freeze({
+    id: "evidence-review-decision-runtime",
+    match: Object.freeze({
+      type: "oneOf",
+      value: Object.freeze([
+        "supabase/functions/api-app-evidence-review-decision/index.ts",
+        "scripts/proofs/app-evidence-review-decision.proof.ts",
+      ]),
+    }),
+    checks: Object.freeze([
+      "deno-check-changed",
+      "evidence-review-decision-pure",
+      "evidence-review-foundation-local",
+      "evidence-review-case-detail-local",
+      "evidence-review-worklist-read-local",
+    ]),
+  }),
+  Object.freeze({
     id: "evidence-review-foundation-proof",
     match: Object.freeze({
       type: "exact",
@@ -1673,6 +1712,7 @@ export const PATH_RULES = Object.freeze([
     }),
     checks: Object.freeze([
       "deno-check-changed",
+      "evidence-review-decision-pure",
       "evidence-review-foundation-pure",
       "evidence-review-foundation-local",
     ]),

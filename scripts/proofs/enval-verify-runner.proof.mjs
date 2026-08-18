@@ -174,6 +174,37 @@ assert(
   "tenant_migration_chain_proof_not_classified_or_deduplicated",
 );
 
+const evidenceReviewDecisionLocalService = buildPlan({
+  paths: [
+    "supabase/functions/api-app-evidence-review-decision/index.ts",
+    "scripts/proofs/app-evidence-review-decision.proof.ts",
+  ],
+  mode: "LOCAL_SERVICE",
+});
+assert(
+  evidenceReviewDecisionLocalService.selected.filter((check) =>
+    check.commandId === "evidence-review-decision-pure"
+  ).length === 1 &&
+    evidenceReviewDecisionLocalService.selected.filter((check) =>
+      check.commandId === "evidence-review-foundation-local"
+    ).length === 1 &&
+    evidenceReviewDecisionLocalService.selected.filter((check) =>
+      check.commandId === "evidence-review-case-detail-local"
+    ).length === 1 &&
+    evidenceReviewDecisionLocalService.selected.filter((check) =>
+      check.commandId === "evidence-review-worklist-read-local"
+    ).length === 1 &&
+    evidenceReviewDecisionLocalService.selected.some((check) =>
+      check.commandId === "evidence-review-foundation-local" &&
+      check.safety === SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE &&
+      check.mutatesState && !check.remote && !check.destructive
+    ) &&
+    evidenceReviewDecisionLocalService.selected.every((check) =>
+      !check.remote && !check.destructive
+    ),
+  "evidence_review_decision_proofs_not_classified_or_deduplicated",
+);
+
 const evidenceReviewLocalService = buildPlan({
   paths: [
     "supabase/migrations/20260817230000_app_evidence_review_foundation.sql",
