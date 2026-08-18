@@ -261,6 +261,7 @@ const evidenceReviewCaseDetailLocalService = buildPlan({
   paths: [
     "supabase/migrations/20260818120000_app_evidence_review_case_detail_read.sql",
     "supabase/migrations/20260818230000_app_evidence_fact_review_rounds.sql",
+    "supabase/migrations/20260819090000_app_evidence_review_current_round_read.sql",
     "supabase/functions/_shared/app_evidence_review_case_detail.ts",
     "supabase/functions/api-app-evidence-review-case-detail/index.ts",
     "supabase/functions/api-app-evidence-review-round-finalize/index.ts",

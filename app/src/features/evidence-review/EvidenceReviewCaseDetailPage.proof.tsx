@@ -59,7 +59,7 @@ function evidence(
 }
 
 const FIXTURE: EvidenceReviewCaseDetailResponseV1 = {
-  schemaVersion: "evidence-review-case-detail-v2",
+  schemaVersion: "evidence-review-case-detail-v3",
   asOf: "2026-08-18T12:00:00.000Z",
   case: {
     caseRef: CASE_REF,
@@ -135,6 +135,7 @@ const FIXTURE: EvidenceReviewCaseDetailResponseV1 = {
       reviewerSuggestion: "ACCEPT",
     },
   ],
+  currentReviewRound: null,
 };
 
 const previewSuccess = async () => ({
@@ -695,7 +696,7 @@ assert(
     !/(role\s*===|email\s*===|caseOwner|case_owner|workforceId|workforce_id|tenantId|tenant_id)/
       .test(value)
   ) &&
-    detailEndpointSource.includes("app_evidence_review_case_detail_read_v4") &&
+    detailEndpointSource.includes("app_evidence_review_case_detail_read_v5") &&
     previewEndpointSource.includes(
       "app_evidence_review_preview_source_read_v1",
     ) &&

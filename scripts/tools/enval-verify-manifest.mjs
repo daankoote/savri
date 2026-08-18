@@ -662,6 +662,7 @@ const CHECK_LIST = [
     ],
     domain: "tenant-evidence-review-case-detail",
     applicablePaths: [
+      "supabase/migrations/20260819090000_app_evidence_review_current_round_read.sql",
       "supabase/functions/_shared/app_evidence_review_case_detail.ts",
       "supabase/functions/api-app-evidence-review-case-detail/index.ts",
       "scripts/proofs/app-evidence-review-case-detail.proof.ts",
@@ -684,6 +685,7 @@ const CHECK_LIST = [
     domain: "tenant-evidence-fact-review-round",
     applicablePaths: [
       "supabase/migrations/20260818230000_app_evidence_fact_review_rounds.sql",
+      "supabase/migrations/20260819090000_app_evidence_review_current_round_read.sql",
       "supabase/functions/_shared/app_evidence_review_case_detail.ts",
       "supabase/functions/api-app-evidence-review-case-detail/index.ts",
       "supabase/functions/api-app-evidence-review-round-finalize/index.ts",
@@ -713,6 +715,7 @@ const CHECK_LIST = [
       "supabase/migrations/20260818210000_app_evidence_review_correction_details.sql",
       "supabase/migrations/20260818220000_app_evidence_review_case_detail_decide_affordance.sql",
       "supabase/migrations/20260818230000_app_evidence_fact_review_rounds.sql",
+      "supabase/migrations/20260819090000_app_evidence_review_current_round_read.sql",
       "supabase/functions/_shared/app_evidence_review_case_detail.ts",
       "supabase/functions/api-app-evidence-review-case-detail/index.ts",
       "supabase/functions/api-app-evidence-review-round-finalize/index.ts",
@@ -1871,6 +1874,20 @@ export const PATH_RULES = Object.freeze([
     checks: Object.freeze([
       "migration-or-sql-review",
       "evidence-fact-review-round-pure",
+      "evidence-review-case-detail-local",
+      "tenant-migration-chain-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "evidence-review-current-round-read-migration",
+    match: Object.freeze({
+      type: "exact",
+      value:
+        "supabase/migrations/20260819090000_app_evidence_review_current_round_read.sql",
+    }),
+    checks: Object.freeze([
+      "migration-or-sql-review",
+      "evidence-review-case-detail-pure",
       "evidence-review-case-detail-local",
       "tenant-migration-chain-local",
     ]),

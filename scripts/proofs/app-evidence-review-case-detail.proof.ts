@@ -24,6 +24,8 @@ const AFFORDANCE_MIGRATION =
   "supabase/migrations/20260818220000_app_evidence_review_case_detail_decide_affordance.sql";
 const ROUND_MIGRATION =
   "supabase/migrations/20260818230000_app_evidence_fact_review_rounds.sql";
+const CURRENT_ROUND_READ_MIGRATION =
+  "supabase/migrations/20260819090000_app_evidence_review_current_round_read.sql";
 const PILOT_CASE_REF = "CASE-7E4CC75CD19F";
 const HASH = "a".repeat(64);
 const EXPIRES = "2030-01-01T00:00:00Z";
@@ -212,6 +214,7 @@ function rpcSuccess(evidence: readonly JsonObject[] = [sourceEvidence()]): JsonO
     review_manifest_version: "fact-review-manifest-v1",
     review_manifest_hash: "b".repeat(64),
     review_subjects: reviewSubjects,
+    current_review_round: null,
   };
 }
 function mockClient(
@@ -304,7 +307,7 @@ async function endpointProof(): Promise<void> {
     onRpc: (name, args) => {
       rpcCalls += 1;
       assert(
-        name === "app_evidence_review_case_detail_read_v4" &&
+        name === "app_evidence_review_case_detail_read_v5" &&
           args.p_auth_user_id === AUTH_ADMIN && args.p_case_ref === CASE_REF_A &&
           Object.keys(args).sort().join("|") === "p_auth_user_id|p_case_ref",
         "rpc_contract_invalid",
@@ -314,7 +317,7 @@ async function endpointProof(): Promise<void> {
   const body = await responseJson(success) as unknown as EvidenceReviewCaseDetailResponseV1;
   assert(
     success.status === 200 && rpcCalls === 1 &&
-      body.schemaVersion === "evidence-review-case-detail-v2" &&
+      body.schemaVersion === "evidence-review-case-detail-v3" &&
       body.case.caseRef === CASE_REF_A &&
       body.case.partyDisplayNameTruth === "DECLARED" &&
       body.case.deliveryAddressTruth === "DECLARED" &&
@@ -322,6 +325,7 @@ async function endpointProof(): Promise<void> {
       body.reviewManifestVersion === "fact-review-manifest-v1" &&
       body.reviewManifestHash === "b".repeat(64) &&
       body.reviewSubjects.length === 2 &&
+      body.currentReviewRound === null &&
       body.evidence.every((item) => item.reviewStatus === "PENDING") &&
       body.evidence.flatMap((item) => item.canonicalFacts)
         .filter((fact) => fact.truthClass === "REVIEW_REQUIRED")
@@ -383,6 +387,9 @@ async function endpointProof(): Promise<void> {
   const correctionSource = await Deno.readTextFile(CORRECTION_MIGRATION);
   const affordanceSource = await Deno.readTextFile(AFFORDANCE_MIGRATION);
   const roundSource = await Deno.readTextFile(ROUND_MIGRATION);
+  const currentRoundReadSource = await Deno.readTextFile(
+    CURRENT_ROUND_READ_MIGRATION,
+  );
   assert(
     source.includes("public.app_workforce_authorize_v1(") &&
       source.includes("'evidence.review.view'") &&
@@ -405,7 +412,16 @@ async function endpointProof(): Promise<void> {
       roundSource.includes("app_evidence_fact_review_manifest_v1") &&
       roundSource.includes("app_evidence_review_round_finalize_v1") &&
       !roundSource.includes("check_execution") &&
-      !roundSource.includes("fraud_suspicion"),
+      !roundSource.includes("fraud_suspicion") &&
+      currentRoundReadSource.includes("app_evidence_review_case_detail_read_v5") &&
+      currentRoundReadSource.includes("app_evidence_review_case_detail_read_v4") &&
+      currentRoundReadSource.includes("current_review_round") &&
+      currentRoundReadSource.includes("app_evidence_review_rounds") &&
+      currentRoundReadSource.includes(
+        "app_evidence_review_round_subject_decisions",
+      ) &&
+      !currentRoundReadSource.includes("grant select") &&
+      !currentRoundReadSource.includes("app_workforce_authorize_v1"),
     "bounded_read_source_missing",
   );
   q(7);
@@ -501,7 +517,7 @@ async function readRpc(
 ): Promise<JsonObject> {
   const output = await psql(database, `begin;
     set local role service_role;
-    select public.app_evidence_review_case_detail_read_v4(
+    select public.app_evidence_review_case_detail_read_v5(
       '${authUserId}', '${caseRef}'
     )::text;
     rollback;`);
@@ -539,16 +555,18 @@ async function databaseProof(): Promise<void> {
   await setupDatabase();
   const acl = await psql(DATABASE, `select concat_ws('|',
     has_function_privilege('service_role',
-      'public.app_evidence_review_case_detail_read_v4(uuid,text)','EXECUTE'),
+      'public.app_evidence_review_case_detail_read_v5(uuid,text)','EXECUTE'),
     has_function_privilege('anon',
-      'public.app_evidence_review_case_detail_read_v4(uuid,text)','EXECUTE'),
+      'public.app_evidence_review_case_detail_read_v5(uuid,text)','EXECUTE'),
     has_function_privilege('authenticated',
+      'public.app_evidence_review_case_detail_read_v5(uuid,text)','EXECUTE'),
+    has_function_privilege('service_role',
       'public.app_evidence_review_case_detail_read_v4(uuid,text)','EXECUTE'),
     has_function_privilege('service_role',
       'public.app_workforce_authorize_v1(uuid,text,uuid,uuid,timestamptz)',
       'EXECUTE')
   );`);
-  assert(acl === "t|f|f|f", `rpc_acl_invalid:${acl}`);
+  assert(acl === "t|f|f|f|f", `rpc_acl_invalid:${acl}`);
   q(8);
 
   await psql(DATABASE, `
@@ -819,7 +837,8 @@ async function databaseProof(): Promise<void> {
       response.evidence.every((item) => item.reviewStatus === "PENDING") &&
       response.reviewManifestVersion === "fact-review-manifest-v1" &&
       /^[0-9a-f]{64}$/.test(response.reviewManifestHash) &&
-      response.reviewSubjects.length === 10,
+      response.reviewSubjects.length === 10 &&
+      response.currentReviewRound === null,
     "authorized_projection_invalid",
   );
   const energy = response.evidence.find((item) => item.kind === "energy_bill_or_contract");
@@ -1001,11 +1020,15 @@ async function databaseProof(): Promise<void> {
   const after = await proofFingerprint();
   assert(postFixtureBaseline === after, "read_rpc_changed_database_state");
   const definition = await psql(DATABASE, `select pg_get_functiondef(
-    'public.app_evidence_review_case_detail_read_v4(uuid,text)'::regprocedure
+    'public.app_evidence_review_case_detail_read_v5(uuid,text)'::regprocedure
   );`);
   assert(
-    definition.includes("app_evidence_review_case_detail_read_v3") &&
-      definition.includes("app_evidence_fact_review_manifest_v1") &&
+    definition.includes("app_evidence_review_case_detail_read_v4") &&
+      definition.includes("app_evidence_review_rounds") &&
+      definition.includes("app_evidence_review_round_subject_decisions") &&
+      definition.includes("review_manifest_version") &&
+      definition.includes("review_manifest_hash") &&
+      !definition.includes("app_workforce_authorize_v1") &&
       !/\binsert\b|\bupdate\b|\bdelete\b|\btruncate\b/i.test(definition),
     "read_function_contains_write_or_parallel_auth",
   );
@@ -1016,6 +1039,8 @@ async function databaseProof(): Promise<void> {
   );
   assert(
     projectedV2 && deterministicV2 &&
+      projectedV2.currentReviewRound === null &&
+      deterministicV2.currentReviewRound === null &&
       response.reviewManifestHash !== projectedV2.reviewManifestHash &&
       projectedV2.reviewManifestHash === deterministicV2.reviewManifestHash &&
       projectedV2.reviewSubjects.map((subject) => subject.subjectRef).join("|") ===
@@ -1229,6 +1254,13 @@ async function databaseProof(): Promise<void> {
     "review15-conflict",
     "c".repeat(64),
   );
+  const correctionProjection = parseEvidenceReviewCaseDetailSource(
+    await readRpc(DATABASE, AUTH_ADMIN, CASE_REF_A),
+  );
+  const correctionRound = correctionProjection?.currentReviewRound;
+  const correctionDecisionProjection = correctionRound?.decisions.find((decision) =>
+    decision.disposition === "CORRECTION_REQUIRED"
+  );
   assert(
     concurrent.every((result) => result.ok === true) && roundRefs.size === 1 &&
       new Set(concurrent.map((result) => result.code)).has("finalized") &&
@@ -1236,7 +1268,19 @@ async function databaseProof(): Promise<void> {
       exactRetry.round_id === concurrent[0].round_id &&
       equivalentRetry.code === "already_finalized" &&
       equivalentRetry.round_id === concurrent[0].round_id &&
-      conflict.code === "review_round_conflict",
+      conflict.code === "review_round_conflict" &&
+      correctionProjection?.case.canDecide === false &&
+      correctionRound?.roundRef === concurrent[0].round_id &&
+      correctionRound?.manifestVersion === manifest.reviewManifestVersion &&
+      correctionRound?.manifestHash === manifest.reviewManifestHash &&
+      correctionRound?.outcome === "CORRECTIONS_REQUIRED" &&
+      correctionRound?.decisions.length === manifest.reviewSubjects.length &&
+      new Set(correctionRound?.decisions.map((decision) => decision.subjectRef))
+          .size === manifest.reviewSubjects.length &&
+      correctionDecisionProjection?.correctionReason ===
+        "INCORRECT_INFORMATION" &&
+      correctionDecisionProjection.correctionInstruction ===
+        "Controleer en corrigeer dit gegeven.",
     "atomic_concurrency_or_idempotency_invalid",
   );
   q(16);
@@ -1303,14 +1347,26 @@ async function databaseProof(): Promise<void> {
     (select count(*) from public.app_evidence_review_round_subject_decisions
       where round_id='${concurrent[0].round_id}')
   );`);
+  const acceptedProjection = parseEvidenceReviewCaseDetailSource(
+    await readRpc(DATABASE, AUTH_ADMIN, CASE_REF_A),
+  );
+  const acceptedRound = acceptedProjection?.currentReviewRound;
   assert(
     manifestAfterEvidence.reviewManifestHash !== manifest.reviewManifestHash &&
+      manifestAfterEvidence.currentReviewRound === null &&
       newEnergySubjects.length === 4 &&
       newEnergySubjects.every((subject) => !oldEnergySubjects.has(subject.subjectRef)) &&
       stale.code === "stale_review_manifest" && preSecondRound === "1|10" &&
       secondRound.code === "finalized" &&
       secondRound.outcome === "ALL_FACTS_ACCEPTED" &&
-      secondRoundCounts === "2|20|1|10",
+      secondRoundCounts === "2|20|1|10" &&
+      acceptedRound?.roundRef === secondRound.round_id &&
+      acceptedRound?.outcome === "ALL_FACTS_ACCEPTED" &&
+      acceptedRound?.decisions.length ===
+        acceptedProjection?.reviewSubjects.length &&
+      acceptedRound?.decisions.every((decision) =>
+        decision.disposition === "ACCEPTED"
+      ),
     "new_evidence_history_or_no_carry_forward_invalid",
   );
   q(17);
@@ -1347,11 +1403,11 @@ async function activePilotProof(): Promise<void> {
       ('20260817160000'),('20260817190000'),('20260817210000'),
       ('20260817230000'),('20260818090000'),('20260818120000'),
       ('20260818150000'),('20260818180000'),('20260818210000'),
-      ('20260818220000'),('20260818230000')
+      ('20260818220000'),('20260818230000'),('20260819090000')
     )
     select concat_ws('|',
       (select count(*) from supabase_migrations.schema_migrations
-       where version='20260818230000'),
+       where version='20260819090000'),
       (select count(*) from active_versions expected
        where not exists (select 1 from supabase_migrations.schema_migrations ledger
          where ledger.version=expected.version))
@@ -1399,6 +1455,7 @@ async function activePilotProof(): Promise<void> {
       response.evidence.every((item) => item.reviewStatus === "PENDING") &&
       response.reviewManifestVersion === "fact-review-manifest-v1" &&
       response.reviewSubjects.length === 10 &&
+      response.currentReviewRound === null &&
       new Set(response.reviewSubjects.map((subject) => subject.subjectRef)).size ===
         10 &&
       await psql(ACTIVE_DATABASE, `begin read only;

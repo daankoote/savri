@@ -1,4 +1,7 @@
 import type {
+  EvidenceFactReviewCorrectionReason,
+  EvidenceFactReviewCurrentRoundV1,
+  EvidenceFactReviewFinalizedDecisionV1,
   EvidenceFactReviewSubjectV1,
   EvidenceReviewCanonicalFactV1,
   EvidenceReviewCaseDetailResponseV1,
@@ -9,6 +12,7 @@ import type {
   EvidenceReviewStatus,
 } from "../../../../supabase/functions/_shared/app_evidence_review_case_detail.ts";
 import {
+  EVIDENCE_FACT_REVIEW_CORRECTION_REASONS,
   EVIDENCE_FACT_REVIEW_MANIFEST_VERSION,
 } from "../../../../supabase/functions/_shared/app_evidence_review_case_detail.ts";
 import { normalizeSignedDownloadUrlForBrowser } from "../documents/documentDownloadClient.ts";
@@ -304,6 +308,88 @@ function parseReviewSubject(value: unknown): EvidenceFactReviewSubjectV1 | null 
   });
 }
 
+function parseCurrentReviewRound(
+  value: unknown,
+  manifestHash: string,
+  subjectRefs: ReadonlySet<string>,
+): EvidenceFactReviewCurrentRoundV1 | null | false {
+  if (value === null) return null;
+  if (
+    !isRecord(value) ||
+    !hasExactFields(value, [
+      "decisions",
+      "finalizedAt",
+      "manifestHash",
+      "manifestVersion",
+      "outcome",
+      "roundRef",
+    ]) || !UUID_RE.test(String(value.roundRef)) ||
+    value.manifestVersion !== EVIDENCE_FACT_REVIEW_MANIFEST_VERSION ||
+    value.manifestHash !== manifestHash ||
+    !["ALL_FACTS_ACCEPTED", "CORRECTIONS_REQUIRED"].includes(
+      String(value.outcome),
+    ) || !isIsoTimestamp(value.finalizedAt) ||
+    !Array.isArray(value.decisions) || value.decisions.length !== subjectRefs.size
+  ) return false;
+
+  const decisions: EvidenceFactReviewFinalizedDecisionV1[] = [];
+  const seen = new Set<string>();
+  for (const rawDecision of value.decisions) {
+    if (!isRecord(rawDecision)) return false;
+    const subjectRef = String(rawDecision.subjectRef ?? "");
+    const disposition = rawDecision.disposition;
+    if (
+      !/^FRS-[0-9a-f]{64}$/.test(subjectRef) ||
+      !subjectRefs.has(subjectRef) || seen.has(subjectRef)
+    ) return false;
+    seen.add(subjectRef);
+    if (disposition === "ACCEPTED") {
+      if (!hasExactFields(rawDecision, ["disposition", "subjectRef"])) {
+        return false;
+      }
+      decisions.push(Object.freeze({ subjectRef, disposition }));
+      continue;
+    }
+    if (
+      disposition !== "CORRECTION_REQUIRED" ||
+      !hasExactFields(rawDecision, [
+        "correctionInstruction",
+        "correctionReason",
+        "disposition",
+        "subjectRef",
+      ]) || !EVIDENCE_FACT_REVIEW_CORRECTION_REASONS.includes(
+        rawDecision.correctionReason as never,
+      ) || !boundedString(rawDecision.correctionInstruction, 1_000) ||
+      !/[\p{L}\p{N}]/u.test(rawDecision.correctionInstruction)
+    ) return false;
+    decisions.push(Object.freeze({
+      subjectRef,
+      disposition,
+      correctionReason:
+        rawDecision.correctionReason as EvidenceFactReviewCorrectionReason,
+      correctionInstruction: rawDecision.correctionInstruction,
+    }));
+  }
+  const hasCorrection = decisions.some((decision) =>
+    decision.disposition === "CORRECTION_REQUIRED"
+  );
+  if (
+    seen.size !== subjectRefs.size ||
+    (value.outcome === "ALL_FACTS_ACCEPTED" && hasCorrection) ||
+    (value.outcome === "CORRECTIONS_REQUIRED" && !hasCorrection)
+  ) return false;
+  return Object.freeze({
+    roundRef: String(value.roundRef),
+    manifestVersion: EVIDENCE_FACT_REVIEW_MANIFEST_VERSION,
+    manifestHash,
+    outcome: value.outcome as
+      | "ALL_FACTS_ACCEPTED"
+      | "CORRECTIONS_REQUIRED",
+    finalizedAt: value.finalizedAt,
+    decisions: Object.freeze(decisions),
+  });
+}
+
 export function decodeEvidenceReviewCaseDetailResponse(
   body: unknown,
 ): EvidenceReviewDetailLoadResult {
@@ -312,13 +398,14 @@ export function decodeEvidenceReviewCaseDetailResponse(
     !hasExactFields(body, [
       "asOf",
       "case",
+      "currentReviewRound",
       "evidence",
       "reviewManifestHash",
       "reviewManifestVersion",
       "reviewSubjects",
       "schemaVersion",
     ]) ||
-    body.schemaVersion !== "evidence-review-case-detail-v2" ||
+    body.schemaVersion !== "evidence-review-case-detail-v3" ||
     !isIsoTimestamp(body.asOf) || !isRecord(body.case) ||
     !Array.isArray(body.evidence) || body.evidence.length > 100 ||
     body.reviewManifestVersion !== EVIDENCE_FACT_REVIEW_MANIFEST_VERSION ||
@@ -372,10 +459,20 @@ export function decodeEvidenceReviewCaseDetailResponse(
     )
   ) return invalidResponse();
 
+  const subjectRefs = new Set(
+    reviewSubjects.flatMap((subject) => subject ? [subject.subjectRef] : []),
+  );
+  const currentReviewRound = parseCurrentReviewRound(
+    body.currentReviewRound,
+    body.reviewManifestHash,
+    subjectRefs,
+  );
+  if (currentReviewRound === false) return invalidResponse();
+
   return {
     ok: true,
     value: Object.freeze({
-      schemaVersion: "evidence-review-case-detail-v2",
+      schemaVersion: "evidence-review-case-detail-v3",
       asOf: body.asOf,
       case: Object.freeze({
         caseRef: body.case.caseRef,
@@ -396,6 +493,7 @@ export function decodeEvidenceReviewCaseDetailResponse(
       reviewSubjects: Object.freeze(
         reviewSubjects as EvidenceFactReviewSubjectV1[],
       ),
+      currentReviewRound,
     }),
   };
 }
