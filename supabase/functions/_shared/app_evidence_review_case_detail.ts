@@ -23,6 +23,15 @@ export const EVIDENCE_REVIEW_FACT_TRUTH_CLASSES = Object.freeze([
   "REVIEW_REQUIRED",
 ] as const);
 
+export const EVIDENCE_REVIEW_REASONS = Object.freeze([
+  "GENERIC_REVIEW_REQUIRED",
+  "USER_OVERRIDE",
+  "USER_SUPPLIED_WITHOUT_DOCUMENT",
+  "DOCUMENT_CONFLICT_RESOLVED",
+  "PROBABLE_IDENTITY_MATCH",
+  "PROBABLE_ADDRESS_MATCH",
+] as const);
+
 type JsonObject = Record<string, unknown>;
 
 export type EvidenceReviewStatus =
@@ -31,11 +40,15 @@ export type EvidenceReviewFactCategory =
   (typeof EVIDENCE_REVIEW_FACT_CATEGORIES)[number];
 export type EvidenceReviewFactTruthClass =
   (typeof EVIDENCE_REVIEW_FACT_TRUTH_CLASSES)[number];
+export type EvidenceReviewReason =
+  (typeof EVIDENCE_REVIEW_REASONS)[number];
 
 export type EvidenceReviewCanonicalFactV1 = Readonly<{
   category: EvidenceReviewFactCategory;
   value: string;
   truthClass: EvidenceReviewFactTruthClass;
+  reviewReason?: EvidenceReviewReason;
+  reviewReasonAuthority?: "CUSTOMER_SIGNED_RESOLUTION";
 }>;
 
 export type EvidenceReviewCaseContextV1 = Readonly<{
@@ -87,7 +100,12 @@ const EVIDENCE_SOURCE_KEYS = [
   "uploaded_at",
 ].sort().join("|");
 
-const FACT_SOURCE_KEYS = ["category", "truth_class", "value"].join("|");
+const FACT_SOURCE_KEYS = [
+  "category",
+  "review_reason",
+  "truth_class",
+  "value",
+].join("|");
 
 function isObject(value: unknown): value is JsonObject {
   return !!value && typeof value === "object" && !Array.isArray(value);
@@ -137,11 +155,26 @@ function parseFact(value: unknown): EvidenceReviewCanonicalFactV1 | null {
     )
   ) return null;
   const factValue = boundedString(value.value, 2_000);
-  if (!factValue) return null;
+  const truthClass = value.truth_class as EvidenceReviewFactTruthClass;
+  const reviewReason = value.review_reason;
+  if (
+    !factValue ||
+    (truthClass === "REVIEW_REQUIRED" &&
+      !EVIDENCE_REVIEW_REASONS.includes(reviewReason as EvidenceReviewReason)) ||
+    (truthClass === "CUSTOMER_CONFIRMED" && reviewReason !== null)
+  ) return null;
   return Object.freeze({
     category: value.category as EvidenceReviewFactCategory,
     value: factValue,
-    truthClass: value.truth_class as EvidenceReviewFactTruthClass,
+    truthClass,
+    ...(truthClass === "REVIEW_REQUIRED"
+      ? {
+        reviewReason: reviewReason as EvidenceReviewReason,
+        ...(reviewReason === "GENERIC_REVIEW_REQUIRED"
+          ? {}
+          : { reviewReasonAuthority: "CUSTOMER_SIGNED_RESOLUTION" as const }),
+      }
+      : {}),
   });
 }
 

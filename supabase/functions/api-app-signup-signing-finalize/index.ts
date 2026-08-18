@@ -1,10 +1,10 @@
 import { serve } from "jsr:@std/http@0.224.0/server";
 
 import {
-  type AppRequestMeta,
   appErrorResponse,
   appJsonResponse,
   appOptionsResponse,
+  type AppRequestMeta,
   getAppRequestMeta,
   payloadHash,
 } from "../_shared/app_foundation.ts";
@@ -33,6 +33,37 @@ import { attemptSignupPromotion } from "../_shared/signup_promotion.ts";
 import {
   requireVerifiedSupabaseAuthUser,
 } from "../_shared/app_customer_auth.ts";
+import {
+  deriveSignupResolutionProvenanceV1,
+  type SignupResolutionActionV1,
+} from "../_shared/signup_resolution_provenance.ts";
+
+type ResolutionSourceInput = {
+  fileReference: string;
+  clientSlotId: string;
+  documentType:
+    | "organization_extract"
+    | "energy_bill_or_contract"
+    | "installation_invoice";
+  contentSha256: string;
+  parserVersion: string;
+  observedValue: string;
+};
+
+type SafeFactInput = {
+  factId: string;
+  factKey: string | null;
+  label: string;
+  value: string;
+  resolutionState: SafeFact["resolution_state"];
+  required: boolean;
+  locationId?: string;
+  chargerId?: string;
+  resolutionInput: {
+    action: SignupResolutionActionV1;
+    sources: ResolutionSourceInput[];
+  };
+};
 
 type SafeFact = {
   fact_id: string;
@@ -43,6 +74,28 @@ type SafeFact = {
   required: boolean;
   location_id?: string;
   charger_id?: string;
+  resolution_provenance: {
+    schema_version: "signup-resolution-provenance-v1";
+    resolution_authority: "CUSTOMER_SIGNED_RESOLUTION";
+    resolution_action: SignupResolutionActionV1;
+    source_relation: "none" | "single" | "equal" | "probable" | "conflict";
+    review_reason:
+      | "USER_OVERRIDE"
+      | "USER_SUPPLIED_WITHOUT_DOCUMENT"
+      | "DOCUMENT_CONFLICT_RESOLVED"
+      | "PROBABLE_IDENTITY_MATCH"
+      | "PROBABLE_ADDRESS_MATCH"
+      | null;
+    sources: Array<{
+      file_reference: string;
+      document_type: ResolutionSourceInput["documentType"];
+      content_sha256: string;
+      document_binding_authority: "SERVER_VERIFIED";
+      parser_version: string;
+      observed_value: string;
+      parser_observation_authority: "CUSTOMER_SIGNED_RESOLUTION";
+    }>;
+  };
 };
 
 async function sha256Hex(value: string): Promise<string> {
@@ -55,13 +108,32 @@ async function sha256Hex(value: string): Promise<string> {
   ).join("");
 }
 
-function safeFacts(value: unknown): SafeFact[] | null {
+function exactKeys(value: Record<string, unknown>, allowed: readonly string[]) {
+  return Object.keys(value).every((key) => allowed.includes(key));
+}
+
+function safeFactInputs(value: unknown): SafeFactInput[] | null {
   if (!Array.isArray(value) || value.length === 0 || value.length > 500) {
     return null;
   }
-  const facts: SafeFact[] = [];
+  const facts: SafeFactInput[] = [];
   for (const item of value) {
-    if (!isRecord(item)) return null;
+    if (
+      !isRecord(item) || !exactKeys(item, [
+        "factId",
+        "factKey",
+        "label",
+        "value",
+        "resolutionState",
+        "required",
+        "locationId",
+        "chargerId",
+        "resolutionInput",
+      ]) || !isRecord(item.resolutionInput) ||
+      !exactKeys(item.resolutionInput, ["action", "sources"]) ||
+      !Array.isArray(item.resolutionInput.sources) ||
+      item.resolutionInput.sources.length > 20
+    ) return null;
     const factId = safeString(item.factId, 240);
     const label = safeString(item.label, 240);
     const factValue = safeString(item.value, 2000);
@@ -69,23 +141,151 @@ function safeFacts(value: unknown): SafeFact[] | null {
       item.resolutionState,
       40,
     ) as SafeFact["resolution_state"];
+    const action = safeString(
+      item.resolutionInput.action,
+      20,
+    ) as SignupResolutionActionV1;
     if (
       !factId || !label ||
-      !["pending", "confirmed", "review_required", "blocked"].includes(state)
+      !["pending", "confirmed", "review_required", "blocked"].includes(state) ||
+      !["confirmed", "corrected", "supplied", "unresolved"].includes(action)
     ) return null;
+    const sources: ResolutionSourceInput[] = [];
+    for (const source of item.resolutionInput.sources) {
+      if (
+        !isRecord(source) || !exactKeys(source, [
+          "fileReference",
+          "clientSlotId",
+          "documentType",
+          "contentSha256",
+          "parserVersion",
+          "observedValue",
+        ])
+      ) return null;
+      const fileReference = safeString(source.fileReference, 100).toLowerCase();
+      const clientSlotId = safeString(source.clientSlotId, 200);
+      const documentType = safeString(
+        source.documentType,
+        80,
+      ) as ResolutionSourceInput["documentType"];
+      const contentSha256 = safeString(source.contentSha256, 64).toLowerCase();
+      const parserVersion = safeString(source.parserVersion, 120);
+      const observedValue = safeString(source.observedValue, 2000);
+      if (
+        !validUuid(fileReference) || !clientSlotId ||
+        ![
+          "organization_extract",
+          "energy_bill_or_contract",
+          "installation_invoice",
+        ].includes(documentType) || !/^[0-9a-f]{64}$/.test(contentSha256) ||
+        !parserVersion || !observedValue
+      ) return null;
+      sources.push({
+        fileReference,
+        clientSlotId,
+        documentType,
+        contentSha256,
+        parserVersion,
+        observedValue,
+      });
+    }
     facts.push({
-      fact_id: factId,
-      fact_key: safeString(item.factKey, 100) || null,
+      factId,
+      factKey: safeString(item.factKey, 100) || null,
       label,
       value: factValue,
-      resolution_state: state,
+      resolutionState: state,
       required: item.required === true,
       ...(safeString(item.locationId, 200)
-        ? { location_id: safeString(item.locationId, 200) }
+        ? { locationId: safeString(item.locationId, 200) }
         : {}),
       ...(safeString(item.chargerId, 200)
-        ? { charger_id: safeString(item.chargerId, 200) }
+        ? { chargerId: safeString(item.chargerId, 200) }
         : {}),
+      resolutionInput: { action, sources },
+    });
+  }
+  return facts;
+}
+
+function safeFacts(
+  inputs: SafeFactInput[],
+  authoritativeFiles: unknown,
+  requiredFileIds: string[],
+  accountType: string,
+): SafeFact[] | null {
+  if (!Array.isArray(authoritativeFiles)) return null;
+  const files = new Map<string, Record<string, unknown>>();
+  for (const value of authoritativeFiles) {
+    if (!isRecord(value) || typeof value.id !== "string") return null;
+    files.set(value.id, value);
+  }
+  if (
+    files.size !== new Set(requiredFileIds).size ||
+    requiredFileIds.some((id) => !files.has(id))
+  ) return null;
+  const partyKind = accountType === "particulier"
+    ? "natural_person" as const
+    : "organization" as const;
+
+  const facts: SafeFact[] = [];
+  for (const input of inputs) {
+    const seen = new Set<string>();
+    const sources: SafeFact["resolution_provenance"]["sources"] = [];
+    for (const source of input.resolutionInput.sources) {
+      const file = files.get(source.fileReference);
+      if (
+        !file || seen.has(source.fileReference) ||
+        file.client_slot_id !== source.clientSlotId ||
+        file.document_type !== source.documentType ||
+        file.status !== "confirmed_quarantine" ||
+        file.server_sha256 !== source.contentSha256
+      ) return null;
+      seen.add(source.fileReference);
+      sources.push({
+        file_reference: source.fileReference,
+        document_type: source.documentType,
+        content_sha256: source.contentSha256,
+        document_binding_authority: "SERVER_VERIFIED",
+        parser_version: source.parserVersion,
+        observed_value: source.observedValue,
+        parser_observation_authority: "CUSTOMER_SIGNED_RESOLUTION",
+      });
+    }
+    const derivation = deriveSignupResolutionProvenanceV1({
+      factKey: input.factKey as never,
+      partyKind,
+      resolutionState: input.resolutionState,
+      action: input.resolutionInput.action,
+      sources: sources.map((source) => ({
+        identity: source.content_sha256,
+        observedValue: source.observed_value,
+      })),
+    });
+    if (
+      !derivation ||
+      (input.resolutionState === "review_required" &&
+        derivation.reviewReason === null) ||
+      (input.resolutionState !== "review_required" &&
+        derivation.reviewReason !== null)
+    ) return null;
+    facts.push({
+      fact_id: input.factId,
+      fact_key: input.factKey,
+      label: input.label,
+      value: input.value,
+      resolution_state: input.resolutionState,
+      required: input.required,
+      ...(input.locationId ? { location_id: input.locationId } : {}),
+      ...(input.chargerId ? { charger_id: input.chargerId } : {}),
+      resolution_provenance: {
+        schema_version: "signup-resolution-provenance-v1",
+        resolution_authority: "CUSTOMER_SIGNED_RESOLUTION",
+        resolution_action: input.resolutionInput.action,
+        source_relation: derivation.sourceRelation,
+        review_reason: derivation.reviewReason,
+        sources,
+      },
     });
   }
   return facts;
@@ -281,7 +481,7 @@ serve(async (req) => {
   const signerRole = safeString(body.signer_role, 200);
   const mandateYear = Number(body.mandate_year);
   const requiredFileIds = safeStringArray(body.required_file_references, 100);
-  const facts = safeFacts(body.canonical_facts);
+  const factInputs = safeFactInputs(body.canonical_facts);
   const legalActions = isRecord(body.legal_actions) ? body.legal_actions : null;
   if (
     !validUuid(intakeId) || !validUuid(challengeId) || !capability ||
@@ -290,7 +490,7 @@ serve(async (req) => {
     !typedFullName ||
     (accountType !== "particulier" && !signerRole) ||
     !Number.isInteger(mandateYear) ||
-    !requiredFileIds || !requiredFileIds.every(validUuid) || !facts ||
+    !requiredFileIds || !requiredFileIds.every(validUuid) || !factInputs ||
     !legalActions ||
     legalActions.privacy_notice_read !== true ||
     legalActions.service_terms_accepted !== true ||
@@ -351,6 +551,21 @@ serve(async (req) => {
     );
   }
 
+  const intakeFiles = await SB.from("app_signup_intake_files").select(
+    "id,client_slot_id,document_type,status,server_sha256",
+  ).eq("intake_id", intakeId).in("id", requiredFileIds);
+  const facts = intakeFiles.error
+    ? null
+    : safeFacts(factInputs, intakeFiles.data, requiredFileIds, accountType);
+  if (!facts) {
+    return appErrorResponse(
+      req,
+      422,
+      "De herkomst van de ondertekende gegevens kon niet veilig worden vastgesteld.",
+      "resolution_provenance_invalid",
+    );
+  }
+
   const legalProjection = await signingLegalRuntimeProjection();
   const legalDocuments = legalProjection.map((
     { canonical_content: _content, ...document },
@@ -395,7 +610,7 @@ serve(async (req) => {
     schema_version: "signup-signing-runtime-snapshot-v1",
     intake_reference: intakeId,
     account_type: accountType,
-    canonical_facts: { schema_version: "canonical-signing-facts-v1", facts },
+    canonical_facts: { schema_version: "canonical-signing-facts-v2", facts },
     required_file_references: [...requiredFileIds].sort(),
     legal_documents: legalDocuments.map((document) => ({
       document_type: document.document_type,

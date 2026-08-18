@@ -17,6 +17,9 @@ import { SigningLegalBundle } from "./signing/SigningLegalBundle";
 import { SigningEntityGroup } from "./signing/SigningEntityGroup";
 import type { SignerInput } from "./signing/signatureMethod";
 import {
+  createCanonicalSigningSourceRegistry,
+} from "./signing/canonicalSigningFacts";
+import {
   createSigningIntent,
   selectSigningStartReadiness,
   signingStartReadinessMessage,
@@ -94,6 +97,7 @@ export function DocumentFirstSigningSummary(
     createSigningIntent({
       accountType: draft.accountBasis.accountType,
       presentation,
+      signingSourceRegistry: createCanonicalSigningSourceRegistry(draft),
       signerInput,
       summaryConfirmed,
       selectedMethod: method,
@@ -102,7 +106,7 @@ export function DocumentFirstSigningSummary(
       mandateYear,
       evidence: null,
     }), [
-    draft.accountBasis.accountType,
+    draft,
     effectiveLegalActions,
     legalDocuments,
     mandateYear,

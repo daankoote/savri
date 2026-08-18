@@ -23,6 +23,9 @@ import {
   otpVerifier,
   signingVerifierSecret,
 } from "../../supabase/functions/_shared/signup_signing.ts";
+import {
+  deriveSignupResolutionProvenanceV1,
+} from "../../supabase/functions/_shared/signup_resolution_provenance.ts";
 
 type Json = Record<string, unknown>;
 type LocalConfig = { url: string; serviceRoleKey: string };
@@ -34,6 +37,11 @@ type Fixture = {
   clientSlotId: string;
 };
 type Challenge = { id: string; verifier: string; code: string };
+type ProvenanceFile = {
+  id: string;
+  hash: string;
+  documentType: "energy_bill_or_contract";
+};
 
 const results: Array<{ id: string; ok: boolean }> = [];
 const SECRET = "09b2b-local-proof-secret-which-is-never-output-000000000000000";
@@ -238,12 +246,136 @@ function facts(state: "confirmed" | "review_required" | "pending" | "blocked") {
   ];
 }
 
+function provenanceFact(
+  input: {
+    factId: string;
+    factKey:
+      | "partyName"
+      | "structuredAddress"
+      | "electricityEan"
+      | "energySupplier"
+      | "midNumber"
+      | "chargerBrand";
+    value: string;
+    action: "confirmed" | "corrected" | "supplied";
+    sources: Array<{ file: ProvenanceFile; observedValue: string }>;
+    locationId?: string;
+    chargerId?: string;
+    resolutionState?: "confirmed" | "review_required";
+  },
+) {
+  const resolutionState = input.resolutionState || "review_required";
+  const derivation = deriveSignupResolutionProvenanceV1({
+    factKey: input.factKey,
+    partyKind: "natural_person",
+    resolutionState,
+    action: input.action,
+    sources: input.sources.map(({ file, observedValue }) => ({
+      identity: file.hash,
+      observedValue,
+    })),
+  });
+  assert(derivation, `provenance_derivation_failed:${input.factId}`);
+  return {
+    fact_id: input.factId,
+    fact_key: input.factKey,
+    label: input.factId,
+    value: input.value,
+    resolution_state: resolutionState,
+    required: true,
+    ...(input.locationId ? { location_id: input.locationId } : {}),
+    ...(input.chargerId ? { charger_id: input.chargerId } : {}),
+    resolution_provenance: {
+      schema_version: "signup-resolution-provenance-v1",
+      resolution_authority: "CUSTOMER_SIGNED_RESOLUTION",
+      resolution_action: input.action,
+      source_relation: derivation.sourceRelation,
+      review_reason: derivation.reviewReason,
+      sources: input.sources.map(({ file, observedValue }) => ({
+        file_reference: file.id,
+        document_type: file.documentType,
+        content_sha256: file.hash,
+        document_binding_authority: "SERVER_VERIFIED",
+        parser_version: "review10-proof-parser-v1",
+        observed_value: observedValue,
+        parser_observation_authority: "CUSTOMER_SIGNED_RESOLUTION",
+      })),
+    },
+  };
+}
+
+function provenanceFacts(files: [ProvenanceFile, ProvenanceFile]) {
+  const [left, right] = files;
+  return [
+    provenanceFact({
+      factId: "party:name",
+      factKey: "partyName",
+      value: "Jan de Vries",
+      action: "confirmed",
+      sources: [
+        { file: left, observedValue: "Jan de Vries" },
+        { file: right, observedValue: "J. de Vries" },
+      ],
+    }),
+    provenanceFact({
+      factId: "location:proof:address",
+      factKey: "structuredAddress",
+      value: "Proofstraat 1, 1000 AA Proofstad",
+      action: "confirmed",
+      locationId: "location-proof",
+      sources: [
+        { file: left, observedValue: "Proofstraat 1, 1000 AA Proofstad" },
+        { file: right, observedValue: "Proofstraat 1-A, 1000 AA Proofstad" },
+      ],
+    }),
+    provenanceFact({
+      factId: "location:proof:ean",
+      factKey: "electricityEan",
+      value: "871687400000000001",
+      action: "corrected",
+      locationId: "location-proof",
+      sources: [{ file: left, observedValue: "871687400000000000" }],
+    }),
+    provenanceFact({
+      factId: "location:proof:supplier",
+      factKey: "energySupplier",
+      value: "Proof Supplier",
+      action: "supplied",
+      locationId: "location-proof",
+      sources: [],
+    }),
+    provenanceFact({
+      factId: "charger:proof:mid",
+      factKey: "midNumber",
+      value: "MID-RESOLVED",
+      action: "corrected",
+      locationId: "location-proof",
+      chargerId: "charger-proof",
+      sources: [
+        { file: left, observedValue: "MID-LEFT" },
+        { file: right, observedValue: "MID-RIGHT" },
+      ],
+    }),
+    provenanceFact({
+      factId: "charger:proof:brand",
+      factKey: "chargerBrand",
+      value: "Proof Brand",
+      action: "confirmed",
+      resolutionState: "confirmed",
+      locationId: "location-proof",
+      chargerId: "charger-proof",
+      sources: [{ file: left, observedValue: "Proof Brand" }],
+    }),
+  ];
+}
+
 async function finalizationArgs(
   fixture: Fixture,
   challenge: Challenge,
   label: string,
   factState: "confirmed" | "review_required" | "pending" | "blocked" =
     "review_required",
+  provenanceFiles?: [ProvenanceFile, ProvenanceFile],
 ) {
   const legalProjection = await signingLegalRuntimeProjection();
   const legalDocuments = legalProjection.map(
@@ -269,16 +401,23 @@ async function finalizationArgs(
     issue_date: issuedAt,
     authority_review_status: "not_applicable",
   };
-  const canonicalFacts = facts(factState);
+  const canonicalFacts = provenanceFiles
+    ? provenanceFacts(provenanceFiles)
+    : facts(factState);
+  const requiredFileIds = provenanceFiles
+    ? provenanceFiles.map((file) => file.id)
+    : [fixture.fileId];
   const snapshot = {
     schema_version: "signup-signing-runtime-snapshot-v1",
     intake_reference: fixture.intakeId,
     account_type: "particulier",
     canonical_facts: {
-      schema_version: "canonical-signing-facts-v1",
+      schema_version: provenanceFiles
+        ? "canonical-signing-facts-v2"
+        : "canonical-signing-facts-v1",
       facts: canonicalFacts,
     },
-    required_file_references: [fixture.fileId],
+    required_file_references: requiredFileIds,
     legal_documents: legalDocuments,
     legal_actions: {
       privacy_notice_read: true,
@@ -302,7 +441,7 @@ async function finalizationArgs(
     p_canonical_snapshot: snapshot,
     p_snapshot_sha256: snapshotHash,
     p_legal_documents: legalDocuments,
-    p_required_file_ids: [fixture.fileId],
+    p_required_file_ids: requiredFileIds,
     p_account_type: "particulier",
     p_mandate_year: 2026,
     p_issued_at: issuedAt,
@@ -329,7 +468,9 @@ async function entityCounts(
     });
     assert(
       !result.error && typeof result.count === "number",
-      "entity_count_failed",
+      `entity_count_failed:${table}:${
+        result.error?.code || result.error?.message || "unknown"
+      }`,
     );
     counts.set(table, result.count);
   }
@@ -565,8 +706,48 @@ async function main(): Promise<void> {
       !pendingFile.error && !pendingCapability.error,
       "pending_upload_fixture_failed",
     );
+    const provenanceFileId = crypto.randomUUID();
+    const provenanceFileHash = "b".repeat(64);
+    const provenanceFile = await service.from("app_signup_intake_files").insert(
+      {
+        id: provenanceFileId,
+        intake_id: successFixture.intakeId,
+        client_slot_id: key("provenance-slot"),
+        document_type: "energy_bill_or_contract",
+        original_filename: "provenance-proof.pdf",
+        declared_mime_type: "application/pdf",
+        detected_mime_type: "application/pdf",
+        size_bytes: 64,
+        sha256: provenanceFileHash,
+        server_size_bytes: 64,
+        server_sha256: provenanceFileHash,
+        storage_bucket: "app-signup-quarantine",
+        storage_path: `proof/${successFixture.intakeId}/${provenanceFileId}`,
+        status: "confirmed_quarantine",
+        confirmed_at: new Date().toISOString(),
+        expires_at: future(90),
+      },
+    );
+    assert(!provenanceFile.error, "provenance_file_fixture_failed");
     const challenge = await issueChallenge(service, successFixture, "success");
-    successArgs = await finalizationArgs(successFixture, challenge, "success");
+    successArgs = await finalizationArgs(
+      successFixture,
+      challenge,
+      "success",
+      "review_required",
+      [
+        {
+          id: successFixture.fileId,
+          hash: HASH,
+          documentType: "energy_bill_or_contract",
+        },
+        {
+          id: provenanceFileId,
+          hash: provenanceFileHash,
+          documentType: "energy_bill_or_contract",
+        },
+      ],
+    );
     const secondHash = await signingSha256Hex(
       stableSigningJson(successArgs.p_canonical_snapshot),
     );
@@ -627,6 +808,42 @@ async function main(): Promise<void> {
     assert(
       (mandate.data.mandate_content as Json).validity !== undefined,
       "mandate_validity_missing",
+    );
+    const persistedSnapshot = await service.from("app_signup_signing_snapshots")
+      .select("canonical_snapshot,canonical_snapshot_sha256")
+      .eq("intake_id", successFixture.intakeId).single();
+    const persistedJson = JSON.stringify(
+      (persistedSnapshot.data?.canonical_snapshot as Json)?.canonical_facts,
+    );
+    for (
+      const reason of [
+        "USER_OVERRIDE",
+        "USER_SUPPLIED_WITHOUT_DOCUMENT",
+        "DOCUMENT_CONFLICT_RESOLVED",
+        "PROBABLE_IDENTITY_MATCH",
+        "PROBABLE_ADDRESS_MATCH",
+      ]
+    ) {
+      assert(
+        persistedJson.includes(reason),
+        `persisted_reason_missing:${reason}`,
+      );
+    }
+    assert(
+      !persistedSnapshot.error &&
+        persistedSnapshot.data.canonical_snapshot_sha256 ===
+          successArgs.p_snapshot_sha256 &&
+        persistedJson.includes(
+          '"resolution_authority":"CUSTOMER_SIGNED_RESOLUTION"',
+        ) &&
+        persistedJson.includes(
+          '"document_binding_authority":"SERVER_VERIFIED"',
+        ) &&
+        persistedJson.includes(
+          '"parser_observation_authority":"CUSTOMER_SIGNED_RESOLUTION"',
+        ) &&
+        persistedJson.includes('"review_reason":null'),
+      "provenance_snapshot_hash_or_clean_confirmation_invalid",
     );
   });
 

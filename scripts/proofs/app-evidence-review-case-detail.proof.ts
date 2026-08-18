@@ -17,7 +17,7 @@ const CONTAINER = "supabase_db_enval";
 const ACTIVE_DATABASE = "postgres";
 const DATABASE = `enval_review07_proof_${crypto.randomUUID().replaceAll("-", "")}`;
 const MIGRATION =
-  "supabase/migrations/20260818120000_app_evidence_review_case_detail_read.sql";
+  "supabase/migrations/20260818180000_app_signup_resolution_provenance_projection.sql";
 const PILOT_CASE_REF = "CASE-7E4CC75CD19F";
 const HASH = "a".repeat(64);
 const EXPIRES = "2030-01-01T00:00:00Z";
@@ -38,6 +38,7 @@ const LOCATION = "e5000000-0000-4000-8000-000000000001";
 const CHARGER = "e5000000-0000-4000-8000-000000000002";
 const PROMOTION = "e6000000-0000-4000-8000-000000000001";
 const SNAPSHOT = "e6000000-0000-4000-8000-000000000002";
+const SNAPSHOT_V2 = "e6000000-0000-4000-8000-000000000003";
 const ENERGY_FILE = "e7000000-0000-4000-8000-000000000001";
 const INVOICE_FILE = "e7000000-0000-4000-8000-000000000002";
 const ENERGY_VERSION = "e8000000-0000-4000-8000-000000000001";
@@ -144,8 +145,8 @@ function sourceEvidence(overrides: Partial<JsonObject> = {}): JsonObject {
     review_status: "PENDING",
     decided_at: null,
     canonical_facts: [
-      { category: "PARTY_NAME", value: "Declared Person", truth_class: "CUSTOMER_CONFIRMED" },
-      { category: "EAN", value: "871234567890123456", truth_class: "REVIEW_REQUIRED" },
+      { category: "PARTY_NAME", value: "Declared Person", truth_class: "CUSTOMER_CONFIRMED", review_reason: null },
+      { category: "EAN", value: "871234567890123456", truth_class: "REVIEW_REQUIRED", review_reason: "USER_OVERRIDE" },
     ],
     ...overrides,
   };
@@ -249,8 +250,8 @@ async function endpointProof(): Promise<void> {
       kind: "installation_invoice",
       uploaded_at: "2026-08-18T10:01:00.000Z",
       canonical_facts: [
-        { category: "CHARGER_BRAND", value: "Brand", truth_class: "CUSTOMER_CONFIRMED" },
-        { category: "MID", value: "MID-DECLARED", truth_class: "REVIEW_REQUIRED" },
+        { category: "CHARGER_BRAND", value: "Brand", truth_class: "CUSTOMER_CONFIRMED", review_reason: null },
+        { category: "MID", value: "MID-DECLARED", truth_class: "REVIEW_REQUIRED", review_reason: "DOCUMENT_CONFLICT_RESOLVED" },
       ],
     }),
   ]), {
@@ -272,7 +273,16 @@ async function endpointProof(): Promise<void> {
       body.case.partyDisplayNameTruth === "DECLARED" &&
       body.case.deliveryAddressTruth === "DECLARED" &&
       body.evidence.length === 2 &&
-      body.evidence.every((item) => item.reviewStatus === "PENDING"),
+      body.evidence.every((item) => item.reviewStatus === "PENDING") &&
+      body.evidence.flatMap((item) => item.canonicalFacts)
+        .filter((fact) => fact.truthClass === "REVIEW_REQUIRED")
+        .every((fact) =>
+          Boolean(fact.reviewReason) &&
+          fact.reviewReasonAuthority === "CUSTOMER_SIGNED_RESOLUTION"
+        ) &&
+      body.evidence.flatMap((item) => item.canonicalFacts)
+        .filter((fact) => fact.truthClass === "CUSTOMER_CONFIRMED")
+        .every((fact) => !("reviewReason" in fact)),
     "response_contract_invalid",
   );
   q(4);
@@ -672,10 +682,101 @@ async function databaseProof(): Promise<void> {
     energy?.canonicalFacts.map((fact) => fact.category).join("|") ===
       "ADDRESS|EAN|ENERGY_SUPPLIER|PARTY_NAME" &&
       invoice?.canonicalFacts.map((fact) => fact.category).join("|") ===
-        "ADDRESS|CHARGER_BRAND|CHARGER_MODEL|MID|PARTY_NAME|SERIAL",
+        "ADDRESS|CHARGER_BRAND|CHARGER_MODEL|MID|PARTY_NAME|SERIAL" &&
+      response.evidence.flatMap((item) => item.canonicalFacts)
+        .filter((fact) => fact.truthClass === "REVIEW_REQUIRED")
+        .every((fact) => fact.reviewReason === "GENERIC_REVIEW_REQUIRED") &&
+      response.evidence.flatMap((item) => item.canonicalFacts)
+        .filter((fact) => fact.truthClass === "REVIEW_REQUIRED")
+        .every((fact) => !("reviewReasonAuthority" in fact)) &&
+      response.evidence.flatMap((item) => item.canonicalFacts)
+        .filter((fact) => fact.truthClass === "CUSTOMER_CONFIRMED")
+        .every((fact) => !("reviewReason" in fact)),
     "canonical_fact_projection_invalid",
   );
   q(11);
+  assert(
+    before === await proofFingerprint(),
+    "historical_read_changed_database_state",
+  );
+
+  await psql(
+    DATABASE,
+    `begin;
+    set local session_replication_role = replica;
+    insert into public.app_signup_signing_snapshots (
+      id,intake_id,schema_version,canonical_snapshot,canonical_snapshot_sha256,
+      created_at
+    ) values ('${SNAPSHOT_V2}',gen_random_uuid(),
+      'signup-signing-runtime-snapshot-v1',jsonb_build_object(
+        'canonical_facts',jsonb_build_object(
+          'schema_version','canonical-signing-facts-v2','facts',jsonb_build_array(
+            jsonb_build_object('fact_id','party-v2','fact_key','partyName',
+              'label','Naam','value','Declared Person','resolution_state',
+              'review_required','required',true,'resolution_provenance',
+              jsonb_build_object('review_reason','PROBABLE_IDENTITY_MATCH')),
+            jsonb_build_object('fact_id','address-v2','fact_key','structuredAddress',
+              'label','Adres','value','Declared Address','resolution_state',
+              'review_required','required',true,'location_id','location-1',
+              'resolution_provenance',jsonb_build_object(
+                'review_reason','PROBABLE_ADDRESS_MATCH')),
+            jsonb_build_object('fact_id','ean-v2','fact_key','electricityEan',
+              'label','EAN','value','871234567890123456','resolution_state',
+              'review_required','required',true,'location_id','location-1',
+              'resolution_provenance',jsonb_build_object(
+                'review_reason','USER_OVERRIDE')),
+            jsonb_build_object('fact_id','supplier-v2','fact_key','energySupplier',
+              'label','Leverancier','value','Declared Supplier','resolution_state',
+              'review_required','required',true,'location_id','location-1',
+              'resolution_provenance',jsonb_build_object(
+                'review_reason','USER_SUPPLIED_WITHOUT_DOCUMENT')),
+            jsonb_build_object('fact_id','mid-v2','fact_key','midNumber',
+              'label','MID','value','MID-DECLARED','resolution_state',
+              'review_required','required',true,'location_id','location-1',
+              'charger_id','charger-1','resolution_provenance',
+              jsonb_build_object('review_reason','DOCUMENT_CONFLICT_RESOLVED')),
+            jsonb_build_object('fact_id','brand-v2','fact_key','chargerBrand',
+              'label','Merk','value','Declared Brand','resolution_state',
+              'confirmed','required',true,'location_id','location-1',
+              'charger_id','charger-1','resolution_provenance',
+              jsonb_build_object('review_reason',null))
+          )
+        )
+      ), '${"b".repeat(64)}', '2026-01-18T08:00:01Z');
+    update public.app_signup_promotions
+      set signing_snapshot_id='${SNAPSHOT_V2}' where id='${PROMOTION}';
+    commit;
+  `,
+  );
+  const projectedV2 = parseEvidenceReviewCaseDetailSource(
+    await readRpc(DATABASE, AUTH_ADMIN, CASE_REF_A),
+  );
+  const projectedReasons = new Set(
+    projectedV2?.evidence.flatMap((item) =>
+      item.canonicalFacts.flatMap((fact) =>
+        fact.reviewReason ? [fact.reviewReason] : []
+      )
+    ),
+  );
+  assert(
+    projectedV2 && [
+      "USER_OVERRIDE",
+      "USER_SUPPLIED_WITHOUT_DOCUMENT",
+      "DOCUMENT_CONFLICT_RESOLVED",
+      "PROBABLE_IDENTITY_MATCH",
+      "PROBABLE_ADDRESS_MATCH",
+      ].every((reason) => projectedReasons.has(reason as never)) &&
+      projectedV2.evidence.flatMap((item) => item.canonicalFacts)
+        .filter((fact) => fact.truthClass === "REVIEW_REQUIRED")
+        .every((fact) =>
+          fact.reviewReasonAuthority === "CUSTOMER_SIGNED_RESOLUTION"
+        ) &&
+      projectedV2.evidence.flatMap((item) => item.canonicalFacts)
+        .filter((fact) => fact.truthClass === "CUSTOMER_CONFIRMED")
+        .every((fact) => !("reviewReason" in fact)),
+    "v2_review_reason_projection_invalid",
+  );
+  const postFixtureBaseline = await proofFingerprint();
 
   const adminNoScope = await readRpc(DATABASE, AUTH_ADMIN_NO_SCOPE, CASE_REF_A);
   const wrongCase = await readRpc(DATABASE, AUTH_ADMIN, CASE_REF_B);
@@ -693,7 +794,7 @@ async function databaseProof(): Promise<void> {
   q(12);
 
   const after = await proofFingerprint();
-  assert(before === after, "read_rpc_changed_database_state");
+  assert(postFixtureBaseline === after, "read_rpc_changed_database_state");
   const definition = await psql(DATABASE, `select pg_get_functiondef(
     'public.app_evidence_review_case_detail_read_v1(uuid,text)'::regprocedure
   );`);
@@ -710,11 +811,12 @@ async function activePilotProof(): Promise<void> {
     with active_versions(version) as (values
       ('20260816150000'),('20260816160000'),('20260817120000'),
       ('20260817160000'),('20260817190000'),('20260817210000'),
-      ('20260817230000'),('20260818090000'),('20260818120000')
+      ('20260817230000'),('20260818090000'),('20260818120000'),
+      ('20260818150000'),('20260818180000')
     )
     select concat_ws('|',
       (select count(*) from supabase_migrations.schema_migrations
-       where version='20260818120000'),
+       where version='20260818180000'),
       (select count(*) from active_versions expected
        where not exists (select 1 from supabase_migrations.schema_migrations ledger
          where ledger.version=expected.version))
@@ -776,7 +878,16 @@ async function activePilotProof(): Promise<void> {
         "CHARGER_MODEL",
         "MID",
         "SERIAL",
-      ].every((category) => categories.has(category as never)),
+      ].every((category) => categories.has(category as never)) &&
+      response.evidence.flatMap((item) => item.canonicalFacts)
+        .filter((fact) => fact.truthClass === "REVIEW_REQUIRED")
+        .every((fact) => fact.reviewReason === "GENERIC_REVIEW_REQUIRED") &&
+      response.evidence.flatMap((item) => item.canonicalFacts)
+        .filter((fact) => fact.truthClass === "REVIEW_REQUIRED")
+        .every((fact) => !("reviewReasonAuthority" in fact)) &&
+      response.evidence.flatMap((item) => item.canonicalFacts)
+        .filter((fact) => fact.truthClass === "CUSTOMER_CONFIRMED")
+        .every((fact) => !("reviewReason" in fact)),
     "active_pilot_fact_categories_invalid",
   );
 

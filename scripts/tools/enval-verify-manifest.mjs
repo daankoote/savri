@@ -593,6 +593,34 @@ const CHECK_LIST = [
     expectedMarker: "EVIDENCE_REVIEW_WORKLIST_READ_Q01_Q14=PASS",
   }),
   check({
+    id: "signup-resolution-provenance-pure",
+    argv: [
+      "deno",
+      "run",
+      "--cached-only",
+      "--allow-read",
+      "--unstable-sloppy-imports",
+      "scripts/proofs/app-signup-resolution-provenance.proof.ts",
+    ],
+    domain: "signup-signing-resolution-provenance",
+    applicablePaths: [
+      "app/src/features/signup/presentation/factPresentationModel.ts",
+      "app/src/features/signup/signing/canonicalSigningFacts.ts",
+      "app/src/features/signup/signing/signingIntent.ts",
+      "app/src/features/signup/DocumentFirstSigningSummary.tsx",
+      "app/src/features/signup/signupSigningClient.ts",
+      "supabase/functions/_shared/signup_resolution_provenance.ts",
+      "supabase/functions/api-app-signup-signing-finalize/index.ts",
+      "supabase/migrations/20260818180000_app_signup_resolution_provenance_projection.sql",
+      "scripts/proofs/app-signup-resolution-provenance.proof.ts",
+      "scripts/proofs/app-signup-signing-runtime.proof.ts",
+    ],
+    safety: SAFETY.SAFE_PURE,
+    minimumMode: "TARGETED",
+    expectedDurationMs: 1_500,
+    expectedMarker: "REVIEW10_SERVER_DERIVED_HASHED_PROVENANCE=PASS",
+  }),
+  check({
     id: "evidence-review-case-detail-pure",
     argv: [
       "deno",
@@ -628,6 +656,7 @@ const CHECK_LIST = [
     domain: "tenant-evidence-review-case-detail",
     applicablePaths: [
       "supabase/migrations/20260818120000_app_evidence_review_case_detail_read.sql",
+      "supabase/migrations/20260818180000_app_signup_resolution_provenance_projection.sql",
       "supabase/functions/_shared/app_evidence_review_case_detail.ts",
       "supabase/functions/api-app-evidence-review-case-detail/index.ts",
       "scripts/proofs/app-evidence-review-case-detail.proof.ts",
@@ -1142,6 +1171,7 @@ const CHECK_LIST = [
       "check",
       "--deny-import",
       "--no-lock",
+      "--unstable-sloppy-imports",
       "--config",
       "supabase/functions/deno.json",
       "supabase/functions/api-app-auth-bootstrap/index.ts",
@@ -1439,6 +1469,39 @@ export const PATH_RULES = Object.freeze([
     checks: Object.freeze(["deno-check-changed"]),
   }),
   Object.freeze({
+    id: "signup-resolution-provenance-browser-runtime",
+    match: Object.freeze({
+      type: "oneOf",
+      value: Object.freeze([
+        "app/src/features/signup/presentation/factPresentationModel.ts",
+        "app/src/features/signup/signing/canonicalSigningFacts.ts",
+        "app/src/features/signup/signing/signingIntent.ts",
+        "app/src/features/signup/DocumentFirstSigningSummary.tsx",
+        "app/src/features/signup/signupSigningClient.ts",
+      ]),
+    }),
+    checks: Object.freeze([
+      "deno-check-app-changed",
+      "signup-resolution-provenance-pure",
+    ]),
+  }),
+  Object.freeze({
+    id: "signup-resolution-provenance-server-runtime",
+    match: Object.freeze({
+      type: "oneOf",
+      value: Object.freeze([
+        "supabase/functions/_shared/signup_resolution_provenance.ts",
+        "supabase/functions/api-app-signup-signing-finalize/index.ts",
+        "scripts/proofs/app-signup-resolution-provenance.proof.ts",
+        "scripts/proofs/app-signup-signing-runtime.proof.ts",
+      ]),
+    }),
+    checks: Object.freeze([
+      "deno-check-changed",
+      "signup-resolution-provenance-pure",
+    ]),
+  }),
+  Object.freeze({
     id: "archived-migration-reference-proof",
     match: Object.freeze({
       type: "exact",
@@ -1483,7 +1546,8 @@ export const PATH_RULES = Object.freeze([
     id: "workforce-policy-foundation-migration",
     match: Object.freeze({
       type: "exact",
-      value: "supabase/migrations/20260816160000_app_workforce_policy_foundation.sql",
+      value:
+        "supabase/migrations/20260816160000_app_workforce_policy_foundation.sql",
     }),
     checks: Object.freeze([
       "migration-or-sql-review",
@@ -1505,7 +1569,8 @@ export const PATH_RULES = Object.freeze([
     id: "compliance-workforce-view-migration",
     match: Object.freeze({
       type: "exact",
-      value: "supabase/migrations/20260817120000_app_compliance_workforce_view.sql",
+      value:
+        "supabase/migrations/20260817120000_app_compliance_workforce_view.sql",
     }),
     checks: Object.freeze([
       "migration-or-sql-review",
@@ -1531,7 +1596,8 @@ export const PATH_RULES = Object.freeze([
     id: "compliance-source-event-ledger-migration",
     match: Object.freeze({
       type: "exact",
-      value: "supabase/migrations/20260817160000_app_compliance_source_event_ledger.sql",
+      value:
+        "supabase/migrations/20260817160000_app_compliance_source_event_ledger.sql",
     }),
     checks: Object.freeze([
       "migration-or-sql-review",
@@ -1677,6 +1743,20 @@ export const PATH_RULES = Object.freeze([
     }),
     checks: Object.freeze([
       "migration-or-sql-review",
+      "evidence-review-case-detail-local",
+      "tenant-migration-chain-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "signup-resolution-provenance-projection-migration",
+    match: Object.freeze({
+      type: "exact",
+      value:
+        "supabase/migrations/20260818180000_app_signup_resolution_provenance_projection.sql",
+    }),
+    checks: Object.freeze([
+      "migration-or-sql-review",
+      "signup-resolution-provenance-pure",
       "evidence-review-case-detail-local",
       "tenant-migration-chain-local",
     ]),

@@ -2,6 +2,7 @@ import type { AccountType } from "../signupTypes";
 import type { UnifiedFactPresentation } from "../presentation/factPresentationModel";
 import {
   type CanonicalSigningFactModel,
+  type CanonicalSigningSourceRegistry,
   createCanonicalSigningFactModel,
 } from "./canonicalSigningFacts";
 import {
@@ -139,6 +140,7 @@ export function signingStartReadinessMessage(
 export function createSigningIntent(input: {
   accountType: AccountType;
   presentation: UnifiedFactPresentation;
+  signingSourceRegistry?: CanonicalSigningSourceRegistry;
   signerInput: SignerInput;
   summaryConfirmed: boolean;
   selectedMethod: SignatureMethodPort | null;
@@ -148,7 +150,10 @@ export function createSigningIntent(input: {
   evidence: SigningEvidenceEnvelope | null;
 }): SigningIntent {
   const reasons = new Set<SigningReadinessReason>();
-  const canonicalFacts = createCanonicalSigningFactModel(input.presentation);
+  const canonicalFacts = createCanonicalSigningFactModel(
+    input.presentation,
+    input.signingSourceRegistry,
+  );
   if (!input.summaryConfirmed) reasons.add("summary_confirmation_missing");
   canonicalFacts.facts.forEach((fact) => {
     if (!fact.required) return;

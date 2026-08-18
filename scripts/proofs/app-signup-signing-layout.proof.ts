@@ -210,7 +210,7 @@ for (
     "app/src/features/signup/signing/mandateDocumentModel.ts":
       "877168ae26d08913c1770797045e0ea9346d0e3c892a1bed9f7a14030fee6a6f",
     "app/src/features/signup/signing/signingIntent.ts":
-      "77e4f523f5eee7c7febb0feb6efbc3ea2dd2a39c046a90871ec3ea52cd421af1",
+      "d5254fbda9f56cc8a290e321c7ab1845437fd0d7511e58f926e695c498f200e6",
     "app/src/features/signup/signing/legalBundleDocument.ts":
       "f73a1bb26b175f768d0c27e97d6467c2e633bd6c2538753b56b589b6d9676813",
     "app/src/features/invoice-analysis/invoicePdfParserAdapter.ts":

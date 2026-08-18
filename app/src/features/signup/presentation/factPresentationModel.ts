@@ -1,5 +1,4 @@
 import type { DocumentFactApplicability } from "../documentFactApplicability";
-import { compareDocumentFactValues } from "../documentFactDecisionPolicy";
 import type {
   DocumentFactKey,
   DocumentSourceType,
@@ -13,17 +12,14 @@ import {
   selectDocumentReviewMatrix,
   selectOrganizationDocumentReviewRows,
 } from "../documentReviewMatrix";
-import { compareBoundedPartyNameValues } from "../signupPartyNameCrossCheck";
 import type { AddressDraft } from "../signupTypes";
+import { deriveSignupSourceRelationV1 } from "../../../../../supabase/functions/_shared/signup_resolution_provenance";
 import {
   isValidDutchPostcode,
   isValidHouseNumber,
   isValidSuffix,
 } from "../address/addressNormalizers";
-import {
-  compareFormattedDutchAddresses,
-  hasMeaningfulManualAddress,
-} from "../structuredAddress";
+import { hasMeaningfulManualAddress } from "../structuredAddress";
 
 export type FactResolutionState =
   | "pending"
@@ -243,51 +239,21 @@ function observationSources(
   return sources;
 }
 
-type SourceRelation = "single" | "equal" | "probable" | "conflict";
-
 function sourceRelation(
   factKey: DocumentFactKey,
   sources: FactPresentationSource[],
   partyKind: "natural_person" | "organization",
-): SourceRelation {
-  const documentSources = [...new Map(
-    sources.filter((source) => source.sourceType !== "user").map((source) => [
-      source.documentIdentity || source.sourceId,
-      source,
-    ]),
-  ).values()];
-  if (documentSources.length < 2) return "single";
-  let probable = false;
-  for (let left = 0; left < documentSources.length; left += 1) {
-    for (let right = left + 1; right < documentSources.length; right += 1) {
-      const leftValue = documentSources[left].observedValue;
-      const rightValue = documentSources[right].observedValue;
-      if (factKey === "partyName") {
-        const match = compareBoundedPartyNameValues(
-          leftValue,
-          rightValue,
-          partyKind,
-        );
-        if (match === "mismatch") return "conflict";
-        if (match === "probable") probable = true;
-        continue;
-      }
-      if (factKey === "structuredAddress") {
-        const match = compareFormattedDutchAddresses(leftValue, rightValue);
-        if (match === "mismatch") return "conflict";
-        if (match === "probable") probable = true;
-        if (match !== "unavailable") continue;
-      }
-      const match = compareDocumentFactValues(
-        factKey,
-        leftValue,
-        rightValue,
-        partyKind,
-      );
-      if (match === "different") return "conflict";
-    }
-  }
-  return probable ? "probable" : "equal";
+): ReturnType<typeof deriveSignupSourceRelationV1> {
+  return deriveSignupSourceRelationV1({
+    factKey,
+    partyKind,
+    sources: sources.filter((source) => source.sourceType !== "user").map(
+      (source) => ({
+        identity: source.documentIdentity || source.sourceId,
+        observedValue: source.observedValue,
+      }),
+    ),
+  });
 }
 
 function resolveRow(
