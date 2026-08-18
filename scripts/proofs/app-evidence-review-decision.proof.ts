@@ -63,6 +63,7 @@ function detailSource(rows: Map<string, DecisionRow>): JsonObject {
     code: "ok",
     as_of: "2026-08-18T12:00:00.000Z",
     case_context: {
+      can_decide: true,
       case_ref: CASE_REF,
       lifecycle_state: "submitted_for_review",
       party_display_name: null,
@@ -130,7 +131,7 @@ function makeHarness(authUserId = AUTH) {
           data: { ok: false, status: 403, code: "case_scope_denied" },
         };
       }
-      if (name === "app_evidence_review_case_detail_read_v2") {
+      if (name === "app_evidence_review_case_detail_read_v3") {
         return { data: detailSource(rows) };
       }
       if (name === "app_evidence_review_decide_v2") {
@@ -343,6 +344,7 @@ try {
       { tenantId: "enval" },
       { decidedAt: DECIDED_AT },
       { capability: "evidence.review.decide" },
+      { canDecide: true },
       { note: "not-in-v1" },
     ]
   ) {
@@ -370,7 +372,7 @@ try {
         "caseRef|decision|decisionAt|evidenceVersionRef|outcome|schemaVersion" &&
       !JSON.stringify(acceptedBody).includes("must-not-leak") &&
       acceptedHarness.calls.map((call) => call.name).join("|") ===
-        "app_evidence_review_case_detail_read_v2|app_evidence_review_decide_v2|app_evidence_review_state_v1" &&
+        "app_evidence_review_case_detail_read_v3|app_evidence_review_decide_v2|app_evidence_review_state_v1" &&
       acceptedHarness.calls[1].args.p_auth_user_id === AUTH &&
       acceptedHarness.calls[1].args.p_evidence_version_id === EVIDENCE_ACCEPT &&
       acceptedHarness.calls[1].args.p_decision === "ACCEPTED" &&

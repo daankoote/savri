@@ -20,6 +20,8 @@ const MIGRATION =
   "supabase/migrations/20260818180000_app_signup_resolution_provenance_projection.sql";
 const CORRECTION_MIGRATION =
   "supabase/migrations/20260818210000_app_evidence_review_correction_details.sql";
+const AFFORDANCE_MIGRATION =
+  "supabase/migrations/20260818220000_app_evidence_review_case_detail_decide_affordance.sql";
 const PILOT_CASE_REF = "CASE-7E4CC75CD19F";
 const HASH = "a".repeat(64);
 const EXPIRES = "2030-01-01T00:00:00Z";
@@ -29,6 +31,8 @@ const AUTH_ADMIN_NO_SCOPE = "e1000000-0000-4000-8000-000000000002";
 const AUTH_DECIDE_ONLY = "e1000000-0000-4000-8000-000000000003";
 const AUTH_NON_WORKFORCE = "e1000000-0000-4000-8000-000000000004";
 const AUTH_CUSTOMER_ONLY = "e1000000-0000-4000-8000-000000000005";
+const AUTH_VIEW_DECIDE = "e1000000-0000-4000-8000-000000000006";
+const AUTH_INACTIVE = "e1000000-0000-4000-8000-000000000007";
 const CUSTOMER = "e2000000-0000-4000-8000-000000000001";
 const CASE_A = "e3000000-0000-4000-8000-000000000001";
 const CASE_B = "e3000000-0000-4000-8000-000000000002";
@@ -162,6 +166,7 @@ function rpcSuccess(evidence: readonly JsonObject[] = [sourceEvidence()]): JsonO
     code: "ok",
     as_of: "2026-08-18T12:00:00.000Z",
     case_context: {
+      can_decide: true,
       case_ref: CASE_REF_A,
       lifecycle_state: "submitted_for_review",
       party_display_name: "Declared Person",
@@ -262,7 +267,7 @@ async function endpointProof(): Promise<void> {
     onRpc: (name, args) => {
       rpcCalls += 1;
       assert(
-        name === "app_evidence_review_case_detail_read_v2" &&
+        name === "app_evidence_review_case_detail_read_v3" &&
           args.p_auth_user_id === AUTH_ADMIN && args.p_case_ref === CASE_REF_A &&
           Object.keys(args).sort().join("|") === "p_auth_user_id|p_case_ref",
         "rpc_contract_invalid",
@@ -334,6 +339,7 @@ async function endpointProof(): Promise<void> {
 
   const source = await Deno.readTextFile(MIGRATION);
   const correctionSource = await Deno.readTextFile(CORRECTION_MIGRATION);
+  const affordanceSource = await Deno.readTextFile(AFFORDANCE_MIGRATION);
   assert(
     source.includes("public.app_workforce_authorize_v1(") &&
       source.includes("'evidence.review.view'") &&
@@ -342,6 +348,10 @@ async function endpointProof(): Promise<void> {
       source.includes("grant execute on function public.app_evidence_review_case_detail_read_v1") &&
       correctionSource.includes("app_evidence_review_case_detail_read_v2") &&
       correctionSource.includes("correction_instruction") &&
+      affordanceSource.includes("app_evidence_review_case_detail_read_v3") &&
+      affordanceSource.includes("'evidence.review.decide'") &&
+      affordanceSource.includes("app_workforce_authorize_v1") &&
+      !affordanceSource.includes("grant execute on function public.app_workforce_authorize_v1") &&
       !source.includes("grant execute on function public.app_workforce_authorize_v1") &&
       !/\binsert\b|\bupdate\b|\bdelete\b|\btruncate\b/i.test(
         source.replace(/^\s*--.*$/gm, ""),
@@ -439,7 +449,7 @@ async function readRpc(
 ): Promise<JsonObject> {
   const output = await psql(database, `begin;
     set local role service_role;
-    select public.app_evidence_review_case_detail_read_v2(
+    select public.app_evidence_review_case_detail_read_v3(
       '${authUserId}', '${caseRef}'
     )::text;
     rollback;`);
@@ -452,11 +462,11 @@ async function databaseProof(): Promise<void> {
   await setupDatabase();
   const acl = await psql(DATABASE, `select concat_ws('|',
     has_function_privilege('service_role',
-      'public.app_evidence_review_case_detail_read_v2(uuid,text)','EXECUTE'),
+      'public.app_evidence_review_case_detail_read_v3(uuid,text)','EXECUTE'),
     has_function_privilege('anon',
-      'public.app_evidence_review_case_detail_read_v2(uuid,text)','EXECUTE'),
+      'public.app_evidence_review_case_detail_read_v3(uuid,text)','EXECUTE'),
     has_function_privilege('authenticated',
-      'public.app_evidence_review_case_detail_read_v2(uuid,text)','EXECUTE'),
+      'public.app_evidence_review_case_detail_read_v3(uuid,text)','EXECUTE'),
     has_function_privilege('service_role',
       'public.app_workforce_authorize_v1(uuid,text,uuid,uuid,timestamptz)',
       'EXECUTE')
@@ -471,7 +481,9 @@ async function databaseProof(): Promise<void> {
       ('${AUTH_ADMIN_NO_SCOPE}','noscope@example.invalid',clock_timestamp(),clock_timestamp(),clock_timestamp()),
       ('${AUTH_DECIDE_ONLY}','decide@example.invalid',clock_timestamp(),clock_timestamp(),clock_timestamp()),
       ('${AUTH_NON_WORKFORCE}','outside@example.invalid',clock_timestamp(),clock_timestamp(),clock_timestamp()),
-      ('${AUTH_CUSTOMER_ONLY}','customer@example.invalid',clock_timestamp(),clock_timestamp(),clock_timestamp());
+      ('${AUTH_CUSTOMER_ONLY}','customer@example.invalid',clock_timestamp(),clock_timestamp(),clock_timestamp()),
+      ('${AUTH_VIEW_DECIDE}','view-decide@example.invalid',clock_timestamp(),clock_timestamp(),clock_timestamp()),
+      ('${AUTH_INACTIVE}','inactive@example.invalid',clock_timestamp(),clock_timestamp(),clock_timestamp());
     insert into public.app_customers (id,customer_type)
     values ('${CUSTOMER}','particulier');
     insert into public.app_customer_access_grants (
@@ -508,6 +520,8 @@ async function databaseProof(): Promise<void> {
   for (const [auth, seniority, suffix] of [
     [AUTH_ADMIN_NO_SCOPE, "admin", "admin-no-scope"],
     [AUTH_DECIDE_ONLY, "reviewer", "decide-only"],
+    [AUTH_VIEW_DECIDE, "reviewer", "view-decide"],
+    [AUTH_INACTIVE, "reviewer", "inactive"],
   ]) {
     const created = await psql(DATABASE, `select
       public.app_workforce_member_manage_v1(
@@ -520,10 +534,16 @@ async function databaseProof(): Promise<void> {
   }
   const identities = await psql(DATABASE, `select concat_ws('|',
     (select id from public.app_workforce_identities where auth_user_id='${AUTH_ADMIN}'),
-    (select id from public.app_workforce_identities where auth_user_id='${AUTH_DECIDE_ONLY}')
+    (select id from public.app_workforce_identities where auth_user_id='${AUTH_DECIDE_ONLY}'),
+    (select id from public.app_workforce_identities where auth_user_id='${AUTH_VIEW_DECIDE}'),
+    (select id from public.app_workforce_identities where auth_user_id='${AUTH_INACTIVE}')
   );`);
-  const [adminIdentity, decideIdentity] = identities.split("|");
-  assert(adminIdentity && decideIdentity, "identity_missing");
+  const [adminIdentity, decideIdentity, viewDecideIdentity, inactiveIdentity] =
+    identities.split("|");
+  assert(
+    adminIdentity && decideIdentity && viewDecideIdentity && inactiveIdentity,
+    "identity_missing",
+  );
 
   const viewGrant = await psql(DATABASE, `select
     public.app_workforce_case_assignment_manage_v1(
@@ -537,7 +557,36 @@ async function databaseProof(): Promise<void> {
       '${EXPIRES}','grant','${decideIdentity}','evidence.review.decide','${CASE_A}',
       null,null,null,clock_timestamp(),null,'decision:review07-decide',null
     )->>'ok';`);
-  assert(viewGrant === "true" && decideGrant === "true", "scope_grant_failed");
+  const adminOtherCaseDecideGrant = await psql(DATABASE, `select
+    public.app_workforce_case_assignment_manage_v1(
+      '${AUTH_ADMIN}','review13-admin-other-decide','review13-admin-other-decide','${HASH}',
+      '${EXPIRES}','grant','${adminIdentity}','evidence.review.decide','${CASE_B}',
+      null,null,null,clock_timestamp(),null,'decision:review13-other-case',null
+    )->>'ok';`);
+  const viewDecideGrants = await psql(DATABASE, `select concat_ws('|',
+    public.app_workforce_case_assignment_manage_v1(
+      '${AUTH_ADMIN}','review13-view-decide-view','review13-view-decide-view','${HASH}',
+      '${EXPIRES}','grant','${viewDecideIdentity}','evidence.review.view','${CASE_A}',
+      null,null,null,clock_timestamp(),null,'decision:review13-view',null
+    )->>'ok',
+    public.app_workforce_case_assignment_manage_v1(
+      '${AUTH_ADMIN}','review13-view-decide-decide','review13-view-decide-decide','${HASH}',
+      '${EXPIRES}','grant','${viewDecideIdentity}','evidence.review.decide','${CASE_A}',
+      null,null,null,clock_timestamp(),null,'decision:review13-decide',null
+    )->>'ok'
+  );`);
+  assert(
+    viewGrant === "true" && decideGrant === "true" &&
+      adminOtherCaseDecideGrant === "true" && viewDecideGrants === "true|true",
+    "scope_grant_failed",
+  );
+  const inactiveViewGrant = await psql(DATABASE, `select
+    public.app_workforce_case_assignment_manage_v1(
+      '${AUTH_ADMIN}','review13-inactive-view','review13-inactive-view','${HASH}',
+      '${EXPIRES}','grant','${inactiveIdentity}','evidence.review.view','${CASE_A}',
+      null,null,null,clock_timestamp(),null,'decision:review13-inactive-view',null
+    )->>'ok';`);
+  assert(inactiveViewGrant === "true", "inactive_scope_grant_failed");
   await psql(DATABASE, `insert into public.app_workforce_capability_assignments (
     assignment_id,workforce_identity_id,capability_code,event_type,effective_at,
     valid_until,decision_ref,reason_ref,recorded_by_actor_ref,request_id,
@@ -549,6 +598,15 @@ async function databaseProof(): Promise<void> {
   where workforce_identity_id='${decideIdentity}'
     and capability_code='evidence.review.view'
     and event_type='granted' and supersedes_assignment_event_id is null;`);
+  await psql(DATABASE, `insert into public.app_workforce_identity_states (
+    workforce_identity_id,state,effective_at,decision_ref,reason_ref,
+    recorded_by_actor_ref,request_id,supersedes_state_id
+  ) select workforce_identity_id,'suspended',clock_timestamp(),
+    'decision:review13','proof_suspension','proof:review13',
+    'review13-suspend',id
+  from public.app_workforce_identity_states
+  where workforce_identity_id='${inactiveIdentity}'
+    and supersedes_state_id is null;`);
   q(9);
 
   await psql(DATABASE, `begin;
@@ -677,6 +735,7 @@ async function databaseProof(): Promise<void> {
   assert(
     response && response.case.caseRef === CASE_REF_A &&
       response.case.lifecycle === "submitted_for_review" &&
+      response.case.canDecide === false &&
       response.case.partyDisplayName === "Declared Person" &&
       response.case.deliveryAddress === "Declared Address" &&
       response.evidence.length === 2 &&
@@ -821,14 +880,20 @@ async function databaseProof(): Promise<void> {
   const adminNoScope = await readRpc(DATABASE, AUTH_ADMIN_NO_SCOPE, CASE_REF_A);
   const wrongCase = await readRpc(DATABASE, AUTH_ADMIN, CASE_REF_B);
   const decideOnly = await readRpc(DATABASE, AUTH_DECIDE_ONLY, CASE_REF_A);
+  const viewDecide = parseEvidenceReviewCaseDetailSource(
+    await readRpc(DATABASE, AUTH_VIEW_DECIDE, CASE_REF_A),
+  );
   const nonWorkforce = await readRpc(DATABASE, AUTH_NON_WORKFORCE, CASE_REF_A);
   const customerOnly = await readRpc(DATABASE, AUTH_CUSTOMER_ONLY, CASE_REF_A);
+  const inactive = await readRpc(DATABASE, AUTH_INACTIVE, CASE_REF_A);
   assert(
     adminNoScope.code === "case_scope_denied" &&
       wrongCase.code === "case_scope_denied" &&
       decideOnly.code === "capability_not_authorized" &&
+      viewDecide?.case.canDecide === true &&
       nonWorkforce.code === "workforce_identity_missing" &&
-      customerOnly.code === "workforce_identity_missing",
+      customerOnly.code === "workforce_identity_missing" &&
+      inactive.code === "workforce_identity_inactive",
     "authorization_matrix_invalid",
   );
   q(12);
@@ -836,10 +901,12 @@ async function databaseProof(): Promise<void> {
   const after = await proofFingerprint();
   assert(postFixtureBaseline === after, "read_rpc_changed_database_state");
   const definition = await psql(DATABASE, `select pg_get_functiondef(
-    'public.app_evidence_review_case_detail_read_v2(uuid,text)'::regprocedure
+    'public.app_evidence_review_case_detail_read_v3(uuid,text)'::regprocedure
   );`);
   assert(
-    definition.includes("app_evidence_review_case_detail_read_v1") &&
+    definition.includes("app_evidence_review_case_detail_read_v2") &&
+      definition.includes("app_workforce_authorize_v1") &&
+      definition.includes("'evidence.review.decide'") &&
       !/\binsert\b|\bupdate\b|\bdelete\b|\btruncate\b/i.test(definition),
     "read_function_contains_write_or_parallel_auth",
   );
@@ -852,11 +919,12 @@ async function activePilotProof(): Promise<void> {
       ('20260816150000'),('20260816160000'),('20260817120000'),
       ('20260817160000'),('20260817190000'),('20260817210000'),
       ('20260817230000'),('20260818090000'),('20260818120000'),
-      ('20260818150000'),('20260818180000'),('20260818210000')
+      ('20260818150000'),('20260818180000'),('20260818210000'),
+      ('20260818220000')
     )
     select concat_ws('|',
       (select count(*) from supabase_migrations.schema_migrations
-       where version='20260818180000'),
+       where version='20260818220000'),
       (select count(*) from active_versions expected
        where not exists (select 1 from supabase_migrations.schema_migrations ledger
          where ledger.version=expected.version))
@@ -898,6 +966,7 @@ async function activePilotProof(): Promise<void> {
   assert(
     response && response.case.caseRef === PILOT_CASE_REF &&
       response.case.lifecycle === "submitted_for_review" &&
+      response.case.canDecide === true &&
       !!response.case.partyDisplayName && !!response.case.deliveryAddress &&
       response.evidence.length === 2 &&
       response.evidence.every((item) => item.reviewStatus === "PENDING") &&
@@ -971,6 +1040,7 @@ async function activePilotProof(): Promise<void> {
   console.log("EVIDENCE_REVIEW_CASE_DETAIL_Q01_Q14=PASS");
   console.log("PRIVATE_CASE_DETAIL_RPC=PASS");
   console.log("PILOT_CASE_READ=PASS");
+  console.log("PILOT_CAN_DECIDE=PASS");
   console.log("CURRENT_EVIDENCE_COUNT=2");
   console.log("BOTH_REVIEW_STATUS=PENDING");
   console.log("UNASSIGNED_CASE_DENIED=PASS");

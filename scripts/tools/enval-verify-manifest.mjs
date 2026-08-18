@@ -529,6 +529,7 @@ const CHECK_LIST = [
     applicablePaths: [
       "supabase/migrations/20260817230000_app_evidence_review_foundation.sql",
       "supabase/migrations/20260818210000_app_evidence_review_correction_details.sql",
+      "supabase/migrations/20260818220000_app_evidence_review_case_detail_decide_affordance.sql",
       "scripts/proofs/app-evidence-review-foundation.proof.ts",
     ],
     safety: SAFETY.SAFE_PURE,
@@ -551,6 +552,7 @@ const CHECK_LIST = [
     applicablePaths: [
       "supabase/migrations/20260817230000_app_evidence_review_foundation.sql",
       "supabase/migrations/20260818210000_app_evidence_review_correction_details.sql",
+      "supabase/migrations/20260818220000_app_evidence_review_case_detail_decide_affordance.sql",
       "supabase/functions/_shared/app_evidence_review_case_detail.ts",
       "supabase/functions/api-app-evidence-review-decision/index.ts",
       "scripts/proofs/app-evidence-review-decision.proof.ts",
@@ -685,6 +687,7 @@ const CHECK_LIST = [
       "supabase/migrations/20260818120000_app_evidence_review_case_detail_read.sql",
       "supabase/migrations/20260818180000_app_signup_resolution_provenance_projection.sql",
       "supabase/migrations/20260818210000_app_evidence_review_correction_details.sql",
+      "supabase/migrations/20260818220000_app_evidence_review_case_detail_decide_affordance.sql",
       "supabase/functions/_shared/app_evidence_review_case_detail.ts",
       "supabase/functions/api-app-evidence-review-case-detail/index.ts",
       "scripts/proofs/app-evidence-review-case-detail.proof.ts",
@@ -1751,6 +1754,22 @@ export const PATH_RULES = Object.freeze([
       "evidence-review-foundation-local",
       "evidence-review-case-detail-local",
       "evidence-review-worklist-read-local",
+      "tenant-migration-chain-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "evidence-review-case-detail-decide-affordance-migration",
+    match: Object.freeze({
+      type: "exact",
+      value:
+        "supabase/migrations/20260818220000_app_evidence_review_case_detail_decide_affordance.sql",
+    }),
+    checks: Object.freeze([
+      "migration-or-sql-review",
+      "evidence-review-decision-pure",
+      "evidence-review-foundation-pure",
+      "evidence-review-foundation-local",
+      "evidence-review-case-detail-local",
       "tenant-migration-chain-local",
     ]),
   }),

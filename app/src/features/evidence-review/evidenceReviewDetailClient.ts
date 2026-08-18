@@ -203,6 +203,7 @@ export function decodeEvidenceReviewCaseDetailResponse(
   ) return invalidResponse();
 
   const caseFields = [
+    "canDecide",
     "caseRef",
     "lifecycle",
     ...(body.case.partyDisplayName === undefined
@@ -217,6 +218,7 @@ export function decodeEvidenceReviewCaseDetailResponse(
     !boundedString(body.case.caseRef, 64) ||
     !isEvidenceReviewCaseRef(body.case.caseRef) ||
     !boundedString(body.case.lifecycle, 80) ||
+    typeof body.case.canDecide !== "boolean" ||
     (body.case.partyDisplayName !== undefined &&
       (!boundedString(body.case.partyDisplayName, 500) ||
         body.case.partyDisplayNameTruth !== "DECLARED")) ||
@@ -240,6 +242,7 @@ export function decodeEvidenceReviewCaseDetailResponse(
       case: Object.freeze({
         caseRef: body.case.caseRef,
         lifecycle: body.case.lifecycle,
+        canDecide: body.case.canDecide,
         ...(body.case.partyDisplayName === undefined ? {} : {
           partyDisplayName: body.case.partyDisplayName,
           partyDisplayNameTruth: "DECLARED" as const,

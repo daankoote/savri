@@ -177,6 +177,7 @@ assert(
 const evidenceReviewDecisionLocalService = buildPlan({
   paths: [
     "supabase/migrations/20260818210000_app_evidence_review_correction_details.sql",
+    "supabase/migrations/20260818220000_app_evidence_review_case_detail_decide_affordance.sql",
     "supabase/functions/_shared/app_evidence_review_case_detail.ts",
     "supabase/functions/api-app-evidence-review-decision/index.ts",
     "scripts/proofs/app-evidence-review-decision.proof.ts",

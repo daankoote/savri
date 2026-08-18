@@ -67,6 +67,7 @@ export type EvidenceReviewCanonicalFactV1 = Readonly<{
 export type EvidenceReviewCaseContextV1 = Readonly<{
   caseRef: string;
   lifecycle: string;
+  canDecide: boolean;
   partyDisplayName?: string;
   partyDisplayNameTruth?: "DECLARED";
   deliveryAddress?: string;
@@ -95,6 +96,7 @@ export type EvidenceReviewCaseDetailResponseV1 = Readonly<{
 }>;
 
 const CASE_SOURCE_KEYS = [
+  "can_decide",
   "case_ref",
   "delivery_address",
   "delivery_address_truth_class",
@@ -285,7 +287,10 @@ export function parseEvidenceReviewCaseDetailSource(
     input.case_context.delivery_address_truth_class,
     500,
   );
-  if (!caseRef || !lifecycle || partyDisplayName === false || deliveryAddress === false) {
+  if (
+    !caseRef || !lifecycle || typeof input.case_context.can_decide !== "boolean" ||
+    partyDisplayName === false || deliveryAddress === false
+  ) {
     return null;
   }
 
@@ -309,6 +314,7 @@ export function parseEvidenceReviewCaseDetailSource(
     case: Object.freeze({
       caseRef,
       lifecycle,
+      canDecide: input.case_context.can_decide,
       ...(partyDisplayName === null
         ? {}
         : { partyDisplayName, partyDisplayNameTruth: "DECLARED" as const }),

@@ -64,6 +64,7 @@ const FIXTURE: EvidenceReviewCaseDetailResponseV1 = {
   case: {
     caseRef: CASE_REF,
     lifecycle: "submitted_for_review",
+    canDecide: true,
     partyDisplayName: "Pilotnaam",
     partyDisplayNameTruth: "DECLARED",
     deliveryAddress: "Pilotadres",
@@ -255,6 +256,7 @@ const detailResult = await loadEvidenceReviewCaseDetail({
 const detailHeaders = new Headers(detailInit?.headers);
 assert(
   detailResult.ok && detailFetches === 1 &&
+    detailResult.value.case.canDecide === true &&
     detailUrl ===
       `https://local-proof.invalid/functions/v1/api-app-evidence-review-case-detail?caseRef=${CASE_REF}` &&
     detailInit?.method === "GET" && !detailInit.body &&
@@ -531,6 +533,10 @@ assert(
   }).ok &&
     !decodeEvidenceReviewCaseDetailResponse({
       ...FIXTURE,
+      case: { ...FIXTURE.case, canDecide: "true" },
+    }).ok &&
+    !decodeEvidenceReviewCaseDetailResponse({
+      ...FIXTURE,
       evidence: [{ ...FIXTURE.evidence[0], reviewStatus: "APPROVED" }],
     }).ok &&
     !decodeEvidenceReviewCaseDetailResponse({
@@ -653,7 +659,7 @@ assert(
     !/(role\s*===|email\s*===|caseOwner|case_owner|workforceId|workforce_id|tenantId|tenant_id)/
       .test(value)
   ) &&
-    detailEndpointSource.includes("app_evidence_review_case_detail_read_v1") &&
+    detailEndpointSource.includes("app_evidence_review_case_detail_read_v3") &&
     previewEndpointSource.includes(
       "app_evidence_review_preview_source_read_v1",
     ) &&

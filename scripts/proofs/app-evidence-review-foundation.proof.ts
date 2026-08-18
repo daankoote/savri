@@ -18,6 +18,7 @@ const DATABASE_PREFIX = "enval_review02_proof_";
 const MIGRATIONS = Object.freeze([
   "supabase/migrations/20260817230000_app_evidence_review_foundation.sql",
   "supabase/migrations/20260818210000_app_evidence_review_correction_details.sql",
+  "supabase/migrations/20260818220000_app_evidence_review_case_detail_decide_affordance.sql",
 ]);
 
 class ProofFailure extends Error {}
@@ -148,10 +149,10 @@ async function activeFingerprint() {
   return `${base}|${reviewCount}`;
 }
 
-const [foundationSource, correctionSource] = await Promise.all(
+const [foundationSource, correctionSource, affordanceSource] = await Promise.all(
   MIGRATIONS.map((path) => Deno.readTextFile(path)),
 );
-const source = `${foundationSource}\n${correctionSource}`;
+const source = `${foundationSource}\n${correctionSource}\n${affordanceSource}`;
 assert(
   source.includes("app_evidence_review_decisions") &&
     source.includes("'ACCEPTED', 'CORRECTION_REQUIRED'") &&
@@ -162,6 +163,7 @@ assert(
     source.includes("app_evidence_review_decide_v1") &&
     source.includes("app_evidence_review_decide_v2") &&
     source.includes("app_evidence_review_case_detail_read_v2") &&
+    source.includes("app_evidence_review_case_detail_read_v3") &&
     source.includes("MISSING_INFORMATION") &&
     source.includes("correction_instruction") &&
     source.includes("app_evidence_review_state_v1") &&
@@ -211,8 +213,8 @@ function databaseServiceClient(database: string): ServiceClient {
     from: () => ({}),
     rpc: async (name, args) => {
       let sql: string;
-      if (name === "app_evidence_review_case_detail_read_v2") {
-        sql = `select public.app_evidence_review_case_detail_read_v2(
+      if (name === "app_evidence_review_case_detail_read_v3") {
+        sql = `select public.app_evidence_review_case_detail_read_v3(
           ${sqlText(args.p_auth_user_id)}::uuid,
           ${sqlText(args.p_case_ref)}
         )::text;`;
@@ -413,6 +415,16 @@ try {
         'public.app_evidence_review_decide_v2(uuid,uuid,text,text,text,text,text,text,timestamptz)',
         'EXECUTE'
       )
+      and not has_function_privilege(
+        'service_role',
+        'public.app_evidence_review_case_detail_read_v2(uuid,text)',
+        'EXECUTE'
+      )
+      and has_function_privilege(
+        'service_role',
+        'public.app_evidence_review_case_detail_read_v3(uuid,text)',
+        'EXECUTE'
+      )
     )::text;
   `);
   assert(security === "true", "browser_or_service_direct_write_present");
@@ -555,7 +567,7 @@ try {
 
   const adminEndpoint = decisionEndpoint(database, AUTH_ADMIN);
   const endpointDetail = JSON.parse(await psql(database, `
-    select public.app_evidence_review_case_detail_read_v2(
+    select public.app_evidence_review_case_detail_read_v3(
       '${AUTH_ADMIN}','${CASE_REF_A}'
     );
   `));
@@ -691,7 +703,7 @@ try {
   );
   const correctionProjection = parseEvidenceReviewCaseDetailSource(
     JSON.parse(await psql(database, `select
-      public.app_evidence_review_case_detail_read_v2(
+      public.app_evidence_review_case_detail_read_v3(
         '${AUTH_REVIEWER}','${CASE_REF_A}'
       );`)),
   );

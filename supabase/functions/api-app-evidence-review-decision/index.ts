@@ -24,7 +24,7 @@ import {
   parseEvidenceReviewCaseDetailSource,
 } from "../_shared/app_evidence_review_case_detail.ts";
 
-const DETAIL_RPC = "app_evidence_review_case_detail_read_v2";
+const DETAIL_RPC = "app_evidence_review_case_detail_read_v3";
 const DECIDE_RPC = "app_evidence_review_decide_v2";
 const STATE_RPC = "app_evidence_review_state_v1";
 const BODY_KEYS = Object.freeze([
