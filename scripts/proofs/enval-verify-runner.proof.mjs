@@ -267,6 +267,8 @@ const evidenceReviewCaseDetailLocalService = buildPlan({
     "supabase/functions/api-app-evidence-review-round-finalize/index.ts",
     "scripts/proofs/app-evidence-review-case-detail.proof.ts",
     "scripts/proofs/app-evidence-fact-review-round.proof.ts",
+    "scripts/proofs/app-evidence-fact-review-round-served.proof.mjs",
+    "scripts/tools/enval-local-dev.mjs",
   ],
   mode: "LOCAL_SERVICE",
 });
@@ -280,6 +282,9 @@ assert(
     evidenceReviewCaseDetailLocalService.selected.filter((check) =>
       check.commandId === "evidence-review-case-detail-local"
     ).length === 1 &&
+    evidenceReviewCaseDetailLocalService.selected.filter((check) =>
+      check.commandId === "evidence-fact-review-round-served-local"
+    ).length === 1 &&
     evidenceReviewCaseDetailLocalService.selected.some((check) =>
       check.commandId === "evidence-fact-review-round-pure" &&
       check.safety === SAFETY.SAFE_PURE && !check.mutatesState &&
@@ -287,6 +292,11 @@ assert(
     ) &&
     evidenceReviewCaseDetailLocalService.selected.some((check) =>
       check.commandId === "evidence-review-case-detail-local" &&
+      check.safety === SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE &&
+      check.mutatesState && !check.remote && !check.destructive
+    ) &&
+    evidenceReviewCaseDetailLocalService.selected.some((check) =>
+      check.commandId === "evidence-fact-review-round-served-local" &&
       check.safety === SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE &&
       check.mutatesState && !check.remote && !check.destructive
     ),
@@ -352,6 +362,7 @@ const evidenceReviewCaseDetailUiLocal = buildPlan({
     "app/src/features/evidence-review/EvidenceReviewWorklistPage.tsx",
     "app/src/features/evidence-review/evidenceReviewDetailClient.ts",
     "app/src/features/evidence-review/evidenceReviewRoutes.ts",
+    "app/src/features/evidence-review/useEvidenceFactReviewDraft.ts",
     "app/src/features/evidence-review/useEvidenceReviewCaseDetail.ts",
     "app/src/pages/EvidenceReviewCaseDetailPage.tsx",
     "app/src/pages/EvidenceReviewWorklistPage.tsx",

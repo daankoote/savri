@@ -17,6 +17,7 @@ import { resolveSupabaseTarget } from "./enval-supabase-target.mjs";
 const ROOT = resolve(fileURLToPath(new URL("../../", import.meta.url)));
 const FUNCTIONS_ENV_FILE = resolve(ROOT, "supabase/functions/.env.local");
 const DEFAULT_VITE_URL = "http://127.0.0.1:5175";
+const LOCAL_IDEMPOTENCY_TTL_SECONDS = "86400";
 const REQUEST_TIMEOUT_MS = 5_000;
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -33,6 +34,7 @@ const CURRENT_EDGE_ENTRYPOINTS = Object.freeze([
   "supabase/functions/api-app-ops-location-root-create/index.ts",
   "supabase/functions/api-app-ops-location-version-accept/index.ts",
   "supabase/functions/api-app-ops-location-version-correct/index.ts",
+  "supabase/functions/api-app-evidence-review-round-finalize/index.ts",
 ]);
 
 function safeDiagnostic(value) {
@@ -209,6 +211,8 @@ function managedLocalConfiguration(controlPlaneStatus) {
     ENVAL_CONTROL_PLANE_SUPABASE_URL: controlPlaneApi.toString().replace(/\/$/, ""),
     ENVAL_CONTROL_PLANE_SERVICE_ROLE_KEY:
       controlPlaneStatus.environment.SERVICE_ROLE_KEY,
+    APP_OPS_LOCATION_IDEMPOTENCY_TTL_SECONDS:
+      LOCAL_IDEMPOTENCY_TTL_SECONDS,
   });
 }
 
@@ -342,6 +346,29 @@ async function ready(viteUrl) {
     fail("auth_bootstrap_not_ready");
   }
 
+  const finalizer = await fetchBounded(
+    `${apiBase}/api-app-evidence-review-round-finalize`,
+    {
+      method: "POST",
+      headers: {
+        ...headers,
+        "Content-Type": "application/json",
+        "Idempotency-Key": `local-ready-${crypto.randomUUID()}`,
+      },
+      body: "{}",
+    },
+  );
+  let finalizerBody;
+  try {
+    finalizerBody = await finalizer.json();
+  } catch {
+    fail("evidence_review_finalizer_invalid");
+  }
+  if (
+    finalizer.status !== 401 ||
+    finalizerBody?.code !== "authentication_required"
+  ) fail("evidence_review_finalizer_not_ready");
+
   const pending = parseMigrationState();
   if (pending !== 0) fail("tenant_migrations_pending", String(pending));
   process.stdout.write([
@@ -350,6 +377,7 @@ async function ready(viteUrl) {
     "SUPABASE=PASS",
     "PRESENTATION_BOOTSTRAP=PASS",
     "AUTH_BOOTSTRAP=PASS",
+    "EVIDENCE_REVIEW_FINALIZER=PASS",
     "DOSSIERS_ROUTE=PASS",
     "PENDING_LOCAL_TENANT_MIGRATIONS=0",
   ].join("\n") + "\n");

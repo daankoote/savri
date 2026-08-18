@@ -4,11 +4,17 @@ import type {
   EvidenceReviewEvidenceV1,
 } from "../../../../supabase/functions/_shared/app_evidence_review_case_detail.ts";
 import {
+  buildEvidenceFactReviewRows,
+  EVIDENCE_FACT_CORRECTION_REASON_LABELS,
+  EVIDENCE_FACT_CORRECTION_REASON_OPTIONS,
   EVIDENCE_REVIEW_REASON_LABELS,
   EvidenceReviewCaseDetailContent,
 } from "./EvidenceReviewCaseDetailPage.tsx";
 import {
   decodeEvidenceReviewCaseDetailResponse,
+  type EvidenceFactReviewRoundFinalizeCall,
+  type EvidenceFactReviewRoundFinalizeRequest,
+  finalizeEvidenceFactReviewRound,
   type EvidenceReviewDetailSafeError,
   loadEvidenceReviewCaseDetail,
   loadEvidenceReviewPreview,
@@ -18,6 +24,14 @@ import {
   type EvidenceReviewPreviewState,
 } from "./EvidenceReviewPreviewPane.tsx";
 import { loadEvidenceReviewCaseDetailOnce } from "./useEvidenceReviewCaseDetail.ts";
+import {
+  buildEvidenceFactReviewFinalizeRequest,
+  initializeEvidenceFactReviewDraft,
+  isEvidenceFactCorrectionValid,
+  isEvidenceFactReviewDraftComplete,
+  reduceEvidenceFactReviewDraft,
+  selectEvidenceFactReviewFinalizeAttempt,
+} from "./useEvidenceFactReviewDraft.ts";
 import {
   buildEvidenceReviewDetailRoute,
   parseEvidenceReviewDetailRoute,
@@ -40,6 +54,10 @@ const CASE_REF = "CASE-7E4CC75CD19F";
 const ENERGY_VERSION = "e8000000-0000-4000-8000-000000000001";
 const INSTALLATION_VERSION = "e8000000-0000-4000-8000-000000000002";
 const noop = () => undefined;
+const noFinalize: EvidenceFactReviewRoundFinalizeCall = async () => ({
+  ok: false,
+  kind: "ordinary",
+});
 
 function evidence(
   evidenceVersionRef: string,
@@ -158,6 +176,7 @@ function detailHtml(
   return renderToStaticMarkup(
     <EvidenceReviewCaseDetailContent
       caseRef={CASE_REF}
+      finalizeReview={noFinalize}
       loadPreview={previewSuccess}
       onBack={noop}
       onRefresh={noop}
@@ -202,7 +221,7 @@ assert(
     readyHtml.includes("Ingediend voor beoordeling") &&
     readyHtml.split("Document bekijken").length - 1 === 2 &&
     readyHtml.split(">PENDING<").length - 1 === 2 &&
-    readyHtml.split('role="columnheader"').length - 1 === 8 &&
+    readyHtml.split('role="columnheader"').length - 1 === 10 &&
     !readyHtml.includes("Aangegeven dossiercontext") &&
     !readyHtml.includes(">Bewijsstukken<") &&
     !readyHtml.includes("Actuele gegevens uit het geautoriseerde dossier.") &&
@@ -223,9 +242,58 @@ assert(
   "Q05_fact_truth_presentation_invalid",
 );
 assert(
-  !/(Accepteren|Correctie vereist maken|Beoordeling opslaan|Check uitvoeren)/i
-    .test(readyHtml),
-  "Q06_decision_or_check_control_present",
+  readyHtml.split(">Accepteren<").length - 1 === 2 &&
+    readyHtml.split(">Correctie<").length - 1 === 2 &&
+    readyHtml.includes('aria-pressed="true"') &&
+    readyHtml.includes("Review afronden") && readyHtml.includes("disabled") &&
+    !/(Beoordeling opslaan|Check uitvoeren)/i.test(readyHtml),
+  "Q06_fact_review_defaults_or_controls_invalid",
+);
+
+const viewOnlyHtml = detailHtml({
+  status: "ready",
+  value: { ...FIXTURE, case: { ...FIXTURE.case, canDecide: false } },
+  error: null,
+});
+const finalizedFixture: EvidenceReviewCaseDetailResponseV1 = {
+  ...FIXTURE,
+  currentReviewRound: {
+    roundRef: "a8000000-0000-4000-8000-000000000010",
+    manifestVersion: FIXTURE.reviewManifestVersion,
+    manifestHash: FIXTURE.reviewManifestHash,
+    outcome: "CORRECTIONS_REQUIRED",
+    finalizedAt: "2026-08-18T12:10:00.000Z",
+    decisions: [
+      {
+        subjectRef: FIXTURE.reviewSubjects[0].subjectRef,
+        disposition: "CORRECTION_REQUIRED",
+        correctionReason: "INCORRECT_INFORMATION",
+        correctionInstruction: "Controleer de EAN en pas deze aan.",
+      },
+      {
+        subjectRef: FIXTURE.reviewSubjects[1].subjectRef,
+        disposition: "ACCEPTED",
+      },
+    ],
+  },
+};
+const finalizedHtml = detailHtml({
+  status: "ready",
+  value: finalizedFixture,
+  error: null,
+});
+assert(
+  !viewOnlyHtml.includes(">Accepteren<") &&
+    !viewOnlyHtml.includes(">Correctie<") &&
+    !viewOnlyHtml.includes("Review afronden") &&
+    !finalizedHtml.includes(">Accepteren<") &&
+    !finalizedHtml.includes(">Correctie<") &&
+    finalizedHtml.includes("Geaccepteerd") &&
+    finalizedHtml.includes("Correctie nodig") &&
+    finalizedHtml.includes("Gegeven onjuist") &&
+    finalizedHtml.includes("Controleer de EAN en pas deze aan.") &&
+    finalizedHtml.includes("Correcties nodig"),
+  "Q06a_view_only_or_finalized_rendering_invalid",
 );
 
 const unauthorizedHtml = detailHtml({
@@ -343,6 +411,226 @@ await loadEvidenceReviewCaseDetailOnce({
   },
 });
 assert((dedupedFetches as number) === 2, "Q08d_explicit_later_read_not_fresh");
+
+const energyRows = buildEvidenceFactReviewRows(
+  FIXTURE.evidence[0],
+  FIXTURE.reviewSubjects,
+);
+const installationRows = buildEvidenceFactReviewRows(
+  FIXTURE.evidence[1],
+  FIXTURE.reviewSubjects,
+);
+assert(
+  energyRows.find((row) => row.label === "EAN")?.subject?.subjectRef ===
+      FIXTURE.reviewSubjects[0].subjectRef &&
+    energyRows.find((row) => row.label === "Energieleverancier")?.subject ===
+      null &&
+    installationRows.find((row) => row.label === "Merk")?.subject
+        ?.subjectRef === FIXTURE.reviewSubjects[1].subjectRef &&
+    installationRows.find((row) => row.label === "MID")?.subject === null,
+  "Q08e_subject_mapping_not_server_identifier_based",
+);
+
+const initialDraft = initializeEvidenceFactReviewDraft(
+  FIXTURE.reviewSubjects,
+  true,
+);
+const eanSubjectRef = FIXTURE.reviewSubjects[0].subjectRef;
+const brandSubjectRef = FIXTURE.reviewSubjects[1].subjectRef;
+assert(
+  initialDraft.decisions[eanSubjectRef].disposition === "UNANSWERED" &&
+    initialDraft.decisions[brandSubjectRef].disposition === "ACCEPTED" &&
+    !isEvidenceFactReviewDraftComplete(FIXTURE.reviewSubjects, initialDraft) &&
+    buildEvidenceFactReviewFinalizeRequest(FIXTURE, initialDraft) === null,
+  "Q08f_draft_defaults_or_unanswered_completeness_invalid",
+);
+
+let correctionDraft = reduceEvidenceFactReviewDraft(initialDraft, {
+  type: "correct",
+  subjectRef: eanSubjectRef,
+});
+correctionDraft = reduceEvidenceFactReviewDraft(correctionDraft, {
+  type: "reason",
+  subjectRef: eanSubjectRef,
+  value: "INCORRECT_INFORMATION",
+});
+assert(
+  !isEvidenceFactCorrectionValid(correctionDraft.decisions[eanSubjectRef]) &&
+    correctionDraft.decisions[brandSubjectRef] ===
+      initialDraft.decisions[brandSubjectRef] &&
+    EVIDENCE_FACT_CORRECTION_REASON_OPTIONS.length === 4 &&
+    new Set(EVIDENCE_FACT_CORRECTION_REASON_OPTIONS.map((item) => item.value))
+        .size === 4 &&
+    EVIDENCE_FACT_CORRECTION_REASON_LABELS.MISSING_INFORMATION ===
+      "Gegeven ontbreekt" &&
+    EVIDENCE_FACT_CORRECTION_REASON_LABELS.INCORRECT_INFORMATION ===
+      "Gegeven onjuist" &&
+    EVIDENCE_FACT_CORRECTION_REASON_LABELS.INCONSISTENT_INFORMATION ===
+      "Gegevens komen niet overeen" &&
+    EVIDENCE_FACT_CORRECTION_REASON_LABELS.OTHER === "Anders" &&
+    !("UNREADABLE_DOCUMENT" in EVIDENCE_FACT_CORRECTION_REASON_LABELS) &&
+    !("WRONG_DOCUMENT" in EVIDENCE_FACT_CORRECTION_REASON_LABELS),
+  "Q08g_independent_correction_or_closed_reason_set_invalid",
+);
+correctionDraft = reduceEvidenceFactReviewDraft(correctionDraft, {
+  type: "instruction",
+  subjectRef: eanSubjectRef,
+  value: "   ",
+});
+assert(
+  !isEvidenceFactCorrectionValid(correctionDraft.decisions[eanSubjectRef]),
+  "Q08h_whitespace_correction_accepted",
+);
+correctionDraft = reduceEvidenceFactReviewDraft(correctionDraft, {
+  type: "instruction",
+  subjectRef: eanSubjectRef,
+  value: "a".repeat(1_001),
+});
+assert(
+  !isEvidenceFactCorrectionValid(correctionDraft.decisions[eanSubjectRef]),
+  "Q08i_oversize_correction_accepted",
+);
+correctionDraft = reduceEvidenceFactReviewDraft(correctionDraft, {
+  type: "instruction",
+  subjectRef: eanSubjectRef,
+  value: "  Controleer de EAN en pas deze aan.  ",
+});
+assert(
+  isEvidenceFactCorrectionValid(correctionDraft.decisions[eanSubjectRef]) &&
+    isEvidenceFactReviewDraftComplete(FIXTURE.reviewSubjects, correctionDraft),
+  "Q08j_valid_complete_round_rejected",
+);
+const clearedDraft = reduceEvidenceFactReviewDraft(correctionDraft, {
+  type: "accept",
+  subjectRef: eanSubjectRef,
+});
+assert(
+  clearedDraft.decisions[eanSubjectRef].disposition === "ACCEPTED" &&
+    clearedDraft.decisions[eanSubjectRef].correctionReason === "" &&
+    clearedDraft.decisions[eanSubjectRef].correctionInstruction === "" &&
+    clearedDraft.decisions[brandSubjectRef] ===
+      correctionDraft.decisions[brandSubjectRef],
+  "Q08k_correction_to_accept_did_not_clear_exact_fact",
+);
+
+let postCount = 0;
+const confirmationDraft = reduceEvidenceFactReviewDraft(correctionDraft, {
+  type: "open_confirmation",
+});
+const cancelledDraft = reduceEvidenceFactReviewDraft(confirmationDraft, {
+  type: "cancel_confirmation",
+});
+assert(
+  postCount === 0 && confirmationDraft.confirmationOpen &&
+    !cancelledDraft.confirmationOpen &&
+    cancelledDraft.decisions === confirmationDraft.decisions,
+  "Q08l_first_click_or_cancel_wrote_or_lost_draft",
+);
+const finalizeRequest = buildEvidenceFactReviewFinalizeRequest(
+  FIXTURE,
+  confirmationDraft,
+);
+assert(finalizeRequest !== null, "Q08m_complete_finalize_payload_missing");
+const firstAttempt = selectEvidenceFactReviewFinalizeAttempt(
+  null,
+  finalizeRequest,
+  () => "fact-round-attempt-1",
+);
+const retryAttempt = selectEvidenceFactReviewFinalizeAttempt(
+  firstAttempt,
+  finalizeRequest,
+  () => "must-not-be-used",
+);
+const changedRequest: EvidenceFactReviewRoundFinalizeRequest = {
+  ...finalizeRequest,
+  decisions: finalizeRequest.decisions.map((decision) =>
+    decision.subjectRef === eanSubjectRef
+      ? { subjectRef: eanSubjectRef, disposition: "ACCEPTED" as const }
+      : decision
+  ),
+};
+const changedAttempt = selectEvidenceFactReviewFinalizeAttempt(
+  retryAttempt,
+  changedRequest,
+  () => "fact-round-attempt-2",
+);
+assert(
+  firstAttempt === retryAttempt &&
+    changedAttempt.idempotencyKey === "fact-round-attempt-2" &&
+    Object.keys(finalizeRequest).sort().join("|") ===
+      "caseRef|decisions|manifestHash|manifestVersion" &&
+    finalizeRequest.decisions.length === FIXTURE.reviewSubjects.length &&
+    !JSON.stringify(finalizeRequest).match(
+      /reviewer|workforce|tenant|capability|timestamp/i,
+    ),
+  "Q08n_idempotency_or_authority_free_payload_invalid",
+);
+
+const finalizeCalls: Array<{ url: string; init?: RequestInit }> = [];
+const finalizeResult = await finalizeEvidenceFactReviewRound({
+  accessToken: "proof-access-token",
+  idempotencyKey: firstAttempt.idempotencyKey,
+  request: finalizeRequest,
+  runtimeConfig: {
+    anonKey: "proof-anon-key",
+    apiBaseUrl: "https://local-proof.invalid/functions/v1",
+  },
+  fetchImpl: async (input, init) => {
+    postCount += 1;
+    finalizeCalls.push({ url: String(input), init });
+    return new Response(JSON.stringify({
+      schemaVersion: "evidence-fact-review-round-finalization-v1",
+      caseRef: CASE_REF,
+      roundRef: "a8000000-0000-4000-8000-000000000011",
+      manifestVersion: FIXTURE.reviewManifestVersion,
+      manifestHash: FIXTURE.reviewManifestHash,
+      outcome: "CORRECTIONS_REQUIRED",
+      finalizedAt: "2026-08-18T12:10:00.000Z",
+      result: "FINALIZED",
+    }), { status: 201, headers: { "content-type": "application/json" } });
+  },
+});
+const finalizeHeaders = new Headers(finalizeCalls[0]?.init?.headers);
+assert(
+  finalizeResult.ok && Number(postCount) === 1 && finalizeCalls.length === 1 &&
+    finalizeCalls[0].url.endsWith(
+      "/api-app-evidence-review-round-finalize",
+    ) && finalizeCalls[0].init?.method === "POST" &&
+    finalizeHeaders.get("authorization") === "Bearer proof-access-token" &&
+    finalizeHeaders.get("apikey") === "proof-anon-key" &&
+    finalizeHeaders.get("idempotency-key") === "fact-round-attempt-1" &&
+    JSON.stringify(JSON.parse(String(finalizeCalls[0].init?.body))) ===
+      JSON.stringify(finalizeRequest),
+  "Q08o_final_confirm_not_exactly_one_post_or_payload_invalid",
+);
+const staleResult = await finalizeEvidenceFactReviewRound({
+  accessToken: "proof-access-token",
+  idempotencyKey: "stale-attempt",
+  request: finalizeRequest,
+  runtimeConfig: {
+    anonKey: "proof-anon-key",
+    apiBaseUrl: "https://local-proof.invalid/functions/v1",
+  },
+  fetchImpl: async () => new Response("{}", { status: 409 }),
+});
+const submittedDraft = reduceEvidenceFactReviewDraft(confirmationDraft, {
+  type: "submitting",
+});
+const failedDraft = reduceEvidenceFactReviewDraft(submittedDraft, {
+  type: "ordinary_failure",
+  message: "Review afronden is niet gelukt. Probeer het opnieuw.",
+});
+const staleDraft = reduceEvidenceFactReviewDraft(submittedDraft, {
+  type: "discard_stale",
+});
+assert(
+  !staleResult.ok && staleResult.kind === "stale" &&
+    failedDraft.decisions === submittedDraft.decisions &&
+    failedDraft.confirmationOpen && !failedDraft.submitting &&
+    Object.keys(staleDraft.decisions).length === 0 &&
+    staleDraft.notice === "Dossier is gewijzigd. Controleer opnieuw.",
+  "Q08p_stale_or_ordinary_failure_recovery_invalid",
+);
 
 const previewRequests: Array<{ url: string; init?: RequestInit }> = [];
 assert(previewRequests.length === 0, "Q09_eager_preview_request_present");
@@ -611,6 +899,7 @@ const [
   worklistSource,
   detailClientSource,
   detailHookSource,
+  factDraftSource,
   detailSource,
   previewPaneSource,
   pageSource,
@@ -619,6 +908,7 @@ const [
   componentsCss,
   detailEndpointSource,
   previewEndpointSource,
+  finalizeEndpointSource,
 ] = await Promise.all([
   source("app/src/App.tsx"),
   source("app/src/features/evidence-review/evidenceReviewRoutes.ts"),
@@ -627,6 +917,7 @@ const [
   source("app/src/features/evidence-review/EvidenceReviewWorklistPage.tsx"),
   source("app/src/features/evidence-review/evidenceReviewDetailClient.ts"),
   source("app/src/features/evidence-review/useEvidenceReviewCaseDetail.ts"),
+  source("app/src/features/evidence-review/useEvidenceFactReviewDraft.ts"),
   source("app/src/features/evidence-review/EvidenceReviewCaseDetailPage.tsx"),
   source("app/src/features/evidence-review/EvidenceReviewPreviewPane.tsx"),
   source("app/src/pages/EvidenceReviewCaseDetailPage.tsx"),
@@ -635,6 +926,7 @@ const [
   source("app/src/styles/components.css"),
   source("supabase/functions/api-app-evidence-review-case-detail/index.ts"),
   source("supabase/functions/api-app-evidence-review-preview/index.ts"),
+  source("supabase/functions/api-app-evidence-review-round-finalize/index.ts"),
 ]);
 assert(
   appSource.includes("parseEvidenceReviewDetailRoute(path)") &&
@@ -651,6 +943,7 @@ assert(
     worklistSource.includes("Dossier openen") &&
     detailClientSource.includes("api-app-evidence-review-case-detail") &&
     detailClientSource.includes("api-app-evidence-review-preview") &&
+    detailClientSource.includes("api-app-evidence-review-round-finalize") &&
     detailHookSource.split("loadEvidenceReviewCaseDetail(config)").length -
           1 === 1 &&
     detailHookSource.includes("IN_FLIGHT_DETAIL_READS") &&
@@ -685,18 +978,19 @@ assert(
     !detailClientSource.includes("window.open") &&
     !previewPaneSource.includes("window.open") &&
     !/(localStorage|sessionStorage|indexedDB|caches\.open|CacheStorage)/.test(
-      detailSource + detailClientSource + previewPaneSource,
+      detailSource + detailClientSource + factDraftSource + previewPaneSource,
     ),
   "Q16_per_evidence_memory_preview_lifecycle_invalid",
 );
 assert(
-  [detailClientSource, detailHookSource, detailSource, pageSource].every((
+  [detailClientSource, detailHookSource, factDraftSource, detailSource, pageSource].every((
     value,
   ) =>
     !/(role\s*===|email\s*===|caseOwner|case_owner|workforceId|workforce_id|tenantId|tenant_id)/
       .test(value)
   ) &&
     detailEndpointSource.includes("app_evidence_review_case_detail_read_v5") &&
+    finalizeEndpointSource.includes("app_evidence_review_round_finalize_v1") &&
     previewEndpointSource.includes(
       "app_evidence_review_preview_source_read_v1",
     ) &&
@@ -709,6 +1003,7 @@ assert(
     detailSource.includes("evidence-review-section-list") &&
     detailSource.includes("fact-table--evidence-review") &&
     detailSource.includes('<span role="columnheader">Reden</span>') &&
+    detailSource.includes('<span role="columnheader">Beoordeling</span>') &&
     detailSource.includes("status-pill") &&
     detailSource.includes("button button-secondary button-compact") &&
     layoutCss.includes("@media (max-width: 620px)") &&
@@ -717,6 +1012,9 @@ assert(
     componentsCss.includes(".evidence-review-section__body--open") &&
     componentsCss.includes("grid-template-columns: minmax(0, 1fr)") &&
     componentsCss.includes(".evidence-review-preview-frame") &&
+    componentsCss.includes(".fact-review-choice--selected") &&
+    componentsCss.includes(".fact-review-correction-row") &&
+    componentsCss.includes(".evidence-review-final-action") &&
     !detailSource.includes("style={{") &&
     !previewPaneSource.includes("style={{"),
   "Q18_shared_css_or_responsive_boundary_invalid",
@@ -736,5 +1034,29 @@ assert(
   "Q19_scope_or_storage_privacy_invalid",
 );
 
-console.log("EVIDENCE_REVIEW_CASE_DETAIL_UI_Q01_Q19=PASS");
+assert(
+  detailSource.includes("buildEvidenceFactReviewRows") &&
+    detailSource.includes("subject.evidenceVersionRef === evidence.evidenceVersionRef") &&
+    detailSource.includes("subject.factCategory === fact.category") &&
+    !detailSource.includes("FRS-") &&
+    detailSource.includes("maxLength={1000}") &&
+    detailSource.includes("Kies een reden") &&
+    detailSource.includes("Alles akkoord. Review afronden?") &&
+    detailSource.includes("Ja, afronden") &&
+    detailSource.includes("Annuleren") &&
+    detailSource.includes("currentReviewRound") &&
+    factDraftSource.includes("reviewerSuggestion === \"ACCEPT\"") &&
+    factDraftSource.includes("Dossier is gewijzigd. Controleer opnieuw.") &&
+    factDraftSource.includes("attempt.current") &&
+    factDraftSource.includes("onRefresh()") &&
+    !factDraftSource.includes("fetch(") &&
+    !factDraftSource.includes("setInterval") &&
+    !factDraftSource.includes("setTimeout") &&
+    !detailClientSource.includes("api-app-evidence-review-decision") &&
+    !detailSource.includes("api-app-evidence-review-decision") &&
+    !factDraftSource.includes("api-app-evidence-review-decision"),
+  "Q20_fact_round_ui_network_or_authority_boundary_invalid",
+);
+
+console.log("EVIDENCE_REVIEW_CASE_DETAIL_UI_Q01_Q20=PASS");
 Deno.exit(0);

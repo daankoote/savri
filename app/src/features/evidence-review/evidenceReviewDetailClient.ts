@@ -51,6 +51,37 @@ export type EvidenceReviewPreviewResult =
     { ok: false; error: EvidenceReviewDetailSafeError; status?: number }
   >;
 
+export type EvidenceFactReviewRoundFinalizeDecision =
+  | Readonly<{ subjectRef: string; disposition: "ACCEPTED" }>
+  | Readonly<{
+    subjectRef: string;
+    disposition: "CORRECTION_REQUIRED";
+    correctionReason: EvidenceFactReviewCorrectionReason;
+    correctionInstruction: string;
+  }>;
+
+export type EvidenceFactReviewRoundFinalizeRequest = Readonly<{
+  caseRef: string;
+  manifestVersion: typeof EVIDENCE_FACT_REVIEW_MANIFEST_VERSION;
+  manifestHash: string;
+  decisions: readonly EvidenceFactReviewRoundFinalizeDecision[];
+}>;
+
+export type EvidenceFactReviewRoundFinalizeResult =
+  | Readonly<{
+    ok: true;
+    result: "FINALIZED" | "ALREADY_FINALIZED";
+    outcome: "ALL_FACTS_ACCEPTED" | "CORRECTIONS_REQUIRED";
+  }>
+  | Readonly<{ ok: false; kind: "stale" | "ordinary" }>;
+
+export type EvidenceFactReviewRoundFinalizeCall = (
+  input: Readonly<{
+    request: EvidenceFactReviewRoundFinalizeRequest;
+    idempotencyKey: string;
+  }>,
+) => Promise<EvidenceFactReviewRoundFinalizeResult>;
+
 type ClientRuntimeConfig = Readonly<{ anonKey: string; apiBaseUrl: string }>;
 export type EvidenceReviewDetailClientConfig = Readonly<{
   accessToken: string;
@@ -64,6 +95,13 @@ type PreviewClientConfig =
   & Readonly<{
     evidenceVersionRef: string;
   }>;
+type FinalizeClientConfig = Readonly<{
+  accessToken: string;
+  idempotencyKey: string;
+  request: EvidenceFactReviewRoundFinalizeRequest;
+  fetchImpl?: typeof fetch;
+  runtimeConfig?: ClientRuntimeConfig;
+}>;
 type JsonRecord = Record<string, unknown>;
 
 const UUID_RE =
@@ -588,6 +626,76 @@ export async function loadEvidenceReviewCaseDetail(
     return invalidResponse();
   }
   return decoded;
+}
+
+export async function finalizeEvidenceFactReviewRound(
+  config: FinalizeClientConfig,
+): Promise<EvidenceFactReviewRoundFinalizeResult> {
+  const accessToken = config.accessToken.trim();
+  const idempotencyKey = config.idempotencyKey.trim();
+  if (
+    !accessToken || !idempotencyKey || idempotencyKey.length > 200 ||
+    /\s/.test(idempotencyKey) ||
+    !isEvidenceReviewCaseRef(config.request.caseRef) ||
+    config.request.manifestVersion !== EVIDENCE_FACT_REVIEW_MANIFEST_VERSION ||
+    !/^[0-9a-f]{64}$/.test(config.request.manifestHash) ||
+    config.request.decisions.length === 0 ||
+    config.request.decisions.length > 100
+  ) return { ok: false, kind: "ordinary" };
+  const runtime = runtimeConfig(config.runtimeConfig);
+  if (!runtime) return { ok: false, kind: "ordinary" };
+
+  let response: Response;
+  try {
+    response = await (config.fetchImpl ?? fetch)(
+      `${runtime.apiBaseUrl}/api-app-evidence-review-round-finalize`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          apikey: runtime.anonKey,
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyKey,
+        },
+        body: JSON.stringify(config.request),
+      },
+    );
+  } catch (_error) {
+    return { ok: false, kind: "ordinary" };
+  }
+  if (!response.ok) {
+    return { ok: false, kind: response.status === 409 ? "stale" : "ordinary" };
+  }
+  const body = await readJson(response);
+  if (
+    !isRecord(body) ||
+    !hasExactFields(body, [
+      "caseRef",
+      "finalizedAt",
+      "manifestHash",
+      "manifestVersion",
+      "outcome",
+      "result",
+      "roundRef",
+      "schemaVersion",
+    ]) ||
+    body.schemaVersion !== "evidence-fact-review-round-finalization-v1" ||
+    body.caseRef !== config.request.caseRef ||
+    body.manifestVersion !== config.request.manifestVersion ||
+    body.manifestHash !== config.request.manifestHash ||
+    !UUID_RE.test(String(body.roundRef)) || !isIsoTimestamp(body.finalizedAt) ||
+    !["FINALIZED", "ALREADY_FINALIZED"].includes(String(body.result)) ||
+    !["ALL_FACTS_ACCEPTED", "CORRECTIONS_REQUIRED"].includes(
+      String(body.outcome),
+    )
+  ) return { ok: false, kind: "ordinary" };
+  return Object.freeze({
+    ok: true,
+    result: body.result as "FINALIZED" | "ALREADY_FINALIZED",
+    outcome: body.outcome as
+      | "ALL_FACTS_ACCEPTED"
+      | "CORRECTIONS_REQUIRED",
+  });
 }
 
 export async function loadEvidenceReviewPreview(

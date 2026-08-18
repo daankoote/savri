@@ -2052,8 +2052,8 @@ button:not(:disabled):active {
 
 .fact-table--evidence-review .fact-table__header,
 .fact-table--evidence-review .fact-table__row {
-  grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.2fr)
-    minmax(0, 0.8fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 0.62fr) minmax(0, 0.92fr)
+    minmax(0, 0.7fr) minmax(0, 0.82fr) minmax(0, 1.22fr);
 }
 
 .fact-table--evidence-review .fact-table__row {
@@ -2065,6 +2065,89 @@ button:not(:disabled):active {
   color: var(--color-muted);
   font-size: var(--text-xs);
   line-height: 1.4;
+}
+
+.fact-review-assessment,
+.fact-review-finalized-correction {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+}
+
+.fact-review-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.fact-review-choice {
+  min-height: 30px;
+  padding: 0 var(--space-2);
+}
+
+.fact-review-choice--selected {
+  border-color: var(--color-brand-strong);
+  background: var(--color-brand-soft);
+  color: var(--color-brand-strong);
+}
+
+.fact-review-finalized-correction > span {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+}
+
+.fact-review-correction-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
+}
+
+.fact-review-correction-fields {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.7fr) minmax(240px, 1.3fr);
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+
+.fact-review-correction-fields select,
+.fact-review-correction-fields textarea {
+  width: 100%;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg);
+  color: var(--color-heading);
+  font: inherit;
+}
+
+.fact-review-correction-fields select {
+  min-height: 40px;
+}
+
+.fact-review-correction-fields textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.evidence-review-final-action,
+.evidence-review-final-confirmation,
+.evidence-review-final-state {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+}
+
+.evidence-review-final-action,
+.evidence-review-final-state {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-5);
+}
+
+.evidence-review-final-state {
+  color: var(--color-heading);
+  font-weight: 750;
 }
 
 .evidence-review-preview-pane {
@@ -2229,6 +2312,10 @@ button:not(:disabled):active {
 
   .evidence-review-preview-frame {
     min-height: 520px;
+  }
+
+  .fact-review-correction-fields {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

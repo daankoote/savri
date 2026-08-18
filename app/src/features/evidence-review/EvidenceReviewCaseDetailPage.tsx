@@ -1,11 +1,16 @@
-import { useCallback } from "react";
+import { Fragment, useCallback } from "react";
 import type {
+  EvidenceFactReviewCorrectionReason,
+  EvidenceFactReviewFinalizedDecisionV1,
+  EvidenceFactReviewSubjectV1,
   EvidenceReviewCanonicalFactV1,
   EvidenceReviewEvidenceV1,
   EvidenceReviewReason,
 } from "../../../../supabase/functions/_shared/app_evidence_review_case_detail.ts";
 import { useAuth } from "../auth/AuthProvider.tsx";
 import {
+  type EvidenceFactReviewRoundFinalizeCall,
+  finalizeEvidenceFactReviewRound,
   type EvidenceReviewDetailSafeError,
   loadEvidenceReviewPreview,
 } from "./evidenceReviewDetailClient.ts";
@@ -17,12 +22,17 @@ import {
 } from "./EvidenceReviewPreviewPane.tsx";
 import type { EvidenceReviewCaseDetailReadState } from "./useEvidenceReviewCaseDetail.ts";
 import { useEvidenceReviewCaseDetail } from "./useEvidenceReviewCaseDetail.ts";
+import {
+  type EvidenceFactReviewDraftDecision,
+  useEvidenceFactReviewDraft,
+} from "./useEvidenceFactReviewDraft.ts";
 
 type EvidenceReviewCaseDetailContentProps = Readonly<{
   caseRef: string;
   state: EvidenceReviewCaseDetailReadState;
   onBack: () => void;
   loadPreview: EvidenceReviewPreviewLoader;
+  finalizeReview: EvidenceFactReviewRoundFinalizeCall;
   onRefresh: () => void;
 }>;
 
@@ -55,6 +65,24 @@ export const EVIDENCE_REVIEW_REASON_LABELS: Readonly<
   GENERIC_REVIEW_REQUIRED: "Historisch niet vastgelegd",
 });
 
+export const EVIDENCE_FACT_CORRECTION_REASON_LABELS: Readonly<
+  Record<EvidenceFactReviewCorrectionReason, string>
+> = Object.freeze({
+  MISSING_INFORMATION: "Gegeven ontbreekt",
+  INCORRECT_INFORMATION: "Gegeven onjuist",
+  INCONSISTENT_INFORMATION: "Gegevens komen niet overeen",
+  OTHER: "Anders",
+});
+
+export const EVIDENCE_FACT_CORRECTION_REASON_OPTIONS = Object.freeze(
+  Object.entries(EVIDENCE_FACT_CORRECTION_REASON_LABELS).map(
+    ([value, label]) => Object.freeze({
+      value: value as EvidenceFactReviewCorrectionReason,
+      label,
+    }),
+  ),
+);
+
 function formatServerDateTime(value: string): string {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
@@ -70,13 +98,72 @@ function lifecycleLabel(value: string): string {
     : value;
 }
 
-function factState(fact: EvidenceReviewCanonicalFactV1): Readonly<{
+function factState(fact: Pick<EvidenceReviewCanonicalFactV1, "truthClass">): Readonly<{
   className: string;
   label: string;
 }> {
   return fact.truthClass === "CUSTOMER_CONFIRMED"
     ? { className: "status-pill-ok", label: "Door klant bevestigd" }
     : { className: "status-pill-warning", label: "Beoordeling nodig" };
+}
+
+type EvidenceFactReviewRow = Readonly<{
+  key: string;
+  label: string;
+  value: string | null;
+  truthClass: EvidenceReviewCanonicalFactV1["truthClass"];
+  reviewReason?: EvidenceFactReviewSubjectV1["reviewReason"];
+  subject: EvidenceFactReviewSubjectV1 | null;
+}>;
+
+export function buildEvidenceFactReviewRows(
+  evidence: EvidenceReviewEvidenceV1,
+  subjects: readonly EvidenceFactReviewSubjectV1[],
+): readonly EvidenceFactReviewRow[] {
+  const candidates = subjects.filter((subject) =>
+    subject.evidenceVersionRef === evidence.evidenceVersionRef
+  );
+  const used = new Set<string>();
+  const rows: EvidenceFactReviewRow[] = evidence.canonicalFacts.map((fact) => {
+    const matching = candidates.filter((subject) =>
+      subject.factCategory === fact.category
+    );
+    const subject = matching.length === 1 ? matching[0] : null;
+    if (subject) used.add(subject.subjectRef);
+    return Object.freeze({
+      key: subject?.subjectRef ??
+        `read-only:${evidence.evidenceVersionRef}:${fact.category}`,
+      label: FACT_LABELS[fact.category],
+      value: fact.value,
+      truthClass: fact.truthClass,
+      ...(fact.truthClass === "REVIEW_REQUIRED"
+        ? { reviewReason: fact.reviewReason }
+        : {}),
+      subject,
+    });
+  });
+  for (const subject of candidates) {
+    if (used.has(subject.subjectRef)) continue;
+    rows.push(Object.freeze({
+      key: subject.subjectRef,
+      label: subject.factLabel,
+      value: subject.value,
+      truthClass: subject.truthClass,
+      ...(subject.reviewReason ? { reviewReason: subject.reviewReason } : {}),
+      subject,
+    }));
+  }
+  return Object.freeze(rows);
+}
+
+function reviewReasonLabel(
+  reason: EvidenceFactReviewSubjectV1["reviewReason"],
+): string {
+  return reason === "REQUIRED_INFORMATION_MISSING"
+    ? "Verplicht gegeven ontbreekt"
+    : reason
+    ? EVIDENCE_REVIEW_REASON_LABELS[reason]
+    : "";
 }
 
 function BackToWorklist({ onBack }: { onBack: () => void }) {
@@ -94,10 +181,24 @@ function BackToWorklist({ onBack }: { onBack: () => void }) {
   );
 }
 
-function EvidenceFacts(
-  { facts }: { facts: readonly EvidenceReviewCanonicalFactV1[] },
-) {
-  if (facts.length === 0) return null;
+type EvidenceFactsProps = Readonly<{
+  evidence: EvidenceReviewEvidenceV1;
+  subjects: readonly EvidenceFactReviewSubjectV1[];
+  draft: Readonly<Record<string, EvidenceFactReviewDraftDecision>>;
+  editable: boolean;
+  finalizedDecisions: ReadonlyMap<string, EvidenceFactReviewFinalizedDecisionV1>;
+  onAccept: (subjectRef: string) => void;
+  onCorrect: (subjectRef: string) => void;
+  onReason: (
+    subjectRef: string,
+    value: EvidenceFactReviewCorrectionReason | "",
+  ) => void;
+  onInstruction: (subjectRef: string, value: string) => void;
+}>;
+
+function EvidenceFacts(props: EvidenceFactsProps) {
+  const rows = buildEvidenceFactReviewRows(props.evidence, props.subjects);
+  if (rows.length === 0) return null;
   return (
     <div
       className="fact-table fact-table--document fact-table--evidence-review"
@@ -108,32 +209,140 @@ function EvidenceFacts(
         <span role="columnheader">Waarde</span>
         <span role="columnheader">Status</span>
         <span role="columnheader">Reden</span>
+        <span role="columnheader">Beoordeling</span>
       </div>
-      {facts.map((fact) => {
-        const state = factState(fact);
+      {rows.map((row) => {
+        const state = factState(row);
+        const subjectRef = row.subject?.subjectRef ?? null;
+        const draft = subjectRef ? props.draft[subjectRef] : undefined;
+        const finalized = subjectRef
+          ? props.finalizedDecisions.get(subjectRef)
+          : undefined;
         return (
-          <div
-            className="fact-table__row"
-            key={`${fact.category}:${fact.value}`}
-            role="row"
-          >
-            <span data-label="Gegeven" role="cell">
-              {FACT_LABELS[fact.category]}
-            </span>
-            <span className="fact-table__value" data-label="Waarde" role="cell">
-              <span className="fact-table__canonical-value">{fact.value}</span>
-            </span>
-            <span data-label="Status" role="cell">
-              <span className={`status-pill ${state.className}`}>
-                {state.label}
+          <Fragment key={row.key}>
+            <div className="fact-table__row" role="row">
+              <span data-label="Gegeven" role="cell">{row.label}</span>
+              <span
+                className="fact-table__value"
+                data-label="Waarde"
+                role="cell"
+              >
+                <span className="fact-table__canonical-value">
+                  {row.value ?? "Niet vastgelegd"}
+                </span>
               </span>
-            </span>
-            <span className="fact-review-reason" data-label="Reden" role="cell">
-              {fact.truthClass === "REVIEW_REQUIRED" && fact.reviewReason
-                ? EVIDENCE_REVIEW_REASON_LABELS[fact.reviewReason]
-                : null}
-            </span>
-          </div>
+              <span data-label="Status" role="cell">
+                <span className={`status-pill ${state.className}`}>
+                  {state.label}
+                </span>
+              </span>
+              <span
+                className="fact-review-reason"
+                data-label="Reden"
+                role="cell"
+              >
+                {row.truthClass === "REVIEW_REQUIRED"
+                  ? reviewReasonLabel(row.reviewReason)
+                  : null}
+              </span>
+              <span
+                className="fact-review-assessment"
+                data-label="Beoordeling"
+                role="cell"
+              >
+                {finalized
+                  ? finalized.disposition === "ACCEPTED"
+                    ? <span>Geaccepteerd</span>
+                    : (
+                      <span className="fact-review-finalized-correction">
+                        <strong>Correctie nodig</strong>
+                        <span>
+                          {EVIDENCE_FACT_CORRECTION_REASON_LABELS[
+                            finalized.correctionReason
+                          ]}
+                        </span>
+                        <span>{finalized.correctionInstruction}</span>
+                      </span>
+                    )
+                  : props.editable && draft && subjectRef
+                  ? (
+                    <span className="fact-review-choices">
+                      <button
+                        aria-pressed={draft.disposition === "ACCEPTED"}
+                        className={`button button-secondary button-compact fact-review-choice${
+                          draft.disposition === "ACCEPTED"
+                            ? " fact-review-choice--selected"
+                            : ""
+                        }`}
+                        onClick={() => props.onAccept(subjectRef)}
+                        type="button"
+                      >
+                        Accepteren
+                      </button>
+                      <button
+                        aria-pressed={
+                          draft.disposition === "CORRECTION_REQUIRED"
+                        }
+                        className={`button button-secondary button-compact fact-review-choice${
+                          draft.disposition === "CORRECTION_REQUIRED"
+                            ? " fact-review-choice--selected"
+                            : ""
+                        }`}
+                        onClick={() => props.onCorrect(subjectRef)}
+                        type="button"
+                      >
+                        Correctie
+                      </button>
+                    </span>
+                  )
+                  : <span aria-hidden="true">—</span>}
+              </span>
+            </div>
+            {props.editable && subjectRef &&
+                draft?.disposition === "CORRECTION_REQUIRED"
+              ? (
+                <div className="fact-review-correction-row" role="row">
+                  <div className="fact-review-correction-fields" role="cell">
+                    <label className="field">
+                      <span>Reden</span>
+                      <select
+                        aria-label={`Reden correctie voor ${row.label}`}
+                        onChange={(event) =>
+                          props.onReason(
+                            subjectRef,
+                            event.currentTarget.value as
+                              | EvidenceFactReviewCorrectionReason
+                              | "",
+                          )}
+                        value={draft.correctionReason}
+                      >
+                        <option disabled value="">Kies een reden</option>
+                        {EVIDENCE_FACT_CORRECTION_REASON_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="field">
+                      <span>Wat ontbreekt of moet worden aangepast?</span>
+                      <textarea
+                        aria-label={`Correctie voor ${row.label}`}
+                        maxLength={1000}
+                        onChange={(event) =>
+                          props.onInstruction(
+                            subjectRef,
+                            event.currentTarget.value,
+                          )}
+                        required
+                        value={draft.correctionInstruction}
+                      />
+                    </label>
+                  </div>
+                </div>
+              )
+              : null}
+          </Fragment>
         );
       })}
     </div>
@@ -142,9 +351,13 @@ function EvidenceFacts(
 
 function EvidenceReviewSection({
   evidence,
+  subjects,
+  review,
   loadPreview,
 }: Readonly<{
   evidence: EvidenceReviewEvidenceV1;
+  subjects: readonly EvidenceFactReviewSubjectV1[];
+  review: ReturnType<typeof useEvidenceFactReviewDraft>;
   loadPreview: EvidenceReviewPreviewLoader;
 }>) {
   const label = EVIDENCE_KIND_LABELS[evidence.kind] ?? evidence.kind;
@@ -186,7 +399,17 @@ function EvidenceReviewSection({
           open ? " evidence-review-section__body--open" : ""
         }`}
       >
-        <EvidenceFacts facts={evidence.canonicalFacts} />
+        <EvidenceFacts
+          draft={review.state.decisions}
+          editable={review.editable}
+          evidence={evidence}
+          finalizedDecisions={review.finalizedDecisions}
+          onAccept={review.accept}
+          onCorrect={review.correct}
+          onInstruction={review.setInstruction}
+          onReason={review.setReason}
+          subjects={subjects}
+        />
         {open
           ? (
             <EvidenceReviewPreviewPane
@@ -211,11 +434,14 @@ function errorTitle(error: EvidenceReviewDetailSafeError): string {
 
 export function EvidenceReviewCaseDetailContent({
   caseRef,
+  finalizeReview,
   loadPreview,
   onBack,
   onRefresh,
   state,
 }: EvidenceReviewCaseDetailContentProps) {
+  const detail = state.status === "ready" ? state.value : null;
+  const review = useEvidenceFactReviewDraft(detail, finalizeReview, onRefresh);
   if (state.status === "loading") {
     return (
       <div className="portal-content-stack">
@@ -267,28 +493,30 @@ export function EvidenceReviewCaseDetailContent({
     );
   }
 
-  const detail = state.value;
+  const readyDetail = state.value;
   return (
     <div className="portal-content-stack evidence-review-detail">
       <header className="portal-content-header">
         <div>
-          <h1>{detail.case.caseRef}</h1>
-          <p>{lifecycleLabel(detail.case.lifecycle)}</p>
+          <h1>{readyDetail.case.caseRef}</h1>
+          <p>{lifecycleLabel(readyDetail.case.lifecycle)}</p>
         </div>
         <BackToWorklist onBack={onBack} />
       </header>
 
-      {detail.evidence.length > 0
+      {readyDetail.evidence.length > 0
         ? (
           <div
             className="evidence-review-section-list"
             aria-label="Bewijsstukken"
           >
-            {detail.evidence.map((evidence) => (
+            {readyDetail.evidence.map((evidence) => (
               <EvidenceReviewSection
                 evidence={evidence}
                 key={evidence.evidenceVersionRef}
                 loadPreview={loadPreview}
+                review={review}
+                subjects={readyDetail.reviewSubjects}
               />
             ))}
           </div>
@@ -301,6 +529,64 @@ export function EvidenceReviewCaseDetailContent({
             </p>
           </div>
         )}
+      {readyDetail.currentReviewRound
+        ? (
+          <div className="evidence-review-final-state" role="status">
+            {readyDetail.currentReviewRound.outcome === "ALL_FACTS_ACCEPTED"
+              ? "Review afgerond"
+              : "Correcties nodig"}
+          </div>
+        )
+        : review.editable
+        ? (
+          <div className="evidence-review-final-action">
+            {review.state.notice
+              ? <p role="status">{review.state.notice}</p>
+              : null}
+            {review.state.error
+              ? <p className="field-message" role="alert">{review.state.error}</p>
+              : null}
+            {review.state.confirmationOpen
+              ? (
+                <div className="evidence-review-final-confirmation">
+                  <p>
+                    {review.correctionCount === 0
+                      ? "Alles akkoord. Review afronden?"
+                      : `Review afronden met ${review.correctionCount} correctie(s)?`}
+                  </p>
+                  <div className="section-actions">
+                    <button
+                      className="button button-primary button-compact"
+                      disabled={review.state.submitting}
+                      onClick={() => void review.confirm()}
+                      type="button"
+                    >
+                      Ja, afronden
+                    </button>
+                    <button
+                      className="button button-secondary button-compact"
+                      disabled={review.state.submitting}
+                      onClick={review.cancelConfirmation}
+                      type="button"
+                    >
+                      Annuleren
+                    </button>
+                  </div>
+                </div>
+              )
+              : (
+                <button
+                  className="button button-primary"
+                  disabled={!review.complete || review.state.submitting}
+                  onClick={review.openConfirmation}
+                  type="button"
+                >
+                  Review afronden
+                </button>
+              )}
+          </div>
+        )
+        : null}
     </div>
   );
 }
@@ -322,9 +608,19 @@ export function EvidenceReviewCaseDetailPageContent({
       }),
     [accessToken, caseRef],
   );
+  const finalizeReview = useCallback<EvidenceFactReviewRoundFinalizeCall>(
+    ({ idempotencyKey, request }) =>
+      finalizeEvidenceFactReviewRound({
+        accessToken: accessToken ?? "",
+        idempotencyKey,
+        request,
+      }),
+    [accessToken],
+  );
   return (
     <EvidenceReviewCaseDetailContent
       caseRef={caseRef}
+      finalizeReview={finalizeReview}
       loadPreview={previewLoader}
       onBack={onBack}
       onRefresh={detail.refresh}

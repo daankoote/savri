@@ -734,6 +734,29 @@ const CHECK_LIST = [
     expectedMarker: "EVIDENCE_REVIEW_CASE_DETAIL_Q01_Q19=PASS",
   }),
   check({
+    id: "evidence-fact-review-round-served-local",
+    argv: [
+      "node",
+      "scripts/proofs/app-evidence-fact-review-round-served.proof.mjs",
+    ],
+    domain: "tenant-evidence-fact-review-round-served-runtime",
+    applicablePaths: [
+      "scripts/tools/enval-local-dev.mjs",
+      "supabase/functions/api-app-evidence-review-round-finalize/index.ts",
+      "scripts/proofs/app-evidence-fact-review-round-served.proof.mjs",
+    ],
+    safety: SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE,
+    minimumMode: "LOCAL_SERVICE",
+    serviceRequirements: [
+      "TENANT_ENVAL Kong, Auth, Edge and PostgreSQL available locally",
+      "served functions started through scripts/tools/enval-local-dev.mjs",
+      "isolated active-local fixture is removed and pilot remains unchanged",
+    ],
+    mutatesState: true,
+    expectedDurationMs: 15_000,
+    expectedMarker: "EVIDENCE_FACT_REVIEW_SERVED_Q01_Q08=PASS",
+  }),
+  check({
     id: "evidence-review-preview-pure",
     argv: [
       "deno",
@@ -895,6 +918,7 @@ const CHECK_LIST = [
       "app/src/features/evidence-review/EvidenceReviewWorklistPage.tsx",
       "app/src/features/evidence-review/evidenceReviewDetailClient.ts",
       "app/src/features/evidence-review/evidenceReviewRoutes.ts",
+      "app/src/features/evidence-review/useEvidenceFactReviewDraft.ts",
       "app/src/features/evidence-review/useEvidenceReviewCaseDetail.ts",
       "app/src/pages/EvidenceReviewCaseDetailPage.tsx",
       "app/src/pages/EvidenceReviewWorklistPage.tsx",
@@ -903,7 +927,7 @@ const CHECK_LIST = [
     safety: SAFETY.SAFE_PURE,
     minimumMode: "TARGETED",
     expectedDurationMs: 2_000,
-    expectedMarker: "EVIDENCE_REVIEW_CASE_DETAIL_UI_Q01_Q19=PASS",
+    expectedMarker: "EVIDENCE_REVIEW_CASE_DETAIL_UI_Q01_Q20=PASS",
   }),
   check({
     id: "tenant-migration-chain-local",
@@ -1485,6 +1509,17 @@ export const PATH_RULES = Object.freeze([
     checks: Object.freeze(["node-check-changed"]),
   }),
   Object.freeze({
+    id: "local-development-runtime",
+    match: Object.freeze({
+      type: "exact",
+      value: "scripts/tools/enval-local-dev.mjs",
+    }),
+    checks: Object.freeze([
+      "node-check-changed",
+      "evidence-fact-review-round-served-local",
+    ]),
+  }),
+  Object.freeze({
     id: "tenant-migration-chain-proof",
     match: Object.freeze({
       type: "exact",
@@ -1862,6 +1897,18 @@ export const PATH_RULES = Object.freeze([
       "deno-check-changed",
       "evidence-fact-review-round-pure",
       "evidence-review-case-detail-local",
+      "evidence-fact-review-round-served-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "evidence-fact-review-round-served-proof",
+    match: Object.freeze({
+      type: "exact",
+      value: "scripts/proofs/app-evidence-fact-review-round-served.proof.mjs",
+    }),
+    checks: Object.freeze([
+      "node-check-changed",
+      "evidence-fact-review-round-served-local",
     ]),
   }),
   Object.freeze({
@@ -2023,6 +2070,7 @@ export const PATH_RULES = Object.freeze([
         "app/src/features/evidence-review/EvidenceReviewWorklistPage.tsx",
         "app/src/features/evidence-review/evidenceReviewDetailClient.ts",
         "app/src/features/evidence-review/evidenceReviewRoutes.ts",
+        "app/src/features/evidence-review/useEvidenceFactReviewDraft.ts",
         "app/src/features/evidence-review/useEvidenceReviewCaseDetail.ts",
         "app/src/pages/EvidenceReviewCaseDetailPage.tsx",
         "app/src/pages/EvidenceReviewWorklistPage.tsx",
