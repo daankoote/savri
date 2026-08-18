@@ -88,14 +88,14 @@ function browserDocument(): BrowserDocumentLike | null {
   return candidate?.body && typeof candidate.createElement === "function" ? candidate : null;
 }
 
-function openSignedUrl(url: string, fileName: string) {
+export function openBrowserUrlInNewTab(url: string, fileName?: string) {
   const documentRef = browserDocument();
   if (!documentRef) return;
   const link = documentRef.createElement("a");
   link.href = url;
   link.rel = "noopener noreferrer";
   link.target = "_blank";
-  link.download = fileName;
+  if (fileName) link.download = fileName;
   documentRef.body.appendChild(link);
   link.click();
   link.remove();
@@ -194,7 +194,7 @@ export async function downloadCurrentDocument(
   }
 
   const browserUrl = normalizeSignedDownloadUrlForBrowser(signedUrl, new URL(runtime.downloadEndpointUrl).origin);
-  (dependencies.openUrl ?? openSignedUrl)(browserUrl, fileName);
+  (dependencies.openUrl ?? openBrowserUrlInNewTab)(browserUrl, fileName);
 
   return {
     ok: true,

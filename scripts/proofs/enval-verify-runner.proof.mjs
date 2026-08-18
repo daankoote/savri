@@ -291,6 +291,42 @@ assert(
   "evidence_review_worklist_ui_not_classified_or_deduplicated",
 );
 
+const evidenceReviewCaseDetailUiLocal = buildPlan({
+  paths: [
+    "app/src/App.tsx",
+    "app/src/features/auth/postLoginNavigation.proof.ts",
+    "app/src/features/auth/postLoginNavigation.ts",
+    "app/src/features/documents/documentDownloadClient.ts",
+    "app/src/features/evidence-review/EvidenceReviewCaseDetailPage.proof.tsx",
+    "app/src/features/evidence-review/EvidenceReviewCaseDetailPage.tsx",
+    "app/src/features/evidence-review/EvidenceReviewWorklistPage.proof.tsx",
+    "app/src/features/evidence-review/EvidenceReviewWorklistPage.tsx",
+    "app/src/features/evidence-review/evidenceReviewDetailClient.ts",
+    "app/src/features/evidence-review/evidenceReviewRoutes.ts",
+    "app/src/features/evidence-review/useEvidenceReviewCaseDetail.ts",
+    "app/src/pages/EvidenceReviewCaseDetailPage.tsx",
+    "app/src/pages/EvidenceReviewWorklistPage.tsx",
+  ],
+  mode: "LOCAL_SERVICE",
+});
+assert(
+  evidenceReviewCaseDetailUiLocal.selected.filter((check) =>
+    check.commandId === "evidence-review-case-detail-ui-pure"
+  ).length === 1 &&
+    evidenceReviewCaseDetailUiLocal.selected.filter((check) =>
+      check.commandId === "evidence-review-case-detail-local"
+    ).length === 1 &&
+    evidenceReviewCaseDetailUiLocal.selected.filter((check) =>
+      check.commandId === "evidence-review-preview-local"
+    ).length === 1 &&
+    evidenceReviewCaseDetailUiLocal.selected.some((check) =>
+      check.commandId === "evidence-review-case-detail-ui-pure" &&
+      check.safety === SAFETY.SAFE_PURE && !check.mutatesState &&
+      !check.remote && !check.destructive
+    ),
+  "evidence_review_case_detail_ui_not_classified_or_deduplicated",
+);
+
 for (const fixture of [
   { target: null, operation: "inspect", expected: "target_required" },
   { target: "UNKNOWN", operation: "inspect", expected: "unknown_target" },

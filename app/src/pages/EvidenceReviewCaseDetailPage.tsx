@@ -1,12 +1,19 @@
 import { DashboardRouteGuard } from "../features/auth/DashboardRouteGuard.tsx";
-import { EvidenceReviewWorklistPageContent } from "../features/evidence-review/EvidenceReviewWorklistPage.tsx";
+import { EvidenceReviewCaseDetailPageContent } from "../features/evidence-review/EvidenceReviewCaseDetailPage.tsx";
 import type { RoutedPageProps } from "../routes/types.ts";
 import { AppHeader } from "../shared/components/AppHeader.tsx";
 
-export function EvidenceReviewWorklistPage({
+type EvidenceReviewCaseDetailPageProps =
+  & RoutedPageProps
+  & Readonly<{
+    caseRef: string;
+  }>;
+
+export function EvidenceReviewCaseDetailPage({
+  caseRef,
   currentPath,
   navigate,
-}: RoutedPageProps) {
+}: EvidenceReviewCaseDetailPageProps) {
   return (
     <div className="site-frame">
       <AppHeader currentPath={currentPath} navigate={navigate} />
@@ -14,7 +21,10 @@ export function EvidenceReviewWorklistPage({
         <main className="page-shell">
           <section className="section">
             <div className="container">
-              <EvidenceReviewWorklistPageContent navigate={navigate} />
+              <EvidenceReviewCaseDetailPageContent
+                caseRef={caseRef}
+                onBack={() => navigate("/intern/dossiers")}
+              />
             </div>
           </section>
         </main>

@@ -59,6 +59,7 @@ function response(
 function readyHtml(value: EvidenceReviewWorklistResponseV1): string {
   return renderToStaticMarkup(
     <EvidenceReviewWorklistContent
+      onOpenCase={noop}
       onRefresh={noop}
       state={{ status: "ready", value, error: null }}
     />,
@@ -68,6 +69,7 @@ function readyHtml(value: EvidenceReviewWorklistResponseV1): string {
 function errorHtml(error: EvidenceReviewWorklistSafeError): string {
   return renderToStaticMarkup(
     <EvidenceReviewWorklistContent
+      onOpenCase={noop}
       onRefresh={noop}
       state={{ status: "error", value: null, error }}
     />,
@@ -76,6 +78,7 @@ function errorHtml(error: EvidenceReviewWorklistSafeError): string {
 
 const loadingHtml = renderToStaticMarkup(
   <EvidenceReviewWorklistContent
+    onOpenCase={noop}
     onRefresh={noop}
     state={{ status: "loading", value: null, error: null }}
   />,
@@ -128,7 +131,11 @@ assert(
   "Q05_multiple_reasons_duplicated_case",
 );
 
-const orderedRefs = ["CASE-PROOF-C", "CASE-PROOF-A", "CASE-PROOF-B"];
+const orderedRefs = [
+  "CASE-AAAA00000001",
+  "CASE-BBBB00000002",
+  "CASE-CCCC00000003",
+];
 const orderedHtml = readyHtml(response(orderedRefs.map((caseRef, index) =>
   caseItem(caseRef, ["UNREVIEWED_EVIDENCE"], {
     latestReviewActivityAt: `2026-08-18T10:0${index}:00.000Z`,
@@ -311,9 +318,12 @@ assert(
   orderedHtml.includes("<h1>") && orderedHtml.includes("<h2") &&
     orderedHtml.includes("<h3>") && orderedHtml.includes("<ul") &&
     orderedHtml.includes("<li") &&
-    orderedHtml.includes('aria-label="Redenen voor aandacht"') &&
-    !featureSource.includes("navigate(") && !featureSource.includes("href="),
-  "Q19_accessibility_or_no_navigation_boundary_invalid",
+    orderedHtml.includes('aria-label="Dossieracties en redenen voor aandacht"') &&
+    orderedHtml.includes("Dossier openen") &&
+    featureSource.includes("buildEvidenceReviewDetailRoute") &&
+    featureSource.includes("event.preventDefault()") &&
+    featureSource.includes("navigate(route)"),
+  "Q19_accessible_case_navigation_invalid",
 );
 
 console.log("EVIDENCE_REVIEW_WORKLIST_UI_Q01_Q19=PASS");

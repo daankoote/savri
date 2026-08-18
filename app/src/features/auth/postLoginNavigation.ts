@@ -1,3 +1,5 @@
+import { parseEvidenceReviewDetailRoute } from "../evidence-review/evidenceReviewRoutes.ts";
+
 export const DEFAULT_POST_LOGIN_DESTINATION = "/dashboard";
 export const INTERNAL_LOGIN_ROUTE = "/inloggen";
 export const POST_LOGIN_RETURN_QUERY_KEY = "returnTo";
@@ -11,7 +13,10 @@ export function normalizeSafeInternalReturnRoute(
   value: string | null | undefined,
 ): string | null {
   if (!value || value !== value.trim()) return null;
-  return SAFE_INTERNAL_RETURN_ROUTES.has(value) ? value : null;
+  return SAFE_INTERNAL_RETURN_ROUTES.has(value) ||
+      parseEvidenceReviewDetailRoute(value)
+    ? value
+    : null;
 }
 
 export function buildInternalLoginRoute(returnTo: string): string {

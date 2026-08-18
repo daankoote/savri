@@ -8,9 +8,12 @@ import {
   type EvidenceReviewWorklistReadState,
   useEvidenceReviewWorklist,
 } from "./useEvidenceReviewWorklist.ts";
+import type { AppNavigate } from "../../routes/types.ts";
+import { buildEvidenceReviewDetailRoute } from "./evidenceReviewRoutes.ts";
 
 type EvidenceReviewWorklistContentProps = Readonly<{
   state: EvidenceReviewWorklistReadState;
+  onOpenCase: (caseRef: string) => void;
   onRefresh: () => void;
 }>;
 
@@ -45,7 +48,14 @@ function unresolvedEvidenceLabel(count: number): string {
   return `${count} ${count === 1 ? "bewijsstuk vraagt" : "bewijsstukken vragen"} aandacht`;
 }
 
-function EvidenceReviewCaseRow({ item }: { item: EvidenceReviewWorklistCaseV1 }) {
+function EvidenceReviewCaseRow({
+  item,
+  onOpenCase,
+}: Readonly<{
+  item: EvidenceReviewWorklistCaseV1;
+  onOpenCase: (caseRef: string) => void;
+}>) {
+  const detailRoute = buildEvidenceReviewDetailRoute(item.caseRef);
   return (
     <li className="portal-row">
       <div>
@@ -54,7 +64,7 @@ function EvidenceReviewCaseRow({ item }: { item: EvidenceReviewWorklistCaseV1 })
         <p><strong>{unresolvedEvidenceLabel(item.unresolvedEvidenceCount)}</strong></p>
         <p>Laatst bijgewerkt: {formatServerDateTime(item.latestReviewActivityAt)}</p>
       </div>
-      <div className="portal-row-actions" aria-label="Redenen voor aandacht">
+      <div className="portal-row-actions" aria-label="Dossieracties en redenen voor aandacht">
         {item.attentionReasons.map((reason) => {
           const presentation = REASON_PRESENTATION[reason];
           return (
@@ -66,6 +76,20 @@ function EvidenceReviewCaseRow({ item }: { item: EvidenceReviewWorklistCaseV1 })
             </span>
           );
         })}
+        {detailRoute
+          ? (
+            <a
+              className="button button-secondary button-compact"
+              href={detailRoute}
+              onClick={(event) => {
+                event.preventDefault();
+                onOpenCase(item.caseRef);
+              }}
+            >
+              Dossier openen
+            </a>
+          )
+          : null}
       </div>
     </li>
   );
@@ -78,6 +102,7 @@ function errorTitle(error: EvidenceReviewWorklistSafeError): string {
 }
 
 export function EvidenceReviewWorklistContent({
+  onOpenCase,
   state,
   onRefresh,
 }: EvidenceReviewWorklistContentProps) {
@@ -156,7 +181,11 @@ export function EvidenceReviewWorklistContent({
           ? (
             <ul className="portal-row-list" aria-label="Dossiers met bewijsaandacht">
               {value.cases.map((item) => (
-                <EvidenceReviewCaseRow item={item} key={item.caseRef} />
+                <EvidenceReviewCaseRow
+                  item={item}
+                  key={item.caseRef}
+                  onOpenCase={onOpenCase}
+                />
               ))}
             </ul>
           )
@@ -174,11 +203,17 @@ export function EvidenceReviewWorklistContent({
   );
 }
 
-export function EvidenceReviewWorklistPageContent() {
+export function EvidenceReviewWorklistPageContent({
+  navigate,
+}: Readonly<{ navigate: AppNavigate }>) {
   const auth = useAuth();
   const worklist = useEvidenceReviewWorklist(auth.session?.access_token ?? null);
   return (
     <EvidenceReviewWorklistContent
+      onOpenCase={(caseRef) => {
+        const route = buildEvidenceReviewDetailRoute(caseRef);
+        if (route) navigate(route);
+      }}
       onRefresh={worklist.refresh}
       state={worklist.state}
     />

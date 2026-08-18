@@ -23,6 +23,8 @@ const source = (path: string) => Deno.readTextFile(new URL(path, root));
 
 const dossiersLogin = buildInternalLoginRoute("/intern/dossiers");
 const complianceLogin = buildInternalLoginRoute("/intern/compliance");
+const detailRoute = "/intern/dossiers/CASE-7E4CC75CD19F";
+const detailLogin = buildInternalLoginRoute(detailRoute);
 assert(
   dossiersLogin === "/inloggen?returnTo=%2Fintern%2Fdossiers" &&
     resolvePostLoginDestination(new URL(dossiersLogin, "https://enval.local").search) ===
@@ -34,6 +36,13 @@ assert(
     resolvePostLoginDestination(new URL(complianceLogin, "https://enval.local").search) ===
       "/intern/compliance",
   "Q02_compliance_login_return_invalid",
+);
+assert(
+  detailLogin ===
+      "/inloggen?returnTo=%2Fintern%2Fdossiers%2FCASE-7E4CC75CD19F" &&
+    resolvePostLoginDestination(new URL(detailLogin, "https://enval.local").search) ===
+      detailRoute,
+  "Q02b_detail_login_return_invalid",
 );
 assert(
   resolvePostLoginDestination("") === DEFAULT_POST_LOGIN_DESTINATION &&
@@ -49,6 +58,10 @@ for (const target of [
   "javascript:alert(1)",
   "data:text/html,invalid",
   "/intern/dossiers/../compliance",
+  "/intern/dossiers/CASE-NOT-HEX",
+  "/intern/dossiers/CASE-7E4CC75CD19F/extra",
+  "/intern/dossiers/CASE-7E4CC75CD19F?next=/dashboard",
+  "/intern/dossiers/CASE-7E4CC75CD19F/",
   "/intern/dossiers?next=https://attacker.invalid",
   "/intern/%E0%A4%A",
   " /intern/dossiers",
@@ -78,6 +91,8 @@ const [
   accountSource,
   authProviderSource,
   dossiersPageSource,
+  dossierDetailPageSource,
+  dossierRouteSource,
   compliancePageSource,
   dashboardPageSource,
   signupSource,
@@ -90,6 +105,8 @@ const [
   source("app/src/features/auth/AccountPage.tsx"),
   source("app/src/features/auth/AuthProvider.tsx"),
   source("app/src/pages/EvidenceReviewWorklistPage.tsx"),
+  source("app/src/pages/EvidenceReviewCaseDetailPage.tsx"),
+  source("app/src/features/evidence-review/evidenceReviewRoutes.ts"),
   source("app/src/pages/ComplianceWorklistPage.tsx"),
   source("app/src/pages/DashboardPage.tsx"),
   source("app/src/features/signup/SignupPageShell.tsx"),
@@ -101,7 +118,9 @@ assert(
   guardSource.includes("buildInternalLoginRoute(returnTo)") &&
     guardSource.includes('auth.status === "signed_out"') &&
     dossiersPageSource.includes("returnTo={currentPath}") &&
+    dossierDetailPageSource.includes("returnTo={currentPath}") &&
     compliancePageSource.includes("returnTo={currentPath}") &&
+    dossierRouteSource.includes("DETAIL_ROUTE_RE") &&
     !dashboardPageSource.includes("returnTo="),
   "Q06_shared_guard_return_intent_not_reused",
 );
@@ -115,6 +134,7 @@ assert(
 );
 assert(
   appSource.includes('path === "/account" || path === "/inloggen"') &&
+    appSource.includes("parseEvidenceReviewDetailRoute(path)") &&
     appSource.includes("target.search") &&
     appSource.includes("window.history.replaceState") &&
     appSource.includes("window.history.pushState") &&

@@ -8,6 +8,7 @@ import { SignupPage } from "./pages/SignupPage";
 import { TermsPage } from "./pages/TermsPage";
 import { UploadPage } from "./pages/UploadPage";
 import type { AppNavigate, RoutedPageProps } from "./routes/types";
+import { parseEvidenceReviewDetailRoute } from "./features/evidence-review/evidenceReviewRoutes";
 
 const AccountPage = lazy(() => import("./pages/AccountPage").then((module) => ({ default: module.AccountPage })));
 const DashboardPage = lazy(() =>
@@ -19,6 +20,11 @@ const ComplianceWorklistPage = lazy(() =>
 const EvidenceReviewWorklistPage = lazy(() =>
   import("./pages/EvidenceReviewWorklistPage").then((module) => ({
     default: module.EvidenceReviewWorklistPage,
+  })),
+);
+const EvidenceReviewCaseDetailPage = lazy(() =>
+  import("./pages/EvidenceReviewCaseDetailPage").then((module) => ({
+    default: module.EvidenceReviewCaseDetailPage,
   })),
 );
 const AuthProvider = lazy(() =>
@@ -112,6 +118,21 @@ export function App() {
       <Suspense fallback={<RouteLoading />}>
         <AuthProvider>
           <EvidenceReviewWorklistPage navigate={navigate} currentPath={path} />
+        </AuthProvider>
+      </Suspense>
+    );
+  }
+
+  const evidenceReviewCaseRef = parseEvidenceReviewDetailRoute(path);
+  if (evidenceReviewCaseRef) {
+    return (
+      <Suspense fallback={<RouteLoading />}>
+        <AuthProvider>
+          <EvidenceReviewCaseDetailPage
+            caseRef={evidenceReviewCaseRef}
+            navigate={navigate}
+            currentPath={path}
+          />
         </AuthProvider>
       </Suspense>
     );
