@@ -193,6 +193,8 @@ function pilotState(runtime) {
       (select count(*) from public.app_evidence_review_round_subject_decisions d
        join public.app_evidence_review_rounds r on r.id=d.round_id
        join pilot on pilot.id=r.case_id),
+      (select count(*) from public.app_evidence_review_correction_handoffs h
+       join pilot on pilot.id=h.case_id),
       coalesce((select r.id::text from public.app_evidence_review_rounds r
        join pilot on pilot.id=r.case_id
        order by r.finalized_at desc,r.id desc limit 1),'NONE')
@@ -209,6 +211,8 @@ function relevantFingerprint(runtime) {
     (select count(*) from public.app_evidence_versions),
     (select count(*) from public.app_evidence_review_rounds),
     (select count(*) from public.app_evidence_review_round_subject_decisions),
+    (select count(*) from public.app_evidence_review_correction_handoffs),
+    (select count(*) from public.app_customer_access_grants),
     (select count(*) from public.app_workforce_identities),
     (select count(*) from public.app_workforce_scope_assignments),
     (select count(*) from public.app_audit_events),
@@ -395,7 +399,31 @@ function setupFixture(runtime, f) {
        'proof:${f.prefix}','${f.prefix}-invoice-context');
     commit;
   `);
-  return workforceId;
+  return Object.freeze({ workforceId, adminId });
+}
+
+function grantCustomerAccess(runtime, f) {
+  psql(runtime, `insert into public.app_customer_access_grants (
+    auth_user_id,customer_id,granted_case_id,access_basis,source_class,
+    source_ref,request_id
+  ) values (
+    '${f.authUserId}','${f.customerId}','${f.caseId}',
+    'signed_service_recipient','app_signup_promotion',
+    '${f.prefix}-customer-access','${f.prefix}-customer-access'
+  );`);
+}
+
+function grantPublishScope(runtime, f, authority) {
+  const expires = new Date(Date.now() + 86_400_000).toISOString();
+  const granted = psql(runtime, `select
+    public.app_workforce_case_assignment_manage_v1(
+      '${authority.adminId}','${f.prefix}-publish-scope',
+      '${f.prefix}-publish-scope','${HASH}','${expires}','grant',
+      '${authority.workforceId}','evidence.review.correction.publish',
+      '${f.caseId}',null,null,null,clock_timestamp(),null,
+      'decision:${f.prefix}:publish',null
+    )->>'ok';`);
+  assert(granted === "true", "workforce_publish_grant_failed");
 }
 
 function addChangedEvidence(runtime, f) {
@@ -424,7 +452,10 @@ async function readDetail(runtime, f, token) {
       },
     },
   );
-  assert(response.status === 200, `detail_runtime_status_${response.status}`);
+  assert(
+    response.status === 200,
+    `detail_runtime_status_${response.status}_${response.body?.code ?? "unknown"}`,
+  );
   assert(
     response.body?.case?.caseRef === f.caseRef &&
       response.body?.reviewManifestVersion === "fact-review-manifest-v1" &&
@@ -453,6 +484,43 @@ async function finalize(runtime, token, idempotencyKey, body) {
   );
 }
 
+async function publishCorrection(runtime, f, token, idempotencyKey, roundRef) {
+  return await jsonRequest(
+    `${runtime.apiUrl}/functions/v1/api-app-evidence-review-correction-publish`,
+    {
+      method: "POST",
+      headers: {
+        apikey: runtime.anonKey,
+        Authorization: `Bearer ${token}`,
+        Origin: "http://127.0.0.1:5175",
+        "Content-Type": "application/json",
+        "Idempotency-Key": idempotencyKey,
+      },
+      body: JSON.stringify({ caseRef: f.caseRef, roundRef }),
+    },
+  );
+}
+
+async function readCustomerHandoff(runtime, f, token) {
+  return await jsonRequest(
+    `${runtime.apiUrl}/functions/v1/api-app-customer-correction-handoff?caseRef=${f.caseRef}`,
+    {
+      method: "GET",
+      headers: {
+        apikey: runtime.anonKey,
+        Authorization: `Bearer ${token}`,
+        Origin: "http://127.0.0.1:5175",
+      },
+    },
+  );
+}
+
+function handoffCount(runtime, f) {
+  return psql(runtime, `begin read only; select count(*)
+    from public.app_evidence_review_correction_handoffs
+    where case_id='${f.caseId}'; rollback;`);
+}
+
 function roundCounts(runtime, f) {
   return psql(runtime, `begin read only; select concat_ws('|',
     (select count(*) from public.app_evidence_review_rounds
@@ -466,6 +534,8 @@ function roundCounts(runtime, f) {
 function cleanupFixture(runtime, f) {
   psql(runtime, `begin;
     set local session_replication_role = replica;
+    delete from public.app_evidence_review_correction_handoffs
+      where case_id='${f.caseId}';
     delete from public.app_evidence_review_round_subject_decisions d using
       public.app_evidence_review_rounds r
       where d.round_id=r.id and r.case_id='${f.caseId}';
@@ -502,6 +572,8 @@ function cleanupFixture(runtime, f) {
       where s.workforce_identity_id=i.id and i.auth_user_id='${f.authUserId}';
     delete from public.app_workforce_identities where auth_user_id='${f.authUserId}';
     delete from public.app_case_lifecycle_events where case_id='${f.caseId}';
+    delete from public.app_customer_access_grants
+      where auth_user_id='${f.authUserId}' and customer_id='${f.customerId}';
     delete from public.app_cases where id='${f.caseId}';
     delete from public.app_customers where id='${f.customerId}';
     commit;`);
@@ -511,6 +583,10 @@ function residueCount(runtime, f) {
   return psql(runtime, `begin read only; select
     (select count(*) from public.app_cases where id='${f.caseId}') +
     (select count(*) from public.app_evidence_review_rounds where case_id='${f.caseId}') +
+    (select count(*) from public.app_evidence_review_correction_handoffs
+      where case_id='${f.caseId}') +
+    (select count(*) from public.app_customer_access_grants
+      where auth_user_id='${f.authUserId}' and customer_id='${f.customerId}') +
     (select count(*) from public.app_workforce_identities
       where auth_user_id='${f.authUserId}') +
     (select count(*) from public.app_audit_events
@@ -523,7 +599,7 @@ async function main() {
   const runtime = localRuntime();
   const prefix = `review15-runtime-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
   const beforePilot = pilotState(runtime);
-  assert(beforePilot === "0|0|NONE", "pilot_not_clean_before_proof");
+  assert(beforePilot.split("|")[2] === "0", "pilot_handoff_not_clean_before_proof");
   const beforeFingerprint = relevantFingerprint(runtime);
   let auth = null;
   let f = null;
@@ -532,9 +608,13 @@ async function main() {
   try {
     auth = await createAuth(runtime, prefix);
     f = fixture(prefix, auth.userId);
-    setupFixture(runtime, f);
+    const authority = setupFixture(runtime, f);
 
     const initial = await readDetail(runtime, f, auth.token);
+    assert(
+      initial.case?.canPublishCorrection === false,
+      "served_publish_affordance_not_scope_derived",
+    );
     const initialDecisions = initial.reviewSubjects.map((subject) => ({
       subjectRef: subject.subjectRef,
       disposition: "ACCEPTED",
@@ -617,6 +697,106 @@ async function main() {
         roundCounts(runtime, f) === expectedCounts,
       "conflicting_finalization_not_denied",
     );
+
+    const workforceOnlyRead = await readCustomerHandoff(runtime, f, auth.token);
+    assert(
+      workforceOnlyRead.status === 404 &&
+        workforceOnlyRead.body?.code === "customer_case_access_denied",
+      "workforce_scope_became_customer_authority",
+    );
+    grantCustomerAccess(runtime, f);
+    const beforePublishRead = await readCustomerHandoff(runtime, f, auth.token);
+    assert(
+      beforePublishRead.status === 200 &&
+        beforePublishRead.body?.caseRef === f.caseRef &&
+        beforePublishRead.body?.handoff === null,
+      "correction_truth_visible_before_handoff",
+    );
+
+    const decideOnlyPublish = await publishCorrection(
+      runtime,
+      f,
+      auth.token,
+      `${prefix}-publish-denied`,
+      valid.body.roundRef,
+    );
+    assert(
+      decideOnlyPublish.status === 403 &&
+        decideOnlyPublish.body?.code === "case_scope_denied" &&
+        handoffCount(runtime, f) === "0",
+      "decide_capability_substituted_for_publish",
+    );
+    grantPublishScope(runtime, f, authority);
+    const publishAuthorizedDetail = await readDetail(runtime, f, auth.token);
+    assert(
+      publishAuthorizedDetail.case?.canPublishCorrection === true &&
+        publishAuthorizedDetail.overallReviewStatus === "CORRECTION_REQUIRED",
+      "served_publish_affordance_not_authoritative",
+    );
+    const [publishA, publishB] = await Promise.all([
+      publishCorrection(
+        runtime,
+        f,
+        auth.token,
+        `${prefix}-publish-a`,
+        valid.body.roundRef,
+      ),
+      publishCorrection(
+        runtime,
+        f,
+        auth.token,
+        `${prefix}-publish-b`,
+        valid.body.roundRef,
+      ),
+    ]);
+    const publishResults = [publishA.body?.result, publishB.body?.result]
+      .sort().join("|");
+    assert(
+      publishResults === "ALREADY_PUBLISHED|PUBLISHED" &&
+        publishA.body?.handoffRef === publishB.body?.handoffRef &&
+        handoffCount(runtime, f) === "1",
+      `concurrent_publish_invalid_${publishResults}`,
+    );
+    const publishRetry = await publishCorrection(
+      runtime,
+      f,
+      auth.token,
+      `${prefix}-publish-a`,
+      valid.body.roundRef,
+    );
+    assert(
+      [200, 201].includes(publishRetry.status) &&
+        publishRetry.body?.handoffRef === publishA.body?.handoffRef &&
+        handoffCount(runtime, f) === "1",
+      "publish_retry_not_idempotent",
+    );
+
+    const customerRead = await readCustomerHandoff(runtime, f, auth.token);
+    const customerSerialized = JSON.stringify(customerRead.body);
+    assert(
+      customerRead.status === 200 &&
+        customerRead.body?.schemaVersion === "customer-correction-handoff-v1" &&
+        customerRead.body?.caseRef === f.caseRef &&
+        Array.isArray(customerRead.body?.handoff?.items) &&
+        customerRead.body.handoff.items.length === 1 &&
+        customerRead.body.handoff.items[0].documentLabel === "Energiedocument" &&
+        customerRead.body.handoff.items[0].correctionReason ===
+          "INCORRECT_INFORMATION" &&
+        customerRead.body.handoff.items[0].correctionInstruction ===
+          "Controleer dit bewijsgegeven." &&
+        !customerSerialized.includes("subjectRef") &&
+        !customerSerialized.includes("manifest") &&
+        !customerSerialized.includes("reviewer") &&
+        !customerSerialized.includes("policy") &&
+        !customerSerialized.includes("bundleSha"),
+      "customer_safe_handoff_runtime_invalid",
+    );
+    const waiting = await readDetail(runtime, f, auth.token);
+    assert(
+      waiting.overallReviewStatus === "WAITING_CUSTOMER" &&
+        waiting.case?.canPublishCorrection === true,
+      "waiting_customer_status_not_derived",
+    );
   } catch (error) {
     proofError = error;
   } finally {
@@ -651,7 +831,11 @@ async function main() {
     "SERVED_FINALIZER_NO_PARTIAL_WRITE=PASS",
     "SERVED_FINALIZER_FIXTURE_CLEANUP=PASS",
     "SERVED_FINALIZER_PILOT_INTEGRITY=PASS",
-    "EVIDENCE_FACT_REVIEW_SERVED_Q01_Q08=PASS",
+    "SERVED_CORRECTION_PUBLISH_AUTHORITY=PASS",
+    "SERVED_CORRECTION_PUBLISH_CONCURRENT_IDEMPOTENT=PASS",
+    "SERVED_CUSTOMER_CORRECTION_READ=PASS",
+    "SERVED_WAITING_CUSTOMER_DERIVATION=PASS",
+    "EVIDENCE_FACT_REVIEW_SERVED_Q01_Q12=PASS",
   ].join("\n") + "\n");
 }
 

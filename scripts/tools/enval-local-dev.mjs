@@ -35,6 +35,8 @@ const CURRENT_EDGE_ENTRYPOINTS = Object.freeze([
   "supabase/functions/api-app-ops-location-version-accept/index.ts",
   "supabase/functions/api-app-ops-location-version-correct/index.ts",
   "supabase/functions/api-app-evidence-review-round-finalize/index.ts",
+  "supabase/functions/api-app-evidence-review-correction-publish/index.ts",
+  "supabase/functions/api-app-customer-correction-handoff/index.ts",
 ]);
 
 function safeDiagnostic(value) {
@@ -369,6 +371,37 @@ async function ready(viteUrl) {
     finalizerBody?.code !== "authentication_required"
   ) fail("evidence_review_finalizer_not_ready");
 
+  const correctionPublish = await fetchBounded(
+    `${apiBase}/api-app-evidence-review-correction-publish`,
+    {
+      method: "POST",
+      headers: {
+        ...headers,
+        "Content-Type": "application/json",
+        "Idempotency-Key": `local-ready-${crypto.randomUUID()}`,
+      },
+      body: "{}",
+    },
+  );
+  const correctionRead = await fetchBounded(
+    `${apiBase}/api-app-customer-correction-handoff?caseRef=CASE-000000000000`,
+    { headers },
+  );
+  let correctionPublishBody;
+  let correctionReadBody;
+  try {
+    correctionPublishBody = await correctionPublish.json();
+    correctionReadBody = await correctionRead.json();
+  } catch {
+    fail("correction_handoff_runtime_invalid");
+  }
+  if (
+    correctionPublish.status !== 401 ||
+    correctionPublishBody?.code !== "authentication_required" ||
+    correctionRead.status !== 401 ||
+    correctionReadBody?.code !== "authentication_required"
+  ) fail("correction_handoff_runtime_not_ready");
+
   const pending = parseMigrationState();
   if (pending !== 0) fail("tenant_migrations_pending", String(pending));
   process.stdout.write([
@@ -378,6 +411,7 @@ async function ready(viteUrl) {
     "PRESENTATION_BOOTSTRAP=PASS",
     "AUTH_BOOTSTRAP=PASS",
     "EVIDENCE_REVIEW_FINALIZER=PASS",
+    "EVIDENCE_REVIEW_CORRECTION_HANDOFF=PASS",
     "DOSSIERS_ROUTE=PASS",
     "PENDING_LOCAL_TENANT_MIGRATIONS=0",
   ].join("\n") + "\n");

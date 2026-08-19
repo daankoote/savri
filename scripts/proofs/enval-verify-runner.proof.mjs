@@ -309,6 +309,50 @@ assert(
   "evidence_review_case_detail_proof_not_classified_or_deduplicated",
 );
 
+const evidenceReviewCorrectionHandoffLocalService = buildPlan({
+  paths: [
+    "supabase/migrations/20260819190000_app_evidence_review_correction_handoff.sql",
+    "supabase/migrations/20260819210000_app_evidence_review_correction_publish_affordance.sql",
+    "supabase/functions/_shared/app_evidence_review_correction_handoff.ts",
+    "supabase/functions/api-app-customer-correction-handoff/index.ts",
+    "supabase/functions/api-app-evidence-review-correction-publish/index.ts",
+    "scripts/proofs/app-evidence-review-correction-handoff.proof.ts",
+  ],
+  mode: "LOCAL_SERVICE",
+});
+assert(
+  evidenceReviewCorrectionHandoffLocalService.selected.filter((check) =>
+    check.commandId === "evidence-review-correction-handoff-pure"
+  ).length === 1 &&
+    evidenceReviewCorrectionHandoffLocalService.selected.filter((check) =>
+      check.commandId === "evidence-review-correction-handoff-local"
+    ).length === 1 &&
+    evidenceReviewCorrectionHandoffLocalService.selected.filter((check) =>
+      check.commandId === "evidence-fact-review-round-served-local"
+    ).length === 1 &&
+    evidenceReviewCorrectionHandoffLocalService.selected.filter((check) =>
+      check.commandId === "evidence-review-worklist-read-local"
+    ).length === 1 &&
+    evidenceReviewCorrectionHandoffLocalService.selected.filter((check) =>
+      check.commandId === "evidence-review-case-detail-local"
+    ).length === 1 &&
+    evidenceReviewCorrectionHandoffLocalService.selected.filter((check) =>
+      check.commandId === "tenant-migration-chain-local"
+    ).length === 1 &&
+    evidenceReviewCorrectionHandoffLocalService.selected.filter((check) =>
+      check.commandId === "evidence-review-case-detail-ui-pure"
+    ).length === 1 &&
+    evidenceReviewCorrectionHandoffLocalService.selected.some((check) =>
+      check.commandId === "evidence-review-correction-handoff-local" &&
+      check.safety === SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE &&
+      check.mutatesState && !check.remote && !check.destructive
+    ) &&
+    evidenceReviewCorrectionHandoffLocalService.selected.every((check) =>
+      !check.remote && !check.destructive
+    ),
+  "evidence_review_correction_handoff_not_classified_or_deduplicated",
+);
+
 const evidenceReviewPreviewLocalService = buildPlan({
   paths: [
     "supabase/migrations/20260818150000_app_evidence_review_preview_read.sql",
@@ -369,6 +413,7 @@ const evidenceReviewCaseDetailUiLocal = buildPlan({
     "app/src/features/evidence-review/evidenceReviewDetailClient.ts",
     "app/src/features/evidence-review/evidenceReviewRoutes.ts",
     "app/src/features/evidence-review/useEvidenceFactReviewDraft.ts",
+    "app/src/features/evidence-review/useEvidenceCorrectionPublish.ts",
     "app/src/features/evidence-review/useEvidenceReviewCaseDetail.ts",
     "app/src/pages/EvidenceReviewCaseDetailPage.tsx",
     "app/src/pages/EvidenceReviewWorklistPage.tsx",

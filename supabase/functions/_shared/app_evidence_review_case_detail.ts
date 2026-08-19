@@ -4,7 +4,7 @@ import {
 } from "./app_evidence_review_overall_status.ts";
 
 export const EVIDENCE_REVIEW_CASE_DETAIL_SCHEMA_VERSION =
-  "evidence-review-case-detail-v4" as const;
+  "evidence-review-case-detail-v5" as const;
 
 export const EVIDENCE_FACT_REVIEW_MANIFEST_VERSION =
   "fact-review-manifest-v1" as const;
@@ -99,6 +99,7 @@ export type EvidenceReviewCaseContextV1 = Readonly<{
   caseRef: string;
   lifecycle: string;
   canDecide: boolean;
+  canPublishCorrection: boolean;
   partyDisplayName?: string;
   partyDisplayNameTruth?: "DECLARED";
   deliveryAddress?: string;
@@ -171,6 +172,7 @@ export type EvidenceReviewCaseDetailResponseV1 = Readonly<{
 
 const CASE_SOURCE_KEYS = [
   "can_decide",
+  "can_publish_correction",
   "case_ref",
   "delivery_address",
   "delivery_address_truth_class",
@@ -577,6 +579,7 @@ export function parseEvidenceReviewCaseDetailSource(
   );
   if (
     !caseRef || !lifecycle || typeof input.case_context.can_decide !== "boolean" ||
+    typeof input.case_context.can_publish_correction !== "boolean" ||
     partyDisplayName === false || deliveryAddress === false
   ) {
     return null;
@@ -619,7 +622,8 @@ export function parseEvidenceReviewCaseDetailSource(
     (currentReviewRound === null &&
       input.overall_review_status !== "TO_REVIEW") ||
     (currentReviewRound?.outcome === "CORRECTIONS_REQUIRED" &&
-      input.overall_review_status !== "CORRECTION_REQUIRED") ||
+      input.overall_review_status !== "CORRECTION_REQUIRED" &&
+      input.overall_review_status !== "WAITING_CUSTOMER") ||
     (currentReviewRound?.outcome === "ALL_FACTS_ACCEPTED" &&
       input.overall_review_status !== "REVIEW_COMPLETE")
   ) return null;
@@ -631,6 +635,7 @@ export function parseEvidenceReviewCaseDetailSource(
       caseRef,
       lifecycle,
       canDecide: input.case_context.can_decide,
+      canPublishCorrection: input.case_context.can_publish_correction,
       ...(partyDisplayName === null
         ? {}
         : { partyDisplayName, partyDisplayNameTruth: "DECLARED" as const }),

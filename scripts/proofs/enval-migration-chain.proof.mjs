@@ -240,14 +240,15 @@ try {
     (select count(*) from public.app_workforce_policy_versions),
     (select count(*) from public.app_workforce_policy_requirements),
     (select count(*) from public.app_workforce_policy_activations),
-    (select count(*) from public.app_evidence_review_decisions)
+    (select count(*) from public.app_evidence_review_decisions),
+    (select count(*) from public.app_evidence_review_correction_handoffs)
   );`);
-  assert(empty === "0|0|0|0|0|13|4|43|4|0", "fresh_data_boundary_failed");
+  assert(empty === "0|0|0|0|0|14|5|57|5|0|0", "fresh_data_boundary_failed");
   const security = psql(DATABASE,`select (
     (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%') = 60
+      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%') = 61
     and (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%' and c.relrowsecurity) = 60
+      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%' and c.relrowsecurity) = 61
     and not exists (select 1 from information_schema.role_table_grants
       where table_schema='public' and table_name like 'app\\_%'
         and grantee in ('anon','authenticated') and privilege_type in ('INSERT','UPDATE','DELETE','TRUNCATE'))
@@ -260,6 +261,8 @@ try {
     and not has_table_privilege('service_role','public.app_evidence_review_rounds','INSERT')
     and not has_table_privilege('service_role','public.app_evidence_review_round_subject_decisions','SELECT')
     and not has_table_privilege('service_role','public.app_evidence_review_round_subject_decisions','INSERT')
+    and not has_table_privilege('service_role','public.app_evidence_review_correction_handoffs','SELECT')
+    and not has_table_privilege('service_role','public.app_evidence_review_correction_handoffs','INSERT')
   )::text;`);
   assert(security === "true", "rls_privilege_parity_failed");
   const foundations = psql(DATABASE,`select (
@@ -283,8 +286,12 @@ try {
     and to_regprocedure('public.app_evidence_review_case_detail_read_v4(uuid,text)') is not null
     and to_regprocedure('public.app_evidence_review_case_detail_read_v5(uuid,text)') is not null
     and to_regprocedure('public.app_evidence_review_case_detail_read_v6(uuid,text)') is not null
+    and to_regprocedure('public.app_evidence_review_case_detail_read_v7(uuid,text)') is not null
     and to_regprocedure('public.app_evidence_review_overall_status_v1(uuid,text,text)') is not null
     and to_regprocedure('public.app_evidence_review_round_finalize_v1(uuid,text,text,text,jsonb,text,text,text,timestamptz)') is not null
+    and to_regclass('public.app_evidence_review_correction_handoffs') is not null
+    and to_regprocedure('public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)') is not null
+    and to_regprocedure('public.app_customer_correction_handoff_read_v1(uuid,text)') is not null
     and to_regprocedure('public.app_evidence_review_state_v1(uuid,uuid)') is not null
     and not has_function_privilege('service_role','public.app_evidence_review_decide_v1(uuid,uuid,text,text,text,text,timestamptz)','EXECUTE')
     and has_function_privilege('service_role','public.app_evidence_review_decide_v2(uuid,uuid,text,text,text,text,text,text,timestamptz)','EXECUTE')
@@ -293,11 +300,18 @@ try {
     and not has_function_privilege('service_role','public.app_evidence_review_case_detail_read_v3(uuid,text)','EXECUTE')
     and not has_function_privilege('service_role','public.app_evidence_review_case_detail_read_v4(uuid,text)','EXECUTE')
     and not has_function_privilege('service_role','public.app_evidence_review_case_detail_read_v5(uuid,text)','EXECUTE')
-    and has_function_privilege('service_role','public.app_evidence_review_case_detail_read_v6(uuid,text)','EXECUTE')
-    and not has_function_privilege('authenticated','public.app_evidence_review_case_detail_read_v6(uuid,text)','EXECUTE')
+    and not has_function_privilege('service_role','public.app_evidence_review_case_detail_read_v6(uuid,text)','EXECUTE')
+    and has_function_privilege('service_role','public.app_evidence_review_case_detail_read_v7(uuid,text)','EXECUTE')
+    and not has_function_privilege('authenticated','public.app_evidence_review_case_detail_read_v7(uuid,text)','EXECUTE')
+    and position('app_workforce_authorize_v1' in pg_get_functiondef('public.app_evidence_review_case_detail_read_v7(uuid,text)'::regprocedure)) > 0
+    and position('evidence.review.correction.publish' in pg_get_functiondef('public.app_evidence_review_case_detail_read_v7(uuid,text)'::regprocedure)) > 0
     and not has_function_privilege('service_role','public.app_evidence_review_overall_status_v1(uuid,text,text)','EXECUTE')
     and has_function_privilege('service_role','public.app_evidence_review_round_finalize_v1(uuid,text,text,text,jsonb,text,text,text,timestamptz)','EXECUTE')
     and not has_function_privilege('authenticated','public.app_evidence_review_round_finalize_v1(uuid,text,text,text,jsonb,text,text,text,timestamptz)','EXECUTE')
+    and has_function_privilege('service_role','public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)','EXECUTE')
+    and not has_function_privilege('authenticated','public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)','EXECUTE')
+    and has_function_privilege('service_role','public.app_customer_correction_handoff_read_v1(uuid,text)','EXECUTE')
+    and not has_function_privilege('authenticated','public.app_customer_correction_handoff_read_v1(uuid,text)','EXECUTE')
     and not has_function_privilege('service_role','public.app_workforce_authorize_v1(uuid,text,uuid,uuid,timestamptz)','EXECUTE')
     and to_regprocedure('public.app_compliance_source_event_capture_v1(uuid,text,text,text,timestamptz,jsonb)') is not null
     and has_function_privilege('service_role','public.app_compliance_source_event_capture_v1(uuid,text,text,text,timestamptz,jsonb)','EXECUTE')
