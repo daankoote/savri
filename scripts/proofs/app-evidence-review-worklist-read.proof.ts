@@ -493,7 +493,7 @@ async function readRpc(authUserId: string): Promise<JsonObject> {
     DATABASE,
     `begin;
     set local role service_role;
-    select public.app_evidence_review_worklist_source_read_v3(
+    select public.app_evidence_review_worklist_source_read_v4(
       '${authUserId}'
     )::text;
     rollback;`,
@@ -509,11 +509,11 @@ async function databaseProof(): Promise<number> {
     DATABASE,
     `select concat_ws('|',
     has_function_privilege('service_role',
-      'public.app_evidence_review_worklist_source_read_v3(uuid)','EXECUTE'),
+      'public.app_evidence_review_worklist_source_read_v4(uuid)','EXECUTE'),
     has_function_privilege('anon',
-      'public.app_evidence_review_worklist_source_read_v3(uuid)','EXECUTE'),
+      'public.app_evidence_review_worklist_source_read_v4(uuid)','EXECUTE'),
     has_function_privilege('authenticated',
-      'public.app_evidence_review_worklist_source_read_v3(uuid)','EXECUTE'),
+      'public.app_evidence_review_worklist_source_read_v4(uuid)','EXECUTE'),
     has_function_privilege('service_role',
       'public.app_workforce_authorize_v1(uuid,text,uuid,uuid,timestamptz)',
       'EXECUTE'),
@@ -1000,11 +1000,11 @@ async function databaseProof(): Promise<number> {
   const definition = await psql(
     DATABASE,
     `select pg_get_functiondef(
-    'public.app_evidence_review_worklist_source_read_v3(uuid)'::regprocedure
+    'public.app_evidence_review_worklist_source_read_v4(uuid)'::regprocedure
   );`,
   );
   assert(
-    definition.includes("app_workforce_authorize_v1") &&
+    definition.includes("app_evidence_review_worklist_source_read_v3") &&
       !/\binsert\b|\bupdate\b|\bdelete\b|\btruncate\b/i.test(definition),
     "read_function_contains_write_or_parallel_auth",
   );
@@ -1079,7 +1079,7 @@ async function databaseProof(): Promise<number> {
       ) seniority on seniority.seniority='admin'
       order by identity_row.created_at,identity_row.id limit 1
     ), response as (
-      select public.app_evidence_review_worklist_source_read_v3(
+      select public.app_evidence_review_worklist_source_read_v4(
         first_admin.auth_user_id
       ) body from first_admin
     ), detail as (

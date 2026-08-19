@@ -246,9 +246,9 @@ try {
   assert(empty === "0|0|0|0|0|14|5|57|5|0|0", "fresh_data_boundary_failed");
   const security = psql(DATABASE,`select (
     (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%') = 61
+      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%') = 64
     and (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%' and c.relrowsecurity) = 61
+      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%' and c.relrowsecurity) = 64
     and not exists (select 1 from information_schema.role_table_grants
       where table_schema='public' and table_name like 'app\\_%'
         and grantee in ('anon','authenticated') and privilege_type in ('INSERT','UPDATE','DELETE','TRUNCATE'))
@@ -290,6 +290,11 @@ try {
     and to_regprocedure('public.app_evidence_review_overall_status_v1(uuid,text,text)') is not null
     and to_regprocedure('public.app_evidence_review_round_finalize_v1(uuid,text,text,text,jsonb,text,text,text,timestamptz)') is not null
     and to_regclass('public.app_evidence_review_correction_handoffs') is not null
+    and to_regclass('public.app_evidence_review_customer_submissions') is not null
+    and to_regclass('public.app_evidence_review_customer_submission_items') is not null
+    and to_regclass('public.app_evidence_review_decision_carry_forwards') is not null
+    and to_regprocedure('public.app_customer_correction_challenge_issue_v1(uuid,text,jsonb,text,text,timestamptz,text,text,text,text,text,text)') is not null
+    and to_regprocedure('public.app_customer_correction_finalize_v1(uuid,text,uuid,text,text,text,text,text,text,text,text)') is not null
     and to_regprocedure('public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)') is not null
     and position('access_grant.customer_id <> v_case.customer_id' in pg_get_functiondef('public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)'::regprocedure)) > 0
     and position('access_grant.customer_id = v_case.customer_id' in pg_get_functiondef('public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)'::regprocedure)) = 0
@@ -326,9 +331,12 @@ try {
     and not has_function_privilege('anon','public.app_evidence_review_worklist_source_read_v1(uuid)','EXECUTE')
     and not has_function_privilege('authenticated','public.app_evidence_review_worklist_source_read_v1(uuid)','EXECUTE')
     and to_regprocedure('public.app_evidence_review_worklist_source_read_v3(uuid)') is not null
+    and to_regprocedure('public.app_evidence_review_worklist_source_read_v4(uuid)') is not null
     and not has_function_privilege('service_role','public.app_evidence_review_worklist_source_read_v2(uuid)','EXECUTE')
-    and has_function_privilege('service_role','public.app_evidence_review_worklist_source_read_v3(uuid)','EXECUTE')
+    and not has_function_privilege('service_role','public.app_evidence_review_worklist_source_read_v3(uuid)','EXECUTE')
     and not has_function_privilege('authenticated','public.app_evidence_review_worklist_source_read_v3(uuid)','EXECUTE')
+    and has_function_privilege('service_role','public.app_evidence_review_worklist_source_read_v4(uuid)','EXECUTE')
+    and not has_function_privilege('authenticated','public.app_evidence_review_worklist_source_read_v4(uuid)','EXECUTE')
     and not has_function_privilege('service_role','public.app_workforce_authorize_v1(uuid,text,text,uuid,uuid,timestamptz)','EXECUTE')
     and position('app_workforce_authorize_v1' in pg_get_functiondef('public.app_compliance_worklist_source_events_read_v1(uuid,integer)'::regprocedure)) > 0
     and position('app_workforce_authorize_v1' in pg_get_functiondef('public.app_evidence_review_worklist_source_read_v1(uuid)'::regprocedure)) > 0

@@ -60,6 +60,7 @@ function localRuntime() {
   const dbUrl = env.get("DB_URL") ?? "";
   const anonKey = env.get("ANON_KEY") ?? "";
   const serviceRoleKey = env.get("SERVICE_ROLE_KEY") ?? "";
+  const mailpitUrl = env.get("MAILPIT_URL") ?? "";
   const api = new URL(apiUrl);
   const database = new URL(dbUrl);
   assert(
@@ -72,12 +73,13 @@ function localRuntime() {
       database.hostname === "127.0.0.1" && database.port === "54322",
     "non_local_database_target",
   );
-  assert(anonKey && serviceRoleKey, "local_keys_missing");
+  assert(anonKey && serviceRoleKey && mailpitUrl, "local_keys_missing");
   return Object.freeze({
     apiUrl: apiUrl.replace(/\/$/, ""),
     dbUrl,
     anonKey,
     serviceRoleKey,
+    mailpitUrl: mailpitUrl.replace(/\/$/, ""),
   });
 }
 
@@ -123,7 +125,10 @@ async function createAuth(runtime, prefix) {
     headers,
     body: JSON.stringify({ email, password, email_confirm: true }),
   });
-  assert(created.status === 200 && created.body?.id, "auth_fixture_create_failed");
+  assert(
+    created.status === 200 && created.body?.id,
+    "auth_fixture_create_failed",
+  );
   const signedIn = await jsonRequest(
     `${runtime.apiUrl}/auth/v1/token?grant_type=password`,
     {
@@ -147,14 +152,17 @@ async function createAuth(runtime, prefix) {
 
 async function deleteAuth(runtime, userId) {
   if (!userId) return;
-  const response = await fetch(`${runtime.apiUrl}/auth/v1/admin/users/${userId}`, {
-    method: "DELETE",
-    headers: {
-      apikey: runtime.serviceRoleKey,
-      Authorization: `Bearer ${runtime.serviceRoleKey}`,
+  const response = await fetch(
+    `${runtime.apiUrl}/auth/v1/admin/users/${userId}`,
+    {
+      method: "DELETE",
+      headers: {
+        apikey: runtime.serviceRoleKey,
+        Authorization: `Bearer ${runtime.serviceRoleKey}`,
+      },
+      signal: AbortSignal.timeout(10_000),
     },
-    signal: AbortSignal.timeout(10_000),
-  });
+  );
   if (!response.ok && response.status !== 404) {
     throw new Error("auth_fixture_cleanup_failed");
   }
@@ -165,9 +173,13 @@ function fixture(prefix, authUserId) {
   return Object.freeze({
     prefix,
     authUserId,
+    customerIdentityId: uuid(),
+    email: `${prefix}@example.test`,
     customerId: uuid(),
     caseId: uuid(),
-    caseRef: `CASE-${crypto.randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase()}`,
+    caseRef: `CASE-${
+      crypto.randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase()
+    }`,
     partyId: uuid(),
     partyProfileId: uuid(),
     locationId: uuid(),
@@ -183,7 +195,9 @@ function fixture(prefix, authUserId) {
 }
 
 function pilotState(runtime) {
-  const value = psql(runtime, `begin read only;
+  const value = psql(
+    runtime,
+    `begin read only;
     with pilot as (
       select id from public.app_cases where case_reference='${PILOT_CASE_REF}'
     )
@@ -198,12 +212,15 @@ function pilotState(runtime) {
       coalesce((select r.id::text from public.app_evidence_review_rounds r
        join pilot on pilot.id=r.case_id
        order by r.finalized_at desc,r.id desc limit 1),'NONE')
-    ); rollback;`);
+    ); rollback;`,
+  );
   return value;
 }
 
 function relevantFingerprint(runtime) {
-  return psql(runtime, `begin read only; select concat_ws('|',
+  return psql(
+    runtime,
+    `begin read only; select concat_ws('|',
     (select count(*) from public.app_customers),
     (select count(*) from public.app_cases),
     (select count(*) from public.app_case_lifecycle_events),
@@ -212,17 +229,25 @@ function relevantFingerprint(runtime) {
     (select count(*) from public.app_evidence_review_rounds),
     (select count(*) from public.app_evidence_review_round_subject_decisions),
     (select count(*) from public.app_evidence_review_correction_handoffs),
+    (select count(*) from public.app_evidence_review_customer_submissions),
+    (select count(*) from public.app_evidence_review_customer_submission_items),
+    (select count(*) from public.app_evidence_review_decision_carry_forwards),
+    (select count(*) from public.app_signup_signing_challenges
+      where subject_type='CUSTOMER_CORRECTION'),
     (select count(*) from public.app_customer_access_grants),
     (select count(*) from public.app_workforce_identities),
     (select count(*) from public.app_workforce_scope_assignments),
     (select count(*) from public.app_audit_events),
     (select count(*) from public.app_idempotency_keys)
-  ); rollback;`);
+  ); rollback;`,
+  );
 }
 
 function setupFixture(runtime, f) {
   const expires = new Date(Date.now() + 86_400_000).toISOString();
-  const adminId = psql(runtime, `begin read only;
+  const adminId = psql(
+    runtime,
+    `begin read only;
     select identity_row.auth_user_id::text
     from public.app_workforce_identities identity_row
     join lateral (
@@ -237,10 +262,13 @@ function setupFixture(runtime, f) {
         and seniority_event.effective_at <= clock_timestamp()
       order by seniority_event.effective_at desc,seniority_event.recorded_at desc limit 1
     ) seniority on seniority.seniority='admin'
-    order by identity_row.created_at,identity_row.id limit 1; rollback;`);
+    order by identity_row.created_at,identity_row.id limit 1; rollback;`,
+  );
   assert(/^[0-9a-f-]{36}$/i.test(adminId), "active_admin_missing");
 
-  psql(runtime, `
+  psql(
+    runtime,
+    `
     insert into public.app_customers (id,customer_type)
     values ('${f.customerId}','particulier');
     insert into public.app_cases (
@@ -257,29 +285,41 @@ function setupFixture(runtime, f) {
       '${f.caseId}',null,'submitted_for_review',clock_timestamp(),'system',
       'proof:${f.prefix}','proof','${f.prefix}:case','${f.prefix}-lifecycle','{}'
     );
-  `);
+  `,
+  );
 
-  const member = psql(runtime, `select public.app_workforce_member_manage_v1(
+  const member = psql(
+    runtime,
+    `select public.app_workforce_member_manage_v1(
     '${adminId}','${f.prefix}-member','${f.prefix}-member','${HASH}',
     '${expires}','create','${f.authUserId}',null,'reviewer',clock_timestamp(),
     'decision:${f.prefix}:member',null
-  )->>'ok';`);
+  )->>'ok';`,
+  );
   assert(member === "true", "workforce_member_create_failed");
-  const workforceId = psql(runtime, `select id::text
+  const workforceId = psql(
+    runtime,
+    `select id::text
     from public.app_workforce_identities
-    where auth_user_id='${f.authUserId}';`);
+    where auth_user_id='${f.authUserId}';`,
+  );
   assert(/^[0-9a-f-]{36}$/i.test(workforceId), "workforce_identity_missing");
   for (const capability of ["evidence.review.view", "evidence.review.decide"]) {
     const suffix = capability.endsWith("view") ? "view" : "decide";
-    const granted = psql(runtime, `select public.app_workforce_case_assignment_manage_v1(
+    const granted = psql(
+      runtime,
+      `select public.app_workforce_case_assignment_manage_v1(
       '${adminId}','${f.prefix}-${suffix}','${f.prefix}-${suffix}','${HASH}',
       '${expires}','grant','${workforceId}','${capability}','${f.caseId}',
       null,null,null,clock_timestamp(),null,'decision:${f.prefix}:${suffix}',null
-    )->>'ok';`);
+    )->>'ok';`,
+    );
     assert(granted === "true", `workforce_${suffix}_grant_failed`);
   }
 
-  psql(runtime, `begin;
+  psql(
+    runtime,
+    `begin;
     set local session_replication_role = replica;
     insert into public.app_parties (
       id,party_kind,source_type,source_reference_type,source_reference_id,
@@ -398,36 +438,123 @@ function setupFixture(runtime, f) {
        '${f.chargerId}','single_declared_charger',clock_timestamp(),
        'proof:${f.prefix}','${f.prefix}-invoice-context');
     commit;
-  `);
+  `,
+  );
   return Object.freeze({ workforceId, adminId });
 }
 
 function grantCustomerAccess(runtime, f) {
-  psql(runtime, `insert into public.app_customer_access_grants (
+  psql(
+    runtime,
+    `insert into public.app_customer_identities (
+    id,customer_id,auth_user_id,email_normalized,email_verified_at,
+    identity_provider,status
+  ) values (
+    '${f.customerIdentityId}','${f.customerId}','${f.authUserId}',
+    '${f.email}',clock_timestamp(),'supabase','active'
+  );
+  insert into public.app_customer_access_grants (
     auth_user_id,customer_id,granted_case_id,access_basis,source_class,
     source_ref,request_id
   ) values (
     '${f.authUserId}','${f.customerId}','${f.caseId}',
     'signed_service_recipient','app_signup_promotion',
     '${f.prefix}-customer-access','${f.prefix}-customer-access'
-  );`);
+  );`,
+  );
+}
+
+async function requestCorrectionChallenge(runtime, f, token, key, responses) {
+  return await jsonRequest(
+    `${runtime.apiUrl}/functions/v1/api-app-customer-correction-signing-challenge`,
+    {
+      method: "POST",
+      headers: {
+        apikey: runtime.anonKey,
+        Authorization: `Bearer ${token}`,
+        Origin: "http://127.0.0.1:5175",
+        "Content-Type": "application/json",
+        "Idempotency-Key": key,
+      },
+      body: JSON.stringify({ caseRef: f.caseRef, responses }),
+    },
+  );
+}
+
+async function correctionOtp(runtime, f, challengeReference) {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const list = await jsonRequest(`${runtime.mailpitUrl}/api/v1/messages`, {});
+    const message = Array.isArray(list.body?.messages)
+      ? list.body.messages.find((candidate) =>
+        candidate?.To?.some((recipient) => recipient?.Address === f.email) &&
+        String(candidate?.Subject || "").includes("ondertekencode")
+      )
+      : null;
+    if (message?.ID) {
+      const detail = await jsonRequest(
+        `${runtime.mailpitUrl}/api/v1/message/${message.ID}`,
+        {},
+      );
+      const text = String(detail.body?.Text || detail.body?.HTML || "");
+      const code = text.match(/(?:^|\D)(\d{6})(?:\D|$)/)?.[1];
+      if (code && text.includes(challengeReference)) return code;
+    }
+    await new Promise((resolveWait) => setTimeout(resolveWait, 100));
+  }
+  throw new Error("correction_otp_not_delivered");
+}
+
+async function finalizeCorrection(runtime, f, token, key, body) {
+  return await jsonRequest(
+    `${runtime.apiUrl}/functions/v1/api-app-customer-correction-signing-finalize`,
+    {
+      method: "POST",
+      headers: {
+        apikey: runtime.anonKey,
+        Authorization: `Bearer ${token}`,
+        Origin: "http://127.0.0.1:5175",
+        "Content-Type": "application/json",
+        "Idempotency-Key": key,
+      },
+      body: JSON.stringify({ caseRef: f.caseRef, ...body }),
+    },
+  );
+}
+
+async function readWorklist(runtime, token) {
+  return await jsonRequest(
+    `${runtime.apiUrl}/functions/v1/api-app-evidence-review-worklist`,
+    {
+      method: "GET",
+      headers: {
+        apikey: runtime.anonKey,
+        Authorization: `Bearer ${token}`,
+        Origin: "http://127.0.0.1:5175",
+      },
+    },
+  );
 }
 
 function grantPublishScope(runtime, f, authority) {
   const expires = new Date(Date.now() + 86_400_000).toISOString();
-  const granted = psql(runtime, `select
+  const granted = psql(
+    runtime,
+    `select
     public.app_workforce_case_assignment_manage_v1(
       '${authority.adminId}','${f.prefix}-publish-scope',
       '${f.prefix}-publish-scope','${HASH}','${expires}','grant',
       '${authority.workforceId}','evidence.review.correction.publish',
       '${f.caseId}',null,null,null,clock_timestamp(),null,
       'decision:${f.prefix}:publish',null
-    )->>'ok';`);
+    )->>'ok';`,
+  );
   assert(granted === "true", "workforce_publish_grant_failed");
 }
 
 function addChangedEvidence(runtime, f) {
-  psql(runtime, `begin;
+  psql(
+    runtime,
+    `begin;
     set local session_replication_role = replica;
     insert into public.app_evidence_versions (
       id,evidence_file_id,version_number,source_intake_file_id,storage_bucket,
@@ -437,7 +564,8 @@ function addChangedEvidence(runtime, f) {
       'proof-private','${f.prefix}-energy-v2.pdf','application/pdf',101,
       '${"d".repeat(64)}','confirmed_awaiting_review',clock_timestamp(),
       clock_timestamp(),'${f.prefix}-energy-v2','${f.prefix}-energy-v2');
-    commit;`);
+    commit;`,
+  );
 }
 
 async function readDetail(runtime, f, token) {
@@ -452,10 +580,24 @@ async function readDetail(runtime, f, token) {
       },
     },
   );
-  assert(
-    response.status === 200,
-    `detail_runtime_status_${response.status}_${response.body?.code ?? "unknown"}`,
-  );
+  if (response.status !== 200) {
+    const diagnostic = psql(
+      runtime,
+      `select concat_ws('|',
+      source->>'ok',source->>'code',jsonb_typeof(source->'review_subjects'),
+      jsonb_array_length(coalesce(source->'review_subjects','[]'::jsonb)),
+      source->>'overall_review_status') from (
+        select public.app_evidence_review_case_detail_read_v6(
+          '${f.authUserId}','${f.caseRef}'
+        ) source
+      ) probe;`,
+    );
+    throw new Error(
+      `detail_runtime_status_${response.status}_${
+        response.body?.code ?? "unknown"
+      }_${diagnostic}`,
+    );
+  }
   assert(
     response.body?.case?.caseRef === f.caseRef &&
       response.body?.reviewManifestVersion === "fact-review-manifest-v1" &&
@@ -516,24 +658,57 @@ async function readCustomerHandoff(runtime, f, token) {
 }
 
 function handoffCount(runtime, f) {
-  return psql(runtime, `begin read only; select count(*)
+  return psql(
+    runtime,
+    `begin read only; select count(*)
     from public.app_evidence_review_correction_handoffs
-    where case_id='${f.caseId}'; rollback;`);
+    where case_id='${f.caseId}'; rollback;`,
+  );
 }
 
 function roundCounts(runtime, f) {
-  return psql(runtime, `begin read only; select concat_ws('|',
+  return psql(
+    runtime,
+    `begin read only; select concat_ws('|',
     (select count(*) from public.app_evidence_review_rounds
       where case_id='${f.caseId}'),
     (select count(*) from public.app_evidence_review_round_subject_decisions d
       join public.app_evidence_review_rounds r on r.id=d.round_id
       where r.case_id='${f.caseId}')
-  ); rollback;`);
+  ); rollback;`,
+  );
 }
 
 function cleanupFixture(runtime, f) {
-  psql(runtime, `begin;
+  psql(
+    runtime,
+    `begin;
     set local session_replication_role = replica;
+    delete from public.app_evidence_review_decision_carry_forwards
+      where submission_id in (select id
+        from public.app_evidence_review_customer_submissions
+        where case_id='${f.caseId}');
+    delete from public.app_evidence_review_customer_submission_items
+      where submission_id in (select id
+        from public.app_evidence_review_customer_submissions
+        where case_id='${f.caseId}');
+    delete from public.app_signup_signature_evidence
+      where subject_type='CUSTOMER_CORRECTION'
+        and subject_ref in (select id
+          from public.app_evidence_review_customer_submissions
+          where case_id='${f.caseId}');
+    delete from public.app_signup_signing_snapshots
+      where subject_type='CUSTOMER_CORRECTION'
+        and subject_ref in (select id
+          from public.app_evidence_review_customer_submissions
+          where case_id='${f.caseId}');
+    delete from public.app_signup_signing_challenges
+      where subject_type='CUSTOMER_CORRECTION'
+        and correction_handoff_id in (select id
+          from public.app_evidence_review_correction_handoffs
+          where case_id='${f.caseId}');
+    delete from public.app_evidence_review_customer_submissions
+      where case_id='${f.caseId}';
     delete from public.app_evidence_review_correction_handoffs
       where case_id='${f.caseId}';
     delete from public.app_evidence_review_round_subject_decisions d using
@@ -574,13 +749,18 @@ function cleanupFixture(runtime, f) {
     delete from public.app_case_lifecycle_events where case_id='${f.caseId}';
     delete from public.app_customer_access_grants
       where auth_user_id='${f.authUserId}' and customer_id='${f.customerId}';
+    delete from public.app_customer_identities
+      where id='${f.customerIdentityId}';
     delete from public.app_cases where id='${f.caseId}';
     delete from public.app_customers where id='${f.customerId}';
-    commit;`);
+    commit;`,
+  );
 }
 
 function residueCount(runtime, f) {
-  return psql(runtime, `begin read only; select
+  return psql(
+    runtime,
+    `begin read only; select
     (select count(*) from public.app_cases where id='${f.caseId}') +
     (select count(*) from public.app_evidence_review_rounds where case_id='${f.caseId}') +
     (select count(*) from public.app_evidence_review_correction_handoffs
@@ -592,14 +772,20 @@ function residueCount(runtime, f) {
     (select count(*) from public.app_audit_events
       where request_id like '${f.prefix}-%') +
     (select count(*) from public.app_idempotency_keys
-      where key like '${f.prefix}-%'); rollback;`);
+      where key like '${f.prefix}-%'); rollback;`,
+  );
 }
 
 async function main() {
   const runtime = localRuntime();
-  const prefix = `review15-runtime-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+  const prefix = `review15-runtime-${Date.now()}-${
+    crypto.randomUUID().slice(0, 8)
+  }`;
   const beforePilot = pilotState(runtime);
-  assert(beforePilot.split("|")[2] === "1", "pilot_handoff_not_exact_before_proof");
+  assert(
+    beforePilot.split("|")[2] === "1",
+    "pilot_handoff_not_exact_before_proof",
+  );
   const beforeFingerprint = relevantFingerprint(runtime);
   let auth = null;
   let f = null;
@@ -650,8 +836,19 @@ async function main() {
       current.reviewManifestHash !== initial.reviewManifestHash,
       "manifest_did_not_change",
     );
+    const correctionIndex = current.reviewSubjects.findIndex((subject) =>
+      subject.factKey === "electricityEan"
+    );
+    assert(
+      correctionIndex >= 0,
+      `ean_subject_missing_${
+        current.reviewSubjects.map((subject) =>
+          subject.factKey ?? subject.fact_key ?? "NONE"
+        ).join("_")
+      }`,
+    );
     const decisions = current.reviewSubjects.map((subject, index) =>
-      index === 0
+      index === correctionIndex
         ? {
           subjectRef: subject.subjectRef,
           disposition: "CORRECTION_REQUIRED",
@@ -674,7 +871,10 @@ async function main() {
       `valid_round_failed_${valid.status}_${valid.body?.code ?? "unknown"}`,
     );
     const expectedCounts = `1|${current.reviewSubjects.length}`;
-    assert(roundCounts(runtime, f) === expectedCounts, "valid_round_counts_invalid");
+    assert(
+      roundCounts(runtime, f) === expectedCounts,
+      "valid_round_counts_invalid",
+    );
 
     const retry = await finalize(runtime, auth.token, key, body);
     assert(
@@ -693,7 +893,8 @@ async function main() {
       })),
     });
     assert(
-      conflict.status === 409 && conflict.body?.code === "review_round_conflict" &&
+      conflict.status === 409 &&
+        conflict.body?.code === "review_round_conflict" &&
         roundCounts(runtime, f) === expectedCounts,
       "conflicting_finalization_not_denied",
     );
@@ -788,7 +989,8 @@ async function main() {
         customerRead.body?.caseRef === f.caseRef &&
         Array.isArray(customerRead.body?.handoff?.items) &&
         customerRead.body.handoff.items.length === 1 &&
-        customerRead.body.handoff.items[0].documentLabel === "Energiedocument" &&
+        customerRead.body.handoff.items[0].documentLabel ===
+          "Energiedocument" &&
         customerRead.body.handoff.items[0].correctionReason ===
           "INCORRECT_INFORMATION" &&
         customerRead.body.handoff.items[0].correctionInstruction ===
@@ -805,6 +1007,162 @@ async function main() {
       waiting.overallReviewStatus === "WAITING_CUSTOMER" &&
         waiting.case?.canPublishCorrection === true,
       "waiting_customer_status_not_derived",
+    );
+
+    const originalSnapshotHash = psql(
+      runtime,
+      `select canonical_snapshot_sha256
+      from public.app_signup_signing_snapshots where id='${f.snapshotId}';`,
+    );
+    const correctionResponses = [{
+      itemIndex: 0,
+      correctedValue: "871234567890123456",
+    }];
+    const challenge = await requestCorrectionChallenge(
+      runtime,
+      f,
+      auth.token,
+      `${prefix}-correction-challenge`,
+      correctionResponses,
+    );
+    assert(
+      challenge.status === 201 && challenge.body?.ok === true &&
+        /^[0-9a-f-]{36}$/i.test(String(challenge.body?.challenge_reference)) &&
+        challenge.body?.item_count === 1 &&
+        challenge.body?.legal_bundle?.bundleVersion ===
+          "customer-correction-confirmation-nl-v1",
+      `correction_challenge_failed_${challenge.status}_${
+        challenge.body?.code ?? "unknown"
+      }`,
+    );
+    const challengeReference = String(challenge.body.challenge_reference);
+    const otp = await correctionOtp(runtime, f, challengeReference);
+    const wrongOtp = otp === "000000" ? "000001" : "000000";
+    const invalidOtp = await finalizeCorrection(
+      runtime,
+      f,
+      auth.token,
+      `${prefix}-correction-invalid-otp`,
+      {
+        challengeReference,
+        otp: wrongOtp,
+        typedFullName: "Proof Customer",
+      },
+    );
+    assert(
+      invalidOtp.status === 400 &&
+        psql(
+            runtime,
+            `select count(*) from
+          public.app_evidence_review_customer_submissions
+          where case_id='${f.caseId}';`,
+          ) === "0",
+      "invalid_otp_created_partial_submission",
+    );
+    const finalizeBody = {
+      challengeReference,
+      otp,
+      typedFullName: "Proof Customer",
+    };
+    const [finalizeA, finalizeB] = await Promise.all([
+      finalizeCorrection(
+        runtime,
+        f,
+        auth.token,
+        `${prefix}-correction-finalize-a`,
+        finalizeBody,
+      ),
+      finalizeCorrection(
+        runtime,
+        f,
+        auth.token,
+        `${prefix}-correction-finalize-b`,
+        finalizeBody,
+      ),
+    ]);
+    const finalized = [finalizeA, finalizeB].find((result) =>
+      result.status === 201 && result.body?.code === "finalized"
+    );
+    const deniedConcurrent = [finalizeA, finalizeB].find((result) =>
+      result.status === 409
+    );
+    assert(
+      finalized && deniedConcurrent,
+      `concurrent_correction_not_single_${finalizeA.status}_${
+        finalizeA.body?.code ?? "unknown"
+      }_${finalizeB.status}_${finalizeB.body?.code ?? "unknown"}`,
+    );
+    const winningKey = finalized === finalizeA
+      ? `${prefix}-correction-finalize-a`
+      : `${prefix}-correction-finalize-b`;
+    const retryFinalized = await finalizeCorrection(
+      runtime,
+      f,
+      auth.token,
+      winningKey,
+      finalizeBody,
+    );
+    assert(
+      retryFinalized.status === 200 &&
+        retryFinalized.body?.code === "already_finalized" &&
+        retryFinalized.body?.submission_ref === finalized.body?.submission_ref,
+      "exact_correction_retry_not_idempotent",
+    );
+    const changedRetry = await finalizeCorrection(
+      runtime,
+      f,
+      auth.token,
+      winningKey,
+      { ...finalizeBody, typedFullName: "Different Proof Customer" },
+    );
+    assert(changedRetry.status === 409, "changed_payload_retry_not_denied");
+    const submissionEvidence = psql(
+      runtime,
+      `select concat_ws('|',
+      (select count(*) from public.app_evidence_review_customer_submissions
+        where case_id='${f.caseId}'),
+      (select count(*) from public.app_evidence_review_customer_submission_items i
+        join public.app_evidence_review_customer_submissions s on s.id=i.submission_id
+        where s.case_id='${f.caseId}'),
+      (select count(*) from public.app_evidence_review_decision_carry_forwards c
+        join public.app_evidence_review_customer_submissions s on s.id=c.submission_id
+        where s.case_id='${f.caseId}'),
+      (select count(*) from public.app_signup_signing_challenges ch
+        join public.app_evidence_review_correction_handoffs h
+          on h.id=ch.correction_handoff_id
+        where h.case_id='${f.caseId}' and ch.consumed_at is not null),
+      (select canonical_snapshot_sha256='${originalSnapshotHash}'
+        from public.app_signup_signing_snapshots where id='${f.snapshotId}'),
+      (select coalesce(string_agg(d.fact_key,',' order by d.fact_key),'NONE')
+        from public.app_evidence_review_round_subject_decisions d
+        join public.app_evidence_review_rounds r on r.id=d.round_id
+        where r.case_id='${f.caseId}' and d.disposition='ACCEPTED'
+          and not exists (select 1
+            from public.app_evidence_review_decision_carry_forwards c
+            where c.prior_decision_id=d.id))
+    );`,
+    );
+    assert(
+      submissionEvidence ===
+        `1|1|${current.reviewSubjects.length - 1}|1|t|NONE`,
+      `correction_submission_evidence_invalid_${submissionEvidence}_expected_${
+        current.reviewSubjects.length - 1
+      }`,
+    );
+    const answered = await readCustomerHandoff(runtime, f, auth.token);
+    const postCorrection = await readDetail(runtime, f, auth.token);
+    const worklist = await readWorklist(runtime, auth.token);
+    const reentered = worklist.body?.cases?.find((row) =>
+      row.caseRef === f.caseRef
+    );
+    assert(
+      answered.status === 200 && answered.body?.handoff === null &&
+        postCorrection.overallReviewStatus === "TO_REVIEW" &&
+        postCorrection.reviewManifestHash !== current.reviewManifestHash &&
+        worklist.status === 200 &&
+        reentered?.overallReviewStatus === "TO_REVIEW" &&
+        reentered?.unresolvedFactCount === 1,
+      "post_correction_projection_invalid",
     );
   } catch (error) {
     proofError = error;
@@ -827,28 +1185,41 @@ async function main() {
 
   if (cleanupError) throw cleanupError;
   if (f) assert(residueCount(runtime, f) === "0", "proof_fixture_residue");
-  assert(relevantFingerprint(runtime) === beforeFingerprint, "active_database_fingerprint_changed");
+  assert(
+    relevantFingerprint(runtime) === beforeFingerprint,
+    "active_database_fingerprint_changed",
+  );
   assert(pilotState(runtime) === beforePilot, "pilot_changed_by_served_proof");
   if (proofError) throw proofError;
 
-  process.stdout.write([
-    "SERVED_FINALIZER_KONG_EDGE_AUTH_RPC=PASS",
-    "SERVED_FINALIZER_VALID_ROUND=PASS",
-    "SERVED_FINALIZER_IDEMPOTENT_RETRY=PASS",
-    "SERVED_FINALIZER_STALE_DENIED=PASS",
-    "SERVED_FINALIZER_CONFLICT_DENIED=PASS",
-    "SERVED_FINALIZER_NO_PARTIAL_WRITE=PASS",
-    "SERVED_FINALIZER_FIXTURE_CLEANUP=PASS",
-    "SERVED_FINALIZER_PILOT_INTEGRITY=PASS",
-    "SERVED_CORRECTION_PUBLISH_AUTHORITY=PASS",
-    "SERVED_CORRECTION_PUBLISH_CONCURRENT_IDEMPOTENT=PASS",
-    "SERVED_CUSTOMER_CORRECTION_READ=PASS",
-    "SERVED_WAITING_CUSTOMER_DERIVATION=PASS",
-    "EVIDENCE_FACT_REVIEW_SERVED_Q01_Q12=PASS",
-  ].join("\n") + "\n");
+  process.stdout.write(
+    [
+      "SERVED_FINALIZER_KONG_EDGE_AUTH_RPC=PASS",
+      "SERVED_FINALIZER_VALID_ROUND=PASS",
+      "SERVED_FINALIZER_IDEMPOTENT_RETRY=PASS",
+      "SERVED_FINALIZER_STALE_DENIED=PASS",
+      "SERVED_FINALIZER_CONFLICT_DENIED=PASS",
+      "SERVED_FINALIZER_NO_PARTIAL_WRITE=PASS",
+      "SERVED_FINALIZER_FIXTURE_CLEANUP=PASS",
+      "SERVED_FINALIZER_PILOT_INTEGRITY=PASS",
+      "SERVED_CORRECTION_PUBLISH_AUTHORITY=PASS",
+      "SERVED_CORRECTION_PUBLISH_CONCURRENT_IDEMPOTENT=PASS",
+      "SERVED_CUSTOMER_CORRECTION_READ=PASS",
+      "SERVED_WAITING_CUSTOMER_DERIVATION=PASS",
+      "SERVED_CUSTOMER_CORRECTION_CHALLENGE=PASS",
+      "SERVED_CUSTOMER_CORRECTION_FINALIZE=PASS",
+      "SERVED_CUSTOMER_CORRECTION_IDEMPOTENCY=PASS",
+      "SERVED_CUSTOMER_CORRECTION_CARRY_FORWARD=PASS",
+      "SERVED_CUSTOMER_CORRECTION_WORKLIST_REENTRY=PASS",
+      "SERVED_CUSTOMER_CORRECTION_PILOT_UNCHANGED=PASS",
+      "EVIDENCE_FACT_REVIEW_SERVED_Q01_Q18=PASS",
+    ].join("\n") + "\n",
+  );
 }
 
 main().catch((error) => {
-  process.stderr.write(`SERVED_FINALIZER_PROOF=FAIL:${scrub(error?.message ?? error)}\n`);
+  process.stderr.write(
+    `SERVED_FINALIZER_PROOF=FAIL:${scrub(error?.message ?? error)}\n`,
+  );
   process.exitCode = 1;
 });

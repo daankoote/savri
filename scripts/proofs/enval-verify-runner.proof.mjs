@@ -56,7 +56,7 @@ for (
 ) {
   assert(
     VERIFY_MANIFEST.commands[id].argv.slice(0, 2).join(" ") ===
-      "deno check" &&
+        "deno check" &&
       !VERIFY_MANIFEST.commands[id].argv.includes("--cached-only") &&
       VERIFY_MANIFEST.commands[id].argv.includes("--deny-import") &&
       VERIFY_MANIFEST.commands[id].argv.includes("--no-lock"),
@@ -107,8 +107,8 @@ const localService = buildPlan({
 });
 assert(
   localService.selected.filter((check) =>
-    check.commandId === "local-readonly-catalog"
-  ).length === 1 &&
+        check.commandId === "local-readonly-catalog"
+      ).length === 1 &&
     localService.selected.every((check) =>
       [SAFETY.SAFE_PURE, SAFETY.SAFE_LOCAL_READ].includes(check.safety)
     ) &&
@@ -127,8 +127,8 @@ const controlPlaneLocalService = buildPlan({
 });
 assert(
   controlPlaneLocalService.selected.filter((check) =>
-    check.commandId === "control-plane-foundation-local"
-  ).length === 1 &&
+        check.commandId === "control-plane-foundation-local"
+      ).length === 1 &&
     controlPlaneLocalService.selected.some((check) =>
       check.safety === SAFETY.SAFE_LOCAL_CONTROL_PLANE_WRITE &&
       check.mutatesState && !check.remote && !check.destructive
@@ -145,8 +145,8 @@ const tenantEphemeralLocalService = buildPlan({
 });
 assert(
   tenantEphemeralLocalService.selected.filter((check) =>
-    check.commandId === "workforce-policy-foundation-local"
-  ).length === 1 &&
+        check.commandId === "workforce-policy-foundation-local"
+      ).length === 1 &&
     tenantEphemeralLocalService.selected.some((check) =>
       check.safety === SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE &&
       check.mutatesState && !check.remote && !check.destructive
@@ -165,8 +165,8 @@ const tenantMigrationChainLocalService = buildPlan({
 });
 assert(
   tenantMigrationChainLocalService.selected.filter((check) =>
-    check.commandId === "tenant-migration-chain-local"
-  ).length === 1 &&
+        check.commandId === "tenant-migration-chain-local"
+      ).length === 1 &&
     tenantMigrationChainLocalService.selected.some((check) =>
       check.safety === SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE &&
       check.mutatesState && !check.remote && !check.destructive
@@ -186,20 +186,20 @@ const evidenceReviewDecisionLocalService = buildPlan({
 });
 assert(
   evidenceReviewDecisionLocalService.selected.filter((check) =>
-    check.commandId === "evidence-review-decision-pure"
-  ).length === 1 &&
+        check.commandId === "evidence-review-decision-pure"
+      ).length === 1 &&
     evidenceReviewDecisionLocalService.selected.filter((check) =>
-      check.commandId === "evidence-review-foundation-local"
-    ).length === 1 &&
+        check.commandId === "evidence-review-foundation-local"
+      ).length === 1 &&
     evidenceReviewDecisionLocalService.selected.filter((check) =>
-      check.commandId === "evidence-review-case-detail-local"
-    ).length === 1 &&
+        check.commandId === "evidence-review-case-detail-local"
+      ).length === 1 &&
     evidenceReviewDecisionLocalService.selected.filter((check) =>
-      check.commandId === "evidence-review-worklist-read-local"
-    ).length === 1 &&
+        check.commandId === "evidence-review-worklist-read-local"
+      ).length === 1 &&
     evidenceReviewDecisionLocalService.selected.filter((check) =>
-      check.commandId === "tenant-migration-chain-local"
-    ).length === 1 &&
+        check.commandId === "tenant-migration-chain-local"
+      ).length === 1 &&
     evidenceReviewDecisionLocalService.selected.some((check) =>
       check.commandId === "evidence-review-foundation-local" &&
       check.safety === SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE &&
@@ -220,11 +220,11 @@ const evidenceReviewLocalService = buildPlan({
 });
 assert(
   evidenceReviewLocalService.selected.filter((check) =>
-    check.commandId === "evidence-review-foundation-pure"
-  ).length === 1 &&
+        check.commandId === "evidence-review-foundation-pure"
+      ).length === 1 &&
     evidenceReviewLocalService.selected.filter((check) =>
-      check.commandId === "evidence-review-foundation-local"
-    ).length === 1 &&
+        check.commandId === "evidence-review-foundation-local"
+      ).length === 1 &&
     evidenceReviewLocalService.selected.some((check) =>
       check.commandId === "evidence-review-foundation-local" &&
       check.safety === SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE &&
@@ -248,11 +248,11 @@ const evidenceReviewWorklistLocalService = buildPlan({
 });
 assert(
   evidenceReviewWorklistLocalService.selected.filter((check) =>
-    check.commandId === "evidence-review-worklist-read-pure"
-  ).length === 1 &&
+        check.commandId === "evidence-review-worklist-read-pure"
+      ).length === 1 &&
     evidenceReviewWorklistLocalService.selected.filter((check) =>
-      check.commandId === "evidence-review-worklist-read-local"
-    ).length === 1 &&
+        check.commandId === "evidence-review-worklist-read-local"
+      ).length === 1 &&
     evidenceReviewWorklistLocalService.selected.some((check) =>
       check.commandId === "evidence-review-worklist-read-local" &&
       check.safety === SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE &&
@@ -280,17 +280,17 @@ const evidenceReviewCaseDetailLocalService = buildPlan({
 });
 assert(
   evidenceReviewCaseDetailLocalService.selected.filter((check) =>
-    check.commandId === "evidence-review-case-detail-pure"
-  ).length === 1 &&
+        check.commandId === "evidence-review-case-detail-pure"
+      ).length === 1 &&
     evidenceReviewCaseDetailLocalService.selected.filter((check) =>
-      check.commandId === "evidence-fact-review-round-pure"
-    ).length === 1 &&
+        check.commandId === "evidence-fact-review-round-pure"
+      ).length === 1 &&
     evidenceReviewCaseDetailLocalService.selected.filter((check) =>
-      check.commandId === "evidence-review-case-detail-local"
-    ).length === 1 &&
+        check.commandId === "evidence-review-case-detail-local"
+      ).length === 1 &&
     evidenceReviewCaseDetailLocalService.selected.filter((check) =>
-      check.commandId === "evidence-fact-review-round-served-local"
-    ).length === 1 &&
+        check.commandId === "evidence-fact-review-round-served-local"
+      ).length === 1 &&
     evidenceReviewCaseDetailLocalService.selected.some((check) =>
       check.commandId === "evidence-fact-review-round-pure" &&
       check.safety === SAFETY.SAFE_PURE && !check.mutatesState &&
@@ -323,26 +323,26 @@ const evidenceReviewCorrectionHandoffLocalService = buildPlan({
 });
 assert(
   evidenceReviewCorrectionHandoffLocalService.selected.filter((check) =>
-    check.commandId === "evidence-review-correction-handoff-pure"
-  ).length === 1 &&
+        check.commandId === "evidence-review-correction-handoff-pure"
+      ).length === 1 &&
     evidenceReviewCorrectionHandoffLocalService.selected.filter((check) =>
-      check.commandId === "evidence-review-correction-handoff-local"
-    ).length === 1 &&
+        check.commandId === "evidence-review-correction-handoff-local"
+      ).length === 1 &&
     evidenceReviewCorrectionHandoffLocalService.selected.filter((check) =>
-      check.commandId === "evidence-fact-review-round-served-local"
-    ).length === 1 &&
+        check.commandId === "evidence-fact-review-round-served-local"
+      ).length === 1 &&
     evidenceReviewCorrectionHandoffLocalService.selected.filter((check) =>
-      check.commandId === "evidence-review-worklist-read-local"
-    ).length === 1 &&
+        check.commandId === "evidence-review-worklist-read-local"
+      ).length === 1 &&
     evidenceReviewCorrectionHandoffLocalService.selected.filter((check) =>
-      check.commandId === "evidence-review-case-detail-local"
-    ).length === 1 &&
+        check.commandId === "evidence-review-case-detail-local"
+      ).length === 1 &&
     evidenceReviewCorrectionHandoffLocalService.selected.filter((check) =>
-      check.commandId === "tenant-migration-chain-local"
-    ).length === 1 &&
+        check.commandId === "tenant-migration-chain-local"
+      ).length === 1 &&
     evidenceReviewCorrectionHandoffLocalService.selected.filter((check) =>
-      check.commandId === "evidence-review-case-detail-ui-pure"
-    ).length === 1 &&
+        check.commandId === "evidence-review-case-detail-ui-pure"
+      ).length === 1 &&
     evidenceReviewCorrectionHandoffLocalService.selected.some((check) =>
       check.commandId === "evidence-review-correction-handoff-local" &&
       check.safety === SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE &&
@@ -352,6 +352,74 @@ assert(
       !check.remote && !check.destructive
     ),
   "evidence_review_correction_handoff_not_classified_or_deduplicated",
+);
+
+const customerCorrectionSubmissionLocalService = buildPlan({
+  paths: [
+    "supabase/migrations/20260820090000_app_customer_correction_submissions.sql",
+    "supabase/functions/_shared/app_customer_correction_submission.ts",
+    "supabase/functions/_shared/signing_otp_transport.ts",
+    "supabase/functions/api-app-customer-correction-signing-challenge/index.ts",
+    "supabase/functions/api-app-customer-correction-signing-finalize/index.ts",
+    "supabase/functions/api-app-evidence-review-worklist/index.ts",
+    "scripts/proofs/app-customer-correction-submission.proof.ts",
+    "scripts/proofs/app-evidence-fact-review-round-served.proof.mjs",
+  ],
+  mode: "LOCAL_SERVICE",
+});
+assert(
+  customerCorrectionSubmissionLocalService.selected.filter((check) =>
+        check.commandId === "customer-correction-submission-pure"
+      ).length === 1 &&
+    customerCorrectionSubmissionLocalService.selected.filter((check) =>
+        check.commandId === "customer-correction-submission-local-read"
+      ).length === 1 &&
+    customerCorrectionSubmissionLocalService.selected.filter((check) =>
+        check.commandId === "evidence-fact-review-round-served-local"
+      ).length === 1 &&
+    customerCorrectionSubmissionLocalService.selected.filter((check) =>
+        check.commandId === "tenant-migration-chain-local"
+      ).length === 1 &&
+    customerCorrectionSubmissionLocalService.selected.some((check) =>
+      check.commandId === "customer-correction-submission-pure" &&
+      check.safety === SAFETY.SAFE_PURE && !check.mutatesState
+    ) &&
+    customerCorrectionSubmissionLocalService.selected.some((check) =>
+      check.commandId === "customer-correction-submission-local-read" &&
+      check.safety === SAFETY.SAFE_LOCAL_READ && !check.mutatesState
+    ) &&
+    customerCorrectionSubmissionLocalService.selected.some((check) =>
+      check.commandId === "evidence-fact-review-round-served-local" &&
+      check.safety === SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE &&
+      check.mutatesState && !check.remote && !check.destructive
+    ) &&
+    customerCorrectionSubmissionLocalService.selected.every((check) =>
+      !check.remote && !check.destructive
+    ),
+  "customer_correction_submission_not_classified_or_deduplicated",
+);
+
+const customerCorrectionTargeted = buildPlan({
+  paths: [
+    "supabase/migrations/20260820090000_app_customer_correction_submissions.sql",
+    "supabase/functions/_shared/app_customer_correction_submission.ts",
+    "scripts/proofs/app-customer-correction-submission.proof.ts",
+  ],
+  mode: "TARGETED",
+});
+assert(
+  customerCorrectionTargeted.selected.filter((check) =>
+        check.commandId === "customer-correction-submission-pure"
+      ).length === 1 &&
+    customerCorrectionTargeted.selected.every((check) =>
+      check.safety === SAFETY.SAFE_PURE && !check.mutatesState &&
+      !check.remote && !check.destructive
+    ) &&
+    !customerCorrectionTargeted.selected.some((check) =>
+      check.commandId === "customer-correction-submission-local-read" ||
+      check.commandId === "evidence-fact-review-round-served-local"
+    ),
+  "customer_correction_targeted_not_pure_or_gated",
 );
 
 const evidenceReviewPreviewLocalService = buildPlan({
@@ -365,11 +433,11 @@ const evidenceReviewPreviewLocalService = buildPlan({
 });
 assert(
   evidenceReviewPreviewLocalService.selected.filter((check) =>
-    check.commandId === "evidence-review-preview-pure"
-  ).length === 1 &&
+        check.commandId === "evidence-review-preview-pure"
+      ).length === 1 &&
     evidenceReviewPreviewLocalService.selected.filter((check) =>
-      check.commandId === "evidence-review-preview-local"
-    ).length === 1 &&
+        check.commandId === "evidence-review-preview-local"
+      ).length === 1 &&
     evidenceReviewPreviewLocalService.selected.some((check) =>
       check.commandId === "evidence-review-preview-local" &&
       check.safety === SAFETY.SAFE_LOCAL_READ && !check.mutatesState &&
@@ -391,8 +459,8 @@ const evidenceReviewWorklistUiTargeted = buildPlan({
 });
 assert(
   evidenceReviewWorklistUiTargeted.selected.filter((check) =>
-    check.commandId === "evidence-review-worklist-ui-pure"
-  ).length === 1 &&
+        check.commandId === "evidence-review-worklist-ui-pure"
+      ).length === 1 &&
     evidenceReviewWorklistUiTargeted.selected.some((check) =>
       check.commandId === "evidence-review-worklist-ui-pure" &&
       check.safety === SAFETY.SAFE_PURE && !check.mutatesState &&
@@ -423,14 +491,14 @@ const evidenceReviewCaseDetailUiLocal = buildPlan({
 });
 assert(
   evidenceReviewCaseDetailUiLocal.selected.filter((check) =>
-    check.commandId === "evidence-review-case-detail-ui-pure"
-  ).length === 1 &&
+        check.commandId === "evidence-review-case-detail-ui-pure"
+      ).length === 1 &&
     evidenceReviewCaseDetailUiLocal.selected.filter((check) =>
-      check.commandId === "evidence-review-case-detail-local"
-    ).length === 1 &&
+        check.commandId === "evidence-review-case-detail-local"
+      ).length === 1 &&
     evidenceReviewCaseDetailUiLocal.selected.filter((check) =>
-      check.commandId === "evidence-review-preview-local"
-    ).length === 1 &&
+        check.commandId === "evidence-review-preview-local"
+      ).length === 1 &&
     evidenceReviewCaseDetailUiLocal.selected.some((check) =>
       check.commandId === "evidence-review-case-detail-ui-pure" &&
       check.safety === SAFETY.SAFE_PURE && !check.mutatesState &&
@@ -439,19 +507,32 @@ assert(
   "evidence_review_case_detail_ui_not_classified_or_deduplicated",
 );
 
-for (const fixture of [
-  { target: null, operation: "inspect", expected: "target_required" },
-  { target: "UNKNOWN", operation: "inspect", expected: "unknown_target" },
-  { target: "CONTROL_PLANE", operation: "link", expected: "remote_operation_not_supported" },
-  { target: "TENANT_ENVAL", operation: "db-reset", expected: "tenant_enval_mutation_not_authorized" },
-]) {
+for (
+  const fixture of [
+    { target: null, operation: "inspect", expected: "target_required" },
+    { target: "UNKNOWN", operation: "inspect", expected: "unknown_target" },
+    {
+      target: "CONTROL_PLANE",
+      operation: "link",
+      expected: "remote_operation_not_supported",
+    },
+    {
+      target: "TENANT_ENVAL",
+      operation: "db-reset",
+      expected: "tenant_enval_mutation_not_authorized",
+    },
+  ]
+) {
   let failure = "";
   try {
     resolveSupabaseTarget({ ...fixture, cwd: ROOT, env: {} });
   } catch (error) {
     failure = String(error);
   }
-  assert(failure.includes(fixture.expected), `target_guard_failed:${fixture.expected}`);
+  assert(
+    failure.includes(fixture.expected),
+    `target_guard_failed:${fixture.expected}`,
+  );
 }
 let ambiguousCredentialsRejected = false;
 try {
@@ -499,12 +580,8 @@ const gated = buildPlan({
 });
 assert(
   gated.gated.some((check) => check.safety === SAFETY.REMOTE_GATED) &&
-    gated.gated.some((check) =>
-      check.safety === SAFETY.DESTRUCTIVE_GATED
-    ) &&
-    gated.gated.some((check) =>
-      check.safety === SAFETY.LOCAL_MUTATING_GATED
-    ),
+    gated.gated.some((check) => check.safety === SAFETY.DESTRUCTIVE_GATED) &&
+    gated.gated.some((check) => check.safety === SAFETY.LOCAL_MUTATING_GATED),
   "remote_destructive_or_mutating_check_not_gated",
 );
 const executed = [];
@@ -536,8 +613,8 @@ assert(
     ) &&
     integration.selected.some((check) => check.id === "edge-static-check") &&
     integration.selected.filter((check) =>
-      check.commandId === "signup-journey-pure"
-    ).length === 1 &&
+        check.commandId === "signup-journey-pure"
+      ).length === 1 &&
     new Set(integration.selected.map((check) => check.dedupeKey)).size ===
       integration.selected.length,
   "integration_breadth_or_deduplication_failed",
@@ -557,12 +634,8 @@ runChecks(release, {
   },
 });
 assert(
-  release.gated.some((check) =>
-    check.safety === SAFETY.LOCAL_MUTATING_GATED
-  ) &&
-    release.gated.some((check) =>
-      check.safety === SAFETY.DESTRUCTIVE_GATED
-    ) &&
+  release.gated.some((check) => check.safety === SAFETY.LOCAL_MUTATING_GATED) &&
+    release.gated.some((check) => check.safety === SAFETY.DESTRUCTIVE_GATED) &&
     release.gated.some((check) => check.safety === SAFETY.REMOTE_GATED) &&
     release.gated.filter((check) => check.requiredForRelease).length === 3 &&
     releaseExecuted.every((id) =>
@@ -822,7 +895,7 @@ const baselineHashesBefore = Object.fromEntries(
   baselineBefore.candidates.map((path) => [path, hash(path)]),
 );
 assert(
-    baselineBefore.exceptions.length === 0 &&
+  baselineBefore.exceptions.length === 0 &&
     baselineBefore.unresolved.length === 0 &&
     baselineBefore.omissions.length === 0 &&
     baselineBefore.gitInclusionRequired.length === 0 &&
@@ -893,7 +966,10 @@ const missingProbePaths = [
 const probeAbsolutes = [...probePaths, ...forwardSeriesPaths].map((path) =>
   resolve(ROOT, path)
 );
-assert(probeAbsolutes.every((path) => !existsSync(path)), "migration_probe_preexists");
+assert(
+  probeAbsolutes.every((path) => !existsSync(path)),
+  "migration_probe_preexists",
+);
 const createdProbes = [];
 try {
   for (const probeAbsolute of probeAbsolutes) {
@@ -974,8 +1050,9 @@ try {
     stagedPaths: [archivedActivePath],
     inventoryPaths: [...activeTenantMigrationPaths, archivedActivePath],
   });
-  const wrongTargetPath =
-    `platform/control-plane/supabase/migrations/${currentTail.path.split("/").at(-1)}`;
+  const wrongTargetPath = `platform/control-plane/supabase/migrations/${
+    currentTail.path.split("/").at(-1)
+  }`;
   const simulatedWrongTargetRoot = inspectMigrationOmissions({
     ignoredPaths: [],
     untrackedPaths: [],
@@ -1025,7 +1102,9 @@ try {
   );
   const ambiguousWorkdir = inspectMigrationOmissions({
     ignoredPaths: Object.keys(VERIFY_MANIFEST.migrationBaseline.exceptions),
-    untrackedPaths: baselineBefore.gitVisibleCandidates.map((item) => item.path),
+    untrackedPaths: baselineBefore.gitVisibleCandidates.map((item) =>
+      item.path
+    ),
     changedPaths: [
       "platform/ambiguous/supabase/migrations/99991231235959_probe.sql",
     ],
@@ -1040,32 +1119,36 @@ try {
   });
   assert(
     withProbe.gitInclusionRequired.length === 0 &&
-    probePaths.every((probePath) =>
-      withProbe.gitVisibleCandidates.some((item) =>
-        item.path === probePath &&
-        item.target === (probePath.startsWith("platform/")
-          ? "CONTROL_PLANE"
-          : "TENANT_ENVAL")
+      probePaths.every((probePath) =>
+        withProbe.gitVisibleCandidates.some((item) =>
+          item.path === probePath &&
+          item.target === (probePath.startsWith("platform/")
+              ? "CONTROL_PLANE"
+              : "TENANT_ENVAL")
+        ) &&
+        git(["status", "--short", "--ignored", "--", probePath]).startsWith(
+          "?? ",
+        ) &&
+        simulatedIgnored.omissions.some((item) =>
+          item.path === probePath && item.reason === "new_ignored_migration"
+        )
       ) &&
-      git(["status", "--short", "--ignored", "--", probePath]).startsWith("?? ") &&
-      simulatedIgnored.omissions.some((item) =>
-        item.path === probePath && item.reason === "new_ignored_migration"
-      )
-    ) &&
       probePaths.every((probePath) =>
         simulatedStaged.stagedMigrationCandidates.some((item) =>
           item.path === probePath &&
-          item.target === (probePath.startsWith("platform/")
-            ? "CONTROL_PLANE"
-            : "TENANT_ENVAL")
+          item.target ===
+            (probePath.startsWith("platform/")
+              ? "CONTROL_PLANE"
+              : "TENANT_ENVAL")
         )
       ) &&
       missingProbePaths.every((probePath) =>
         simulatedMissing.omissions.some((item) =>
           item.path === probePath && item.reason === "missing_migration" &&
-          item.target === (probePath.startsWith("platform/")
-            ? "CONTROL_PLANE"
-            : "TENANT_ENVAL")
+          item.target ===
+            (probePath.startsWith("platform/")
+              ? "CONTROL_PLANE"
+              : "TENANT_ENVAL")
         )
       ) &&
       simulatedInvalidName.omissions.some((item) =>

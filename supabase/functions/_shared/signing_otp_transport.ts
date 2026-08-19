@@ -9,7 +9,9 @@ export type SigningOtpDeliveryRequest = {
   deliveryTarget: string;
   secretCode: string;
   expiresAt: string;
-  templateVersion: "signup-signing-otp-nl-v1";
+  templateVersion:
+    | "signup-signing-otp-nl-v1"
+    | "customer-correction-signing-otp-nl-v1";
   requestReference: string;
 };
 
@@ -79,13 +81,17 @@ export class LocalMailpitSigningOtpTransportAdapter
         251,
       ]);
       await smtpCommand(conn, "DATA", [354]);
+      const purpose = request.templateVersion ===
+          "customer-correction-signing-otp-nl-v1"
+        ? "je correctie op je ENVAL-dossier te ondertekenen"
+        : "je ENVAL-aanmelding te ondertekenen";
       const body = [
         `From: ENVAL <${this.sender}>`,
         `To: ${request.deliveryTarget}`,
         "Subject: Je ENVAL ondertekencode",
         "Content-Type: text/plain; charset=UTF-8",
         "",
-        "Gebruik deze eenmalige code om je ENVAL-aanmelding te ondertekenen:",
+        `Gebruik deze eenmalige code om ${purpose}:`,
         "",
         request.secretCode,
         "",

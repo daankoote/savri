@@ -1,0 +1,223 @@
+import {
+  correctionLegalBundleProjection,
+  CUSTOMER_CORRECTION_ACTIONS,
+  CUSTOMER_CORRECTION_RUNTIME_ACTIONS,
+  isRuntimeCorrectionAction,
+  parseCorrectionChallengeRequest,
+  parseCorrectionFinalizeRequest,
+} from "../../supabase/functions/_shared/app_customer_correction_submission.ts";
+
+const ROOT = new URL("../../", import.meta.url);
+const read = (path: string) => Deno.readTextFileSync(new URL(path, ROOT));
+const migration = read(
+  "supabase/migrations/20260820090000_app_customer_correction_submissions.sql",
+);
+const challenge = read(
+  "supabase/functions/api-app-customer-correction-signing-challenge/index.ts",
+);
+const finalize = read(
+  "supabase/functions/api-app-customer-correction-signing-finalize/index.ts",
+);
+
+function assert(value: unknown, code: string): asserts value {
+  if (!value) throw new Error(code);
+}
+
+const caseRef = "CASE-AAAAAAAAAAAA";
+const one = [{ itemIndex: 0, correctedValue: "Supplier One" }];
+const threeDomain = [
+  { itemIndex: 0, correctedValue: "Supplier One" },
+  { itemIndex: 1, correctedValue: "871234567890123456" },
+  { itemIndex: 2, correctedValue: "Proof Address" },
+];
+const crossDocument = [
+  { itemIndex: 0, correctedValue: "Supplier One" },
+  { itemIndex: 1, correctedValue: "Proof Charger" },
+];
+const allFacts = Array.from({ length: 10 }, (_, itemIndex) => ({
+  itemIndex,
+  correctedValue: itemIndex === 2 ? "871234567890123456" : `Value ${itemIndex}`,
+}));
+
+for (const responses of [one, threeDomain, crossDocument, allFacts]) {
+  const parsed = parseCorrectionChallengeRequest({ caseRef, responses });
+  assert(
+    parsed?.responses.length === responses.length,
+    "multi_item_parse_failed",
+  );
+}
+assert(
+  parseCorrectionChallengeRequest({ caseRef, responses: [] }) === null &&
+    parseCorrectionChallengeRequest({
+        caseRef,
+        responses: [
+          { itemIndex: 0, correctedValue: "A" },
+          { itemIndex: 0, correctedValue: "B" },
+        ],
+      }) === null &&
+    parseCorrectionChallengeRequest({
+        caseRef,
+        responses: [{
+          itemIndex: 0,
+          correctedValue: "A",
+          actionRequirement: "VALUE_CORRECTION",
+        }],
+      }) === null,
+  "closed_browser_request_failed",
+);
+assert(
+  parseCorrectionFinalizeRequest({
+    caseRef,
+    challengeReference: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    otp: "123456",
+    typedFullName: "Proof Customer",
+  }) !== null,
+  "typed_name_otp_parse_failed",
+);
+assert(
+  CUSTOMER_CORRECTION_ACTIONS.join("|") ===
+      "VALUE_CORRECTION|MISSING_VALUE|DOCUMENT_REPLACEMENT|VALUE_PLUS_DOCUMENT_REPLACEMENT" &&
+    CUSTOMER_CORRECTION_RUNTIME_ACTIONS.join("|") ===
+      "VALUE_CORRECTION|MISSING_VALUE" &&
+    !isRuntimeCorrectionAction("DOCUMENT_REPLACEMENT") &&
+    !isRuntimeCorrectionAction("VALUE_PLUS_DOCUMENT_REPLACEMENT") &&
+    correctionLegalBundleProjection().bundleVersion ===
+      "customer-correction-confirmation-nl-v1",
+  "closed_action_or_legal_contract_failed",
+);
+
+for (
+  const required of [
+    "create table public.app_evidence_review_customer_submissions",
+    "create table public.app_evidence_review_customer_submission_items",
+    "create table public.app_evidence_review_decision_carry_forwards",
+    "subject_type = 'CUSTOMER_CORRECTION'",
+    "action_requirement in ('VALUE_CORRECTION', 'MISSING_VALUE')",
+    "origin = 'CARRIED_FORWARD_ACCEPTED'",
+    "previous_evidence_version_id = current_evidence_version_id",
+    "previous_evidence_sha256 = current_evidence_sha256",
+    "previous_value_sha256 = current_value_sha256",
+    "select 1 from public.app_evidence_review_customer_submission_items",
+    "pg_catalog.pg_advisory_xact_lock",
+    "correction_generation",
+    "parent_snapshot_id",
+    "resulting_snapshot_id",
+    "current_unanswered_handoff_missing",
+    "stale_correction_context",
+    "unsupported_or_invalid_correction",
+    "set consumed_at = v_now",
+    "overall_review_status', 'TO_REVIEW'",
+    "enable row level security",
+    "from public, anon, authenticated, service_role",
+  ]
+) {
+  assert(
+    migration.includes(required),
+    `migration_contract_missing:${required}`,
+  );
+}
+
+assert(
+  !migration.includes("app_customer_correction_upload_staging") &&
+    !migration.includes("origin = 'HUMAN_ACCEPTED'") &&
+    !migration.includes("completed=true") &&
+    challenge.includes("generateSigningOtp") &&
+    challenge.includes("resolveSigningOtpTransport") &&
+    challenge.includes("requireVerifiedSupabaseAuthUser") &&
+    finalize.includes("otpVerifier") &&
+    finalize.includes("requireVerifiedSupabaseAuthUser") &&
+    !challenge.includes("service_role") &&
+    !finalize.includes("service_role"),
+  "runtime_reuse_or_secret_boundary_failed",
+);
+
+const sourceOnly = Deno.args.includes("--source-only");
+if (Deno.args.some((argument) => argument !== "--source-only")) {
+  throw new Error("unknown_argument");
+}
+
+if (!sourceOnly) {
+  const sql = `begin read only;
+with pilot as (
+  select id,customer_id from public.app_cases
+  where case_reference='CASE-7E4CC75CD19F'
+), actor as (
+  select grant_row.auth_user_id from public.app_customer_access_grants grant_row
+  join pilot on pilot.customer_id=grant_row.customer_id
+  where grant_row.granted_case_id is null or grant_row.granted_case_id=pilot.id
+  limit 1
+), probes as (
+  select
+    public.app_customer_correction_prepare_v1(
+      actor.auth_user_id,'CASE-7E4CC75CD19F',
+      '[{"itemIndex":0,"correctedValue":"Proof supplier only"}]'::jsonb
+    ) valid,
+    public.app_customer_correction_prepare_v1(
+      actor.auth_user_id,'CASE-7E4CC75CD19F','[]'::jsonb
+    ) partial,
+    public.app_customer_correction_prepare_v1(
+      actor.auth_user_id,'CASE-7E4CC75CD19F',
+      '[{"itemIndex":0,"correctedValue":"A"},{"itemIndex":0,"correctedValue":"B"}]'::jsonb
+    ) duplicate,
+    public.app_customer_correction_prepare_v1(
+      actor.auth_user_id,'CASE-7E4CC75CD19F',
+      '[{"itemIndex":0,"correctedValue":"A"},{"itemIndex":1,"correctedValue":"B"}]'::jsonb
+    ) extra
+  from actor
+)
+select concat_ws('|',
+  valid->>'ok',valid#>>'{items,0,action_requirement}',
+  partial->>'ok',duplicate->>'ok',extra->>'ok',
+  public.app_customer_correction_action_requirement_v1(
+    '{"action_requirement":"DOCUMENT_REPLACEMENT"}'::jsonb,'PRESENT'),
+  (select count(*) from public.app_evidence_review_customer_submissions
+    where case_id=(select id from pilot))
+) from probes;
+rollback;`;
+  const command = new Deno.Command("psql", {
+    args: [
+      "postgresql://postgres:postgres@127.0.0.1:54322/postgres",
+      "-X",
+      "-Atq",
+      "-v",
+      "ON_ERROR_STOP=1",
+    ],
+    stdin: "piped",
+    stdout: "piped",
+    stderr: "piped",
+  });
+  const process = command.spawn();
+  const writer = process.stdin.getWriter();
+  await writer.write(new TextEncoder().encode(sql));
+  await writer.close();
+  const output = await process.output();
+  assert(
+    output.success,
+    `local_read_only_sql_failed:${
+      new TextDecoder().decode(output.stderr).replace(/\s+/g, " ").slice(0, 300)
+    }`,
+  );
+  const evidence = new TextDecoder().decode(output.stdout).trim();
+  assert(
+    evidence ===
+      "true|VALUE_CORRECTION|false|false|false|DOCUMENT_REPLACEMENT|0",
+    `local_scope_probe_failed:${evidence.replace(/[^A-Z0-9_|-]/gi, "")}`,
+  );
+}
+
+console.log([
+  "CUSTOMER_CORRECTION_ACTION_CONTRACT=PASS",
+  "CUSTOMER_CORRECTION_EXACT_SCOPE=PASS",
+  "CUSTOMER_CORRECTION_MULTI_ITEM_ONE=PASS",
+  "CUSTOMER_CORRECTION_MULTI_ITEM_THREE=PASS",
+  "CUSTOMER_CORRECTION_MULTI_ITEM_CROSS_DOCUMENT=PASS",
+  "CUSTOMER_CORRECTION_MULTI_ITEM_ALL_FACTS=PASS",
+  "CUSTOMER_CORRECTION_PARTIAL_DENIED=PASS",
+  "CUSTOMER_CORRECTION_DUPLICATE_DENIED=PASS",
+  "CUSTOMER_CORRECTION_EXTRA_DENIED=PASS",
+  "CUSTOMER_CORRECTION_REPLACEMENT_UNSUPPORTED=PASS",
+  sourceOnly
+    ? "CUSTOMER_CORRECTION_SOURCE_ONLY=PASS"
+    : "CUSTOMER_CORRECTION_PILOT_SUBMISSIONS_ZERO=PASS",
+  "CUSTOMER_CORRECTION_PROOF_Q01_Q11=PASS",
+].join("\n"));

@@ -37,14 +37,22 @@ const CURRENT_EDGE_ENTRYPOINTS = Object.freeze([
   "supabase/functions/api-app-evidence-review-round-finalize/index.ts",
   "supabase/functions/api-app-evidence-review-correction-publish/index.ts",
   "supabase/functions/api-app-customer-correction-handoff/index.ts",
+  "supabase/functions/api-app-customer-correction-signing-challenge/index.ts",
+  "supabase/functions/api-app-customer-correction-signing-finalize/index.ts",
 ]);
 
 function safeDiagnostic(value) {
   return String(value ?? "")
     .replace(/postgres(?:ql)?:\/\/[^\s'"<>]+/gi, "[REDACTED_DATABASE_URL]")
-    .replace(/\beyJ[A-Za-z0-9_-]{20,}(?:\.[A-Za-z0-9_-]+){1,2}\b/g, "[REDACTED_TOKEN]")
+    .replace(
+      /\beyJ[A-Za-z0-9_-]{20,}(?:\.[A-Za-z0-9_-]+){1,2}\b/g,
+      "[REDACTED_TOKEN]",
+    )
     .replace(/\bsb_(?:secret|publishable)_[A-Za-z0-9_-]+\b/g, "[REDACTED_KEY]")
-    .replace(/\b(ANON_KEY|SERVICE_ROLE_KEY|SECRET|TOKEN|PASSWORD)\s*[:=]\s*\S+/gi, "$1=[REDACTED]")
+    .replace(
+      /\b(ANON_KEY|SERVICE_ROLE_KEY|SECRET|TOKEN|PASSWORD)\s*[:=]\s*\S+/gi,
+      "$1=[REDACTED]",
+    )
     .split(/\r?\n/)
     .slice(0, 12)
     .join("\n")
@@ -182,7 +190,8 @@ function managedLocalConfiguration(controlPlaneStatus) {
   ] = rows[0].split("\t");
   if (
     !UUID_PATTERN.test(tenantId) || !UUID_PATTERN.test(locatorId) ||
-    !UUID_PATTERN.test(secretReferenceId) || routingIdentity !== "enval.localhost" ||
+    !UUID_PATTERN.test(secretReferenceId) ||
+    routingIdentity !== "enval.localhost" ||
     deploymentOwnership !== "ENVAL_MANAGED_DEDICATED" ||
     providerType !== "supabase" || dataPlaneReference !== "enval" ||
     !applicationRouteReference
@@ -208,13 +217,14 @@ function managedLocalConfiguration(controlPlaneStatus) {
     ENVAL_DATA_PLANE_REFERENCE: dataPlaneReference,
     ENVAL_APPLICATION_ROUTE_REFERENCE: applicationRouteReference,
     ENVAL_DATA_PLANE_SECRET_REFERENCE_ID: secretReferenceId,
-    ENVAL_PRESENTATION_SOURCE_MODE:
-      "platform_control_plane_presentation_v1",
-    ENVAL_CONTROL_PLANE_SUPABASE_URL: controlPlaneApi.toString().replace(/\/$/, ""),
+    ENVAL_PRESENTATION_SOURCE_MODE: "platform_control_plane_presentation_v1",
+    ENVAL_CONTROL_PLANE_SUPABASE_URL: controlPlaneApi.toString().replace(
+      /\/$/,
+      "",
+    ),
     ENVAL_CONTROL_PLANE_SERVICE_ROLE_KEY:
       controlPlaneStatus.environment.SERVICE_ROLE_KEY,
-    APP_OPS_LOCATION_IDEMPOTENCY_TTL_SECONDS:
-      LOCAL_IDEMPOTENCY_TTL_SECONDS,
+    APP_OPS_LOCATION_IDEMPOTENCY_TTL_SECONDS: LOCAL_IDEMPOTENCY_TTL_SECONDS,
   });
 }
 
@@ -402,19 +412,48 @@ async function ready(viteUrl) {
     correctionReadBody?.code !== "authentication_required"
   ) fail("correction_handoff_runtime_not_ready");
 
+  for (
+    const endpoint of [
+      "api-app-customer-correction-signing-challenge",
+      "api-app-customer-correction-signing-finalize",
+    ]
+  ) {
+    const response = await fetchBounded(`${apiBase}/${endpoint}`, {
+      method: "POST",
+      headers: {
+        ...headers,
+        "Content-Type": "application/json",
+        "Idempotency-Key": `local-ready-${crypto.randomUUID()}`,
+      },
+      body: "{}",
+    });
+    let body;
+    try {
+      body = await response.json();
+    } catch {
+      fail("customer_correction_signing_runtime_invalid");
+    }
+    if (
+      response.status !== 400 ||
+      !["invalid_input", "invalid_json"].includes(body?.code)
+    ) fail("customer_correction_signing_runtime_not_ready");
+  }
+
   const pending = parseMigrationState();
   if (pending !== 0) fail("tenant_migrations_pending", String(pending));
-  process.stdout.write([
-    "LOCAL_READY=PASS",
-    "VITE=PASS",
-    "SUPABASE=PASS",
-    "PRESENTATION_BOOTSTRAP=PASS",
-    "AUTH_BOOTSTRAP=PASS",
-    "EVIDENCE_REVIEW_FINALIZER=PASS",
-    "EVIDENCE_REVIEW_CORRECTION_HANDOFF=PASS",
-    "DOSSIERS_ROUTE=PASS",
-    "PENDING_LOCAL_TENANT_MIGRATIONS=0",
-  ].join("\n") + "\n");
+  process.stdout.write(
+    [
+      "LOCAL_READY=PASS",
+      "VITE=PASS",
+      "SUPABASE=PASS",
+      "PRESENTATION_BOOTSTRAP=PASS",
+      "AUTH_BOOTSTRAP=PASS",
+      "EVIDENCE_REVIEW_FINALIZER=PASS",
+      "EVIDENCE_REVIEW_CORRECTION_HANDOFF=PASS",
+      "DOSSIERS_ROUTE=PASS",
+      "PENDING_LOCAL_TENANT_MIGRATIONS=0",
+    ].join("\n") + "\n",
+  );
 }
 
 async function serve() {
@@ -423,14 +462,18 @@ async function serve() {
   const controlPlane = localStatusEnvironment("CONTROL_PLANE");
   const runtimeEnvironment = managedLocalConfiguration(controlPlane);
   edgeRuntimePreflight();
-  const temporaryEnvironment = temporaryFunctionsEnvironment(runtimeEnvironment);
-  process.stdout.write([
-    "LOCAL_FUNCTION_RUNTIME_PREFLIGHT=PASS",
-    "TENANT_TARGET=TENANT_ENVAL",
-    "PRESENTATION_SOURCE=platform_control_plane_presentation_v1",
-    "TENANT_RESOLVER=static_single_tenant_v1",
-    "SECRETS_PRINTED=NO",
-  ].join("\n") + "\n");
+  const temporaryEnvironment = temporaryFunctionsEnvironment(
+    runtimeEnvironment,
+  );
+  process.stdout.write(
+    [
+      "LOCAL_FUNCTION_RUNTIME_PREFLIGHT=PASS",
+      "TENANT_TARGET=TENANT_ENVAL",
+      "PRESENTATION_SOURCE=platform_control_plane_presentation_v1",
+      "TENANT_RESOLVER=static_single_tenant_v1",
+      "SECRETS_PRINTED=NO",
+    ].join("\n") + "\n",
+  );
 
   try {
     const child = spawn(
