@@ -5,6 +5,7 @@ import { ContactChoicePanel } from "./ContactChoicePanel";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { TodoPlaceholderPanel } from "./TodoPlaceholderPanel";
 import { useDashboardRead } from "./useDashboardRead";
+import { useCustomerCorrectionHandoff } from "./useCustomerCorrectionHandoff";
 import type { AppNavigate } from "../../routes/types";
 import { clearSignupIntakeSession } from "../signup/signupIntakeCapabilityStore";
 import { clearSignupSubmissionReceipt } from "../signup/signupSubmissionReceiptStore";
@@ -20,6 +21,15 @@ export function DashboardPageShell({ navigate }: { navigate: AppNavigate }) {
   const effectiveDossierId = selectedDossierExists ? selectedDossierId : authDossiers[0]?.dossier_id ?? null;
   const cacheScope = auth.session && auth.summary ? auth.session.user.id : null;
   const dashboardRead = useDashboardRead(auth.session?.access_token ?? null, cacheScope, effectiveDossierId);
+  const selectedCaseRef = activeSection === "active"
+    ? authDossiers.find((dossier) => dossier.dossier_id === effectiveDossierId)
+      ?.case_reference ?? null
+    : null;
+  const correctionHandoff = useCustomerCorrectionHandoff(
+    auth.session?.access_token ?? null,
+    cacheScope,
+    selectedCaseRef,
+  );
 
   function startNewApplication() {
     clearSignupIntakeSession();
@@ -42,6 +52,7 @@ export function DashboardPageShell({ navigate }: { navigate: AppNavigate }) {
         {activeSection === "active" ? (
           <ActivePrivateDashboard
             accessToken={auth.session?.access_token ?? null}
+            correctionHandoff={correctionHandoff}
             dashboardRead={dashboardRead}
             dossierOptions={dossierOptions}
             onSelectDossier={setSelectedDossierId}

@@ -1,6 +1,7 @@
 import { type ReactNode, useMemo, useState } from "react";
 import type { AuthDossierSummary } from "../auth/authTypes";
 import { DocumentUploadCard } from "../documents/DocumentUploadCard";
+import { CustomerCorrectionHandoffPanel } from "./CustomerCorrectionHandoffPanel";
 import {
   getDocumentSectionStatusPresentation,
   getDocumentSlotCustomerTitle,
@@ -14,6 +15,7 @@ import type {
   DashboardReadModel,
 } from "./dashboardTypes";
 import type { DashboardReadState } from "./useDashboardRead";
+import type { CustomerCorrectionHandoffState } from "./useCustomerCorrectionHandoff";
 
 type AccordionSection =
   | "charger"
@@ -38,6 +40,7 @@ type PortalCharger = {
 
 type ActivePrivateDashboardProps = {
   accessToken: string | null;
+  correctionHandoff: CustomerCorrectionHandoffState;
   dashboardRead: DashboardReadState;
   dossierOptions: AuthDossierSummary[];
   onSelectDossier: (dossierId: string) => void;
@@ -48,6 +51,7 @@ type ActivePrivateDashboardProps = {
 
 export function ActivePrivateDashboard({
   accessToken,
+  correctionHandoff,
   dashboardRead,
   dossierOptions,
   onSelectDossier,
@@ -66,6 +70,8 @@ export function ActivePrivateDashboard({
     dossierOptions.find((dossier) =>
       dossier.dossier_id === selectedDossierId
     ) ?? null;
+  const hasPublishedCorrection = correctionHandoff.status === "ready" &&
+    correctionHandoff.model.handoff !== null;
   const chargerRows = useMemo(() => (model ? buildPortalChargers(model) : []), [
     model,
   ]);
@@ -116,7 +122,7 @@ export function ActivePrivateDashboard({
           <h1>Actief</h1>
           <p>
             {selectedDossier
-              ? dossierLabel(selectedDossier)
+              ? dossierLabel(selectedDossier, hasPublishedCorrection)
               : "Geen dossier geselecteerd"}
           </p>
         </div>
@@ -135,7 +141,11 @@ export function ActivePrivateDashboard({
               >
                 {dossierOptions.map((dossier) => (
                   <option key={dossier.dossier_id} value={dossier.dossier_id}>
-                    {dossierLabel(dossier)}
+                    {dossierLabel(
+                      dossier,
+                      dossier.dossier_id === selectedDossierId &&
+                        hasPublishedCorrection,
+                    )}
                   </option>
                 ))}
               </select>
@@ -201,6 +211,8 @@ export function ActivePrivateDashboard({
       {model
         ? (
           <>
+            <CustomerCorrectionHandoffPanel state={correctionHandoff} />
+
             <section className="portal-card-compact" aria-label="Dossier">
               <h2>Dossier</h2>
               <ReadOnlyInfoRows
@@ -208,7 +220,10 @@ export function ActivePrivateDashboard({
                   {
                     identity: "dossier-summary",
                     label: "Dossier",
-                    value: dossierLabel(model.selected_dossier),
+                    value: dossierLabel(
+                      model.selected_dossier,
+                      hasPublishedCorrection,
+                    ),
                   },
                   {
                     identity: "case-reference",
@@ -225,8 +240,14 @@ export function ActivePrivateDashboard({
                   {
                     identity: "case-status",
                     label: "Status",
-                    value: statusLabel(model.selected_dossier.status),
-                    status: statusLabel(model.selected_dossier.status),
+                    value: selectedDossierStatusLabel(
+                      model.selected_dossier.status,
+                      hasPublishedCorrection,
+                    ),
+                    status: selectedDossierStatusLabel(
+                      model.selected_dossier.status,
+                      hasPublishedCorrection,
+                    ),
                   },
                 ]}
               />
@@ -774,11 +795,19 @@ function dossierLabel(
     DashboardDossierSummary,
     "account_type" | "dossier_number" | "status"
   >,
+  hasPublishedCorrection = false,
 ): string {
   const number = dossier.dossier_number || "Dossier";
   return `${number} · ${accountTypeLabel(dossier.account_type)} · ${
-    statusLabel(dossier.status)
+    selectedDossierStatusLabel(dossier.status, hasPublishedCorrection)
   }`;
+}
+
+function selectedDossierStatusLabel(
+  status: string,
+  hasPublishedCorrection: boolean,
+): string {
+  return hasPublishedCorrection ? "Aanpassing nodig" : statusLabel(status);
 }
 
 function buildPortalChargers(model: DashboardReadModel): PortalCharger[] {
