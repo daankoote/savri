@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { EvidenceReviewWorklistResponseV2 } from "../../../../supabase/functions/_shared/app_evidence_review_worklist.ts";
+import type { EvidenceReviewWorklistResponseV3 } from "../../../../supabase/functions/_shared/app_evidence_review_worklist.ts";
 import {
   loadEvidenceReviewWorklist,
   type EvidenceReviewWorklistSafeError,
@@ -9,7 +9,7 @@ export type EvidenceReviewWorklistReadState =
   | Readonly<{ status: "loading"; value: null; error: null }>
   | Readonly<{
     status: "ready";
-    value: EvidenceReviewWorklistResponseV2;
+    value: EvidenceReviewWorklistResponseV3;
     error: null;
   }>
   | Readonly<{

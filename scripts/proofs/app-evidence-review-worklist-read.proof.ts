@@ -1,6 +1,6 @@
 import {
   buildEvidenceReviewWorklistResponse,
-  type EvidenceReviewWorklistResponseV2,
+  type EvidenceReviewWorklistResponseV3,
   parseAuthorizedEvidenceReviewSourceRows,
 } from "../../supabase/functions/_shared/app_evidence_review_worklist.ts";
 import {
@@ -20,7 +20,7 @@ const DATABASE = `enval_review04_proof_${
   crypto.randomUUID().replaceAll("-", "")
 }`;
 const MIGRATION =
-  "supabase/migrations/20260819120000_app_evidence_review_worklist_fact_cutover.sql";
+  "supabase/migrations/20260819160000_app_evidence_review_overall_status.sql";
 const AUTH_ADMIN = "d1000000-0000-4000-8000-000000000001";
 const AUTH_ADMIN_NO_SCOPE = "d1000000-0000-4000-8000-000000000002";
 const AUTH_NO_VIEW = "d1000000-0000-4000-8000-000000000003";
@@ -160,7 +160,7 @@ function sourceRow(
   return {
     case_ref: CASE_REFS.unreviewed,
     lifecycle_state: "submitted_for_review",
-    queue_state: "ACTIVE_REVIEW",
+    overall_review_status: "TO_REVIEW",
     unresolved_fact_count: 4,
     review_attention_reasons: ["FACT_REVIEW_REQUIRED"],
     latest_review_activity_at: "2026-08-18T10:00:00.000Z",
@@ -256,11 +256,11 @@ async function endpointProof(): Promise<void> {
   );
   const emptyBody = await responseJson(
     empty,
-  ) as unknown as EvidenceReviewWorklistResponseV2;
+  ) as unknown as EvidenceReviewWorklistResponseV3;
   assert(
     empty.status === 200 && emptyBody.caseCount === 0 &&
       emptyBody.cases.length === 0 &&
-      emptyBody.schemaVersion === "evidence-review-worklist-v2",
+      emptyBody.schemaVersion === "evidence-review-worklist-v3",
     "empty_contract_invalid",
   );
   q(4);
@@ -269,14 +269,14 @@ async function endpointProof(): Promise<void> {
     sourceRow(),
     sourceRow({
       case_ref: CASE_REFS.accepted,
-      queue_state: "REVIEW_COMPLETE",
+      overall_review_status: "REVIEW_COMPLETE",
       unresolved_fact_count: 0,
       review_attention_reasons: [],
       latest_review_activity_at: "2026-08-18T10:10:00.000Z",
     }),
     sourceRow({
       case_ref: CASE_REFS.correction,
-      queue_state: "WAITING_CUSTOMER",
+      overall_review_status: "CORRECTION_REQUIRED",
       unresolved_fact_count: 0,
       review_attention_reasons: [],
       latest_review_activity_at: "2026-08-18T10:20:00.000Z",
@@ -288,7 +288,7 @@ async function endpointProof(): Promise<void> {
     }),
     sourceRow({
       case_ref: CASE_REFS.correctionThenNew,
-      queue_state: "REVIEW_MODEL_UNAVAILABLE",
+      overall_review_status: "REVIEW_MODEL_UNAVAILABLE",
       unresolved_fact_count: 0,
       review_attention_reasons: ["REVIEW_MODEL_UNAVAILABLE"],
       latest_review_activity_at: "2026-08-18T10:40:00.000Z",
@@ -307,9 +307,9 @@ async function endpointProof(): Promise<void> {
     item.caseRef === CASE_REFS.correctionThenNew
   );
   assert(
-    acceptedThenNew?.queueState === "ACTIVE_REVIEW" &&
+    acceptedThenNew?.overallReviewStatus === "TO_REVIEW" &&
       acceptedThenNew.unresolvedFactCount === 4 &&
-      unavailable?.queueState === "REVIEW_MODEL_UNAVAILABLE" &&
+      unavailable?.overallReviewStatus === "REVIEW_MODEL_UNAVAILABLE" &&
       !projected.cases.some((item) => item.caseRef === CASE_REFS.accepted) &&
       !projected.cases.some((item) => item.caseRef === CASE_REFS.correction),
     "attention_semantics_invalid",
@@ -373,7 +373,10 @@ async function endpointProof(): Promise<void> {
       source.includes("scope_event.case_id") &&
       source.includes("lifecycle_state = 'submitted_for_review'") &&
       source.includes("app_evidence_fact_review_manifest_v1") &&
+      source.includes("app_evidence_review_overall_status_v1") &&
       source.includes("app_evidence_review_rounds") &&
+      source.includes("return 'CORRECTION_REQUIRED'") &&
+      !source.includes("return 'WAITING_CUSTOMER'") &&
       !source.includes("app_evidence_review_decisions") &&
       !source.includes(
         "grant execute on function public.app_workforce_authorize_v1",
@@ -490,7 +493,7 @@ async function readRpc(authUserId: string): Promise<JsonObject> {
     DATABASE,
     `begin;
     set local role service_role;
-    select public.app_evidence_review_worklist_source_read_v2(
+    select public.app_evidence_review_worklist_source_read_v3(
       '${authUserId}'
     )::text;
     rollback;`,
@@ -506,11 +509,11 @@ async function databaseProof(): Promise<number> {
     DATABASE,
     `select concat_ws('|',
     has_function_privilege('service_role',
-      'public.app_evidence_review_worklist_source_read_v2(uuid)','EXECUTE'),
+      'public.app_evidence_review_worklist_source_read_v3(uuid)','EXECUTE'),
     has_function_privilege('anon',
-      'public.app_evidence_review_worklist_source_read_v2(uuid)','EXECUTE'),
+      'public.app_evidence_review_worklist_source_read_v3(uuid)','EXECUTE'),
     has_function_privilege('authenticated',
-      'public.app_evidence_review_worklist_source_read_v2(uuid)','EXECUTE'),
+      'public.app_evidence_review_worklist_source_read_v3(uuid)','EXECUTE'),
     has_function_privilege('service_role',
       'public.app_workforce_authorize_v1(uuid,text,uuid,uuid,timestamptz)',
       'EXECUTE'),
@@ -949,14 +952,15 @@ async function databaseProof(): Promise<number> {
   assert(response && response.caseCount === 4, "authorized_case_count_invalid");
   const refs = response.cases.map((item) => item.caseRef);
   const sourceQueueRows = allowed.queue_rows as JsonObject[];
-  const queueState = (caseRef: string) =>
-    sourceQueueRows.find((row) => row.case_ref === caseRef)?.queue_state;
+  const overallStatus = (caseRef: string) =>
+    sourceQueueRows.find((row) => row.case_ref === caseRef)
+      ?.overall_review_status;
   assert(
-    queueState(CASE_REFS.unreviewed) === "ACTIVE_REVIEW" &&
-      queueState(CASE_REFS.accepted) === "REVIEW_COMPLETE" &&
-      queueState(CASE_REFS.correction) === "WAITING_CUSTOMER" &&
-      queueState(CASE_REFS.acceptedThenNew) === "ACTIVE_REVIEW" &&
-      queueState(CASE_REFS.multiple) === "REVIEW_MODEL_UNAVAILABLE" &&
+    overallStatus(CASE_REFS.unreviewed) === "TO_REVIEW" &&
+      overallStatus(CASE_REFS.accepted) === "REVIEW_COMPLETE" &&
+      overallStatus(CASE_REFS.correction) === "CORRECTION_REQUIRED" &&
+      overallStatus(CASE_REFS.acceptedThenNew) === "TO_REVIEW" &&
+      overallStatus(CASE_REFS.multiple) === "REVIEW_MODEL_UNAVAILABLE" &&
       !refs.includes(CASE_REFS.accepted) &&
       !refs.includes(CASE_REFS.correction) &&
       !refs.includes(CASE_REFS.terminal) &&
@@ -996,7 +1000,7 @@ async function databaseProof(): Promise<number> {
   const definition = await psql(
     DATABASE,
     `select pg_get_functiondef(
-    'public.app_evidence_review_worklist_source_read_v2(uuid)'::regprocedure
+    'public.app_evidence_review_worklist_source_read_v3(uuid)'::regprocedure
   );`,
   );
   assert(
@@ -1075,11 +1079,11 @@ async function databaseProof(): Promise<number> {
       ) seniority on seniority.seniority='admin'
       order by identity_row.created_at,identity_row.id limit 1
     ), response as (
-      select public.app_evidence_review_worklist_source_read_v2(
+      select public.app_evidence_review_worklist_source_read_v3(
         first_admin.auth_user_id
       ) body from first_admin
     ), detail as (
-      select public.app_evidence_review_case_detail_read_v5(
+      select public.app_evidence_review_case_detail_read_v6(
         first_admin.auth_user_id, 'CASE-7E4CC75CD19F'
       ) body from first_admin
     ), pilot as (
@@ -1104,7 +1108,7 @@ async function databaseProof(): Promise<number> {
        and round_row.manifest_hash=current_manifest.body->>'manifest_hash'
     )
     select concat_ws('|',
-      (select item->>'queue_state' from pilot),
+      (select item->>'overall_review_status' from pilot),
       (select item->>'unresolved_fact_count' from pilot),
       (select jsonb_array_length(item->'review_attention_reasons') from pilot),
       (select outcome from current_round),
@@ -1125,19 +1129,34 @@ async function databaseProof(): Promise<number> {
         join pilot_case on pilot_case.id=lifecycle.case_id
         order by lifecycle.event_at desc,lifecycle.id desc limit 1),
       (select body->>'ok' from detail),
+      (select body->>'overall_review_status' from detail),
       (select body#>>'{current_review_round,outcome}' from detail),
       (select jsonb_array_length(body#>'{current_review_round,decisions}')
-        from detail)
+        from detail),
+      (select count(*)
+        from detail
+        cross join lateral pg_catalog.jsonb_array_elements(
+          detail.body->'review_subjects'
+        ) subject(item)
+        join lateral pg_catalog.jsonb_array_elements(
+          detail.body#>'{current_review_round,decisions}'
+        ) decision(item)
+          on decision.item->>'subject_ref'=subject.item->>'subject_ref'
+        where subject.item->>'evidence_kind'='energy_bill_or_contract'
+          and subject.item->>'fact_label'='Energieleverancier'
+          and decision.item->>'disposition'='CORRECTION_REQUIRED'
+          and decision.item->>'correction_reason'='INCORRECT_INFORMATION'
+          and decision.item->>'correction_instruction'='foute invoer')
     );
     rollback;`,
   );
   assert(
     pilotSummary ===
-      "WAITING_CUSTOMER|0|0|CORRECTIONS_REQUIRED|1|10|1|0|submitted_for_review|true|CORRECTIONS_REQUIRED|10",
+      "CORRECTION_REQUIRED|0|0|CORRECTIONS_REQUIRED|1|10|1|0|submitted_for_review|true|CORRECTION_REQUIRED|CORRECTIONS_REQUIRED|10|1",
     `pilot_fact_round_or_queue_invalid:${pilotSummary}`,
   );
   console.log("PILOT_CASE_REF=CASE-7E4CC75CD19F");
-  console.log("PILOT_QUEUE_STATE=WAITING_CUSTOMER");
+  console.log("PILOT_OVERALL_REVIEW_STATUS=CORRECTION_REQUIRED");
   console.log("PILOT_FACT_ROUND_COUNT=1");
   console.log("PILOT_FACT_SUBJECT_DECISION_COUNT=10");
   console.log("PILOT_ROUND_OUTCOME=CORRECTIONS_REQUIRED");

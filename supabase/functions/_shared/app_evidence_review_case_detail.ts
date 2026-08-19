@@ -1,5 +1,10 @@
+import {
+  EVIDENCE_REVIEW_OVERALL_STATUSES,
+  type EvidenceReviewOverallStatus,
+} from "./app_evidence_review_overall_status.ts";
+
 export const EVIDENCE_REVIEW_CASE_DETAIL_SCHEMA_VERSION =
-  "evidence-review-case-detail-v3" as const;
+  "evidence-review-case-detail-v4" as const;
 
 export const EVIDENCE_FACT_REVIEW_MANIFEST_VERSION =
   "fact-review-manifest-v1" as const;
@@ -161,6 +166,7 @@ export type EvidenceReviewCaseDetailResponseV1 = Readonly<{
   reviewManifestHash: string;
   reviewSubjects: readonly EvidenceFactReviewSubjectV1[];
   currentReviewRound: EvidenceFactReviewCurrentRoundV1 | null;
+  overallReviewStatus: EvidenceReviewOverallStatus;
 }>;
 
 const CASE_SOURCE_KEYS = [
@@ -542,7 +548,7 @@ export function parseEvidenceReviewCaseDetailSource(
     !isObject(input) ||
     !hasExactKeys(
       input,
-      "as_of|case_context|code|current_review_round|evidence|ok|review_manifest_hash|review_manifest_version|review_subjects|status",
+      "as_of|case_context|code|current_review_round|evidence|ok|overall_review_status|review_manifest_hash|review_manifest_version|review_subjects|status",
     ) ||
     input.ok !== true || input.status !== 200 || input.code !== "ok" ||
     !isIsoTimestamp(input.as_of) || !isObject(input.case_context) ||
@@ -551,7 +557,10 @@ export function parseEvidenceReviewCaseDetailSource(
     input.review_manifest_version !== EVIDENCE_FACT_REVIEW_MANIFEST_VERSION ||
     typeof input.review_manifest_hash !== "string" ||
     !/^[0-9a-f]{64}$/.test(input.review_manifest_hash) ||
-    !Array.isArray(input.review_subjects) || input.review_subjects.length > 100
+    !Array.isArray(input.review_subjects) || input.review_subjects.length > 100 ||
+    !EVIDENCE_REVIEW_OVERALL_STATUSES.includes(
+      input.overall_review_status as EvidenceReviewOverallStatus,
+    )
   ) return null;
 
   const caseRef = boundedString(input.case_context.case_ref, 64);
@@ -606,6 +615,14 @@ export function parseEvidenceReviewCaseDetailSource(
     subjectRefs,
   );
   if (currentReviewRound === false) return null;
+  if (
+    (currentReviewRound === null &&
+      input.overall_review_status !== "TO_REVIEW") ||
+    (currentReviewRound?.outcome === "CORRECTIONS_REQUIRED" &&
+      input.overall_review_status !== "CORRECTION_REQUIRED") ||
+    (currentReviewRound?.outcome === "ALL_FACTS_ACCEPTED" &&
+      input.overall_review_status !== "REVIEW_COMPLETE")
+  ) return null;
 
   return Object.freeze({
     schemaVersion: EVIDENCE_REVIEW_CASE_DETAIL_SCHEMA_VERSION,
@@ -626,5 +643,7 @@ export function parseEvidenceReviewCaseDetailSource(
     reviewManifestHash: input.review_manifest_hash,
     reviewSubjects: Object.freeze(reviewSubjects),
     currentReviewRound,
+    overallReviewStatus:
+      input.overall_review_status as EvidenceReviewOverallStatus,
   });
 }

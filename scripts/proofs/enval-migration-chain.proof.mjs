@@ -282,6 +282,8 @@ try {
     and to_regprocedure('public.app_evidence_review_case_detail_read_v3(uuid,text)') is not null
     and to_regprocedure('public.app_evidence_review_case_detail_read_v4(uuid,text)') is not null
     and to_regprocedure('public.app_evidence_review_case_detail_read_v5(uuid,text)') is not null
+    and to_regprocedure('public.app_evidence_review_case_detail_read_v6(uuid,text)') is not null
+    and to_regprocedure('public.app_evidence_review_overall_status_v1(uuid,text,text)') is not null
     and to_regprocedure('public.app_evidence_review_round_finalize_v1(uuid,text,text,text,jsonb,text,text,text,timestamptz)') is not null
     and to_regprocedure('public.app_evidence_review_state_v1(uuid,uuid)') is not null
     and not has_function_privilege('service_role','public.app_evidence_review_decide_v1(uuid,uuid,text,text,text,text,timestamptz)','EXECUTE')
@@ -290,8 +292,10 @@ try {
     and not has_function_privilege('service_role','public.app_evidence_review_case_detail_read_v2(uuid,text)','EXECUTE')
     and not has_function_privilege('service_role','public.app_evidence_review_case_detail_read_v3(uuid,text)','EXECUTE')
     and not has_function_privilege('service_role','public.app_evidence_review_case_detail_read_v4(uuid,text)','EXECUTE')
-    and has_function_privilege('service_role','public.app_evidence_review_case_detail_read_v5(uuid,text)','EXECUTE')
-    and not has_function_privilege('authenticated','public.app_evidence_review_case_detail_read_v5(uuid,text)','EXECUTE')
+    and not has_function_privilege('service_role','public.app_evidence_review_case_detail_read_v5(uuid,text)','EXECUTE')
+    and has_function_privilege('service_role','public.app_evidence_review_case_detail_read_v6(uuid,text)','EXECUTE')
+    and not has_function_privilege('authenticated','public.app_evidence_review_case_detail_read_v6(uuid,text)','EXECUTE')
+    and not has_function_privilege('service_role','public.app_evidence_review_overall_status_v1(uuid,text,text)','EXECUTE')
     and has_function_privilege('service_role','public.app_evidence_review_round_finalize_v1(uuid,text,text,text,jsonb,text,text,text,timestamptz)','EXECUTE')
     and not has_function_privilege('authenticated','public.app_evidence_review_round_finalize_v1(uuid,text,text,text,jsonb,text,text,text,timestamptz)','EXECUTE')
     and not has_function_privilege('service_role','public.app_workforce_authorize_v1(uuid,text,uuid,uuid,timestamptz)','EXECUTE')
@@ -305,6 +309,10 @@ try {
     and has_function_privilege('service_role','public.app_evidence_review_worklist_source_read_v1(uuid)','EXECUTE')
     and not has_function_privilege('anon','public.app_evidence_review_worklist_source_read_v1(uuid)','EXECUTE')
     and not has_function_privilege('authenticated','public.app_evidence_review_worklist_source_read_v1(uuid)','EXECUTE')
+    and to_regprocedure('public.app_evidence_review_worklist_source_read_v3(uuid)') is not null
+    and not has_function_privilege('service_role','public.app_evidence_review_worklist_source_read_v2(uuid)','EXECUTE')
+    and has_function_privilege('service_role','public.app_evidence_review_worklist_source_read_v3(uuid)','EXECUTE')
+    and not has_function_privilege('authenticated','public.app_evidence_review_worklist_source_read_v3(uuid)','EXECUTE')
     and not has_function_privilege('service_role','public.app_workforce_authorize_v1(uuid,text,text,uuid,uuid,timestamptz)','EXECUTE')
     and position('app_workforce_authorize_v1' in pg_get_functiondef('public.app_compliance_worklist_source_events_read_v1(uuid,integer)'::regprocedure)) > 0
     and position('app_workforce_authorize_v1' in pg_get_functiondef('public.app_evidence_review_worklist_source_read_v1(uuid)'::regprocedure)) > 0

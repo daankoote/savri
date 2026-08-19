@@ -1,7 +1,7 @@
 import type {
   EvidenceReviewAttentionReason,
-  EvidenceReviewWorklistCaseV2,
-  EvidenceReviewWorklistResponseV2,
+  EvidenceReviewWorklistCaseV3,
+  EvidenceReviewWorklistResponseV3,
 } from "../../../../supabase/functions/_shared/app_evidence_review_worklist.ts";
 import { resolvePublicApiRuntimeConfig } from "../auth/authRuntimeConfig.ts";
 
@@ -18,7 +18,7 @@ export type EvidenceReviewWorklistSafeError = Readonly<{
 }>;
 
 export type EvidenceReviewWorklistLoadResult =
-  | Readonly<{ ok: true; value: EvidenceReviewWorklistResponseV2 }>
+  | Readonly<{ ok: true; value: EvidenceReviewWorklistResponseV3 }>
   | Readonly<{
     ok: false;
     error: EvidenceReviewWorklistSafeError;
@@ -44,7 +44,7 @@ const CASE_FIELDS = Object.freeze([
   "caseRef",
   "latestReviewActivityAt",
   "lifecycleState",
-  "queueState",
+  "overallReviewStatus",
   "reviewAttentionReasons",
   "unresolvedFactCount",
 ]);
@@ -69,15 +69,15 @@ function isIsoTimestamp(value: unknown): value is string {
     Number.isFinite(Date.parse(value));
 }
 
-function parseCase(value: unknown): EvidenceReviewWorklistCaseV2 | null {
+function parseCase(value: unknown): EvidenceReviewWorklistCaseV3 | null {
   if (!isRecord(value) || !hasExactFields(value, CASE_FIELDS)) return null;
   if (
     typeof value.caseRef !== "string" ||
     value.caseRef !== value.caseRef.trim() ||
     value.caseRef.length < 8 || value.caseRef.length > 64 ||
     value.lifecycleState !== "submitted_for_review" ||
-    !["ACTIVE_REVIEW", "REVIEW_MODEL_UNAVAILABLE"].includes(
-      value.queueState as string,
+    !["TO_REVIEW", "REVIEW_MODEL_UNAVAILABLE"].includes(
+      value.overallReviewStatus as string,
     ) ||
     !Number.isInteger(value.unresolvedFactCount) ||
     Number(value.unresolvedFactCount) < 0 ||
@@ -87,10 +87,10 @@ function parseCase(value: unknown): EvidenceReviewWorklistCaseV2 | null {
     !value.reviewAttentionReasons.every((reason) =>
       ATTENTION_REASONS.has(reason as EvidenceReviewAttentionReason)
     ) ||
-    (value.queueState === "ACTIVE_REVIEW" &&
+    (value.overallReviewStatus === "TO_REVIEW" &&
       (Number(value.unresolvedFactCount) < 1 ||
         value.reviewAttentionReasons[0] !== "FACT_REVIEW_REQUIRED")) ||
-    (value.queueState === "REVIEW_MODEL_UNAVAILABLE" &&
+    (value.overallReviewStatus === "REVIEW_MODEL_UNAVAILABLE" &&
       (Number(value.unresolvedFactCount) !== 0 ||
         value.reviewAttentionReasons[0] !== "REVIEW_MODEL_UNAVAILABLE"))
   ) return null;
@@ -98,8 +98,8 @@ function parseCase(value: unknown): EvidenceReviewWorklistCaseV2 | null {
   return Object.freeze({
     caseRef: value.caseRef,
     lifecycleState: "submitted_for_review",
-    queueState: value.queueState as
-      | "ACTIVE_REVIEW"
+    overallReviewStatus: value.overallReviewStatus as
+      | "TO_REVIEW"
       | "REVIEW_MODEL_UNAVAILABLE",
     unresolvedFactCount: Number(value.unresolvedFactCount),
     reviewAttentionReasons: Object.freeze(
@@ -131,7 +131,7 @@ export function decodeEvidenceReviewWorklistResponse(
     return { ok: false, error: safeError("invalid_response") };
   }
   if (
-    body.schemaVersion !== "evidence-review-worklist-v2" ||
+    body.schemaVersion !== "evidence-review-worklist-v3" ||
     !isIsoTimestamp(body.asOf) || !Number.isInteger(body.caseCount) ||
     Number(body.caseCount) < 0 || !Array.isArray(body.cases) ||
     Number(body.caseCount) !== body.cases.length
@@ -146,10 +146,10 @@ export function decodeEvidenceReviewWorklistResponse(
   return {
     ok: true,
     value: Object.freeze({
-      schemaVersion: "evidence-review-worklist-v2",
+      schemaVersion: "evidence-review-worklist-v3",
       asOf: body.asOf,
       caseCount: Number(body.caseCount),
-      cases: Object.freeze(cases as EvidenceReviewWorklistCaseV2[]),
+      cases: Object.freeze(cases as EvidenceReviewWorklistCaseV3[]),
     }),
   };
 }

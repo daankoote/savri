@@ -159,7 +159,7 @@ assert(
 );
 assert(
   evidenceEndpointSource.includes("requireVerifiedSupabaseAuthUser") &&
-    evidenceEndpointSource.includes("app_evidence_review_worklist_source_read_v1") &&
+    evidenceEndpointSource.includes("app_evidence_review_worklist_source_read_v3") &&
     complianceEndpointSource.includes("requireVerifiedSupabaseAuthUser") &&
     complianceEndpointSource.includes(
       "app_compliance_worklist_source_events_read_v1",

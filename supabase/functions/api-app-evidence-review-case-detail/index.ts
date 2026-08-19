@@ -18,7 +18,7 @@ import {
   parseEvidenceReviewCaseDetailSource,
 } from "../_shared/app_evidence_review_case_detail.ts";
 
-const READ_RPC = "app_evidence_review_case_detail_read_v5";
+const READ_RPC = "app_evidence_review_case_detail_read_v6";
 const CASE_REFERENCE_RE =
   /^CASE-(?:[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 

@@ -438,18 +438,25 @@ export function decodeEvidenceReviewCaseDetailResponse(
       "case",
       "currentReviewRound",
       "evidence",
+      "overallReviewStatus",
       "reviewManifestHash",
       "reviewManifestVersion",
       "reviewSubjects",
       "schemaVersion",
     ]) ||
-    body.schemaVersion !== "evidence-review-case-detail-v3" ||
+    body.schemaVersion !== "evidence-review-case-detail-v4" ||
     !isIsoTimestamp(body.asOf) || !isRecord(body.case) ||
     !Array.isArray(body.evidence) || body.evidence.length > 100 ||
     body.reviewManifestVersion !== EVIDENCE_FACT_REVIEW_MANIFEST_VERSION ||
     typeof body.reviewManifestHash !== "string" ||
     !/^[0-9a-f]{64}$/.test(body.reviewManifestHash) ||
-    !Array.isArray(body.reviewSubjects) || body.reviewSubjects.length > 100
+    !Array.isArray(body.reviewSubjects) || body.reviewSubjects.length > 100 ||
+    ![
+      "TO_REVIEW",
+      "CORRECTION_REQUIRED",
+      "WAITING_CUSTOMER",
+      "REVIEW_COMPLETE",
+    ].includes(body.overallReviewStatus as string)
   ) return invalidResponse();
 
   const caseFields = [
@@ -506,11 +513,18 @@ export function decodeEvidenceReviewCaseDetailResponse(
     subjectRefs,
   );
   if (currentReviewRound === false) return invalidResponse();
+  if (
+    (currentReviewRound === null && body.overallReviewStatus !== "TO_REVIEW") ||
+    (currentReviewRound?.outcome === "CORRECTIONS_REQUIRED" &&
+      body.overallReviewStatus !== "CORRECTION_REQUIRED") ||
+    (currentReviewRound?.outcome === "ALL_FACTS_ACCEPTED" &&
+      body.overallReviewStatus !== "REVIEW_COMPLETE")
+  ) return invalidResponse();
 
   return {
     ok: true,
     value: Object.freeze({
-      schemaVersion: "evidence-review-case-detail-v3",
+      schemaVersion: "evidence-review-case-detail-v4",
       asOf: body.asOf,
       case: Object.freeze({
         caseRef: body.case.caseRef,
@@ -532,6 +546,11 @@ export function decodeEvidenceReviewCaseDetailResponse(
         reviewSubjects as EvidenceFactReviewSubjectV1[],
       ),
       currentReviewRound,
+      overallReviewStatus: body.overallReviewStatus as
+        | "TO_REVIEW"
+        | "CORRECTION_REQUIRED"
+        | "WAITING_CUSTOMER"
+        | "REVIEW_COMPLETE",
     }),
   };
 }

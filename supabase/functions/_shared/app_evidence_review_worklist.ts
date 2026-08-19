@@ -1,5 +1,10 @@
 export const EVIDENCE_REVIEW_WORKLIST_SCHEMA_VERSION =
-  "evidence-review-worklist-v2" as const;
+  "evidence-review-worklist-v3" as const;
+
+import {
+  type EvidenceReviewOperationalStatus,
+  isEvidenceReviewOperationalStatus,
+} from "./app_evidence_review_overall_status.ts";
 
 export const EVIDENCE_REVIEW_ATTENTION_REASONS = Object.freeze(
   [
@@ -13,42 +18,36 @@ export type EvidenceReviewAttentionReason =
 
 type JsonObject = Record<string, unknown>;
 
-export type EvidenceReviewQueueState =
-  | "ACTIVE_REVIEW"
-  | "WAITING_CUSTOMER"
-  | "REVIEW_COMPLETE"
-  | "REVIEW_MODEL_UNAVAILABLE";
-
-export type AuthorizedEvidenceReviewSourceRowV2 = Readonly<{
+export type AuthorizedEvidenceReviewSourceRowV3 = Readonly<{
   caseRef: string;
   lifecycleState: "submitted_for_review";
-  queueState: EvidenceReviewQueueState;
+  overallReviewStatus: EvidenceReviewOperationalStatus;
   unresolvedFactCount: number;
   reviewAttentionReasons: readonly EvidenceReviewAttentionReason[];
   latestReviewActivityAt: string;
 }>;
 
-export type EvidenceReviewWorklistCaseV2 = Readonly<{
+export type EvidenceReviewWorklistCaseV3 = Readonly<{
   caseRef: string;
   lifecycleState: "submitted_for_review";
-  queueState: "ACTIVE_REVIEW" | "REVIEW_MODEL_UNAVAILABLE";
+  overallReviewStatus: "TO_REVIEW" | "REVIEW_MODEL_UNAVAILABLE";
   unresolvedFactCount: number;
   reviewAttentionReasons: readonly EvidenceReviewAttentionReason[];
   latestReviewActivityAt: string;
 }>;
 
-export type EvidenceReviewWorklistResponseV2 = Readonly<{
+export type EvidenceReviewWorklistResponseV3 = Readonly<{
   schemaVersion: typeof EVIDENCE_REVIEW_WORKLIST_SCHEMA_VERSION;
   asOf: string;
   caseCount: number;
-  cases: readonly EvidenceReviewWorklistCaseV2[];
+  cases: readonly EvidenceReviewWorklistCaseV3[];
 }>;
 
 const SOURCE_KEYS = [
   "case_ref",
   "latest_review_activity_at",
   "lifecycle_state",
-  "queue_state",
+  "overall_review_status",
   "review_attention_reasons",
   "unresolved_fact_count",
 ].sort().join("|");
@@ -65,7 +64,7 @@ function isIsoTimestamp(value: unknown): value is string {
 
 function parseSourceRow(
   input: unknown,
-): AuthorizedEvidenceReviewSourceRowV2 | null {
+): AuthorizedEvidenceReviewSourceRowV3 | null {
   if (!isObject(input) || Object.keys(input).sort().join("|") !== SOURCE_KEYS) {
     return null;
   }
@@ -74,12 +73,7 @@ function parseSourceRow(
     input.case_ref !== input.case_ref.trim() ||
     input.case_ref.length < 8 || input.case_ref.length > 64 ||
     input.lifecycle_state !== "submitted_for_review" ||
-    ![
-      "ACTIVE_REVIEW",
-      "WAITING_CUSTOMER",
-      "REVIEW_COMPLETE",
-      "REVIEW_MODEL_UNAVAILABLE",
-    ].includes(input.queue_state as string) ||
+    !isEvidenceReviewOperationalStatus(input.overall_review_status) ||
     !Number.isInteger(input.unresolved_fact_count) ||
     (input.unresolved_fact_count as number) < 0 ||
     !Array.isArray(input.review_attention_reasons) ||
@@ -93,25 +87,28 @@ function parseSourceRow(
     !isIsoTimestamp(input.latest_review_activity_at)
   ) return null;
 
-  const queueState = input.queue_state as EvidenceReviewQueueState;
+  const overallReviewStatus = input
+    .overall_review_status as EvidenceReviewOperationalStatus;
   const reasons = input
     .review_attention_reasons as EvidenceReviewAttentionReason[];
   const unresolvedFactCount = input.unresolved_fact_count as number;
   if (
-    (queueState === "ACTIVE_REVIEW" &&
+    (overallReviewStatus === "TO_REVIEW" &&
       (unresolvedFactCount < 1 ||
         reasons.join("|") !== "FACT_REVIEW_REQUIRED")) ||
-    (queueState === "REVIEW_MODEL_UNAVAILABLE" &&
+    (overallReviewStatus === "REVIEW_MODEL_UNAVAILABLE" &&
       (unresolvedFactCount !== 0 ||
         reasons.join("|") !== "REVIEW_MODEL_UNAVAILABLE")) ||
-    (["WAITING_CUSTOMER", "REVIEW_COMPLETE"].includes(queueState) &&
+    (["CORRECTION_REQUIRED", "WAITING_CUSTOMER", "REVIEW_COMPLETE"].includes(
+      overallReviewStatus,
+    ) &&
       (unresolvedFactCount !== 0 || reasons.length !== 0))
   ) return null;
 
   return Object.freeze({
     caseRef: input.case_ref,
     lifecycleState: input.lifecycle_state,
-    queueState,
+    overallReviewStatus,
     unresolvedFactCount,
     reviewAttentionReasons: Object.freeze([...reasons]),
     latestReviewActivityAt: input.latest_review_activity_at,
@@ -120,7 +117,7 @@ function parseSourceRow(
 
 export function parseAuthorizedEvidenceReviewSourceRows(
   input: unknown,
-): readonly AuthorizedEvidenceReviewSourceRowV2[] | null {
+): readonly AuthorizedEvidenceReviewSourceRowV3[] | null {
   if (!isObject(input)) return null;
   if (
     Object.keys(input).sort().join("|") !== "code|ok|queue_rows|status" ||
@@ -128,7 +125,7 @@ export function parseAuthorizedEvidenceReviewSourceRows(
     !Array.isArray(input.queue_rows)
   ) return null;
 
-  const rows: AuthorizedEvidenceReviewSourceRowV2[] = [];
+  const rows: AuthorizedEvidenceReviewSourceRowV3[] = [];
   const caseRefs = new Set<string>();
   for (const rawRow of input.queue_rows) {
     const row = parseSourceRow(rawRow);
@@ -141,22 +138,22 @@ export function parseAuthorizedEvidenceReviewSourceRows(
 
 export function buildEvidenceReviewWorklistResponse(
   asOf: string,
-  sourceRows: readonly AuthorizedEvidenceReviewSourceRowV2[],
-): EvidenceReviewWorklistResponseV2 | null {
+  sourceRows: readonly AuthorizedEvidenceReviewSourceRowV3[],
+): EvidenceReviewWorklistResponseV3 | null {
   if (!isIsoTimestamp(asOf)) return null;
 
   const cases = sourceRows.filter((row): row is
-    & AuthorizedEvidenceReviewSourceRowV2
+    & AuthorizedEvidenceReviewSourceRowV3
     & Readonly<{
-      queueState: "ACTIVE_REVIEW" | "REVIEW_MODEL_UNAVAILABLE";
+      overallReviewStatus: "TO_REVIEW" | "REVIEW_MODEL_UNAVAILABLE";
     }> =>
-    row.queueState === "ACTIVE_REVIEW" ||
-    row.queueState === "REVIEW_MODEL_UNAVAILABLE"
+    row.overallReviewStatus === "TO_REVIEW" ||
+    row.overallReviewStatus === "REVIEW_MODEL_UNAVAILABLE"
   ).map((row) =>
     Object.freeze({
       caseRef: row.caseRef,
       lifecycleState: row.lifecycleState,
-      queueState: row.queueState,
+      overallReviewStatus: row.overallReviewStatus,
       unresolvedFactCount: row.unresolvedFactCount,
       reviewAttentionReasons: row.reviewAttentionReasons,
       latestReviewActivityAt: row.latestReviewActivityAt,

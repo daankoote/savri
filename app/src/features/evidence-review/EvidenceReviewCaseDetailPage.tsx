@@ -7,6 +7,7 @@ import type {
   EvidenceReviewEvidenceV1,
   EvidenceReviewReason,
 } from "../../../../supabase/functions/_shared/app_evidence_review_case_detail.ts";
+import type { EvidenceReviewOverallStatus } from "../../../../supabase/functions/_shared/app_evidence_review_overall_status.ts";
 import { useAuth } from "../auth/AuthProvider.tsx";
 import {
   type EvidenceFactReviewRoundFinalizeCall,
@@ -97,6 +98,22 @@ function lifecycleLabel(value: string): string {
     ? "Ingediend voor beoordeling"
     : value;
 }
+
+const OVERALL_STATUS_PRESENTATION: Readonly<Record<
+  EvidenceReviewOverallStatus,
+  Readonly<{ className: string; label: string }>
+>> = Object.freeze({
+  TO_REVIEW: { className: "status-pill-warning", label: "ENVAL beoordelen" },
+  CORRECTION_REQUIRED: {
+    className: "status-pill-danger",
+    label: "Correctie nodig",
+  },
+  WAITING_CUSTOMER: {
+    className: "status-pill-warning",
+    label: "Wacht op klant",
+  },
+  REVIEW_COMPLETE: { className: "status-pill-ok", label: "Afgerond" },
+});
 
 function factState(fact: Pick<EvidenceReviewCanonicalFactV1, "truthClass">): Readonly<{
   className: string;
@@ -494,11 +511,18 @@ export function EvidenceReviewCaseDetailContent({
   }
 
   const readyDetail = state.value;
+  const overallStatus =
+    OVERALL_STATUS_PRESENTATION[readyDetail.overallReviewStatus];
   return (
     <div className="portal-content-stack evidence-review-detail">
       <header className="portal-content-header">
         <div>
-          <h1>{readyDetail.case.caseRef}</h1>
+          <h1>
+            {readyDetail.case.caseRef}{" "}
+            <span className={`status-pill ${overallStatus.className}`}>
+              {overallStatus.label}
+            </span>
+          </h1>
           <p>{lifecycleLabel(readyDetail.case.lifecycle)}</p>
         </div>
         <BackToWorklist onBack={onBack} />
@@ -529,15 +553,7 @@ export function EvidenceReviewCaseDetailContent({
             </p>
           </div>
         )}
-      {readyDetail.currentReviewRound
-        ? (
-          <div className="evidence-review-final-state" role="status">
-            {readyDetail.currentReviewRound.outcome === "ALL_FACTS_ACCEPTED"
-              ? "Review afgerond"
-              : "Correcties nodig"}
-          </div>
-        )
-        : review.editable
+      {!readyDetail.currentReviewRound && review.editable
         ? (
           <div className="evidence-review-final-action">
             {review.state.notice

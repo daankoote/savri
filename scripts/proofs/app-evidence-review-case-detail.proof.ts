@@ -26,6 +26,8 @@ const ROUND_MIGRATION =
   "supabase/migrations/20260818230000_app_evidence_fact_review_rounds.sql";
 const CURRENT_ROUND_READ_MIGRATION =
   "supabase/migrations/20260819090000_app_evidence_review_current_round_read.sql";
+const OVERALL_STATUS_MIGRATION =
+  "supabase/migrations/20260819160000_app_evidence_review_overall_status.sql";
 const PILOT_CASE_REF = "CASE-7E4CC75CD19F";
 const HASH = "a".repeat(64);
 const EXPIRES = "2030-01-01T00:00:00Z";
@@ -215,6 +217,7 @@ function rpcSuccess(evidence: readonly JsonObject[] = [sourceEvidence()]): JsonO
     review_manifest_hash: "b".repeat(64),
     review_subjects: reviewSubjects,
     current_review_round: null,
+    overall_review_status: "TO_REVIEW",
   };
 }
 function mockClient(
@@ -307,7 +310,7 @@ async function endpointProof(): Promise<void> {
     onRpc: (name, args) => {
       rpcCalls += 1;
       assert(
-        name === "app_evidence_review_case_detail_read_v5" &&
+        name === "app_evidence_review_case_detail_read_v6" &&
           args.p_auth_user_id === AUTH_ADMIN && args.p_case_ref === CASE_REF_A &&
           Object.keys(args).sort().join("|") === "p_auth_user_id|p_case_ref",
         "rpc_contract_invalid",
@@ -317,7 +320,7 @@ async function endpointProof(): Promise<void> {
   const body = await responseJson(success) as unknown as EvidenceReviewCaseDetailResponseV1;
   assert(
     success.status === 200 && rpcCalls === 1 &&
-      body.schemaVersion === "evidence-review-case-detail-v3" &&
+      body.schemaVersion === "evidence-review-case-detail-v4" &&
       body.case.caseRef === CASE_REF_A &&
       body.case.partyDisplayNameTruth === "DECLARED" &&
       body.case.deliveryAddressTruth === "DECLARED" &&
@@ -326,6 +329,7 @@ async function endpointProof(): Promise<void> {
       body.reviewManifestHash === "b".repeat(64) &&
       body.reviewSubjects.length === 2 &&
       body.currentReviewRound === null &&
+      body.overallReviewStatus === "TO_REVIEW" &&
       body.evidence.every((item) => item.reviewStatus === "PENDING") &&
       body.evidence.flatMap((item) => item.canonicalFacts)
         .filter((fact) => fact.truthClass === "REVIEW_REQUIRED")
@@ -364,7 +368,14 @@ async function endpointProof(): Promise<void> {
     ...rpcSuccess(),
     storage_path: "private/path",
   });
-  assert(malformed === null, "unknown_source_field_allowed");
+  const prematureWaiting = parseEvidenceReviewCaseDetailSource({
+    ...rpcSuccess(),
+    overall_review_status: "WAITING_CUSTOMER",
+  });
+  assert(
+    malformed === null && prematureWaiting === null,
+    "unknown_or_unbacked_status_allowed",
+  );
   for (const code of [
     "authenticated_actor_not_verified",
     "workforce_identity_missing",
@@ -389,6 +400,9 @@ async function endpointProof(): Promise<void> {
   const roundSource = await Deno.readTextFile(ROUND_MIGRATION);
   const currentRoundReadSource = await Deno.readTextFile(
     CURRENT_ROUND_READ_MIGRATION,
+  );
+  const overallStatusSource = await Deno.readTextFile(
+    OVERALL_STATUS_MIGRATION,
   );
   assert(
     source.includes("public.app_workforce_authorize_v1(") &&
@@ -421,7 +435,13 @@ async function endpointProof(): Promise<void> {
         "app_evidence_review_round_subject_decisions",
       ) &&
       !currentRoundReadSource.includes("grant select") &&
-      !currentRoundReadSource.includes("app_workforce_authorize_v1"),
+      !currentRoundReadSource.includes("app_workforce_authorize_v1") &&
+      overallStatusSource.includes("app_evidence_review_overall_status_v1") &&
+      overallStatusSource.includes("app_evidence_review_case_detail_read_v6") &&
+      overallStatusSource.includes("app_evidence_review_case_detail_read_v5") &&
+      overallStatusSource.includes("'overall_review_status'") &&
+      overallStatusSource.includes("return 'CORRECTION_REQUIRED'") &&
+      !overallStatusSource.includes("return 'WAITING_CUSTOMER'"),
     "bounded_read_source_missing",
   );
   q(7);
@@ -517,7 +537,7 @@ async function readRpc(
 ): Promise<JsonObject> {
   const output = await psql(database, `begin;
     set local role service_role;
-    select public.app_evidence_review_case_detail_read_v5(
+    select public.app_evidence_review_case_detail_read_v6(
       '${authUserId}', '${caseRef}'
     )::text;
     rollback;`);
@@ -555,13 +575,13 @@ async function databaseProof(): Promise<void> {
   await setupDatabase();
   const acl = await psql(DATABASE, `select concat_ws('|',
     has_function_privilege('service_role',
-      'public.app_evidence_review_case_detail_read_v5(uuid,text)','EXECUTE'),
+      'public.app_evidence_review_case_detail_read_v6(uuid,text)','EXECUTE'),
     has_function_privilege('anon',
-      'public.app_evidence_review_case_detail_read_v5(uuid,text)','EXECUTE'),
+      'public.app_evidence_review_case_detail_read_v6(uuid,text)','EXECUTE'),
     has_function_privilege('authenticated',
-      'public.app_evidence_review_case_detail_read_v5(uuid,text)','EXECUTE'),
+      'public.app_evidence_review_case_detail_read_v6(uuid,text)','EXECUTE'),
     has_function_privilege('service_role',
-      'public.app_evidence_review_case_detail_read_v4(uuid,text)','EXECUTE'),
+      'public.app_evidence_review_case_detail_read_v5(uuid,text)','EXECUTE'),
     has_function_privilege('service_role',
       'public.app_workforce_authorize_v1(uuid,text,uuid,uuid,timestamptz)',
       'EXECUTE')
@@ -838,7 +858,8 @@ async function databaseProof(): Promise<void> {
       response.reviewManifestVersion === "fact-review-manifest-v1" &&
       /^[0-9a-f]{64}$/.test(response.reviewManifestHash) &&
       response.reviewSubjects.length === 10 &&
-      response.currentReviewRound === null,
+      response.currentReviewRound === null &&
+      response.overallReviewStatus === "TO_REVIEW",
     "authorized_projection_invalid",
   );
   const energy = response.evidence.find((item) => item.kind === "energy_bill_or_contract");
@@ -1020,12 +1041,11 @@ async function databaseProof(): Promise<void> {
   const after = await proofFingerprint();
   assert(postFixtureBaseline === after, "read_rpc_changed_database_state");
   const definition = await psql(DATABASE, `select pg_get_functiondef(
-    'public.app_evidence_review_case_detail_read_v5(uuid,text)'::regprocedure
+    'public.app_evidence_review_case_detail_read_v6(uuid,text)'::regprocedure
   );`);
   assert(
-    definition.includes("app_evidence_review_case_detail_read_v4") &&
-      definition.includes("app_evidence_review_rounds") &&
-      definition.includes("app_evidence_review_round_subject_decisions") &&
+    definition.includes("app_evidence_review_case_detail_read_v5") &&
+      definition.includes("app_evidence_review_overall_status_v1") &&
       definition.includes("review_manifest_version") &&
       definition.includes("review_manifest_hash") &&
       !definition.includes("app_workforce_authorize_v1") &&
@@ -1041,6 +1061,8 @@ async function databaseProof(): Promise<void> {
     projectedV2 && deterministicV2 &&
       projectedV2.currentReviewRound === null &&
       deterministicV2.currentReviewRound === null &&
+      projectedV2.overallReviewStatus === "TO_REVIEW" &&
+      deterministicV2.overallReviewStatus === "TO_REVIEW" &&
       response.reviewManifestHash !== projectedV2.reviewManifestHash &&
       projectedV2.reviewManifestHash === deterministicV2.reviewManifestHash &&
       projectedV2.reviewSubjects.map((subject) => subject.subjectRef).join("|") ===
@@ -1270,6 +1292,7 @@ async function databaseProof(): Promise<void> {
       equivalentRetry.round_id === concurrent[0].round_id &&
       conflict.code === "review_round_conflict" &&
       correctionProjection?.case.canDecide === false &&
+      correctionProjection?.overallReviewStatus === "CORRECTION_REQUIRED" &&
       correctionRound?.roundRef === concurrent[0].round_id &&
       correctionRound?.manifestVersion === manifest.reviewManifestVersion &&
       correctionRound?.manifestHash === manifest.reviewManifestHash &&
@@ -1354,6 +1377,7 @@ async function databaseProof(): Promise<void> {
   assert(
     manifestAfterEvidence.reviewManifestHash !== manifest.reviewManifestHash &&
       manifestAfterEvidence.currentReviewRound === null &&
+      manifestAfterEvidence.overallReviewStatus === "TO_REVIEW" &&
       newEnergySubjects.length === 4 &&
       newEnergySubjects.every((subject) => !oldEnergySubjects.has(subject.subjectRef)) &&
       stale.code === "stale_review_manifest" && preSecondRound === "1|10" &&
@@ -1361,6 +1385,7 @@ async function databaseProof(): Promise<void> {
       secondRound.outcome === "ALL_FACTS_ACCEPTED" &&
       secondRoundCounts === "2|20|1|10" &&
       acceptedRound?.roundRef === secondRound.round_id &&
+      acceptedProjection?.overallReviewStatus === "REVIEW_COMPLETE" &&
       acceptedRound?.outcome === "ALL_FACTS_ACCEPTED" &&
       acceptedRound?.decisions.length ===
         acceptedProjection?.reviewSubjects.length &&
@@ -1403,11 +1428,12 @@ async function activePilotProof(): Promise<void> {
       ('20260817160000'),('20260817190000'),('20260817210000'),
       ('20260817230000'),('20260818090000'),('20260818120000'),
       ('20260818150000'),('20260818180000'),('20260818210000'),
-      ('20260818220000'),('20260818230000'),('20260819090000')
+      ('20260818220000'),('20260818230000'),('20260819090000'),
+      ('20260819120000'),('20260819123000'),('20260819160000')
     )
     select concat_ws('|',
       (select count(*) from supabase_migrations.schema_migrations
-       where version='20260819090000'),
+       where version='20260819160000'),
       (select count(*) from active_versions expected
        where not exists (select 1 from supabase_migrations.schema_migrations ledger
          where ledger.version=expected.version))
@@ -1455,7 +1481,9 @@ async function activePilotProof(): Promise<void> {
       response.evidence.every((item) => item.reviewStatus === "PENDING") &&
       response.reviewManifestVersion === "fact-review-manifest-v1" &&
       response.reviewSubjects.length === 10 &&
-      response.currentReviewRound === null &&
+      response.overallReviewStatus === "CORRECTION_REQUIRED" &&
+      response.currentReviewRound?.outcome === "CORRECTIONS_REQUIRED" &&
+      response.currentReviewRound.decisions.length === 10 &&
       new Set(response.reviewSubjects.map((subject) => subject.subjectRef)).size ===
         10 &&
       await psql(ACTIVE_DATABASE, `begin read only;
@@ -1472,8 +1500,14 @@ async function activePilotProof(): Promise<void> {
               on round_row.id=subject.round_id
             join public.app_cases case_row on case_row.id=round_row.case_id
             where case_row.case_reference='${PILOT_CASE_REF}')
-        ); rollback;`) === "0|0|0",
+        ); rollback;`) === "0|1|10",
     "active_pilot_projection_invalid",
+  );
+  const pilotCorrection = response.currentReviewRound?.decisions.find(
+    (decision) => decision.disposition === "CORRECTION_REQUIRED",
+  );
+  const pilotCorrectionSubject = response.reviewSubjects.find((subject) =>
+    subject.subjectRef === pilotCorrection?.subjectRef
   );
   const kinds = response.evidence.map((item) => item.kind).sort().join("|");
   const categories = new Set(
@@ -1481,6 +1515,11 @@ async function activePilotProof(): Promise<void> {
   );
   assert(
     kinds === "energy_bill_or_contract|installation_invoice" &&
+      pilotCorrection?.disposition === "CORRECTION_REQUIRED" &&
+      pilotCorrection.correctionReason === "INCORRECT_INFORMATION" &&
+      pilotCorrection.correctionInstruction === "foute invoer" &&
+      pilotCorrectionSubject?.evidenceKind === "energy_bill_or_contract" &&
+      pilotCorrectionSubject.factLabel === "Energieleverancier" &&
       [
         "PARTY_NAME",
         "ADDRESS",
@@ -1543,8 +1582,10 @@ async function activePilotProof(): Promise<void> {
   console.log("CURRENT_EVIDENCE_COUNT=2");
   console.log("BOTH_REVIEW_STATUS=PENDING");
   console.log(`PILOT_FACT_SUBJECT_COUNT=${response.reviewSubjects.length}`);
-  console.log("PILOT_FACT_ROUND_COUNT=0");
-  console.log("PILOT_FACT_SUBJECT_DECISION_COUNT=0");
+  console.log("PILOT_OVERALL_REVIEW_STATUS=CORRECTION_REQUIRED");
+  console.log("PILOT_FACT_ROUND_COUNT=1");
+  console.log("PILOT_FACT_SUBJECT_DECISION_COUNT=10");
+  console.log("PILOT_CORRECTION_BUNDLE_UNCHANGED=PASS");
   console.log("UNASSIGNED_CASE_DENIED=PASS");
   console.log("DATABASE_WRITES_ON_GET=0");
   console.log("EXPECTED_SERVER_CALL_COUNT=1");

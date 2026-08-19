@@ -582,6 +582,7 @@ const CHECK_LIST = [
     ],
     domain: "tenant-evidence-review-worklist-read",
     applicablePaths: [
+      "supabase/functions/_shared/app_evidence_review_overall_status.ts",
       "supabase/functions/_shared/app_evidence_review_worklist.ts",
       "supabase/functions/api-app-evidence-review-worklist/index.ts",
       "scripts/proofs/app-evidence-review-worklist-read.proof.ts",
@@ -608,6 +609,8 @@ const CHECK_LIST = [
       "supabase/migrations/20260818210000_app_evidence_review_correction_details.sql",
       "supabase/migrations/20260819120000_app_evidence_review_worklist_fact_cutover.sql",
       "supabase/migrations/20260819123000_app_evidence_review_worklist_activity_fix.sql",
+      "supabase/migrations/20260819160000_app_evidence_review_overall_status.sql",
+      "supabase/functions/_shared/app_evidence_review_overall_status.ts",
       "supabase/functions/_shared/app_evidence_review_worklist.ts",
       "supabase/functions/api-app-evidence-review-worklist/index.ts",
       "scripts/proofs/app-evidence-review-worklist-read.proof.ts",
@@ -665,6 +668,8 @@ const CHECK_LIST = [
     domain: "tenant-evidence-review-case-detail",
     applicablePaths: [
       "supabase/migrations/20260819090000_app_evidence_review_current_round_read.sql",
+      "supabase/migrations/20260819160000_app_evidence_review_overall_status.sql",
+      "supabase/functions/_shared/app_evidence_review_overall_status.ts",
       "supabase/functions/_shared/app_evidence_review_case_detail.ts",
       "supabase/functions/api-app-evidence-review-case-detail/index.ts",
       "scripts/proofs/app-evidence-review-case-detail.proof.ts",
@@ -688,6 +693,8 @@ const CHECK_LIST = [
     applicablePaths: [
       "supabase/migrations/20260818230000_app_evidence_fact_review_rounds.sql",
       "supabase/migrations/20260819090000_app_evidence_review_current_round_read.sql",
+      "supabase/migrations/20260819160000_app_evidence_review_overall_status.sql",
+      "supabase/functions/_shared/app_evidence_review_overall_status.ts",
       "supabase/functions/_shared/app_evidence_review_case_detail.ts",
       "supabase/functions/api-app-evidence-review-case-detail/index.ts",
       "supabase/functions/api-app-evidence-review-round-finalize/index.ts",
@@ -718,6 +725,8 @@ const CHECK_LIST = [
       "supabase/migrations/20260818220000_app_evidence_review_case_detail_decide_affordance.sql",
       "supabase/migrations/20260818230000_app_evidence_fact_review_rounds.sql",
       "supabase/migrations/20260819090000_app_evidence_review_current_round_read.sql",
+      "supabase/migrations/20260819160000_app_evidence_review_overall_status.sql",
+      "supabase/functions/_shared/app_evidence_review_overall_status.ts",
       "supabase/functions/_shared/app_evidence_review_case_detail.ts",
       "supabase/functions/api-app-evidence-review-case-detail/index.ts",
       "supabase/functions/api-app-evidence-review-round-finalize/index.ts",
@@ -1846,6 +1855,7 @@ export const PATH_RULES = Object.freeze([
       type: "oneOf",
       value: Object.freeze([
         "supabase/functions/_shared/app_evidence_review_worklist.ts",
+        "supabase/functions/_shared/app_evidence_review_overall_status.ts",
         "supabase/functions/api-app-evidence-review-worklist/index.ts",
         "scripts/proofs/app-evidence-review-worklist-read.proof.ts",
       ]),
@@ -1873,11 +1883,26 @@ export const PATH_RULES = Object.freeze([
     ]),
   }),
   Object.freeze({
+    id: "evidence-review-overall-status-migration",
+    match: Object.freeze({
+      type: "exact",
+      value:
+        "supabase/migrations/20260819160000_app_evidence_review_overall_status.sql",
+    }),
+    checks: Object.freeze([
+      "migration-or-sql-review",
+      "evidence-review-worklist-read-local",
+      "evidence-review-case-detail-local",
+      "tenant-migration-chain-local",
+    ]),
+  }),
+  Object.freeze({
     id: "evidence-review-case-detail-runtime",
     match: Object.freeze({
       type: "oneOf",
       value: Object.freeze([
         "supabase/functions/_shared/app_evidence_review_case_detail.ts",
+        "supabase/functions/_shared/app_evidence_review_overall_status.ts",
         "supabase/functions/api-app-evidence-review-case-detail/index.ts",
         "scripts/proofs/app-evidence-review-case-detail.proof.ts",
       ]),

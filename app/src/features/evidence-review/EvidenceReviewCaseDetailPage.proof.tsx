@@ -77,7 +77,7 @@ function evidence(
 }
 
 const FIXTURE: EvidenceReviewCaseDetailResponseV1 = {
-  schemaVersion: "evidence-review-case-detail-v3",
+  schemaVersion: "evidence-review-case-detail-v4",
   asOf: "2026-08-18T12:00:00.000Z",
   case: {
     caseRef: CASE_REF,
@@ -154,6 +154,7 @@ const FIXTURE: EvidenceReviewCaseDetailResponseV1 = {
     },
   ],
   currentReviewRound: null,
+  overallReviewStatus: "TO_REVIEW",
 };
 
 const previewSuccess = async () => ({
@@ -218,6 +219,7 @@ assert(
 const readyHtml = detailHtml({ status: "ready", value: FIXTURE, error: null });
 assert(
   readyHtml.includes(CASE_REF) &&
+    readyHtml.includes("ENVAL beoordelen") &&
     readyHtml.includes("Ingediend voor beoordeling") &&
     readyHtml.split("Document bekijken").length - 1 === 2 &&
     readyHtml.split(">PENDING<").length - 1 === 2 &&
@@ -257,6 +259,7 @@ const viewOnlyHtml = detailHtml({
 });
 const finalizedFixture: EvidenceReviewCaseDetailResponseV1 = {
   ...FIXTURE,
+  overallReviewStatus: "CORRECTION_REQUIRED",
   currentReviewRound: {
     roundRef: "a8000000-0000-4000-8000-000000000010",
     manifestVersion: FIXTURE.reviewManifestVersion,
@@ -292,7 +295,8 @@ assert(
     finalizedHtml.includes("Correctie nodig") &&
     finalizedHtml.includes("Gegeven onjuist") &&
     finalizedHtml.includes("Controleer de EAN en pas deze aan.") &&
-    finalizedHtml.includes("Correcties nodig"),
+    finalizedHtml.includes("Correctie nodig") &&
+    !finalizedHtml.includes("Correcties nodig"),
   "Q06a_view_only_or_finalized_rendering_invalid",
 );
 
@@ -359,8 +363,13 @@ const detailResult = await loadEvidenceReviewCaseDetail({
   },
 });
 const detailHeaders = new Headers(detailInit?.headers);
+const prematureWaiting = decodeEvidenceReviewCaseDetailResponse({
+  ...FIXTURE,
+  overallReviewStatus: "WAITING_CUSTOMER",
+});
 assert(
   detailResult.ok && detailFetches === 1 &&
+    !prematureWaiting.ok &&
     detailResult.value.case.canDecide === true &&
     detailUrl ===
       `https://local-proof.invalid/functions/v1/api-app-evidence-review-case-detail?caseRef=${CASE_REF}` &&
@@ -989,7 +998,7 @@ assert(
     !/(role\s*===|email\s*===|caseOwner|case_owner|workforceId|workforce_id|tenantId|tenant_id)/
       .test(value)
   ) &&
-    detailEndpointSource.includes("app_evidence_review_case_detail_read_v5") &&
+    detailEndpointSource.includes("app_evidence_review_case_detail_read_v6") &&
     finalizeEndpointSource.includes("app_evidence_review_round_finalize_v1") &&
     previewEndpointSource.includes(
       "app_evidence_review_preview_source_read_v1",
@@ -1045,6 +1054,12 @@ assert(
     detailSource.includes("Ja, afronden") &&
     detailSource.includes("Annuleren") &&
     detailSource.includes("currentReviewRound") &&
+    detailSource.includes("overallReviewStatus") &&
+    detailSource.includes("ENVAL beoordelen") &&
+    detailSource.includes("Correctie nodig") &&
+    detailSource.includes("Wacht op klant") &&
+    detailSource.includes("Afgerond") &&
+    !detailSource.includes("Correcties nodig") &&
     factDraftSource.includes("reviewerSuggestion === \"ACCEPT\"") &&
     factDraftSource.includes("Dossier is gewijzigd. Controleer opnieuw.") &&
     factDraftSource.includes("attempt.current") &&

@@ -19,7 +19,7 @@ import {
   parseAuthorizedEvidenceReviewSourceRows,
 } from "../_shared/app_evidence_review_worklist.ts";
 
-const READ_RPC = "app_evidence_review_worklist_source_read_v2";
+const READ_RPC = "app_evidence_review_worklist_source_read_v3";
 
 type RpcResult = { data?: unknown; error?: unknown };
 

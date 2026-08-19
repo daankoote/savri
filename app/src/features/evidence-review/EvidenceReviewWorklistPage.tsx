@@ -1,6 +1,6 @@
 import type {
   EvidenceReviewAttentionReason,
-  EvidenceReviewWorklistCaseV2,
+  EvidenceReviewWorklistCaseV3,
 } from "../../../../supabase/functions/_shared/app_evidence_review_worklist.ts";
 import { useAuth } from "../auth/AuthProvider.tsx";
 import type { EvidenceReviewWorklistSafeError } from "./evidenceReviewWorklistClient.ts";
@@ -40,8 +40,8 @@ function formatServerDateTime(value: string): string {
   }).format(parsed);
 }
 
-function unresolvedFactLabel(item: EvidenceReviewWorklistCaseV2): string {
-  if (item.queueState === "REVIEW_MODEL_UNAVAILABLE") {
+function unresolvedFactLabel(item: EvidenceReviewWorklistCaseV3): string {
+  if (item.overallReviewStatus === "REVIEW_MODEL_UNAVAILABLE") {
     return "Aantal te beoordelen gegevens niet beschikbaar";
   }
   return `${item.unresolvedFactCount} ${
@@ -53,7 +53,7 @@ function EvidenceReviewCaseRow({
   item,
   onOpenCase,
 }: Readonly<{
-  item: EvidenceReviewWorklistCaseV2;
+  item: EvidenceReviewWorklistCaseV3;
   onOpenCase: (caseRef: string) => void;
 }>) {
   const detailRoute = buildEvidenceReviewDetailRoute(item.caseRef);

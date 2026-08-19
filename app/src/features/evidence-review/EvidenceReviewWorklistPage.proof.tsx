@@ -1,8 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import type {
   EvidenceReviewAttentionReason,
-  EvidenceReviewWorklistCaseV2,
-  EvidenceReviewWorklistResponseV2,
+  EvidenceReviewWorklistCaseV3,
+  EvidenceReviewWorklistResponseV3,
 } from "../../../../supabase/functions/_shared/app_evidence_review_worklist.ts";
 import { EvidenceReviewWorklistContent } from "./EvidenceReviewWorklistPage.tsx";
 import {
@@ -32,14 +32,14 @@ async function source(path: string): Promise<string> {
 function caseItem(
   caseRef: string,
   reasons: readonly EvidenceReviewAttentionReason[],
-  overrides: Partial<EvidenceReviewWorklistCaseV2> = {},
-): EvidenceReviewWorklistCaseV2 {
+  overrides: Partial<EvidenceReviewWorklistCaseV3> = {},
+): EvidenceReviewWorklistCaseV3 {
   return {
     caseRef,
     lifecycleState: "submitted_for_review",
-    queueState: reasons[0] === "REVIEW_MODEL_UNAVAILABLE"
+    overallReviewStatus: reasons[0] === "REVIEW_MODEL_UNAVAILABLE"
       ? "REVIEW_MODEL_UNAVAILABLE"
-      : "ACTIVE_REVIEW",
+      : "TO_REVIEW",
     unresolvedFactCount: reasons[0] === "REVIEW_MODEL_UNAVAILABLE" ? 0 : 1,
     reviewAttentionReasons: reasons,
     latestReviewActivityAt: "2026-08-18T10:00:00.000Z",
@@ -48,17 +48,17 @@ function caseItem(
 }
 
 function response(
-  cases: readonly EvidenceReviewWorklistCaseV2[],
-): EvidenceReviewWorklistResponseV2 {
+  cases: readonly EvidenceReviewWorklistCaseV3[],
+): EvidenceReviewWorklistResponseV3 {
   return {
-    schemaVersion: "evidence-review-worklist-v2",
+    schemaVersion: "evidence-review-worklist-v3",
     asOf: "2026-08-18T12:00:00.000Z",
     caseCount: cases.length,
     cases,
   };
 }
 
-function readyHtml(value: EvidenceReviewWorklistResponseV2): string {
+function readyHtml(value: EvidenceReviewWorklistResponseV3): string {
   return renderToStaticMarkup(
     <EvidenceReviewWorklistContent
       onOpenCase={noop}
@@ -118,7 +118,7 @@ const terminalQueueState = decodeEvidenceReviewWorklistResponse({
   caseCount: 1,
   cases: [{
     ...caseItem("CASE-PROOF-WAITING", ["FACT_REVIEW_REQUIRED"]),
-    queueState: "WAITING_CUSTOMER",
+    overallReviewStatus: "CORRECTION_REQUIRED",
   }],
 });
 assert(
