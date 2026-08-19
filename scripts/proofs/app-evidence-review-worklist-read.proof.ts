@@ -1,7 +1,7 @@
 import {
   buildEvidenceReviewWorklistResponse,
+  type EvidenceReviewWorklistResponseV2,
   parseAuthorizedEvidenceReviewSourceRows,
-  type EvidenceReviewWorklistResponseV1,
 } from "../../supabase/functions/_shared/app_evidence_review_worklist.ts";
 import {
   createHandler,
@@ -20,7 +20,7 @@ const DATABASE = `enval_review04_proof_${
   crypto.randomUUID().replaceAll("-", "")
 }`;
 const MIGRATION =
-  "supabase/migrations/20260818090000_app_evidence_review_worklist_read.sql";
+  "supabase/migrations/20260819120000_app_evidence_review_worklist_fact_cutover.sql";
 const AUTH_ADMIN = "d1000000-0000-4000-8000-000000000001";
 const AUTH_ADMIN_NO_SCOPE = "d1000000-0000-4000-8000-000000000002";
 const AUTH_NO_VIEW = "d1000000-0000-4000-8000-000000000003";
@@ -160,17 +160,15 @@ function sourceRow(
   return {
     case_ref: CASE_REFS.unreviewed,
     lifecycle_state: "submitted_for_review",
-    evidence_version_ref: VERSION.unreviewed,
-    version_number: 1,
-    evidence_created_at: "2026-08-18T10:00:00.000Z",
-    current_decision: null,
-    current_decided_at: null,
-    has_earlier_decision: false,
+    queue_state: "ACTIVE_REVIEW",
+    unresolved_fact_count: 4,
+    review_attention_reasons: ["FACT_REVIEW_REQUIRED"],
+    latest_review_activity_at: "2026-08-18T10:00:00.000Z",
     ...overrides,
   };
 }
 function rpcSuccess(rows: readonly JsonObject[]): JsonObject {
-  return { ok: true, status: 200, code: "ok", source_rows: rows };
+  return { ok: true, status: 200, code: "ok", queue_rows: rows };
 }
 function mockClient(
   rpc: (name: string, args: JsonObject) => Promise<{
@@ -236,7 +234,10 @@ async function endpointProof(): Promise<void> {
     tenantFailure,
     onRpc: () => gatedRpcCalls++,
   })(new Request("https://enval.local/api-app-evidence-review-worklist"));
-  assert(gated === tenantFailure && gatedRpcCalls === 0, "tenant_gate_not_first");
+  assert(
+    gated === tenantFailure && gatedRpcCalls === 0,
+    "tenant_gate_not_first",
+  );
   q(2);
 
   const noAuth = await endpoint(rpcSuccess([]), { auth: false })(
@@ -255,11 +256,11 @@ async function endpointProof(): Promise<void> {
   );
   const emptyBody = await responseJson(
     empty,
-  ) as unknown as EvidenceReviewWorklistResponseV1;
+  ) as unknown as EvidenceReviewWorklistResponseV2;
   assert(
     empty.status === 200 && emptyBody.caseCount === 0 &&
       emptyBody.cases.length === 0 &&
-      emptyBody.schemaVersion === "evidence-review-worklist-v1",
+      emptyBody.schemaVersion === "evidence-review-worklist-v2",
     "empty_contract_invalid",
   );
   q(4);
@@ -267,39 +268,30 @@ async function endpointProof(): Promise<void> {
   const parsed = parseAuthorizedEvidenceReviewSourceRows(rpcSuccess([
     sourceRow(),
     sourceRow({
-      evidence_version_ref: VERSION.accepted,
-      current_decision: "ACCEPTED",
-      current_decided_at: "2026-08-18T10:10:00.000Z",
+      case_ref: CASE_REFS.accepted,
+      queue_state: "REVIEW_COMPLETE",
+      unresolved_fact_count: 0,
+      review_attention_reasons: [],
+      latest_review_activity_at: "2026-08-18T10:10:00.000Z",
     }),
     sourceRow({
       case_ref: CASE_REFS.correction,
-      evidence_version_ref: VERSION.correction,
-      current_decision: "CORRECTION_REQUIRED",
-      current_decided_at: "2026-08-18T10:20:00.000Z",
+      queue_state: "WAITING_CUSTOMER",
+      unresolved_fact_count: 0,
+      review_attention_reasons: [],
+      latest_review_activity_at: "2026-08-18T10:20:00.000Z",
     }),
     sourceRow({
       case_ref: CASE_REFS.acceptedThenNew,
-      evidence_version_ref: VERSION.acceptedNew,
-      version_number: 2,
-      evidence_created_at: "2026-08-18T10:30:00.000Z",
-      has_earlier_decision: true,
+      unresolved_fact_count: 4,
+      latest_review_activity_at: "2026-08-18T10:30:00.000Z",
     }),
     sourceRow({
       case_ref: CASE_REFS.correctionThenNew,
-      evidence_version_ref: VERSION.correctionNew,
-      version_number: 2,
-      evidence_created_at: "2026-08-18T10:40:00.000Z",
-      has_earlier_decision: true,
-    }),
-    sourceRow({
-      case_ref: CASE_REFS.multiple,
-      evidence_version_ref: VERSION.multipleA,
-      evidence_created_at: "2026-08-18T10:50:00.000Z",
-    }),
-    sourceRow({
-      case_ref: CASE_REFS.multiple,
-      evidence_version_ref: VERSION.multipleB,
-      evidence_created_at: "2026-08-18T11:00:00.000Z",
+      queue_state: "REVIEW_MODEL_UNAVAILABLE",
+      unresolved_fact_count: 0,
+      review_attention_reasons: ["REVIEW_MODEL_UNAVAILABLE"],
+      latest_review_activity_at: "2026-08-18T10:40:00.000Z",
     }),
   ]));
   assert(parsed, "valid_source_rejected");
@@ -307,28 +299,19 @@ async function endpointProof(): Promise<void> {
     "2026-08-18T12:00:00.000Z",
     parsed,
   );
-  assert(projected && projected.caseCount === 5, "case_projection_invalid");
-  const currentCorrection = projected.cases.find((item) =>
-    item.caseRef === CASE_REFS.correction
-  );
+  assert(projected && projected.caseCount === 3, "case_projection_invalid");
   const acceptedThenNew = projected.cases.find((item) =>
     item.caseRef === CASE_REFS.acceptedThenNew
   );
-  const correctionThenNew = projected.cases.find((item) =>
+  const unavailable = projected.cases.find((item) =>
     item.caseRef === CASE_REFS.correctionThenNew
   );
-  const multiple = projected.cases.find((item) =>
-    item.caseRef === CASE_REFS.multiple
-  );
   assert(
-    currentCorrection?.attentionReasons.join("|") === "CORRECTION_REQUIRED" &&
-      acceptedThenNew?.attentionReasons.join("|") ===
-        "UNREVIEWED_EVIDENCE|NEW_EVIDENCE_VERSION_AFTER_REVIEW" &&
-      correctionThenNew?.attentionReasons.join("|") ===
-        "UNREVIEWED_EVIDENCE|NEW_EVIDENCE_VERSION_AFTER_REVIEW" &&
-      !correctionThenNew.attentionReasons.includes("CORRECTION_REQUIRED") &&
-      multiple?.unresolvedEvidenceCount === 2 &&
-      multiple.evidenceRefs.length === 2,
+    acceptedThenNew?.queueState === "ACTIVE_REVIEW" &&
+      acceptedThenNew.unresolvedFactCount === 4 &&
+      unavailable?.queueState === "REVIEW_MODEL_UNAVAILABLE" &&
+      !projected.cases.some((item) => item.caseRef === CASE_REFS.accepted) &&
+      !projected.cases.some((item) => item.caseRef === CASE_REFS.correction),
     "attention_semantics_invalid",
   );
   q(5);
@@ -359,7 +342,7 @@ async function endpointProof(): Promise<void> {
   q(6);
 
   const malformed = parseAuthorizedEvidenceReviewSourceRows(rpcSuccess([
-    sourceRow({ storage_path: "private/path" }),
+    sourceRow({ legacy_decision: "PENDING" }),
   ]));
   assert(malformed === null, "unknown_source_field_allowed");
   for (
@@ -389,7 +372,12 @@ async function endpointProof(): Promise<void> {
       source.includes("'evidence.review.view'") &&
       source.includes("scope_event.case_id") &&
       source.includes("lifecycle_state = 'submitted_for_review'") &&
-      !source.includes("grant execute on function public.app_workforce_authorize_v1") &&
+      source.includes("app_evidence_fact_review_manifest_v1") &&
+      source.includes("app_evidence_review_rounds") &&
+      !source.includes("app_evidence_review_decisions") &&
+      !source.includes(
+        "grant execute on function public.app_workforce_authorize_v1",
+      ) &&
       !source.includes("customer_display") &&
       !source.includes("check_execution") && !source.includes("review_task"),
     "bounded_read_source_missing",
@@ -409,7 +397,9 @@ async function setupDatabase(): Promise<void> {
     "template0",
     DATABASE,
   ]);
-  await psql(DATABASE, `
+  await psql(
+    DATABASE,
+    `
     create schema extensions;
     create extension pgcrypto with schema extensions;
     create schema auth;
@@ -435,7 +425,8 @@ async function setupDatabase(): Promise<void> {
       is_sso_user boolean default false not null,
       deleted_at timestamptz, is_anonymous boolean default false not null
     );
-  `);
+  `,
+  );
   const migrations: string[] = [];
   for await (const entry of Deno.readDir("supabase/migrations")) {
     if (entry.isFile && entry.name.endsWith(".sql")) {
@@ -449,7 +440,9 @@ async function setupDatabase(): Promise<void> {
 }
 
 async function activeFingerprint(): Promise<string> {
-  return await psql(ACTIVE_DATABASE, `begin read only;
+  return await psql(
+    ACTIVE_DATABASE,
+    `begin read only;
     select concat_ws('|',
       (select count(*) from supabase_migrations.schema_migrations),
       (select count(*) from public.app_customers),
@@ -457,33 +450,51 @@ async function activeFingerprint(): Promise<string> {
       (select count(*) from public.app_evidence_files),
       (select count(*) from public.app_evidence_versions),
       (select count(*) from public.app_evidence_review_decisions),
+      (select count(*) from public.app_evidence_review_rounds),
+      (select count(*) from public.app_evidence_review_round_subject_decisions),
+      (select pg_catalog.encode(extensions.digest(coalesce(pg_catalog.string_agg(
+        concat_ws(':',decision.subject_ref,decision.disposition,
+          coalesce(decision.correction_reason,''),
+          coalesce(decision.correction_instruction,'')), '|'
+        order by decision.round_id,decision.subject_ref
+      ),''),'sha256'),'hex')
+       from public.app_evidence_review_round_subject_decisions decision),
       (select count(*) from public.app_workforce_identities),
       (select count(*) from public.app_workforce_scope_assignments),
       (select count(*) from public.app_audit_events),
       (select count(*) from public.app_idempotency_keys)
-    ); rollback;`);
+    ); rollback;`,
+  );
 }
 async function proofFingerprint(): Promise<string> {
-  return await psql(DATABASE, `select concat_ws('|',
+  return await psql(
+    DATABASE,
+    `select concat_ws('|',
     (select count(*) from public.app_customers),
     (select count(*) from public.app_cases),
     (select count(*) from public.app_case_lifecycle_events),
     (select count(*) from public.app_evidence_files),
     (select count(*) from public.app_evidence_versions),
     (select count(*) from public.app_evidence_review_decisions),
+    (select count(*) from public.app_evidence_review_rounds),
+    (select count(*) from public.app_evidence_review_round_subject_decisions),
     (select count(*) from public.app_workforce_identities),
     (select count(*) from public.app_workforce_scope_assignments),
     (select count(*) from public.app_audit_events),
     (select count(*) from public.app_idempotency_keys)
-  );`);
+  );`,
+  );
 }
 async function readRpc(authUserId: string): Promise<JsonObject> {
-  const output = await psql(DATABASE, `begin;
+  const output = await psql(
+    DATABASE,
+    `begin;
     set local role service_role;
-    select public.app_evidence_review_worklist_source_read_v1(
+    select public.app_evidence_review_worklist_source_read_v2(
       '${authUserId}'
     )::text;
-    rollback;`);
+    rollback;`,
+  );
   const line = output.split("\n").find((value) => value.startsWith("{"));
   assert(line, "rpc_output_missing");
   return JSON.parse(line) as JsonObject;
@@ -491,23 +502,28 @@ async function readRpc(authUserId: string): Promise<JsonObject> {
 
 async function databaseProof(): Promise<number> {
   await setupDatabase();
-  const acl = await psql(DATABASE, `select concat_ws('|',
+  const acl = await psql(
+    DATABASE,
+    `select concat_ws('|',
     has_function_privilege('service_role',
-      'public.app_evidence_review_worklist_source_read_v1(uuid)','EXECUTE'),
+      'public.app_evidence_review_worklist_source_read_v2(uuid)','EXECUTE'),
     has_function_privilege('anon',
-      'public.app_evidence_review_worklist_source_read_v1(uuid)','EXECUTE'),
+      'public.app_evidence_review_worklist_source_read_v2(uuid)','EXECUTE'),
     has_function_privilege('authenticated',
-      'public.app_evidence_review_worklist_source_read_v1(uuid)','EXECUTE'),
+      'public.app_evidence_review_worklist_source_read_v2(uuid)','EXECUTE'),
     has_function_privilege('service_role',
       'public.app_workforce_authorize_v1(uuid,text,uuid,uuid,timestamptz)',
       'EXECUTE'),
     has_table_privilege('authenticated',
       'public.app_evidence_review_decisions','SELECT')
-  );`);
+  );`,
+  );
   assert(acl === "t|f|f|f|f", `rpc_acl_invalid:${acl}`);
   q(9);
 
-  await psql(DATABASE, `
+  await psql(
+    DATABASE,
+    `
     insert into auth.users (id,email,email_confirmed_at,created_at,updated_at)
     values
       ('${AUTH_ADMIN}','admin@example.invalid',clock_timestamp(),clock_timestamp(),clock_timestamp()),
@@ -526,11 +542,14 @@ async function databaseProof(): Promise<number> {
       'bound_customer_identity','app_customer_identity','proof:customer',
       'review04-customer-access'
     );
-  `);
+  `,
+  );
   const caseEntries = Object.entries(CASES) as [keyof typeof CASES, string][];
   for (const [name, caseId] of caseEntries) {
     const state = name === "terminal" ? "rejected" : "submitted_for_review";
-    await psql(DATABASE, `
+    await psql(
+      DATABASE,
+      `
       insert into public.app_cases (
         id,customer_id,case_reference,created_at,created_by_actor_type,
         created_by_actor_ref,source_class,source_ref,request_id
@@ -547,38 +566,53 @@ async function databaseProof(): Promise<number> {
         'proof:review04','proof','review04:${name}',
         'review04-lifecycle:${name}','{}'
       );
-    `);
+    `,
+    );
   }
 
-  const bootstrap = await psql(DATABASE, `select
+  const bootstrap = await psql(
+    DATABASE,
+    `select
     public.app_workforce_first_admin_bootstrap_v1(
       '${AUTH_ADMIN}','local','enval','review04-bootstrap','review04-bootstrap',
       '${HASH}','${EXPIRES}','decision:review04-bootstrap'
-    )->>'ok';`);
+    )->>'ok';`,
+  );
   assert(bootstrap === "true", "admin_bootstrap_failed");
-  for (const [auth, seniority, suffix] of [
-    [AUTH_ADMIN_NO_SCOPE, "admin", "admin-no-scope"],
-    [AUTH_NO_VIEW, "reviewer", "no-view"],
-    [AUTH_SUSPENDED, "reviewer", "suspended"],
-  ]) {
-    const created = await psql(DATABASE, `select
+  for (
+    const [auth, seniority, suffix] of [
+      [AUTH_ADMIN_NO_SCOPE, "admin", "admin-no-scope"],
+      [AUTH_NO_VIEW, "reviewer", "no-view"],
+      [AUTH_SUSPENDED, "reviewer", "suspended"],
+    ]
+  ) {
+    const created = await psql(
+      DATABASE,
+      `select
       public.app_workforce_member_manage_v1(
         '${AUTH_ADMIN}','review04-member-${suffix}',
         'review04-member-${suffix}','${HASH}','${EXPIRES}','create',
         '${auth}',null,'${seniority}',clock_timestamp(),
         'decision:review04-${suffix}',null
-      )->>'ok';`);
+      )->>'ok';`,
+    );
     assert(created === "true", `member_create_failed:${suffix}`);
   }
-  const identityRows = await psql(DATABASE, `select concat_ws('|',
+  const identityRows = await psql(
+    DATABASE,
+    `select concat_ws('|',
     (select id from public.app_workforce_identities where auth_user_id='${AUTH_ADMIN}'),
     (select id from public.app_workforce_identities where auth_user_id='${AUTH_ADMIN_NO_SCOPE}'),
     (select id from public.app_workforce_identities where auth_user_id='${AUTH_NO_VIEW}'),
     (select id from public.app_workforce_identities where auth_user_id='${AUTH_SUSPENDED}')
-  );`);
-  const [adminIdentity, , noViewIdentity, suspendedIdentity] =
-    identityRows.split("|");
-  assert(adminIdentity && noViewIdentity && suspendedIdentity, "identity_missing");
+  );`,
+  );
+  const [adminIdentity, , noViewIdentity, suspendedIdentity] = identityRows
+    .split("|");
+  assert(
+    adminIdentity && noViewIdentity && suspendedIdentity,
+    "identity_missing",
+  );
 
   let assignment = 0;
   async function grantCase(
@@ -587,13 +621,16 @@ async function databaseProof(): Promise<number> {
     caseId: string,
   ): Promise<void> {
     assignment += 1;
-    const result = await psql(DATABASE, `select
+    const result = await psql(
+      DATABASE,
+      `select
       public.app_workforce_case_assignment_manage_v1(
         '${AUTH_ADMIN}','review04-assignment-${assignment}',
         'review04-assignment-${assignment}','${HASH}','${EXPIRES}','grant',
         '${identityId}','${capability}','${caseId}',null,null,null,
         clock_timestamp(),null,'decision:review04-assignment',null
-      )->>'ok';`);
+      )->>'ok';`,
+    );
     assert(result === "true", `assignment_failed:${assignment}`);
   }
   for (const caseId of Object.values(CASES).slice(0, 7)) {
@@ -610,7 +647,9 @@ async function databaseProof(): Promise<number> {
   await grantCase(noViewIdentity, "evidence.review.decide", CASES.unreviewed);
   await grantCase(suspendedIdentity, "evidence.review.view", CASES.unreviewed);
 
-  await psql(DATABASE, `
+  await psql(
+    DATABASE,
+    `
     insert into public.app_workforce_capability_assignments (
       assignment_id,workforce_identity_id,capability_code,event_type,
       effective_at,valid_until,decision_ref,reason_ref,recorded_by_actor_ref,
@@ -631,39 +670,132 @@ async function databaseProof(): Promise<number> {
     from public.app_workforce_identity_states
     where workforce_identity_id='${suspendedIdentity}'
       and supersedes_state_id is null;
-  `);
+  `,
+  );
 
   const files = [
     ["01", CASES.unreviewed, VERSION.unreviewed, 1, "2026-01-18T09:01:00Z"],
     ["02", CASES.accepted, VERSION.accepted, 1, "2026-01-18T09:02:00Z"],
     ["03", CASES.correction, VERSION.correction, 1, "2026-01-18T09:03:00Z"],
-    ["04", CASES.acceptedThenNew, VERSION.acceptedOld, 1, "2026-01-18T09:04:00Z"],
-    ["04", CASES.acceptedThenNew, VERSION.acceptedNew, 2, "2026-01-18T09:05:00Z"],
-    ["05", CASES.correctionThenNew, VERSION.correctionOld, 1, "2026-01-18T09:06:00Z"],
-    ["05", CASES.correctionThenNew, VERSION.correctionNew, 2, "2026-01-18T09:07:00Z"],
+    [
+      "04",
+      CASES.acceptedThenNew,
+      VERSION.acceptedOld,
+      1,
+      "2026-01-18T09:04:00Z",
+    ],
+    [
+      "04",
+      CASES.acceptedThenNew,
+      VERSION.acceptedNew,
+      2,
+      "2026-01-18T09:05:00Z",
+    ],
+    [
+      "05",
+      CASES.correctionThenNew,
+      VERSION.correctionOld,
+      1,
+      "2026-01-18T09:06:00Z",
+    ],
+    [
+      "05",
+      CASES.correctionThenNew,
+      VERSION.correctionNew,
+      2,
+      "2026-01-18T09:07:00Z",
+    ],
     ["06", CASES.multiple, VERSION.multipleA, 1, "2026-01-18T09:08:00Z"],
-    ["07", CASES.multiple, VERSION.multipleB, 1, "2026-01-18T09:09:00Z"],
     ["08", CASES.terminal, VERSION.terminal, 1, "2026-01-18T09:10:00Z"],
     ["09", CASES.wrongScope, VERSION.wrongScope, 1, "2026-01-18T09:11:00Z"],
   ] as const;
   const insertedFiles = new Set<string>();
   for (const [fileSuffix, caseId, versionId, number, createdAt] of files) {
     const fileId = `d3000000-0000-4000-8000-0000000000${fileSuffix}`;
+    const fixtureHash = fileSuffix.padStart(64, "0");
     if (!insertedFiles.has(fileId)) {
       insertedFiles.add(fileId);
-      await psql(DATABASE, `begin;
+      await psql(
+        DATABASE,
+        `begin;
       set local session_replication_role = replica;
+      insert into public.app_locations (
+        id,created_at,created_by_actor_ref,created_from_request_id,creation_basis
+      ) values (
+        'd6000000-0000-4000-8000-0000000000${fileSuffix}',
+        '2026-01-18T08:00:00Z','proof:review17',
+        'review17-promotion:${fileSuffix}:location:location-1',
+        'customer_declaration'
+      );
+      insert into public.app_signup_signing_snapshots (
+        id,intake_id,schema_version,canonical_snapshot,
+        canonical_snapshot_sha256,created_at
+      ) values (
+        'd7000000-0000-4000-8000-0000000000${fileSuffix}',gen_random_uuid(),
+        'signup-signing-runtime-snapshot-v1',
+        jsonb_build_object('canonical_facts',jsonb_build_object(
+          'schema_version','canonical-signing-facts-v1','facts',jsonb_build_array(
+            jsonb_build_object('fact_id','party-${fileSuffix}','fact_key','partyName',
+              'label','Naam','value','Proof Person','resolution_state','confirmed',
+              'required',true),
+            jsonb_build_object('fact_id','address-${fileSuffix}',
+              'fact_key','structuredAddress','label','Adres','value','Proof Address',
+              'resolution_state','review_required','required',true,
+              'location_id','location-1'),
+            jsonb_build_object('fact_id','ean-${fileSuffix}',
+              'fact_key','electricityEan','label','EAN','value','871234567890123456',
+              'resolution_state','review_required','required',true,
+              'location_id','location-1'),
+            jsonb_build_object('fact_id','supplier-${fileSuffix}',
+              'fact_key','energySupplier','label','Leverancier','value','Proof Supplier',
+              'resolution_state','review_required','required',false,
+              'location_id','location-1')
+          )
+        )), '${fixtureHash}','2026-01-18T08:00:00Z'
+      );
+      insert into public.app_signup_promotions (
+        id,intake_id,customer_id,identity_id,service_recipient_party_id,
+        contact_party_id,case_id,signing_snapshot_id,mandate_id,
+        signature_evidence_id,account_type,source_signing_sha256,
+        promotion_payload_sha256,request_payload_sha256,request_id,
+        idempotency_key,actor_type,actor_ref,environment,promoted_at
+      ) values (
+        'd8000000-0000-4000-8000-0000000000${fileSuffix}',gen_random_uuid(),
+        'd5000000-0000-4000-8000-000000000001',gen_random_uuid(),
+        gen_random_uuid(),gen_random_uuid(),'${caseId}',
+        'd7000000-0000-4000-8000-0000000000${fileSuffix}',gen_random_uuid(),
+        gen_random_uuid(),'particulier','${fixtureHash}','${fixtureHash}',
+        '${fixtureHash}',
+        'review17-promotion:${fileSuffix}','review17-promotion:${fileSuffix}',
+        'system','proof:review17','local','2026-01-18T08:00:00Z'
+      );
       insert into public.app_evidence_files (
         id,case_id,promotion_id,document_type,source_class,source_ref,
         created_at,created_by_actor_ref,request_id
       ) values (
-        '${fileId}','${caseId}',gen_random_uuid(),'energy_bill',
+        '${fileId}','${caseId}',
+        'd8000000-0000-4000-8000-0000000000${fileSuffix}',
+        'energy_bill_or_contract',
         'signup_quarantine_file','proof:${fileSuffix}','${createdAt}',
         'proof:review04','review04-file:${fileSuffix}'
       );
-      commit;`);
+      insert into public.app_evidence_declaration_contexts (
+        evidence_file_id,promotion_id,source_slot_ref_sha256,location_id,
+        charger_id,association_basis,created_at,created_by_actor_ref,
+        created_from_request_id
+      ) values (
+        '${fileId}','d8000000-0000-4000-8000-0000000000${fileSuffix}',
+        '${fixtureHash}',
+        'd6000000-0000-4000-8000-0000000000${fileSuffix}',null,
+        'single_declared_location','${createdAt}','proof:review17',
+        'review17-context:${fileSuffix}'
+      );
+      commit;`,
+      );
     }
-    await psql(DATABASE, `begin;
+    await psql(
+      DATABASE,
+      `begin;
     set local session_replication_role = replica;
     insert into public.app_evidence_versions (
       id,evidence_file_id,version_number,source_intake_file_id,storage_bucket,
@@ -676,24 +808,134 @@ async function databaseProof(): Promise<number> {
       'review04-version:${fileSuffix}:${number}',
       'review04-version:${fileSuffix}:${number}'
     );
-    commit;`);
+    commit;`,
+    );
   }
-  for (const [versionId, decision, suffix] of [
-    [VERSION.accepted, "ACCEPTED", "accepted"],
-    [VERSION.correction, "CORRECTION_REQUIRED", "correction"],
-    [VERSION.acceptedOld, "ACCEPTED", "accepted-old"],
-    [VERSION.correctionOld, "CORRECTION_REQUIRED", "correction-old"],
-  ]) {
-    const result = await psql(DATABASE, `select
+  for (
+    const [versionId, decision, suffix] of [
+      [VERSION.accepted, "ACCEPTED", "accepted"],
+      [VERSION.correction, "CORRECTION_REQUIRED", "correction"],
+      [VERSION.acceptedOld, "ACCEPTED", "accepted-old"],
+      [VERSION.correctionOld, "CORRECTION_REQUIRED", "correction-old"],
+    ]
+  ) {
+    const result = await psql(
+      DATABASE,
+      `select
       public.app_evidence_review_decide_v2(
         '${AUTH_ADMIN}','${versionId}','${decision}',
-        ${decision === "CORRECTION_REQUIRED" ? "'MISSING_INFORMATION'" : "null"},
-        ${decision === "CORRECTION_REQUIRED" ? "'Voeg het ontbrekende gegeven toe.'" : "null"},
+        ${
+        decision === "CORRECTION_REQUIRED" ? "'MISSING_INFORMATION'" : "null"
+      },
+        ${
+        decision === "CORRECTION_REQUIRED"
+          ? "'Voeg het ontbrekende gegeven toe.'"
+          : "null"
+      },
         'review04-decision-${suffix}','review04-decision-${suffix}',
         '${HASH}','${EXPIRES}'
-      )->>'ok';`);
+      )->>'ok';`,
+    );
     assert(result === "true", `decision_failed:${suffix}`);
   }
+
+  // One otherwise reviewable case deliberately has no derivable current
+  // fact manifest. It must remain visible as bounded fail-closed attention.
+  await psql(
+    DATABASE,
+    `begin;
+    set local session_replication_role = replica;
+    delete from public.app_evidence_declaration_contexts context_row
+    using public.app_evidence_files evidence_file
+    where context_row.evidence_file_id=evidence_file.id
+      and evidence_file.case_id='${CASES.multiple}';
+    commit;`,
+  );
+
+  async function finalizeFactRound(
+    caseId: string,
+    caseRef: string,
+    outcome: "ALL_FACTS_ACCEPTED" | "CORRECTIONS_REQUIRED",
+    suffix: string,
+  ): Promise<void> {
+    const manifestText = await psql(
+      DATABASE,
+      `select
+      public.app_evidence_fact_review_manifest_v1('${caseId}')::text;`,
+    );
+    const manifest = JSON.parse(manifestText) as JsonObject;
+    assert(
+      manifest.ok === true && typeof manifest.manifest_hash === "string" &&
+        Array.isArray(manifest.subjects) && manifest.subjects.length === 4,
+      `manifest_invalid:${suffix}`,
+    );
+    const decisions = (manifest.subjects as JsonObject[]).map((
+      subject,
+      index,
+    ) =>
+      outcome === "CORRECTIONS_REQUIRED" && index === 0
+        ? {
+          subjectRef: subject.subject_ref,
+          disposition: "CORRECTION_REQUIRED",
+          correctionReason: "INCORRECT_INFORMATION",
+          correctionInstruction: "Corrigeer dit gegeven.",
+        }
+        : { subjectRef: subject.subject_ref, disposition: "ACCEPTED" }
+    );
+    const resultText = await psql(
+      DATABASE,
+      `select
+      public.app_evidence_review_round_finalize_v1(
+        '${AUTH_ADMIN}','${caseRef}','fact-review-manifest-v1',
+        '${manifest.manifest_hash}',
+        $review17$${JSON.stringify(decisions)}$review17$::jsonb,
+        'review17-finalize-${suffix}','review17-finalize-${suffix}',
+        '${HASH}','${EXPIRES}'
+      )::text;`,
+    );
+    const result = JSON.parse(resultText) as JsonObject;
+    assert(
+      result.ok === true && result.outcome === outcome,
+      `round_finalize_failed:${suffix}:${String(result.code)}`,
+    );
+  }
+
+  await finalizeFactRound(
+    CASES.accepted,
+    CASE_REFS.accepted,
+    "ALL_FACTS_ACCEPTED",
+    "accepted",
+  );
+  await finalizeFactRound(
+    CASES.correction,
+    CASE_REFS.correction,
+    "CORRECTIONS_REQUIRED",
+    "correction",
+  );
+  await finalizeFactRound(
+    CASES.acceptedThenNew,
+    CASE_REFS.acceptedThenNew,
+    "ALL_FACTS_ACCEPTED",
+    "accepted-before-new-version",
+  );
+  await psql(
+    DATABASE,
+    `begin;
+    set local session_replication_role = replica;
+    insert into public.app_evidence_versions (
+      id,evidence_file_id,version_number,source_intake_file_id,storage_bucket,
+      storage_path,detected_mime_type,size_bytes,sha256,status,
+      source_confirmed_at,created_at,request_id,idempotency_key
+    ) values (
+      'd4000000-0000-4000-8000-00000000000c',
+      'd3000000-0000-4000-8000-000000000004',3,gen_random_uuid(),
+      'proof-private','private-04-v3.pdf','application/pdf',100,
+      '${"b".repeat(64)}','confirmed_awaiting_review','2026-01-18T09:30:00Z',
+      '2026-01-18T09:30:00Z','review17-version:04:3',
+      'review17-version:04:3'
+    );
+    commit;`,
+  );
   q(10);
 
   const before = await proofFingerprint();
@@ -704,14 +946,29 @@ async function databaseProof(): Promise<number> {
     "2026-08-18T12:00:00.000Z",
     rows,
   );
-  assert(response && response.caseCount === 5, "authorized_case_count_invalid");
+  assert(response && response.caseCount === 4, "authorized_case_count_invalid");
   const refs = response.cases.map((item) => item.caseRef);
+  const sourceQueueRows = allowed.queue_rows as JsonObject[];
+  const queueState = (caseRef: string) =>
+    sourceQueueRows.find((row) => row.case_ref === caseRef)?.queue_state;
   assert(
-    !refs.includes(CASE_REFS.accepted) &&
+    queueState(CASE_REFS.unreviewed) === "ACTIVE_REVIEW" &&
+      queueState(CASE_REFS.accepted) === "REVIEW_COMPLETE" &&
+      queueState(CASE_REFS.correction) === "WAITING_CUSTOMER" &&
+      queueState(CASE_REFS.acceptedThenNew) === "ACTIVE_REVIEW" &&
+      queueState(CASE_REFS.multiple) === "REVIEW_MODEL_UNAVAILABLE" &&
+      !refs.includes(CASE_REFS.accepted) &&
+      !refs.includes(CASE_REFS.correction) &&
       !refs.includes(CASE_REFS.terminal) &&
       !refs.includes(CASE_REFS.wrongScope),
-    "accepted_terminal_or_wrong_scope_visible",
+    "fact_queue_projection_invalid",
   );
+  console.log("NO_CURRENT_ROUND_ACTIVE=PASS");
+  console.log("ALL_ACCEPTED_EXCLUDED=PASS");
+  console.log("CORRECTIONS_REQUIRED_EXCLUDED=PASS");
+  console.log("NEW_EVIDENCE_REENTERS_ACTIVE=PASS");
+  console.log("REVIEW_MODEL_UNAVAILABLE_FAIL_CLOSED=PASS");
+  console.log("LEGACY_DECISIONS_NOT_WORKLIST_AUTHORITY=PASS");
   q(11);
 
   const adminEmpty = await readRpc(AUTH_ADMIN_NO_SCOPE);
@@ -720,23 +977,28 @@ async function databaseProof(): Promise<number> {
   const noView = await readRpc(AUTH_NO_VIEW);
   const suspended = await readRpc(AUTH_SUSPENDED);
   assert(
-    adminEmpty.ok === true && Array.isArray(adminEmpty.source_rows) &&
-      adminEmpty.source_rows.length === 0 &&
+    adminEmpty.ok === true && Array.isArray(adminEmpty.queue_rows) &&
+      adminEmpty.queue_rows.length === 0 &&
       customerOnly.code === "workforce_identity_missing" &&
       nonWorkforce.code === "workforce_identity_missing" &&
       noView.code === "capability_not_authorized" &&
       suspended.code === "workforce_identity_inactive",
     `authorization_matrix_invalid:${
-      [customerOnly.code, nonWorkforce.code, noView.code, suspended.code].join("|")
+      [customerOnly.code, nonWorkforce.code, noView.code, suspended.code].join(
+        "|",
+      )
     }`,
   );
   q(12);
 
   const after = await proofFingerprint();
   assert(before === after, "read_rpc_changed_database_state");
-  const definition = await psql(DATABASE, `select pg_get_functiondef(
-    'public.app_evidence_review_worklist_source_read_v1(uuid)'::regprocedure
-  );`);
+  const definition = await psql(
+    DATABASE,
+    `select pg_get_functiondef(
+    'public.app_evidence_review_worklist_source_read_v2(uuid)'::regprocedure
+  );`,
+  );
   assert(
     definition.includes("app_workforce_authorize_v1") &&
       !/\binsert\b|\bupdate\b|\bdelete\b|\btruncate\b/i.test(definition),
@@ -744,7 +1006,9 @@ async function databaseProof(): Promise<number> {
   );
   q(13);
 
-  const activeCountRaw = await psql(ACTIVE_DATABASE, `begin read only;
+  const activeCountRaw = await psql(
+    ACTIVE_DATABASE,
+    `begin read only;
     with first_admin as (
       select identity_row.auth_user_id,identity_row.id
       from public.app_workforce_identities identity_row
@@ -778,10 +1042,108 @@ async function databaseProof(): Promise<number> {
         auth_user_id,'evidence.review.view',case_id,null,clock_timestamp()
       )->>'ok')::boolean)
     from candidate;
-    rollback;`);
+    rollback;`,
+  );
   const activeCount = Number(activeCountRaw);
-  assert(Number.isInteger(activeCount) && activeCount >= 0, "active_count_invalid");
+  assert(
+    Number.isInteger(activeCount) && activeCount >= 0,
+    "active_count_invalid",
+  );
   q(14);
+
+  const pilotSummary = await psql(
+    ACTIVE_DATABASE,
+    `begin read only;
+    with first_admin as (
+      select identity_row.auth_user_id
+      from public.app_workforce_identities identity_row
+      join lateral (
+        select state
+        from public.app_workforce_identity_states state_event
+        where state_event.workforce_identity_id=identity_row.id
+          and state_event.effective_at <= clock_timestamp()
+        order by state_event.effective_at desc,state_event.recorded_at desc
+        limit 1
+      ) state on state.state='active'
+      join lateral (
+        select seniority
+        from public.app_workforce_seniority_assignments seniority_event
+        where seniority_event.workforce_identity_id=identity_row.id
+          and seniority_event.effective_at <= clock_timestamp()
+        order by seniority_event.effective_at desc,seniority_event.recorded_at desc
+        limit 1
+      ) seniority on seniority.seniority='admin'
+      order by identity_row.created_at,identity_row.id limit 1
+    ), response as (
+      select public.app_evidence_review_worklist_source_read_v2(
+        first_admin.auth_user_id
+      ) body from first_admin
+    ), detail as (
+      select public.app_evidence_review_case_detail_read_v5(
+        first_admin.auth_user_id, 'CASE-7E4CC75CD19F'
+      ) body from first_admin
+    ), pilot as (
+      select row.item
+      from response
+      cross join lateral pg_catalog.jsonb_array_elements(
+        response.body->'queue_rows'
+      ) row(item)
+      where row.item->>'case_ref'='CASE-7E4CC75CD19F'
+    ), pilot_case as (
+      select id from public.app_cases
+      where case_reference='CASE-7E4CC75CD19F'
+    ), current_manifest as (
+      select public.app_evidence_fact_review_manifest_v1(pilot_case.id) body
+      from pilot_case
+    ), current_round as (
+      select round_row.*
+      from public.app_evidence_review_rounds round_row
+      join pilot_case on pilot_case.id=round_row.case_id
+      join current_manifest
+        on round_row.manifest_version=current_manifest.body->>'manifest_version'
+       and round_row.manifest_hash=current_manifest.body->>'manifest_hash'
+    )
+    select concat_ws('|',
+      (select item->>'queue_state' from pilot),
+      (select item->>'unresolved_fact_count' from pilot),
+      (select jsonb_array_length(item->'review_attention_reasons') from pilot),
+      (select outcome from current_round),
+      (select count(*) from public.app_evidence_review_rounds round_row
+        join pilot_case on pilot_case.id=round_row.case_id),
+      (select count(*) from public.app_evidence_review_round_subject_decisions decision
+        join current_round on current_round.id=decision.round_id),
+      (select count(*) from public.app_evidence_review_round_subject_decisions decision
+        join current_round on current_round.id=decision.round_id
+        where decision.disposition='CORRECTION_REQUIRED'),
+      (select count(*) from public.app_evidence_review_decisions legacy
+        join public.app_evidence_versions version_row
+          on version_row.id=legacy.evidence_version_id
+        join public.app_evidence_files file_row
+          on file_row.id=version_row.evidence_file_id
+        join pilot_case on pilot_case.id=file_row.case_id),
+      (select lifecycle_state from public.app_case_lifecycle_events lifecycle
+        join pilot_case on pilot_case.id=lifecycle.case_id
+        order by lifecycle.event_at desc,lifecycle.id desc limit 1),
+      (select body->>'ok' from detail),
+      (select body#>>'{current_review_round,outcome}' from detail),
+      (select jsonb_array_length(body#>'{current_review_round,decisions}')
+        from detail)
+    );
+    rollback;`,
+  );
+  assert(
+    pilotSummary ===
+      "WAITING_CUSTOMER|0|0|CORRECTIONS_REQUIRED|1|10|1|0|submitted_for_review|true|CORRECTIONS_REQUIRED|10",
+    `pilot_fact_round_or_queue_invalid:${pilotSummary}`,
+  );
+  console.log("PILOT_CASE_REF=CASE-7E4CC75CD19F");
+  console.log("PILOT_QUEUE_STATE=WAITING_CUSTOMER");
+  console.log("PILOT_FACT_ROUND_COUNT=1");
+  console.log("PILOT_FACT_SUBJECT_DECISION_COUNT=10");
+  console.log("PILOT_ROUND_OUTCOME=CORRECTIONS_REQUIRED");
+  console.log("PILOT_LEGACY_DECISION_COUNT=0");
+  console.log("PILOT_LIFECYCLE_UNCHANGED=PASS");
+  console.log("PILOT_DIRECT_DETAIL_ACCESS=PASS");
   console.log("EVIDENCE_REVIEW_WORKLIST_READ_Q01_Q14=PASS");
   console.log("PRIVATE_AUTHORIZED_READ_RPC=PASS");
   console.log("DATABASE_WRITES_ON_GET=0");
@@ -817,6 +1179,7 @@ try {
       } else if (!Deno.exitCode) {
         console.log("ACTIVE_TENANT_DATABASE_UNCHANGED=PASS");
         console.log("FIRST_ADMIN_STATE_PRESERVED=PASS");
+        console.log("PILOT_CORRECTION_BUNDLE_UNCHANGED=PASS");
       }
     } catch (error) {
       console.error(`PROOF_CLEANUP=FAIL:${scrub(String(error))}`);

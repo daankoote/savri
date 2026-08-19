@@ -1,7 +1,7 @@
 import type {
   EvidenceReviewAttentionReason,
-  EvidenceReviewWorklistCaseV1,
-  EvidenceReviewWorklistResponseV1,
+  EvidenceReviewWorklistCaseV2,
+  EvidenceReviewWorklistResponseV2,
 } from "../../../../supabase/functions/_shared/app_evidence_review_worklist.ts";
 import { resolvePublicApiRuntimeConfig } from "../auth/authRuntimeConfig.ts";
 
@@ -18,7 +18,7 @@ export type EvidenceReviewWorklistSafeError = Readonly<{
 }>;
 
 export type EvidenceReviewWorklistLoadResult =
-  | Readonly<{ ok: true; value: EvidenceReviewWorklistResponseV1 }>
+  | Readonly<{ ok: true; value: EvidenceReviewWorklistResponseV2 }>
   | Readonly<{
     ok: false;
     error: EvidenceReviewWorklistSafeError;
@@ -41,17 +41,16 @@ const RESPONSE_FIELDS = Object.freeze([
   "schemaVersion",
 ]);
 const CASE_FIELDS = Object.freeze([
-  "attentionReasons",
   "caseRef",
-  "evidenceRefs",
   "latestReviewActivityAt",
   "lifecycleState",
-  "unresolvedEvidenceCount",
+  "queueState",
+  "reviewAttentionReasons",
+  "unresolvedFactCount",
 ]);
 const ATTENTION_REASONS = new Set<EvidenceReviewAttentionReason>([
-  "UNREVIEWED_EVIDENCE",
-  "CORRECTION_REQUIRED",
-  "NEW_EVIDENCE_VERSION_AFTER_REVIEW",
+  "FACT_REVIEW_REQUIRED",
+  "REVIEW_MODEL_UNAVAILABLE",
 ]);
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -70,40 +69,42 @@ function isIsoTimestamp(value: unknown): value is string {
     Number.isFinite(Date.parse(value));
 }
 
-function isUuid(value: unknown): value is string {
-  return typeof value === "string" &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-      .test(value);
-}
-
-function parseCase(value: unknown): EvidenceReviewWorklistCaseV1 | null {
+function parseCase(value: unknown): EvidenceReviewWorklistCaseV2 | null {
   if (!isRecord(value) || !hasExactFields(value, CASE_FIELDS)) return null;
   if (
-    typeof value.caseRef !== "string" || value.caseRef !== value.caseRef.trim() ||
+    typeof value.caseRef !== "string" ||
+    value.caseRef !== value.caseRef.trim() ||
     value.caseRef.length < 8 || value.caseRef.length > 64 ||
     value.lifecycleState !== "submitted_for_review" ||
-    !Number.isInteger(value.unresolvedEvidenceCount) ||
-    Number(value.unresolvedEvidenceCount) < 1 ||
+    !["ACTIVE_REVIEW", "REVIEW_MODEL_UNAVAILABLE"].includes(
+      value.queueState as string,
+    ) ||
+    !Number.isInteger(value.unresolvedFactCount) ||
+    Number(value.unresolvedFactCount) < 0 ||
     !isIsoTimestamp(value.latestReviewActivityAt) ||
-    !Array.isArray(value.attentionReasons) ||
-    value.attentionReasons.length === 0 ||
-    !value.attentionReasons.every((reason) =>
+    !Array.isArray(value.reviewAttentionReasons) ||
+    value.reviewAttentionReasons.length !== 1 ||
+    !value.reviewAttentionReasons.every((reason) =>
       ATTENTION_REASONS.has(reason as EvidenceReviewAttentionReason)
     ) ||
-    new Set(value.attentionReasons).size !== value.attentionReasons.length ||
-    !Array.isArray(value.evidenceRefs) || value.evidenceRefs.length === 0 ||
-    !value.evidenceRefs.every(isUuid) ||
-    new Set(value.evidenceRefs).size !== value.evidenceRefs.length
+    (value.queueState === "ACTIVE_REVIEW" &&
+      (Number(value.unresolvedFactCount) < 1 ||
+        value.reviewAttentionReasons[0] !== "FACT_REVIEW_REQUIRED")) ||
+    (value.queueState === "REVIEW_MODEL_UNAVAILABLE" &&
+      (Number(value.unresolvedFactCount) !== 0 ||
+        value.reviewAttentionReasons[0] !== "REVIEW_MODEL_UNAVAILABLE"))
   ) return null;
 
   return Object.freeze({
     caseRef: value.caseRef,
     lifecycleState: "submitted_for_review",
-    unresolvedEvidenceCount: Number(value.unresolvedEvidenceCount),
-    attentionReasons: Object.freeze(
-      [...value.attentionReasons] as EvidenceReviewAttentionReason[],
+    queueState: value.queueState as
+      | "ACTIVE_REVIEW"
+      | "REVIEW_MODEL_UNAVAILABLE",
+    unresolvedFactCount: Number(value.unresolvedFactCount),
+    reviewAttentionReasons: Object.freeze(
+      [...value.reviewAttentionReasons] as EvidenceReviewAttentionReason[],
     ),
-    evidenceRefs: Object.freeze([...value.evidenceRefs] as string[]),
     latestReviewActivityAt: value.latestReviewActivityAt,
   });
 }
@@ -130,7 +131,7 @@ export function decodeEvidenceReviewWorklistResponse(
     return { ok: false, error: safeError("invalid_response") };
   }
   if (
-    body.schemaVersion !== "evidence-review-worklist-v1" ||
+    body.schemaVersion !== "evidence-review-worklist-v2" ||
     !isIsoTimestamp(body.asOf) || !Number.isInteger(body.caseCount) ||
     Number(body.caseCount) < 0 || !Array.isArray(body.cases) ||
     Number(body.caseCount) !== body.cases.length
@@ -145,10 +146,10 @@ export function decodeEvidenceReviewWorklistResponse(
   return {
     ok: true,
     value: Object.freeze({
-      schemaVersion: "evidence-review-worklist-v1",
+      schemaVersion: "evidence-review-worklist-v2",
       asOf: body.asOf,
       caseCount: Number(body.caseCount),
-      cases: Object.freeze(cases as EvidenceReviewWorklistCaseV1[]),
+      cases: Object.freeze(cases as EvidenceReviewWorklistCaseV2[]),
     }),
   };
 }

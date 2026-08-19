@@ -1,14 +1,14 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import type {
   EvidenceReviewAttentionReason,
-  EvidenceReviewWorklistCaseV1,
-  EvidenceReviewWorklistResponseV1,
+  EvidenceReviewWorklistCaseV2,
+  EvidenceReviewWorklistResponseV2,
 } from "../../../../supabase/functions/_shared/app_evidence_review_worklist.ts";
 import { EvidenceReviewWorklistContent } from "./EvidenceReviewWorklistPage.tsx";
 import {
   decodeEvidenceReviewWorklistResponse,
-  loadEvidenceReviewWorklist,
   type EvidenceReviewWorklistSafeError,
+  loadEvidenceReviewWorklist,
 } from "./evidenceReviewWorklistClient.ts";
 
 class ProofFailure extends Error {}
@@ -32,31 +32,33 @@ async function source(path: string): Promise<string> {
 function caseItem(
   caseRef: string,
   reasons: readonly EvidenceReviewAttentionReason[],
-  overrides: Partial<EvidenceReviewWorklistCaseV1> = {},
-): EvidenceReviewWorklistCaseV1 {
+  overrides: Partial<EvidenceReviewWorklistCaseV2> = {},
+): EvidenceReviewWorklistCaseV2 {
   return {
     caseRef,
     lifecycleState: "submitted_for_review",
-    unresolvedEvidenceCount: 1,
-    attentionReasons: reasons,
-    evidenceRefs: ["e1000000-0000-4000-8000-000000000001"],
+    queueState: reasons[0] === "REVIEW_MODEL_UNAVAILABLE"
+      ? "REVIEW_MODEL_UNAVAILABLE"
+      : "ACTIVE_REVIEW",
+    unresolvedFactCount: reasons[0] === "REVIEW_MODEL_UNAVAILABLE" ? 0 : 1,
+    reviewAttentionReasons: reasons,
     latestReviewActivityAt: "2026-08-18T10:00:00.000Z",
     ...overrides,
   };
 }
 
 function response(
-  cases: readonly EvidenceReviewWorklistCaseV1[],
-): EvidenceReviewWorklistResponseV1 {
+  cases: readonly EvidenceReviewWorklistCaseV2[],
+): EvidenceReviewWorklistResponseV2 {
   return {
-    schemaVersion: "evidence-review-worklist-v1",
+    schemaVersion: "evidence-review-worklist-v2",
     asOf: "2026-08-18T12:00:00.000Z",
     caseCount: cases.length,
     cases,
   };
 }
 
-function readyHtml(value: EvidenceReviewWorklistResponseV1): string {
+function readyHtml(value: EvidenceReviewWorklistResponseV2): string {
   return renderToStaticMarkup(
     <EvidenceReviewWorklistContent
       onOpenCase={noop}
@@ -90,45 +92,46 @@ assert(
   "Q01_loading_state_invalid",
 );
 
-const unreviewedHtml = readyHtml(response([
-  caseItem("CASE-PROOF-UNREVIEWED", ["UNREVIEWED_EVIDENCE"]),
+const activeHtml = readyHtml(response([
+  caseItem("CASE-PROOF-ACTIVE", ["FACT_REVIEW_REQUIRED"]),
 ]));
 assert(
-  unreviewedHtml.includes("Bewijs nog te beoordelen") &&
-    unreviewedHtml.includes("1 bewijsstuk vraagt aandacht"),
-  "Q02_unreviewed_presentation_invalid",
+  activeHtml.includes("Factbeoordeling nodig") &&
+    activeHtml.includes("1 gegeven vraagt beoordeling"),
+  "Q02_active_fact_presentation_invalid",
 );
 
-const correctionHtml = readyHtml(response([
-  caseItem("CASE-PROOF-CORRECTION", ["CORRECTION_REQUIRED"]),
+const unavailableHtml = readyHtml(response([
+  caseItem("CASE-PROOF-UNAVAILABLE", ["REVIEW_MODEL_UNAVAILABLE"]),
 ]));
 assert(
-  correctionHtml.includes("Correctie nodig") &&
-    correctionHtml.includes("status-pill-danger"),
-  "Q03_correction_presentation_invalid",
+  unavailableHtml.includes("Beoordelingsmodel niet beschikbaar") &&
+    unavailableHtml.includes(
+      "Aantal te beoordelen gegevens niet beschikbaar",
+    ) &&
+    unavailableHtml.includes("status-pill-danger"),
+  "Q03_unavailable_attention_invalid",
 );
 
-const newVersionHtml = readyHtml(response([
-  caseItem("CASE-PROOF-NEW-VERSION", [
-    "NEW_EVIDENCE_VERSION_AFTER_REVIEW",
-  ]),
-]));
+const terminalQueueState = decodeEvidenceReviewWorklistResponse({
+  ...response([]),
+  caseCount: 1,
+  cases: [{
+    ...caseItem("CASE-PROOF-WAITING", ["FACT_REVIEW_REQUIRED"]),
+    queueState: "WAITING_CUSTOMER",
+  }],
+});
 assert(
-  newVersionHtml.includes("Nieuwe versie ontvangen"),
-  "Q04_new_version_presentation_invalid",
+  !terminalQueueState.ok,
+  "Q04_non_active_queue_state_reached_browser",
 );
 
-const multipleHtml = readyHtml(response([
-  caseItem("CASE-PROOF-MULTIPLE", [
-    "UNREVIEWED_EVIDENCE",
-    "NEW_EVIDENCE_VERSION_AFTER_REVIEW",
-  ]),
+const oneCaseHtml = readyHtml(response([
+  caseItem("CASE-PROOF-ONE", ["FACT_REVIEW_REQUIRED"]),
 ]));
 assert(
-  multipleHtml.split("CASE-PROOF-MULTIPLE").length - 1 === 1 &&
-    multipleHtml.includes("Bewijs nog te beoordelen") &&
-    multipleHtml.includes("Nieuwe versie ontvangen"),
-  "Q05_multiple_reasons_duplicated_case",
+  oneCaseHtml.split("CASE-PROOF-ONE").length - 1 === 1,
+  "Q05_case_duplicated",
 );
 
 const orderedRefs = [
@@ -136,11 +139,15 @@ const orderedRefs = [
   "CASE-BBBB00000002",
   "CASE-CCCC00000003",
 ];
-const orderedHtml = readyHtml(response(orderedRefs.map((caseRef, index) =>
-  caseItem(caseRef, ["UNREVIEWED_EVIDENCE"], {
-    latestReviewActivityAt: `2026-08-18T10:0${index}:00.000Z`,
-  })
-)));
+const orderedHtml = readyHtml(
+  response(
+    orderedRefs.map((caseRef, index) =>
+      caseItem(caseRef, ["FACT_REVIEW_REQUIRED"], {
+        latestReviewActivityAt: `2026-08-18T10:0${index}:00.000Z`,
+      })
+    ),
+  ),
+);
 assert(
   orderedHtml.indexOf(orderedRefs[0]) < orderedHtml.indexOf(orderedRefs[1]) &&
     orderedHtml.indexOf(orderedRefs[1]) < orderedHtml.indexOf(orderedRefs[2]),
@@ -148,13 +155,12 @@ assert(
 );
 
 const serverCountHtml = readyHtml(response([
-  caseItem("CASE-PROOF-SERVER-COUNT", ["UNREVIEWED_EVIDENCE"], {
-    unresolvedEvidenceCount: 7,
-    evidenceRefs: ["e1000000-0000-4000-8000-000000000001"],
+  caseItem("CASE-PROOF-SERVER-COUNT", ["FACT_REVIEW_REQUIRED"], {
+    unresolvedFactCount: 7,
   }),
 ]));
 assert(
-  serverCountHtml.includes("7 bewijsstukken vragen aandacht"),
+  serverCountHtml.includes("7 gegevens vragen beoordeling"),
   "Q07_server_count_not_reused",
 );
 
@@ -178,7 +184,8 @@ const forbiddenHtml = errorHtml({
 });
 const serverErrorHtml = errorHtml({
   code: "service_unavailable",
-  message: "De dossierwerklijst is tijdelijk niet beschikbaar. Probeer het opnieuw.",
+  message:
+    "De dossierwerklijst is tijdelijk niet beschikbaar. Probeer het opnieuw.",
 });
 assert(
   unauthorizedHtml.includes("Inloggen vereist") &&
@@ -215,7 +222,10 @@ const clientConfig = {
 };
 const firstLoad = await loadEvidenceReviewWorklist(clientConfig);
 const secondLoad = await loadEvidenceReviewWorklist(clientConfig);
-assert(firstLoad.ok && secondLoad.ok && fetchCount === 2, "Q11_refresh_not_refetched");
+assert(
+  firstLoad.ok && secondLoad.ok && fetchCount === 2,
+  "Q11_refresh_not_refetched",
+);
 const headers = new Headers(requestedInit?.headers);
 assert(
   requestedUrl ===
@@ -226,12 +236,17 @@ assert(
   "Q12_authenticated_get_contract_invalid",
 );
 
-for (const [status, code] of [[401, "unauthorized"], [403, "forbidden"]] as const) {
+for (
+  const [status, code] of [[401, "unauthorized"], [403, "forbidden"]] as const
+) {
   const result = await loadEvidenceReviewWorklist({
     ...clientConfig,
     fetchImpl: async () => new Response("{}", { status }),
   });
-  assert(!result.ok && result.error.code === code, `Q13_http_${status}_mapping_invalid`);
+  assert(
+    !result.ok && result.error.code === code,
+    `Q13_http_${status}_mapping_invalid`,
+  );
 }
 const malformedCount = decodeEvidenceReviewWorklistResponse({
   ...response([]),
@@ -276,7 +291,8 @@ const [
 ]);
 assert(
   appSource.includes('path === "/intern/dossiers"') &&
-    pageSource.includes("DashboardRouteGuard") && pageSource.includes("AppHeader") &&
+    pageSource.includes("DashboardRouteGuard") &&
+    pageSource.includes("AppHeader") &&
     !headerSource.includes("/intern/dossiers") &&
     !sidebarSource.includes("/intern/dossiers"),
   "Q15_route_only_boundary_invalid",
@@ -318,7 +334,9 @@ assert(
   orderedHtml.includes("<h1>") && orderedHtml.includes("<h2") &&
     orderedHtml.includes("<h3>") && orderedHtml.includes("<ul") &&
     orderedHtml.includes("<li") &&
-    orderedHtml.includes('aria-label="Dossieracties en redenen voor aandacht"') &&
+    orderedHtml.includes(
+      'aria-label="Dossieracties en redenen voor aandacht"',
+    ) &&
     orderedHtml.includes("Dossier openen") &&
     featureSource.includes("buildEvidenceReviewDetailRoute") &&
     featureSource.includes("event.preventDefault()") &&

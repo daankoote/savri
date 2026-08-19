@@ -606,6 +606,8 @@ const CHECK_LIST = [
     applicablePaths: [
       "supabase/migrations/20260818090000_app_evidence_review_worklist_read.sql",
       "supabase/migrations/20260818210000_app_evidence_review_correction_details.sql",
+      "supabase/migrations/20260819120000_app_evidence_review_worklist_fact_cutover.sql",
+      "supabase/migrations/20260819123000_app_evidence_review_worklist_activity_fix.sql",
       "supabase/functions/_shared/app_evidence_review_worklist.ts",
       "supabase/functions/api-app-evidence-review-worklist/index.ts",
       "scripts/proofs/app-evidence-review-worklist-read.proof.ts",
@@ -1857,9 +1859,12 @@ export const PATH_RULES = Object.freeze([
   Object.freeze({
     id: "evidence-review-worklist-read-migration",
     match: Object.freeze({
-      type: "exact",
-      value:
+      type: "oneOf",
+      value: Object.freeze([
         "supabase/migrations/20260818090000_app_evidence_review_worklist_read.sql",
+        "supabase/migrations/20260819120000_app_evidence_review_worklist_fact_cutover.sql",
+        "supabase/migrations/20260819123000_app_evidence_review_worklist_activity_fix.sql",
+      ]),
     }),
     checks: Object.freeze([
       "migration-or-sql-review",

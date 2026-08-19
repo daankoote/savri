@@ -605,13 +605,14 @@ export function inspectMigrationOmissions({
       });
       return;
     }
-    const otherVersions = inventoriedPaths
+    const committedVersions = trackedCandidates
+      .filter((candidate) => !stagedCandidates.includes(candidate))
       .filter((candidate) =>
         candidate !== path && candidate.startsWith(prefix) &&
         /^[0-9]{14}_/.test(basename(candidate))
       )
       .map((candidate) => basename(candidate).slice(0, 14));
-    const latestVersion = otherVersions.sort().at(-1) ?? null;
+    const latestVersion = committedVersions.sort().at(-1) ?? null;
     if (!isDeclaredBaseline && latestVersion && version <= latestVersion) {
       omissions.push({
         path,

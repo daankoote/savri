@@ -236,6 +236,8 @@ assert(
 const evidenceReviewWorklistLocalService = buildPlan({
   paths: [
     "supabase/migrations/20260818090000_app_evidence_review_worklist_read.sql",
+    "supabase/migrations/20260819120000_app_evidence_review_worklist_fact_cutover.sql",
+    "supabase/migrations/20260819123000_app_evidence_review_worklist_activity_fix.sql",
     "supabase/functions/_shared/app_evidence_review_worklist.ts",
     "supabase/functions/api-app-evidence-review-worklist/index.ts",
     "scripts/proofs/app-evidence-review-worklist-read.proof.ts",
@@ -830,11 +832,17 @@ const tenantProbePath =
 const controlPlaneProbePath =
   `platform/control-plane/supabase/migrations/99991231235959_enval_verify_probe_${process.pid}.sql`;
 const probePaths = [tenantProbePath, controlPlaneProbePath];
+const forwardSeriesPaths = [
+  `supabase/migrations/99991231235957_forward_a_${process.pid}.sql`,
+  `supabase/migrations/99991231235958_forward_b_${process.pid}.sql`,
+];
 const missingProbePaths = [
   `supabase/migrations/99991231235958_missing_${process.pid}.sql`,
   `platform/control-plane/supabase/migrations/99991231235958_missing_${process.pid}.sql`,
 ];
-const probeAbsolutes = probePaths.map((path) => resolve(ROOT, path));
+const probeAbsolutes = [...probePaths, ...forwardSeriesPaths].map((path) =>
+  resolve(ROOT, path)
+);
 assert(probeAbsolutes.every((path) => !existsSync(path)), "migration_probe_preexists");
 const createdProbes = [];
 try {
@@ -942,6 +950,29 @@ try {
       outOfOrderPath,
     ],
   });
+  const simulatedForwardSeries = inspectMigrationOmissions({
+    ignoredPaths: [],
+    untrackedPaths: forwardSeriesPaths,
+    stagedPaths: [],
+    changedPaths: forwardSeriesPaths,
+    inventoryPaths: [
+      VERIFY_MANIFEST.tenantMigrationChain.baseline.path,
+      ...VERIFY_MANIFEST.tenantMigrationChain.forwardTail.map((entry) =>
+        entry.path
+      ),
+      ...forwardSeriesPaths,
+    ],
+  });
+  assert(
+    simulatedForwardSeries.omissions.length === 0 &&
+      simulatedForwardSeries.gitVisibleCandidates.length === 2,
+    `forward_migration_series_rejected:${
+      JSON.stringify({
+        omissions: simulatedForwardSeries.omissions,
+        visible: simulatedForwardSeries.gitVisibleCandidates,
+      })
+    }`,
+  );
   const ambiguousWorkdir = inspectMigrationOmissions({
     ignoredPaths: Object.keys(VERIFY_MANIFEST.migrationBaseline.exceptions),
     untrackedPaths: baselineBefore.gitVisibleCandidates.map((item) => item.path),
@@ -1011,6 +1042,8 @@ try {
         item.path === outOfOrderPath &&
         item.reason === "migration_version_not_forward"
       ) &&
+      simulatedForwardSeries.omissions.length === 0 &&
+      simulatedForwardSeries.gitVisibleCandidates.length === 2 &&
       ambiguousWorkdir.omissions.some((item) =>
         item.reason === "ambiguous_migration_workdir"
       ) &&

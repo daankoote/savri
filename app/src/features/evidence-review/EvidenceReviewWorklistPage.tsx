@@ -1,6 +1,6 @@
 import type {
   EvidenceReviewAttentionReason,
-  EvidenceReviewWorklistCaseV1,
+  EvidenceReviewWorklistCaseV2,
 } from "../../../../supabase/functions/_shared/app_evidence_review_worklist.ts";
 import { useAuth } from "../auth/AuthProvider.tsx";
 import type { EvidenceReviewWorklistSafeError } from "./evidenceReviewWorklistClient.ts";
@@ -21,17 +21,13 @@ const REASON_PRESENTATION: Record<
   EvidenceReviewAttentionReason,
   Readonly<{ label: string; className: string }>
 > = {
-  UNREVIEWED_EVIDENCE: {
-    label: "Bewijs nog te beoordelen",
+  FACT_REVIEW_REQUIRED: {
+    label: "Factbeoordeling nodig",
     className: "status-pill-warning",
   },
-  CORRECTION_REQUIRED: {
-    label: "Correctie nodig",
+  REVIEW_MODEL_UNAVAILABLE: {
+    label: "Beoordelingsmodel niet beschikbaar",
     className: "status-pill-danger",
-  },
-  NEW_EVIDENCE_VERSION_AFTER_REVIEW: {
-    label: "Nieuwe versie ontvangen",
-    className: "status-pill-warning",
   },
 };
 
@@ -44,15 +40,20 @@ function formatServerDateTime(value: string): string {
   }).format(parsed);
 }
 
-function unresolvedEvidenceLabel(count: number): string {
-  return `${count} ${count === 1 ? "bewijsstuk vraagt" : "bewijsstukken vragen"} aandacht`;
+function unresolvedFactLabel(item: EvidenceReviewWorklistCaseV2): string {
+  if (item.queueState === "REVIEW_MODEL_UNAVAILABLE") {
+    return "Aantal te beoordelen gegevens niet beschikbaar";
+  }
+  return `${item.unresolvedFactCount} ${
+    item.unresolvedFactCount === 1 ? "gegeven vraagt" : "gegevens vragen"
+  } beoordeling`;
 }
 
 function EvidenceReviewCaseRow({
   item,
   onOpenCase,
 }: Readonly<{
-  item: EvidenceReviewWorklistCaseV1;
+  item: EvidenceReviewWorklistCaseV2;
   onOpenCase: (caseRef: string) => void;
 }>) {
   const detailRoute = buildEvidenceReviewDetailRoute(item.caseRef);
@@ -61,11 +62,18 @@ function EvidenceReviewCaseRow({
       <div>
         <h3>{item.caseRef}</h3>
         <p>Dossierstatus: ingediend voor beoordeling</p>
-        <p><strong>{unresolvedEvidenceLabel(item.unresolvedEvidenceCount)}</strong></p>
-        <p>Laatst bijgewerkt: {formatServerDateTime(item.latestReviewActivityAt)}</p>
+        <p>
+          <strong>{unresolvedFactLabel(item)}</strong>
+        </p>
+        <p>
+          Laatst bijgewerkt: {formatServerDateTime(item.latestReviewActivityAt)}
+        </p>
       </div>
-      <div className="portal-row-actions" aria-label="Dossieracties en redenen voor aandacht">
-        {item.attentionReasons.map((reason) => {
+      <div
+        className="portal-row-actions"
+        aria-label="Dossieracties en redenen voor aandacht"
+      >
+        {item.reviewAttentionReasons.map((reason) => {
           const presentation = REASON_PRESENTATION[reason];
           return (
             <span
@@ -172,14 +180,22 @@ export function EvidenceReviewWorklistContent({
         </button>
       </header>
 
-      <section className="portal-card-compact" aria-labelledby="review-cases-title">
+      <section
+        className="portal-card-compact"
+        aria-labelledby="review-cases-title"
+      >
         <div>
           <h2 id="review-cases-title">Toegewezen dossiers</h2>
-          <p>Bewijsaandacht afgeleid door de server voor uw exacte dossierscope.</p>
+          <p>
+            Factbeoordeling afgeleid door de server voor uw exacte dossierscope.
+          </p>
         </div>
         {value.cases.length > 0
           ? (
-            <ul className="portal-row-list" aria-label="Dossiers met bewijsaandacht">
+            <ul
+              className="portal-row-list"
+              aria-label="Dossiers met factbeoordeling"
+            >
               {value.cases.map((item) => (
                 <EvidenceReviewCaseRow
                   item={item}
@@ -207,7 +223,9 @@ export function EvidenceReviewWorklistPageContent({
   navigate,
 }: Readonly<{ navigate: AppNavigate }>) {
   const auth = useAuth();
-  const worklist = useEvidenceReviewWorklist(auth.session?.access_token ?? null);
+  const worklist = useEvidenceReviewWorklist(
+    auth.session?.access_token ?? null,
+  );
   return (
     <EvidenceReviewWorklistContent
       onOpenCase={(caseRef) => {
