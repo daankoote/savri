@@ -11,9 +11,11 @@ import type { EvidenceReviewOverallStatus } from "../../../../supabase/functions
 import { useAuth } from "../auth/AuthProvider.tsx";
 import {
   type EvidenceFactReviewRoundFinalizeCall,
+  type EvidenceReviewCorrectionPublishCall,
   finalizeEvidenceFactReviewRound,
   type EvidenceReviewDetailSafeError,
   loadEvidenceReviewPreview,
+  publishEvidenceReviewCorrection,
 } from "./evidenceReviewDetailClient.ts";
 import {
   type EvidenceReviewPreviewLoader,
@@ -27,6 +29,7 @@ import {
   type EvidenceFactReviewDraftDecision,
   useEvidenceFactReviewDraft,
 } from "./useEvidenceFactReviewDraft.ts";
+import { useEvidenceCorrectionPublish } from "./useEvidenceCorrectionPublish.ts";
 
 type EvidenceReviewCaseDetailContentProps = Readonly<{
   caseRef: string;
@@ -34,6 +37,7 @@ type EvidenceReviewCaseDetailContentProps = Readonly<{
   onBack: () => void;
   loadPreview: EvidenceReviewPreviewLoader;
   finalizeReview: EvidenceFactReviewRoundFinalizeCall;
+  publishCorrection: EvidenceReviewCorrectionPublishCall;
   onRefresh: () => void;
 }>;
 
@@ -392,9 +396,6 @@ function EvidenceReviewSection({
           <p>Geüpload op {formatServerDateTime(evidence.uploadedAt)}</p>
         </div>
         <div className="portal-row-actions">
-          <span className="status-pill status-pill-warning">
-            {evidence.reviewStatus}
-          </span>
           <button
             className="button button-secondary button-compact"
             aria-expanded={open}
@@ -455,10 +456,16 @@ export function EvidenceReviewCaseDetailContent({
   loadPreview,
   onBack,
   onRefresh,
+  publishCorrection,
   state,
 }: EvidenceReviewCaseDetailContentProps) {
   const detail = state.status === "ready" ? state.value : null;
   const review = useEvidenceFactReviewDraft(detail, finalizeReview, onRefresh);
+  const correctionPublish = useEvidenceCorrectionPublish(
+    detail,
+    publishCorrection,
+    onRefresh,
+  );
   if (state.status === "loading") {
     return (
       <div className="portal-content-stack">
@@ -603,6 +610,57 @@ export function EvidenceReviewCaseDetailContent({
           </div>
         )
         : null}
+      {correctionPublish.eligible || correctionPublish.state.notice
+        ? (
+          <div className="evidence-review-final-action">
+            {correctionPublish.state.notice
+              ? <p role="status">{correctionPublish.state.notice}</p>
+              : null}
+            {correctionPublish.state.error
+              ? (
+                <p className="field-message" role="alert">
+                  {correctionPublish.state.error}
+                </p>
+              )
+              : null}
+            {correctionPublish.eligible
+              ? correctionPublish.state.confirmationOpen
+                ? (
+                  <div className="evidence-review-final-confirmation">
+                    <p>Correcties naar klant sturen?</p>
+                    <div className="section-actions">
+                      <button
+                        className="button button-primary button-compact"
+                        disabled={correctionPublish.state.submitting}
+                        onClick={() => void correctionPublish.confirm()}
+                        type="button"
+                      >
+                        Ja, sturen
+                      </button>
+                      <button
+                        className="button button-secondary button-compact"
+                        disabled={correctionPublish.state.submitting}
+                        onClick={correctionPublish.cancelConfirmation}
+                        type="button"
+                      >
+                        Annuleren
+                      </button>
+                    </div>
+                  </div>
+                )
+                : (
+                  <button
+                    className="button button-primary"
+                    onClick={correctionPublish.openConfirmation}
+                    type="button"
+                  >
+                    Naar klant sturen
+                  </button>
+                )
+              : null}
+          </div>
+        )
+        : null}
     </div>
   );
 }
@@ -633,6 +691,15 @@ export function EvidenceReviewCaseDetailPageContent({
       }),
     [accessToken],
   );
+  const publishCorrection = useCallback<EvidenceReviewCorrectionPublishCall>(
+    ({ idempotencyKey, request }) =>
+      publishEvidenceReviewCorrection({
+        accessToken: accessToken ?? "",
+        idempotencyKey,
+        request,
+      }),
+    [accessToken],
+  );
   return (
     <EvidenceReviewCaseDetailContent
       caseRef={caseRef}
@@ -640,6 +707,7 @@ export function EvidenceReviewCaseDetailPageContent({
       loadPreview={previewLoader}
       onBack={onBack}
       onRefresh={detail.refresh}
+      publishCorrection={publishCorrection}
       state={detail.state}
     />
   );

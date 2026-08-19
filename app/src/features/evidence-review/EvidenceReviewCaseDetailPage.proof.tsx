@@ -12,12 +12,14 @@ import {
 } from "./EvidenceReviewCaseDetailPage.tsx";
 import {
   decodeEvidenceReviewCaseDetailResponse,
+  type EvidenceReviewCorrectionPublishCall,
   type EvidenceFactReviewRoundFinalizeCall,
   type EvidenceFactReviewRoundFinalizeRequest,
   finalizeEvidenceFactReviewRound,
   type EvidenceReviewDetailSafeError,
   loadEvidenceReviewCaseDetail,
   loadEvidenceReviewPreview,
+  publishEvidenceReviewCorrection,
 } from "./evidenceReviewDetailClient.ts";
 import {
   createEvidenceReviewPreviewSession,
@@ -32,6 +34,11 @@ import {
   reduceEvidenceFactReviewDraft,
   selectEvidenceFactReviewFinalizeAttempt,
 } from "./useEvidenceFactReviewDraft.ts";
+import {
+  canPublishEvidenceCorrection,
+  createEvidenceCorrectionPublishSession,
+  type EvidenceCorrectionPublishState,
+} from "./useEvidenceCorrectionPublish.ts";
 import {
   buildEvidenceReviewDetailRoute,
   parseEvidenceReviewDetailRoute,
@@ -48,6 +55,10 @@ function assert(condition: boolean, code: string): asserts condition {
   if (!condition) throw new ProofFailure(code);
 }
 
+function last<T>(values: readonly T[]): T | undefined {
+  return values[values.length - 1];
+}
+
 const root = new URL("../../../../", import.meta.url);
 const source = (path: string) => Deno.readTextFile(new URL(path, root));
 const CASE_REF = "CASE-7E4CC75CD19F";
@@ -55,6 +66,10 @@ const ENERGY_VERSION = "e8000000-0000-4000-8000-000000000001";
 const INSTALLATION_VERSION = "e8000000-0000-4000-8000-000000000002";
 const noop = () => undefined;
 const noFinalize: EvidenceFactReviewRoundFinalizeCall = async () => ({
+  ok: false,
+  kind: "ordinary",
+});
+const noPublish: EvidenceReviewCorrectionPublishCall = async () => ({
   ok: false,
   kind: "ordinary",
 });
@@ -77,12 +92,13 @@ function evidence(
 }
 
 const FIXTURE: EvidenceReviewCaseDetailResponseV1 = {
-  schemaVersion: "evidence-review-case-detail-v4",
+  schemaVersion: "evidence-review-case-detail-v5",
   asOf: "2026-08-18T12:00:00.000Z",
   case: {
     caseRef: CASE_REF,
     lifecycle: "submitted_for_review",
     canDecide: true,
+    canPublishCorrection: false,
     partyDisplayName: "Pilotnaam",
     partyDisplayNameTruth: "DECLARED",
     deliveryAddress: "Pilotadres",
@@ -181,6 +197,7 @@ function detailHtml(
       loadPreview={previewSuccess}
       onBack={noop}
       onRefresh={noop}
+      publishCorrection={noPublish}
       state={state}
     />,
   );
@@ -222,7 +239,9 @@ assert(
     readyHtml.includes("ENVAL beoordelen") &&
     readyHtml.includes("Ingediend voor beoordeling") &&
     readyHtml.split("Document bekijken").length - 1 === 2 &&
-    readyHtml.split(">PENDING<").length - 1 === 2 &&
+    !readyHtml.includes(">PENDING<") &&
+    !readyHtml.includes(">ACCEPTED<") &&
+    !readyHtml.includes(">CORRECTION_REQUIRED<") &&
     readyHtml.split('role="columnheader"').length - 1 === 10 &&
     !readyHtml.includes("Aangegeven dossiercontext") &&
     !readyHtml.includes(">Bewijsstukken<") &&
@@ -285,6 +304,38 @@ const finalizedHtml = detailHtml({
   value: finalizedFixture,
   error: null,
 });
+const publishEligibleFixture: EvidenceReviewCaseDetailResponseV1 = {
+  ...finalizedFixture,
+  case: { ...finalizedFixture.case, canPublishCorrection: true },
+};
+const publishEligibleHtml = detailHtml({
+  status: "ready",
+  value: publishEligibleFixture,
+  error: null,
+});
+const waitingHtml = detailHtml({
+  status: "ready",
+  value: { ...publishEligibleFixture, overallReviewStatus: "WAITING_CUSTOMER" },
+  error: null,
+});
+const completeHtml = detailHtml({
+  status: "ready",
+  value: {
+    ...publishEligibleFixture,
+    overallReviewStatus: "REVIEW_COMPLETE",
+    currentReviewRound: {
+      ...publishEligibleFixture.currentReviewRound!,
+      outcome: "ALL_FACTS_ACCEPTED",
+      decisions: publishEligibleFixture.currentReviewRound!.decisions.map(
+        (decision) => ({
+          subjectRef: decision.subjectRef,
+          disposition: "ACCEPTED" as const,
+        }),
+      ),
+    },
+  },
+  error: null,
+});
 assert(
   !viewOnlyHtml.includes(">Accepteren<") &&
     !viewOnlyHtml.includes(">Correctie<") &&
@@ -298,6 +349,26 @@ assert(
     finalizedHtml.includes("Correctie nodig") &&
     !finalizedHtml.includes("Correcties nodig"),
   "Q06a_view_only_or_finalized_rendering_invalid",
+);
+assert(
+  publishEligibleHtml.includes(">Naar klant sturen<") &&
+    !finalizedHtml.includes(">Naar klant sturen<") &&
+    !waitingHtml.includes(">Naar klant sturen<") &&
+    waitingHtml.includes("Wacht op klant") &&
+    !completeHtml.includes(">Naar klant sturen<") &&
+    !readyHtml.includes(">Naar klant sturen<") &&
+    canPublishEvidenceCorrection(publishEligibleFixture) &&
+    !canPublishEvidenceCorrection(finalizedFixture) &&
+    !canPublishEvidenceCorrection({
+      ...publishEligibleFixture,
+      overallReviewStatus: "WAITING_CUSTOMER",
+    }) &&
+    !canPublishEvidenceCorrection({
+      ...publishEligibleFixture,
+      overallReviewStatus: "REVIEW_COMPLETE",
+    }) &&
+    !canPublishEvidenceCorrection(FIXTURE),
+  "Q06b_publish_affordance_or_status_visibility_invalid",
 );
 
 const unauthorizedHtml = detailHtml({
@@ -378,6 +449,190 @@ assert(
     detailHeaders.get("apikey") === "proof-anon-key",
   "Q08_exact_single_detail_get_invalid",
 );
+
+let publishPosts = 0;
+let publishUrl = "";
+let publishInit: RequestInit | undefined;
+const publishResult = await publishEvidenceReviewCorrection({
+  accessToken: "proof-access-token",
+  idempotencyKey: "review20-publish-attempt",
+  request: {
+    caseRef: CASE_REF,
+    roundRef: publishEligibleFixture.currentReviewRound!.roundRef,
+  },
+  runtimeConfig: {
+    anonKey: "proof-anon-key",
+    apiBaseUrl: "https://local-proof.invalid/functions/v1",
+  },
+  fetchImpl: async (input, init) => {
+    publishPosts += 1;
+    publishUrl = String(input);
+    publishInit = init;
+    return new Response(JSON.stringify({
+      schemaVersion: "evidence-review-correction-publish-v1",
+      result: "PUBLISHED",
+      caseRef: CASE_REF,
+      roundRef: publishEligibleFixture.currentReviewRound!.roundRef,
+      handoffRef: "CRH-0123456789ABCDEF",
+      publishedAt: "2026-08-19T12:00:00.000Z",
+    }), { status: 201 });
+  },
+});
+const publishHeaders = new Headers(publishInit?.headers);
+const publishBody = JSON.parse(String(publishInit?.body));
+assert(
+  publishResult.ok && publishResult.result === "PUBLISHED" &&
+    publishPosts === 1 &&
+    publishUrl.endsWith("/api-app-evidence-review-correction-publish") &&
+    publishInit?.method === "POST" &&
+    publishHeaders.get("authorization") === "Bearer proof-access-token" &&
+    publishHeaders.get("apikey") === "proof-anon-key" &&
+    publishHeaders.get("idempotency-key") === "review20-publish-attempt" &&
+    Object.keys(publishBody).sort().join("|") === "caseRef|roundRef" &&
+    publishBody.caseRef === CASE_REF &&
+    publishBody.roundRef === publishEligibleFixture.currentReviewRound!.roundRef,
+  "Q08c_publish_client_contract_invalid",
+);
+const publishFailureConfig = {
+  accessToken: "proof-access-token",
+  idempotencyKey: "review20-publish-failure",
+  request: {
+    caseRef: CASE_REF,
+    roundRef: publishEligibleFixture.currentReviewRound!.roundRef,
+  },
+  runtimeConfig: {
+    anonKey: "proof-anon-key",
+    apiBaseUrl: "https://local-proof.invalid/functions/v1",
+  },
+};
+const staleClientResult = await publishEvidenceReviewCorrection({
+  ...publishFailureConfig,
+  fetchImpl: async () =>
+    new Response(JSON.stringify({ code: "stale_review_round" }), {
+      status: 409,
+    }),
+});
+const ordinaryConflictResult = await publishEvidenceReviewCorrection({
+  ...publishFailureConfig,
+  fetchImpl: async () =>
+    new Response(JSON.stringify({ code: "customer_context_unavailable" }), {
+      status: 409,
+    }),
+});
+assert(
+  !staleClientResult.ok && staleClientResult.kind === "stale" &&
+    !ordinaryConflictResult.ok && ordinaryConflictResult.kind === "ordinary",
+  "Q08c_publish_conflict_classification_invalid",
+);
+
+let releasePublish: (
+  result: Awaited<ReturnType<EvidenceReviewCorrectionPublishCall>>,
+) => void = () => {
+  throw new ProofFailure("publish_release_not_initialized");
+};
+let sessionPosts = 0;
+let refreshes = 0;
+let createdKeys = 0;
+let sentRequest: unknown = null;
+const sessionStates: EvidenceCorrectionPublishState[] = [];
+const publishSession = createEvidenceCorrectionPublishSession({
+  send: async (input) => {
+    sessionPosts += 1;
+    sentRequest = input;
+    return await new Promise((resolve) => {
+      releasePublish = resolve;
+    });
+  },
+  refresh: () => refreshes += 1,
+  publish: (state) => sessionStates.push(state),
+  createIdempotencyKey: () => {
+    createdKeys += 1;
+    return "review20-memory-only-key";
+  },
+});
+publishSession.updateDetail(publishEligibleFixture);
+publishSession.openConfirmation();
+assert(
+  sessionPosts === 0 && last(sessionStates)?.confirmationOpen === true,
+  "Q08d_first_click_wrote_or_confirmation_missing",
+);
+publishSession.cancelConfirmation();
+assert(
+  sessionPosts === 0 && last(sessionStates)?.confirmationOpen === false,
+  "Q08e_cancel_wrote_or_did_not_close",
+);
+publishSession.openConfirmation();
+const firstPublish = publishSession.confirm();
+const duplicatePublish = publishSession.confirm();
+await Promise.resolve();
+assert(
+  Number(sessionPosts) === 1 && Number(createdKeys) === 1 &&
+    last(sessionStates)?.submitting === true,
+  "Q08f_double_submit_not_blocked",
+);
+releasePublish({ ok: true, result: "PUBLISHED" });
+await Promise.all([firstPublish, duplicatePublish]);
+assert(
+  Number(refreshes) === 1 && Number(sessionPosts) === 1 &&
+    JSON.stringify(sentRequest) === JSON.stringify({
+      request: {
+        caseRef: CASE_REF,
+        roundRef: publishEligibleFixture.currentReviewRound!.roundRef,
+      },
+      idempotencyKey: "review20-memory-only-key",
+    }) &&
+    !JSON.stringify(sentRequest).match(
+      /customer|reviewer|capability|correctionReason|correctionInstruction|tenant|timestamp/,
+    ),
+  "Q08g_publish_session_payload_or_refresh_invalid",
+);
+publishSession.dispose();
+
+let ordinaryRefreshes = 0;
+const ordinaryKeys: string[] = [];
+const ordinaryStates: EvidenceCorrectionPublishState[] = [];
+const ordinarySession = createEvidenceCorrectionPublishSession({
+  send: async (input) => {
+    ordinaryKeys.push(input.idempotencyKey);
+    return { ok: false, kind: "ordinary" };
+  },
+  refresh: () => ordinaryRefreshes += 1,
+  publish: (state) => ordinaryStates.push(state),
+  createIdempotencyKey: () => "review20-retry-key",
+});
+ordinarySession.updateDetail(publishEligibleFixture);
+ordinarySession.openConfirmation();
+await ordinarySession.confirm();
+await ordinarySession.confirm();
+assert(
+  Number(ordinaryRefreshes) === 0 && ordinaryKeys.join("|") ===
+      "review20-retry-key|review20-retry-key" &&
+    last(ordinaryStates)?.confirmationOpen === true &&
+    last(ordinaryStates)?.submitting === false &&
+    last(ordinaryStates)?.error ===
+      "Naar klant sturen is niet gelukt. Probeer het opnieuw.",
+  "Q08h_ordinary_failure_or_retry_identity_invalid",
+);
+ordinarySession.dispose();
+
+let staleRefreshes = 0;
+const stalePublishStates: EvidenceCorrectionPublishState[] = [];
+const stalePublishSession = createEvidenceCorrectionPublishSession({
+  send: async () => ({ ok: false, kind: "stale" }),
+  refresh: () => staleRefreshes += 1,
+  publish: (state) => stalePublishStates.push(state),
+});
+stalePublishSession.updateDetail(publishEligibleFixture);
+stalePublishSession.openConfirmation();
+await stalePublishSession.confirm();
+assert(
+  Number(staleRefreshes) === 1 &&
+    last(stalePublishStates)?.notice ===
+      "Dossier is gewijzigd. Controleer opnieuw." &&
+    last(stalePublishStates)?.confirmationOpen === false,
+  "Q08i_stale_publish_recovery_invalid",
+);
+stalePublishSession.dispose();
 
 let dedupedFetches = 0;
 let releaseDedupedFetch: () => void = () => {
@@ -871,6 +1126,10 @@ assert(
     }).ok &&
     !decodeEvidenceReviewCaseDetailResponse({
       ...FIXTURE,
+      case: { ...FIXTURE.case, canPublishCorrection: "true" },
+    }).ok &&
+    !decodeEvidenceReviewCaseDetailResponse({
+      ...FIXTURE,
       evidence: [{ ...FIXTURE.evidence[0], reviewStatus: "APPROVED" }],
     }).ok &&
     !decodeEvidenceReviewCaseDetailResponse({
@@ -909,6 +1168,7 @@ const [
   detailClientSource,
   detailHookSource,
   factDraftSource,
+  correctionPublishHookSource,
   detailSource,
   previewPaneSource,
   pageSource,
@@ -918,6 +1178,8 @@ const [
   detailEndpointSource,
   previewEndpointSource,
   finalizeEndpointSource,
+  publishEndpointSource,
+  customerHandoffEndpointSource,
 ] = await Promise.all([
   source("app/src/App.tsx"),
   source("app/src/features/evidence-review/evidenceReviewRoutes.ts"),
@@ -927,6 +1189,7 @@ const [
   source("app/src/features/evidence-review/evidenceReviewDetailClient.ts"),
   source("app/src/features/evidence-review/useEvidenceReviewCaseDetail.ts"),
   source("app/src/features/evidence-review/useEvidenceFactReviewDraft.ts"),
+  source("app/src/features/evidence-review/useEvidenceCorrectionPublish.ts"),
   source("app/src/features/evidence-review/EvidenceReviewCaseDetailPage.tsx"),
   source("app/src/features/evidence-review/EvidenceReviewPreviewPane.tsx"),
   source("app/src/pages/EvidenceReviewCaseDetailPage.tsx"),
@@ -936,6 +1199,8 @@ const [
   source("supabase/functions/api-app-evidence-review-case-detail/index.ts"),
   source("supabase/functions/api-app-evidence-review-preview/index.ts"),
   source("supabase/functions/api-app-evidence-review-round-finalize/index.ts"),
+  source("supabase/functions/api-app-evidence-review-correction-publish/index.ts"),
+  source("supabase/functions/api-app-customer-correction-handoff/index.ts"),
 ]);
 assert(
   appSource.includes("parseEvidenceReviewDetailRoute(path)") &&
@@ -953,12 +1218,17 @@ assert(
     detailClientSource.includes("api-app-evidence-review-case-detail") &&
     detailClientSource.includes("api-app-evidence-review-preview") &&
     detailClientSource.includes("api-app-evidence-review-round-finalize") &&
+    detailClientSource.includes(
+      "api-app-evidence-review-correction-publish",
+    ) &&
     detailHookSource.split("loadEvidenceReviewCaseDetail(config)").length -
           1 === 1 &&
     detailHookSource.includes("IN_FLIGHT_DETAIL_READS") &&
     detailHookSource.includes("loadEvidenceReviewCaseDetailOnce") &&
     !detailHookSource.includes("setInterval") &&
-    !detailHookSource.includes("setTimeout"),
+    !detailHookSource.includes("setTimeout") &&
+    !correctionPublishHookSource.includes("setInterval") &&
+    !correctionPublishHookSource.includes("setTimeout"),
   "Q15_one_load_no_polling_or_navigation_invalid",
 );
 assert(
@@ -992,14 +1262,24 @@ assert(
   "Q16_per_evidence_memory_preview_lifecycle_invalid",
 );
 assert(
-  [detailClientSource, detailHookSource, factDraftSource, detailSource, pageSource].every((
+  [
+    detailClientSource,
+    detailHookSource,
+    factDraftSource,
+    correctionPublishHookSource,
+    detailSource,
+    pageSource,
+  ].every((
     value,
   ) =>
     !/(role\s*===|email\s*===|caseOwner|case_owner|workforceId|workforce_id|tenantId|tenant_id)/
       .test(value)
   ) &&
-    detailEndpointSource.includes("app_evidence_review_case_detail_read_v6") &&
+    detailEndpointSource.includes("app_evidence_review_case_detail_read_v7") &&
     finalizeEndpointSource.includes("app_evidence_review_round_finalize_v1") &&
+    publishEndpointSource.includes(
+      "app_evidence_review_correction_publish_v1",
+    ) &&
     previewEndpointSource.includes(
       "app_evidence_review_preview_source_read_v1",
     ) &&
@@ -1030,6 +1310,10 @@ assert(
 );
 assert(
   !detailSource.includes("evidence.review.decide") &&
+    !detailSource.includes("evidence.review.correction.publish") &&
+    !correctionPublishHookSource.includes("evidence.review.correction.publish") &&
+    !correctionPublishHookSource.includes("canDecide") &&
+    !correctionPublishHookSource.includes("email") &&
     !previewPaneSource.includes("evidence.review.decide") &&
     !detailSource.includes("CheckExecution") &&
     !detailSource.includes("parser") &&
@@ -1059,6 +1343,10 @@ assert(
     detailSource.includes("Correctie nodig") &&
     detailSource.includes("Wacht op klant") &&
     detailSource.includes("Afgerond") &&
+    detailSource.includes("Naar klant sturen") &&
+    detailSource.includes("Correcties naar klant sturen?") &&
+    detailSource.includes("Ja, sturen") &&
+    !detailSource.includes("{evidence.reviewStatus}") &&
     !detailSource.includes("Correcties nodig") &&
     factDraftSource.includes("reviewerSuggestion === \"ACCEPT\"") &&
     factDraftSource.includes("Dossier is gewijzigd. Controleer opnieuw.") &&
@@ -1067,6 +1355,19 @@ assert(
     !factDraftSource.includes("fetch(") &&
     !factDraftSource.includes("setInterval") &&
     !factDraftSource.includes("setTimeout") &&
+    correctionPublishHookSource.includes("canPublishCorrection") &&
+    correctionPublishHookSource.includes(
+      "Dossier is gewijzigd. Controleer opnieuw.",
+    ) &&
+    correctionPublishHookSource.includes("idempotencyKey") &&
+    correctionPublishHookSource.includes("dependencies.refresh()") &&
+    !correctionPublishHookSource.includes("fetch(") &&
+    !correctionPublishHookSource.includes("localStorage") &&
+    !correctionPublishHookSource.includes("sessionStorage") &&
+    !detailClientSource.includes("api-app-customer-correction-handoff") &&
+    customerHandoffEndpointSource.includes(
+      "app_customer_correction_handoff_read_v1",
+    ) &&
     !detailClientSource.includes("api-app-evidence-review-decision") &&
     !detailSource.includes("api-app-evidence-review-decision") &&
     !factDraftSource.includes("api-app-evidence-review-decision"),

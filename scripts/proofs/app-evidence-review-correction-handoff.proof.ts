@@ -20,8 +20,10 @@ const CONTAINER = "supabase_db_enval";
 const ACTIVE_DATABASE = "postgres";
 const DATABASE = `enval_review19_proof_${crypto.randomUUID().replaceAll("-", "")}`;
 const DUMP_FILE = `/tmp/${DATABASE}.dump`;
-const MIGRATION =
+const FOUNDATION_MIGRATION =
   "supabase/migrations/20260819190000_app_evidence_review_correction_handoff.sql";
+const PUBLICATION_TARGET_FIX_MIGRATION =
+  "supabase/migrations/20260819220000_app_evidence_review_correction_publication_target_fix.sql";
 const PILOT_CASE_REF = "CASE-7E4CC75CD19F";
 const CASE_REF = `CASE-${crypto.randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase()}`;
 const ROUND_REF = "e1000000-0000-4000-8000-000000000001";
@@ -32,6 +34,9 @@ const OTHER_CASE = "e4000000-0000-4000-8000-000000000001";
 const HASH = "a".repeat(64);
 const STALE_HASH = "b".repeat(64);
 const EXPIRES = "2030-01-01T00:00:00Z";
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const HANDOFF_REFERENCE_RE = /^CRH-[0-9A-F]{16}$/;
 
 type CommandResult = { code: number; stdout: string; stderr: string };
 class ProofFailure extends Error {}
@@ -48,6 +53,11 @@ function scrub(value: string): string {
     .replaceAll(/[A-Z0-9._%+-]+@[A-Z0-9.-]+/gi, "[address]")
     .replaceAll(/\s+/g, " ")
     .slice(0, 600);
+}
+
+function isTimestamp(value: unknown): boolean {
+  return typeof value === "string" && value.length <= 40 &&
+    Number.isFinite(Date.parse(value));
 }
 
 async function command(
@@ -154,7 +164,10 @@ async function body(response: Response): Promise<JsonObject> {
 }
 
 async function endpointProof(): Promise<void> {
-  const migration = await Deno.readTextFile(MIGRATION);
+  const migration = await Deno.readTextFile(FOUNDATION_MIGRATION);
+  const publicationTargetFix = await Deno.readTextFile(
+    PUBLICATION_TARGET_FIX_MIGRATION,
+  );
   assert(
     migration.includes("evidence.review.correction.publish") &&
       migration.includes("app_evidence_review_correction_handoffs") &&
@@ -170,6 +183,26 @@ async function endpointProof(): Promise<void> {
       migration.includes("app_customer_access_grants") &&
       !migration.includes("email_normalized"),
     "migration_boundary_missing",
+  );
+  assert(
+    publicationTargetFix.includes(
+      "create or replace function public.app_evidence_review_correction_publish_v1",
+    ) &&
+      publicationTargetFix.includes(
+        "customer_row.id = v_case.customer_id",
+      ) &&
+      publicationTargetFix.includes("customer_row.status = 'active'") &&
+      publicationTargetFix.includes(
+        "access_grant.customer_id <> v_case.customer_id",
+      ) &&
+      publicationTargetFix.includes(
+        "A current Auth\n  -- grant is separate read authority",
+      ) &&
+      !publicationTargetFix.includes("email_normalized") &&
+      !publicationTargetFix.includes(
+        "access_grant.customer_id = v_case.customer_id",
+      ),
+    "publication_target_not_separated_from_read_authority",
   );
 
   assert(
@@ -387,6 +420,139 @@ async function activeFingerprint(): Promise<string> {
     ); rollback;`);
 }
 
+async function activePilotHandoffProof(): Promise<void> {
+  const output = await psql(ACTIVE_DATABASE, `begin read only;
+    with target as (
+      select case_row.*,
+        public.app_evidence_fact_review_manifest_v1(case_row.id) manifest
+      from public.app_cases case_row
+      where case_row.case_reference='${PILOT_CASE_REF}'
+    ), current_round as (
+      select round_row.*
+      from public.app_evidence_review_rounds round_row
+      join target on target.id=round_row.case_id
+      where round_row.manifest_version=target.manifest->>'manifest_version'
+        and round_row.manifest_hash=target.manifest->>'manifest_hash'
+    ), handoff as (
+      select handoff_row.*
+      from public.app_evidence_review_correction_handoffs handoff_row
+      join target on target.id=handoff_row.case_id
+    ), items as (
+      select item
+      from handoff
+      cross join lateral jsonb_array_elements(
+        handoff.correction_bundle->'items'
+      ) item
+    ), first_admin as (
+      select identity_row.auth_user_id
+      from public.app_workforce_identities identity_row
+      join lateral (
+        select state.state
+        from public.app_workforce_identity_states state
+        where state.workforce_identity_id=identity_row.id
+        order by state.effective_at desc,state.recorded_at desc limit 1
+      ) active_state on active_state.state='active'
+      join lateral (
+        select seniority.seniority
+        from public.app_workforce_seniority_assignments seniority
+        where seniority.workforce_identity_id=identity_row.id
+        order by seniority.effective_at desc,seniority.recorded_at desc limit 1
+      ) admin_seniority on admin_seniority.seniority='admin'
+      order by identity_row.created_at,identity_row.id limit 1
+    )
+    select jsonb_build_object(
+      'handoff_count',(select count(*) from handoff),
+      'handoff_ref',(select handoff_reference from handoff),
+      'round_ref',(select round_id from handoff),
+      'published_at',(select published_at from handoff),
+      'bundle_hash_valid',(select bundle_sha256~'^[0-9a-f]{64}$'
+        and bundle_sha256=encode(
+          extensions.digest(correction_bundle::text,'sha256'),'hex'
+        ) from handoff),
+      'customer_binding_valid',(select handoff.target_customer_id=target.customer_id
+        and customer.status='active'
+        from handoff,target
+        join public.app_customers customer on customer.id=target.customer_id),
+      'overall_status',(select public.app_evidence_review_overall_status_v1(
+        target.id,target.manifest->>'manifest_version',
+        target.manifest->>'manifest_hash'
+      ) from target),
+      'item_count',(select count(*) from items),
+      'document_label',(select item#>>'{customer_safe,document_label}' from items),
+      'fact_label',(select item#>>'{customer_safe,fact_label}' from items),
+      'reason',(select item#>>'{customer_safe,correction_reason}' from items),
+      'instruction',(select item#>>'{customer_safe,correction_instruction}' from items),
+      'accepted_items',(select count(*)
+        from public.app_evidence_review_round_subject_decisions decision
+        join handoff on handoff.round_id=decision.round_id
+        where decision.disposition='ACCEPTED'
+          and exists (select 1 from items where items.item->>'subject_ref'=decision.subject_ref)),
+      'fact_round_count',(select count(*) from current_round),
+      'decision_count',(select count(*)
+        from public.app_evidence_review_round_subject_decisions decision
+        join current_round on current_round.id=decision.round_id),
+      'accepted_count',(select count(*)
+        from public.app_evidence_review_round_subject_decisions decision
+        join current_round on current_round.id=decision.round_id
+        where decision.disposition='ACCEPTED'),
+      'correction_count',(select count(*)
+        from public.app_evidence_review_round_subject_decisions decision
+        join current_round on current_round.id=decision.round_id
+        where decision.disposition='CORRECTION_REQUIRED'),
+      'legacy_decision_count',(select count(*)
+        from public.app_evidence_review_decisions decision,target
+        where decision.case_id=target.id),
+      'access_grant_count',(select count(*)
+        from public.app_customer_access_grants access_grant,target
+        where access_grant.customer_id=target.customer_id),
+      'bound_auth_count',(select count(*)
+        from public.app_customer_identities identity_row,target
+        where identity_row.customer_id=target.customer_id
+          and identity_row.status='active'
+          and identity_row.auth_user_id is not null),
+      'customer_read_code',(select public.app_customer_correction_handoff_read_v1(
+        first_admin.auth_user_id,target.case_reference
+      )->>'code' from first_admin,target),
+      'lifecycle_state',(select lifecycle.lifecycle_state
+        from public.app_case_lifecycle_events lifecycle,target
+        where lifecycle.case_id=target.id
+        order by lifecycle.event_at desc,lifecycle.id desc limit 1),
+      'active_worklist_member',(select public.app_evidence_review_overall_status_v1(
+        target.id,target.manifest->>'manifest_version',
+        target.manifest->>'manifest_hash'
+      ) in ('TO_REVIEW','REVIEW_MODEL_UNAVAILABLE') from target)
+    )::text;
+    rollback;`);
+  const line = output.split("\n").find((value) => value.startsWith("{"));
+  assert(line, "pilot_handoff_output_missing");
+  const state = JSON.parse(line) as JsonObject;
+  assert(
+    state.handoff_count === 1 &&
+      typeof state.handoff_ref === "string" &&
+      HANDOFF_REFERENCE_RE.test(state.handoff_ref) &&
+      typeof state.round_ref === "string" && UUID_RE.test(state.round_ref) &&
+      isTimestamp(state.published_at) &&
+      state.bundle_hash_valid === true &&
+      state.customer_binding_valid === true &&
+      state.overall_status === "WAITING_CUSTOMER" &&
+      state.item_count === 1 &&
+      state.document_label === "Energiedocument" &&
+      state.fact_label === "Energieleverancier" &&
+      state.reason === "INCORRECT_INFORMATION" &&
+      state.instruction === "foute invoer" &&
+      state.accepted_items === 0 &&
+      state.fact_round_count === 1 && state.decision_count === 10 &&
+      state.accepted_count === 9 && state.correction_count === 1 &&
+      state.legacy_decision_count === 0 &&
+      state.access_grant_count === 0 && state.bound_auth_count === 0 &&
+      state.customer_read_code === "customer_case_access_denied" &&
+      state.lifecycle_state === "submitted_for_review" &&
+      state.active_worklist_member === false,
+    "pilot_handoff_truth_invalid",
+  );
+  console.log("REVIEW20C_REAL_PILOT_HANDOFF=PASS");
+}
+
 async function setupDatabase(): Promise<void> {
   await must("docker", [
     "exec",
@@ -404,6 +570,7 @@ async function setupDatabase(): Promise<void> {
     "--schema=extensions",
     "--schema=storage",
     "--exclude-table-data=public.app_workforce_tenant_scope_assignments",
+    "--exclude-table-data=public.app_evidence_review_correction_handoffs",
     `--file=${DUMP_FILE}`,
   ]);
   await must("docker", [
@@ -466,6 +633,7 @@ async function rpc(
 }
 
 async function databaseProof(): Promise<void> {
+  await activePilotHandoffProof();
   const before = await activeFingerprint();
   try {
     await setupDatabase();
@@ -496,13 +664,6 @@ async function databaseProof(): Promise<void> {
          clock_timestamp(),clock_timestamp()),
         ('${OTHER_AUTH_USER}','review19-other@example.invalid',clock_timestamp(),
          clock_timestamp(),clock_timestamp());
-      insert into public.app_customer_access_grants (
-        auth_user_id,customer_id,granted_case_id,access_basis,source_class,
-        source_ref,request_id
-      ) select '${AUTH_USER}',case_row.customer_id,case_row.id,
-        'signed_service_recipient','app_signup_promotion',
-        'review19-proof-access','review19-proof-access'
-      from public.app_cases case_row where case_row.case_reference='${CASE_REF}';
       insert into public.app_customers (id,customer_type)
       values ('${OTHER_CUSTOMER}','particulier');
       insert into public.app_cases (
@@ -511,14 +672,6 @@ async function databaseProof(): Promise<void> {
       ) values (
         '${OTHER_CASE}','${OTHER_CUSTOMER}','CASE-OTHER0000001',clock_timestamp(),
         'system','proof:review19','proof','review19-other','review19-other-case'
-      );
-      insert into public.app_customer_access_grants (
-        auth_user_id,customer_id,granted_case_id,access_basis,source_class,
-        source_ref,request_id
-      ) values (
-        '${OTHER_AUTH_USER}','${OTHER_CUSTOMER}','${OTHER_CASE}',
-        'signed_service_recipient','app_signup_promotion',
-        'review19-other-access','review19-other-access'
       );
       commit;`);
 
@@ -556,6 +709,90 @@ async function databaseProof(): Promise<void> {
           clock_timestamp())->>'ok')::boolean from first_admin)
       ); rollback;`);
     assert(authority === "t|t|t", `publish_authority_invalid:${authority}`);
+
+    const adminAuth = await psql(DATABASE, `begin read only;
+      select i.auth_user_id::text
+      from public.app_workforce_identities i
+      join public.app_workforce_scope_assignments s
+        on s.workforce_identity_id=i.id
+      join public.app_cases c on c.id=s.case_id
+      where s.capability_code='evidence.review.correction.publish'
+        and s.event_type='granted' and c.case_reference='${CASE_REF}'
+      order by s.effective_at desc limit 1; rollback;`);
+    assert(/^[0-9a-f-]{36}$/i.test(adminAuth), "publisher_missing");
+
+    const noGrantRead = await psql(DATABASE, `begin read only;
+      select public.app_customer_correction_handoff_read_v1(
+        '${AUTH_USER}','${CASE_REF}'
+      )->>'code'; rollback;`);
+    assert(
+      noGrantRead === "customer_case_access_denied",
+      "customer_read_did_not_require_access_grant",
+    );
+
+    const noGrantPublish = await psql(DATABASE, `begin;
+      select public.app_evidence_review_correction_publish_v1(
+        '${adminAuth}', '${CASE_REF}',
+        (select id from public.app_evidence_review_rounds
+         where case_id=(select id from public.app_cases
+           where case_reference='${CASE_REF}')),
+        'review20b-no-grant', 'review20b-no-grant', '${HASH}', '${EXPIRES}'
+      )->>'code';
+      select count(*) from public.app_evidence_review_correction_handoffs
+      where case_id=(select id from public.app_cases
+        where case_reference='${CASE_REF}');
+      select public.app_customer_correction_handoff_read_v1(
+        '${AUTH_USER}','${CASE_REF}'
+      )->>'code';
+      rollback;`);
+    assert(
+      noGrantPublish.split("\n").join("|") ===
+        "published|1|customer_case_access_denied",
+      `stable_customer_publish_without_grant_failed:${noGrantPublish}`,
+    );
+
+    const conflictingCustomer = await psql(DATABASE, `begin;
+      insert into public.app_customer_access_grants (
+        auth_user_id,customer_id,granted_case_id,access_basis,source_class,
+        source_ref,request_id
+      ) select '${OTHER_AUTH_USER}','${OTHER_CUSTOMER}',case_row.id,
+        'signed_service_recipient','app_signup_promotion',
+        'review20b-conflicting-access','review20b-conflicting-access'
+      from public.app_cases case_row where case_row.case_reference='${CASE_REF}';
+      select public.app_evidence_review_correction_publish_v1(
+        '${adminAuth}', '${CASE_REF}',
+        (select id from public.app_evidence_review_rounds
+         where case_id=(select id from public.app_cases
+           where case_reference='${CASE_REF}')),
+        'review20b-conflict', 'review20b-conflict', '${HASH}', '${EXPIRES}'
+      )->>'code';
+      select count(*) from public.app_evidence_review_correction_handoffs
+      where case_id=(select id from public.app_cases
+        where case_reference='${CASE_REF}');
+      rollback;`);
+    assert(
+      conflictingCustomer.split("\n").join("|") ===
+        "customer_context_unavailable|0",
+      `ambiguous_customer_context_not_denied:${conflictingCustomer}`,
+    );
+
+    await psql(DATABASE, `begin;
+      insert into public.app_customer_access_grants (
+        auth_user_id,customer_id,granted_case_id,access_basis,source_class,
+        source_ref,request_id
+      ) select '${AUTH_USER}',case_row.customer_id,case_row.id,
+        'signed_service_recipient','app_signup_promotion',
+        'review19-proof-access','review19-proof-access'
+      from public.app_cases case_row where case_row.case_reference='${CASE_REF}';
+      insert into public.app_customer_access_grants (
+        auth_user_id,customer_id,granted_case_id,access_basis,source_class,
+        source_ref,request_id
+      ) values (
+        '${OTHER_AUTH_USER}','${OTHER_CUSTOMER}','${OTHER_CASE}',
+        'signed_service_recipient','app_signup_promotion',
+        'review19-other-access','review19-other-access'
+      );
+      commit;`);
 
     const noHandoff = await psql(DATABASE, `begin read only;
       select public.app_customer_correction_handoff_read_v1(
@@ -632,16 +869,6 @@ async function databaseProof(): Promise<void> {
       ); rollback;`);
     assert(stale === "stale_review_round|0|TO_REVIEW", `stale_not_denied:${stale}`);
 
-    const adminAuth = await psql(DATABASE, `begin read only;
-      select i.auth_user_id::text
-      from public.app_workforce_identities i
-      join public.app_workforce_scope_assignments s
-        on s.workforce_identity_id=i.id
-      join public.app_cases c on c.id=s.case_id
-      where s.capability_code='evidence.review.correction.publish'
-        and s.event_type='granted' and c.case_reference='${CASE_REF}'
-      order by s.effective_at desc limit 1; rollback;`);
-    assert(/^[0-9a-f-]{36}$/i.test(adminAuth), "publisher_missing");
     const [left, right] = await Promise.all([
       rpc(adminAuth, "review19-concurrent-a", "review19-concurrent-a"),
       rpc(adminAuth, "review19-concurrent-b", "review19-concurrent-b"),

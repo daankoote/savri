@@ -599,7 +599,7 @@ async function main() {
   const runtime = localRuntime();
   const prefix = `review15-runtime-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
   const beforePilot = pilotState(runtime);
-  assert(beforePilot.split("|")[2] === "0", "pilot_handoff_not_clean_before_proof");
+  assert(beforePilot.split("|")[2] === "1", "pilot_handoff_not_exact_before_proof");
   const beforeFingerprint = relevantFingerprint(runtime);
   let auth = null;
   let f = null;
@@ -704,13 +704,11 @@ async function main() {
         workforceOnlyRead.body?.code === "customer_case_access_denied",
       "workforce_scope_became_customer_authority",
     );
-    grantCustomerAccess(runtime, f);
     const beforePublishRead = await readCustomerHandoff(runtime, f, auth.token);
     assert(
-      beforePublishRead.status === 200 &&
-        beforePublishRead.body?.caseRef === f.caseRef &&
-        beforePublishRead.body?.handoff === null,
-      "correction_truth_visible_before_handoff",
+      beforePublishRead.status === 404 &&
+        beforePublishRead.body?.code === "customer_case_access_denied",
+      "customer_read_did_not_require_access_grant",
     );
 
     const decideOnlyPublish = await publishCorrection(
@@ -771,6 +769,17 @@ async function main() {
       "publish_retry_not_idempotent",
     );
 
+    const noGrantPublishedRead = await readCustomerHandoff(
+      runtime,
+      f,
+      auth.token,
+    );
+    assert(
+      noGrantPublishedRead.status === 404 &&
+        noGrantPublishedRead.body?.code === "customer_case_access_denied",
+      "publication_created_customer_read_authority",
+    );
+    grantCustomerAccess(runtime, f);
     const customerRead = await readCustomerHandoff(runtime, f, auth.token);
     const customerSerialized = JSON.stringify(customerRead.body);
     assert(

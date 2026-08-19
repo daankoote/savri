@@ -786,6 +786,7 @@ const CHECK_LIST = [
     domain: "tenant-evidence-review-correction-handoff",
     applicablePaths: [
       "supabase/migrations/20260819190000_app_evidence_review_correction_handoff.sql",
+      "supabase/migrations/20260819220000_app_evidence_review_correction_publication_target_fix.sql",
       "supabase/functions/_shared/app_evidence_review_correction_handoff.ts",
       "supabase/functions/api-app-customer-correction-handoff/index.ts",
       "supabase/functions/api-app-evidence-review-correction-publish/index.ts",
@@ -810,6 +811,7 @@ const CHECK_LIST = [
     domain: "tenant-evidence-review-correction-handoff",
     applicablePaths: [
       "supabase/migrations/20260819190000_app_evidence_review_correction_handoff.sql",
+      "supabase/migrations/20260819220000_app_evidence_review_correction_publication_target_fix.sql",
       "supabase/functions/_shared/app_evidence_review_correction_handoff.ts",
       "supabase/functions/api-app-customer-correction-handoff/index.ts",
       "supabase/functions/api-app-evidence-review-correction-publish/index.ts",
@@ -2028,6 +2030,23 @@ export const PATH_RULES = Object.freeze([
       type: "exact",
       value:
         "supabase/migrations/20260819190000_app_evidence_review_correction_handoff.sql",
+    }),
+    checks: Object.freeze([
+      "migration-or-sql-review",
+      "evidence-review-correction-handoff-pure",
+      "evidence-review-correction-handoff-local",
+      "evidence-fact-review-round-served-local",
+      "evidence-review-worklist-read-local",
+      "evidence-review-case-detail-local",
+      "tenant-migration-chain-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "evidence-review-correction-publication-target-fix-migration",
+    match: Object.freeze({
+      type: "exact",
+      value:
+        "supabase/migrations/20260819220000_app_evidence_review_correction_publication_target_fix.sql",
     }),
     checks: Object.freeze([
       "migration-or-sql-review",

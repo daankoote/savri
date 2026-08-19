@@ -82,6 +82,25 @@ export type EvidenceFactReviewRoundFinalizeCall = (
   }>,
 ) => Promise<EvidenceFactReviewRoundFinalizeResult>;
 
+export type EvidenceReviewCorrectionPublishRequest = Readonly<{
+  caseRef: string;
+  roundRef: string;
+}>;
+
+export type EvidenceReviewCorrectionPublishResult =
+  | Readonly<{
+    ok: true;
+    result: "PUBLISHED" | "ALREADY_PUBLISHED";
+  }>
+  | Readonly<{ ok: false; kind: "stale" | "ordinary" }>;
+
+export type EvidenceReviewCorrectionPublishCall = (
+  input: Readonly<{
+    request: EvidenceReviewCorrectionPublishRequest;
+    idempotencyKey: string;
+  }>,
+) => Promise<EvidenceReviewCorrectionPublishResult>;
+
 type ClientRuntimeConfig = Readonly<{ anonKey: string; apiBaseUrl: string }>;
 export type EvidenceReviewDetailClientConfig = Readonly<{
   accessToken: string;
@@ -102,10 +121,18 @@ type FinalizeClientConfig = Readonly<{
   fetchImpl?: typeof fetch;
   runtimeConfig?: ClientRuntimeConfig;
 }>;
+type PublishCorrectionClientConfig = Readonly<{
+  accessToken: string;
+  idempotencyKey: string;
+  request: EvidenceReviewCorrectionPublishRequest;
+  fetchImpl?: typeof fetch;
+  runtimeConfig?: ClientRuntimeConfig;
+}>;
 type JsonRecord = Record<string, unknown>;
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const HANDOFF_REFERENCE_RE = /^CRH-[0-9A-F]{16}$/;
 const FACT_CATEGORIES = new Set<EvidenceReviewFactCategory>([
   "PARTY_NAME",
   "ADDRESS",
@@ -444,7 +471,7 @@ export function decodeEvidenceReviewCaseDetailResponse(
       "reviewSubjects",
       "schemaVersion",
     ]) ||
-    body.schemaVersion !== "evidence-review-case-detail-v4" ||
+    body.schemaVersion !== "evidence-review-case-detail-v5" ||
     !isIsoTimestamp(body.asOf) || !isRecord(body.case) ||
     !Array.isArray(body.evidence) || body.evidence.length > 100 ||
     body.reviewManifestVersion !== EVIDENCE_FACT_REVIEW_MANIFEST_VERSION ||
@@ -461,6 +488,7 @@ export function decodeEvidenceReviewCaseDetailResponse(
 
   const caseFields = [
     "canDecide",
+    "canPublishCorrection",
     "caseRef",
     "lifecycle",
     ...(body.case.partyDisplayName === undefined
@@ -476,6 +504,7 @@ export function decodeEvidenceReviewCaseDetailResponse(
     !isEvidenceReviewCaseRef(body.case.caseRef) ||
     !boundedString(body.case.lifecycle, 80) ||
     typeof body.case.canDecide !== "boolean" ||
+    typeof body.case.canPublishCorrection !== "boolean" ||
     (body.case.partyDisplayName !== undefined &&
       (!boundedString(body.case.partyDisplayName, 500) ||
         body.case.partyDisplayNameTruth !== "DECLARED")) ||
@@ -516,7 +545,8 @@ export function decodeEvidenceReviewCaseDetailResponse(
   if (
     (currentReviewRound === null && body.overallReviewStatus !== "TO_REVIEW") ||
     (currentReviewRound?.outcome === "CORRECTIONS_REQUIRED" &&
-      body.overallReviewStatus !== "CORRECTION_REQUIRED") ||
+      body.overallReviewStatus !== "CORRECTION_REQUIRED" &&
+      body.overallReviewStatus !== "WAITING_CUSTOMER") ||
     (currentReviewRound?.outcome === "ALL_FACTS_ACCEPTED" &&
       body.overallReviewStatus !== "REVIEW_COMPLETE")
   ) return invalidResponse();
@@ -524,12 +554,13 @@ export function decodeEvidenceReviewCaseDetailResponse(
   return {
     ok: true,
     value: Object.freeze({
-      schemaVersion: "evidence-review-case-detail-v4",
+      schemaVersion: "evidence-review-case-detail-v5",
       asOf: body.asOf,
       case: Object.freeze({
         caseRef: body.case.caseRef,
         lifecycle: body.case.lifecycle,
         canDecide: body.case.canDecide,
+        canPublishCorrection: body.case.canPublishCorrection,
         ...(body.case.partyDisplayName === undefined ? {} : {
           partyDisplayName: body.case.partyDisplayName,
           partyDisplayNameTruth: "DECLARED" as const,
@@ -714,6 +745,71 @@ export async function finalizeEvidenceFactReviewRound(
     outcome: body.outcome as
       | "ALL_FACTS_ACCEPTED"
       | "CORRECTIONS_REQUIRED",
+  });
+}
+
+export async function publishEvidenceReviewCorrection(
+  config: PublishCorrectionClientConfig,
+): Promise<EvidenceReviewCorrectionPublishResult> {
+  const accessToken = config.accessToken.trim();
+  const idempotencyKey = config.idempotencyKey.trim();
+  if (
+    !accessToken || !idempotencyKey || idempotencyKey.length > 200 ||
+    /\s/.test(idempotencyKey) ||
+    !isEvidenceReviewCaseRef(config.request.caseRef) ||
+    !UUID_RE.test(config.request.roundRef)
+  ) return { ok: false, kind: "ordinary" };
+  const runtime = runtimeConfig(config.runtimeConfig);
+  if (!runtime) return { ok: false, kind: "ordinary" };
+
+  let response: Response;
+  try {
+    response = await (config.fetchImpl ?? fetch)(
+      `${runtime.apiBaseUrl}/api-app-evidence-review-correction-publish`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          apikey: runtime.anonKey,
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyKey,
+        },
+        body: JSON.stringify(config.request),
+      },
+    );
+  } catch (_error) {
+    return { ok: false, kind: "ordinary" };
+  }
+  if (!response.ok) {
+    const errorBody = response.status === 409 ? await readJson(response) : null;
+    return {
+      ok: false,
+      kind: isRecord(errorBody) && errorBody.code === "stale_review_round"
+        ? "stale"
+        : "ordinary",
+    };
+  }
+  const body = await readJson(response);
+  if (
+    !isRecord(body) ||
+    !hasExactFields(body, [
+      "caseRef",
+      "handoffRef",
+      "publishedAt",
+      "result",
+      "roundRef",
+      "schemaVersion",
+    ]) ||
+    body.schemaVersion !== "evidence-review-correction-publish-v1" ||
+    body.caseRef !== config.request.caseRef ||
+    body.roundRef !== config.request.roundRef ||
+    !HANDOFF_REFERENCE_RE.test(String(body.handoffRef)) ||
+    !isIsoTimestamp(body.publishedAt) ||
+    !["PUBLISHED", "ALREADY_PUBLISHED"].includes(String(body.result))
+  ) return { ok: false, kind: "ordinary" };
+  return Object.freeze({
+    ok: true,
+    result: body.result as "PUBLISHED" | "ALREADY_PUBLISHED",
   });
 }
 

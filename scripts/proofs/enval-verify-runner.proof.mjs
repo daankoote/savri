@@ -313,6 +313,7 @@ const evidenceReviewCorrectionHandoffLocalService = buildPlan({
   paths: [
     "supabase/migrations/20260819190000_app_evidence_review_correction_handoff.sql",
     "supabase/migrations/20260819210000_app_evidence_review_correction_publish_affordance.sql",
+    "supabase/migrations/20260819220000_app_evidence_review_correction_publication_target_fix.sql",
     "supabase/functions/_shared/app_evidence_review_correction_handoff.ts",
     "supabase/functions/api-app-customer-correction-handoff/index.ts",
     "supabase/functions/api-app-evidence-review-correction-publish/index.ts",

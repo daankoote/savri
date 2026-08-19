@@ -291,6 +291,8 @@ try {
     and to_regprocedure('public.app_evidence_review_round_finalize_v1(uuid,text,text,text,jsonb,text,text,text,timestamptz)') is not null
     and to_regclass('public.app_evidence_review_correction_handoffs') is not null
     and to_regprocedure('public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)') is not null
+    and position('access_grant.customer_id <> v_case.customer_id' in pg_get_functiondef('public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)'::regprocedure)) > 0
+    and position('access_grant.customer_id = v_case.customer_id' in pg_get_functiondef('public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)'::regprocedure)) = 0
     and to_regprocedure('public.app_customer_correction_handoff_read_v1(uuid,text)') is not null
     and to_regprocedure('public.app_evidence_review_state_v1(uuid,uuid)') is not null
     and not has_function_privilege('service_role','public.app_evidence_review_decide_v1(uuid,uuid,text,text,text,text,timestamptz)','EXECUTE')

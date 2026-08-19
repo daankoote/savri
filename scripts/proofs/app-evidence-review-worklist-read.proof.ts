@@ -1083,7 +1083,7 @@ async function databaseProof(): Promise<number> {
         first_admin.auth_user_id
       ) body from first_admin
     ), detail as (
-      select public.app_evidence_review_case_detail_read_v6(
+      select public.app_evidence_review_case_detail_read_v7(
         first_admin.auth_user_id, 'CASE-7E4CC75CD19F'
       ) body from first_admin
     ), pilot as (
@@ -1129,6 +1129,7 @@ async function databaseProof(): Promise<number> {
         join pilot_case on pilot_case.id=lifecycle.case_id
         order by lifecycle.event_at desc,lifecycle.id desc limit 1),
       (select body->>'ok' from detail),
+      (select body#>>'{case_context,can_publish_correction}' from detail),
       (select body->>'overall_review_status' from detail),
       (select body#>>'{current_review_round,outcome}' from detail),
       (select jsonb_array_length(body#>'{current_review_round,decisions}')
@@ -1146,21 +1147,26 @@ async function databaseProof(): Promise<number> {
           and subject.item->>'fact_label'='Energieleverancier'
           and decision.item->>'disposition'='CORRECTION_REQUIRED'
           and decision.item->>'correction_reason'='INCORRECT_INFORMATION'
-          and decision.item->>'correction_instruction'='foute invoer')
+          and decision.item->>'correction_instruction'='foute invoer'),
+      (select count(*)
+        from public.app_evidence_review_correction_handoffs handoff
+        join pilot_case on pilot_case.id=handoff.case_id)
     );
     rollback;`,
   );
   assert(
     pilotSummary ===
-      "CORRECTION_REQUIRED|0|0|CORRECTIONS_REQUIRED|1|10|1|0|submitted_for_review|true|CORRECTION_REQUIRED|CORRECTIONS_REQUIRED|10|1",
+      "WAITING_CUSTOMER|0|0|CORRECTIONS_REQUIRED|1|10|1|0|submitted_for_review|true|true|WAITING_CUSTOMER|CORRECTIONS_REQUIRED|10|1|1",
     `pilot_fact_round_or_queue_invalid:${pilotSummary}`,
   );
   console.log("PILOT_CASE_REF=CASE-7E4CC75CD19F");
-  console.log("PILOT_OVERALL_REVIEW_STATUS=CORRECTION_REQUIRED");
+  console.log("PILOT_OVERALL_REVIEW_STATUS=WAITING_CUSTOMER");
   console.log("PILOT_FACT_ROUND_COUNT=1");
   console.log("PILOT_FACT_SUBJECT_DECISION_COUNT=10");
   console.log("PILOT_ROUND_OUTCOME=CORRECTIONS_REQUIRED");
   console.log("PILOT_LEGACY_DECISION_COUNT=0");
+  console.log("PILOT_CORRECTION_HANDOFF_COUNT=1");
+  console.log("PILOT_IN_ACTIVE_WORKLIST=NO");
   console.log("PILOT_LIFECYCLE_UNCHANGED=PASS");
   console.log("PILOT_DIRECT_DETAIL_ACCESS=PASS");
   console.log("EVIDENCE_REVIEW_WORKLIST_READ_Q01_Q14=PASS");
