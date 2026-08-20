@@ -182,6 +182,8 @@ function fixture(prefix, authUserId) {
     }`,
     partyId: uuid(),
     partyProfileId: uuid(),
+    partyProfileDriftId: uuid(),
+    relationshipId: uuid(),
     locationId: uuid(),
     chargerId: uuid(),
     promotionId: uuid(),
@@ -209,6 +211,13 @@ function pilotState(runtime) {
        join pilot on pilot.id=r.case_id),
       (select count(*) from public.app_evidence_review_correction_handoffs h
        join pilot on pilot.id=h.case_id),
+      (select count(*) from public.app_evidence_review_customer_submissions s
+       join pilot on pilot.id=s.case_id),
+      (select count(*) from public.app_signup_signing_challenges ch
+       join public.app_evidence_review_correction_handoffs h
+         on h.id=ch.correction_handoff_id
+       join pilot on pilot.id=h.case_id
+       where ch.subject_type='CUSTOMER_CORRECTION'),
       coalesce((select r.id::text from public.app_evidence_review_rounds r
        join pilot on pilot.id=r.case_id
        order by r.finalized_at desc,r.id desc limit 1),'NONE')
@@ -232,9 +241,14 @@ function relevantFingerprint(runtime) {
     (select count(*) from public.app_evidence_review_customer_submissions),
     (select count(*) from public.app_evidence_review_customer_submission_items),
     (select count(*) from public.app_evidence_review_decision_carry_forwards),
+    (select count(*) from public.app_customer_correction_signer_challenge_bindings),
+    (select count(*) from public.app_customer_correction_signer_evidence_bindings),
     (select count(*) from public.app_signup_signing_challenges
       where subject_type='CUSTOMER_CORRECTION'),
     (select count(*) from public.app_customer_access_grants),
+    (select count(*) from public.app_customer_party_relationships),
+    (select count(*) from public.app_parties),
+    (select count(*) from public.app_party_person_versions),
     (select count(*) from public.app_workforce_identities),
     (select count(*) from public.app_workforce_scope_assignments),
     (select count(*) from public.app_audit_events),
@@ -332,6 +346,13 @@ function setupFixture(runtime, f) {
     ) values ('${f.partyProfileId}','${f.partyId}','Proof Person',current_date,
       'signed_signup_intake','proof','${f.prefix}-party-profile',
       '${f.prefix}-party-profile','system','proof:${f.prefix}');
+    insert into public.app_customer_party_relationships (
+      id,customer_id,party_id,relationship_role,valid_from,source_type,
+      source_reference_type,source_reference_id,request_id,actor_type,actor_ref
+    ) values ('${f.relationshipId}','${f.customerId}','${f.partyId}',
+      'account_owner',current_date,'signed_signup_intake','proof',
+      '${f.prefix}-account-owner','${f.prefix}-account-owner','system',
+      'proof:${f.prefix}');
     insert into public.app_case_party_roles (
       case_id,party_id,person_profile_version_id,organization_profile_version_id,
       role_type,claim_status,valid_from,recorded_at,recorded_by_actor_type,
@@ -464,7 +485,14 @@ function grantCustomerAccess(runtime, f) {
   );
 }
 
-async function requestCorrectionChallenge(runtime, f, token, key, responses) {
+async function requestCorrectionChallenge(
+  runtime,
+  f,
+  token,
+  key,
+  responses,
+  typedFullName,
+) {
   return await jsonRequest(
     `${runtime.apiUrl}/functions/v1/api-app-customer-correction-signing-challenge`,
     {
@@ -476,8 +504,58 @@ async function requestCorrectionChallenge(runtime, f, token, key, responses) {
         "Content-Type": "application/json",
         "Idempotency-Key": key,
       },
-      body: JSON.stringify({ caseRef: f.caseRef, responses }),
+      body: JSON.stringify({ caseRef: f.caseRef, responses, typedFullName }),
     },
+  );
+}
+
+async function correctionMailCount(runtime, f) {
+  const list = await jsonRequest(`${runtime.mailpitUrl}/api/v1/messages`, {});
+  return Array.isArray(list.body?.messages)
+    ? list.body.messages.filter((candidate) =>
+      candidate?.To?.some((recipient) => recipient?.Address === f.email) &&
+      String(candidate?.Subject || "").includes("ondertekencode")
+    ).length
+    : 0;
+}
+
+function correctionChallengeCount(runtime, f) {
+  return psql(
+    runtime,
+    `begin read only; select count(*)
+    from public.app_signup_signing_challenges challenge
+    join public.app_evidence_review_correction_handoffs handoff
+      on handoff.id=challenge.correction_handoff_id
+    where handoff.case_id='${f.caseId}'
+      and challenge.subject_type='CUSTOMER_CORRECTION'; rollback;`,
+  );
+}
+
+function addSignerAuthorityDrift(runtime, f) {
+  psql(
+    runtime,
+    `begin;
+    set local session_replication_role = replica;
+    insert into public.app_party_person_versions (
+      id,party_id,full_name,valid_from,source_type,source_reference_type,
+      source_reference_id,request_id,actor_type,actor_ref,
+      supersedes_person_version_id
+    ) values ('${f.partyProfileDriftId}','${f.partyId}',
+      'Proof Person Changed',current_date,'proof','proof',
+      '${f.prefix}-authority-drift','${f.prefix}-authority-drift','system',
+      'proof:${f.prefix}','${f.partyProfileId}');
+    commit;`,
+  );
+}
+
+function removeSignerAuthorityDrift(runtime, f) {
+  psql(
+    runtime,
+    `begin;
+    set local session_replication_role = replica;
+    delete from public.app_party_person_versions
+    where id='${f.partyProfileDriftId}';
+    commit;`,
   );
 }
 
@@ -684,6 +762,10 @@ function cleanupFixture(runtime, f) {
     runtime,
     `begin;
     set local session_replication_role = replica;
+    delete from public.app_customer_correction_signer_evidence_bindings
+      where case_id='${f.caseId}';
+    delete from public.app_customer_correction_signer_challenge_bindings
+      where case_id='${f.caseId}';
     delete from public.app_evidence_review_decision_carry_forwards
       where submission_id in (select id
         from public.app_evidence_review_customer_submissions
@@ -728,6 +810,8 @@ function cleanupFixture(runtime, f) {
       where location_id='${f.locationId}';
     delete from public.app_locations where id='${f.locationId}';
     delete from public.app_case_party_roles where case_id='${f.caseId}';
+    delete from public.app_customer_party_relationships
+      where customer_id='${f.customerId}';
     delete from public.app_party_person_versions where party_id='${f.partyId}';
     delete from public.app_parties where id='${f.partyId}';
     delete from public.app_audit_events
@@ -764,6 +848,10 @@ function residueCount(runtime, f) {
     (select count(*) from public.app_cases where id='${f.caseId}') +
     (select count(*) from public.app_evidence_review_rounds where case_id='${f.caseId}') +
     (select count(*) from public.app_evidence_review_correction_handoffs
+      where case_id='${f.caseId}') +
+    (select count(*) from public.app_customer_correction_signer_challenge_bindings
+      where case_id='${f.caseId}') +
+    (select count(*) from public.app_customer_correction_signer_evidence_bindings
       where case_id='${f.caseId}') +
     (select count(*) from public.app_customer_access_grants
       where auth_user_id='${f.authUserId}' and customer_id='${f.customerId}') +
@@ -985,8 +1073,11 @@ async function main() {
     const customerSerialized = JSON.stringify(customerRead.body);
     assert(
       customerRead.status === 200 &&
-        customerRead.body?.schemaVersion === "customer-correction-handoff-v2" &&
+        customerRead.body?.schemaVersion === "customer-correction-handoff-v3" &&
         customerRead.body?.caseRef === f.caseRef &&
+        customerRead.body?.handoff?.signerAuthority?.status === "available" &&
+        customerRead.body?.handoff?.signerAuthority
+            ?.expectedSignerDisplayName === "Proof Person" &&
         Array.isArray(customerRead.body?.handoff?.items) &&
         customerRead.body.handoff.items.length === 1 &&
         customerRead.body.handoff.items[0].documentLabel ===
@@ -1009,8 +1100,11 @@ async function main() {
       `customer_safe_handoff_runtime_invalid:${customerRead.status}:` +
         `${customerRead.body?.schemaVersion ?? "NONE"}:` +
         `${customerRead.body?.handoff?.items?.length ?? "NONE"}:` +
-        `${customerRead.body?.handoff?.items?.[0]?.responseRequirement ?? "NONE"}:` +
-        `${!("currentValue" in (customerRead.body?.handoff?.items?.[0] ?? {}))}`,
+        `${
+          customerRead.body?.handoff?.items?.[0]?.responseRequirement ?? "NONE"
+        }:` +
+        `${!("currentValue" in
+          (customerRead.body?.handoff?.items?.[0] ?? {}))}`,
     );
     const waiting = await readDetail(runtime, f, auth.token);
     assert(
@@ -1028,12 +1122,42 @@ async function main() {
       itemRef: customerRead.body.handoff.items[0].itemRef,
       correctedValue: "871234567890123456",
     }];
+    const mailCountBeforeWrongName = await correctionMailCount(runtime, f);
+    for (
+      const [suffix, typedFullName] of [
+        ["different", "Daan Koote"],
+        ["partial", "Proof"],
+        ["empty", ""],
+      ]
+    ) {
+      const rejectedName = await requestCorrectionChallenge(
+        runtime,
+        f,
+        auth.token,
+        `${prefix}-correction-name-${suffix}`,
+        correctionResponses,
+        typedFullName,
+      );
+      assert(
+        rejectedName.status === 400 &&
+          ["signer_name_mismatch", "invalid_input"].includes(
+            rejectedName.body?.code,
+          ),
+        `incorrect_signer_name_not_denied_${suffix}`,
+      );
+    }
+    assert(
+      correctionChallengeCount(runtime, f) === "0" &&
+        await correctionMailCount(runtime, f) === mailCountBeforeWrongName,
+      "incorrect_signer_name_created_challenge_or_otp",
+    );
     const challenge = await requestCorrectionChallenge(
       runtime,
       f,
       auth.token,
       `${prefix}-correction-challenge`,
       correctionResponses,
+      "Proof Person",
     );
     assert(
       challenge.status === 201 && challenge.body?.ok === true &&
@@ -1047,6 +1171,29 @@ async function main() {
     );
     const challengeReference = String(challenge.body.challenge_reference);
     const otp = await correctionOtp(runtime, f, challengeReference);
+    addSignerAuthorityDrift(runtime, f);
+    const driftedAuthority = await finalizeCorrection(
+      runtime,
+      f,
+      auth.token,
+      `${prefix}-correction-authority-drift`,
+      {
+        challengeReference,
+        otp,
+        typedFullName: "Proof Person Changed",
+      },
+    );
+    assert(
+      driftedAuthority.status === 409 &&
+        driftedAuthority.body?.code === "signer_authority_changed" &&
+        psql(
+            runtime,
+            `select count(*) from public.app_evidence_review_customer_submissions
+            where case_id='${f.caseId}';`,
+          ) === "0",
+      "signer_authority_drift_not_fail_closed",
+    );
+    removeSignerAuthorityDrift(runtime, f);
     const wrongOtp = otp === "000000" ? "000001" : "000000";
     const invalidOtp = await finalizeCorrection(
       runtime,
@@ -1056,7 +1203,7 @@ async function main() {
       {
         challengeReference,
         otp: wrongOtp,
-        typedFullName: "Proof Customer",
+        typedFullName: "Proof Person",
       },
     );
     assert(
@@ -1072,7 +1219,7 @@ async function main() {
     const finalizeBody = {
       challengeReference,
       otp,
-      typedFullName: "Proof Customer",
+      typedFullName: "Proof Person",
     };
     const [finalizeA, finalizeB] = await Promise.all([
       finalizeCorrection(
@@ -1125,7 +1272,11 @@ async function main() {
       winningKey,
       { ...finalizeBody, typedFullName: "Different Proof Customer" },
     );
-    assert(changedRetry.status === 409, "changed_payload_retry_not_denied");
+    assert(
+      changedRetry.status === 400 &&
+        changedRetry.body?.code === "signer_name_mismatch",
+      "changed_signer_retry_not_denied",
+    );
     const submissionEvidence = psql(
       runtime,
       `select concat_ws('|',
@@ -1141,6 +1292,10 @@ async function main() {
         join public.app_evidence_review_correction_handoffs h
           on h.id=ch.correction_handoff_id
         where h.case_id='${f.caseId}' and ch.consumed_at is not null),
+      (select count(*) from public.app_customer_correction_signer_challenge_bindings
+        where case_id='${f.caseId}'),
+      (select count(*) from public.app_customer_correction_signer_evidence_bindings
+        where case_id='${f.caseId}'),
       (select canonical_snapshot_sha256='${originalSnapshotHash}'
         from public.app_signup_signing_snapshots where id='${f.snapshotId}'),
       (select coalesce(string_agg(d.fact_key,',' order by d.fact_key),'NONE')
@@ -1154,7 +1309,7 @@ async function main() {
     );
     assert(
       submissionEvidence ===
-        `1|1|${current.reviewSubjects.length - 1}|1|t|NONE`,
+        `1|1|${current.reviewSubjects.length - 1}|1|1|1|t|NONE`,
       `correction_submission_evidence_invalid_${submissionEvidence}_expected_${
         current.reviewSubjects.length - 1
       }`,
@@ -1217,12 +1372,14 @@ async function main() {
       "SERVED_CUSTOMER_CORRECTION_READ=PASS",
       "SERVED_WAITING_CUSTOMER_DERIVATION=PASS",
       "SERVED_CUSTOMER_CORRECTION_CHALLENGE=PASS",
+      "SERVED_CUSTOMER_CORRECTION_WRONG_NAME_NO_OTP=PASS",
+      "SERVED_CUSTOMER_CORRECTION_AUTHORITY_DRIFT_DENIED=PASS",
       "SERVED_CUSTOMER_CORRECTION_FINALIZE=PASS",
       "SERVED_CUSTOMER_CORRECTION_IDEMPOTENCY=PASS",
       "SERVED_CUSTOMER_CORRECTION_CARRY_FORWARD=PASS",
       "SERVED_CUSTOMER_CORRECTION_WORKLIST_REENTRY=PASS",
       "SERVED_CUSTOMER_CORRECTION_PILOT_UNCHANGED=PASS",
-      "EVIDENCE_FACT_REVIEW_SERVED_Q01_Q18=PASS",
+      "EVIDENCE_FACT_REVIEW_SERVED_Q01_Q20=PASS",
     ].join("\n") + "\n",
   );
 }

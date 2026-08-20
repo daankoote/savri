@@ -14,18 +14,29 @@ type HandoffFetcher = (config: {
 }) => Promise<CustomerCorrectionHandoffResult>;
 
 export type CustomerCorrectionHandoffState =
-  | { status: "idle" | "loading"; model: null; error: null; retry: () => void }
+  | {
+    status: "idle" | "loading";
+    model: null;
+    error: null;
+    notice: string | null;
+    retry: () => void;
+    retryStale: () => void;
+  }
   | {
     status: "ready";
     model: CustomerCorrectionHandoffModel;
     error: null;
+    notice: string | null;
     retry: () => void;
+    retryStale: () => void;
   }
   | {
     status: "error";
     model: null;
     error: CustomerCorrectionHandoffSafeError;
+    notice: string | null;
     retry: () => void;
+    retryStale: () => void;
   };
 
 const cachedHandoffs = new Map<string, CustomerCorrectionHandoffModel>();
@@ -109,9 +120,18 @@ export function useCustomerCorrectionHandoff(
   caseRef: string | null,
 ): CustomerCorrectionHandoffState {
   const [retryNonce, setRetryNonce] = useState(0);
+  const [notice, setNotice] = useState<string | null>(null);
   const requestKeyRef = useRef("");
   const previousCacheScopeRef = useRef<string | null>(null);
   const retry = useCallback(() => {
+    setNotice(null);
+    if (cacheScope && caseRef) {
+      clearCustomerCorrectionHandoffCache(cacheScope, caseRef);
+    }
+    setRetryNonce((current) => current + 1);
+  }, [cacheScope, caseRef]);
+  const retryStale = useCallback(() => {
+    setNotice("Aanpassing is gewijzigd. Controleer opnieuw.");
     if (cacheScope && caseRef) {
       clearCustomerCorrectionHandoffCache(cacheScope, caseRef);
     }
@@ -121,7 +141,9 @@ export function useCustomerCorrectionHandoff(
     status: "idle",
     model: null,
     error: null,
+    notice: null,
     retry,
+    retryStale,
   });
 
   useEffect(() => {
@@ -133,19 +155,44 @@ export function useCustomerCorrectionHandoff(
 
     if (!accessToken || !cacheScope || !caseRef) {
       requestKeyRef.current = "";
-      setState({ status: "idle", model: null, error: null, retry });
+      setNotice(null);
+      setState({
+        status: "idle",
+        model: null,
+        error: null,
+        notice: null,
+        retry,
+        retryStale,
+      });
       return undefined;
     }
 
     const requestKey = cacheKey(cacheScope, caseRef);
+    if (requestKeyRef.current && requestKeyRef.current !== requestKey) {
+      setNotice(null);
+    }
     requestKeyRef.current = requestKey;
     let isActive = true;
-    setState({ status: "loading", model: null, error: null, retry });
+    setState({
+      status: "loading",
+      model: null,
+      error: null,
+      notice,
+      retry,
+      retryStale,
+    });
 
     loadCustomerCorrectionHandoffOnce({ accessToken, cacheScope, caseRef })
       .then((model) => {
         if (!isActive || requestKeyRef.current !== requestKey) return;
-        setState({ status: "ready", model, error: null, retry });
+        setState({
+          status: "ready",
+          model,
+          error: null,
+          notice,
+          retry,
+          retryStale,
+        });
       })
       .catch((error) => {
         if (!isActive || requestKeyRef.current !== requestKey) return;
@@ -159,13 +206,28 @@ export function useCustomerCorrectionHandoff(
           ? candidateCode as CustomerCorrectionHandoffErrorCode
           : "service_unavailable";
         const safeError = customerCorrectionHandoffSafeError(code);
-        setState({ status: "error", model: null, error: safeError, retry });
+        setState({
+          status: "error",
+          model: null,
+          error: safeError,
+          notice,
+          retry,
+          retryStale,
+        });
       });
 
     return () => {
       isActive = false;
     };
-  }, [accessToken, cacheScope, caseRef, retry, retryNonce]);
+  }, [
+    accessToken,
+    cacheScope,
+    caseRef,
+    notice,
+    retry,
+    retryNonce,
+    retryStale,
+  ]);
 
   return state;
 }

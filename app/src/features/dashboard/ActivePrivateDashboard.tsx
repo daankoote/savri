@@ -211,7 +211,11 @@ export function ActivePrivateDashboard({
       {model
         ? (
           <>
-            <CustomerCorrectionHandoffPanel state={correctionHandoff} />
+            <CustomerCorrectionHandoffPanel
+              accessToken={accessToken}
+              accountType={model.selected_dossier.account_type}
+              state={correctionHandoff}
+            />
 
             <section className="portal-card-compact" aria-label="Dossier">
               <h2>Dossier</h2>

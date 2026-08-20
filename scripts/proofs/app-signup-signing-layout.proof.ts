@@ -202,7 +202,7 @@ for (
     "app/src/features/signup/signing/signatureMethodRegistry.ts":
       "0fc19eb9f679505eb50a08d2efbe373b92734270b06854a3444a4b1e9f486b2b",
     "app/src/features/signup/signing/methods/typedNameOtpV1.ts":
-      "f6e2a730475815cf731ec49737d77bce65e7130b0691c289e809da28ad912aa0",
+      "a91ddf2bb876283e78b3ca1bfd26dba0b09986a89905b39bcad4a1f9dc32f9e7",
     "app/src/features/signup/signing/signupSigningComposition.ts":
       "6e11a2360071bd02236d6de77f693cdb7097b394b0886819103f1deaf13326dd",
     "app/src/features/signup/signing/legalDocumentRegistry.ts":

@@ -14,6 +14,9 @@ const read = (path: string) => Deno.readTextFileSync(new URL(path, ROOT));
 const MIGRATION = read(
   "supabase/migrations/20260820120000_app_customer_correction_handoff_contract_v2.sql",
 );
+const SIGNER_AUTHORITY_MIGRATION = read(
+  "supabase/migrations/20260820150000_app_customer_correction_signer_authority.sql",
+);
 const HANDOFF_ENDPOINT = read(
   "supabase/functions/api-app-customer-correction-handoff/index.ts",
 );
@@ -71,6 +74,10 @@ function source(items: unknown[]) {
     handoff: {
       handoff_ref: "CRH-0123456789ABCDEF",
       published_at: "2026-08-20T12:00:00.000Z",
+      signer_authority: {
+        status: "available",
+        expected_signer_display_name: "Proof Person",
+      },
       items,
     },
   };
@@ -106,11 +113,12 @@ for (const items of matrix) {
     "source_matrix_failed",
   );
   const client = decodeCustomerCorrectionHandoffResponse({
-    schemaVersion: "customer-correction-handoff-v2",
+    schemaVersion: "customer-correction-handoff-v3",
     caseRef: CASE_REF,
     handoff: {
       handoffRef: "CRH-0123456789ABCDEF",
       publishedAt: "2026-08-20T12:00:00.000Z",
+      signerAuthority: parsed.handoff.signerAuthority,
       items: parsed.handoff.items,
     },
   }, CASE_REF);
@@ -150,15 +158,18 @@ assert(
 const challenge = parseCorrectionChallengeRequest({
   caseRef: CASE_REF,
   responses: [{ itemRef: ITEM_REF(1), correctedValue: "Corrected" }],
+  typedFullName: "Proof Person",
 });
 assert(
   challenge?.responses[0].itemRef === ITEM_REF(1) &&
     !parseCorrectionChallengeRequest({
       caseRef: CASE_REF,
+      typedFullName: "Proof Person",
       responses: [{ itemIndex: 0, correctedValue: "Corrected" }],
     }) &&
     !parseCorrectionChallengeRequest({
       caseRef: CASE_REF,
+      typedFullName: "Proof Person",
       responses: [
         { itemRef: ITEM_REF(1), correctedValue: "A" },
         { itemRef: ITEM_REF(1), correctedValue: "B" },
@@ -187,9 +198,12 @@ for (
   );
 }
 assert(
-  HANDOFF_ENDPOINT.includes("app_customer_correction_handoff_read_v2") &&
-    CHALLENGE_ENDPOINT.includes("app_customer_correction_challenge_issue_v2") &&
-    FINALIZE_ENDPOINT.includes("app_customer_correction_finalize_v1") &&
+  HANDOFF_ENDPOINT.includes("app_customer_correction_handoff_read_v3") &&
+    CHALLENGE_ENDPOINT.includes("app_customer_correction_challenge_issue_v3") &&
+    FINALIZE_ENDPOINT.includes("app_customer_correction_finalize_v2") &&
+    SIGNER_AUTHORITY_MIGRATION.includes(
+      "app_customer_correction_signer_context_v1",
+    ) &&
     MIGRATION.includes("return v_prepare") &&
     CLIENT.includes(
       "responseRequirement as CustomerCorrectionResponseRequirement",
@@ -215,15 +229,15 @@ with pilot as (
   where grant_row.granted_case_id is null or grant_row.granted_case_id=pilot.id
   limit 1
 ), first_read as (
-  select public.app_customer_correction_handoff_read_v2(
+  select public.app_customer_correction_handoff_read_v3(
     actor.auth_user_id,pilot.case_reference
   ) body from actor,pilot
 ), second_read as (
-  select public.app_customer_correction_handoff_read_v2(
+  select public.app_customer_correction_handoff_read_v3(
     actor.auth_user_id,pilot.case_reference
   ) body from actor,pilot
 ), unauthorized as (
-  select public.app_customer_correction_handoff_read_v2(
+  select public.app_customer_correction_handoff_read_v3(
     '00000000-0000-4000-8000-000000000001'::uuid,pilot.case_reference
   ) body from pilot
 )
@@ -236,6 +250,8 @@ select concat_ws('|',
     second_read.body#>>'{handoff,items,0,item_ref}',
   first_read.body#>>'{handoff,items,0,item_ref}' ~ '^CCI-[A-F0-9]{32}$',
   not (first_read.body#>'{handoff,items,0}' ? 'subject_ref'),
+  first_read.body#>>'{handoff,signer_authority,status}',
+  first_read.body#>>'{handoff,signer_authority,expected_signer_display_name}',
   unauthorized.body->>'code',
   (select count(*) from public.app_evidence_review_customer_submissions s
     join pilot on pilot.id=s.case_id)
@@ -268,20 +284,21 @@ rollback;`;
   const evidence = new TextDecoder().decode(output.stdout).trim();
   assert(
     evidence ===
-      "true|1|VALUE_CORRECTION|Pilot Energie Nederland B.V.|t|t|t|authentication_required|0",
+      "true|1|VALUE_CORRECTION|Pilot Energie Nederland B.V.|t|t|t|available|Lokaal Piloot|authentication_required|0",
     `pilot_projection_failed:${evidence.replace(/[^A-Za-z0-9 ._|-]/g, "")}`,
   );
 }
 
 console.log([
-  "CUSTOMER_CORRECTION_HANDOFF_V2_ACTION_AUTHORITY=PASS",
-  "CUSTOMER_CORRECTION_HANDOFF_V2_OPAQUE_ITEM_REF=PASS",
-  "CUSTOMER_CORRECTION_HANDOFF_V2_INTERNAL_REFS_PRIVATE=PASS",
-  "CUSTOMER_CORRECTION_HANDOFF_V2_MULTI_ITEM_MATRIX=PASS",
-  "CUSTOMER_CORRECTION_HANDOFF_V2_MIXED_DOCUMENT_ACTION=PASS",
-  "CUSTOMER_CORRECTION_HANDOFF_V2_FINALIZER_COMPATIBILITY=PASS",
+  "CUSTOMER_CORRECTION_HANDOFF_V3_ACTION_AUTHORITY=PASS",
+  "CUSTOMER_CORRECTION_HANDOFF_V3_OPAQUE_ITEM_REF=PASS",
+  "CUSTOMER_CORRECTION_HANDOFF_V3_INTERNAL_REFS_PRIVATE=PASS",
+  "CUSTOMER_CORRECTION_HANDOFF_V3_MULTI_ITEM_MATRIX=PASS",
+  "CUSTOMER_CORRECTION_HANDOFF_V3_MIXED_DOCUMENT_ACTION=PASS",
+  "CUSTOMER_CORRECTION_HANDOFF_V3_FINALIZER_COMPATIBILITY=PASS",
+  "CUSTOMER_CORRECTION_HANDOFF_V3_SIGNER_AUTHORITY=PASS",
   local
-    ? "CUSTOMER_CORRECTION_HANDOFF_V2_PILOT_LOCAL_READ=PASS"
-    : "CUSTOMER_CORRECTION_HANDOFF_V2_SOURCE_ONLY=PASS",
-  "CUSTOMER_CORRECTION_HANDOFF_V2_Q01_Q07=PASS",
+    ? "CUSTOMER_CORRECTION_HANDOFF_V3_PILOT_LOCAL_READ=PASS"
+    : "CUSTOMER_CORRECTION_HANDOFF_V3_SOURCE_ONLY=PASS",
+  "CUSTOMER_CORRECTION_HANDOFF_V3_Q01_Q08=PASS",
 ].join("\n"));

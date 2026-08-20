@@ -5,22 +5,49 @@ type SignerPanelProps = {
   organizationName: string;
   value: SignerInput;
   onChange: (value: SignerInput) => void;
+  intentStatement?: string;
+  sectionId?: string;
+  showRole?: boolean;
+  fullNameAutoComplete?: string;
+  expectedSignerDisplayName?: string;
+  fullNameInvalid?: boolean;
 };
 
 export function SignerPanel({
   onChange,
   organizationName,
   value,
+  intentStatement,
+  sectionId = "signup-signer",
+  showRole,
+  fullNameAutoComplete = "name",
+  expectedSignerDisplayName,
+  fullNameInvalid = false,
 }: SignerPanelProps) {
   const organization = value.accountType !== "particulier";
+  const roleVisible = showRole ?? organization;
+  const fullNameErrorId = `${sectionId}-full-name-error`;
   return (
-    <section className="signing-kiss-section" id="signup-signer">
+    <section className="signing-kiss-section" id={sectionId}>
       <h3>Ondertekening</h3>
+      {expectedSignerDisplayName
+        ? (
+          <dl className="signing-document__facts">
+            <div>
+              <dt>Dit moet worden ondertekend door</dt>
+              <dd>{expectedSignerDisplayName}</dd>
+            </div>
+          </dl>
+        )
+        : null}
       <div className="form-grid form-grid-two signing-document__signer-fields">
         <label className="field">
           <span>Volledige naam</span>
           <input
-            autoComplete="name"
+            aria-describedby={fullNameInvalid ? fullNameErrorId : undefined}
+            aria-invalid={fullNameInvalid ? true : undefined}
+            autoComplete={fullNameAutoComplete}
+            className={fullNameInvalid ? "input-error" : undefined}
             onBlur={(event) =>
               onChange({
                 ...value,
@@ -31,8 +58,15 @@ export function SignerPanel({
             type="text"
             value={value.fullName}
           />
+          {fullNameInvalid
+            ? (
+              <span className="sr-only" id={fullNameErrorId}>
+                De ingevoerde naam is niet de verwachte ondertekenaar.
+              </span>
+            )
+            : null}
         </label>
-        {organization
+        {roleVisible
           ? (
             <label className="field">
               <span>Functie/rol</span>
@@ -54,11 +88,11 @@ export function SignerPanel({
           type="checkbox"
         />
         <span>
-          {organization
+          {intentStatement ?? (organization
             ? `Ik verklaar dat ik bevoegd ben om deze machtiging namens ${
               organizationName || "de organisatie"
             } te ondertekenen.`
-            : "Ik verklaar dat ik de hierboven genoemde persoon ben en deze machtiging onderteken."}
+            : "Ik verklaar dat ik de hierboven genoemde persoon ben en deze machtiging onderteken.")}
         </span>
       </label>
     </section>

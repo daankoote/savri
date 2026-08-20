@@ -31,6 +31,7 @@ export type CorrectionResponse = {
 export type CorrectionChallengeRequest = {
   caseRef: string;
   responses: CorrectionResponse[];
+  typedFullName: string;
 };
 
 export type CorrectionFinalizeRequest = {
@@ -68,12 +69,17 @@ function exactCaseRef(value: unknown): string {
 export function parseCorrectionChallengeRequest(
   value: unknown,
 ): CorrectionChallengeRequest | null {
-  if (!isRecord(value) || !hasExactKeys(value, ["caseRef", "responses"])) {
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, ["caseRef", "responses", "typedFullName"])
+  ) {
     return null;
   }
   const caseRef = exactCaseRef(value.caseRef);
+  const typedFullName = normalizeCorrectionSignerName(value.typedFullName);
   if (
-    !caseRef || !Array.isArray(value.responses) ||
+    !caseRef || !typedFullName || typedFullName.length > 200 ||
+    !Array.isArray(value.responses) ||
     value.responses.length < 1 || value.responses.length > 100
   ) return null;
   const responses: CorrectionResponse[] = [];
@@ -93,7 +99,7 @@ export function parseCorrectionChallengeRequest(
     itemRefs.add(itemRef);
     responses.push({ itemRef, correctedValue });
   }
-  return { caseRef, responses };
+  return { caseRef, responses, typedFullName };
 }
 
 export function parseCorrectionFinalizeRequest(
@@ -112,7 +118,7 @@ export function parseCorrectionFinalizeRequest(
     ? value.challengeReference.trim().toLowerCase()
     : "";
   const otp = typeof value.otp === "string" ? value.otp.trim() : "";
-  const typedFullName = safeString(value.typedFullName, 200);
+  const typedFullName = normalizeCorrectionSignerName(value.typedFullName);
   if (
     !caseRef || !validUuid(challengeReference) || !/^\d{6}$/.test(otp) ||
     !typedFullName
@@ -130,13 +136,29 @@ export async function correctionLegalBundleHash(): Promise<string> {
 
 export async function correctionResponsePayloadHash(
   request: CorrectionChallengeRequest,
+  expectedSignerAuthorityRef: string,
 ): Promise<string> {
   return await payloadHash({
     case_ref: request.caseRef,
     responses: request.responses,
+    typed_full_name: request.typedFullName,
+    expected_signer_authority_ref: expectedSignerAuthorityRef,
     signing_method: "typed_name_otp_v1",
     legal_bundle_version: CUSTOMER_CORRECTION_LEGAL_BUNDLE.bundleVersion,
   });
+}
+
+export function normalizeCorrectionSignerName(value: unknown): string {
+  return typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "";
+}
+
+export function correctionSignerNamesMatch(
+  typedName: unknown,
+  expectedName: unknown,
+): boolean {
+  const typed = normalizeCorrectionSignerName(typedName);
+  const expected = normalizeCorrectionSignerName(expectedName);
+  return !!typed && typed === expected;
 }
 
 export function isRuntimeCorrectionAction(

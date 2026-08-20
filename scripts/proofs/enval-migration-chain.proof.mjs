@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { TENANT_ENVAL_MIGRATION_CHAIN as chain } from
-  "../tools/enval-migration-chain-manifest.mjs";
+import {
+  TENANT_ENVAL_MIGRATION_CHAIN as chain,
+} from "../tools/enval-migration-chain-manifest.mjs";
 import { resolveSupabaseTarget } from "../tools/enval-supabase-target.mjs";
 
 const ROOT = resolve(fileURLToPath(new URL("../../", import.meta.url)));
@@ -43,15 +44,26 @@ function docker(args, input) {
 }
 function psql(database, sql) {
   return docker([
-    "psql", "-X", "-qAt", "-U", "postgres", "-d", database,
-    "-v", "ON_ERROR_STOP=1",
+    "psql",
+    "-X",
+    "-qAt",
+    "-U",
+    "postgres",
+    "-d",
+    database,
+    "-v",
+    "ON_ERROR_STOP=1",
   ], sql);
 }
 function sha256(path) {
-  return createHash("sha256").update(readFileSync(resolve(ROOT, path))).digest("hex");
+  return createHash("sha256").update(readFileSync(resolve(ROOT, path))).digest(
+    "hex",
+  );
 }
 function activeFingerprint() {
-  return psql(ACTIVE_DATABASE, `begin read only;
+  return psql(
+    ACTIVE_DATABASE,
+    `begin read only;
     with current_state as (
       select distinct on (workforce_identity_id) workforce_identity_id, state
       from public.app_workforce_identity_states
@@ -76,7 +88,8 @@ function activeFingerprint() {
       (select count(*) from public.app_evidence_review_decisions),
       (select count(*) from public.app_audit_events),
       (select count(*) from public.app_idempotency_keys)
-    ); rollback;`).split("\n").find((line) => /^\d+(\|\d+){9}$/.test(line));
+    ); rollback;`,
+  ).split("\n").find((line) => /^\d+(\|\d+){9}$/.test(line));
 }
 
 const catalogSql = `
@@ -171,7 +184,11 @@ function setupSql() {
   `;
 }
 
-const target = resolveSupabaseTarget({ target: "TENANT_ENVAL", operation: "inspect", cwd: ROOT });
+const target = resolveSupabaseTarget({
+  target: "TENANT_ENVAL",
+  operation: "inspect",
+  cwd: ROOT,
+});
 assert(target.localOnly && target.projectId === "enval", "target_guard_failed");
 const before = activeFingerprint();
 assert(before, "active_fingerprint_missing");
@@ -179,58 +196,117 @@ assert(before, "active_fingerprint_missing");
 try {
   const activeFiles = readdirSync(resolve(ROOT, chain.activeRoot))
     .filter((name) => name.endsWith(".sql")).sort();
-  const expectedActive = [chain.baseline.path, ...chain.forwardTail.map((item) => item.path)]
+  const expectedActive = [
+    chain.baseline.path,
+    ...chain.forwardTail.map((item) => item.path),
+  ]
     .map((path) => basename(path)).sort();
-  assert(activeFiles.join("|") === expectedActive.join("|"), "active_chain_not_exact");
-  assert(chain.currentPresentAppMigrations.length === 29, "present_app_cohort_not_exact");
-  assert(chain.absentLegacyMigrations.length === 10, "absent_legacy_cohort_not_exact");
-  assert(chain.excludedConnectionMigrations.length === 2, "connection_cohort_not_exact");
-  assert(sha256(chain.baseline.path) === chain.baseline.sha256, "baseline_hash_mismatch");
-  for (const item of chain.forwardTail) assert(sha256(item.path) === item.sha256, "tail_hash_mismatch");
-  for (const cohort of [
-    chain.currentPresentAppMigrations,
-    chain.absentLegacyMigrations,
-    chain.excludedConnectionMigrations,
-  ]) {
+  assert(
+    activeFiles.join("|") === expectedActive.join("|"),
+    "active_chain_not_exact",
+  );
+  assert(
+    chain.currentPresentAppMigrations.length === 29,
+    "present_app_cohort_not_exact",
+  );
+  assert(
+    chain.absentLegacyMigrations.length === 10,
+    "absent_legacy_cohort_not_exact",
+  );
+  assert(
+    chain.excludedConnectionMigrations.length === 2,
+    "connection_cohort_not_exact",
+  );
+  assert(
+    sha256(chain.baseline.path) === chain.baseline.sha256,
+    "baseline_hash_mismatch",
+  );
+  for (const item of chain.forwardTail) {
+    assert(sha256(item.path) === item.sha256, "tail_hash_mismatch");
+  }
+  for (
+    const cohort of [
+      chain.currentPresentAppMigrations,
+      chain.absentLegacyMigrations,
+      chain.excludedConnectionMigrations,
+    ]
+  ) {
     for (const item of cohort) {
-      assert(existsSync(resolve(ROOT,item.path)), "archive_source_missing");
+      assert(existsSync(resolve(ROOT, item.path)), "archive_source_missing");
       assert(sha256(item.path) === item.sha256, "archive_source_hash_mismatch");
-      assert(!item.path.startsWith(`${chain.activeRoot}/`), "archive_inside_active_root");
+      assert(
+        !item.path.startsWith(`${chain.activeRoot}/`),
+        "archive_inside_active_root",
+      );
     }
   }
-  const baseline = readFileSync(resolve(ROOT,chain.baseline.path),"utf8");
+  const baseline = readFileSync(resolve(ROOT, chain.baseline.path), "utf8");
   assert(
     !/^(INSERT INTO|UPDATE|DELETE FROM|MERGE INTO) public\./im.test(baseline) &&
       !/COPY public\./.test(baseline),
     "baseline_contains_population",
   );
-  assert(!baseline.includes("r6-bound-identity-backfill") &&
-    !baseline.includes("perform public.app_materialize_signed_signup_declared_data_v1(v_intake_id)"),
-  "historical_transformation_replayed");
+  assert(
+    !baseline.includes("r6-bound-identity-backfill") &&
+      !baseline.includes(
+        "perform public.app_materialize_signed_signup_declared_data_v1(v_intake_id)",
+      ),
+    "historical_transformation_replayed",
+  );
 
-  docker(["createdb","-U","postgres","-T","template0",DATABASE]);
-  psql(DATABASE,setupSql());
-  psql(DATABASE,baseline);
-  psql(DATABASE,`insert into supabase_migrations.schema_migrations(version,name) values ('${chain.baseline.version}','app_current_baseline');`);
+  docker(["createdb", "-U", "postgres", "-T", "template0", DATABASE]);
+  psql(DATABASE, setupSql());
+  psql(DATABASE, baseline);
+  psql(
+    DATABASE,
+    `insert into supabase_migrations.schema_migrations(version,name) values ('${chain.baseline.version}','app_current_baseline');`,
+  );
   for (const item of chain.forwardTail) {
-    psql(DATABASE,readFileSync(resolve(ROOT,item.path),"utf8"));
-    psql(DATABASE,`insert into supabase_migrations.schema_migrations(version,name) values ('${item.version}','${basename(item.path).replace(/^\d+_|\.sql$/g,"")}');`);
+    psql(DATABASE, readFileSync(resolve(ROOT, item.path), "utf8"));
+    psql(
+      DATABASE,
+      `insert into supabase_migrations.schema_migrations(version,name) values ('${item.version}','${
+        basename(item.path).replace(/^\d+_|\.sql$/g, "")
+      }');`,
+    );
   }
 
-  const history = psql(DATABASE,"select version from supabase_migrations.schema_migrations order by version;");
-  assert(history === [chain.baseline.version,...chain.forwardTail.map((item)=>item.version)].join("\n"), "history_not_coherent");
-  const activeCatalog = psql(ACTIVE_DATABASE,`begin read only; ${catalogSql} rollback;`)
-    .split("\n").filter((line)=>line.includes("\t"));
-  const rebuiltCatalog = psql(DATABASE,catalogSql).split("\n").filter((line)=>line.includes("\t"));
+  const history = psql(
+    DATABASE,
+    "select version from supabase_migrations.schema_migrations order by version;",
+  );
+  assert(
+    history === [
+      chain.baseline.version,
+      ...chain.forwardTail.map((item) => item.version),
+    ].join("\n"),
+    "history_not_coherent",
+  );
+  const activeCatalog = psql(
+    ACTIVE_DATABASE,
+    `begin read only; ${catalogSql} rollback;`,
+  )
+    .split("\n").filter((line) => line.includes("\t"));
+  const rebuiltCatalog = psql(DATABASE, catalogSql).split("\n").filter((line) =>
+    line.includes("\t")
+  );
   if (activeCatalog.join("\n") !== rebuiltCatalog.join("\n")) {
     const activeSet = new Set(activeCatalog);
     const rebuiltSet = new Set(rebuiltCatalog);
-    const activeOnly = activeCatalog.filter((line)=>!rebuiltSet.has(line)).slice(0,3);
-    const rebuiltOnly = rebuiltCatalog.filter((line)=>!activeSet.has(line)).slice(0,3);
-    fail(`current_app_schema_parity_failed:active_only=${activeOnly.join(";")}:rebuilt_only=${rebuiltOnly.join(";")}`);
+    const activeOnly = activeCatalog.filter((line) => !rebuiltSet.has(line))
+      .slice(0, 3);
+    const rebuiltOnly = rebuiltCatalog.filter((line) => !activeSet.has(line))
+      .slice(0, 3);
+    fail(
+      `current_app_schema_parity_failed:active_only=${
+        activeOnly.join(";")
+      }:rebuilt_only=${rebuiltOnly.join(";")}`,
+    );
   }
 
-  const empty = psql(DATABASE,`select concat_ws('|',
+  const empty = psql(
+    DATABASE,
+    `select concat_ws('|',
     (select count(*) from public.app_customers),
     (select count(*) from public.app_cases),
     (select count(*) from public.app_customer_access_grants),
@@ -242,13 +318,16 @@ try {
     (select count(*) from public.app_workforce_policy_activations),
     (select count(*) from public.app_evidence_review_decisions),
     (select count(*) from public.app_evidence_review_correction_handoffs)
-  );`);
+  );`,
+  );
   assert(empty === "0|0|0|0|0|14|5|57|5|0|0", "fresh_data_boundary_failed");
-  const security = psql(DATABASE,`select (
+  const security = psql(
+    DATABASE,
+    `select (
     (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%') = 64
+      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%') = 66
     and (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%' and c.relrowsecurity) = 64
+      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%' and c.relrowsecurity) = 66
     and not exists (select 1 from information_schema.role_table_grants
       where table_schema='public' and table_name like 'app\\_%'
         and grantee in ('anon','authenticated') and privilege_type in ('INSERT','UPDATE','DELETE','TRUNCATE'))
@@ -263,9 +342,12 @@ try {
     and not has_table_privilege('service_role','public.app_evidence_review_round_subject_decisions','INSERT')
     and not has_table_privilege('service_role','public.app_evidence_review_correction_handoffs','SELECT')
     and not has_table_privilege('service_role','public.app_evidence_review_correction_handoffs','INSERT')
-  )::text;`);
+  )::text;`,
+  );
   assert(security === "true", "rls_privilege_parity_failed");
-  const foundations = psql(DATABASE,`select (
+  const foundations = psql(
+    DATABASE,
+    `select (
     to_regclass('public.app_customers') is not null
     and to_regclass('public.app_cases') is not null
     and to_regclass('public.app_customer_access_grants') is not null
@@ -293,14 +375,20 @@ try {
     and to_regclass('public.app_evidence_review_customer_submissions') is not null
     and to_regclass('public.app_evidence_review_customer_submission_items') is not null
     and to_regclass('public.app_evidence_review_decision_carry_forwards') is not null
+    and to_regclass('public.app_customer_correction_signer_challenge_bindings') is not null
+    and to_regclass('public.app_customer_correction_signer_evidence_bindings') is not null
     and to_regprocedure('public.app_customer_correction_challenge_issue_v1(uuid,text,jsonb,text,text,timestamptz,text,text,text,text,text,text)') is not null
     and to_regprocedure('public.app_customer_correction_challenge_issue_v2(uuid,text,jsonb,text,text,timestamptz,text,text,text,text,text,text)') is not null
+    and to_regprocedure('public.app_customer_correction_challenge_issue_v3(uuid,text,jsonb,text,text,text,timestamptz,text,text,text,text,text,text)') is not null
     and to_regprocedure('public.app_customer_correction_finalize_v1(uuid,text,uuid,text,text,text,text,text,text,text,text)') is not null
+    and to_regprocedure('public.app_customer_correction_finalize_v2(uuid,text,uuid,text,text,text,text,text,text,text)') is not null
     and to_regprocedure('public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)') is not null
     and position('access_grant.customer_id <> v_case.customer_id' in pg_get_functiondef('public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)'::regprocedure)) > 0
     and position('access_grant.customer_id = v_case.customer_id' in pg_get_functiondef('public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)'::regprocedure)) = 0
     and to_regprocedure('public.app_customer_correction_handoff_read_v1(uuid,text)') is not null
     and to_regprocedure('public.app_customer_correction_handoff_read_v2(uuid,text)') is not null
+    and to_regprocedure('public.app_customer_correction_handoff_read_v3(uuid,text)') is not null
+    and to_regprocedure('public.app_customer_correction_signer_context_v1(uuid,text)') is not null
     and to_regprocedure('public.app_customer_correction_item_ref_v1(uuid,uuid,uuid,text)') is not null
     and to_regprocedure('public.app_customer_correction_prepare_v2(uuid,text,jsonb)') is not null
     and to_regprocedure('public.app_evidence_review_state_v1(uuid,uuid)') is not null
@@ -325,8 +413,17 @@ try {
     and not has_function_privilege('authenticated','public.app_customer_correction_handoff_read_v1(uuid,text)','EXECUTE')
     and has_function_privilege('service_role','public.app_customer_correction_handoff_read_v2(uuid,text)','EXECUTE')
     and not has_function_privilege('authenticated','public.app_customer_correction_handoff_read_v2(uuid,text)','EXECUTE')
-    and has_function_privilege('service_role','public.app_customer_correction_challenge_issue_v2(uuid,text,jsonb,text,text,timestamptz,text,text,text,text,text,text)','EXECUTE')
+    and has_function_privilege('service_role','public.app_customer_correction_handoff_read_v3(uuid,text)','EXECUTE')
+    and not has_function_privilege('authenticated','public.app_customer_correction_handoff_read_v3(uuid,text)','EXECUTE')
+    and has_function_privilege('service_role','public.app_customer_correction_signer_context_v1(uuid,text)','EXECUTE')
+    and not has_function_privilege('authenticated','public.app_customer_correction_signer_context_v1(uuid,text)','EXECUTE')
+    and not has_function_privilege('service_role','public.app_customer_correction_challenge_issue_v2(uuid,text,jsonb,text,text,timestamptz,text,text,text,text,text,text)','EXECUTE')
     and not has_function_privilege('authenticated','public.app_customer_correction_challenge_issue_v2(uuid,text,jsonb,text,text,timestamptz,text,text,text,text,text,text)','EXECUTE')
+    and has_function_privilege('service_role','public.app_customer_correction_challenge_issue_v3(uuid,text,jsonb,text,text,text,timestamptz,text,text,text,text,text,text)','EXECUTE')
+    and not has_function_privilege('authenticated','public.app_customer_correction_challenge_issue_v3(uuid,text,jsonb,text,text,text,timestamptz,text,text,text,text,text,text)','EXECUTE')
+    and not has_function_privilege('service_role','public.app_customer_correction_finalize_v1(uuid,text,uuid,text,text,text,text,text,text,text,text)','EXECUTE')
+    and has_function_privilege('service_role','public.app_customer_correction_finalize_v2(uuid,text,uuid,text,text,text,text,text,text,text)','EXECUTE')
+    and not has_function_privilege('authenticated','public.app_customer_correction_finalize_v2(uuid,text,uuid,text,text,text,text,text,text,text)','EXECUTE')
     and not has_function_privilege('service_role','public.app_customer_correction_item_ref_v1(uuid,uuid,uuid,text)','EXECUTE')
     and not has_function_privilege('service_role','public.app_customer_correction_prepare_v2(uuid,text,jsonb)','EXECUTE')
     and not has_function_privilege('service_role','public.app_workforce_authorize_v1(uuid,text,uuid,uuid,timestamptz)','EXECUTE')
@@ -352,9 +449,12 @@ try {
     and position('app_workforce_authorize_v1' in pg_get_functiondef('public.app_evidence_review_worklist_source_read_v1(uuid)'::regprocedure)) > 0
     and to_regprocedure('public.app_ops_location_authorization_resolve_v1(uuid,text,uuid,uuid,timestamptz)') is not null
     and position('app_workforce_authorize_v1' in pg_get_functiondef('public.app_ops_location_authorization_resolve_v1(uuid,text,uuid,uuid,timestamptz)'::regprocedure)) > 0
-  )::text;`);
+  )::text;`,
+  );
   assert(foundations === "true", "behavioral_foundations_missing");
-  const bootstrapOutput = psql(DATABASE,`begin;
+  const bootstrapOutput = psql(
+    DATABASE,
+    `begin;
     insert into auth.users(id,email,email_confirmed_at,created_at,updated_at)
     values ('91000000-0000-4000-8000-000000000001','proof@example.invalid',clock_timestamp(),clock_timestamp(),clock_timestamp());
     select (public.app_workforce_first_admin_bootstrap_v1(
@@ -369,10 +469,18 @@ try {
       'compliance.delivery_year.view','CURRENT_TENANT_DATA_PLANE',
       null,null,clock_timestamp()
     )->>'ok')::boolean;
-    rollback;`);
-  const bootstrap = bootstrapOutput.split("\n").filter((line)=>line==="t");
-  assert(bootstrap.length === 3, `central_policy_behavior_failed:result=${bootstrapOutput}`);
-  assert(psql(DATABASE,"select count(*) from public.app_workforce_identities;") === "0", "fresh_workforce_not_zero");
+    rollback;`,
+  );
+  const bootstrap = bootstrapOutput.split("\n").filter((line) => line === "t");
+  assert(
+    bootstrap.length === 3,
+    `central_policy_behavior_failed:result=${bootstrapOutput}`,
+  );
+  assert(
+    psql(DATABASE, "select count(*) from public.app_workforce_identities;") ===
+      "0",
+    "fresh_workforce_not_zero",
+  );
 
   console.log("MIG02_CHAIN_PROOF=PASS");
   console.log("DISPOSABLE_REBUILD=PASS");
@@ -381,16 +489,48 @@ try {
   console.log("BEHAVIORAL_PARITY=PASS");
   console.log("FRESH_WORKFORCE_COUNT=0");
   console.log("ARCHIVED_LEGACY_CANNOT_EXECUTE=PASS");
-  console.log(`CURRENT_PRESENT_APP_MIGRATIONS=${chain.currentPresentAppMigrations.map((item) => `${item.version}_${item.name}`).join(",")}`);
-  console.log(`ABSENT_LEGACY_MIGRATIONS=${chain.absentLegacyMigrations.map((item) => `${item.version}_${item.name}`).join(",")}`);
-  console.log(`EXCLUDED_CONNECTION_MIGRATIONS=${chain.excludedConnectionMigrations.map((item) => `${item.version}_${item.name}`).join(",")}`);
-  console.log(`CURRENT_TAIL=${chain.forwardTail.map((item) => basename(item.path)).join(",")}`);
-  console.log(`ACTIVE_CHAIN=${[chain.baseline, ...chain.forwardTail].map((item) => basename(item.path)).join(",")}`);
+  console.log(
+    `CURRENT_PRESENT_APP_MIGRATIONS=${
+      chain.currentPresentAppMigrations.map((item) =>
+        `${item.version}_${item.name}`
+      ).join(",")
+    }`,
+  );
+  console.log(
+    `ABSENT_LEGACY_MIGRATIONS=${
+      chain.absentLegacyMigrations.map((item) => `${item.version}_${item.name}`)
+        .join(",")
+    }`,
+  );
+  console.log(
+    `EXCLUDED_CONNECTION_MIGRATIONS=${
+      chain.excludedConnectionMigrations.map((item) =>
+        `${item.version}_${item.name}`
+      ).join(",")
+    }`,
+  );
+  console.log(
+    `CURRENT_TAIL=${
+      chain.forwardTail.map((item) => basename(item.path)).join(",")
+    }`,
+  );
+  console.log(
+    `ACTIVE_CHAIN=${
+      [chain.baseline, ...chain.forwardTail].map((item) => basename(item.path))
+        .join(",")
+    }`,
+  );
 } catch (error) {
-  console.error(`MIG02_CHAIN_PROOF=FAIL\n${scrub(error instanceof Error ? error.message : error)}`);
+  console.error(
+    `MIG02_CHAIN_PROOF=FAIL\n${
+      scrub(error instanceof Error ? error.message : error)
+    }`,
+  );
   process.exitCode = 1;
 } finally {
-  try { docker(["dropdb","-U","postgres","--force","--if-exists",DATABASE]); } catch {}
+  try {
+    docker(["dropdb", "-U", "postgres", "--force", "--if-exists", DATABASE]);
+  } catch {}
   const after = activeFingerprint();
   if (before !== after) {
     console.error("ACTIVE_DATABASE_UNCHANGED=FAIL");

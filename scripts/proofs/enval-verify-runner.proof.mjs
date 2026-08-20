@@ -315,6 +315,7 @@ const evidenceReviewCorrectionHandoffLocalService = buildPlan({
     "supabase/migrations/20260819210000_app_evidence_review_correction_publish_affordance.sql",
     "supabase/migrations/20260819220000_app_evidence_review_correction_publication_target_fix.sql",
     "supabase/migrations/20260820120000_app_customer_correction_handoff_contract_v2.sql",
+    "supabase/migrations/20260820150000_app_customer_correction_signer_authority.sql",
     "supabase/functions/_shared/app_evidence_review_correction_handoff.ts",
     "supabase/functions/api-app-customer-correction-handoff/index.ts",
     "supabase/functions/api-app-evidence-review-correction-publish/index.ts",
@@ -366,6 +367,7 @@ const customerCorrectionSubmissionLocalService = buildPlan({
   paths: [
     "supabase/migrations/20260820090000_app_customer_correction_submissions.sql",
     "supabase/migrations/20260820120000_app_customer_correction_handoff_contract_v2.sql",
+    "supabase/migrations/20260820150000_app_customer_correction_signer_authority.sql",
     "supabase/functions/_shared/app_customer_correction_submission.ts",
     "supabase/functions/_shared/signing_otp_transport.ts",
     "supabase/functions/api-app-customer-correction-signing-challenge/index.ts",
@@ -419,6 +421,7 @@ const customerCorrectionTargeted = buildPlan({
   paths: [
     "supabase/migrations/20260820090000_app_customer_correction_submissions.sql",
     "supabase/migrations/20260820120000_app_customer_correction_handoff_contract_v2.sql",
+    "supabase/migrations/20260820150000_app_customer_correction_signer_authority.sql",
     "supabase/functions/_shared/app_customer_correction_submission.ts",
     "scripts/proofs/app-customer-correction-submission.proof.ts",
     "scripts/proofs/app-customer-correction-handoff-contract-v2.proof.ts",
@@ -426,7 +429,7 @@ const customerCorrectionTargeted = buildPlan({
   mode: "TARGETED",
 });
 assert(
-    customerCorrectionTargeted.selected.filter((check) =>
+  customerCorrectionTargeted.selected.filter((check) =>
         check.commandId === "customer-correction-submission-pure"
       ).length === 1 &&
     customerCorrectionTargeted.selected.filter((check) =>

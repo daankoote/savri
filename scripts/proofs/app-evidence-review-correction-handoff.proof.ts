@@ -18,7 +18,9 @@ import type {
 
 const CONTAINER = "supabase_db_enval";
 const ACTIVE_DATABASE = "postgres";
-const DATABASE = `enval_review19_proof_${crypto.randomUUID().replaceAll("-", "")}`;
+const DATABASE = `enval_review19_proof_${
+  crypto.randomUUID().replaceAll("-", "")
+}`;
 const DUMP_FILE = `/tmp/${DATABASE}.dump`;
 const FOUNDATION_MIGRATION =
   "supabase/migrations/20260819190000_app_evidence_review_correction_handoff.sql";
@@ -26,8 +28,12 @@ const PUBLICATION_TARGET_FIX_MIGRATION =
   "supabase/migrations/20260819220000_app_evidence_review_correction_publication_target_fix.sql";
 const CUSTOMER_READ_V2_MIGRATION =
   "supabase/migrations/20260820120000_app_customer_correction_handoff_contract_v2.sql";
+const SIGNER_AUTHORITY_MIGRATION =
+  "supabase/migrations/20260820150000_app_customer_correction_signer_authority.sql";
 const PILOT_CASE_REF = "CASE-7E4CC75CD19F";
-const CASE_REF = `CASE-${crypto.randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase()}`;
+const CASE_REF = `CASE-${
+  crypto.randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase()
+}`;
 const ROUND_REF = "e1000000-0000-4000-8000-000000000001";
 const AUTH_USER = "e2000000-0000-4000-8000-000000000001";
 const OTHER_AUTH_USER = "e2000000-0000-4000-8000-000000000002";
@@ -86,7 +92,11 @@ async function command(
   };
 }
 
-async function must(name: string, args: string[], stdin?: string): Promise<string> {
+async function must(
+  name: string,
+  args: string[],
+  stdin?: string,
+): Promise<string> {
   const result = await command(name, args, stdin);
   if (result.code !== 0) {
     throw new ProofFailure(scrub(result.stderr || `${name}_failed`));
@@ -145,7 +155,10 @@ const META: AppRequestMeta = {
 };
 
 function serviceClient(
-  rpc: (name: string, args: JsonObject) => Promise<{ data?: unknown; error?: unknown }>,
+  rpc: (
+    name: string,
+    args: JsonObject,
+  ) => Promise<{ data?: unknown; error?: unknown }>,
 ): ServiceClient {
   return {
     auth: { getUser: async () => ({}) },
@@ -157,7 +170,10 @@ function serviceClient(
 function verified() {
   return Promise.resolve({
     ok: true as const,
-    context: { authUserId: AUTH_USER, emailNormalized: "proof@example.invalid" },
+    context: {
+      authUserId: AUTH_USER,
+      emailNormalized: "proof@example.invalid",
+    },
   });
 }
 
@@ -171,6 +187,7 @@ async function endpointProof(): Promise<void> {
     PUBLICATION_TARGET_FIX_MIGRATION,
   );
   const customerReadV2 = await Deno.readTextFile(CUSTOMER_READ_V2_MIGRATION);
+  const signerAuthority = await Deno.readTextFile(SIGNER_AUTHORITY_MIGRATION);
   assert(
     migration.includes("evidence.review.correction.publish") &&
       migration.includes("app_evidence_review_correction_handoffs") &&
@@ -218,9 +235,17 @@ async function endpointProof(): Promise<void> {
       !customerReadV2.includes("email_normalized"),
     "customer_read_v2_authority_missing",
   );
+  assert(
+    signerAuthority.includes("app_customer_correction_handoff_read_v3") &&
+      signerAuthority.includes("app_customer_correction_signer_context_v1"),
+    "customer_read_v3_signer_authority_missing",
+  );
 
   assert(
-    normalizeCorrectionPublishRequest({ caseRef: CASE_REF, roundRef: ROUND_REF }) &&
+    normalizeCorrectionPublishRequest({
+      caseRef: CASE_REF,
+      roundRef: ROUND_REF,
+    }) &&
       !normalizeCorrectionPublishRequest({
         caseRef: CASE_REF,
         roundRef: ROUND_REF,
@@ -236,34 +261,38 @@ async function endpointProof(): Promise<void> {
 
   let rpcCalls = 0;
   const publish = createPublishHandler({
-    createServiceClient: () => serviceClient(async (name, args) => {
-      rpcCalls += 1;
-      assert(name === "app_evidence_review_correction_publish_v1", "publish_rpc_changed");
-      assert(
-        Object.keys(args).sort().join("|") === [
-          "p_auth_user_id",
-          "p_case_ref",
-          "p_idempotency_expires_at",
-          "p_idempotency_key",
-          "p_payload_sha256",
-          "p_request_id",
-          "p_round_id",
-        ].sort().join("|") && !("items" in args),
-        "publish_rpc_input_widened",
-      );
-      return {
-        data: {
-          ok: true,
-          status: 201,
-          code: "published",
-          handoff_id: "e5000000-0000-4000-8000-000000000001",
-          handoff_ref: "CRH-0123456789ABCDEF",
-          round_id: ROUND_REF,
-          bundle_sha256: HASH,
-          published_at: "2026-08-19T19:00:00.000Z",
-        },
-      };
-    }),
+    createServiceClient: () =>
+      serviceClient(async (name, args) => {
+        rpcCalls += 1;
+        assert(
+          name === "app_evidence_review_correction_publish_v1",
+          "publish_rpc_changed",
+        );
+        assert(
+          Object.keys(args).sort().join("|") === [
+                "p_auth_user_id",
+                "p_case_ref",
+                "p_idempotency_expires_at",
+                "p_idempotency_key",
+                "p_payload_sha256",
+                "p_request_id",
+                "p_round_id",
+              ].sort().join("|") && !("items" in args),
+          "publish_rpc_input_widened",
+        );
+        return {
+          data: {
+            ok: true,
+            status: 201,
+            code: "published",
+            handoff_id: "e5000000-0000-4000-8000-000000000001",
+            handoff_ref: "CRH-0123456789ABCDEF",
+            round_id: ROUND_REF,
+            bundle_sha256: HASH,
+            published_at: "2026-08-19T19:00:00.000Z",
+          },
+        };
+      }),
     idempotencyExpiresAt: () => EXPIRES,
     requestMeta: async () => META,
     hashPayload: async (value) => {
@@ -278,15 +307,17 @@ async function endpointProof(): Promise<void> {
     },
     verifyBearer: verified,
   });
-  const published = await publish(new Request(META.url, {
-    method: "POST",
-    headers: {
-      authorization: "Bearer proof",
-      "content-type": "application/json",
-      "idempotency-key": META.idempotency_key!,
-    },
-    body: JSON.stringify({ caseRef: CASE_REF, roundRef: ROUND_REF }),
-  }));
+  const published = await publish(
+    new Request(META.url, {
+      method: "POST",
+      headers: {
+        authorization: "Bearer proof",
+        "content-type": "application/json",
+        "idempotency-key": META.idempotency_key!,
+      },
+      body: JSON.stringify({ caseRef: CASE_REF, roundRef: ROUND_REF }),
+    }),
+  );
   const publishedBody = await body(published);
   assert(
     published.status === 201 && publishedBody.result === "PUBLISHED" &&
@@ -296,19 +327,21 @@ async function endpointProof(): Promise<void> {
     "publish_endpoint_contract_invalid",
   );
 
-  const invalid = await publish(new Request(META.url, {
-    method: "POST",
-    headers: {
-      authorization: "Bearer proof",
-      "content-type": "application/json",
-      "idempotency-key": META.idempotency_key!,
-    },
-    body: JSON.stringify({
-      caseRef: CASE_REF,
-      roundRef: ROUND_REF,
-      items: [{ correctionInstruction: "client supplied" }],
+  const invalid = await publish(
+    new Request(META.url, {
+      method: "POST",
+      headers: {
+        authorization: "Bearer proof",
+        "content-type": "application/json",
+        "idempotency-key": META.idempotency_key!,
+      },
+      body: JSON.stringify({
+        caseRef: CASE_REF,
+        roundRef: ROUND_REF,
+        items: [{ correctionInstruction: "client supplied" }],
+      }),
     }),
-  }));
+  );
   assert(invalid.status === 400 && rpcCalls === 1, "client_items_not_rejected");
 
   let clientCreated = 0;
@@ -319,9 +352,11 @@ async function endpointProof(): Promise<void> {
     },
     requestMeta: async () => new Response("safe", { status: 503 }),
   });
-  const tenantDeniedResponse = await tenantDenied(new Request(META.url, {
-    method: "POST",
-  }));
+  const tenantDeniedResponse = await tenantDenied(
+    new Request(META.url, {
+      method: "POST",
+    }),
+  );
   assert(
     tenantDeniedResponse.status === 503 && clientCreated === 0,
     "tenant_gate_not_first",
@@ -335,6 +370,10 @@ async function endpointProof(): Promise<void> {
     handoff: {
       handoff_ref: "CRH-0123456789ABCDEF",
       published_at: "2026-08-19T19:00:00.000Z",
+      signer_authority: {
+        status: "available",
+        expected_signer_display_name: "Proof Person",
+      },
       items: [{
         item_ref: "CCI-0123456789ABCDEF0123456789ABCDEF",
         document_label: "Energiedocument",
@@ -365,12 +404,12 @@ async function endpointProof(): Promise<void> {
   );
   assert(
     parseCustomerCorrectionHandoffSource({
-      ok: true,
-      status: 200,
-      code: "not_available",
-      case_ref: CASE_REF,
-      handoff: null,
-    })?.handoff === null &&
+          ok: true,
+          status: 200,
+          code: "not_available",
+          case_ref: CASE_REF,
+          handoff: null,
+        })?.handoff === null &&
       !parseCustomerCorrectionHandoffSource({
         ...safeSource,
         handoff: { ...safeSource.handoff, subject_ref: `FRS-${HASH}` },
@@ -379,21 +418,31 @@ async function endpointProof(): Promise<void> {
   );
 
   const customerRead = createCustomerReadHandler({
-    createServiceClient: () => serviceClient(async (name, args) => {
-      assert(name === "app_customer_correction_handoff_read_v2", "read_rpc_changed");
-      assert(
-        Object.keys(args).sort().join("|") === "p_auth_user_id|p_case_ref",
-        "read_rpc_input_widened",
-      );
-      return { data: safeSource };
+    createServiceClient: () =>
+      serviceClient(async (name, args) => {
+        assert(
+          name === "app_customer_correction_handoff_read_v3",
+          "read_rpc_changed",
+        );
+        assert(
+          Object.keys(args).sort().join("|") === "p_auth_user_id|p_case_ref",
+          "read_rpc_input_widened",
+        );
+        return { data: safeSource };
+      }),
+    requestMeta: async () => ({
+      ...META,
+      method: "GET",
+      idempotency_key: null,
     }),
-    requestMeta: async () => ({ ...META, method: "GET", idempotency_key: null }),
     verifyBearer: verified,
   });
-  const readResponse = await customerRead(new Request(
-    `https://enval.local/api-app-customer-correction-handoff?caseRef=${CASE_REF}`,
-    { headers: { authorization: "Bearer proof" } },
-  ));
+  const readResponse = await customerRead(
+    new Request(
+      `https://enval.local/api-app-customer-correction-handoff?caseRef=${CASE_REF}`,
+      { headers: { authorization: "Bearer proof" } },
+    ),
+  );
   const readBody = await body(readResponse);
   assert(
     readResponse.status === 200 && readBody.caseRef === CASE_REF &&
@@ -402,10 +451,15 @@ async function endpointProof(): Promise<void> {
   );
 
   const noAuth = createCustomerReadHandler({
-    createServiceClient: () => serviceClient(async () => {
-      throw new ProofFailure("rpc_reached_without_auth");
+    createServiceClient: () =>
+      serviceClient(async () => {
+        throw new ProofFailure("rpc_reached_without_auth");
+      }),
+    requestMeta: async () => ({
+      ...META,
+      method: "GET",
+      idempotency_key: null,
     }),
-    requestMeta: async () => ({ ...META, method: "GET", idempotency_key: null }),
     verifyBearer: async () => ({
       ok: false,
       status: 401,
@@ -413,16 +467,20 @@ async function endpointProof(): Promise<void> {
       message: "Niet geautoriseerd.",
     }),
   });
-  const noAuthResponse = await noAuth(new Request(
-    `https://enval.local/api-app-customer-correction-handoff?caseRef=${CASE_REF}`,
-  ));
+  const noAuthResponse = await noAuth(
+    new Request(
+      `https://enval.local/api-app-customer-correction-handoff?caseRef=${CASE_REF}`,
+    ),
+  );
   assert(noAuthResponse.status === 401, "customer_unauthenticated_not_denied");
 
   console.log("REVIEW19_ENDPOINT_Q01_Q09=PASS");
 }
 
 async function activeFingerprint(): Promise<string> {
-  return await psql(ACTIVE_DATABASE, `begin read only;
+  return await psql(
+    ACTIVE_DATABASE,
+    `begin read only;
     with pilot as (
       select id from public.app_cases where case_reference='${PILOT_CASE_REF}'
     )
@@ -437,11 +495,14 @@ async function activeFingerprint(): Promise<string> {
       (select count(*) from public.app_idempotency_keys),
       (select count(*) from public.app_evidence_review_correction_handoffs h
        join pilot on pilot.id=h.case_id)
-    ); rollback;`);
+    ); rollback;`,
+  );
 }
 
 async function activePilotHandoffProof(): Promise<void> {
-  const output = await psql(ACTIVE_DATABASE, `begin read only;
+  const output = await psql(
+    ACTIVE_DATABASE,
+    `begin read only;
     with target as (
       select case_row.*,
         public.app_evidence_fact_review_manifest_v1(case_row.id) manifest
@@ -525,7 +586,7 @@ async function activePilotHandoffProof(): Promise<void> {
         where identity_row.customer_id=target.customer_id
           and identity_row.status='active'
           and identity_row.auth_user_id is not null),
-      'customer_read_code',(select public.app_customer_correction_handoff_read_v2(
+      'customer_read_code',(select public.app_customer_correction_handoff_read_v3(
         customer_actor.auth_user_id,target.case_reference
       )->>'code' from customer_actor,target),
       'lifecycle_state',(select lifecycle.lifecycle_state
@@ -537,7 +598,8 @@ async function activePilotHandoffProof(): Promise<void> {
         target.manifest->>'manifest_hash'
       ) in ('TO_REVIEW','REVIEW_MODEL_UNAVAILABLE') from target)
     )::text;
-    rollback;`);
+    rollback;`,
+  );
   const line = output.split("\n").find((value) => value.startsWith("{"));
   assert(line, "pilot_handoff_output_missing");
   const state = JSON.parse(line) as JsonObject;
@@ -612,7 +674,9 @@ async function setupDatabase(): Promise<void> {
     "--no-privileges",
     DUMP_FILE,
   ]);
-  await psql(DATABASE, `
+  await psql(
+    DATABASE,
+    `
     create schema if not exists extensions;
     create extension if not exists pgcrypto with schema extensions;
     grant usage on schema public to service_role, anon, authenticated;
@@ -622,7 +686,8 @@ async function setupDatabase(): Promise<void> {
     grant execute on function public.app_customer_correction_handoff_read_v1(
       uuid,text
     ) to service_role;
-  `);
+  `,
+  );
 }
 
 async function rpc(
@@ -630,19 +695,25 @@ async function rpc(
   requestId: string,
   idempotencyKey: string,
 ): Promise<JsonObject> {
-  const roundRef = await psql(DATABASE, `begin read only;
+  const roundRef = await psql(
+    DATABASE,
+    `begin read only;
     select r.id::text from public.app_evidence_review_rounds r
     join public.app_cases c on c.id=r.case_id
-    where c.case_reference='${CASE_REF}'; rollback;`);
+    where c.case_reference='${CASE_REF}'; rollback;`,
+  );
   assert(/^[0-9a-f-]{36}$/i.test(roundRef), "fixture_round_missing");
-  const output = await psql(DATABASE, `begin;
+  const output = await psql(
+    DATABASE,
+    `begin;
     set local role service_role;
     select public.app_evidence_review_correction_publish_v1(
       '${authUserId}', '${CASE_REF}',
       '${roundRef}',
       '${requestId}', '${idempotencyKey}', '${HASH}', '${EXPIRES}'
     )::text;
-    commit;`);
+    commit;`,
+  );
   const line = output.split("\n").find((value) => value.startsWith("{"));
   assert(line, "publish_rpc_output_missing");
   return JSON.parse(line) as JsonObject;
@@ -653,7 +724,9 @@ async function databaseProof(): Promise<void> {
   const before = await activeFingerprint();
   try {
     await setupDatabase();
-    const migrationPresent = await psql(DATABASE, `select concat_ws('|',
+    const migrationPresent = await psql(
+      DATABASE,
+      `select concat_ws('|',
       to_regclass('public.app_evidence_review_correction_handoffs') is not null,
       has_function_privilege('service_role',
         'public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)',
@@ -665,10 +738,13 @@ async function databaseProof(): Promise<void> {
       has_table_privilege('service_role','public.app_evidence_review_correction_handoffs','INSERT'),
       (select relrowsecurity from pg_catalog.pg_class
        where oid='public.app_evidence_review_correction_handoffs'::regclass)
-    );`);
+    );`,
+    );
     assert(migrationPresent === "t|t|t|f|f|f|t", "handoff_acl_invalid");
 
-    await psql(DATABASE, `begin;
+    await psql(
+      DATABASE,
+      `begin;
       set local session_replication_role=replica;
       update public.app_cases set case_reference='${CASE_REF}'
       where case_reference='${PILOT_CASE_REF}';
@@ -689,9 +765,12 @@ async function databaseProof(): Promise<void> {
         '${OTHER_CASE}','${OTHER_CUSTOMER}','CASE-OTHER0000001',clock_timestamp(),
         'system','proof:review19','proof','review19-other','review19-other-case'
       );
-      commit;`);
+      commit;`,
+    );
 
-    const authority = await psql(DATABASE, `begin read only;
+    const authority = await psql(
+      DATABASE,
+      `begin read only;
       with first_admin as (
         select i.auth_user_id
         from public.app_workforce_identities i
@@ -723,10 +802,13 @@ async function databaseProof(): Promise<void> {
         (select (public.app_workforce_authorize_v1(
           first_admin.auth_user_id,'case.assignment.manage',null,null,
           clock_timestamp())->>'ok')::boolean from first_admin)
-      ); rollback;`);
+      ); rollback;`,
+    );
     assert(authority === "t|t|t", `publish_authority_invalid:${authority}`);
 
-    const adminAuth = await psql(DATABASE, `begin read only;
+    const adminAuth = await psql(
+      DATABASE,
+      `begin read only;
       select i.auth_user_id::text
       from public.app_workforce_identities i
       join public.app_workforce_scope_assignments s
@@ -734,19 +816,25 @@ async function databaseProof(): Promise<void> {
       join public.app_cases c on c.id=s.case_id
       where s.capability_code='evidence.review.correction.publish'
         and s.event_type='granted' and c.case_reference='${CASE_REF}'
-      order by s.effective_at desc limit 1; rollback;`);
+      order by s.effective_at desc limit 1; rollback;`,
+    );
     assert(/^[0-9a-f-]{36}$/i.test(adminAuth), "publisher_missing");
 
-    const noGrantRead = await psql(DATABASE, `begin read only;
+    const noGrantRead = await psql(
+      DATABASE,
+      `begin read only;
       select public.app_customer_correction_handoff_read_v1(
         '${AUTH_USER}','${CASE_REF}'
-      )->>'code'; rollback;`);
+      )->>'code'; rollback;`,
+    );
     assert(
       noGrantRead === "customer_case_access_denied",
       "customer_read_did_not_require_access_grant",
     );
 
-    const noGrantPublish = await psql(DATABASE, `begin;
+    const noGrantPublish = await psql(
+      DATABASE,
+      `begin;
       select public.app_evidence_review_correction_publish_v1(
         '${adminAuth}', '${CASE_REF}',
         (select id from public.app_evidence_review_rounds
@@ -760,14 +848,17 @@ async function databaseProof(): Promise<void> {
       select public.app_customer_correction_handoff_read_v1(
         '${AUTH_USER}','${CASE_REF}'
       )->>'code';
-      rollback;`);
+      rollback;`,
+    );
     assert(
       noGrantPublish.split("\n").join("|") ===
         "published|1|customer_case_access_denied",
       `stable_customer_publish_without_grant_failed:${noGrantPublish}`,
     );
 
-    const conflictingCustomer = await psql(DATABASE, `begin;
+    const conflictingCustomer = await psql(
+      DATABASE,
+      `begin;
       insert into public.app_customer_access_grants (
         auth_user_id,customer_id,granted_case_id,access_basis,source_class,
         source_ref,request_id
@@ -785,14 +876,17 @@ async function databaseProof(): Promise<void> {
       select count(*) from public.app_evidence_review_correction_handoffs
       where case_id=(select id from public.app_cases
         where case_reference='${CASE_REF}');
-      rollback;`);
+      rollback;`,
+    );
     assert(
       conflictingCustomer.split("\n").join("|") ===
         "customer_context_unavailable|0",
       `ambiguous_customer_context_not_denied:${conflictingCustomer}`,
     );
 
-    await psql(DATABASE, `begin;
+    await psql(
+      DATABASE,
+      `begin;
       insert into public.app_customer_access_grants (
         auth_user_id,customer_id,granted_case_id,access_basis,source_class,
         source_ref,request_id
@@ -808,15 +902,24 @@ async function databaseProof(): Promise<void> {
         'signed_service_recipient','app_signup_promotion',
         'review19-other-access','review19-other-access'
       );
-      commit;`);
+      commit;`,
+    );
 
-    const noHandoff = await psql(DATABASE, `begin read only;
+    const noHandoff = await psql(
+      DATABASE,
+      `begin read only;
       select public.app_customer_correction_handoff_read_v1(
         '${AUTH_USER}','${CASE_REF}'
-      )->>'code'; rollback;`);
-    assert(noHandoff === "not_available", "correction_truth_leaked_before_publish");
+      )->>'code'; rollback;`,
+    );
+    assert(
+      noHandoff === "not_available",
+      "correction_truth_leaked_before_publish",
+    );
 
-    const allAccepted = await psql(DATABASE, `begin;
+    const allAccepted = await psql(
+      DATABASE,
+      `begin;
       set local session_replication_role=replica;
       update public.app_evidence_review_rounds set outcome='ALL_FACTS_ACCEPTED'
       where case_id=(select id from public.app_cases where case_reference='${CASE_REF}');
@@ -849,13 +952,16 @@ async function databaseProof(): Promise<void> {
            where case_id=(select id from public.app_cases
              where case_reference='${CASE_REF}'))
         )
-      ); rollback;`);
+      ); rollback;`,
+    );
     assert(
       allAccepted === "correction_handoff_not_eligible|0|REVIEW_COMPLETE",
       `all_accepted_not_denied:${allAccepted}`,
     );
 
-    const stale = await psql(DATABASE, `begin;
+    const stale = await psql(
+      DATABASE,
+      `begin;
       set local session_replication_role=replica;
       update public.app_evidence_review_rounds set manifest_hash='${STALE_HASH}'
       where case_id=(select id from public.app_cases where case_reference='${CASE_REF}');
@@ -882,8 +988,12 @@ async function databaseProof(): Promise<void> {
             (select id from public.app_cases where case_reference='${CASE_REF}')
           )->>'manifest_hash')
         )
-      ); rollback;`);
-    assert(stale === "stale_review_round|0|TO_REVIEW", `stale_not_denied:${stale}`);
+      ); rollback;`,
+    );
+    assert(
+      stale === "stale_review_round|0|TO_REVIEW",
+      `stale_not_denied:${stale}`,
+    );
 
     const [left, right] = await Promise.all([
       rpc(adminAuth, "review19-concurrent-a", "review19-concurrent-a"),
@@ -906,7 +1016,9 @@ async function databaseProof(): Promise<void> {
       "exact_retry_not_idempotent",
     );
 
-    const state = await psql(DATABASE, `begin read only;
+    const state = await psql(
+      DATABASE,
+      `begin read only;
       with fixture as (
         select id from public.app_cases where case_reference='${CASE_REF}'
       ), manifest as (
@@ -926,16 +1038,23 @@ async function databaseProof(): Promise<void> {
           '${OTHER_AUTH_USER}','${CASE_REF}')->>'code'),
         (public.app_customer_correction_handoff_read_v1(
           '${adminAuth}','${CASE_REF}')->>'code')
-      ); rollback;`);
+      ); rollback;`,
+    );
     assert(
-      state === "1|1|WAITING_CUSTOMER|ok|customer_case_access_denied|customer_case_access_denied",
+      state ===
+        "1|1|WAITING_CUSTOMER|ok|customer_case_access_denied|customer_case_access_denied",
       `handoff_state_invalid:${state}`,
     );
-    const safeRead = await psql(DATABASE, `begin read only;
+    const safeRead = await psql(
+      DATABASE,
+      `begin read only;
       select public.app_customer_correction_handoff_read_v1(
         '${AUTH_USER}','${CASE_REF}'
-      )::text; rollback;`);
-    const safe = JSON.parse(safeRead.split("\n").find((line) => line.startsWith("{"))!);
+      )::text; rollback;`,
+    );
+    const safe = JSON.parse(
+      safeRead.split("\n").find((line) => line.startsWith("{"))!,
+    );
     const serialized = JSON.stringify(safe);
     assert(
       safe.handoff?.items?.length === 1 &&
@@ -944,13 +1063,16 @@ async function databaseProof(): Promise<void> {
         safe.handoff.items[0].correction_reason === "INCORRECT_INFORMATION" &&
         safe.handoff.items[0].correction_reason_label === "Gegeven onjuist" &&
         safe.handoff.items[0].correction_instruction === "foute invoer" &&
-        !serialized.includes("subject_ref") && !serialized.includes("manifest_hash") &&
+        !serialized.includes("subject_ref") &&
+        !serialized.includes("manifest_hash") &&
         !serialized.includes("reviewer") && !serialized.includes("policy") &&
         !serialized.includes("bundle_sha256"),
       "customer_safe_bundle_invalid",
     );
 
-    const immutable = await psql(DATABASE, `do $$
+    const immutable = await psql(
+      DATABASE,
+      `do $$
       begin
         begin
           update public.app_evidence_review_correction_handoffs
@@ -967,14 +1089,18 @@ async function databaseProof(): Promise<void> {
         end;
       end;
     $$;
-    select count(*) from public.app_evidence_review_correction_handoffs;`);
+    select count(*) from public.app_evidence_review_correction_handoffs;`,
+    );
     assert(immutable === "1", "handoff_mutability_guard_failed");
 
     console.log("REVIEW19_DATABASE_Q10_Q24=PASS");
   } finally {
     await dropDatabase();
   }
-  assert(await activeFingerprint() === before, "active_tenant_changed_by_proof");
+  assert(
+    await activeFingerprint() === before,
+    "active_tenant_changed_by_proof",
+  );
 }
 
 async function main(): Promise<void> {
@@ -985,6 +1111,8 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
-  console.error(`REVIEW19_PROOF=FAIL:${scrub(String(error?.message ?? error))}`);
+  console.error(
+    `REVIEW19_PROOF=FAIL:${scrub(String(error?.message ?? error))}`,
+  );
   Deno.exit(1);
 });

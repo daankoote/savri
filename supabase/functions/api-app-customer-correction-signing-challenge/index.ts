@@ -11,6 +11,7 @@ import {
   correctionLegalBundleHash,
   correctionLegalBundleProjection,
   correctionResponsePayloadHash,
+  correctionSignerNamesMatch,
   parseCorrectionChallengeRequest,
 } from "../_shared/app_customer_correction_submission.ts";
 import {
@@ -36,6 +37,11 @@ type ChallengeRow = {
   consumed_at?: string | null;
 };
 
+type SignerContext = {
+  expectedName: string;
+  authorityRef: string;
+};
+
 function isRecord(value: unknown): value is JsonObject {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
@@ -45,6 +51,19 @@ function safeStatus(value: unknown): number {
   return Number.isInteger(status) && status >= 400 && status <= 503
     ? status
     : 500;
+}
+
+function signerContext(value: unknown): SignerContext | null {
+  if (
+    !isRecord(value) || value.ok !== true || value.status !== 200 ||
+    typeof value.expected_signer_display_name !== "string" ||
+    typeof value.expected_signer_authority_ref !== "string" ||
+    !/^CSA-[A-F0-9]{32}$/.test(value.expected_signer_authority_ref)
+  ) return null;
+  return {
+    expectedName: value.expected_signer_display_name,
+    authorityRef: value.expected_signer_authority_ref,
+  };
 }
 
 export type CorrectionChallengeDependencies = {
@@ -123,6 +142,54 @@ export function createHandler(
         "authentication_required",
       );
     }
+    const signerResult = await serviceClient.rpc(
+      "app_customer_correction_signer_context_v1",
+      {
+        p_auth_user_id: verified.context.authUserId,
+        p_case_ref: input.caseRef,
+      },
+    ) as RpcResult;
+    if (signerResult.error || !isRecord(signerResult.data)) {
+      return appErrorResponse(
+        req,
+        500,
+        "Ondertekenen is tijdelijk niet beschikbaar.",
+        "internal_error",
+      );
+    }
+    const expectedSigner = signerContext(signerResult.data);
+    if (!expectedSigner) {
+      const status = signerResult.data.ok === false
+        ? safeStatus(signerResult.data.status)
+        : 500;
+      return appErrorResponse(
+        req,
+        status,
+        status === 404
+          ? "Dossier niet gevonden."
+          : status === 400
+          ? "Controleer de ondertekening."
+          : status === 409
+          ? "Ondertekenen is niet beschikbaar voor dit account."
+          : "Ondertekenen is tijdelijk niet beschikbaar.",
+        typeof signerResult.data.code === "string"
+          ? signerResult.data.code
+          : "internal_error",
+      );
+    }
+    if (
+      !correctionSignerNamesMatch(
+        input.typedFullName,
+        expectedSigner.expectedName,
+      )
+    ) {
+      return appErrorResponse(
+        req,
+        400,
+        "De ingevoerde naam komt niet overeen met de verwachte ondertekenaar.",
+        "signer_name_mismatch",
+      );
+    }
     const code = generateSigningOtp();
     const channelHash = await channelReference(
       secret,
@@ -130,14 +197,18 @@ export function createHandler(
     );
     const verifier = await otpVerifier(secret, code);
     const expiresAt = new Date(Date.now() + 10 * 60_000).toISOString();
-    const payloadSha256 = await correctionResponsePayloadHash(input);
+    const payloadSha256 = await correctionResponsePayloadHash(
+      input,
+      expectedSigner.authorityRef,
+    );
     const legalBundleSha256 = await correctionLegalBundleHash();
     const issued = await serviceClient.rpc(
-      "app_customer_correction_challenge_issue_v2",
+      "app_customer_correction_challenge_issue_v3",
       {
         p_auth_user_id: verified.context.authUserId,
         p_case_ref: input.caseRef,
         p_responses: input.responses,
+        p_typed_full_name: input.typedFullName,
         p_channel_reference_sha256: channelHash,
         p_otp_verifier_sha256: verifier,
         p_expires_at: expiresAt,

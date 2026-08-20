@@ -1,22 +1,26 @@
 export const CUSTOMER_CORRECTION_HANDOFF_SCHEMA_VERSION =
-  "customer-correction-handoff-v2" as const;
+  "customer-correction-handoff-v3" as const;
 
-export const CUSTOMER_CORRECTION_REASONS = Object.freeze([
-  "MISSING_INFORMATION",
-  "INCORRECT_INFORMATION",
-  "INCONSISTENT_INFORMATION",
-  "OTHER",
-] as const);
+export const CUSTOMER_CORRECTION_REASONS = Object.freeze(
+  [
+    "MISSING_INFORMATION",
+    "INCORRECT_INFORMATION",
+    "INCONSISTENT_INFORMATION",
+    "OTHER",
+  ] as const,
+);
 
 export type CustomerCorrectionReason =
   (typeof CUSTOMER_CORRECTION_REASONS)[number];
 
-export const CUSTOMER_CORRECTION_RESPONSE_REQUIREMENTS = Object.freeze([
-  "VALUE_CORRECTION",
-  "MISSING_VALUE",
-  "DOCUMENT_REPLACEMENT",
-  "VALUE_PLUS_DOCUMENT_REPLACEMENT",
-] as const);
+export const CUSTOMER_CORRECTION_RESPONSE_REQUIREMENTS = Object.freeze(
+  [
+    "VALUE_CORRECTION",
+    "MISSING_VALUE",
+    "DOCUMENT_REPLACEMENT",
+    "VALUE_PLUS_DOCUMENT_REPLACEMENT",
+  ] as const,
+);
 
 export type CustomerCorrectionResponseRequirement =
   (typeof CUSTOMER_CORRECTION_RESPONSE_REQUIREMENTS)[number];
@@ -35,11 +39,19 @@ export type CustomerCorrectionHandoffItem = Readonly<{
 export type CustomerCorrectionHandoffResponse = Readonly<{
   schemaVersion: typeof CUSTOMER_CORRECTION_HANDOFF_SCHEMA_VERSION;
   caseRef: string;
-  handoff: null | Readonly<{
-    handoffRef: string;
-    publishedAt: string;
-    items: readonly CustomerCorrectionHandoffItem[];
-  }>;
+  handoff:
+    | null
+    | Readonly<{
+      handoffRef: string;
+      publishedAt: string;
+      signerAuthority:
+        | Readonly<{
+          status: "available";
+          expectedSignerDisplayName: string;
+        }>
+        | Readonly<{ status: "unavailable" }>;
+      items: readonly CustomerCorrectionHandoffItem[];
+    }>;
 }>;
 
 type JsonObject = Record<string, unknown>;
@@ -48,8 +60,8 @@ const CASE_REFERENCE_RE =
   /^CASE-(?:[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 const HANDOFF_REFERENCE_RE = /^CRH-[0-9A-F]{16}$/;
 const ITEM_REFERENCE_RE = /^CCI-[A-F0-9]{32}$/;
-const REASON_LABELS: Readonly<Record<CustomerCorrectionReason, string>> =
-  Object.freeze({
+const REASON_LABELS: Readonly<Record<CustomerCorrectionReason, string>> = Object
+  .freeze({
     MISSING_INFORMATION: "Gegeven ontbreekt",
     INCORRECT_INFORMATION: "Gegeven onjuist",
     INCONSISTENT_INFORMATION: "Gegevens inconsistent",
@@ -97,15 +109,17 @@ function safeCurrentValue(value: unknown): unknown | null {
 }
 
 function parseItem(value: unknown): CustomerCorrectionHandoffItem | null {
-  if (!isObject(value) || !exactKeys(value, [
-    "correction_instruction",
-    "correction_reason",
-    "correction_reason_label",
-    "document_label",
-    "fact_label",
-    "item_ref",
-    "response_requirement",
-  ], ["current_value"])) return null;
+  if (
+    !isObject(value) || !exactKeys(value, [
+      "correction_instruction",
+      "correction_reason",
+      "correction_reason_label",
+      "document_label",
+      "fact_label",
+      "item_ref",
+      "response_requirement",
+    ], ["current_value"])
+  ) return null;
   const itemRef = value.item_ref;
   const documentLabel = value.document_label;
   const factLabel = boundedString(value.fact_label, 240);
@@ -118,8 +132,8 @@ function parseItem(value: unknown): CustomerCorrectionHandoffItem | null {
     value.correction_instruction,
     1_000,
   );
-  const responseRequirement =
-    value.response_requirement as CustomerCorrectionResponseRequirement;
+  const responseRequirement = value
+    .response_requirement as CustomerCorrectionResponseRequirement;
   if (
     typeof itemRef !== "string" || !ITEM_REFERENCE_RE.test(itemRef) ||
     !["Energiedocument", "Installatiefactuur"].includes(
@@ -148,6 +162,31 @@ function parseItem(value: unknown): CustomerCorrectionHandoffItem | null {
   });
 }
 
+function parseSignerAuthority(
+  value: unknown,
+):
+  | NonNullable<CustomerCorrectionHandoffResponse["handoff"]>["signerAuthority"]
+  | null {
+  if (!isObject(value) || typeof value.status !== "string") return null;
+  if (value.status === "unavailable" && exactKeys(value, ["status"])) {
+    return Object.freeze({ status: "unavailable" as const });
+  }
+  if (
+    value.status !== "available" ||
+    !exactKeys(value, ["expected_signer_display_name", "status"])
+  ) return null;
+  const expectedSignerDisplayName = boundedString(
+    value.expected_signer_display_name,
+    200,
+  );
+  return expectedSignerDisplayName
+    ? Object.freeze({
+      status: "available" as const,
+      expectedSignerDisplayName,
+    })
+    : null;
+}
+
 export function parseCustomerCorrectionHandoffSource(
   value: unknown,
 ): CustomerCorrectionHandoffResponse | null {
@@ -167,11 +206,14 @@ export function parseCustomerCorrectionHandoffSource(
       handoff: null,
     });
   }
-  if (!isObject(value.handoff) || !exactKeys(value.handoff, [
-    "handoff_ref",
-    "items",
-    "published_at",
-  ])) return null;
+  if (
+    !isObject(value.handoff) || !exactKeys(value.handoff, [
+      "handoff_ref",
+      "items",
+      "published_at",
+      "signer_authority",
+    ])
+  ) return null;
   const handoffRef = value.handoff.handoff_ref;
   const publishedAt = normalizedTimestamp(value.handoff.published_at);
   if (
@@ -181,8 +223,9 @@ export function parseCustomerCorrectionHandoffSource(
     value.handoff.items.length > 100
   ) return null;
   const items = value.handoff.items.map(parseItem);
+  const signerAuthority = parseSignerAuthority(value.handoff.signer_authority);
   if (
-    items.some((item) => !item) ||
+    !signerAuthority || items.some((item) => !item) ||
     new Set(items.map((item) => item?.itemRef)).size !== items.length
   ) return null;
   return Object.freeze({
@@ -191,6 +234,7 @@ export function parseCustomerCorrectionHandoffSource(
     handoff: Object.freeze({
       handoffRef,
       publishedAt,
+      signerAuthority,
       items: Object.freeze(items as CustomerCorrectionHandoffItem[]),
     }),
   });

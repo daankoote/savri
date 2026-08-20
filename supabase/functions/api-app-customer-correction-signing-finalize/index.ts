@@ -5,7 +5,6 @@ import {
   appJsonResponse,
   appOptionsResponse,
   getAppRequestMeta,
-  payloadHash,
 } from "../_shared/app_foundation.ts";
 import { requireVerifiedSupabaseAuthUser } from "../_shared/app_customer_auth.ts";
 import {
@@ -109,14 +108,8 @@ export function createHandler(
     }
     const verifier = await otpVerifier(secret, input.otp);
     const legalBundleSha256 = await correctionLegalBundleHash();
-    const finalizePayloadSha256 = await payloadHash({
-      case_ref: input.caseRef,
-      challenge_reference: input.challengeReference,
-      typed_full_name: input.typedFullName,
-      legal_bundle_sha256: legalBundleSha256,
-    });
     const result = await serviceClient.rpc(
-      "app_customer_correction_finalize_v1",
+      "app_customer_correction_finalize_v2",
       {
         p_auth_user_id: verified.context.authUserId,
         p_case_ref: input.caseRef,
@@ -125,7 +118,6 @@ export function createHandler(
         p_typed_full_name: input.typedFullName,
         p_legal_bundle_version: "customer-correction-confirmation-nl-v1",
         p_legal_bundle_sha256: legalBundleSha256,
-        p_payload_sha256: finalizePayloadSha256,
         p_request_id: meta.request_id,
         p_idempotency_key: meta.idempotency_key,
         p_environment: meta.environment,

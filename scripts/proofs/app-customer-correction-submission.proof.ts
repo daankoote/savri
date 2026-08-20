@@ -1,8 +1,10 @@
 import {
   correctionLegalBundleProjection,
+  correctionSignerNamesMatch,
   CUSTOMER_CORRECTION_ACTIONS,
   CUSTOMER_CORRECTION_RUNTIME_ACTIONS,
   isRuntimeCorrectionAction,
+  normalizeCorrectionSignerName,
   parseCorrectionChallengeRequest,
   parseCorrectionFinalizeRequest,
 } from "../../supabase/functions/_shared/app_customer_correction_submission.ts";
@@ -14,6 +16,9 @@ const migration = read(
 );
 const handoffV2Migration = read(
   "supabase/migrations/20260820120000_app_customer_correction_handoff_contract_v2.sql",
+);
+const signerAuthorityMigration = read(
+  "supabase/migrations/20260820150000_app_customer_correction_signer_authority.sql",
 );
 const challenge = read(
   "supabase/functions/api-app-customer-correction-signing-challenge/index.ts",
@@ -45,16 +50,25 @@ const allFacts = Array.from({ length: 10 }, (_, index) => ({
 }));
 
 for (const responses of [one, threeDomain, crossDocument, allFacts]) {
-  const parsed = parseCorrectionChallengeRequest({ caseRef, responses });
+  const parsed = parseCorrectionChallengeRequest({
+    caseRef,
+    responses,
+    typedFullName: "Proof Person",
+  });
   assert(
     parsed?.responses.length === responses.length,
     "multi_item_parse_failed",
   );
 }
 assert(
-  parseCorrectionChallengeRequest({ caseRef, responses: [] }) === null &&
+  parseCorrectionChallengeRequest({
+        caseRef,
+        responses: [],
+        typedFullName: "Proof Person",
+      }) === null &&
     parseCorrectionChallengeRequest({
         caseRef,
+        typedFullName: "Proof Person",
         responses: [
           { itemRef: itemRef(1), correctedValue: "A" },
           { itemRef: itemRef(1), correctedValue: "B" },
@@ -62,6 +76,7 @@ assert(
       }) === null &&
     parseCorrectionChallengeRequest({
         caseRef,
+        typedFullName: "Proof Person",
         responses: [{
           itemRef: itemRef(1),
           correctedValue: "A",
@@ -69,6 +84,15 @@ assert(
         }],
       }) === null,
   "closed_browser_request_failed",
+);
+assert(
+  normalizeCorrectionSignerName("  Proof\t Person  ") === "Proof Person" &&
+    correctionSignerNamesMatch("  Proof\n Person ", "Proof Person") &&
+    !correctionSignerNamesMatch("proof person", "Proof Person") &&
+    !correctionSignerNamesMatch("Proof", "Proof Person") &&
+    !correctionSignerNamesMatch("", "Proof Person") &&
+    !correctionSignerNamesMatch("Daan Koote", "Lokaal Piloot"),
+  "signer_name_matching_not_exact",
 );
 assert(
   parseCorrectionFinalizeRequest({
@@ -135,7 +159,24 @@ assert(
     !finalize.includes("service_role") &&
     handoffV2Migration.includes("app_customer_correction_prepare_v2") &&
     handoffV2Migration.includes("app_customer_correction_prepare_v1") &&
-    challenge.includes("app_customer_correction_challenge_issue_v2"),
+    signerAuthorityMigration.includes(
+      "app_customer_correction_signer_context_v1",
+    ) &&
+    signerAuthorityMigration.includes(
+      "app_customer_correction_signer_challenge_bindings",
+    ) &&
+    signerAuthorityMigration.includes(
+      "app_customer_correction_signer_evidence_bindings",
+    ) &&
+    signerAuthorityMigration.includes("signer_authority_changed") &&
+    signerAuthorityMigration.includes("current_account_owner_person_v1") &&
+    signerAuthorityMigration.includes("current_authorized_representative_v1") &&
+    signerAuthorityMigration.includes("customer_type in ('zakelijk', 'vve')") &&
+    challenge.includes("app_customer_correction_challenge_issue_v3") &&
+    challenge.includes("app_customer_correction_signer_context_v1") &&
+    challenge.indexOf("app_customer_correction_signer_context_v1") <
+      challenge.indexOf("generateSigningOtp()") &&
+    finalize.includes("app_customer_correction_finalize_v2"),
   "runtime_reuse_or_secret_boundary_failed",
 );
 
@@ -155,7 +196,7 @@ with pilot as (
   where grant_row.granted_case_id is null or grant_row.granted_case_id=pilot.id
   limit 1
 ), read_contract as (
-  select public.app_customer_correction_handoff_read_v2(
+  select public.app_customer_correction_handoff_read_v3(
     actor.auth_user_id,'CASE-7E4CC75CD19F'
   ) body from actor
 ), item_ref as (
@@ -202,7 +243,10 @@ select concat_ws('|',
   public.app_customer_correction_action_requirement_v1(
     '{"action_requirement":"DOCUMENT_REPLACEMENT"}'::jsonb,'PRESENT'),
   (select count(*) from public.app_evidence_review_customer_submissions
-    where case_id=(select id from pilot))
+    where case_id=(select id from pilot)),
+  (select public.app_customer_correction_signer_context_v1(
+    actor.auth_user_id,'CASE-7E4CC75CD19F'
+  )#>>'{expected_signer_display_name}' from actor)
 ) from probes;
 rollback;`;
   const command = new Deno.Command("psql", {
@@ -231,7 +275,7 @@ rollback;`;
   const evidence = new TextDecoder().decode(output.stdout).trim();
   assert(
     evidence ===
-      "true|VALUE_CORRECTION|false|false|false|DOCUMENT_REPLACEMENT|0",
+      "true|VALUE_CORRECTION|false|false|false|DOCUMENT_REPLACEMENT|0|Lokaal Piloot",
     `local_scope_probe_failed:${evidence.replace(/[^A-Z0-9_|-]/gi, "")}`,
   );
 }
@@ -250,5 +294,7 @@ console.log([
   sourceOnly
     ? "CUSTOMER_CORRECTION_SOURCE_ONLY=PASS"
     : "CUSTOMER_CORRECTION_PILOT_SUBMISSIONS_ZERO=PASS",
-  "CUSTOMER_CORRECTION_PROOF_Q01_Q11=PASS",
+  "CUSTOMER_CORRECTION_SIGNER_AUTHORITY=PASS",
+  "CUSTOMER_CORRECTION_EXACT_NAME_MATCH=PASS",
+  "CUSTOMER_CORRECTION_PROOF_Q01_Q13=PASS",
 ].join("\n"));
