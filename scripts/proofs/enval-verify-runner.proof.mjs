@@ -363,6 +363,44 @@ assert(
   "evidence_review_correction_handoff_not_classified_or_deduplicated",
 );
 
+const correctionHandoffSupersessionLocalService = buildPlan({
+  paths: [
+    "supabase/functions/api-app-evidence-review-correction-supersede/index.ts",
+    "supabase/migrations/20260820210000_app_correction_handoff_supersession.sql",
+    "scripts/proofs/app-correction-handoff-supersession.proof.ts",
+    "scripts/proofs/app-correction-handoff-supersession-served.proof.mjs",
+    "scripts/proofs/app-evidence-fact-review-round-served.proof.mjs",
+    "scripts/tools/enval-migration-chain-manifest.mjs",
+    "scripts/proofs/enval-migration-chain.proof.mjs",
+  ],
+  mode: "LOCAL_SERVICE",
+});
+assert(
+  correctionHandoffSupersessionLocalService.selected.filter((check) =>
+        check.commandId === "correction-handoff-supersession-pure"
+      ).length === 1 &&
+    correctionHandoffSupersessionLocalService.selected.filter((check) =>
+        check.commandId === "correction-handoff-supersession-served-local"
+      ).length === 1 &&
+    correctionHandoffSupersessionLocalService.selected.filter((check) =>
+        check.commandId === "tenant-migration-chain-local"
+      ).length === 1 &&
+    correctionHandoffSupersessionLocalService.selected.some((check) =>
+      check.commandId === "correction-handoff-supersession-pure" &&
+      check.safety === SAFETY.SAFE_PURE && !check.mutatesState &&
+      !check.remote && !check.destructive
+    ) &&
+    correctionHandoffSupersessionLocalService.selected.some((check) =>
+      check.commandId === "correction-handoff-supersession-served-local" &&
+      check.safety === SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE &&
+      check.mutatesState && !check.remote && !check.destructive
+    ) &&
+    correctionHandoffSupersessionLocalService.selected.every((check) =>
+      !check.remote && !check.destructive
+    ),
+  "correction_handoff_supersession_not_classified_or_deduplicated",
+);
+
 const customerCorrectionSubmissionLocalService = buildPlan({
   paths: [
     "supabase/migrations/20260820090000_app_customer_correction_submissions.sql",

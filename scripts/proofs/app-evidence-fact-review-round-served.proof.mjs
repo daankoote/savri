@@ -257,7 +257,11 @@ function relevantFingerprint(runtime) {
   );
 }
 
-function setupFixture(runtime, f) {
+function setupFixture(runtime, f, seniority = "reviewer") {
+  assert(
+    ["member", "reviewer", "admin"].includes(seniority),
+    "invalid_fixture_seniority",
+  );
   const expires = new Date(Date.now() + 86_400_000).toISOString();
   const adminId = psql(
     runtime,
@@ -306,7 +310,7 @@ function setupFixture(runtime, f) {
     runtime,
     `select public.app_workforce_member_manage_v1(
     '${adminId}','${f.prefix}-member','${f.prefix}-member','${HASH}',
-    '${expires}','create','${f.authUserId}',null,'reviewer',clock_timestamp(),
+    '${expires}','create','${f.authUserId}',null,'${seniority}',clock_timestamp(),
     'decision:${f.prefix}:member',null
   )->>'ok';`,
   );
@@ -629,7 +633,7 @@ function grantPublishScope(runtime, f, authority) {
   assert(granted === "true", "workforce_publish_grant_failed");
 }
 
-function addChangedEvidence(runtime, f) {
+export function addChangedEvidence(runtime, f) {
   psql(
     runtime,
     `begin;
@@ -646,7 +650,7 @@ function addChangedEvidence(runtime, f) {
   );
 }
 
-async function readDetail(runtime, f, token) {
+export async function readDetail(runtime, f, token) {
   const response = await jsonRequest(
     `${runtime.apiUrl}/functions/v1/api-app-evidence-review-case-detail?caseRef=${f.caseRef}`,
     {
@@ -687,7 +691,7 @@ async function readDetail(runtime, f, token) {
   return response.body;
 }
 
-async function finalize(runtime, token, idempotencyKey, body) {
+export async function finalize(runtime, token, idempotencyKey, body) {
   return await jsonRequest(
     `${runtime.apiUrl}/functions/v1/api-app-evidence-review-round-finalize`,
     {
@@ -704,7 +708,13 @@ async function finalize(runtime, token, idempotencyKey, body) {
   );
 }
 
-async function publishCorrection(runtime, f, token, idempotencyKey, roundRef) {
+export async function publishCorrection(
+  runtime,
+  f,
+  token,
+  idempotencyKey,
+  roundRef,
+) {
   return await jsonRequest(
     `${runtime.apiUrl}/functions/v1/api-app-evidence-review-correction-publish`,
     {
@@ -721,7 +731,7 @@ async function publishCorrection(runtime, f, token, idempotencyKey, roundRef) {
   );
 }
 
-async function readCustomerHandoff(runtime, f, token) {
+export async function readCustomerHandoff(runtime, f, token) {
   return await jsonRequest(
     `${runtime.apiUrl}/functions/v1/api-app-customer-correction-handoff?caseRef=${f.caseRef}`,
     {
@@ -757,7 +767,7 @@ function roundCounts(runtime, f) {
   );
 }
 
-function cleanupFixture(runtime, f) {
+export function cleanupFixture(runtime, f) {
   psql(
     runtime,
     `begin;
@@ -841,7 +851,7 @@ function cleanupFixture(runtime, f) {
   );
 }
 
-function residueCount(runtime, f) {
+export function residueCount(runtime, f) {
   return psql(
     runtime,
     `begin read only; select
@@ -1384,9 +1394,35 @@ async function main() {
   );
 }
 
-main().catch((error) => {
-  process.stderr.write(
-    `SERVED_FINALIZER_PROOF=FAIL:${scrub(error?.message ?? error)}\n`,
-  );
-  process.exitCode = 1;
-});
+if (
+  process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
+  main().catch((error) => {
+    process.stderr.write(
+      `SERVED_FINALIZER_PROOF=FAIL:${scrub(error?.message ?? error)}\n`,
+    );
+    process.exitCode = 1;
+  });
+}
+
+export {
+  assert,
+  correctionOtp,
+  createAuth,
+  deleteAuth,
+  finalizeCorrection,
+  fixture,
+  grantCustomerAccess,
+  grantPublishScope,
+  handoffCount,
+  jsonRequest,
+  localRuntime,
+  pilotState,
+  psql,
+  readWorklist,
+  relevantFingerprint,
+  requestCorrectionChallenge,
+  roundCounts,
+  scrub,
+  setupFixture,
+};
