@@ -314,10 +314,12 @@ const evidenceReviewCorrectionHandoffLocalService = buildPlan({
     "supabase/migrations/20260819190000_app_evidence_review_correction_handoff.sql",
     "supabase/migrations/20260819210000_app_evidence_review_correction_publish_affordance.sql",
     "supabase/migrations/20260819220000_app_evidence_review_correction_publication_target_fix.sql",
+    "supabase/migrations/20260820120000_app_customer_correction_handoff_contract_v2.sql",
     "supabase/functions/_shared/app_evidence_review_correction_handoff.ts",
     "supabase/functions/api-app-customer-correction-handoff/index.ts",
     "supabase/functions/api-app-evidence-review-correction-publish/index.ts",
     "scripts/proofs/app-evidence-review-correction-handoff.proof.ts",
+    "scripts/proofs/app-customer-correction-handoff-contract-v2.proof.ts",
   ],
   mode: "LOCAL_SERVICE",
 });
@@ -327,6 +329,12 @@ assert(
       ).length === 1 &&
     evidenceReviewCorrectionHandoffLocalService.selected.filter((check) =>
         check.commandId === "evidence-review-correction-handoff-local"
+      ).length === 1 &&
+    evidenceReviewCorrectionHandoffLocalService.selected.filter((check) =>
+        check.commandId === "customer-correction-handoff-v2-pure"
+      ).length === 1 &&
+    evidenceReviewCorrectionHandoffLocalService.selected.filter((check) =>
+        check.commandId === "customer-correction-handoff-v2-local-read"
       ).length === 1 &&
     evidenceReviewCorrectionHandoffLocalService.selected.filter((check) =>
         check.commandId === "evidence-fact-review-round-served-local"
@@ -357,12 +365,14 @@ assert(
 const customerCorrectionSubmissionLocalService = buildPlan({
   paths: [
     "supabase/migrations/20260820090000_app_customer_correction_submissions.sql",
+    "supabase/migrations/20260820120000_app_customer_correction_handoff_contract_v2.sql",
     "supabase/functions/_shared/app_customer_correction_submission.ts",
     "supabase/functions/_shared/signing_otp_transport.ts",
     "supabase/functions/api-app-customer-correction-signing-challenge/index.ts",
     "supabase/functions/api-app-customer-correction-signing-finalize/index.ts",
     "supabase/functions/api-app-evidence-review-worklist/index.ts",
     "scripts/proofs/app-customer-correction-submission.proof.ts",
+    "scripts/proofs/app-customer-correction-handoff-contract-v2.proof.ts",
     "scripts/proofs/app-evidence-fact-review-round-served.proof.mjs",
   ],
   mode: "LOCAL_SERVICE",
@@ -373,6 +383,12 @@ assert(
       ).length === 1 &&
     customerCorrectionSubmissionLocalService.selected.filter((check) =>
         check.commandId === "customer-correction-submission-local-read"
+      ).length === 1 &&
+    customerCorrectionSubmissionLocalService.selected.filter((check) =>
+        check.commandId === "customer-correction-handoff-v2-pure"
+      ).length === 1 &&
+    customerCorrectionSubmissionLocalService.selected.filter((check) =>
+        check.commandId === "customer-correction-handoff-v2-local-read"
       ).length === 1 &&
     customerCorrectionSubmissionLocalService.selected.filter((check) =>
         check.commandId === "evidence-fact-review-round-served-local"
@@ -402,14 +418,19 @@ assert(
 const customerCorrectionTargeted = buildPlan({
   paths: [
     "supabase/migrations/20260820090000_app_customer_correction_submissions.sql",
+    "supabase/migrations/20260820120000_app_customer_correction_handoff_contract_v2.sql",
     "supabase/functions/_shared/app_customer_correction_submission.ts",
     "scripts/proofs/app-customer-correction-submission.proof.ts",
+    "scripts/proofs/app-customer-correction-handoff-contract-v2.proof.ts",
   ],
   mode: "TARGETED",
 });
 assert(
-  customerCorrectionTargeted.selected.filter((check) =>
+    customerCorrectionTargeted.selected.filter((check) =>
         check.commandId === "customer-correction-submission-pure"
+      ).length === 1 &&
+    customerCorrectionTargeted.selected.filter((check) =>
+        check.commandId === "customer-correction-handoff-v2-pure"
       ).length === 1 &&
     customerCorrectionTargeted.selected.every((check) =>
       check.safety === SAFETY.SAFE_PURE && !check.mutatesState &&
@@ -417,6 +438,7 @@ assert(
     ) &&
     !customerCorrectionTargeted.selected.some((check) =>
       check.commandId === "customer-correction-submission-local-read" ||
+      check.commandId === "customer-correction-handoff-v2-local-read" ||
       check.commandId === "evidence-fact-review-round-served-local"
     ),
   "customer_correction_targeted_not_pure_or_gated",

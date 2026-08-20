@@ -18,7 +18,7 @@ import {
   type ServiceClient,
 } from "../_shared/app_workforce_authorization.ts";
 
-const READ_RPC = "app_customer_correction_handoff_read_v1";
+const READ_RPC = "app_customer_correction_handoff_read_v2";
 const CASE_REFERENCE_RE =
   /^CASE-(?:[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 

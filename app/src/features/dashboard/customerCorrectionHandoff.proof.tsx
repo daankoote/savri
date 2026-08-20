@@ -47,6 +47,7 @@ function item(
     | "INCORRECT_INFORMATION"
     | "INCONSISTENT_INFORMATION"
     | "OTHER" = "INCORRECT_INFORMATION",
+  itemNumber = 1,
 ) {
   const serverLabels = {
     MISSING_INFORMATION: "Gegeven ontbreekt",
@@ -55,17 +56,24 @@ function item(
     OTHER: "Aanpassing nodig",
   } as const;
   return {
+    itemRef: `CCI-${itemNumber.toString(16).padStart(32, "0").toUpperCase()}`,
     documentLabel: "Energiedocument",
     factLabel: "Energieleverancier",
+    ...(correctionReason === "MISSING_INFORMATION"
+      ? {}
+      : { currentValue: "Pilot Energie Nederland B.V." }),
     correctionReason,
     correctionReasonLabel: serverLabels[correctionReason],
     correctionInstruction: "foute invoer",
+    responseRequirement: correctionReason === "MISSING_INFORMATION"
+      ? "MISSING_VALUE"
+      : "VALUE_CORRECTION",
   };
 }
 
 function body(caseRef = CASE_A, items: unknown[] = [item()]) {
   return {
-    schemaVersion: "customer-correction-handoff-v1",
+    schemaVersion: "customer-correction-handoff-v2",
     caseRef,
     handoff: {
       handoffRef: "CRH-0123456789ABCDEF",
@@ -138,11 +146,16 @@ function renderDashboard(correctionHandoff: CustomerCorrectionHandoffState) {
 const decoded = decodeCustomerCorrectionHandoffResponse(body(), CASE_A);
 assert(
   decoded.ok && decoded.model.handoff?.items.length === 1 &&
-    decoded.model.handoff.items[0].correctionReason === "INCORRECT_INFORMATION",
+    decoded.model.handoff.items[0].correctionReason ===
+      "INCORRECT_INFORMATION" &&
+    decoded.model.handoff.items[0].responseRequirement ===
+      "VALUE_CORRECTION" &&
+    decoded.model.handoff.items[0].currentValue ===
+      "Pilot Energie Nederland B.V.",
   "Q01_customer_safe_response_not_decoded",
 );
 const noHandoff = decodeCustomerCorrectionHandoffResponse({
-  schemaVersion: "customer-correction-handoff-v1",
+  schemaVersion: "customer-correction-handoff-v2",
   caseRef: CASE_A,
   handoff: null,
 }, CASE_A);
@@ -299,9 +312,9 @@ assert(
 
 const multiple = decodeCustomerCorrectionHandoffResponse(
   body(CASE_A, [
-    item("MISSING_INFORMATION"),
-    item("INCONSISTENT_INFORMATION"),
-    item("OTHER"),
+    item("MISSING_INFORMATION", 1),
+    item("INCONSISTENT_INFORMATION", 2),
+    item("OTHER", 3),
   ]),
   CASE_A,
 );

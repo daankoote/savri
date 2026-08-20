@@ -24,7 +24,7 @@ export const CUSTOMER_CORRECTION_LEGAL_BUNDLE = Object.freeze({
 });
 
 export type CorrectionResponse = {
-  itemIndex: number;
+  itemRef: string;
   correctedValue: string;
 };
 
@@ -42,6 +42,7 @@ export type CorrectionFinalizeRequest = {
 
 const CASE_REFERENCE_RE =
   /^CASE-(?:[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+const ITEM_REFERENCE_RE = /^CCI-[A-F0-9]{32}$/;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
@@ -76,21 +77,21 @@ export function parseCorrectionChallengeRequest(
     value.responses.length < 1 || value.responses.length > 100
   ) return null;
   const responses: CorrectionResponse[] = [];
-  const indexes = new Set<number>();
+  const itemRefs = new Set<string>();
   for (const response of value.responses) {
     if (
       !isRecord(response) ||
-      !hasExactKeys(response, ["itemIndex", "correctedValue"]) ||
-      !Number.isInteger(response.itemIndex) ||
-      Number(response.itemIndex) < 0 || Number(response.itemIndex) > 99
+      !hasExactKeys(response, ["itemRef", "correctedValue"]) ||
+      typeof response.itemRef !== "string" ||
+      !ITEM_REFERENCE_RE.test(response.itemRef)
     ) {
       return null;
     }
-    const itemIndex = Number(response.itemIndex);
+    const itemRef = response.itemRef;
     const correctedValue = safeString(response.correctedValue, 2000);
-    if (!correctedValue || indexes.has(itemIndex)) return null;
-    indexes.add(itemIndex);
-    responses.push({ itemIndex, correctedValue });
+    if (!correctedValue || itemRefs.has(itemRef)) return null;
+    itemRefs.add(itemRef);
+    responses.push({ itemRef, correctedValue });
   }
   return { caseRef, responses };
 }

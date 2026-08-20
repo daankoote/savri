@@ -1366,7 +1366,7 @@ assert(
     !correctionPublishHookSource.includes("sessionStorage") &&
     !detailClientSource.includes("api-app-customer-correction-handoff") &&
     customerHandoffEndpointSource.includes(
-      "app_customer_correction_handoff_read_v1",
+      "app_customer_correction_handoff_read_v2",
     ) &&
     !detailClientSource.includes("api-app-evidence-review-decision") &&
     !detailSource.includes("api-app-evidence-review-decision") &&

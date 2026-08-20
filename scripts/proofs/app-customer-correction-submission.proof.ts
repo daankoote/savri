@@ -12,6 +12,9 @@ const read = (path: string) => Deno.readTextFileSync(new URL(path, ROOT));
 const migration = read(
   "supabase/migrations/20260820090000_app_customer_correction_submissions.sql",
 );
+const handoffV2Migration = read(
+  "supabase/migrations/20260820120000_app_customer_correction_handoff_contract_v2.sql",
+);
 const challenge = read(
   "supabase/functions/api-app-customer-correction-signing-challenge/index.ts",
 );
@@ -24,19 +27,21 @@ function assert(value: unknown, code: string): asserts value {
 }
 
 const caseRef = "CASE-AAAAAAAAAAAA";
-const one = [{ itemIndex: 0, correctedValue: "Supplier One" }];
+const itemRef = (number: number) =>
+  `CCI-${number.toString(16).padStart(32, "0").toUpperCase()}`;
+const one = [{ itemRef: itemRef(1), correctedValue: "Supplier One" }];
 const threeDomain = [
-  { itemIndex: 0, correctedValue: "Supplier One" },
-  { itemIndex: 1, correctedValue: "871234567890123456" },
-  { itemIndex: 2, correctedValue: "Proof Address" },
+  { itemRef: itemRef(1), correctedValue: "Supplier One" },
+  { itemRef: itemRef(2), correctedValue: "871234567890123456" },
+  { itemRef: itemRef(3), correctedValue: "Proof Address" },
 ];
 const crossDocument = [
-  { itemIndex: 0, correctedValue: "Supplier One" },
-  { itemIndex: 1, correctedValue: "Proof Charger" },
+  { itemRef: itemRef(1), correctedValue: "Supplier One" },
+  { itemRef: itemRef(2), correctedValue: "Proof Charger" },
 ];
-const allFacts = Array.from({ length: 10 }, (_, itemIndex) => ({
-  itemIndex,
-  correctedValue: itemIndex === 2 ? "871234567890123456" : `Value ${itemIndex}`,
+const allFacts = Array.from({ length: 10 }, (_, index) => ({
+  itemRef: itemRef(index + 1),
+  correctedValue: index === 2 ? "871234567890123456" : `Value ${index}`,
 }));
 
 for (const responses of [one, threeDomain, crossDocument, allFacts]) {
@@ -51,14 +56,14 @@ assert(
     parseCorrectionChallengeRequest({
         caseRef,
         responses: [
-          { itemIndex: 0, correctedValue: "A" },
-          { itemIndex: 0, correctedValue: "B" },
+          { itemRef: itemRef(1), correctedValue: "A" },
+          { itemRef: itemRef(1), correctedValue: "B" },
         ],
       }) === null &&
     parseCorrectionChallengeRequest({
         caseRef,
         responses: [{
-          itemIndex: 0,
+          itemRef: itemRef(1),
           correctedValue: "A",
           actionRequirement: "VALUE_CORRECTION",
         }],
@@ -127,7 +132,10 @@ assert(
     finalize.includes("otpVerifier") &&
     finalize.includes("requireVerifiedSupabaseAuthUser") &&
     !challenge.includes("service_role") &&
-    !finalize.includes("service_role"),
+    !finalize.includes("service_role") &&
+    handoffV2Migration.includes("app_customer_correction_prepare_v2") &&
+    handoffV2Migration.includes("app_customer_correction_prepare_v1") &&
+    challenge.includes("app_customer_correction_challenge_issue_v2"),
   "runtime_reuse_or_secret_boundary_failed",
 );
 
@@ -146,24 +154,47 @@ with pilot as (
   join pilot on pilot.customer_id=grant_row.customer_id
   where grant_row.granted_case_id is null or grant_row.granted_case_id=pilot.id
   limit 1
+), read_contract as (
+  select public.app_customer_correction_handoff_read_v2(
+    actor.auth_user_id,'CASE-7E4CC75CD19F'
+  ) body from actor
+), item_ref as (
+  select body#>>'{handoff,items,0,item_ref}' value from read_contract
 ), probes as (
   select
-    public.app_customer_correction_prepare_v1(
+    public.app_customer_correction_prepare_v2(
       actor.auth_user_id,'CASE-7E4CC75CD19F',
-      '[{"itemIndex":0,"correctedValue":"Proof supplier only"}]'::jsonb
+      pg_catalog.jsonb_build_array(pg_catalog.jsonb_build_object(
+        'itemRef',item_ref.value,'correctedValue','Proof supplier only'
+      ))
     ) valid,
-    public.app_customer_correction_prepare_v1(
+    public.app_customer_correction_prepare_v2(
       actor.auth_user_id,'CASE-7E4CC75CD19F','[]'::jsonb
     ) partial,
-    public.app_customer_correction_prepare_v1(
+    public.app_customer_correction_prepare_v2(
       actor.auth_user_id,'CASE-7E4CC75CD19F',
-      '[{"itemIndex":0,"correctedValue":"A"},{"itemIndex":0,"correctedValue":"B"}]'::jsonb
+      pg_catalog.jsonb_build_array(
+        pg_catalog.jsonb_build_object(
+          'itemRef',item_ref.value,'correctedValue','A'
+        ),
+        pg_catalog.jsonb_build_object(
+          'itemRef',item_ref.value,'correctedValue','B'
+        )
+      )
     ) duplicate,
-    public.app_customer_correction_prepare_v1(
+    public.app_customer_correction_prepare_v2(
       actor.auth_user_id,'CASE-7E4CC75CD19F',
-      '[{"itemIndex":0,"correctedValue":"A"},{"itemIndex":1,"correctedValue":"B"}]'::jsonb
+      pg_catalog.jsonb_build_array(
+        pg_catalog.jsonb_build_object(
+          'itemRef',item_ref.value,'correctedValue','A'
+        ),
+        pg_catalog.jsonb_build_object(
+          'itemRef','CCI-FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF',
+          'correctedValue','B'
+        )
+      )
     ) extra
-  from actor
+  from actor,item_ref
 )
 select concat_ws('|',
   valid->>'ok',valid#>>'{items,0,action_requirement}',

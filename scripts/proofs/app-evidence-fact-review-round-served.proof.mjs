@@ -985,12 +985,18 @@ async function main() {
     const customerSerialized = JSON.stringify(customerRead.body);
     assert(
       customerRead.status === 200 &&
-        customerRead.body?.schemaVersion === "customer-correction-handoff-v1" &&
+        customerRead.body?.schemaVersion === "customer-correction-handoff-v2" &&
         customerRead.body?.caseRef === f.caseRef &&
         Array.isArray(customerRead.body?.handoff?.items) &&
         customerRead.body.handoff.items.length === 1 &&
         customerRead.body.handoff.items[0].documentLabel ===
           "Energiedocument" &&
+        /^CCI-[A-F0-9]{32}$/.test(
+          String(customerRead.body.handoff.items[0].itemRef),
+        ) &&
+        customerRead.body.handoff.items[0].responseRequirement ===
+          "MISSING_VALUE" &&
+        !("currentValue" in customerRead.body.handoff.items[0]) &&
         customerRead.body.handoff.items[0].correctionReason ===
           "INCORRECT_INFORMATION" &&
         customerRead.body.handoff.items[0].correctionInstruction ===
@@ -1000,7 +1006,11 @@ async function main() {
         !customerSerialized.includes("reviewer") &&
         !customerSerialized.includes("policy") &&
         !customerSerialized.includes("bundleSha"),
-      "customer_safe_handoff_runtime_invalid",
+      `customer_safe_handoff_runtime_invalid:${customerRead.status}:` +
+        `${customerRead.body?.schemaVersion ?? "NONE"}:` +
+        `${customerRead.body?.handoff?.items?.length ?? "NONE"}:` +
+        `${customerRead.body?.handoff?.items?.[0]?.responseRequirement ?? "NONE"}:` +
+        `${!("currentValue" in (customerRead.body?.handoff?.items?.[0] ?? {}))}`,
     );
     const waiting = await readDetail(runtime, f, auth.token);
     assert(
@@ -1015,7 +1025,7 @@ async function main() {
       from public.app_signup_signing_snapshots where id='${f.snapshotId}';`,
     );
     const correctionResponses = [{
-      itemIndex: 0,
+      itemRef: customerRead.body.handoff.items[0].itemRef,
       correctedValue: "871234567890123456",
     }];
     const challenge = await requestCorrectionChallenge(

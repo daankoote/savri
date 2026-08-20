@@ -294,11 +294,15 @@ try {
     and to_regclass('public.app_evidence_review_customer_submission_items') is not null
     and to_regclass('public.app_evidence_review_decision_carry_forwards') is not null
     and to_regprocedure('public.app_customer_correction_challenge_issue_v1(uuid,text,jsonb,text,text,timestamptz,text,text,text,text,text,text)') is not null
+    and to_regprocedure('public.app_customer_correction_challenge_issue_v2(uuid,text,jsonb,text,text,timestamptz,text,text,text,text,text,text)') is not null
     and to_regprocedure('public.app_customer_correction_finalize_v1(uuid,text,uuid,text,text,text,text,text,text,text,text)') is not null
     and to_regprocedure('public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)') is not null
     and position('access_grant.customer_id <> v_case.customer_id' in pg_get_functiondef('public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)'::regprocedure)) > 0
     and position('access_grant.customer_id = v_case.customer_id' in pg_get_functiondef('public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)'::regprocedure)) = 0
     and to_regprocedure('public.app_customer_correction_handoff_read_v1(uuid,text)') is not null
+    and to_regprocedure('public.app_customer_correction_handoff_read_v2(uuid,text)') is not null
+    and to_regprocedure('public.app_customer_correction_item_ref_v1(uuid,uuid,uuid,text)') is not null
+    and to_regprocedure('public.app_customer_correction_prepare_v2(uuid,text,jsonb)') is not null
     and to_regprocedure('public.app_evidence_review_state_v1(uuid,uuid)') is not null
     and not has_function_privilege('service_role','public.app_evidence_review_decide_v1(uuid,uuid,text,text,text,text,timestamptz)','EXECUTE')
     and has_function_privilege('service_role','public.app_evidence_review_decide_v2(uuid,uuid,text,text,text,text,text,text,timestamptz)','EXECUTE')
@@ -319,6 +323,12 @@ try {
     and not has_function_privilege('authenticated','public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)','EXECUTE')
     and has_function_privilege('service_role','public.app_customer_correction_handoff_read_v1(uuid,text)','EXECUTE')
     and not has_function_privilege('authenticated','public.app_customer_correction_handoff_read_v1(uuid,text)','EXECUTE')
+    and has_function_privilege('service_role','public.app_customer_correction_handoff_read_v2(uuid,text)','EXECUTE')
+    and not has_function_privilege('authenticated','public.app_customer_correction_handoff_read_v2(uuid,text)','EXECUTE')
+    and has_function_privilege('service_role','public.app_customer_correction_challenge_issue_v2(uuid,text,jsonb,text,text,timestamptz,text,text,text,text,text,text)','EXECUTE')
+    and not has_function_privilege('authenticated','public.app_customer_correction_challenge_issue_v2(uuid,text,jsonb,text,text,timestamptz,text,text,text,text,text,text)','EXECUTE')
+    and not has_function_privilege('service_role','public.app_customer_correction_item_ref_v1(uuid,uuid,uuid,text)','EXECUTE')
+    and not has_function_privilege('service_role','public.app_customer_correction_prepare_v2(uuid,text,jsonb)','EXECUTE')
     and not has_function_privilege('service_role','public.app_workforce_authorize_v1(uuid,text,uuid,uuid,timestamptz)','EXECUTE')
     and to_regprocedure('public.app_compliance_source_event_capture_v1(uuid,text,text,text,timestamptz,jsonb)') is not null
     and has_function_privilege('service_role','public.app_compliance_source_event_capture_v1(uuid,text,text,text,timestamptz,jsonb)','EXECUTE')

@@ -1,5 +1,5 @@
 export const CUSTOMER_CORRECTION_HANDOFF_SCHEMA_VERSION =
-  "customer-correction-handoff-v1" as const;
+  "customer-correction-handoff-v2" as const;
 
 export const CUSTOMER_CORRECTION_REASONS = Object.freeze([
   "MISSING_INFORMATION",
@@ -11,13 +11,25 @@ export const CUSTOMER_CORRECTION_REASONS = Object.freeze([
 export type CustomerCorrectionReason =
   (typeof CUSTOMER_CORRECTION_REASONS)[number];
 
+export const CUSTOMER_CORRECTION_RESPONSE_REQUIREMENTS = Object.freeze([
+  "VALUE_CORRECTION",
+  "MISSING_VALUE",
+  "DOCUMENT_REPLACEMENT",
+  "VALUE_PLUS_DOCUMENT_REPLACEMENT",
+] as const);
+
+export type CustomerCorrectionResponseRequirement =
+  (typeof CUSTOMER_CORRECTION_RESPONSE_REQUIREMENTS)[number];
+
 export type CustomerCorrectionHandoffItem = Readonly<{
+  itemRef: string;
   documentLabel: "Energiedocument" | "Installatiefactuur";
   factLabel: string;
   currentValue?: unknown;
   correctionReason: CustomerCorrectionReason;
   correctionReasonLabel: string;
   correctionInstruction: string;
+  responseRequirement: CustomerCorrectionResponseRequirement;
 }>;
 
 export type CustomerCorrectionHandoffResponse = Readonly<{
@@ -35,6 +47,7 @@ type JsonObject = Record<string, unknown>;
 const CASE_REFERENCE_RE =
   /^CASE-(?:[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 const HANDOFF_REFERENCE_RE = /^CRH-[0-9A-F]{16}$/;
+const ITEM_REFERENCE_RE = /^CCI-[A-F0-9]{32}$/;
 const REASON_LABELS: Readonly<Record<CustomerCorrectionReason, string>> =
   Object.freeze({
     MISSING_INFORMATION: "Gegeven ontbreekt",
@@ -90,7 +103,10 @@ function parseItem(value: unknown): CustomerCorrectionHandoffItem | null {
     "correction_reason_label",
     "document_label",
     "fact_label",
+    "item_ref",
+    "response_requirement",
   ], ["current_value"])) return null;
+  const itemRef = value.item_ref;
   const documentLabel = value.document_label;
   const factLabel = boundedString(value.fact_label, 240);
   const correctionReason = value.correction_reason as CustomerCorrectionReason;
@@ -102,11 +118,15 @@ function parseItem(value: unknown): CustomerCorrectionHandoffItem | null {
     value.correction_instruction,
     1_000,
   );
+  const responseRequirement =
+    value.response_requirement as CustomerCorrectionResponseRequirement;
   if (
+    typeof itemRef !== "string" || !ITEM_REFERENCE_RE.test(itemRef) ||
     !["Energiedocument", "Installatiefactuur"].includes(
       String(documentLabel),
     ) || !factLabel ||
     !CUSTOMER_CORRECTION_REASONS.includes(correctionReason) ||
+    !CUSTOMER_CORRECTION_RESPONSE_REQUIREMENTS.includes(responseRequirement) ||
     !correctionReasonLabel ||
     correctionReasonLabel !== REASON_LABELS[correctionReason] ||
     !correctionInstruction || !/[\p{L}\p{N}]/u.test(correctionInstruction)
@@ -116,6 +136,7 @@ function parseItem(value: unknown): CustomerCorrectionHandoffItem | null {
     : undefined;
   if ("current_value" in value && currentValue === null) return null;
   return Object.freeze({
+    itemRef,
     documentLabel:
       documentLabel as CustomerCorrectionHandoffItem["documentLabel"],
     factLabel,
@@ -123,6 +144,7 @@ function parseItem(value: unknown): CustomerCorrectionHandoffItem | null {
     correctionReason,
     correctionReasonLabel,
     correctionInstruction,
+    responseRequirement,
   });
 }
 
@@ -159,7 +181,10 @@ export function parseCustomerCorrectionHandoffSource(
     value.handoff.items.length > 100
   ) return null;
   const items = value.handoff.items.map(parseItem);
-  if (items.some((item) => !item)) return null;
+  if (
+    items.some((item) => !item) ||
+    new Set(items.map((item) => item?.itemRef)).size !== items.length
+  ) return null;
   return Object.freeze({
     schemaVersion: CUSTOMER_CORRECTION_HANDOFF_SCHEMA_VERSION,
     caseRef: value.case_ref,

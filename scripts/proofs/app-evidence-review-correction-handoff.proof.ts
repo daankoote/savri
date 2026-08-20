@@ -24,6 +24,8 @@ const FOUNDATION_MIGRATION =
   "supabase/migrations/20260819190000_app_evidence_review_correction_handoff.sql";
 const PUBLICATION_TARGET_FIX_MIGRATION =
   "supabase/migrations/20260819220000_app_evidence_review_correction_publication_target_fix.sql";
+const CUSTOMER_READ_V2_MIGRATION =
+  "supabase/migrations/20260820120000_app_customer_correction_handoff_contract_v2.sql";
 const PILOT_CASE_REF = "CASE-7E4CC75CD19F";
 const CASE_REF = `CASE-${crypto.randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase()}`;
 const ROUND_REF = "e1000000-0000-4000-8000-000000000001";
@@ -168,6 +170,7 @@ async function endpointProof(): Promise<void> {
   const publicationTargetFix = await Deno.readTextFile(
     PUBLICATION_TARGET_FIX_MIGRATION,
   );
+  const customerReadV2 = await Deno.readTextFile(CUSTOMER_READ_V2_MIGRATION);
   assert(
     migration.includes("evidence.review.correction.publish") &&
       migration.includes("app_evidence_review_correction_handoffs") &&
@@ -203,6 +206,17 @@ async function endpointProof(): Promise<void> {
         "access_grant.customer_id = v_case.customer_id",
       ),
     "publication_target_not_separated_from_read_authority",
+  );
+  assert(
+    customerReadV2.includes("app_customer_correction_handoff_read_v2") &&
+      customerReadV2.includes("app_customer_correction_item_ref_v1") &&
+      customerReadV2.includes(
+        "app_customer_correction_action_requirement_v1",
+      ) &&
+      customerReadV2.includes("response_requirement") &&
+      !customerReadV2.includes("'subject_ref',") &&
+      !customerReadV2.includes("email_normalized"),
+    "customer_read_v2_authority_missing",
   );
 
   assert(
@@ -322,12 +336,14 @@ async function endpointProof(): Promise<void> {
       handoff_ref: "CRH-0123456789ABCDEF",
       published_at: "2026-08-19T19:00:00.000Z",
       items: [{
+        item_ref: "CCI-0123456789ABCDEF0123456789ABCDEF",
         document_label: "Energiedocument",
         fact_label: "Energieleverancier",
         current_value: "Vorige leverancier",
         correction_reason: "INCORRECT_INFORMATION",
         correction_reason_label: "Gegeven onjuist",
         correction_instruction: "foute invoer",
+        response_requirement: "VALUE_CORRECTION",
       }],
     },
   };
@@ -335,6 +351,10 @@ async function endpointProof(): Promise<void> {
   assert(
     parsed?.handoff?.items[0]?.documentLabel === "Energiedocument" &&
       parsed.handoff.items[0].factLabel === "Energieleverancier" &&
+      parsed.handoff.items[0].itemRef ===
+        "CCI-0123456789ABCDEF0123456789ABCDEF" &&
+      parsed.handoff.items[0].responseRequirement === "VALUE_CORRECTION" &&
+      parsed.handoff.items[0].currentValue === "Vorige leverancier" &&
       parsed.handoff.items[0].correctionReasonLabel === "Gegeven onjuist" &&
       parsed.handoff.items[0].correctionInstruction === "foute invoer" &&
       !JSON.stringify(parsed).includes("subject_ref") &&
@@ -360,7 +380,7 @@ async function endpointProof(): Promise<void> {
 
   const customerRead = createCustomerReadHandler({
     createServiceClient: () => serviceClient(async (name, args) => {
-      assert(name === "app_customer_correction_handoff_read_v1", "read_rpc_changed");
+      assert(name === "app_customer_correction_handoff_read_v2", "read_rpc_changed");
       assert(
         Object.keys(args).sort().join("|") === "p_auth_user_id|p_case_ref",
         "read_rpc_input_widened",
@@ -443,21 +463,16 @@ async function activePilotHandoffProof(): Promise<void> {
       cross join lateral jsonb_array_elements(
         handoff.correction_bundle->'items'
       ) item
-    ), first_admin as (
+    ), customer_actor as (
       select identity_row.auth_user_id
-      from public.app_workforce_identities identity_row
-      join lateral (
-        select state.state
-        from public.app_workforce_identity_states state
-        where state.workforce_identity_id=identity_row.id
-        order by state.effective_at desc,state.recorded_at desc limit 1
-      ) active_state on active_state.state='active'
-      join lateral (
-        select seniority.seniority
-        from public.app_workforce_seniority_assignments seniority
-        where seniority.workforce_identity_id=identity_row.id
-        order by seniority.effective_at desc,seniority.recorded_at desc limit 1
-      ) admin_seniority on admin_seniority.seniority='admin'
+      from public.app_customer_identities identity_row
+      join target on target.customer_id=identity_row.customer_id
+      join public.app_customer_access_grants access_grant
+        on access_grant.auth_user_id=identity_row.auth_user_id
+       and access_grant.customer_id=target.customer_id
+       and (access_grant.granted_case_id is null
+         or access_grant.granted_case_id=target.id)
+      where identity_row.status='active'
       order by identity_row.created_at,identity_row.id limit 1
     )
     select jsonb_build_object(
@@ -510,9 +525,9 @@ async function activePilotHandoffProof(): Promise<void> {
         where identity_row.customer_id=target.customer_id
           and identity_row.status='active'
           and identity_row.auth_user_id is not null),
-      'customer_read_code',(select public.app_customer_correction_handoff_read_v1(
-        first_admin.auth_user_id,target.case_reference
-      )->>'code' from first_admin,target),
+      'customer_read_code',(select public.app_customer_correction_handoff_read_v2(
+        customer_actor.auth_user_id,target.case_reference
+      )->>'code' from customer_actor,target),
       'lifecycle_state',(select lifecycle.lifecycle_state
         from public.app_case_lifecycle_events lifecycle,target
         where lifecycle.case_id=target.id
@@ -544,8 +559,9 @@ async function activePilotHandoffProof(): Promise<void> {
       state.fact_round_count === 1 && state.decision_count === 10 &&
       state.accepted_count === 9 && state.correction_count === 1 &&
       state.legacy_decision_count === 0 &&
-      state.access_grant_count === 0 && state.bound_auth_count === 0 &&
-      state.customer_read_code === "customer_case_access_denied" &&
+      Number(state.access_grant_count) >= 1 &&
+      Number(state.bound_auth_count) >= 1 &&
+      state.customer_read_code === "ok" &&
       state.lifecycle_state === "submitted_for_review" &&
       state.active_worklist_member === false,
     "pilot_handoff_truth_invalid",

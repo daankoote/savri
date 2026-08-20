@@ -133,7 +133,7 @@ export function createHandler(
     const payloadSha256 = await correctionResponsePayloadHash(input);
     const legalBundleSha256 = await correctionLegalBundleHash();
     const issued = await serviceClient.rpc(
-      "app_customer_correction_challenge_issue_v1",
+      "app_customer_correction_challenge_issue_v2",
       {
         p_auth_user_id: verified.context.authUserId,
         p_case_ref: input.caseRef,
