@@ -138,12 +138,7 @@ export async function downloadSignupObject(
   bucket: string,
   path: string,
 ): Promise<
-  | {
-    ok: true;
-    sizeBytes: number;
-    detectedMimeType: string;
-    serverSha256: string;
-  }
+  | ({ ok: true } & PrivateStorageObject)
   | { ok: false; failureCode: "object_missing" | "object_read_failed" }
 > {
   if (
@@ -154,12 +149,7 @@ export async function downloadSignupObject(
   }
   const stored = await downloadPrivateStorageObject(SB, bucket, path);
   if (!stored.ok) return stored;
-  return {
-    ok: true,
-    sizeBytes: stored.sizeBytes,
-    detectedMimeType: stored.detectedMimeType,
-    serverSha256: stored.serverSha256,
-  };
+  return stored;
 }
 
 export type PrivateStorageObject = {

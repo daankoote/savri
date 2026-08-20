@@ -298,7 +298,7 @@ for (
     "app/src/features/invoice-analysis/invoicePdfParserAdapter.ts":
       "703a31e9aabf72d64d0f5c01e0ed239a9c29077c164e16fecff2234b379f4850",
     "app/src/features/invoice-analysis/documentObservationEnvelope.ts":
-      "d437a77d5e5a5f2323eaf96d126e3c6272da728bf8228a701f356757b9963323",
+      "d3efb3e7e28e1d666727fe020cd68178843cb0a68f21cdfe9f3d6b92fd9a9718",
     "app/src/features/invoice-analysis/documentTypeClassifier.ts":
       "e1978f9be592787e4ef131b255e771f3654c7147ff630bc01e275c4804f91113",
     "app/src/features/invoice-analysis/energyEanCandidateExtractor.ts":

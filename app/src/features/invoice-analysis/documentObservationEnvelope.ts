@@ -1,26 +1,6 @@
-export type GenericDocumentFactKey =
-  | "partyName"
-  | "organizationName"
-  | "registeredAddress"
-  | "legalForm"
-  | "tradeName"
-  | "directorOrBoardMember"
-  | "directorTitle"
-  | "representationAuthorityText"
-  | "structuredAddress"
-  | "electricityEan"
-  | "gasEan"
-  | "kvkNumber"
-  | "energySupplier"
-  | "installerOrSupplier"
-  | "contractStart"
-  | "contractEnd"
-  | "invoiceDate"
-  | "explicitInstallationDate"
-  | "chargerBrand"
-  | "chargerModel"
-  | "midNumber"
-  | "serialNumber";
+import type { DocumentFactKey } from "../../../../platform/runtime/document-parsing/document_fact_vocabulary.ts";
+
+export type GenericDocumentFactKey = Exclude<DocumentFactKey, "partyRole">;
 
 export type GenericDocumentType =
   | "organization_extract"

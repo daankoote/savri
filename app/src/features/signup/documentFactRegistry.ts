@@ -1,27 +1,6 @@
-export type DocumentFactKey =
-  | "partyName"
-  | "organizationName"
-  | "registeredAddress"
-  | "legalForm"
-  | "tradeName"
-  | "directorOrBoardMember"
-  | "directorTitle"
-  | "representationAuthorityText"
-  | "partyRole"
-  | "structuredAddress"
-  | "electricityEan"
-  | "gasEan"
-  | "energySupplier"
-  | "contractStart"
-  | "contractEnd"
-  | "kvkNumber"
-  | "installerOrSupplier"
-  | "chargerBrand"
-  | "chargerModel"
-  | "midNumber"
-  | "serialNumber"
-  | "invoiceDate"
-  | "explicitInstallationDate";
+import type { DocumentFactKey } from "../../../../platform/runtime/document-parsing/document_fact_vocabulary.ts";
+
+export type { DocumentFactKey } from "../../../../platform/runtime/document-parsing/document_fact_vocabulary.ts";
 
 export type DocumentSourceType =
   | "organization_extract"

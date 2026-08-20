@@ -1,6 +1,7 @@
 import { type Dispatch, useRef } from "react";
 import { getConfirmableEnergyEanCandidates } from "../invoice-analysis/energyEanCandidateExtractor";
 import { parseInvoicePdfInput } from "../invoice-analysis/invoicePdfParserAdapter";
+import { projectParserObservationForCurrentIntake } from "../invoice-analysis/parserObservationProjection.ts";
 import {
   type DocumentFirstSignupAction,
   type DocumentFirstSignupDraft,
@@ -137,19 +138,27 @@ export function DocumentFirstDocumentsStep({
       return;
     }
 
-    const result = await parseInvoicePdfInput(document.file);
-    if (
-      energyAttempts.current.get(locationId) !== attempt ||
-      !isDraftGenerationCurrent(generation)
-    ) return;
-
-    if (!result.ok) {
-      updateConnection(locationId, {
-        ...reset,
-        preflightStatus: "parser_error",
-      });
-    } else {
-      const envelope = result.observation_envelope;
+    const uploading: LocationDocumentDraft = {
+      ...document,
+      quarantineStatus: "uploading",
+      quarantineFileReference: null,
+      quarantineRevision: null,
+    };
+    dispatch({ type: "update_energy_document", document: uploading });
+    const upload = await uploadSignupDocument({
+      accountType: draft.accountBasis.accountType,
+      email: draft.accountBasis.email,
+      clientSlotId: document.clientId,
+      documentType: document.documentType,
+      file: document.file,
+      signal: controller.signal,
+    });
+    if (energyAttempts.current.get(locationId) !== attempt ||
+      !isDraftGenerationCurrent(generation) || (!upload.ok && upload.aborted)) return;
+    if (upload.ok && upload.receipt.parserObservation) {
+      const envelope = projectParserObservationForCurrentIntake(
+        upload.receipt.parserObservation,
+      );
       dispatch({
         type: "set_document_observation",
         documentId: document.clientId,
@@ -187,25 +196,12 @@ export function DocumentFirstDocumentsStep({
             : "unclassified_candidate_found",
         });
       }
+    } else {
+      updateConnection(locationId, {
+        ...reset,
+        preflightStatus: "parser_error",
+      });
     }
-
-    const uploading: LocationDocumentDraft = {
-      ...document,
-      quarantineStatus: "uploading",
-      quarantineFileReference: null,
-      quarantineRevision: null,
-    };
-    dispatch({ type: "update_energy_document", document: uploading });
-    const upload = await uploadSignupDocument({
-      accountType: draft.accountBasis.accountType,
-      email: draft.accountBasis.email,
-      clientSlotId: document.clientId,
-      documentType: document.documentType,
-      file: document.file,
-      signal: controller.signal,
-    });
-    if (energyAttempts.current.get(locationId) !== attempt ||
-      !isDraftGenerationCurrent(generation) || (!upload.ok && upload.aborted)) return;
     dispatch({
       type: "update_energy_document",
       document: upload.ok

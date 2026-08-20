@@ -1,5 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
+  isParserObservationEnvelopeV1,
+  type ParserObservationEnvelopeV1,
+} from "../../../../platform/runtime/document-parsing/document_parser_contract.ts";
+import {
   getCurrentAuthSession,
   getSupabaseBrowserClient,
 } from "../auth/authClient.ts";
@@ -34,6 +38,7 @@ export type SignupQuarantineReceipt = {
   fileReference: string;
   revisionNumber: number;
   status: "confirmed_quarantine";
+  parserObservation: ParserObservationEnvelopeV1 | null;
 };
 
 export type SignupQuarantineResult =
@@ -222,7 +227,20 @@ export async function uploadSignupDocument(input: {
       jsonStringField(confirmed, "file_status") !== "confirmed_quarantine") {
       return { ok: false, aborted: !!input.signal?.aborted };
     }
-    return { ok: true, receipt: { fileReference, revisionNumber, status: "confirmed_quarantine" } };
+    const parserObservation = isParserObservationEnvelopeV1(
+        confirmed.parser_observation,
+      )
+      ? confirmed.parser_observation
+      : null;
+    return {
+      ok: true,
+      receipt: {
+        fileReference,
+        revisionNumber,
+        status: "confirmed_quarantine",
+        parserObservation,
+      },
+    };
   } catch (error) {
     return { ok: false, aborted: input.signal?.aborted || (error instanceof DOMException && error.name === "AbortError") };
   }
