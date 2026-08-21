@@ -14,6 +14,8 @@ export type CustomerCorrectionAction =
 export const CUSTOMER_CORRECTION_RUNTIME_ACTIONS = [
   "VALUE_CORRECTION",
   "MISSING_VALUE",
+  "DOCUMENT_REPLACEMENT",
+  "VALUE_PLUS_DOCUMENT_REPLACEMENT",
 ] as const;
 
 export const CUSTOMER_CORRECTION_LEGAL_BUNDLE = Object.freeze({
@@ -23,10 +25,14 @@ export const CUSTOMER_CORRECTION_LEGAL_BUNDLE = Object.freeze({
     "Ik bevestig dat de door mij ingediende correcties juist en volledig zijn en onderdeel worden van mijn ENVAL-dossier.",
 });
 
-export type CorrectionResponse = {
-  itemRef: string;
-  correctedValue: string;
-};
+export type CorrectionResponse =
+  | Readonly<{ itemRef: string; correctedValue: string }>
+  | Readonly<{ itemRef: string; replacementCandidateRef: string }>
+  | Readonly<{
+    itemRef: string;
+    correctedValue: string;
+    replacementCandidateRef: string;
+  }>;
 
 export type CorrectionChallengeRequest = {
   caseRef: string;
@@ -44,6 +50,7 @@ export type CorrectionFinalizeRequest = {
 const CASE_REFERENCE_RE =
   /^CASE-(?:[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 const ITEM_REFERENCE_RE = /^CCI-[A-F0-9]{32}$/;
+const REPLACEMENT_CANDIDATE_REFERENCE_RE = /^CRC-[A-F0-9]{32}$/;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
@@ -85,19 +92,45 @@ export function parseCorrectionChallengeRequest(
   const responses: CorrectionResponse[] = [];
   const itemRefs = new Set<string>();
   for (const response of value.responses) {
+    const hasCorrectedValue = isRecord(response) &&
+      "correctedValue" in response;
+    const hasReplacementCandidate = isRecord(response) &&
+      "replacementCandidateRef" in response;
     if (
       !isRecord(response) ||
-      !hasExactKeys(response, ["itemRef", "correctedValue"]) ||
+      (!hasExactKeys(response, ["itemRef", "correctedValue"]) &&
+        !hasExactKeys(response, ["itemRef", "replacementCandidateRef"]) &&
+        !hasExactKeys(response, [
+          "itemRef",
+          "correctedValue",
+          "replacementCandidateRef",
+        ])) ||
       typeof response.itemRef !== "string" ||
-      !ITEM_REFERENCE_RE.test(response.itemRef)
+      !ITEM_REFERENCE_RE.test(response.itemRef) ||
+      (!hasCorrectedValue && !hasReplacementCandidate)
     ) {
       return null;
     }
     const itemRef = response.itemRef;
-    const correctedValue = safeString(response.correctedValue, 2000);
-    if (!correctedValue || itemRefs.has(itemRef)) return null;
+    const correctedValue = hasCorrectedValue
+      ? safeString(response.correctedValue, 2000)
+      : "";
+    const replacementCandidateRef = hasReplacementCandidate &&
+        typeof response.replacementCandidateRef === "string"
+      ? response.replacementCandidateRef
+      : "";
+    if (
+      (hasCorrectedValue && !correctedValue) ||
+      (hasReplacementCandidate &&
+        !REPLACEMENT_CANDIDATE_REFERENCE_RE.test(replacementCandidateRef)) ||
+      itemRefs.has(itemRef)
+    ) return null;
     itemRefs.add(itemRef);
-    responses.push({ itemRef, correctedValue });
+    responses.push({
+      itemRef,
+      ...(hasCorrectedValue ? { correctedValue } : {}),
+      ...(hasReplacementCandidate ? { replacementCandidateRef } : {}),
+    } as CorrectionResponse);
   }
   return { caseRef, responses, typedFullName };
 }
@@ -163,8 +196,8 @@ export function correctionSignerNamesMatch(
 
 export function isRuntimeCorrectionAction(
   value: unknown,
-): value is "VALUE_CORRECTION" | "MISSING_VALUE" {
+): value is CustomerCorrectionAction {
   return CUSTOMER_CORRECTION_RUNTIME_ACTIONS.includes(
-    value as "VALUE_CORRECTION" | "MISSING_VALUE",
+    value as (typeof CUSTOMER_CORRECTION_RUNTIME_ACTIONS)[number],
   );
 }

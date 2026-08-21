@@ -250,6 +250,8 @@ function relevantFingerprint(runtime) {
       where source_kind='correction_replacement_candidate'),
     (select count(*) from public.app_evidence_review_customer_submissions),
     (select count(*) from public.app_evidence_review_customer_submission_items),
+    (select count(*)
+      from public.app_evidence_review_customer_submission_replacements),
     (select count(*) from public.app_evidence_review_decision_carry_forwards),
     (select count(*) from public.app_customer_correction_signer_challenge_bindings),
     (select count(*) from public.app_customer_correction_signer_evidence_bindings),
@@ -782,16 +784,6 @@ export function cleanupFixture(runtime, f) {
     runtime,
     `begin;
     set local session_replication_role = replica;
-    delete from public.app_parser_observation_envelopes
-      where correction_replacement_candidate_id in (
-        select id
-        from public.app_customer_correction_replacement_candidates
-        where case_id='${f.caseId}'
-      );
-    delete from public.app_customer_correction_replacement_candidates
-      where case_id='${f.caseId}';
-    delete from public.app_customer_correction_replacement_uploads
-      where case_id='${f.caseId}';
     delete from public.app_customer_correction_signer_evidence_bindings
       where case_id='${f.caseId}';
     delete from public.app_customer_correction_signer_challenge_bindings
@@ -801,6 +793,10 @@ export function cleanupFixture(runtime, f) {
         from public.app_evidence_review_customer_submissions
         where case_id='${f.caseId}');
     delete from public.app_evidence_review_customer_submission_items
+      where submission_id in (select id
+        from public.app_evidence_review_customer_submissions
+        where case_id='${f.caseId}');
+    delete from public.app_evidence_review_customer_submission_replacements
       where submission_id in (select id
         from public.app_evidence_review_customer_submissions
         where case_id='${f.caseId}');
@@ -820,6 +816,22 @@ export function cleanupFixture(runtime, f) {
           from public.app_evidence_review_correction_handoffs
           where case_id='${f.caseId}');
     delete from public.app_evidence_review_customer_submissions
+      where case_id='${f.caseId}';
+    delete from public.app_evidence_versions
+      where correction_replacement_candidate_id in (
+        select id
+        from public.app_customer_correction_replacement_candidates
+        where case_id='${f.caseId}'
+      );
+    delete from public.app_parser_observation_envelopes
+      where correction_replacement_candidate_id in (
+        select id
+        from public.app_customer_correction_replacement_candidates
+        where case_id='${f.caseId}'
+      );
+    delete from public.app_customer_correction_replacement_candidates
+      where case_id='${f.caseId}';
+    delete from public.app_customer_correction_replacement_uploads
       where case_id='${f.caseId}';
     delete from public.app_evidence_review_correction_handoffs
       where case_id='${f.caseId}';
@@ -883,6 +895,15 @@ export function residueCount(runtime, f) {
       where case_id='${f.caseId}') +
     (select count(*) from public.app_customer_correction_replacement_candidates
       where case_id='${f.caseId}') +
+    (select count(*)
+      from public.app_evidence_review_customer_submission_replacements r
+      join public.app_evidence_review_customer_submissions s
+        on s.id=r.submission_id
+      where s.case_id='${f.caseId}') +
+    (select count(*) from public.app_evidence_versions v
+      join public.app_evidence_files f2 on f2.id=v.evidence_file_id
+      where f2.case_id='${f.caseId}'
+        and v.correction_replacement_candidate_id is not null) +
     (select count(*) from public.app_customer_correction_signer_challenge_bindings
       where case_id='${f.caseId}') +
     (select count(*) from public.app_customer_correction_signer_evidence_bindings
@@ -1430,6 +1451,7 @@ if (
 }
 
 export {
+  addSignerAuthorityDrift,
   assert,
   correctionOtp,
   createAuth,
@@ -1445,6 +1467,7 @@ export {
   psql,
   readWorklist,
   relevantFingerprint,
+  removeSignerAuthorityDrift,
   requestCorrectionChallenge,
   roundCounts,
   scrub,

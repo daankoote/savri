@@ -442,6 +442,48 @@ assert(
   "customer_correction_replacement_not_classified_or_deduplicated",
 );
 
+const customerCorrectionDocumentFinalizationLocalService = buildPlan({
+  paths: [
+    "supabase/functions/_shared/app_customer_correction_submission.ts",
+    "supabase/functions/api-app-customer-correction-signing-challenge/index.ts",
+    "supabase/functions/api-app-customer-correction-signing-finalize/index.ts",
+    "supabase/migrations/20260821100000_app_customer_correction_document_finalization.sql",
+    "scripts/proofs/app-customer-correction-document-finalization.proof.ts",
+    "scripts/proofs/app-customer-correction-document-finalization-served.proof.mjs",
+  ],
+  mode: "LOCAL_SERVICE",
+});
+assert(
+  customerCorrectionDocumentFinalizationLocalService.selected.filter((check) =>
+        check.commandId === "customer-correction-document-finalization-pure"
+      ).length === 1 &&
+    customerCorrectionDocumentFinalizationLocalService.selected.filter((
+        check,
+      ) =>
+        check.commandId ===
+          "customer-correction-document-finalization-served-local"
+      ).length === 1 &&
+    customerCorrectionDocumentFinalizationLocalService.selected.filter((
+        check,
+      ) => check.commandId === "tenant-migration-chain-local"
+      ).length === 1 &&
+    customerCorrectionDocumentFinalizationLocalService.selected.some((check) =>
+      check.commandId === "customer-correction-document-finalization-pure" &&
+      check.safety === SAFETY.SAFE_PURE && !check.mutatesState &&
+      !check.remote && !check.destructive
+    ) &&
+    customerCorrectionDocumentFinalizationLocalService.selected.some((check) =>
+      check.commandId ===
+        "customer-correction-document-finalization-served-local" &&
+      check.safety === SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE &&
+      check.mutatesState && !check.remote && !check.destructive
+    ) &&
+    customerCorrectionDocumentFinalizationLocalService.selected.every((check) =>
+      !check.remote && !check.destructive
+    ),
+  "customer_correction_document_finalization_not_classified_or_deduplicated",
+);
+
 const customerCorrectionSubmissionLocalService = buildPlan({
   paths: [
     "supabase/migrations/20260820090000_app_customer_correction_submissions.sql",

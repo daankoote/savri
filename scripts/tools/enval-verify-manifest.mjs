@@ -990,6 +990,58 @@ const CHECK_LIST = [
     expectedMarker: "CUSTOMER04C3B1_SERVED_Q01_Q09=PASS",
   }),
   check({
+    id: "customer-correction-document-finalization-pure",
+    argv: [
+      "deno",
+      "run",
+      "--allow-read",
+      "scripts/proofs/app-customer-correction-document-finalization.proof.ts",
+    ],
+    domain: "customer-correction-document-finalization",
+    applicablePaths: [
+      "supabase/functions/_shared/app_customer_correction_submission.ts",
+      "supabase/functions/api-app-customer-correction-signing-challenge/index.ts",
+      "supabase/functions/api-app-customer-correction-signing-finalize/index.ts",
+      "supabase/functions/api-app-customer-correction-upload-confirm/index.ts",
+      "supabase/migrations/20260821100000_app_customer_correction_document_finalization.sql",
+      "scripts/proofs/app-customer-correction-document-finalization.proof.ts",
+    ],
+    safety: SAFETY.SAFE_PURE,
+    minimumMode: "TARGETED",
+    expectedDurationMs: 1_500,
+    expectedMarker: "CUSTOMER04C3B2_Q01_Q24=PASS",
+  }),
+  check({
+    id: "customer-correction-document-finalization-served-local",
+    argv: [
+      "node",
+      "scripts/proofs/app-customer-correction-document-finalization-served.proof.mjs",
+    ],
+    domain: "customer-correction-document-finalization-served-runtime",
+    applicablePaths: [
+      "supabase/functions/_shared/app_customer_correction_submission.ts",
+      "supabase/functions/api-app-customer-correction-signing-challenge/index.ts",
+      "supabase/functions/api-app-customer-correction-signing-finalize/index.ts",
+      "supabase/functions/api-app-customer-correction-upload-confirm/index.ts",
+      "supabase/migrations/20260821100000_app_customer_correction_document_finalization.sql",
+      "scripts/proofs/app-customer-correction-document-finalization.proof.ts",
+      "scripts/proofs/app-customer-correction-document-finalization-served.proof.mjs",
+      "scripts/proofs/app-customer-correction-replacement-served.proof.mjs",
+      "scripts/proofs/app-correction-handoff-supersession-served.proof.mjs",
+      "scripts/proofs/app-evidence-fact-review-round-served.proof.mjs",
+    ],
+    safety: SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE,
+    minimumMode: "LOCAL_SERVICE",
+    serviceRequirements: [
+      "TENANT_ENVAL Kong, Auth, Edge, Storage and PostgreSQL available locally",
+      "disposable signed correction fixtures and private objects are removed",
+      "real pilot remains read-only and unchanged",
+    ],
+    mutatesState: true,
+    expectedDurationMs: 30_000,
+    expectedMarker: "CUSTOMER04C3B2_SERVED_Q01_Q14=PASS",
+  }),
+  check({
     id: "customer-correction-submission-pure",
     argv: [
       "deno",
@@ -2437,6 +2489,7 @@ export const PATH_RULES = Object.freeze([
       "evidence-fact-review-round-served-local",
       "correction-handoff-supersession-served-local",
       "customer-correction-replacement-served-local",
+      "customer-correction-document-finalization-served-local",
     ]),
   }),
   Object.freeze({
@@ -2483,6 +2536,7 @@ export const PATH_RULES = Object.freeze([
     checks: Object.freeze([
       "node-check-changed",
       "customer-correction-replacement-served-local",
+      "customer-correction-document-finalization-served-local",
     ]),
   }),
   Object.freeze({
@@ -2602,6 +2656,50 @@ export const PATH_RULES = Object.freeze([
       "evidence-review-case-detail-ui-pure",
       "evidence-review-case-detail-local",
       "evidence-fact-review-round-served-local",
+      "tenant-migration-chain-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "customer-correction-document-finalization-runtime",
+    match: Object.freeze({
+      type: "oneOf",
+      value: Object.freeze([
+        "supabase/functions/_shared/app_customer_correction_submission.ts",
+        "supabase/functions/api-app-customer-correction-signing-challenge/index.ts",
+        "supabase/functions/api-app-customer-correction-signing-finalize/index.ts",
+        "scripts/proofs/app-customer-correction-document-finalization.proof.ts",
+      ]),
+    }),
+    checks: Object.freeze([
+      "deno-check-changed",
+      "customer-correction-document-finalization-pure",
+      "customer-correction-document-finalization-served-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "customer-correction-document-finalization-served-proof",
+    match: Object.freeze({
+      type: "exact",
+      value:
+        "scripts/proofs/app-customer-correction-document-finalization-served.proof.mjs",
+    }),
+    checks: Object.freeze([
+      "node-check-changed",
+      "customer-correction-document-finalization-served-local",
+    ]),
+  }),
+  Object.freeze({
+    id: "customer-correction-document-finalization-migration",
+    match: Object.freeze({
+      type: "exact",
+      value:
+        "supabase/migrations/20260821100000_app_customer_correction_document_finalization.sql",
+    }),
+    checks: Object.freeze([
+      "migration-or-sql-review",
+      "customer-correction-document-finalization-pure",
+      "customer-correction-submission-pure",
+      "customer-correction-document-finalization-served-local",
       "tenant-migration-chain-local",
     ]),
   }),

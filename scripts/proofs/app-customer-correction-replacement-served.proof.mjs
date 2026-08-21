@@ -4,6 +4,9 @@
 // the actual Edge upload URL, private Storage PUT, confirm and shared parser
 // path, then removes the isolated fixture and private objects.
 
+import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
+
 import {
   assert,
   cleanupFixture,
@@ -640,9 +643,26 @@ async function main() {
   );
 }
 
-main().catch((error) => {
-  process.stderr.write(
-    `CUSTOMER04C3B1_SERVED_PROOF=FAIL:${scrub(error?.message ?? error)}\n`,
-  );
-  process.exitCode = 1;
-});
+if (
+  process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
+  main().catch((error) => {
+    process.stderr.write(
+      `CUSTOMER04C3B1_SERVED_PROOF=FAIL:${scrub(error?.message ?? error)}\n`,
+    );
+    process.exitCode = 1;
+  });
+}
+
+export {
+  confirmUpload,
+  coreTruth,
+  currentResolution,
+  deleteStoragePaths,
+  issueUpload,
+  pdf,
+  post,
+  putSignedUpload,
+  stagedCounts,
+  storagePaths,
+};

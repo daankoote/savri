@@ -86,6 +86,26 @@ assert(
   "closed_browser_request_failed",
 );
 assert(
+  parseCorrectionChallengeRequest({
+        caseRef,
+        typedFullName: "Proof Person",
+        responses: [{
+          itemRef: itemRef(1),
+          replacementCandidateRef: `CRC-${"A".repeat(32)}`,
+        }],
+      }) !== null &&
+    parseCorrectionChallengeRequest({
+        caseRef,
+        typedFullName: "Proof Person",
+        responses: [{
+          itemRef: itemRef(1),
+          correctedValue: "Customer resolution",
+          replacementCandidateRef: `CRC-${"B".repeat(32)}`,
+        }],
+      }) !== null,
+  "document_response_contract_failed",
+);
+assert(
   normalizeCorrectionSignerName("  Proof\t Person  ") === "Proof Person" &&
     correctionSignerNamesMatch("  Proof\n Person ", "Proof Person") &&
     !correctionSignerNamesMatch("proof person", "Proof Person") &&
@@ -107,9 +127,9 @@ assert(
   CUSTOMER_CORRECTION_ACTIONS.join("|") ===
       "VALUE_CORRECTION|MISSING_VALUE|DOCUMENT_REPLACEMENT|VALUE_PLUS_DOCUMENT_REPLACEMENT" &&
     CUSTOMER_CORRECTION_RUNTIME_ACTIONS.join("|") ===
-      "VALUE_CORRECTION|MISSING_VALUE" &&
-    !isRuntimeCorrectionAction("DOCUMENT_REPLACEMENT") &&
-    !isRuntimeCorrectionAction("VALUE_PLUS_DOCUMENT_REPLACEMENT") &&
+      "VALUE_CORRECTION|MISSING_VALUE|DOCUMENT_REPLACEMENT|VALUE_PLUS_DOCUMENT_REPLACEMENT" &&
+    isRuntimeCorrectionAction("DOCUMENT_REPLACEMENT") &&
+    isRuntimeCorrectionAction("VALUE_PLUS_DOCUMENT_REPLACEMENT") &&
     correctionLegalBundleProjection().bundleVersion ===
       "customer-correction-confirmation-nl-v1",
   "closed_action_or_legal_contract_failed",
@@ -290,7 +310,7 @@ console.log([
   "CUSTOMER_CORRECTION_PARTIAL_DENIED=PASS",
   "CUSTOMER_CORRECTION_DUPLICATE_DENIED=PASS",
   "CUSTOMER_CORRECTION_EXTRA_DENIED=PASS",
-  "CUSTOMER_CORRECTION_REPLACEMENT_UNSUPPORTED=PASS",
+  "CUSTOMER_CORRECTION_DOCUMENT_ACTIONS_SUPPORTED=PASS",
   sourceOnly
     ? "CUSTOMER_CORRECTION_SOURCE_ONLY=PASS"
     : "CUSTOMER_CORRECTION_PILOT_SUBMISSIONS_ZERO=PASS",

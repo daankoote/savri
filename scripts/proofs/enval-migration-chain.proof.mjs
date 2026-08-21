@@ -319,20 +319,21 @@ try {
     (select count(*) from public.app_evidence_review_decisions),
     (select count(*) from public.app_evidence_review_correction_handoffs),
     (select count(*) from public.app_customer_correction_replacement_uploads),
-    (select count(*) from public.app_customer_correction_replacement_candidates)
+    (select count(*) from public.app_customer_correction_replacement_candidates),
+    (select count(*) from public.app_evidence_review_customer_submission_replacements)
   );`,
   );
   assert(
-    empty === "0|0|0|0|0|15|6|72|6|0|0|0|0",
+    empty === "0|0|0|0|0|15|6|72|6|0|0|0|0|0",
     "fresh_data_boundary_failed",
   );
   const security = psql(
     DATABASE,
     `select (
     (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%') = 69
+      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%') = 70
     and (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%' and c.relrowsecurity) = 69
+      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%' and c.relrowsecurity) = 70
     and not exists (select 1 from information_schema.role_table_grants
       where table_schema='public' and table_name like 'app\\_%'
         and grantee in ('anon','authenticated') and privilege_type in ('INSERT','UPDATE','DELETE','TRUNCATE'))
@@ -351,6 +352,7 @@ try {
     and not has_table_privilege('service_role','public.app_customer_correction_replacement_uploads','INSERT')
     and has_table_privilege('service_role','public.app_customer_correction_replacement_candidates','SELECT')
     and not has_table_privilege('service_role','public.app_customer_correction_replacement_candidates','INSERT')
+    and not has_table_privilege('service_role','public.app_evidence_review_customer_submission_replacements','SELECT')
   )::text;`,
   );
   assert(security === "true", "rls_privilege_parity_failed");
@@ -385,6 +387,7 @@ try {
     and to_regclass('public.app_customer_correction_replacement_candidates') is not null
     and to_regclass('public.app_evidence_review_customer_submissions') is not null
     and to_regclass('public.app_evidence_review_customer_submission_items') is not null
+    and to_regclass('public.app_evidence_review_customer_submission_replacements') is not null
     and to_regclass('public.app_evidence_review_decision_carry_forwards') is not null
     and to_regclass('public.app_customer_correction_signer_challenge_bindings') is not null
     and to_regclass('public.app_customer_correction_signer_evidence_bindings') is not null
