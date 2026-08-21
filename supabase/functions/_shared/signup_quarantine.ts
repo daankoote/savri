@@ -122,6 +122,17 @@ export async function createSignupSignedUpload(
     bucket !== SIGNUP_QUARANTINE_BUCKET ||
     !path.startsWith(SIGNUP_QUARANTINE_PREFIX)
   ) return null;
+  return await createPrivateSignedUpload(SB, bucket, path);
+}
+
+export async function createPrivateSignedUpload(
+  SB: any,
+  bucket: string,
+  path: string,
+): Promise<{ signed_upload_url: string; upload_token: string } | null> {
+  if (!bucket || !path || path.startsWith("/") || path.includes("..")) {
+    return null;
+  }
   const { data, error } = await SB.storage.from(bucket).createSignedUploadUrl(
     path,
     { upsert: false },

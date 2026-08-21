@@ -47,6 +47,10 @@ function sourceItem({
   documentLabel?: "Energiedocument" | "Installatiefactuur";
   requirement?: (typeof CUSTOMER_CORRECTION_RESPONSE_REQUIREMENTS)[number];
 }) {
+  const requiresReplacement = [
+    "DOCUMENT_REPLACEMENT",
+    "VALUE_PLUS_DOCUMENT_REPLACEMENT",
+  ].includes(requirement);
   return {
     item_ref: ITEM_REF(number),
     document_label: documentLabel,
@@ -62,6 +66,16 @@ function sourceItem({
       : "Gegeven onjuist",
     correction_instruction: `Corrigeer item ${number}`,
     response_requirement: requirement,
+    ...(requiresReplacement
+      ? {
+        replacement_target: {
+          replacement_target_ref: `CRT-${"A".repeat(31)}${number}`,
+          document_label: documentLabel,
+          accepted_mime_types: ["application/pdf"],
+          maximum_file_size: 15 * 1024 * 1024,
+        },
+      }
+      : {}),
   };
 }
 
@@ -112,23 +126,35 @@ for (const items of matrix) {
     parsed?.handoff?.items.length === items.length,
     "source_matrix_failed",
   );
-  const client = decodeCustomerCorrectionHandoffResponse({
-    schemaVersion: "customer-correction-handoff-v3",
-    caseRef: CASE_REF,
-    handoff: {
-      handoffRef: "CRH-0123456789ABCDEF",
-      publishedAt: "2026-08-20T12:00:00.000Z",
-      signerAuthority: parsed.handoff.signerAuthority,
-      items: parsed.handoff.items,
-    },
-  }, CASE_REF);
-  assert(client.ok, "client_matrix_failed");
+  if (
+    parsed.handoff.items.every((item) =>
+      ![
+        "DOCUMENT_REPLACEMENT",
+        "VALUE_PLUS_DOCUMENT_REPLACEMENT",
+      ].includes(item.responseRequirement)
+    )
+  ) {
+    const client = decodeCustomerCorrectionHandoffResponse({
+      schemaVersion: "customer-correction-handoff-v3",
+      caseRef: CASE_REF,
+      handoff: {
+        handoffRef: "CRH-0123456789ABCDEF",
+        publishedAt: "2026-08-20T12:00:00.000Z",
+        signerAuthority: parsed.handoff.signerAuthority,
+        items: parsed.handoff.items,
+      },
+    }, CASE_REF);
+    assert(client.ok, "value_only_client_matrix_failed");
+  }
 }
 
 const mixed = parseCustomerCorrectionHandoffSource(source(matrix[3]));
 assert(
   mixed?.handoff?.items[0].responseRequirement === "VALUE_CORRECTION" &&
-    mixed.handoff.items[1].responseRequirement === "DOCUMENT_REPLACEMENT",
+    mixed.handoff.items[1].responseRequirement === "DOCUMENT_REPLACEMENT" &&
+    mixed.handoff.items[1].replacementTarget?.acceptedMimeTypes[0] ===
+      "application/pdf" &&
+    !("replacementTarget" in mixed.handoff.items[0]),
   "mixed_document_requirement_not_distinguished",
 );
 const missing = parseCustomerCorrectionHandoffSource(source([

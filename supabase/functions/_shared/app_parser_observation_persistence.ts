@@ -23,12 +23,27 @@ async function sourceMatchesTrustedEnvelope(
       source.evidenceVersionRef ===
         `signup_intake_file:${source.signupIntakeFileRef}:revision:${source.revisionNumber}`;
   }
-  const { data, error } = await client.from("app_evidence_versions")
-    .select("id,version_number,sha256")
-    .eq("id", source.evidenceVersionId).maybeSingle();
-  return !error && !!data && String(data.sha256 || "") === envelope.byteSha256 &&
+  if (source.kind === "evidence_version") {
+    const { data, error } = await client.from("app_evidence_versions")
+      .select("id,version_number,sha256")
+      .eq("id", source.evidenceVersionId).maybeSingle();
+    return !error && !!data &&
+      String(data.sha256 || "") === envelope.byteSha256 &&
+      source.evidenceVersionRef ===
+        `evidence_version:${source.evidenceVersionId}:version:${
+          Number(data.version_number)
+        }`;
+  }
+  const { data, error } = await client.from(
+    "app_customer_correction_replacement_candidates",
+  )
+    .select("id,candidate_reference,server_sha256")
+    .eq("id", source.replacementCandidateId).maybeSingle();
+  return !error && !!data &&
+    String(data.candidate_reference || "") === source.replacementCandidateRef &&
+    String(data.server_sha256 || "") === envelope.byteSha256 &&
     source.evidenceVersionRef ===
-      `evidence_version:${source.evidenceVersionId}:version:${Number(data.version_number)}`;
+      `correction_replacement_candidate:${source.replacementCandidateId}`;
 }
 
 export async function findPersistedParserObservation(
@@ -60,6 +75,10 @@ export async function persistParserObservation(
     evidence_version_id: source.kind === "evidence_version"
       ? source.evidenceVersionId
       : null,
+    correction_replacement_candidate_id:
+      source.kind === "correction_replacement_candidate"
+        ? source.replacementCandidateId
+        : null,
     evidence_version_ref: source.evidenceVersionRef,
     byte_sha256: envelope.byteSha256,
     parser_core_version: envelope.parserCoreVersion,

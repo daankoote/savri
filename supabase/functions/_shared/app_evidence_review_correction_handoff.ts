@@ -34,6 +34,12 @@ export type CustomerCorrectionHandoffItem = Readonly<{
   correctionReasonLabel: string;
   correctionInstruction: string;
   responseRequirement: CustomerCorrectionResponseRequirement;
+  replacementTarget?: Readonly<{
+    replacementTargetRef: string;
+    documentLabel: "Energiedocument" | "Installatiefactuur";
+    acceptedMimeTypes: readonly ["application/pdf"];
+    maximumFileSize: number;
+  }>;
 }>;
 
 export type CustomerCorrectionHandoffResponse = Readonly<{
@@ -108,6 +114,37 @@ function safeCurrentValue(value: unknown): unknown | null {
   }
 }
 
+function parseReplacementTarget(
+  value: unknown,
+): NonNullable<CustomerCorrectionHandoffItem["replacementTarget"]> | null {
+  if (
+    !isObject(value) || !exactKeys(value, [
+      "accepted_mime_types",
+      "document_label",
+      "maximum_file_size",
+      "replacement_target_ref",
+    ]) ||
+    typeof value.replacement_target_ref !== "string" ||
+    !/^CRT-[A-F0-9]{32}$/.test(value.replacement_target_ref) ||
+    !["Energiedocument", "Installatiefactuur"].includes(
+      String(value.document_label),
+    ) ||
+    !Array.isArray(value.accepted_mime_types) ||
+    value.accepted_mime_types.length !== 1 ||
+    value.accepted_mime_types[0] !== "application/pdf" ||
+    !Number.isInteger(value.maximum_file_size) ||
+    Number(value.maximum_file_size) !== 15 * 1024 * 1024
+  ) return null;
+  return Object.freeze({
+    replacementTargetRef: value.replacement_target_ref,
+    documentLabel: value.document_label as
+      | "Energiedocument"
+      | "Installatiefactuur",
+    acceptedMimeTypes: Object.freeze(["application/pdf"] as const),
+    maximumFileSize: Number(value.maximum_file_size),
+  });
+}
+
 function parseItem(value: unknown): CustomerCorrectionHandoffItem | null {
   if (
     !isObject(value) || !exactKeys(value, [
@@ -118,7 +155,7 @@ function parseItem(value: unknown): CustomerCorrectionHandoffItem | null {
       "fact_label",
       "item_ref",
       "response_requirement",
-    ], ["current_value"])
+    ], ["current_value", "replacement_target"])
   ) return null;
   const itemRef = value.item_ref;
   const documentLabel = value.document_label;
@@ -134,6 +171,13 @@ function parseItem(value: unknown): CustomerCorrectionHandoffItem | null {
   );
   const responseRequirement = value
     .response_requirement as CustomerCorrectionResponseRequirement;
+  const requiresReplacement = [
+    "DOCUMENT_REPLACEMENT",
+    "VALUE_PLUS_DOCUMENT_REPLACEMENT",
+  ].includes(responseRequirement);
+  const replacementTarget = "replacement_target" in value
+    ? parseReplacementTarget(value.replacement_target)
+    : null;
   if (
     typeof itemRef !== "string" || !ITEM_REFERENCE_RE.test(itemRef) ||
     !["Energiedocument", "Installatiefactuur"].includes(
@@ -143,7 +187,8 @@ function parseItem(value: unknown): CustomerCorrectionHandoffItem | null {
     !CUSTOMER_CORRECTION_RESPONSE_REQUIREMENTS.includes(responseRequirement) ||
     !correctionReasonLabel ||
     correctionReasonLabel !== REASON_LABELS[correctionReason] ||
-    !correctionInstruction || !/[\p{L}\p{N}]/u.test(correctionInstruction)
+    !correctionInstruction || !/[\p{L}\p{N}]/u.test(correctionInstruction) ||
+    (requiresReplacement ? !replacementTarget : replacementTarget !== null)
   ) return null;
   const currentValue = "current_value" in value
     ? safeCurrentValue(value.current_value)
@@ -159,6 +204,7 @@ function parseItem(value: unknown): CustomerCorrectionHandoffItem | null {
     correctionReasonLabel,
     correctionInstruction,
     responseRequirement,
+    ...(replacementTarget ? { replacementTarget } : {}),
   });
 }
 

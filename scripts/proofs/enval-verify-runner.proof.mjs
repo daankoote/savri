@@ -401,6 +401,47 @@ assert(
   "correction_handoff_supersession_not_classified_or_deduplicated",
 );
 
+const customerCorrectionReplacementLocalService = buildPlan({
+  paths: [
+    "platform/runtime/document-parsing/document_parser_contract.ts",
+    "supabase/functions/_shared/app_customer_correction_replacement.ts",
+    "supabase/functions/_shared/app_evidence_review_correction_handoff.ts",
+    "supabase/functions/_shared/app_parser_observation_persistence.ts",
+    "supabase/functions/_shared/signup_quarantine.ts",
+    "supabase/functions/api-app-customer-correction-upload-url/index.ts",
+    "supabase/functions/api-app-customer-correction-upload-confirm/index.ts",
+    "supabase/migrations/20260820220000_app_customer_correction_replacement_staging.sql",
+    "scripts/proofs/app-customer-correction-replacement.proof.ts",
+    "scripts/proofs/app-customer-correction-replacement-served.proof.mjs",
+  ],
+  mode: "LOCAL_SERVICE",
+});
+assert(
+  customerCorrectionReplacementLocalService.selected.filter((check) =>
+        check.commandId === "customer-correction-replacement-pure"
+      ).length === 1 &&
+    customerCorrectionReplacementLocalService.selected.filter((check) =>
+        check.commandId === "customer-correction-replacement-served-local"
+      ).length === 1 &&
+    customerCorrectionReplacementLocalService.selected.filter((check) =>
+        check.commandId === "tenant-migration-chain-local"
+      ).length === 1 &&
+    customerCorrectionReplacementLocalService.selected.some((check) =>
+      check.commandId === "customer-correction-replacement-pure" &&
+      check.safety === SAFETY.SAFE_PURE && !check.mutatesState &&
+      !check.remote && !check.destructive
+    ) &&
+    customerCorrectionReplacementLocalService.selected.some((check) =>
+      check.commandId === "customer-correction-replacement-served-local" &&
+      check.safety === SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE &&
+      check.mutatesState && !check.remote && !check.destructive
+    ) &&
+    customerCorrectionReplacementLocalService.selected.every((check) =>
+      !check.remote && !check.destructive
+    ),
+  "customer_correction_replacement_not_classified_or_deduplicated",
+);
+
 const customerCorrectionSubmissionLocalService = buildPlan({
   paths: [
     "supabase/migrations/20260820090000_app_customer_correction_submissions.sql",

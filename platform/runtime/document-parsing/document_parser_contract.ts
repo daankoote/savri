@@ -20,6 +20,12 @@ export type ParserEvidenceSource =
     kind: "evidence_version";
     evidenceVersionId: string;
     evidenceVersionRef: string;
+  }
+  | {
+    kind: "correction_replacement_candidate";
+    replacementCandidateId: string;
+    replacementCandidateRef: string;
+    evidenceVersionRef: string;
   };
 
 export type TrustedParserContext = Readonly<{

@@ -211,6 +211,12 @@ function pilotState(runtime) {
        join pilot on pilot.id=r.case_id),
       (select count(*) from public.app_evidence_review_correction_handoffs h
        join pilot on pilot.id=h.case_id),
+      (select count(*)
+       from public.app_customer_correction_replacement_uploads upload
+       join pilot on pilot.id=upload.case_id),
+      (select count(*)
+       from public.app_customer_correction_replacement_candidates candidate
+       join pilot on pilot.id=candidate.case_id),
       (select count(*) from public.app_evidence_review_customer_submissions s
        join pilot on pilot.id=s.case_id),
       (select count(*) from public.app_signup_signing_challenges ch
@@ -238,6 +244,10 @@ function relevantFingerprint(runtime) {
     (select count(*) from public.app_evidence_review_rounds),
     (select count(*) from public.app_evidence_review_round_subject_decisions),
     (select count(*) from public.app_evidence_review_correction_handoffs),
+    (select count(*) from public.app_customer_correction_replacement_uploads),
+    (select count(*) from public.app_customer_correction_replacement_candidates),
+    (select count(*) from public.app_parser_observation_envelopes
+      where source_kind='correction_replacement_candidate'),
     (select count(*) from public.app_evidence_review_customer_submissions),
     (select count(*) from public.app_evidence_review_customer_submission_items),
     (select count(*) from public.app_evidence_review_decision_carry_forwards),
@@ -772,6 +782,16 @@ export function cleanupFixture(runtime, f) {
     runtime,
     `begin;
     set local session_replication_role = replica;
+    delete from public.app_parser_observation_envelopes
+      where correction_replacement_candidate_id in (
+        select id
+        from public.app_customer_correction_replacement_candidates
+        where case_id='${f.caseId}'
+      );
+    delete from public.app_customer_correction_replacement_candidates
+      where case_id='${f.caseId}';
+    delete from public.app_customer_correction_replacement_uploads
+      where case_id='${f.caseId}';
     delete from public.app_customer_correction_signer_evidence_bindings
       where case_id='${f.caseId}';
     delete from public.app_customer_correction_signer_challenge_bindings
@@ -858,6 +878,10 @@ export function residueCount(runtime, f) {
     (select count(*) from public.app_cases where id='${f.caseId}') +
     (select count(*) from public.app_evidence_review_rounds where case_id='${f.caseId}') +
     (select count(*) from public.app_evidence_review_correction_handoffs
+      where case_id='${f.caseId}') +
+    (select count(*) from public.app_customer_correction_replacement_uploads
+      where case_id='${f.caseId}') +
+    (select count(*) from public.app_customer_correction_replacement_candidates
       where case_id='${f.caseId}') +
     (select count(*) from public.app_customer_correction_signer_challenge_bindings
       where case_id='${f.caseId}') +
