@@ -13,7 +13,12 @@ The new `/aanmelden` page is a single-page intake with these customer-facing sec
 
 Draft edits remain browser-local. Required PDFs use the dedicated private pre-auth quarantine path; successful Step 3 `typed_name_otp_v1` finalization atomically stores the signed snapshot, legal acceptances, mandate and signature evidence and locks the intake. It does not create a customer, Auth session, dossier or case.
 
-The authenticated shared document module remains separate. `/aanmelden` uses the signup-quarantine transport and keeps parser observations separate from declared/signed facts.
+Signup quarantine and authenticated correction keep separate lifecycle-specific
+transport/authorization lanes, but their customer document presentation and
+fact interaction are not separate implementations. Both feed the shared
+`CustomerDocumentWorkflowController` and `DocumentEvidenceWorkflow` proven in
+CUSTOMER04C. `/aanmelden` still uses signup-quarantine transport and keeps
+parser observations separate from declared/signed facts.
 
 Pre-auth signup must not call authenticated upload endpoints. Quarantine confirmation proves only server-observed bytes/MIME/size/hash and never evidence acceptance. Parser/precheck output remains observed/derived and cannot silently overwrite declared state.
 

@@ -251,6 +251,40 @@ The recent app frontend Auth/session flow is retained as local proof:
 - Unsupported future dashboard domains are not fabricated.
 - Production deployment and production browser proof remain OPEN.
 
+CUSTOMER04C external customer document workflow:
+
+- Status: `CURRENT PROVEN — LOCAL` at commit `d613592` for the bounded signup
+  and customer-correction implementation. The recorded final pre-commit
+  Integration gate was `127/127 PASS`.
+- Signup and customer correction are lifecycle inputs into one shared customer
+  document workflow. They do not own separate fact-row or interaction
+  implementations.
+- `app/src/features/documents/CustomerDocumentWorkflowController.ts` owns the
+  shared upload-card, source, row, interaction and projected-status model.
+  `app/src/features/documents/DocumentEvidenceWorkflow.tsx` is the shared
+  presentation boundary.
+- The same `DocumentEvidenceUploadCard`, `DocumentFactMatrix`, canonical fact
+  registry and `CustomerDocumentFactInteraction` are used by both lifecycles.
+  The generic policy authority is
+  `platform/runtime/customer-fact-resolution/customer_fact_resolution_policy.ts`.
+- Lifecycle-specific transport and actions remain explicit inputs: signup uses
+  private pre-auth quarantine and owns add/remove-charger behavior; correction
+  uses correction-scoped replacement/withdraw actions. The compact signup
+  charger-delete action is not PDF-upload component behavior.
+- Correction locked/read-only facts are configuration of the same shared rows.
+  Correction rounds, source/customer provenance and replacements remain
+  immutable/versioned.
+- Parser output remains `OBSERVED_DERIVED`. Customer confirmation records
+  customer intent and never creates ENVAL/workforce acceptance, verifier
+  judgment or canonical accepted truth by itself.
+- Dependency-aware verification ownership classifies TypeScript entry graphs:
+  app/React graphs use the app TypeScript configuration, while Deno-native
+  graphs remain under Deno semantics. Deleted paths are not compile inputs.
+- Customer lifecycle qualification, the parser qualification corpus,
+  third-party verification/check execution, kWh/generation/feed-in accounting,
+  verifier/audit dossier generation and periodic audit snapshots remain
+  `TARGET — NOT CURRENT`; the exact target inventory is in `04_TODO.md`.
+
 Signed-intake and promotion lifecycle:
 
 - Collecting pre-auth quarantine, `typed_name_otp_v1`, immutable signing finalization, finalized server locks, safe receipt and server-authoritative same-tab recovery are CURRENT PROVEN locally as bounded source/runtime proofs.

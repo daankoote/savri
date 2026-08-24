@@ -262,7 +262,10 @@ Rules:
 
 ## Current Document Lifecycle Path
 
-Status: CURRENT / LOCAL PROOF for backend upload/download/withdrawal endpoints and the authenticated reusable dashboard document card.
+Status: CURRENT / LOCAL PROOF for backend upload/download/withdrawal endpoints,
+the authenticated reusable dashboard document card and the CUSTOMER04C shared
+signup/customer-correction workflow at commit `d613592`. The recorded final
+pre-commit Integration gate for CUSTOMER04C was `127/127 PASS`.
 
 ```text
 authenticated customer
@@ -288,6 +291,18 @@ pre-lock withdrawal
 → targeted dashboard refresh
 ```
 
+Signup and correction now enter one external customer document workflow:
+
+```text
+signup lifecycle input ─┐
+                       ├→ CustomerDocumentWorkflowController
+correction input ──────┘  → DocumentEvidenceWorkflow
+                           → DocumentEvidenceUploadCard
+                           → DocumentFactMatrix
+                           → CustomerDocumentFactInteraction
+                           → shared customer fact-resolution policy
+```
+
 Rules:
 
 - One shared transport applies to particulier, zakelijk, and VVE.
@@ -298,6 +313,21 @@ Rules:
 - Current document withdrawal does not hard-delete storage or immutable evidence.
 - The client does not poll, reload the page, or automatically retry blindly.
 - No account-type-specific upload transport exists.
+- Signup and correction may supply lifecycle-specific documents, readiness,
+  locked/read-only facts and actions, but neither builds row interaction state
+  independently.
+- `app/src/features/signup/documentFactRegistry.ts` remains the one canonical
+  fact registry consumed by the shared controller; its historical path name
+  does not make it signup-only authority.
+- The same `DocumentEvidenceUploadCard`, `DocumentFactMatrix` and
+  `CustomerDocumentFactInteraction` render both lifecycles. Correction locking
+  is row state, not separate markup or policy.
+- Signup charger deletion is an extra charger-item lifecycle action outside the
+  PDF upload component and is disabled while only one charger exists.
+- Parser observations remain `OBSERVED_DERIVED`; source projection and customer
+  confirmation cannot create ENVAL/workforce acceptance.
+- The shared customer fact-resolution policy is
+  `platform/runtime/customer-fact-resolution/customer_fact_resolution_policy.ts`.
 
 ## Current Signed Intake And Promotion Path
 
@@ -314,14 +344,16 @@ public form and local parser
 → Auth/account handoff and case-owned dashboard when applicable
 ```
 
-Later internal-review/correction path (TARGET / not implemented):
+Current bounded customer-correction path (`CURRENT PROVEN — LOCAL`):
 
 ```text
 internal review
 → action_needed
-→ targeted editable section
-→ Correcties indienen
-→ immutable correction revision
+→ correction-scoped replacement target and private upload
+→ immutable candidate/parser observation
+→ shared customer document workflow
+→ customer resolution and signed finalize
+→ immutable successor correction round
 ```
 
 Rules:
@@ -333,6 +365,20 @@ Rules:
 - `app_cases` is the current promotion owner; promotion does not create a parallel `app_customer_dossiers` core.
 - Internal review and external inboekverificatie are separate concepts and statuses.
 - A successful promoted dashboard must not show a generic `Dossier indienen` button.
+- No replacement candidate, parser observation or unsigned customer resolution
+  promotes itself to current evidence or canonical accepted truth.
+- Customer confirmation is not a `HUMAN_ACCEPTED` decision. Required downstream
+  or third-party verification cannot be bypassed by single- or multi-source
+  evidence strength.
+- Customer correction rounds are immutable/versioned; replacement, withdrawal,
+  submission, signing and finalization preserve prior review/handoff truth.
+
+Still `TARGET — NOT CURRENT`: full customer-lifecycle qualification across
+party types, repeated correction loops, multi-location/multi-charger and
+resume/signing/audit combinations; a ground-truthed parser qualification
+corpus; third-party verification/check execution; kWh, renewable-generation
+and feed-in accounting; verifier/audit dossier generation and periodic audit
+snapshots. Exact target cases are maintained in `04_TODO.md`.
 
 ## Backend Data Expectations
 

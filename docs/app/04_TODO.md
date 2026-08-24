@@ -1,7 +1,8 @@
 # ENVAL App TODO
 
-Status: CURRENT app/MVP TODO — reconciled through commit `be2e247` on
-2026-08-17.
+Status: CURRENT app/MVP TODO — CUSTOMER04C documentation reconciled through
+commit `d613592` on 2026-08-24. Earlier bounded work-package records retain
+their own dated proof status.
 
 This queue is primarily for the new `/app`, `api-app-*`, and `app_*`
 implementation. Bounded legacy-caller cutover and white-label foundation status
@@ -39,6 +40,26 @@ implementation.
     runbook remain unimplemented.
 
 ## Current / Locally Proven
+
+- CUSTOMER04C is `CURRENT PROVEN — LOCAL` at commit `d613592`; its recorded
+  final pre-commit Integration gate was `127/127 PASS`.
+- Signup and customer correction are lifecycle inputs into the same
+  `CustomerDocumentWorkflowController` and `DocumentEvidenceWorkflow`.
+  Upload-card composition, canonical rows/source projection, interaction
+  state, confirm/edit/cancel and projected ENVAL state use shared authorities.
+- Both lifecycles use the same `DocumentEvidenceUploadCard`,
+  `DocumentFactMatrix`, canonical fact registry and
+  `CustomerDocumentFactInteraction`. Correction locked/read-only facts are
+  state on those shared rows, not a separate implementation.
+- Signup's compact charger-delete action remains charger lifecycle behavior
+  outside the PDF upload component.
+- Parser output remains `OBSERVED_DERIVED`; customer confirmation is customer
+  intent, not ENVAL/workforce acceptance. Correction rounds and provenance are
+  immutable/versioned.
+- The verification harness uses dependency-aware compiler ownership: app/React
+  TypeScript graphs use app semantics, Deno-native graphs use Deno semantics,
+  and deleted paths remain visible to repository diff checks without becoming
+  compiler inputs.
 
 - REG02–REG03I compliance runtime foundation is DONE / CURRENT PROVEN — LOCAL
   ONLY for the bounded implemented slices:
@@ -572,9 +593,31 @@ Collecting quarantine/capability transport, the public document-first flow,
 Supabase-Auth binding and dashboard convergence are no longer P1 TODOs; they
 are CURRENT PROVEN LOCAL in the bounded 09B/09C evidence above.
 
-- Build targeted charger/location correction forms using shared signup form modules.
-- Reuse parser/precheck for authenticated document corrections.
-- Build Correcties indienen revision flow.
+CUSTOMER04C qualification and downstream foundations remain exactly
+`TARGET — NOT CURRENT`:
+
+- Customer Lifecycle Qualification:
+  - particulier clean path;
+  - single correction loop;
+  - multiple correction loops;
+  - bedrijf;
+  - VvE;
+  - multi-location;
+  - multi-charger;
+  - locked/yellow/green combinations;
+  - refresh/resume/signing/audit integrity.
+- Parser Qualification Corpus:
+  - real sanitized energy contracts;
+  - synthetic installation documents;
+  - adversarial/ambiguous fixtures;
+  - ground-truth expected facts and `MUST_NOT_EMIT` assertions.
+- Third-party verification/check execution foundation.
+- kWh, renewable-generation and feed-in accounting.
+- Verifier/audit dossier generation and periodic audit snapshots.
+
+None of these targets is inferred from CUSTOMER04C source, parser fixtures,
+customer confirmation, the green Integration gate or local database state.
+
 - Define review email notification contract.
 - Define kWh periodic lifecycle.
 - Define consent renewal/version-expiry lifecycle.
