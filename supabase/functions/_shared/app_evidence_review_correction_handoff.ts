@@ -1,5 +1,10 @@
+import {
+  type DocumentFactKey,
+  isDocumentFactKey,
+} from "../../../platform/runtime/document-parsing/document_fact_vocabulary.ts";
+
 export const CUSTOMER_CORRECTION_HANDOFF_SCHEMA_VERSION =
-  "customer-correction-handoff-v3" as const;
+  "customer-correction-handoff-v5" as const;
 
 export const CUSTOMER_CORRECTION_REASONS = Object.freeze(
   [
@@ -27,6 +32,7 @@ export type CustomerCorrectionResponseRequirement =
 
 export type CustomerCorrectionHandoffItem = Readonly<{
   itemRef: string;
+  factKey: DocumentFactKey;
   documentLabel: "Energiedocument" | "Installatiefactuur";
   factLabel: string;
   currentValue?: unknown;
@@ -40,6 +46,32 @@ export type CustomerCorrectionHandoffItem = Readonly<{
     acceptedMimeTypes: readonly ["application/pdf"];
     maximumFileSize: number;
   }>;
+}>;
+
+export type CustomerCorrectionCurrentReplacementCandidate = Readonly<{
+  replacementTargetRef: string;
+  candidateRef: string;
+  fileName: string;
+  contentFingerprint: string | null;
+  parserObservation:
+    | null
+    | Readonly<{
+      schemaVersion: "customer-correction-replacement-observation-v1";
+      parserProfile:
+        | "energy_document_v1"
+        | "installation_invoice_v1"
+        | "kvk_extract_v1"
+        | "generic_charger_evidence_v1";
+      outcome: "completed" | "completed_with_limitations" | "failed";
+      observedFacts: ReadonlyArray<
+        Readonly<{
+          factKey: DocumentFactKey;
+          status: "observed" | "not_observed";
+          observedValue: string | null;
+          extractionMethod: string | null;
+        }>
+      >;
+    }>;
 }>;
 
 export type CustomerCorrectionHandoffResponse = Readonly<{
@@ -57,6 +89,8 @@ export type CustomerCorrectionHandoffResponse = Readonly<{
         }>
         | Readonly<{ status: "unavailable" }>;
       items: readonly CustomerCorrectionHandoffItem[];
+      currentReplacementCandidates:
+        readonly CustomerCorrectionCurrentReplacementCandidate[];
     }>;
 }>;
 
@@ -152,6 +186,7 @@ function parseItem(value: unknown): CustomerCorrectionHandoffItem | null {
       "correction_reason",
       "correction_reason_label",
       "document_label",
+      "fact_key",
       "fact_label",
       "item_ref",
       "response_requirement",
@@ -159,6 +194,7 @@ function parseItem(value: unknown): CustomerCorrectionHandoffItem | null {
   ) return null;
   const itemRef = value.item_ref;
   const documentLabel = value.document_label;
+  const factKey = value.fact_key;
   const factLabel = boundedString(value.fact_label, 240);
   const correctionReason = value.correction_reason as CustomerCorrectionReason;
   const correctionReasonLabel = boundedString(
@@ -180,6 +216,7 @@ function parseItem(value: unknown): CustomerCorrectionHandoffItem | null {
     : null;
   if (
     typeof itemRef !== "string" || !ITEM_REFERENCE_RE.test(itemRef) ||
+    !isDocumentFactKey(factKey) ||
     !["Energiedocument", "Installatiefactuur"].includes(
       String(documentLabel),
     ) || !factLabel ||
@@ -196,6 +233,7 @@ function parseItem(value: unknown): CustomerCorrectionHandoffItem | null {
   if ("current_value" in value && currentValue === null) return null;
   return Object.freeze({
     itemRef,
+    factKey,
     documentLabel:
       documentLabel as CustomerCorrectionHandoffItem["documentLabel"],
     factLabel,
@@ -233,6 +271,112 @@ function parseSignerAuthority(
     : null;
 }
 
+function parseCurrentReplacementCandidate(
+  value: unknown,
+): CustomerCorrectionCurrentReplacementCandidate | null {
+  if (
+    !isObject(value) ||
+    !exactKeys(value, [
+      "candidate_ref",
+      "file_name",
+      "parser_observation",
+      "replacement_target_ref",
+    ]) ||
+    typeof value.replacement_target_ref !== "string" ||
+    !/^CRT-[A-F0-9]{32}$/.test(value.replacement_target_ref) ||
+    typeof value.candidate_ref !== "string" ||
+    !/^CRC-[A-F0-9]{32}$/.test(value.candidate_ref) ||
+    !boundedString(value.file_name, 180)
+  ) return null;
+  if (value.parser_observation === null) {
+    return Object.freeze({
+      replacementTargetRef: value.replacement_target_ref,
+      candidateRef: value.candidate_ref,
+      fileName: value.file_name as string,
+      contentFingerprint: null,
+      parserObservation: null,
+    });
+  }
+  const observation = value.parser_observation;
+  if (
+    !isObject(observation) ||
+    !exactKeys(observation, [
+      "observed_facts",
+      "outcome",
+      "parser_profile",
+      "schema_version",
+    ]) ||
+    observation.schema_version !==
+      "customer-correction-replacement-observation-v1" ||
+    ![
+      "energy_document_v1",
+      "installation_invoice_v1",
+      "kvk_extract_v1",
+      "generic_charger_evidence_v1",
+    ].includes(String(observation.parser_profile)) ||
+    !["completed", "completed_with_limitations", "failed"].includes(
+      String(observation.outcome),
+    ) ||
+    !Array.isArray(observation.observed_facts)
+  ) return null;
+  const observedFacts = observation.observed_facts.map((fact) => {
+    if (
+      !isObject(fact) ||
+      !exactKeys(fact, [
+        "extraction_method",
+        "fact_key",
+        "observed_value",
+        "status",
+      ]) ||
+      !isDocumentFactKey(fact.fact_key) ||
+      !["observed", "not_observed"].includes(String(fact.status)) ||
+      !(fact.observed_value === null ||
+        typeof fact.observed_value === "string") ||
+      (fact.status === "observed" &&
+        (typeof fact.observed_value !== "string" ||
+          fact.observed_value.trim().length < 1)) ||
+      (fact.status === "not_observed" && fact.observed_value !== null) ||
+      !(fact.extraction_method === null ||
+        boundedString(fact.extraction_method, 120))
+    ) return null;
+    return Object.freeze({
+      factKey: fact.fact_key,
+      status: fact.status as "observed" | "not_observed",
+      observedValue: fact.observed_value,
+      extractionMethod: fact.extraction_method as string | null,
+    });
+  });
+  if (
+    observedFacts.some((fact) => fact === null) ||
+    new Set(observedFacts.map((fact) => fact?.factKey)).size !==
+      observedFacts.length
+  ) return null;
+  return Object.freeze({
+    replacementTargetRef: value.replacement_target_ref,
+    candidateRef: value.candidate_ref,
+    fileName: value.file_name as string,
+    contentFingerprint: null,
+    parserObservation: Object.freeze({
+      schemaVersion: observation.schema_version,
+      parserProfile: observation.parser_profile as NonNullable<
+        CustomerCorrectionCurrentReplacementCandidate["parserObservation"]
+      >["parserProfile"],
+      outcome: observation.outcome as NonNullable<
+        CustomerCorrectionCurrentReplacementCandidate["parserObservation"]
+      >["outcome"],
+      observedFacts: Object.freeze(
+        observedFacts as Array<
+          NonNullable<
+            NonNullable<
+              CustomerCorrectionCurrentReplacementCandidate["parserObservation"]
+            >["observedFacts"][number]
+          >
+        >,
+      ),
+    }),
+  });
+}
+
 export function parseCustomerCorrectionHandoffSource(
   value: unknown,
 ): CustomerCorrectionHandoffResponse | null {
@@ -254,6 +398,7 @@ export function parseCustomerCorrectionHandoffSource(
   }
   if (
     !isObject(value.handoff) || !exactKeys(value.handoff, [
+      "current_replacement_candidates",
       "handoff_ref",
       "items",
       "published_at",
@@ -269,11 +414,34 @@ export function parseCustomerCorrectionHandoffSource(
     value.handoff.items.length > 100
   ) return null;
   const items = value.handoff.items.map(parseItem);
+  if (!Array.isArray(value.handoff.current_replacement_candidates)) return null;
+  const currentReplacementCandidates = value.handoff
+    .current_replacement_candidates.map(parseCurrentReplacementCandidate);
   const signerAuthority = parseSignerAuthority(value.handoff.signer_authority);
   if (
     !signerAuthority || items.some((item) => !item) ||
-    new Set(items.map((item) => item?.itemRef)).size !== items.length
+    new Set(items.map((item) => item?.itemRef)).size !== items.length ||
+    currentReplacementCandidates.some((candidate) => !candidate) ||
+    new Set(
+        currentReplacementCandidates.map((candidate) =>
+          candidate?.replacementTargetRef
+        ),
+      ).size !== currentReplacementCandidates.length
   ) return null;
+  const parsedItems = items as CustomerCorrectionHandoffItem[];
+  for (const candidate of currentReplacementCandidates) {
+    if (!candidate) return null;
+    const targetItems = parsedItems.filter((item) =>
+      item.replacementTarget?.replacementTargetRef ===
+        candidate.replacementTargetRef
+    );
+    if (
+      targetItems.length < 1 ||
+      candidate.parserObservation?.observedFacts.some((fact) =>
+        !targetItems.some((item) => item.factKey === fact.factKey)
+      )
+    ) return null;
+  }
   return Object.freeze({
     schemaVersion: CUSTOMER_CORRECTION_HANDOFF_SCHEMA_VERSION,
     caseRef: value.case_ref,
@@ -281,7 +449,10 @@ export function parseCustomerCorrectionHandoffSource(
       handoffRef,
       publishedAt,
       signerAuthority,
-      items: Object.freeze(items as CustomerCorrectionHandoffItem[]),
+      items: Object.freeze(parsedItems),
+      currentReplacementCandidates: Object.freeze(
+        currentReplacementCandidates as CustomerCorrectionCurrentReplacementCandidate[],
+      ),
     }),
   });
 }

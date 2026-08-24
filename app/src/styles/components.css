@@ -75,7 +75,11 @@
   padding: var(--space-6) 0;
   border-bottom: 1px solid var(--color-border);
   background:
-    radial-gradient(circle at 78% 18%, rgba(15, 118, 110, 0.1), transparent 28%),
+    radial-gradient(
+      circle at 78% 18%,
+      rgba(15, 118, 110, 0.1),
+      transparent 28%
+    ),
     linear-gradient(135deg, rgba(11, 83, 77, 0.06), transparent 46%),
     var(--color-bg);
 }
@@ -663,25 +667,6 @@ button:not(:disabled):active {
   background: var(--color-bg);
 }
 
-.document-slot-picker {
-  display: grid;
-  min-width: 0;
-  gap: var(--space-2);
-}
-
-.document-file-native-frame {
-  position: relative;
-  display: block;
-  width: min(100%, 132px);
-  max-width: 100%;
-  overflow: hidden;
-}
-
-.document-file-native-frame:focus-within {
-  border-radius: var(--radius-sm);
-  box-shadow: var(--focus-ring);
-}
-
 .document-file-input {
   width: 260px;
   max-width: none;
@@ -700,25 +685,8 @@ button:not(:disabled):active {
   border: 0;
 }
 
-.document-file-input-hidden:focus-visible + .document-file-trigger {
-  box-shadow: var(--focus-ring);
-}
-
-.document-file-trigger {
-  width: fit-content;
-}
-
-.document-file-trigger[aria-disabled="true"] {
-  opacity: 0.66;
-  pointer-events: none;
-}
-
 .document-slot .document-file-input {
   max-width: none;
-}
-
-.document-file-input::file-selector-button {
-  color: var(--color-heading);
 }
 
 .upload-dropzone span,
@@ -779,11 +747,24 @@ button:not(:disabled):active {
   gap: var(--space-4);
 }
 
+.document-evidence-workflow,
+.document-evidence-workflow__review {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-4);
+}
+
+.document-evidence-workflow__review {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-5);
+}
+
 .document-upload-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 320px));
   gap: var(--space-3);
   align-items: start;
+  justify-content: start;
 }
 
 .document-slot-card {
@@ -812,11 +793,6 @@ button:not(:disabled):active {
 
 .document-slot-card .document-slot {
   padding: var(--space-3);
-}
-
-.document-slot-card__binding {
-  color: var(--color-muted);
-  font-size: var(--text-xs);
 }
 
 .document-group-muted {
@@ -934,20 +910,133 @@ button:not(:disabled):active {
 .fact-table__row {
   display: grid;
   min-width: 0;
-  grid-template-columns: minmax(110px, 0.8fr) minmax(120px, 1fr)
+  grid-template-columns:
+    minmax(110px, 0.8fr) minmax(120px, 1fr)
     minmax(180px, 1.4fr) minmax(140px, 0.9fr);
   border-bottom: 1px solid var(--color-border);
 }
 
 .fact-table--five-columns .fact-table__header,
 .fact-table--five-columns .fact-table__row {
-  grid-template-columns: minmax(105px, 0.75fr) minmax(120px, 0.9fr)
+  grid-template-columns:
+    minmax(105px, 0.75fr) minmax(120px, 0.9fr)
     minmax(190px, 1.35fr) minmax(180px, 1.2fr) minmax(145px, 0.9fr);
+}
+
+.fact-table--customer .fact-table__header,
+.fact-table--customer .fact-table__row {
+  grid-template-columns:
+    minmax(118px, 0.9fr) minmax(118px, 0.9fr)
+    minmax(150px, 1.15fr) minmax(180px, 1.25fr) minmax(130px, 0.85fr);
+}
+
+.fact-table--customer .fact-table__row {
+  min-height: 42px;
+  font-size: var(--text-sm);
+}
+
+.fact-table--customer .fact-table__header > span,
+.fact-table--customer .fact-table__row > span {
+  align-content: center;
+  padding: var(--space-1) var(--space-2);
+}
+
+.fact-table__source,
+.fact-table__source-info,
+.fact-table__customer,
+.fact-table__enval,
+.fact-table__source-stack,
+.customer-fact-interaction {
+  min-width: 0;
+}
+
+.fact-table__source-stack {
+  display: grid;
+  align-content: center;
+}
+
+.fact-table__source-line {
+  display: block;
+  min-height: 1.45em;
+}
+
+.customer-fact-interaction {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.customer-fact-interaction--resolved,
+.customer-fact-interaction--actions {
+  flex-wrap: wrap;
+}
+
+.customer-fact-interaction--conflict {
+  align-items: flex-start;
+}
+
+.customer-fact-source-choice-stack {
+  display: grid;
+  min-width: 32px;
+  align-content: center;
+}
+
+.customer-fact-source-choice-line {
+  display: flex;
+  min-height: 1.45em;
+  align-items: center;
+}
+
+.customer-fact-source-choice {
+  cursor: pointer;
+}
+
+.customer-fact-source-choice input {
+  margin: 0;
+  accent-color: var(--color-brand-strong);
+}
+
+.fact-table__ellipsis {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.button-icon {
+  width: 32px;
+  min-height: 32px;
+  flex: 0 0 32px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-md);
+  line-height: 1;
+}
+
+.customer-fact-confirm {
+  border-color: var(--color-brand-strong);
+  background: var(--color-brand-strong);
+  color: #ffffff;
+}
+
+.customer-fact-edit {
+  color: var(--color-heading);
+}
+
+.customer-fact-cancel {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.customer-fact-confirmed-value {
+  color: var(--color-brand-strong);
+  font-weight: 750;
 }
 
 .fact-table--three-columns .fact-table__header,
 .fact-table--three-columns .fact-table__row {
-  grid-template-columns: minmax(130px, 0.8fr) minmax(220px, 1.4fr)
+  grid-template-columns:
+    minmax(130px, 0.8fr) minmax(220px, 1.4fr)
     minmax(150px, 1fr);
 }
 
@@ -1036,7 +1125,8 @@ button:not(:disabled):active {
 }
 
 .address-fields-compact {
-  grid-template-columns: minmax(92px, 1fr) minmax(72px, 0.7fr)
+  grid-template-columns:
+    minmax(92px, 1fr) minmax(72px, 0.7fr)
     minmax(72px, 0.7fr);
   gap: var(--space-2);
 }
@@ -1426,7 +1516,7 @@ button:not(:disabled):active {
 
 .status-pill-danger {
   background: #fbe3df;
-  color: #b42318;
+  color: var(--color-danger);
 }
 
 .status-dot {
@@ -1787,27 +1877,33 @@ button:not(:disabled):active {
   height: 12px;
   margin-top: 4px;
   border-radius: 999px;
+  background: currentColor;
   box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 14%, transparent);
 }
 
-.document-upload-card-status-danger {
-  background: #b42318;
+.document-upload-card-status-danger,
+.document-upload-card-message-danger {
   color: #b42318;
 }
 
-.document-upload-card-status-warning {
-  background: var(--color-amber);
+.document-upload-card-status-warning,
+.document-upload-card-message-warning {
   color: var(--color-amber);
 }
 
-.document-upload-card-status-success {
-  background: var(--color-brand);
+.document-upload-card-status-success,
+.document-upload-card-message-success {
   color: var(--color-brand);
 }
 
-.document-upload-card-status-neutral {
-  background: var(--color-muted);
+.document-upload-card-status-neutral,
+.document-upload-card-message-neutral {
   color: var(--color-muted);
+}
+
+.document-upload-card-message {
+  font-size: var(--text-xs);
+  font-weight: 650;
 }
 
 .document-upload-card-body {
@@ -2052,7 +2148,8 @@ button:not(:disabled):active {
 
 .fact-table--evidence-review .fact-table__header,
 .fact-table--evidence-review .fact-table__row {
-  grid-template-columns: minmax(0, 0.62fr) minmax(0, 0.92fr)
+  grid-template-columns:
+    minmax(0, 0.62fr) minmax(0, 0.92fr)
     minmax(0, 0.7fr) minmax(0, 0.82fr) minmax(0, 1.22fr);
 }
 
@@ -2215,6 +2312,7 @@ button:not(:disabled):active {
   }
 
   .fact-table__row,
+  .fact-table--customer .fact-table__row,
   .fact-table--five-columns .fact-table__row,
   .fact-table--three-columns .fact-table__row,
   .fact-table--two-columns .fact-table__row {

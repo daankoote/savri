@@ -147,6 +147,23 @@ async function confirmUpload(runtime, f, token, key, uploadRef) {
   );
 }
 
+async function withdrawUpload(
+  runtime,
+  f,
+  token,
+  key,
+  replacementTargetRef,
+  candidateRef,
+) {
+  return await post(
+    runtime,
+    token,
+    "api-app-customer-correction-upload-remove",
+    key,
+    { caseRef: f.caseRef, replacementTargetRef, candidateRef },
+  );
+}
+
 function coreTruth(runtime, f) {
   return psql(
     runtime,
@@ -338,6 +355,18 @@ async function main() {
     );
     assert(createdB.status === 201, "document_handoff_supersession_failed");
     const customerB = await readCustomerHandoff(runtime, f, auth.token);
+    if (customerB.status === 500) {
+      const directRead = JSON.parse(psql(
+        runtime,
+        `begin read only; select public.app_customer_correction_handoff_read_v5(
+          '${f.authUserId}','${f.caseRef}'
+        )::text; rollback;`,
+      ));
+      throw new Error(
+        `direct_handoff_v5_${directRead.code || "unknown"}` +
+          `_status_${directRead.status || "unknown"}`,
+      );
+    }
     const itemsB = customerB.body?.handoff?.items ?? [];
     const energyItems = itemsB.filter((item) =>
       item.documentLabel === "Energiedocument"
@@ -356,7 +385,11 @@ async function main() {
           item.replacementTarget?.replacementTargetRef === energyTarget
         ) && energyTarget && invoiceTarget && energyTarget !== invoiceTarget &&
         itemsB.every((item) => item.replacementTarget),
-      "server_target_grouping_or_projection_failed",
+      `server_target_grouping_or_projection_failed_status_${customerB.status}` +
+        `_items_${itemsB.length}_energy_${energyItems.length}` +
+        `_invoice_${invoiceItems.length}_code_${
+          customerB.body?.code || "none"
+        }`,
     );
 
     const coreBeforeStaging = coreTruth(runtime, f);
@@ -520,11 +553,133 @@ async function main() {
         ),
       "c3b2_server_resolution_contract_failed",
     );
+    const currentCandidateRef = retry.body.candidateRef;
+    const withdrawKey = `${prefix}-energy-withdraw`;
+    const withdrawn = await withdrawUpload(
+      runtime,
+      f,
+      auth.token,
+      withdrawKey,
+      energyTarget,
+      currentCandidateRef,
+    );
+    const withdrawnRetry = await withdrawUpload(
+      runtime,
+      f,
+      auth.token,
+      withdrawKey,
+      energyTarget,
+      currentCandidateRef,
+    );
+    const withdrawnAgain = await withdrawUpload(
+      runtime,
+      f,
+      auth.token,
+      `${prefix}-energy-withdraw-again`,
+      energyTarget,
+      currentCandidateRef,
+    );
+    const afterWithdrawRefresh = await readCustomerHandoff(
+      runtime,
+      f,
+      auth.token,
+    );
+    const withdrawnResolution = currentResolution(runtime, f);
+    assert(
+      withdrawn.status === 200 && withdrawn.body?.status === "withdrawn" &&
+        withdrawnRetry.status === 200 &&
+        withdrawnRetry.body?.status === "withdrawn" &&
+        withdrawnAgain.status === 200 &&
+        withdrawnAgain.body?.status === "already_withdrawn" &&
+        withdrawnResolution.targets.find((target) =>
+            target.replacement_target_ref === energyTarget
+          )?.candidate_ref == null &&
+        !afterWithdrawRefresh.body?.handoff?.currentReplacementCandidates
+          ?.some((candidate) =>
+            candidate.replacementTargetRef === energyTarget
+          ),
+      `withdrawal_not_idempotent_or_refresh_safe_first_${withdrawn.status}` +
+        `_${withdrawn.body?.status || withdrawn.body?.code || "none"}` +
+        `_retry_${withdrawnRetry.status}_${
+          withdrawnRetry.body?.status || withdrawnRetry.body?.code || "none"
+        }_again_${withdrawnAgain.status}_${
+          withdrawnAgain.body?.status || withdrawnAgain.body?.code || "none"
+        }_current_${
+          withdrawnResolution.targets.find((target) =>
+            target.replacement_target_ref === energyTarget
+          )?.candidate_ref || "none"
+        }`,
+    );
+
+    const reuploadPdf = pdf([
+      "Onze gegevens: Reupload Supplier B.V.",
+      "Contracthouder Reupload Person",
+      "Leveradres Reuploadstraat 35",
+      "Postcode 1234 AB Proefstad",
+      "Elektriciteit 871685900012345678",
+    ]);
+    const reuploadIssue = await issueUpload(
+      runtime,
+      f,
+      auth.token,
+      `${prefix}-reupload-issue`,
+      energyTarget,
+      reuploadPdf,
+    );
+    assert(reuploadIssue.status === 201, "reupload_issue_failed");
+    await putSignedUpload(
+      runtime,
+      auth.token,
+      reuploadIssue.body.signedUploadUrl,
+      reuploadPdf,
+    );
+    const reuploadConfirm = await confirmUpload(
+      runtime,
+      f,
+      auth.token,
+      `${prefix}-reupload-confirm`,
+      reuploadIssue.body.uploadRef,
+    );
+    const afterReuploadRefresh = await readCustomerHandoff(
+      runtime,
+      f,
+      auth.token,
+    );
+    const reuploadResolution = currentResolution(runtime, f);
+    const selectedCandidate = afterReuploadRefresh.body?.handoff
+      ?.currentReplacementCandidates?.find((candidate) =>
+        candidate.replacementTargetRef === energyTarget
+      );
+    const eventCounts = psql(
+      runtime,
+      `begin read only; select concat_ws('|',
+        count(*) filter (where event_type='SELECTED'),
+        count(*) filter (where event_type='WITHDRAWN'),
+        count(distinct replacement_target_ref) filter (
+          where event_type='WITHDRAWN'
+        ))
+       from public.app_customer_correction_replacement_candidate_events
+       where case_id='${f.caseId}'; rollback;`,
+    );
+    assert(
+      reuploadConfirm.status === 200 &&
+        reuploadConfirm.body?.candidateRef !== currentCandidateRef &&
+        reuploadResolution.targets.find((target) =>
+            target.replacement_target_ref === energyTarget
+          )?.candidate_ref === reuploadConfirm.body?.candidateRef &&
+        selectedCandidate?.candidateRef ===
+          reuploadConfirm.body?.candidateRef &&
+        selectedCandidate?.fileName === "replacement.pdf" &&
+        selectedCandidate?.parserObservation?.observedFacts?.every((fact) =>
+          Object.hasOwn(fact, "extractionMethod")
+        ) && eventCounts === "3|1|1",
+      "reupload_not_selected_or_customer_source_projection_invalid",
+    );
     const worklistAfter = await readWorklist(runtime, auth.token);
     assert(
       coreTruth(runtime, f) === coreBeforeStaging &&
         !worklistAfter.body?.cases?.some((row) => row.caseRef === f.caseRef) &&
-        stagedCounts(runtime, f) === "2|2|2",
+        stagedCounts(runtime, f) === "3|3|3",
       "pre_finalize_core_truth_changed",
     );
 
@@ -567,10 +722,19 @@ async function main() {
       `${prefix}-stale-confirm`,
       staleIssue.body.uploadRef,
     );
+    const staleWithdraw = await withdrawUpload(
+      runtime,
+      f,
+      auth.token,
+      `${prefix}-stale-withdraw`,
+      energyTarget,
+      reuploadConfirm.body.candidateRef,
+    );
     const customerC = await readCustomerHandoff(runtime, f, auth.token);
     const resolutionC = currentResolution(runtime, f);
     assert(
       staleUrl.status === 404 && [404, 409].includes(staleConfirm.status) &&
+        [404, 409].includes(staleWithdraw.status) &&
         customerC.body?.handoff?.items?.every((item) =>
           item.responseRequirement === "VALUE_CORRECTION" &&
           !item.replacementTarget
@@ -580,7 +744,7 @@ async function main() {
     );
     assert(
       coreTruth(runtime, f).split("|")[6] === "WAITING_CUSTOMER" &&
-        stagedCounts(runtime, f) === "3|2|2",
+        stagedCounts(runtime, f) === "4|3|3",
       "stale_candidate_history_or_status_invalid",
     );
     paths = storagePaths(runtime, f);
@@ -635,6 +799,9 @@ async function main() {
       "SERVED_SAME_DOCUMENT_MULTI_ITEM_ONE_TARGET=PASS",
       "SERVED_CROSS_DOCUMENT_DISTINCT_TARGETS=PASS",
       "SERVED_CONFIRM_IDEMPOTENT_CONCURRENT=PASS",
+      "SERVED_WITHDRAWAL_REFRESH_IDEMPOTENT=PASS",
+      "SERVED_WITHDRAW_REUPLOAD_SELECTS_NEW=PASS",
+      "SERVED_SELECTION_EVENT_TAIL=PASS",
       "SERVED_STALE_HANDOFF_DENIED=PASS",
       "SERVED_PRE_FINALIZE_CORE_TRUTH_UNCHANGED=PASS",
       "SERVED_REPLACEMENT_PILOT_UNCHANGED=PASS",

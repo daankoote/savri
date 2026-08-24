@@ -165,6 +165,7 @@ export type DocumentFirstSignupAction =
     pendingPersistence: boolean;
   }
   | { type: "reject_fact"; factKey: string }
+  | { type: "invalidate_fact_confirmation"; factKey: string }
   | {
     type: "set_manual_correction";
     factKey: string;
@@ -482,7 +483,9 @@ export function documentFirstSignupReducer(
           quarantineRevision: null,
         },
         energyDocumentsByLocationId: Object.fromEntries(
-          Object.entries(state.energyDocumentsByLocationId).map(([id, document]) => [
+          Object.entries(state.energyDocumentsByLocationId).map((
+            [id, document],
+          ) => [
             id,
             {
               ...document,
@@ -493,7 +496,9 @@ export function documentFirstSignupReducer(
           ]),
         ),
         chargerDocumentsByChargerId: Object.fromEntries(
-          Object.entries(state.chargerDocumentsByChargerId).map(([id, documents]) => [
+          Object.entries(state.chargerDocumentsByChargerId).map((
+            [id, documents],
+          ) => [
             id,
             documents.map((document) => ({
               ...document,
@@ -532,7 +537,8 @@ export function documentFirstSignupReducer(
     }
     case "update_organization_document": {
       const documentId = action.document.clientId;
-      const fileChanged = state.organizationDocument.file !== action.document.file;
+      const fileChanged =
+        state.organizationDocument.file !== action.document.file;
       return {
         ...state,
         organizationDocument: action.document,
@@ -545,10 +551,16 @@ export function documentFirstSignupReducer(
             : state.parserObservations.byDocumentId,
         },
         customerConfirmations: fileChanged
-          ? invalidateDocumentConfirmations(state.customerConfirmations, documentId)
+          ? invalidateDocumentConfirmations(
+            state.customerConfirmations,
+            documentId,
+          )
           : state.customerConfirmations,
         manualCorrections: fileChanged
-          ? invalidateCorrectionsForDocument(state.manualCorrections, documentId)
+          ? invalidateCorrectionsForDocument(
+            state.manualCorrections,
+            documentId,
+          )
           : state.manualCorrections,
         rejectedFactKeys: state.rejectedFactKeys,
       };
@@ -745,10 +757,14 @@ export function documentFirstSignupReducer(
     }
     case "update_energy_document": {
       const documentId = action.document.clientId;
-      const current = state.energyDocumentsByLocationId[action.document.locationClientId];
+      const current =
+        state.energyDocumentsByLocationId[action.document.locationClientId];
       const fileChanged = current?.file !== action.document.file;
       const customerConfirmations = fileChanged
-        ? invalidateDocumentConfirmations(state.customerConfirmations, documentId)
+        ? invalidateDocumentConfirmations(
+          state.customerConfirmations,
+          documentId,
+        )
         : state.customerConfirmations;
       const manualCorrections = fileChanged
         ? invalidateCorrectionsForDocument(state.manualCorrections, documentId)
@@ -761,7 +777,10 @@ export function documentFirstSignupReducer(
         },
         parserObservations: {
           byDocumentId: fileChanged
-            ? withoutDocumentObservations(state.parserObservations.byDocumentId, [documentId])
+            ? withoutDocumentObservations(
+              state.parserObservations.byDocumentId,
+              [documentId],
+            )
             : state.parserObservations.byDocumentId,
         },
         customerConfirmations,
@@ -799,8 +818,10 @@ export function documentFirstSignupReducer(
     }
     case "update_charger_document": {
       const documentId = action.document.clientId;
-      const current = (state.chargerDocumentsByChargerId[action.document.chargerClientId] || [])
-        .find((document) => document.clientId === documentId);
+      const current =
+        (state.chargerDocumentsByChargerId[action.document.chargerClientId] ||
+          [])
+          .find((document) => document.clientId === documentId);
       const fileChanged = current?.file !== action.document.file;
       return {
         ...state,
@@ -816,14 +837,23 @@ export function documentFirstSignupReducer(
         },
         parserObservations: {
           byDocumentId: fileChanged
-            ? withoutDocumentObservations(state.parserObservations.byDocumentId, [documentId])
+            ? withoutDocumentObservations(
+              state.parserObservations.byDocumentId,
+              [documentId],
+            )
             : state.parserObservations.byDocumentId,
         },
         customerConfirmations: fileChanged
-          ? invalidateDocumentConfirmations(state.customerConfirmations, documentId)
+          ? invalidateDocumentConfirmations(
+            state.customerConfirmations,
+            documentId,
+          )
           : state.customerConfirmations,
         manualCorrections: fileChanged
-          ? invalidateCorrectionsForDocument(state.manualCorrections, documentId)
+          ? invalidateCorrectionsForDocument(
+            state.manualCorrections,
+            documentId,
+          )
           : state.manualCorrections,
         rejectedFactKeys: state.rejectedFactKeys,
       };
@@ -866,6 +896,11 @@ export function documentFirstSignupReducer(
           [action.factKey]: true,
         },
       };
+    }
+    case "invalidate_fact_confirmation": {
+      const confirmations = { ...state.customerConfirmations };
+      delete confirmations[action.factKey];
+      return { ...state, customerConfirmations: confirmations };
     }
     case "set_manual_correction": {
       const confirmations = { ...state.customerConfirmations };

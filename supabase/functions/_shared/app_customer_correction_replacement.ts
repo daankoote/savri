@@ -40,6 +40,12 @@ export type CorrectionReplacementConfirmRequest = Readonly<{
   uploadRef: string;
 }>;
 
+export type CorrectionReplacementWithdrawRequest = Readonly<{
+  caseRef: string;
+  replacementTargetRef: string;
+  candidateRef: string;
+}>;
+
 type NormalizationFailure = Readonly<{
   ok: false;
   code: "invalid_input" | "unsupported_mime_type" | "file_too_large";
@@ -121,6 +127,33 @@ export function normalizeCorrectionReplacementConfirmRequest(
   return { ok: true, value: { caseRef, uploadRef } };
 }
 
+export function normalizeCorrectionReplacementWithdrawRequest(
+  value: unknown,
+):
+  | { ok: true; value: CorrectionReplacementWithdrawRequest }
+  | NormalizationFailure {
+  if (
+    !isRecord(value) ||
+    !exactKeys(value, [
+      "candidateRef",
+      "caseRef",
+      "replacementTargetRef",
+    ])
+  ) return { ok: false, code: "invalid_input" };
+  const caseRef = stringField(value, "caseRef");
+  const replacementTargetRef = stringField(value, "replacementTargetRef");
+  const candidateRef = stringField(value, "candidateRef");
+  if (
+    !CASE_REFERENCE_RE.test(caseRef) ||
+    !REPLACEMENT_TARGET_REF_RE.test(replacementTargetRef) ||
+    !REPLACEMENT_CANDIDATE_REF_RE.test(candidateRef)
+  ) return { ok: false, code: "invalid_input" };
+  return {
+    ok: true,
+    value: { caseRef, replacementTargetRef, candidateRef },
+  };
+}
+
 export async function createCorrectionReplacementSignedUpload(
   client: any,
   bucket: string,
@@ -155,6 +188,7 @@ export type CustomerSafeReplacementObservation = Readonly<{
       status: "observed" | "not_observed";
       observedValue: string | null;
       normalizedObservedValue: string | null;
+      extractionMethod: string | null;
       confidence: "high" | "medium" | "low" | "unavailable";
       limitation: string | null;
     }>
@@ -179,6 +213,7 @@ export function projectCustomerSafeReplacementObservation(
             status: fact.status,
             observedValue: fact.observedValue,
             normalizedObservedValue: fact.normalizedObservedValue,
+            extractionMethod: fact.sourceLocator?.extractionMethod || null,
             confidence: fact.confidence,
             limitation: fact.limitation,
           }),

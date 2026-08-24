@@ -109,7 +109,7 @@ export function createHandler(
     const verifier = await otpVerifier(secret, input.otp);
     const legalBundleSha256 = await correctionLegalBundleHash();
     const result = await serviceClient.rpc(
-      "app_customer_correction_finalize_v2",
+      "app_customer_correction_finalize_v3",
       {
         p_auth_user_id: verified.context.authUserId,
         p_case_ref: input.caseRef,

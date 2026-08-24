@@ -203,6 +203,55 @@ export const TENANT_ENVAL_MIGRATION_CHAIN = Object.freeze({
       sha256:
         "425ea994188ea3bc130c48e6f06024246220e7b61184e049ec7a7f3314047aca",
     }),
+    Object.freeze({
+      version: "20260822120000",
+      path:
+        "supabase/migrations/20260822120000_app_customer_correction_handoff_fact_projection.sql",
+      sha256:
+        "13edf3a4aa8e41ce77443da7e050449cf37e6357818f98e19cc3f0b65af6a2df",
+    }),
+    Object.freeze({
+      version: "20260823120000",
+      path:
+        "supabase/migrations/20260823120000_app_customer_correction_candidate_selection.sql",
+      sha256:
+        "204566d6fa935fa12005f710d2938c08392d08f506b9a5eb3ee95489bced16bf",
+    }),
+    Object.freeze({
+      version: "20260823123000",
+      path:
+        "supabase/migrations/20260823123000_app_customer_correction_resolution_null_projection.sql",
+      sha256:
+        "bc2ea7547b0038cc321f8a64a33c266030722e453ef910435cfab7c067fadb3c",
+    }),
+    Object.freeze({
+      version: "20260823130000",
+      path:
+        "supabase/migrations/20260823130000_app_customer_correction_withdraw_scope_fix.sql",
+      sha256:
+        "ed5ced65c837c692668e2f0d01ccf28596e6a48a31d47e4e8e303e98950050af",
+    }),
+    Object.freeze({
+      version: "20260823133000",
+      path:
+        "supabase/migrations/20260823133000_app_customer_correction_handoff_null_fix.sql",
+      sha256:
+        "8962aec2045b0ebaf2ce170e2906f8711c6c308f41c9edf2f7a7be8b6871b3e7",
+    }),
+    Object.freeze({
+      version: "20260823134500",
+      path:
+        "supabase/migrations/20260823134500_app_customer_correction_handoff_preflight_fix.sql",
+      sha256:
+        "de01dcc55e3e5a34d0c6fad92c1770e980b2177ffb31aa31dbc41467a7bcd156",
+    }),
+    Object.freeze({
+      version: "20260824100000",
+      path:
+        "supabase/migrations/20260824100000_app_customer_correction_resolution_routing.sql",
+      sha256:
+        "c767ad5f3fb9e4d67a6562b3156f4f33b1bec90a12327bc58151650e32b79f49",
+    }),
   ]),
   currentPresentAppMigrations: Object.freeze([
     [

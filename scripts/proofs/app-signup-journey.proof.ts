@@ -43,6 +43,21 @@ export async function runSignupJourneyProof(): Promise<void> {
   );
   const matrix = await source("DocumentFirstCheckMatrix.tsx");
   const factTable = await source("presentation/FactTable.tsx");
+  const sharedMatrix = await Deno.readTextFile(
+    "app/src/features/documents/DocumentFactMatrix.tsx",
+  );
+  const sharedWorkflow = await Deno.readTextFile(
+    "app/src/features/documents/DocumentEvidenceWorkflow.tsx",
+  );
+  const sharedWorkflowController = await Deno.readTextFile(
+    "app/src/features/documents/CustomerDocumentWorkflowController.ts",
+  );
+  const correctionWorkflow = await Deno.readTextFile(
+    "app/src/features/dashboard/CustomerCorrectionHandoffPanel.tsx",
+  );
+  const sharedUploadCard = await Deno.readTextFile(
+    "app/src/features/documents/DocumentEvidenceUploadCard.tsx",
+  );
   const reviewControls = await source("presentation/FactReviewControls.tsx");
   const presentationModel = await source(
     "presentation/factPresentationModel.ts",
@@ -92,7 +107,6 @@ export async function runSignupJourneyProof(): Promise<void> {
   for (
     const [productionSource, heading] of [
       [account, "Account"],
-      [documents, "Documenten"],
       [shell, "Ondertekenen"],
     ]
   ) {
@@ -101,6 +115,11 @@ export async function runSignupJourneyProof(): Promise<void> {
       `signup_heading_missing:${heading}`,
     );
   }
+  assert(
+    sharedWorkflow.includes('title = "Upload en controle"') &&
+      sharedWorkflow.includes("<h2 id={titleId}>{title}</h2>"),
+    "signup_heading_missing:Upload en controle",
+  );
 
   assert(
     !shell.includes("<SignupLocationSection") &&
@@ -150,9 +169,16 @@ export async function runSignupJourneyProof(): Promise<void> {
   );
 
   assert(
-    upload.includes("Uploaden…") &&
-      upload.includes("Bestand veilig ontvangen") &&
-      upload.includes("Upload mislukt") &&
+    upload.includes("DocumentEvidenceUploadCard") &&
+      upload.includes('document.quarantineStatus === "uploading"') &&
+      upload.includes('document.quarantineStatus === "confirmed_quarantine"') &&
+      upload.includes('document.quarantineStatus === "error"') &&
+      sharedUploadCard.includes('"EMPTY"') &&
+      sharedUploadCard.includes('"UPLOADING"') &&
+      sharedUploadCard.includes('"PARSING"') &&
+      sharedUploadCard.includes('"READY"') &&
+      sharedUploadCard.includes('"ERROR"') &&
+      sharedUploadCard.includes("PDF kiezen") &&
       selectors.includes('quarantineStatus !== "confirmed_quarantine"') &&
       selectors.includes('quarantineStatus === "confirmed_quarantine"') &&
       quarantineClient.includes("api-app-signup-intake-start") &&
@@ -177,14 +203,29 @@ export async function runSignupJourneyProof(): Promise<void> {
   );
 
   assert(
-    matrix.includes("DocumentReviewRow") &&
+      matrix.includes("DocumentReviewRow") &&
       matrix.includes("locations.flatMap") &&
       matrix.includes("chargers.filter") &&
-      matrix.includes("sections.map") &&
-      factTable.includes("visibleRows.map") &&
+      matrix.includes("createCustomerDocumentWorkflowGroup") &&
+      matrix.includes("createDocumentFirstWorkflowGroups") &&
+      documents.includes("createCustomerDocumentWorkflowModel") &&
+      documents.includes("<DocumentEvidenceWorkflow") &&
+      !matrix.includes("<section") &&
+      sharedWorkflow.includes("groups.map") &&
+      sharedWorkflowController.includes(
+        "resolveCustomerFactResolutionPolicy",
+      ) &&
+      sharedMatrix.includes("visibleRows.map") &&
+      factTable.includes("DocumentFactMatrix") &&
       factTable.includes("FactReviewControls") &&
-      reviewControls.includes("onConfirm(reviewRow)") &&
+      reviewControls.includes("onConfirm(reviewRow, value)") &&
       reviewControls.includes("onCorrect(reviewRow") &&
+      !matrix.includes("resolveCustomerFactResolutionPolicy") &&
+      !correctionWorkflow.includes(
+        "resolveCustomerFactResolutionPolicy",
+      ) &&
+      !matrix.includes("CustomerDocumentFactInteraction") &&
+      !correctionWorkflow.includes("CustomerDocumentFactInteraction") &&
       !matrix.includes("compareEnergyDocument") &&
       !matrix.includes("compareChargerDocument") &&
       !matrix.includes("parseInvoicePdfInput"),

@@ -91,6 +91,12 @@ const applicability = await source(
 const matrixUi = await source(
   "app/src/features/signup/DocumentFirstCheckMatrix.tsx",
 );
+const sharedMatrix = await source(
+  "app/src/features/documents/DocumentFactMatrix.tsx",
+);
+const sharedInteraction = await source(
+  "app/src/features/documents/CustomerDocumentFactInteraction.tsx",
+);
 const factTable = await source(
   "app/src/features/signup/presentation/FactTable.tsx",
 );
@@ -102,6 +108,12 @@ const presentationModel = await source(
 );
 const documentsUi = await source(
   "app/src/features/signup/DocumentFirstDocumentsStep.tsx",
+);
+const workflowUi = await source(
+  "app/src/features/documents/DocumentEvidenceWorkflow.tsx",
+);
+const uploadCard = await source(
+  "app/src/features/documents/DocumentEvidenceUploadCard.tsx",
 );
 const uploadSlot = await source(
   "app/src/features/signup/DocumentUploadSlot.tsx",
@@ -455,7 +467,7 @@ const exactHeaders = [
 ];
 let previousHeaderIndex = -1;
 for (const header of exactHeaders) {
-  const index = factTable.indexOf(`"${header}"`);
+  const index = sharedMatrix.indexOf(`"${header}"`);
   assert(
     index > previousHeaderIndex,
     `matrix_header_missing_or_out_of_order:${header}`,
@@ -466,30 +478,33 @@ assert(
   !factTable.includes("Opgegeven") && !factTable.includes("Niet opgegeven") &&
     reviewControls.includes("button button-secondary button-compact") &&
     !reviewControls.includes("button-link") &&
-    reviewControls.includes("CompactFactCorrectionEditor") &&
-    factTable.includes("fact-table__action-cell") &&
+    reviewControls.includes("CustomerDocumentFactInteraction") &&
+    sharedInteraction.includes("<AddressFields") &&
+    sharedInteraction.includes("compact") &&
+    sharedMatrix.includes("fact-table__action-cell") &&
     factTable.includes("row.canonicalValue") &&
     reviewControls.includes("row.actions") &&
     presentationModel.includes('row.applicability === "not_applicable"') &&
     factTable.includes('row.canonicalValue || "—"') &&
+    !factTable.includes("createCustomerDocumentFactRows") &&
     !factTable.includes("Niet gevonden") &&
-    ![matrixUi, factTable, reviewControls].some((value) =>
-      value.includes("style={{")
-    ),
+    ![matrixUi, factTable, reviewControls, sharedMatrix, sharedInteraction]
+      .some((value) => value.includes("style={{")),
   "canonical_matrix_ui_contract_failed",
 );
 
 assert(
   (documentsUi.match(/Energienota of energiecontract/g) || []).length === 1 &&
-    (documentsUi.match(/title="Installatiefactuur"/g) || []).length === 1 &&
-    documentsUi.includes("document-upload-grid") &&
-    documentsUi.includes("hideDocumentLabel") &&
-    uploadSlot.includes("document-selected-file") &&
+    (documentsUi.match(/title: "Installatiefactuur"/g) || []).length === 1 &&
+    documentsUi.includes("createDocumentUploadCardModel") &&
+    documentsUi.includes("<DocumentEvidenceWorkflow") &&
+    workflowUi.includes("document-upload-grid") &&
+    uploadCard.includes("document-selected-file") &&
     uploadSlot.includes("safeDocumentFilename") &&
     uploadSlot.includes("slice(0, 180)") &&
     css.includes(".document-upload-grid") &&
     css.includes("auto-fit") &&
-    css.includes("min(100%, 260px)"),
+    css.includes("min(100%, 250px)"),
   "compact_upload_grid_contract_failed",
 );
 

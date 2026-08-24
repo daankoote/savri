@@ -7,12 +7,14 @@ type SignupFlowNavigationProps = {
   activeStep: DocumentFirstStepId;
   canContinue: boolean;
   onStepChange: (step: DocumentFirstStepId) => void;
+  showNext?: boolean;
 };
 
 export function SignupFlowNavigation({
   activeStep,
   canContinue,
   onStepChange,
+  showNext = true,
 }: SignupFlowNavigationProps) {
   const index = DOCUMENT_FIRST_STEPS.findIndex((step) =>
     step.id === activeStep
@@ -35,7 +37,7 @@ export function SignupFlowNavigation({
           : null}
       </div>
       <div>
-        {next
+        {next && showNext
           ? (
             <button
               className="button button-primary"

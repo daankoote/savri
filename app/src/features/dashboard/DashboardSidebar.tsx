@@ -7,11 +7,23 @@ import { usePresentationBrand } from "../../shared/presentation/PresentationBran
 
 type DashboardSidebarProps = {
   activeSection: "active" | "history" | "contact";
+  collapsed?: boolean;
+  id?: string;
   navigate: AppNavigate;
+  onToggle?: () => void;
   onSelectSection: (section: "active" | "history" | "contact") => void;
+  showToggle?: boolean;
 };
 
-export function DashboardSidebar({ activeSection, navigate, onSelectSection }: DashboardSidebarProps) {
+export function DashboardSidebar({
+  activeSection,
+  collapsed = false,
+  id,
+  navigate,
+  onToggle,
+  onSelectSection,
+  showToggle = false,
+}: DashboardSidebarProps) {
   const auth = useAuth();
   const presentation = usePresentationBrand();
 
@@ -27,61 +39,124 @@ export function DashboardSidebar({ activeSection, navigate, onSelectSection }: D
   }
 
   return (
-    <aside className="portal-sidebar" aria-label="Dashboard navigatie">
+    <aside
+      aria-label="Dashboard navigatie"
+      className={collapsed
+        ? "portal-sidebar portal-sidebar--collapsed"
+        : "portal-sidebar"}
+      id={id}
+    >
       <div className="portal-sidebar-brand">
-        <span className="brand-symbol" aria-hidden="true">{presentation.shortMark}</span>
-        <div>
-          <strong>{presentation.displayName}</strong>
-          <small>{presentation.productLabel}</small>
-        </div>
+        <span className="brand-symbol" aria-hidden="true">
+          {presentation.shortMark}
+        </span>
+        {!collapsed
+          ? (
+            <div>
+              <strong>{presentation.displayName}</strong>
+              <small>{presentation.productLabel}</small>
+            </div>
+          )
+          : null}
       </div>
 
-      <div className="portal-user-block">
-        <strong>{presentation.productLabel}</strong>
-        <span>{auth.summary ? `${auth.summary.dossiers.length} dossier${auth.summary.dossiers.length === 1 ? "" : "s"}` : "Account"}</span>
-      </div>
+      {showToggle && onToggle
+        ? (
+          <button
+            aria-controls={id}
+            aria-expanded={!collapsed}
+            aria-label={collapsed
+              ? "Dashboardnavigatie openen"
+              : "Dashboardnavigatie sluiten"}
+            className="button button-secondary button-compact portal-sidebar-toggle"
+            onClick={onToggle}
+            title={collapsed ? "Navigatie openen" : "Navigatie sluiten"}
+            type="button"
+          >
+            <span aria-hidden="true">☰</span>
+            {!collapsed ? <span>Navigatie sluiten</span> : null}
+          </button>
+        )
+        : null}
 
-      <nav className="portal-nav" aria-label="Portaal menu">
-        <button
-          className="button button-primary portal-primary-action"
-          onClick={handleNewApplication}
-          type="button"
-        >
-          Nieuwe aanvraag
-        </button>
-        <button
-          className={activeSection === "active" ? "portal-nav-item portal-nav-item-active" : "portal-nav-item"}
-          onClick={() => onSelectSection("active")}
-          type="button"
-        >
-          Actief
-        </button>
-        <button
-          className={activeSection === "history" ? "portal-nav-item portal-nav-item-active" : "portal-nav-item"}
-          onClick={() => onSelectSection("history")}
-          type="button"
-        >
-          History
-        </button>
-      </nav>
+      {!collapsed
+        ? (
+          <>
+            <div className="portal-user-block">
+              <strong>{presentation.productLabel}</strong>
+              <span>
+                {auth.summary
+                  ? `${auth.summary.dossiers.length} dossier${
+                    auth.summary.dossiers.length === 1 ? "" : "s"
+                  }`
+                  : "Account"}
+              </span>
+            </div>
 
-      <div className="portal-sidebar-divider" />
+            <nav className="portal-nav" aria-label="Portaal menu">
+              <button
+                className="button button-primary portal-primary-action"
+                onClick={handleNewApplication}
+                type="button"
+              >
+                Nieuwe aanvraag
+              </button>
+              <button
+                className={activeSection === "active"
+                  ? "portal-nav-item portal-nav-item-active"
+                  : "portal-nav-item"}
+                onClick={() => onSelectSection("active")}
+                type="button"
+              >
+                Actief
+              </button>
+              <button
+                className={activeSection === "history"
+                  ? "portal-nav-item portal-nav-item-active"
+                  : "portal-nav-item"}
+                onClick={() => onSelectSection("history")}
+                type="button"
+              >
+                History
+              </button>
+            </nav>
 
-      <button
-        className={activeSection === "contact" ? "portal-nav-item portal-nav-item-active" : "portal-nav-item"}
-        onClick={() => onSelectSection("contact")}
-        type="button"
-      >
-        Contact ENVAL
-      </button>
+            <div className="portal-sidebar-divider" />
 
-      <div className="portal-sidebar-divider" />
+            <button
+              className={activeSection === "contact"
+                ? "portal-nav-item portal-nav-item-active"
+                : "portal-nav-item"}
+              onClick={() => onSelectSection("contact")}
+              type="button"
+            >
+              Contact ENVAL
+            </button>
 
-      <div className="portal-sidebar-bottom">
-        <button className="portal-nav-item" onClick={() => navigate("/")} type="button">Naar website</button>
-        <button className="portal-nav-item" type="button">Settings</button>
-        <button className="portal-nav-item" onClick={handleLogout} type="button">Uitloggen</button>
-      </div>
+            <div className="portal-sidebar-divider" />
+
+            <div className="portal-sidebar-bottom">
+              <button
+                className="portal-nav-item"
+                onClick={() => navigate("/")}
+                type="button"
+              >
+                Naar website
+              </button>
+              <button className="portal-nav-item" type="button">
+                Settings
+              </button>
+              <button
+                className="portal-nav-item"
+                onClick={handleLogout}
+                type="button"
+              >
+                Uitloggen
+              </button>
+            </div>
+          </>
+        )
+        : null}
     </aside>
   );
 }

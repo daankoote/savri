@@ -280,6 +280,7 @@ export function createHandler(
         confirmed.data,
         "replacement_target_ref",
       ),
+      fileName: stringValue(resolved.data, "original_filename"),
       status: "confirmed_staged",
       parserObservation,
       parserSuccessRequiredForFinalCustomerValue: false,

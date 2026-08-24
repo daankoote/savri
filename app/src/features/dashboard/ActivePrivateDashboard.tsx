@@ -214,144 +214,158 @@ export function ActivePrivateDashboard({
             <CustomerCorrectionHandoffPanel
               accessToken={accessToken}
               accountType={model.selected_dossier.account_type}
+              dashboardModel={model}
               state={correctionHandoff}
             />
 
-            <section className="portal-card-compact" aria-label="Dossier">
-              <h2>Dossier</h2>
-              <ReadOnlyInfoRows
-                rows={[
-                  {
-                    identity: "dossier-summary",
-                    label: "Dossier",
-                    value: dossierLabel(
-                      model.selected_dossier,
-                      hasPublishedCorrection,
-                    ),
-                  },
-                  {
-                    identity: "case-reference",
-                    label: "Zaakreferentie",
-                    value: model.selected_dossier.case_reference,
-                  },
-                  {
-                    identity: "account-type",
-                    label: "Type",
-                    value: accountTypeLabel(
-                      model.selected_dossier.account_type,
-                    ),
-                  },
-                  {
-                    identity: "case-status",
-                    label: "Status",
-                    value: selectedDossierStatusLabel(
-                      model.selected_dossier.status,
-                      hasPublishedCorrection,
-                    ),
-                    status: selectedDossierStatusLabel(
-                      model.selected_dossier.status,
-                      hasPublishedCorrection,
-                    ),
-                  },
-                ]}
-              />
-            </section>
-
-            {model.locations.length
+            {!hasPublishedCorrection
               ? (
-                <section className="portal-card-compact" aria-label="Locaties">
-                  <h2>Locaties</h2>
-                  <ReadOnlyInfoRows
-                    rows={model.locations.map((location, index) => ({
-                      identity: location.location_id,
-                      label: location.label || `Locatie ${index + 1}`,
-                      value: formatLocationLine(location),
-                      status: statusLabel(location.status),
-                    }))}
-                  />
-                </section>
-              )
-              : null}
+                <>
+                  <section className="portal-card-compact" aria-label="Dossier">
+                    <h2>Dossier</h2>
+                    <ReadOnlyInfoRows
+                      rows={[
+                        {
+                          identity: "dossier-summary",
+                          label: "Dossier",
+                          value: dossierLabel(
+                            model.selected_dossier,
+                            hasPublishedCorrection,
+                          ),
+                        },
+                        {
+                          identity: "case-reference",
+                          label: "Zaakreferentie",
+                          value: model.selected_dossier.case_reference,
+                        },
+                        {
+                          identity: "account-type",
+                          label: "Type",
+                          value: accountTypeLabel(
+                            model.selected_dossier.account_type,
+                          ),
+                        },
+                        {
+                          identity: "case-status",
+                          label: "Status",
+                          value: selectedDossierStatusLabel(
+                            model.selected_dossier.status,
+                            hasPublishedCorrection,
+                          ),
+                          status: selectedDossierStatusLabel(
+                            model.selected_dossier.status,
+                            hasPublishedCorrection,
+                          ),
+                        },
+                      ]}
+                    />
+                  </section>
 
-            {model.document_slots.some((slot) => !slot.charger_id)
-              ? (
-                <section
-                  className="portal-card-compact"
-                  aria-label="Documenten"
-                >
-                  <h2>Documenten</h2>
-                  <ReadOnlyInfoRows
-                    rows={model.document_slots.filter((slot) =>
-                      !slot.charger_id
-                    ).map((slot) => ({
-                      identity: slot.document_slot_id,
-                      label: getDocumentSlotCustomerTitle(slot),
-                      value: statusLabel(slot.status),
-                      status: statusLabel(slot.status),
-                    }))}
-                  />
-                </section>
-              )
-              : null}
-
-            {chargerRows.length
-              ? (
-                <section
-                  className="charger-tabs"
-                  aria-label="Actieve laadpalen"
-                >
-                  {chargerRows.map((row) => {
-                    const isSelected =
-                      row.charger.charger_id === selectedChargerId;
-
-                    return (
-                      <div
-                        className="charger-tab-group"
-                        key={row.charger.charger_id}
+                  {model.locations.length
+                    ? (
+                      <section
+                        className="portal-card-compact"
+                        aria-label="Locaties"
                       >
-                        <button
-                          aria-expanded={isSelected}
-                          className={isSelected
-                            ? "charger-tab-row charger-tab-row-active"
-                            : "charger-tab-row"}
-                          onClick={() => toggleCharger(row.charger.charger_id)}
-                          type="button"
-                        >
-                          <div>
-                            <h2>Laadpaal {row.index}</h2>
-                            <p>Locatie: {formatLocationLine(row.location)}</p>
-                          </div>
-                          <StatusPill
-                            status={statusLabel(row.charger.status)}
-                          />
-                        </button>
+                        <h2>Locaties</h2>
+                        <ReadOnlyInfoRows
+                          rows={model.locations.map((location, index) => ({
+                            identity: location.location_id,
+                            label: location.label || `Locatie ${index + 1}`,
+                            value: formatLocationLine(location),
+                            status: statusLabel(location.status),
+                          }))}
+                        />
+                      </section>
+                    )
+                    : null}
 
-                        {isSelected
-                          ? (
-                            <ChargerInformation
-                              accessToken={accessToken}
-                              documentChangesAllowed={model.selected_dossier
-                                .document_changes_allowed}
-                              expandedSection={expandedSection}
-                              legalAcceptances={model.legal_acceptances}
-                              onToggleSection={toggleSection}
-                              onRefreshSelectedDossier={onRefreshSelectedDossier}
-                              row={row}
-                              selectedDossierId={selectedDossierId}
-                            />
-                          )
-                          : null}
-                      </div>
-                    );
-                  })}
-                </section>
+                  {model.document_slots.some((slot) => !slot.charger_id)
+                    ? (
+                      <section
+                        className="portal-card-compact"
+                        aria-label="Documenten"
+                      >
+                        <h2>Documenten</h2>
+                        <ReadOnlyInfoRows
+                          rows={model.document_slots.filter((slot) =>
+                            !slot.charger_id
+                          ).map((slot) => ({
+                            identity: slot.document_slot_id,
+                            label: getDocumentSlotCustomerTitle(slot),
+                            value: statusLabel(slot.status),
+                            status: statusLabel(slot.status),
+                          }))}
+                        />
+                      </section>
+                    )
+                    : null}
+
+                  {chargerRows.length
+                    ? (
+                      <section
+                        className="charger-tabs"
+                        aria-label="Actieve laadpalen"
+                      >
+                        {chargerRows.map((row) => {
+                          const isSelected =
+                            row.charger.charger_id === selectedChargerId;
+
+                          return (
+                            <div
+                              className="charger-tab-group"
+                              key={row.charger.charger_id}
+                            >
+                              <button
+                                aria-expanded={isSelected}
+                                className={isSelected
+                                  ? "charger-tab-row charger-tab-row-active"
+                                  : "charger-tab-row"}
+                                onClick={() =>
+                                  toggleCharger(row.charger.charger_id)}
+                                type="button"
+                              >
+                                <div>
+                                  <h2>Laadpaal {row.index}</h2>
+                                  <p>
+                                    Locatie: {formatLocationLine(row.location)}
+                                  </p>
+                                </div>
+                                <StatusPill
+                                  status={statusLabel(row.charger.status)}
+                                />
+                              </button>
+
+                              {isSelected
+                                ? (
+                                  <ChargerInformation
+                                    accessToken={accessToken}
+                                    documentChangesAllowed={model
+                                      .selected_dossier
+                                      .document_changes_allowed}
+                                    expandedSection={expandedSection}
+                                    legalAcceptances={model.legal_acceptances}
+                                    onToggleSection={toggleSection}
+                                    onRefreshSelectedDossier={onRefreshSelectedDossier}
+                                    row={row}
+                                    selectedDossierId={selectedDossierId}
+                                  />
+                                )
+                                : null}
+                            </div>
+                          );
+                        })}
+                      </section>
+                    )
+                    : (
+                      <DashboardNotice
+                        title="Geen laadpalen gevonden"
+                        note="Dit dossier bevat nog geen laadpaalgegevens."
+                      />
+                    )}
+                </>
               )
-              : (
-                <DashboardNotice
-                  title="Geen laadpalen gevonden"
-                  note="Dit dossier bevat nog geen laadpaalgegevens."
-                />
-              )}
+              : null}
           </>
         )
         : null}

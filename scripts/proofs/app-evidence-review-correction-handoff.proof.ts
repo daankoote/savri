@@ -30,6 +30,8 @@ const CUSTOMER_READ_V2_MIGRATION =
   "supabase/migrations/20260820120000_app_customer_correction_handoff_contract_v2.sql";
 const SIGNER_AUTHORITY_MIGRATION =
   "supabase/migrations/20260820150000_app_customer_correction_signer_authority.sql";
+const FACT_IDENTITY_PROJECTION_MIGRATION =
+  "supabase/migrations/20260822120000_app_customer_correction_handoff_fact_projection.sql";
 const PILOT_CASE_REF = "CASE-7E4CC75CD19F";
 const CASE_REF = `CASE-${
   crypto.randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase()
@@ -188,6 +190,9 @@ async function endpointProof(): Promise<void> {
   );
   const customerReadV2 = await Deno.readTextFile(CUSTOMER_READ_V2_MIGRATION);
   const signerAuthority = await Deno.readTextFile(SIGNER_AUTHORITY_MIGRATION);
+  const factIdentityProjection = await Deno.readTextFile(
+    FACT_IDENTITY_PROJECTION_MIGRATION,
+  );
   assert(
     migration.includes("evidence.review.correction.publish") &&
       migration.includes("app_evidence_review_correction_handoffs") &&
@@ -239,6 +244,29 @@ async function endpointProof(): Promise<void> {
     signerAuthority.includes("app_customer_correction_handoff_read_v3") &&
       signerAuthority.includes("app_customer_correction_signer_context_v1"),
     "customer_read_v3_signer_authority_missing",
+  );
+  assert(
+    factIdentityProjection.includes(
+      "app_customer_correction_handoff_read_v4",
+    ) &&
+      factIdentityProjection.includes(
+        "app_customer_correction_handoff_read_v3",
+      ) &&
+      factIdentityProjection.includes(
+        "app_customer_correction_item_ref_v1",
+      ) &&
+      factIdentityProjection.includes(
+        "'fact_key', subject.item->>'fact_key'",
+      ) &&
+      factIdentityProjection.includes(
+        "v_manifest->>'manifest_hash' <> v_handoff.manifest_hash",
+      ) &&
+      factIdentityProjection.includes(
+        "extensions.digest(v_handoff.correction_bundle::text, 'sha256')",
+      ) &&
+      !factIdentityProjection.includes("fact_label") &&
+      !factIdentityProjection.includes("'subject_ref',"),
+    "customer_read_v4_fact_identity_authority_missing",
   );
 
   assert(
@@ -368,6 +396,7 @@ async function endpointProof(): Promise<void> {
     code: "ok",
     case_ref: CASE_REF,
     handoff: {
+      current_replacement_candidates: [],
       handoff_ref: "CRH-0123456789ABCDEF",
       published_at: "2026-08-19T19:00:00.000Z",
       signer_authority: {
@@ -377,6 +406,7 @@ async function endpointProof(): Promise<void> {
       items: [{
         item_ref: "CCI-0123456789ABCDEF0123456789ABCDEF",
         document_label: "Energiedocument",
+        fact_key: "energySupplier",
         fact_label: "Energieleverancier",
         current_value: "Vorige leverancier",
         correction_reason: "INCORRECT_INFORMATION",
@@ -389,6 +419,7 @@ async function endpointProof(): Promise<void> {
   const parsed = parseCustomerCorrectionHandoffSource(safeSource);
   assert(
     parsed?.handoff?.items[0]?.documentLabel === "Energiedocument" &&
+      parsed.handoff.items[0].factKey === "energySupplier" &&
       parsed.handoff.items[0].factLabel === "Energieleverancier" &&
       parsed.handoff.items[0].itemRef ===
         "CCI-0123456789ABCDEF0123456789ABCDEF" &&
@@ -421,7 +452,7 @@ async function endpointProof(): Promise<void> {
     createServiceClient: () =>
       serviceClient(async (name, args) => {
         assert(
-          name === "app_customer_correction_handoff_read_v3",
+          name === "app_customer_correction_handoff_read_v5",
           "read_rpc_changed",
         );
         assert(
@@ -649,6 +680,10 @@ async function setupDatabase(): Promise<void> {
     "--schema=storage",
     "--exclude-table-data=public.app_workforce_tenant_scope_assignments",
     "--exclude-table-data=public.app_evidence_review_correction_handoffs",
+    "--exclude-table-data=public.app_customer_correction_replacement_uploads",
+    "--exclude-table-data=public.app_customer_correction_replacement_candidates",
+    "--exclude-table-data=public.app_customer_correction_replacement_candidate_events",
+    "--exclude-table-data=public.app_parser_observation_envelopes",
     `--file=${DUMP_FILE}`,
   ]);
   await must("docker", [
@@ -662,8 +697,36 @@ async function setupDatabase(): Promise<void> {
     DATABASE,
   ]);
   await psql(DATABASE, "drop schema public cascade;");
+  const preservedFixtureForeignKeys = Object.freeze([
+    "app_evidence_versions_source_intake_file_id_fkey",
+    "app_signup_promotions_identity_id_fkey",
+    "app_signup_promotions_intake_id_fkey",
+    "app_signup_promotions_mandate_id_fkey",
+    "app_signup_promotions_signature_evidence_id_fkey",
+    "app_signup_signing_snapshots_intake_id_fkey",
+  ]);
+  const restoreList = await must("docker", [
+    "exec",
+    CONTAINER,
+    "pg_restore",
+    "--list",
+    DUMP_FILE,
+  ]);
+  let skippedFixtureForeignKeys = 0;
+  const filteredRestoreList = restoreList.split("\n").filter((line) => {
+    const skip = preservedFixtureForeignKeys.some((constraint) =>
+      line.includes(" FK CONSTRAINT ") && line.includes(constraint)
+    );
+    if (skip) skippedFixtureForeignKeys += 1;
+    return !skip;
+  }).join("\n");
+  assert(
+    skippedFixtureForeignKeys === preservedFixtureForeignKeys.length,
+    "preserved_browser_fixture_fk_restore_list_changed",
+  );
   await must("docker", [
     "exec",
+    "-i",
     CONTAINER,
     "pg_restore",
     "-U",
@@ -672,8 +735,13 @@ async function setupDatabase(): Promise<void> {
     DATABASE,
     "--no-owner",
     "--no-privileges",
+    "--use-list=/dev/stdin",
     DUMP_FILE,
-  ]);
+  ], filteredRestoreList);
+  await psql(
+    DATABASE,
+    await Deno.readTextFile(FACT_IDENTITY_PROJECTION_MIGRATION),
+  );
   await psql(
     DATABASE,
     `
@@ -733,6 +801,8 @@ async function databaseProof(): Promise<void> {
         'EXECUTE'),
       has_function_privilege('service_role',
         'public.app_customer_correction_handoff_read_v1(uuid,text)','EXECUTE'),
+      has_function_privilege('service_role',
+        'public.app_customer_correction_handoff_read_v4(uuid,text)','EXECUTE'),
       has_table_privilege('anon','public.app_evidence_review_correction_handoffs','SELECT'),
       has_table_privilege('authenticated','public.app_evidence_review_correction_handoffs','INSERT'),
       has_table_privilege('service_role','public.app_evidence_review_correction_handoffs','INSERT'),
@@ -740,7 +810,7 @@ async function databaseProof(): Promise<void> {
        where oid='public.app_evidence_review_correction_handoffs'::regclass)
     );`,
     );
-    assert(migrationPresent === "t|t|t|f|f|f|t", "handoff_acl_invalid");
+    assert(migrationPresent === "t|t|t|t|f|f|f|t", "handoff_acl_invalid");
 
     await psql(
       DATABASE,
@@ -1068,6 +1138,27 @@ async function databaseProof(): Promise<void> {
         !serialized.includes("reviewer") && !serialized.includes("policy") &&
         !serialized.includes("bundle_sha256"),
       "customer_safe_bundle_invalid",
+    );
+    const projectedRead = await psql(
+      DATABASE,
+      `begin read only;
+      set local role service_role;
+      select public.app_customer_correction_handoff_read_v4(
+        '${AUTH_USER}','${CASE_REF}'
+      )::text; rollback;`,
+    );
+    const projectedSafe = JSON.parse(
+      projectedRead.split("\n").find((line) => line.startsWith("{"))!,
+    );
+    const projectedSerialized = JSON.stringify(projectedSafe);
+    assert(
+      projectedSafe.ok === true && projectedSafe.code === "ok" &&
+        projectedSafe.handoff?.items?.length === 1 &&
+        projectedSafe.handoff.items[0].fact_key === "energySupplier" &&
+        !projectedSerialized.includes("subject_ref") &&
+        !projectedSerialized.includes("manifest_hash") &&
+        !projectedSerialized.includes("bundle_sha256"),
+      "customer_safe_fact_identity_projection_invalid",
     );
 
     const immutable = await psql(

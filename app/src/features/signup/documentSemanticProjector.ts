@@ -17,6 +17,7 @@ import type {
   DocumentSemanticRole,
   DocumentSourceType,
 } from "./documentFactRegistry";
+import { customerDocumentSemanticRoleFor } from "./documentFactRegistry";
 
 const clean = (value: unknown) =>
   String(value ?? "").replace(/\s+/g, " ").trim();
@@ -65,55 +66,6 @@ const GENERIC_FACT_KEYS: ReadonlyArray<GenericDocumentFactKey> = [
   "serialNumber",
 ];
 
-function semanticRoleFor(
-  factKey: GenericDocumentFactKey,
-  extractionMethod: string | null,
-): DocumentSemanticRole {
-  if (factKey === "partyName" || factKey === "organizationName") {
-    if (extractionMethod === "semantic_contract_holder_block") {
-      return "contract_holder";
-    }
-    if (extractionMethod === "invoice_customer_block") {
-      return "buyer_or_customer";
-    }
-    return "unknown";
-  }
-  if (factKey === "structuredAddress") {
-    if (
-      extractionMethod === "semantic_delivery_address_block" ||
-      extractionMethod === "explicit_delivery_address_block"
-    ) return "delivery_address";
-    if (extractionMethod === "invoice_address_block") return "invoice_address";
-    if (extractionMethod === "explicit_installation_address_block") {
-      return "installation_address";
-    }
-    return "unknown";
-  }
-  if (factKey === "electricityEan") return "electricity_connection";
-  if (factKey === "gasEan") return "gas_connection";
-  if (factKey === "energySupplier") return "energy_supplier";
-  if (factKey === "installerOrSupplier") return "installer_or_supplier";
-  if (factKey === "contractStart" || factKey === "contractEnd") {
-    return "contract_period";
-  }
-  if (factKey === "kvkNumber") return "business_registration";
-  if (factKey === "registeredAddress") return "registered_office";
-  if (factKey === "legalForm") return "legal_form";
-  if (factKey === "tradeName") return "trade_name";
-  if (factKey === "directorOrBoardMember") return "director_or_board_member";
-  if (factKey === "directorTitle") return "director_title";
-  if (factKey === "representationAuthorityText") {
-    return "representation_authority_text";
-  }
-  if (
-    factKey === "chargerBrand" || factKey === "chargerModel" ||
-    factKey === "midNumber" || factKey === "serialNumber"
-  ) return "charger_asset";
-  if (factKey === "invoiceDate") return "invoice_date";
-  if (factKey === "explicitInstallationDate") return "installation_date";
-  return "unknown";
-}
-
 function projectGenericFact(
   envelope: DocumentObservationEnvelope,
   documentId: string,
@@ -138,7 +90,10 @@ function projectGenericFact(
     value: ambiguous ? null : candidate?.normalizedValue || null,
     sourceDocumentId: documentId,
     sourceDocumentType,
-    semanticRole: semanticRoleFor(factKey, candidate?.extractionMethod || null),
+    semanticRole: customerDocumentSemanticRoleFor(
+      factKey,
+      candidate?.extractionMethod || null,
+    ),
     extractionStatus: ambiguous
       ? "ambiguous"
       : candidate

@@ -18,11 +18,15 @@ import {
   type ServiceClient,
 } from "../_shared/app_workforce_authorization.ts";
 
-const READ_RPC = "app_customer_correction_handoff_read_v3";
+const READ_RPC = "app_customer_correction_handoff_read_v5";
 const CASE_REFERENCE_RE =
   /^CASE-(?:[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 
 type RpcResult = { data?: unknown; error?: unknown };
+type CandidateFingerprintRow = Readonly<{
+  candidate_reference: string;
+  server_sha256: string;
+}>;
 
 export type CustomerCorrectionHandoffHandlerDependencies = {
   createServiceClient: () => ServiceClient | null;
@@ -48,6 +52,40 @@ function exactCaseReference(req: Request): string | null {
   ) return null;
   const value = params.get("caseRef") ?? "";
   return value === value.trim() && CASE_REFERENCE_RE.test(value) ? value : null;
+}
+
+async function readCandidateFingerprints(
+  serviceClient: ServiceClient,
+  candidateRefs: readonly string[],
+): Promise<ReadonlyMap<string, string> | null> {
+  if (candidateRefs.length === 0) return new Map();
+  const table = serviceClient.from(
+    "app_customer_correction_replacement_candidates",
+  ) as {
+    select: (columns: string) => {
+      in: (
+        column: string,
+        values: readonly string[],
+      ) => Promise<{ data?: unknown; error?: unknown }>;
+    };
+  };
+  const result = await table.select("candidate_reference,server_sha256").in(
+    "candidate_reference",
+    candidateRefs,
+  );
+  if (result.error || !Array.isArray(result.data)) return null;
+  const fingerprints = new Map<string, string>();
+  for (const value of result.data) {
+    if (
+      !isObject(value) || typeof value.candidate_reference !== "string" ||
+      !candidateRefs.includes(value.candidate_reference) ||
+      typeof value.server_sha256 !== "string" ||
+      !/^[0-9a-f]{64}$/.test(value.server_sha256) ||
+      fingerprints.has(value.candidate_reference)
+    ) return null;
+    fingerprints.set(value.candidate_reference, value.server_sha256);
+  }
+  return fingerprints.size === candidateRefs.length ? fingerprints : null;
 }
 
 export function createHandler(
@@ -133,7 +171,39 @@ export function createHandler(
         "correction_handoff_reconstruction_failed",
       );
     }
-    return appJsonResponse(req, 200, response);
+    const candidateRefs = response.handoff?.currentReplacementCandidates.map(
+      (candidate) => candidate.candidateRef,
+    ) ?? [];
+    const fingerprints = await readCandidateFingerprints(
+      serviceClient,
+      candidateRefs,
+    );
+    if (!fingerprints) {
+      return appErrorResponse(
+        req,
+        500,
+        "De correctieopdracht is tijdelijk niet beschikbaar.",
+        "correction_handoff_reconstruction_failed",
+      );
+    }
+    const customerResponse = response.handoff
+      ? Object.freeze({
+        ...response,
+        handoff: Object.freeze({
+          ...response.handoff,
+          currentReplacementCandidates: Object.freeze(
+            response.handoff.currentReplacementCandidates.map((candidate) =>
+              Object.freeze({
+                ...candidate,
+                contentFingerprint: fingerprints.get(candidate.candidateRef) ||
+                  null,
+              })
+            ),
+          ),
+        }),
+      })
+      : response;
+    return appJsonResponse(req, 200, customerResponse);
   };
 }
 

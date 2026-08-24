@@ -10,14 +10,21 @@ export function jsonStringField(record: JsonRecord, key: string): string {
   return typeof record[key] === "string" ? String(record[key]).trim() : "";
 }
 
-export function jsonNumberField(record: JsonRecord, key: string): number | null {
-  return typeof record[key] === "number" && Number.isFinite(record[key]) ? Number(record[key]) : null;
+export function jsonNumberField(
+  record: JsonRecord,
+  key: string,
+): number | null {
+  return typeof record[key] === "number" && Number.isFinite(record[key])
+    ? Number(record[key])
+    : null;
 }
 
 export async function sha256HexFromBlob(
   file: Blob,
-  digestImpl: (algorithm: AlgorithmIdentifier, data: BufferSource) => Promise<ArrayBuffer> =
-    crypto.subtle.digest.bind(crypto.subtle),
+  digestImpl: (
+    algorithm: AlgorithmIdentifier,
+    data: BufferSource,
+  ) => Promise<ArrayBuffer> = crypto.subtle.digest.bind(crypto.subtle),
 ): Promise<string | null> {
   try {
     const bytes = await file.arrayBuffer();
@@ -30,7 +37,9 @@ export async function sha256HexFromBlob(
   }
 }
 
-export async function parseJsonResponse(response: Response): Promise<{ ok: true; body: unknown } | { ok: false }> {
+export async function parseJsonResponse(
+  response: Response,
+): Promise<{ ok: true; body: unknown } | { ok: false }> {
   try {
     return { ok: true, body: await response.json() };
   } catch (_error) {
@@ -75,6 +84,32 @@ export async function putSignedUpload(input: {
       contentType: input.contentType,
     });
   return result.error ? { ok: false } : { ok: true };
+}
+
+export async function putPrivateSignedUploadUrl(input: {
+  endpointUrl: string;
+  anonKey: string;
+  accessToken: string;
+  file: Blob;
+  contentType: string;
+  fetchImpl?: typeof fetch;
+}): Promise<{ ok: true } | { ok: false }> {
+  try {
+    const response = await (input.fetchImpl ?? fetch)(input.endpointUrl, {
+      method: "PUT",
+      headers: {
+        apikey: input.anonKey,
+        Authorization: `Bearer ${input.accessToken}`,
+        "Content-Type": input.contentType,
+        "cache-control": "max-age=3600",
+        "x-upsert": "false",
+      },
+      body: input.file,
+    });
+    return response.ok ? { ok: true } : { ok: false };
+  } catch (_error) {
+    return { ok: false };
+  }
 }
 
 export function createUploadIdempotencyKey(): string {

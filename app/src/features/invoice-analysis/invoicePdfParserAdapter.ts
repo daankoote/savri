@@ -46,7 +46,7 @@ export type InvoicePdfParserConfidence = {
 export type InvoicePdfParserResult = {
   ok: true;
   parser_kind: "invoice_pdf_parser";
-  parser_version: "2026-08-04-unified-document-v5";
+  parser_version: "2026-08-23-unified-document-v7";
   source_kind: "pdf";
   observed_fields: InvoiceObservedFields;
   ean_candidates: EnergyEanCandidate[];
@@ -55,7 +55,7 @@ export type InvoicePdfParserResult = {
   confidence: InvoicePdfParserConfidence;
   limitations: string[];
   summary: {
-    mode: "unified_document_extract_app_adapter_v5";
+    mode: "unified_document_extract_app_adapter_v7";
     reason: "client_pdf_text_extract_completed";
     byte_length: number;
     pdf_text_length: number;
@@ -68,7 +68,7 @@ export type InvoicePdfParserResult = {
 export type InvoicePdfParserError = {
   ok: false;
   parser_kind: "invoice_pdf_parser";
-  parser_version: "2026-08-04-unified-document-v5";
+  parser_version: "2026-08-23-unified-document-v7";
   source_kind: "pdf";
   code: "invalid_input" | "unsupported_runtime" | "parse_failed";
   message: string;
@@ -96,7 +96,7 @@ type PdfInput = File | Blob | ArrayBuffer | Uint8Array;
 
 const PARSER_KIND = "invoice_pdf_parser" as const;
 export const UNIFIED_DOCUMENT_PARSER_VERSION =
-  "2026-08-04-unified-document-v5" as const;
+  "2026-08-23-unified-document-v7" as const;
 const PARSER_VERSION = UNIFIED_DOCUMENT_PARSER_VERSION;
 const SOURCE_KIND = "pdf" as const;
 
@@ -1398,11 +1398,59 @@ function invoiceCandidateCells(text: string): string[] {
     .filter(Boolean);
 }
 
+const INVOICE_CUSTOMER_VALUE_LABELS = [
+  "customer name",
+  "contracthouder",
+  "klant",
+] as const;
+const INVOICE_ADDRESS_VALUE_LABELS = [
+  "delivery address",
+  "billing address",
+  "leveradres",
+  "factuuradres",
+  "installatieadres",
+  "adres",
+] as const;
+const INVOICE_CITY_VALUE_LABELS = [
+  "postcode en plaats",
+  "postcode / plaats",
+  "postcode/plaats",
+  "postcode",
+  "plaats",
+] as const;
+
+const EXPLICIT_INSTALLATION_ADDRESS_LABELS = [
+  "installation address",
+  "placement address",
+  "installatieadres",
+  "plaatsingsadres",
+  "adres installatie",
+] as const;
+
+function stripExactInvoiceFieldLabel(
+  inputText: unknown,
+  labels: ReadonlyArray<string>,
+): string {
+  let value = cleanLine(inputText);
+  for (
+    const label of [...labels].sort((left, right) => right.length - left.length)
+  ) {
+    const match = value.match(
+      new RegExp(`^${escapeRegExp(label)}\\s*[:\\-–—]?\\s*(.+)$`, "i"),
+    );
+    if (match?.[1]) return cleanLine(match[1]);
+  }
+  return value;
+}
+
 function extractCustomerName(text: string): string | null {
   const lines = invoiceCandidateCells(text);
 
   for (let i = 0; i < lines.length; i += 1) {
-    const line = lines[i];
+    const line = stripExactInvoiceFieldLabel(
+      lines[i],
+      INVOICE_CUSTOMER_VALUE_LABELS,
+    );
     if (!looksLikePersonNameCandidate(line)) continue;
 
     const next1 = lines[i + 1] || null;
@@ -1435,11 +1483,15 @@ function pickBestAddressBlock(text: string): {
 
   for (let i = 0; i < lines.length; i += 1) {
     let streetCandidate: string | null = null;
+    const addressValue = stripExactInvoiceFieldLabel(
+      lines[i],
+      INVOICE_ADDRESS_VALUE_LABELS,
+    );
 
-    if (isLikelyStreetLine(lines[i])) {
-      streetCandidate = lines[i];
+    if (isLikelyStreetLine(addressValue)) {
+      streetCandidate = addressValue;
     } else {
-      const mixedStreet = extractLastAddressLineCandidate(lines[i]);
+      const mixedStreet = extractLastAddressLineCandidate(addressValue);
       if (mixedStreet && isLikelyStreetLine(mixedStreet)) {
         streetCandidate = mixedStreet;
       }
@@ -1449,11 +1501,15 @@ function pickBestAddressBlock(text: string): {
 
     for (let j = i; j < Math.min(i + 5, lines.length); j += 1) {
       let cityCandidate: string | null = null;
+      const cityValue = stripExactInvoiceFieldLabel(
+        lines[j],
+        INVOICE_CITY_VALUE_LABELS,
+      );
 
-      if (isLikelyCityLine(lines[j])) {
-        cityCandidate = lines[j];
+      if (isLikelyCityLine(cityValue)) {
+        cityCandidate = cityValue;
       } else {
-        const mixedCity = extractLastCityLineCandidate(lines[j]);
+        const mixedCity = extractLastCityLineCandidate(cityValue);
         if (mixedCity && isLikelyCityLine(mixedCity)) cityCandidate = mixedCity;
       }
 
@@ -1510,6 +1566,87 @@ function pickBestAddressBlock(text: string): {
     name_line: best.name_line || null,
     address_block_ambiguous: ambiguous,
   };
+}
+
+function extractExplicitInstallationAddresses(
+  pages: ReadonlyArray<EnergyEanExtractionPage>,
+): ReadonlyArray<{
+  value: string;
+  address: GenericStructuredAddress;
+  page: number;
+}> {
+  const found = new Map<string, {
+    value: string;
+    address: GenericStructuredAddress;
+    page: number;
+  }>();
+  const labelPattern = new RegExp(
+    `^(?:${
+      EXPLICIT_INSTALLATION_ADDRESS_LABELS.map(escapeRegExp).join("|")
+    })\\b`,
+    "i",
+  );
+  for (const page of pages) {
+    const lines = splitLines(page.text);
+    for (let labelIndex = 0; labelIndex < lines.length; labelIndex += 1) {
+      if (!labelPattern.test(cleanLine(lines[labelIndex]))) continue;
+      let streetIndex = labelIndex;
+      let streetLine = stripExactInvoiceFieldLabel(
+        lines[labelIndex],
+        EXPLICIT_INSTALLATION_ADDRESS_LABELS,
+      );
+      if (!isLikelyStreetLine(streetLine)) {
+        streetLine = "";
+        for (
+          let index = labelIndex + 1;
+          index < Math.min(labelIndex + 4, lines.length);
+          index += 1
+        ) {
+          const candidate = cleanLine(lines[index]);
+          if (!isLikelyStreetLine(candidate)) continue;
+          streetLine = candidate;
+          streetIndex = index;
+          break;
+        }
+      }
+      if (!streetLine) continue;
+      let cityLine = "";
+      for (
+        let index = streetIndex + 1;
+        index < Math.min(streetIndex + 5, lines.length);
+        index += 1
+      ) {
+        const candidate = stripExactInvoiceFieldLabel(
+          lines[index],
+          INVOICE_CITY_VALUE_LABELS,
+        );
+        if (!isLikelyCityLine(candidate)) continue;
+        cityLine = candidate;
+        break;
+      }
+      if (!cityLine) continue;
+      const street = splitDutchStreetLine(streetLine);
+      const city = splitDutchCityLine(cityLine);
+      if (
+        !street.street || !street.house_number || !city.postcode || !city.city
+      ) continue;
+      const address: GenericStructuredAddress = {
+        street: street.street,
+        houseNumber: street.house_number,
+        houseNumberAddition: street.house_number_addition,
+        postalCode: city.postcode,
+        city: city.city,
+        country: null,
+      };
+      const value = addressText(address);
+      found.set(value.toLocaleLowerCase("nl-NL"), {
+        value,
+        address,
+        page: page.page,
+      });
+    }
+  }
+  return Object.freeze([...found.values()]);
 }
 
 function escapeRegExp(value: string): string {
@@ -2065,10 +2202,12 @@ const ENGLISH_ORGANIZATION_LABELS = [
   "signing authority",
 ] as const;
 
-const ORGANIZATION_SECTION_LABELS: Readonly<Record<
-  string,
-  OrganizationSection
->> = {
+const ORGANIZATION_SECTION_LABELS: Readonly<
+  Record<
+    string,
+    OrganizationSection
+  >
+> = {
   onderneming: "onderneming",
   vestiging: "vestiging",
   "enig aandeelhouder": "enig_aandeelhouder",
@@ -2103,9 +2242,10 @@ function organizationRows(
       .map((row) => row.split(/\t+/).map(cleanLine).filter(Boolean))
       .filter((cells) => cells.length > 0),
   }));
-  const firstPageLabels = pageRows[0]?.rows.map((cells) =>
-    cells.map(normalizeOrganizationLabel).join(" ")
-  ) || [];
+  const firstPageLabels =
+    pageRows[0]?.rows.map((cells) =>
+      cells.map(normalizeOrganizationLabel).join(" ")
+    ) || [];
   const kvkIndex = firstPageLabels.findIndex((row) =>
     row === "kvk-nummer" || row.startsWith("kvk-nummer ")
   );
@@ -2581,6 +2721,20 @@ async function buildObservationEnvelope(
         : null,
     ));
   }
+  for (
+    const installationAddress of extractExplicitInstallationAddresses(
+      pages,
+    )
+  ) {
+    add(genericCandidate(
+      "structuredAddress",
+      installationAddress.value,
+      "explicit_installation_address_block",
+      "high",
+      installationAddress.page,
+      installationAddress.address,
+    ));
+  }
   const invoiceAddress: GenericStructuredAddress = {
     street: observedFields.street,
     houseNumber: observedFields.house_number,
@@ -2808,7 +2962,7 @@ export async function parseInvoicePdfInput(
       },
       limitations,
       summary: {
-        mode: "unified_document_extract_app_adapter_v5",
+        mode: "unified_document_extract_app_adapter_v7",
         reason: "client_pdf_text_extract_completed",
         byte_length: pdfBytes.length,
         pdf_text_length: extractedText.length,

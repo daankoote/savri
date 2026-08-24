@@ -102,8 +102,23 @@ const upload = await source("app/src/features/signup/DocumentUploadSlot.tsx");
 const table = await source(
   "app/src/features/signup/presentation/FactTable.tsx",
 );
+const sharedMatrix = await source(
+  "app/src/features/documents/DocumentFactMatrix.tsx",
+);
+const sharedWorkflow = await source(
+  "app/src/features/documents/DocumentEvidenceWorkflow.tsx",
+);
+const workflowController = await source(
+  "app/src/features/documents/CustomerDocumentWorkflowController.ts",
+);
+const correctionWorkflow = await source(
+  "app/src/features/dashboard/CustomerCorrectionHandoffPanel.tsx",
+);
 const controls = await source(
   "app/src/features/signup/presentation/FactReviewControls.tsx",
+);
+const customerInteraction = await source(
+  "app/src/features/documents/CustomerDocumentFactInteraction.tsx",
 );
 const model = await source(
   "app/src/features/signup/presentation/factPresentationModel.ts",
@@ -112,37 +127,64 @@ const shell = await source("app/src/features/signup/SignupPageShell.tsx");
 const css = await source("app/src/styles/components.css");
 
 assert(
-  [organization, review, signing].every((value) =>
-    value.includes("FactTable")
-  ) &&
+  [organization, signing].every((value) => value.includes("FactTable")) &&
+    review.includes("createCustomerDocumentWorkflowGroup") &&
+    documents.includes("createCustomerDocumentWorkflowModel") &&
+    documents.includes("<DocumentEvidenceWorkflow {...workflowModel} />") &&
+    sharedWorkflow.includes("<DocumentFactMatrix") &&
+    workflowController.includes("resolveCustomerFactResolutionPolicy") &&
+    !review.includes("resolveCustomerFactResolutionPolicy") &&
+    !correctionWorkflow.includes("resolveCustomerFactResolutionPolicy") &&
+    !review.includes("CustomerDocumentFactInteraction") &&
+    !correctionWorkflow.includes("CustomerDocumentFactInteraction") &&
+    !review.includes("<FactTable") &&
     table.includes("FactReviewControls") &&
+    table.includes("DocumentFactMatrix") &&
     organization.includes('variant="review"') &&
-    review.includes('variant="review"') &&
     signing.includes('variant="document"'),
   "shared_fact_table_or_controls_missing",
 );
 assert(
   organization.includes("DocumentUploadSlot") &&
-    documents.includes("DocumentUploadSlot") &&
+    documents.includes("createDocumentUploadCardModel") &&
+    documents.includes("<DocumentEvidenceWorkflow {...workflowModel} />") &&
     organization.includes('title="KvK-uittreksel"') &&
-    documents.includes('title="Energienota of energiecontract"') &&
-    documents.includes('title="Installatiefactuur"') &&
+    documents.includes('title: "Energienota of energiecontract"') &&
+    documents.includes('title: "Installatiefactuur"') &&
     (upload.match(/export function DocumentUploadSlot/g) || []).length === 1 &&
-    (table.match(/export function FactTable/g) || []).length === 1,
+    (table.match(/export function FactTable/g) || []).length === 1 &&
+    (sharedMatrix.match(/export function DocumentFactMatrix/g) || []).length ===
+      1,
   "single_upload_or_table_family_missing",
 );
 assert(
-  ![organization, review, signing, documents, upload, table, controls, shell]
+  ![
+    organization,
+    review,
+    signing,
+    documents,
+    upload,
+    table,
+    sharedMatrix,
+    controls,
+    shell,
+  ]
     .some((value) => value.includes("style={{")) &&
     ![organization, review, signing, documents, upload, table, controls, model]
       .some((value) => /\.css["']/.test(value)),
   "inline_css_or_new_stylesheet_reference",
 );
 assert(
-  controls.includes("Bevestigen") && controls.includes("Corrigeren") &&
-    controls.includes("CompactFactCorrectionEditor") &&
-    table.includes('className="fact-table__action-cell"') &&
-    table.includes('className="fact-table__judgment"') &&
+  controls.includes("createSignupCustomerInteractionModel") &&
+    controls.includes("CustomerDocumentFactInteraction") &&
+    customerInteraction.includes("Bevestigen") &&
+    customerInteraction.includes("Corrigeren") &&
+    customerInteraction.includes("Handmatig aangepast") &&
+    customerInteraction.includes("Bevestiging annuleren") &&
+    customerInteraction.includes("Correctie annuleren") &&
+    sharedMatrix.includes('className="fact-table__action-cell"') &&
+    sharedMatrix.includes('className="fact-table__judgment"') &&
+    sharedMatrix.includes('className="fact-table__customer"') &&
     css.includes(".fact-table--five-columns") &&
     css.includes("flex-wrap: wrap"),
   "shared_inline_action_and_judgment_rendering_missing",
@@ -154,7 +196,7 @@ const hidden = projectFactPresentationRow(reviewRow({
 }));
 assert(
   hidden === null && model.includes('row.applicability === "not_applicable"') &&
-    table.includes('row.applicability !== "not_applicable"'),
+    table.includes('hidden: row.applicability === "not_applicable"'),
   "not_applicable_exposed_to_customer_projection",
 );
 
@@ -226,7 +268,8 @@ assert(
   "vertical_signing_document_or_section_order_failed",
 );
 assert(
-  review.includes("locations.flatMap") && review.includes("sections.map") &&
+  review.includes("locations.flatMap") &&
+    review.includes("createCustomerDocumentWorkflowGroup") &&
     model.includes("globalChargerNumber") &&
     model.includes("locationId") && model.includes("chargerId"),
   "step_two_hierarchy_or_stable_binding_missing",
@@ -235,7 +278,7 @@ assert(
 for (
   const [path, expected] of Object.entries({
     "app/src/features/invoice-analysis/invoicePdfParserAdapter.ts":
-      "703a31e9aabf72d64d0f5c01e0ed239a9c29077c164e16fecff2234b379f4850",
+      "5c724902875a2365f70686acd40d09f20b76a4af81249908666d747f66cc0c57",
     "app/src/features/invoice-analysis/documentObservationEnvelope.ts":
       "d3efb3e7e28e1d666727fe020cd68178843cb0a68f21cdfe9f3d6b92fd9a9718",
     "app/src/features/invoice-analysis/documentTypeClassifier.ts":
@@ -243,21 +286,23 @@ for (
     "app/src/features/invoice-analysis/energyEanCandidateExtractor.ts":
       "de06da71bf03185227ed563e5bfb652f804f08c739c9623851d0cf71a644577e",
     "app/src/features/invoice-analysis/energyDocumentObservation.ts":
-      "6d591c0d392ef408239c0220615dbc5a5c5e1f92c09a26233e244e04b47f3565",
+      "43dd608d6009c9b348d5946fb6e56876ac58790db43f87afb9202d50b7b72e03",
     "app/src/features/signup/documentSemanticProjector.ts":
-      "39ba67165aa0bd969498e3d400d5b7c871177821c21bec096fcdef300ecbb9b8",
+      "e34f195df8e7f44f716f88d919dbefcc5bf6f2c8a78d9ff8e9c1e0825fad3f4b",
     "app/src/features/signup/signupSubmitMapper.ts":
       "d348960a22701e5baec962fdb8e8964d8025b3afa6d8f7d3b30ba5ede147ad06",
     "app/src/features/signup/signupSubmitClient.proof.ts":
       "0295f44c72c9050a30653ec812dc42b273dee3e9402999a73b9949fd4407fd9b",
-    [resolveTenantEnvalArchivedMigrationPath(
-      "supabase/migrations/20260730150000_app_signup_connection_declaration_sources.sql",
-    )]:
-      "c9a82157dcc77577edf833950ee97eb886ebbaa645cfada20a98e492b2771ff8",
-    [resolveTenantEnvalArchivedMigrationPath(
-      "supabase/migrations/20260730170000_app_assisted_connection_capture_correction.sql",
-    )]:
-      "561a80fee5c04cc073d8c099e54b7ad721abff021b23522d4cfa8588f4afcb25",
+    [
+      resolveTenantEnvalArchivedMigrationPath(
+        "supabase/migrations/20260730150000_app_signup_connection_declaration_sources.sql",
+      )
+    ]: "c9a82157dcc77577edf833950ee97eb886ebbaa645cfada20a98e492b2771ff8",
+    [
+      resolveTenantEnvalArchivedMigrationPath(
+        "supabase/migrations/20260730170000_app_assisted_connection_capture_correction.sql",
+      )
+    ]: "561a80fee5c04cc073d8c099e54b7ad721abff021b23522d4cfa8588f4afcb25",
     "supabase/functions/api-app-signup-submit/index.ts":
       "97f9afe03ac39dc4dfde89d4906432c06c79397be33a649f90160bae6a718b01",
   })

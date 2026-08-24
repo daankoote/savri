@@ -12,11 +12,11 @@ import {
 } from "./EvidenceReviewCaseDetailPage.tsx";
 import {
   decodeEvidenceReviewCaseDetailResponse,
-  type EvidenceReviewCorrectionPublishCall,
   type EvidenceFactReviewRoundFinalizeCall,
   type EvidenceFactReviewRoundFinalizeRequest,
-  finalizeEvidenceFactReviewRound,
+  type EvidenceReviewCorrectionPublishCall,
   type EvidenceReviewDetailSafeError,
+  finalizeEvidenceFactReviewRound,
   loadEvidenceReviewCaseDetail,
   loadEvidenceReviewPreview,
   publishEvidenceReviewCorrection,
@@ -468,14 +468,17 @@ const publishResult = await publishEvidenceReviewCorrection({
     publishPosts += 1;
     publishUrl = String(input);
     publishInit = init;
-    return new Response(JSON.stringify({
-      schemaVersion: "evidence-review-correction-publish-v1",
-      result: "PUBLISHED",
-      caseRef: CASE_REF,
-      roundRef: publishEligibleFixture.currentReviewRound!.roundRef,
-      handoffRef: "CRH-0123456789ABCDEF",
-      publishedAt: "2026-08-19T12:00:00.000Z",
-    }), { status: 201 });
+    return new Response(
+      JSON.stringify({
+        schemaVersion: "evidence-review-correction-publish-v1",
+        result: "PUBLISHED",
+        caseRef: CASE_REF,
+        roundRef: publishEligibleFixture.currentReviewRound!.roundRef,
+        handoffRef: "CRH-0123456789ABCDEF",
+        publishedAt: "2026-08-19T12:00:00.000Z",
+      }),
+      { status: 201 },
+    );
   },
 });
 const publishHeaders = new Headers(publishInit?.headers);
@@ -490,7 +493,8 @@ assert(
     publishHeaders.get("idempotency-key") === "review20-publish-attempt" &&
     Object.keys(publishBody).sort().join("|") === "caseRef|roundRef" &&
     publishBody.caseRef === CASE_REF &&
-    publishBody.roundRef === publishEligibleFixture.currentReviewRound!.roundRef,
+    publishBody.roundRef ===
+      publishEligibleFixture.currentReviewRound!.roundRef,
   "Q08c_publish_client_contract_invalid",
 );
 const publishFailureConfig = {
@@ -575,12 +579,12 @@ await Promise.all([firstPublish, duplicatePublish]);
 assert(
   Number(refreshes) === 1 && Number(sessionPosts) === 1 &&
     JSON.stringify(sentRequest) === JSON.stringify({
-      request: {
-        caseRef: CASE_REF,
-        roundRef: publishEligibleFixture.currentReviewRound!.roundRef,
-      },
-      idempotencyKey: "review20-memory-only-key",
-    }) &&
+        request: {
+          caseRef: CASE_REF,
+          roundRef: publishEligibleFixture.currentReviewRound!.roundRef,
+        },
+        idempotencyKey: "review20-memory-only-key",
+      }) &&
     !JSON.stringify(sentRequest).match(
       /customer|reviewer|capability|correctionReason|correctionInstruction|tenant|timestamp/,
     ),
@@ -842,16 +846,19 @@ const finalizeResult = await finalizeEvidenceFactReviewRound({
   fetchImpl: async (input, init) => {
     postCount += 1;
     finalizeCalls.push({ url: String(input), init });
-    return new Response(JSON.stringify({
-      schemaVersion: "evidence-fact-review-round-finalization-v1",
-      caseRef: CASE_REF,
-      roundRef: "a8000000-0000-4000-8000-000000000011",
-      manifestVersion: FIXTURE.reviewManifestVersion,
-      manifestHash: FIXTURE.reviewManifestHash,
-      outcome: "CORRECTIONS_REQUIRED",
-      finalizedAt: "2026-08-18T12:10:00.000Z",
-      result: "FINALIZED",
-    }), { status: 201, headers: { "content-type": "application/json" } });
+    return new Response(
+      JSON.stringify({
+        schemaVersion: "evidence-fact-review-round-finalization-v1",
+        caseRef: CASE_REF,
+        roundRef: "a8000000-0000-4000-8000-000000000011",
+        manifestVersion: FIXTURE.reviewManifestVersion,
+        manifestHash: FIXTURE.reviewManifestHash,
+        outcome: "CORRECTIONS_REQUIRED",
+        finalizedAt: "2026-08-18T12:10:00.000Z",
+        result: "FINALIZED",
+      }),
+      { status: 201, headers: { "content-type": "application/json" } },
+    );
   },
 });
 const finalizeHeaders = new Headers(finalizeCalls[0]?.init?.headers);
@@ -1199,7 +1206,9 @@ const [
   source("supabase/functions/api-app-evidence-review-case-detail/index.ts"),
   source("supabase/functions/api-app-evidence-review-preview/index.ts"),
   source("supabase/functions/api-app-evidence-review-round-finalize/index.ts"),
-  source("supabase/functions/api-app-evidence-review-correction-publish/index.ts"),
+  source(
+    "supabase/functions/api-app-evidence-review-correction-publish/index.ts",
+  ),
   source("supabase/functions/api-app-customer-correction-handoff/index.ts"),
 ]);
 assert(
@@ -1311,7 +1320,9 @@ assert(
 assert(
   !detailSource.includes("evidence.review.decide") &&
     !detailSource.includes("evidence.review.correction.publish") &&
-    !correctionPublishHookSource.includes("evidence.review.correction.publish") &&
+    !correctionPublishHookSource.includes(
+      "evidence.review.correction.publish",
+    ) &&
     !correctionPublishHookSource.includes("canDecide") &&
     !correctionPublishHookSource.includes("email") &&
     !previewPaneSource.includes("evidence.review.decide") &&
@@ -1329,7 +1340,9 @@ assert(
 
 assert(
   detailSource.includes("buildEvidenceFactReviewRows") &&
-    detailSource.includes("subject.evidenceVersionRef === evidence.evidenceVersionRef") &&
+    detailSource.includes(
+      "subject.evidenceVersionRef === evidence.evidenceVersionRef",
+    ) &&
     detailSource.includes("subject.factCategory === fact.category") &&
     !detailSource.includes("FRS-") &&
     detailSource.includes("maxLength={1000}") &&
@@ -1348,7 +1361,7 @@ assert(
     detailSource.includes("Ja, sturen") &&
     !detailSource.includes("{evidence.reviewStatus}") &&
     !detailSource.includes("Correcties nodig") &&
-    factDraftSource.includes("reviewerSuggestion === \"ACCEPT\"") &&
+    factDraftSource.includes('reviewerSuggestion === "ACCEPT"') &&
     factDraftSource.includes("Dossier is gewijzigd. Controleer opnieuw.") &&
     factDraftSource.includes("attempt.current") &&
     factDraftSource.includes("onRefresh()") &&
@@ -1366,7 +1379,7 @@ assert(
     !correctionPublishHookSource.includes("sessionStorage") &&
     !detailClientSource.includes("api-app-customer-correction-handoff") &&
     customerHandoffEndpointSource.includes(
-      "app_customer_correction_handoff_read_v2",
+      "app_customer_correction_handoff_read_v5",
     ) &&
     !detailClientSource.includes("api-app-evidence-review-decision") &&
     !detailSource.includes("api-app-evidence-review-decision") &&

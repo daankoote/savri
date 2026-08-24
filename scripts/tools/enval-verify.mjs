@@ -10,6 +10,11 @@ import {
   SAFETY,
   VERIFY_MANIFEST,
 } from "./enval-verify-manifest.mjs";
+import {
+  commandWithCompilerAuthority,
+  COMPILER_AUTHORITY,
+  compilerCheckForPath,
+} from "./enval-verify-ownership.mjs";
 
 const ROOT = resolve(fileURLToPath(new URL("../../", import.meta.url)));
 const MAX_DIAGNOSTIC_CHARS = 4_000;
@@ -93,6 +98,7 @@ function materializeCommand(commandId, command, path) {
     expectedDurationMs: command.expectedDurationMs,
     expectedMarker: command.expectedMarker,
     requiredForRelease: command.requiredForRelease,
+    compilerAuthority: command.compilerAuthority,
   };
 }
 
@@ -163,6 +169,10 @@ export function validateManifest(manifest = VERIFY_MANIFEST) {
     ) {
       errors.push(`manifest_tenant_ephemeral_write_invalid:${id}`);
     }
+    if (
+      command.compilerAuthority !== null &&
+      !Object.values(COMPILER_AUTHORITY).includes(command.compilerAuthority)
+    ) errors.push(`manifest_compiler_authority_invalid:${id}`);
   }
   for (const inventory of manifest.migrationInventories ?? []) {
     if (
@@ -264,6 +274,7 @@ export function buildPlan({
   paths,
   mode,
   manifest = VERIFY_MANIFEST,
+  cwd = ROOT,
 }) {
   if (!manifest.modes.includes(mode)) {
     throw new Error(`unsupported_mode:${mode}`);
@@ -275,7 +286,7 @@ export function buildPlan({
   const errors = validateManifest(manifest);
 
   const addCommand = (commandId, path = null, minimumMode = null) => {
-    const command = manifest.commands[commandId];
+    let command = manifest.commands[commandId];
     if (!command) {
       errors.push(`unknown_check:${commandId}${path ? `:${path}` : ""}`);
       return;
@@ -288,6 +299,23 @@ export function buildPlan({
     if (
       modeRank(mode, manifest.modes) < modeRank(requiredMode, manifest.modes)
     ) return;
+    if (command.perPath && path && !existsSync(resolve(cwd, path))) return;
+    const resolvedCommandId = path
+      ? compilerCheckForPath(commandId, path, manifest, { cwd })
+      : commandId;
+    if (path && resolvedCommandId === null) {
+      errors.push(`typescript_compiler_authority_unknown:${path}`);
+      return;
+    }
+    if (resolvedCommandId !== commandId) {
+      commandId = resolvedCommandId;
+      command = manifest.commands[commandId];
+    }
+    command = commandWithCompilerAuthority(command, { cwd, entrypoint: path });
+    if (!command) {
+      errors.push(`check_compiler_authority_unknown:${commandId}`);
+      return;
+    }
     const instance = materializeCommand(commandId, command, path);
     if (!instance) {
       errors.push(`invalid_check_template:${commandId}`);
@@ -928,7 +956,7 @@ export function verify({
 } = {}) {
   const started = performance.now();
   const paths = collectChangedPaths(cwd);
-  const plan = buildPlan({ paths, mode, manifest });
+  const plan = buildPlan({ paths, mode, manifest, cwd });
   const migration = inspectMigrationOmissions({
     cwd,
     baseline: manifest.migrationBaseline,

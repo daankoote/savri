@@ -286,6 +286,9 @@ function supplierRejectionReason(value: string): string | null {
       candidate,
     )
   ) return "supplier_candidate_is_label";
+  if (/^(?:installateur|installer)\s*[:\-–—]/i.test(candidate)) {
+    return "supplier_candidate_is_installer_field";
+  }
   if (!privacySafeText(candidate)) return "supplier_candidate_not_safe";
   if (
     /\b(?:postadres|postcode|straat|laan|weg|plein|telefoon|e-?mail|iban|ean)\b/i

@@ -63,6 +63,18 @@ const matrixUi = await source(
 const documentsUi = await source(
   "app/src/features/signup/DocumentFirstDocumentsStep.tsx",
 );
+const sharedWorkflow = await source(
+  "app/src/features/documents/DocumentEvidenceWorkflow.tsx",
+);
+const workflowController = await source(
+  "app/src/features/documents/CustomerDocumentWorkflowController.ts",
+);
+const customerInteraction = await source(
+  "app/src/features/documents/CustomerDocumentFactInteraction.tsx",
+);
+const correctionWorkflow = await source(
+  "app/src/features/dashboard/CustomerCorrectionHandoffPanel.tsx",
+);
 const navigation = await source(
   "app/src/features/signup/SignupFlowNavigation.tsx",
 );
@@ -149,14 +161,15 @@ assert(
         selectDocumentFactApplicability("particulier", fact.key) === "required"
       ).map((fact) => fact.key).join("|") ===
       "partyName|structuredAddress|electricityEan|chargerBrand|chargerModel|midNumber|serialNumber" &&
-    matrixUi.includes("Gegeven") &&
-    !matrixUi.includes("Opgegeven") &&
-    matrixUi.includes("Energiecontract/-nota") &&
-    matrixUi.includes("Installatiefactuur") &&
-    matrixUi.includes("Actie") &&
-    matrixUi.includes("Wordt gebruikt") &&
-    !matrixUi.includes("Niet opgegeven") &&
-    matrixUi.includes("rows.map") &&
+    matrixUi.includes("createCustomerDocumentWorkflowGroup") &&
+    documentsUi.includes("createCustomerDocumentWorkflowModel") &&
+    documentsUi.includes("<DocumentEvidenceWorkflow") &&
+    sharedWorkflow.includes("<DocumentFactMatrix") &&
+    workflowController.includes("resolveCustomerFactResolutionPolicy") &&
+    !matrixUi.includes("resolveCustomerFactResolutionPolicy") &&
+    !correctionWorkflow.includes("resolveCustomerFactResolutionPolicy") &&
+    !matrixUi.includes("CustomerDocumentFactInteraction") &&
+    !correctionWorkflow.includes("CustomerDocumentFactInteraction") &&
     !matrixUi.includes("compareEnergy") &&
     !matrixUi.includes("compareCharger"),
   "single_generic_row_registry_or_matrix_columns_missing",
@@ -290,11 +303,12 @@ for (const label of ["Bevestigen", "Oplossen", "Invullen", "Kiezen"]) {
   );
 }
 assert(
-  matrixUi.includes("Document vervangen") &&
-    matrixUi.includes("Waarde corrigeren") &&
-    matrixUi.includes("document-first-confirmed") &&
-    !matrixUi.includes("Corrigeren") &&
-    (matrixUi.match(/row\.action/g) || []).length >= 1,
+  customerInteraction.includes("onConfirm") &&
+    customerInteraction.includes("onCorrect") &&
+    customerInteraction.includes("onCancel") &&
+    workflowController.includes("interactionState") &&
+    !matrixUi.includes("interactionState") &&
+    !correctionWorkflow.includes("interactionState"),
   "one_action_or_inline_resolution_contract_missing",
 );
 pass();

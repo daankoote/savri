@@ -479,6 +479,18 @@ const shell = await source("app/src/features/signup/SignupPageShell.tsx");
 const documentFirstMatrix = await source(
   "app/src/features/signup/DocumentFirstCheckMatrix.tsx",
 );
+const documentFirstDocuments = await source(
+  "app/src/features/signup/DocumentFirstDocumentsStep.tsx",
+);
+const sharedWorkflow = await source(
+  "app/src/features/documents/DocumentEvidenceWorkflow.tsx",
+);
+const workflowController = await source(
+  "app/src/features/documents/CustomerDocumentWorkflowController.ts",
+);
+const correctionWorkflow = await source(
+  "app/src/features/dashboard/CustomerCorrectionHandoffPanel.tsx",
+);
 const documentFirstSelectors = await source(
   "app/src/features/signup/documentFirstSignupSelectors.ts",
 );
@@ -487,10 +499,16 @@ const documentReviewMatrix = await source(
 );
 assert(
   documentFirstSelectors.includes("requiresConfirmation") &&
-    documentFirstMatrix.includes("onCorrect(row, value)") &&
-    documentFirstMatrix.includes("Document vervangen") &&
-    documentFirstMatrix.includes("Waarde corrigeren") &&
-    documentReviewMatrix.includes('decision.status === "review_required"') &&
+    documentFirstMatrix.includes("createCustomerDocumentWorkflowGroup") &&
+    documentFirstDocuments.includes("createCustomerDocumentWorkflowModel") &&
+    documentFirstDocuments.includes("<DocumentEvidenceWorkflow") &&
+    sharedWorkflow.includes("<DocumentFactMatrix") &&
+    workflowController.includes("resolveCustomerFactResolutionPolicy") &&
+    !documentFirstMatrix.includes("resolveCustomerFactResolutionPolicy") &&
+    !correctionWorkflow.includes("resolveCustomerFactResolutionPolicy") &&
+    !documentFirstMatrix.includes("CustomerDocumentFactInteraction") &&
+    !correctionWorkflow.includes("CustomerDocumentFactInteraction") &&
+    documentReviewMatrix.includes('decisionStatus === "review_required"') &&
     !shell.includes('setActiveStep("gaps")'),
   "inline_mismatch_correction_action_missing",
 );

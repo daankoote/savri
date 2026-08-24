@@ -98,6 +98,7 @@ function handoffItem(
   return {
     item_ref: `CCI-${number.toString(16).padStart(32, "0").toUpperCase()}`,
     document_label: "Energiedocument",
+    fact_key: "energySupplier",
     fact_label: `Fact ${number}`,
     current_value: `Current ${number}`,
     correction_reason: "INCORRECT_INFORMATION",
@@ -122,6 +123,7 @@ function handoffSource(items: unknown[]) {
     code: "ok",
     case_ref: CASE_REF,
     handoff: {
+      current_replacement_candidates: [],
       handoff_ref: "CRH-0123456789ABCDEF",
       published_at: "2026-08-20T22:00:00.000Z",
       signer_authority: { status: "unavailable" },
@@ -267,6 +269,7 @@ async function endpointProof(): Promise<void> {
               upload_id: "f2000000-0000-4000-8000-000000000001",
               storage_bucket: "app-documents",
               storage_path: "customer-corrections/server-owned.pdf",
+              original_filename: "replacement.pdf",
             },
           };
         }

@@ -80,16 +80,14 @@ function provider(
     adapterVersion: version,
     configFingerprint: "c".repeat(64),
     async extract() {
-      return failure
-        ? { ok: false as const, limitation: failure }
-        : {
-          ok: true as const,
-          contentSha256: "a".repeat(64),
-          pageCount: 1,
-          documentTypeCandidates: [],
-          factCandidates: candidates,
-          limitations: [],
-        };
+      return failure ? { ok: false as const, limitation: failure } : {
+        ok: true as const,
+        contentSha256: "a".repeat(64),
+        pageCount: 1,
+        documentTypeCandidates: [],
+        factCandidates: candidates,
+        limitations: [],
+      };
     },
   });
 }
@@ -136,6 +134,18 @@ const charger = await parser.parse(
   "generic_charger_evidence_v1",
   context("d1000000-0000-4000-8000-000000000013"),
 );
+const closedVocabulary = await createDocumentParserPort(
+  provider("v1-closed", [{
+    ...candidate("partyName", "Voorbeeld Persoon"),
+    factKey: "arbitraryFreeFormFact",
+    extractionMethod: "semantic_contract_holder_block",
+  } as unknown as ParserProviderFactCandidate]),
+  payloadHash,
+).parse(
+  bytes,
+  "energy_document_v1",
+  context("d1000000-0000-4000-8000-000000000018"),
+);
 
 assert(
   Object.keys(DOCUMENT_PARSER_PROFILE_REGISTRY).sort().join("|") ===
@@ -148,17 +158,39 @@ assert(
   "closed_profile_registry_invalid",
 );
 assert(
-  ["energySupplier", "electricityEan", "gasEan", "partyName", "structuredAddress"]
+  !observedKeys(closedVocabulary).includes("arbitraryFreeFormFact"),
+  "closed_canonical_fact_vocabulary_bypassed",
+);
+assert(
+  [
+    "energySupplier",
+    "electricityEan",
+    "gasEan",
+    "partyName",
+    "structuredAddress",
+  ]
     .every((key) => observedKeys(energy).includes(key)),
   "energy_profile_observations_missing",
 );
 assert(
-  ["chargerBrand", "chargerModel", "midNumber", "serialNumber", "partyName", "structuredAddress"]
+  [
+    "chargerBrand",
+    "chargerModel",
+    "midNumber",
+    "serialNumber",
+    "partyName",
+    "structuredAddress",
+  ]
     .every((key) => observedKeys(installation).includes(key)),
   "installation_profile_observations_missing",
 );
 assert(
-  ["organizationName", "kvkNumber", "registeredAddress", "directorOrBoardMember"]
+  [
+    "organizationName",
+    "kvkNumber",
+    "registeredAddress",
+    "directorOrBoardMember",
+  ]
     .every((key) => observedKeys(kvk).includes(key)),
   "kvk_profile_observations_missing",
 );
@@ -170,18 +202,28 @@ assert(
 );
 
 const missing = await createDocumentParserPort(provider("v1", []), payloadHash)
-  .parse(bytes, "energy_document_v1", context("d1000000-0000-4000-8000-000000000014"));
+  .parse(
+    bytes,
+    "energy_document_v1",
+    context("d1000000-0000-4000-8000-000000000014"),
+  );
 assert(
-  missing.observedFacts.filter((item) => item.status === "not_observed").length === 4 &&
+  missing.observedFacts.filter((item) => item.status === "not_observed")
+        .length === 4 &&
     missing.observedFacts.every((item) => item.observedValue === null),
   "missing_fact_was_fabricated",
 );
 const failed = await createDocumentParserPort(
   provider("v1", [], "extraction_unavailable"),
   payloadHash,
-).parse(bytes, "energy_document_v1", context("d1000000-0000-4000-8000-000000000015"));
+).parse(
+  bytes,
+  "energy_document_v1",
+  context("d1000000-0000-4000-8000-000000000015"),
+);
 assert(
-  failed.outcome === "failed" && failed.limitations.includes("extraction_unavailable"),
+  failed.outcome === "failed" &&
+    failed.limitations.includes("extraction_unavailable"),
   "parser_failure_not_represented_as_data",
 );
 let hashMismatchRejected = false;
@@ -222,14 +264,21 @@ assert(
   "observation_envelope_not_immutable",
 );
 const publicShape = JSON.stringify([energy, installation, kvk, charger]);
-for (const forbidden of [
-  "acceptedEvidence",
-  "workforceAccepted",
-  "customerConfirmed",
-  "reviewDecision",
-  "signerAuthority",
-  "caseLifecycle",
-]) assert(!publicShape.includes(forbidden), `decision_field_leaked:${forbidden}`);
+for (
+  const forbidden of [
+    "acceptedEvidence",
+    "workforceAccepted",
+    "customerConfirmed",
+    "reviewDecision",
+    "signerAuthority",
+    "caseLifecycle",
+  ]
+) {
+  assert(
+    !publicShape.includes(forbidden),
+    `decision_field_leaked:${forbidden}`,
+  );
+}
 
 const intakeSource = await Deno.readTextFile(
   new URL("app/src/features/signup/DocumentFirstDocumentsStep.tsx", ROOT),
@@ -252,11 +301,13 @@ assert(
     confirmSource.includes("persistParserObservation"),
   "trusted_energy_server_parser_wiring_missing",
 );
-for (const legacy of [
-  "assets/js/analyse/analyse_invoice_parser.js",
-  "supabase/functions/_shared/analysis.ts",
-  "scripts/analysis_worker/pdf_extract.py",
-]) await Deno.stat(new URL(legacy, ROOT));
+for (
+  const legacy of [
+    "assets/js/analyse/analyse_invoice_parser.js",
+    "supabase/functions/_shared/analysis.ts",
+    "scripts/analysis_worker/pdf_extract.py",
+  ]
+) await Deno.stat(new URL(legacy, ROOT));
 
 console.log("PARSER_SHARED_CORE_Q01_Q14=PASS");
 
@@ -364,8 +415,12 @@ rollback;`;
   await writer.close();
   const result = await command.output();
   const output = new TextDecoder().decode(result.stdout).trim();
-  const error = new TextDecoder().decode(result.stderr).replaceAll(/\s+/g, " ").slice(0, 300);
+  const error = new TextDecoder().decode(result.stderr).replaceAll(/\s+/g, " ")
+    .slice(0, 300);
   assert(result.code === 0, `local_persistence_sql_failed:${error}`);
-  assert(output.endsWith("1|true|true|true|false|false"), `local_catalog_boundary_invalid:${output}`);
+  assert(
+    output.endsWith("1|true|true|true|false|false"),
+    `local_catalog_boundary_invalid:${output}`,
+  );
   console.log("PARSER_OBSERVATION_LOCAL_Q15_Q22=PASS");
 }

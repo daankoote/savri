@@ -1,7 +1,17 @@
 import type { DocumentFactApplicability } from "../documentFactApplicability";
 import type {
+  CustomerDocumentEvidenceRelationship,
   DocumentFactKey,
+  DocumentFactObservation,
+  DocumentSemanticRole,
   DocumentSourceType,
+} from "../documentFactRegistry";
+import {
+  customerDocumentEvidenceBindingFor,
+  customerDocumentFactInstanceRowId,
+  type CustomerDocumentFactRowDefinition,
+  customerDocumentVisibleEvidenceBindingFor,
+  selectCustomerDocumentFactRows,
 } from "../documentFactRegistry";
 import type {
   DocumentFirstFactValue,
@@ -13,6 +23,16 @@ import {
   selectOrganizationDocumentReviewRows,
 } from "../documentReviewMatrix";
 import type { AddressDraft } from "../signupTypes";
+import {
+  decideDocumentFact,
+  semanticRolesComparable,
+} from "../documentFactDecisionPolicy";
+import {
+  compareCustomerDocumentFactSourceOrder,
+  distinctNormalizedCustomerDocumentFactSourceValues,
+  normalizeCustomerDocumentFactSourceValue,
+} from "../../documents/customerDocumentFactSourceResolution.ts";
+import type { CustomerDocumentWorkflowSourceInput } from "../../documents/CustomerDocumentWorkflowController.ts";
 import { deriveSignupSourceRelationV1 } from "../../../../../supabase/functions/_shared/signup_resolution_provenance";
 import {
   isValidDutchPostcode,
@@ -59,18 +79,30 @@ export type FactPresentationSource = {
   binding: string;
   observedValue: string;
   normalizedValue: string;
+  semanticRole: DocumentSemanticRole;
+  extractionStatus: DocumentFactObservation["extractionStatus"];
+  relationship: CustomerDocumentEvidenceRelationship;
   documentIdentity?: string;
   locationId?: string;
   chargerId?: string;
 };
+
+export type FactSourceConsistency =
+  | "MATCH"
+  | "CONFLICT"
+  | "SINGLE_SOURCE"
+  | "NOT_COMPARABLE"
+  | "MISSING";
 
 export type FactPresentationRow = {
   id: string;
   label: string;
   canonicalValue: string;
   sources: FactPresentationSource[];
+  workflowSources?: readonly CustomerDocumentWorkflowSourceInput[];
   sourceValues: string[];
   sourceLabels: string[];
+  sourceConsistency: FactSourceConsistency;
   applicability: DocumentFactApplicability;
   resolutionState: FactResolutionState;
   resolutionReason: FactResolutionReason;
@@ -78,6 +110,7 @@ export type FactPresentationRow = {
   confirmationState: "confirmed" | "unconfirmed";
   correctionState: "manual" | "unchanged";
   correctionValue?: DocumentFirstFactValue;
+  customerConfirmedValue?: DocumentFirstFactValue;
   isRequired: boolean;
   isInformational: boolean;
   actions: FactPresentationAction[];
@@ -85,6 +118,17 @@ export type FactPresentationRow = {
   chargerId?: string;
   reviewRow: DocumentReviewRow | null;
 };
+
+type FactPresentationActiveSourceSlot = Readonly<{
+  sourceRef: string;
+  evidenceRootRef: string;
+  contentFingerprint: string | null;
+  fileName: string;
+  sourceDocumentType: Extract<
+    DocumentSourceType,
+    "energy_bill_or_contract" | "installation_invoice"
+  >;
+}>;
 
 export type FactPresentationSection = {
   id: string;
@@ -109,12 +153,17 @@ type RowProjectionOptions = {
   chargerId?: string;
   sourceType?: DocumentSourceType;
   sourceBindings?: Partial<Record<DocumentSourceType, string>>;
+  sourceNames?: Record<string, string>;
+  evidenceRelationships?: Record<string, CustomerDocumentEvidenceRelationship>;
   userBinding?: string;
   documentIdentities?: Record<string, string>;
   manualValue?: DocumentFirstFactValue;
   manualValues?: Record<string, DocumentFirstFactValue>;
+  confirmedValues?: Record<string, DocumentFirstFactValue>;
   partyKind?: "natural_person" | "organization";
   forceInformational?: boolean;
+  allowLocationDocumentForCharger?: boolean;
+  activeSourceSlots?: readonly FactPresentationActiveSourceSlot[];
 };
 
 const SOURCE_LABELS: Record<DocumentSourceType, string> = {
@@ -129,37 +178,12 @@ const ACCOUNT_TYPE_LABELS = {
   vve: "VvE",
 } as const;
 
-const LOCATION_FACTS: ReadonlyArray<{
-  factKey: DocumentFactKey;
-  label?: string;
-}> = [
-  { factKey: "partyName", label: "Naam op energiecontract" },
-  { factKey: "structuredAddress" },
-  { factKey: "electricityEan" },
-  { factKey: "energySupplier" },
-  { factKey: "contractStart" },
-  { factKey: "contractEnd" },
-];
-
-const CHARGER_FACTS: ReadonlyArray<{
-  factKey: DocumentFactKey;
-  label?: string;
-}> = [
-  { factKey: "chargerBrand" },
-  { factKey: "chargerModel" },
-  { factKey: "serialNumber" },
-  { factKey: "midNumber" },
-  { factKey: "invoiceDate" },
-  { factKey: "explicitInstallationDate" },
-];
-
 function clean(value: unknown): string {
   return String(value ?? "").replace(/\s+/g, " ").trim();
 }
 
 function normalizedValue(value: string): string {
-  return clean(value).normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase("nl-NL").replace(/[^a-z0-9]+/g, " ").trim();
+  return normalizeCustomerDocumentFactSourceValue(clean(value));
 }
 
 function visibleValue(row: DocumentReviewRow): string {
@@ -197,27 +221,46 @@ function observationSources(
     .filter((candidate) =>
       !options.sourceType || candidate.sourceDocumentType === options.sourceType
     )
-    .filter((candidate) =>
-      candidate.extractionStatus === "found" && candidate.displayable &&
-      Boolean(clean(candidate.value))
-    )
     .map((candidate): FactPresentationSource => ({
       sourceId: candidate.sourceDocumentId,
       sourceType: candidate.sourceDocumentType,
-      sourceLabel: SOURCE_LABELS[candidate.sourceDocumentType],
+      sourceLabel: options.sourceNames?.[candidate.sourceDocumentId] ||
+        SOURCE_LABELS[candidate.sourceDocumentType],
       binding: options.sourceBindings?.[candidate.sourceDocumentType] ||
         SOURCE_LABELS[candidate.sourceDocumentType],
       observedValue: clean(candidate.value),
       normalizedValue: normalizedValue(clean(candidate.value)),
+      semanticRole: candidate.semanticRole,
+      extractionStatus: candidate.extractionStatus,
+      relationship: options.evidenceRelationships?.[
+        `${candidate.sourceDocumentType}:${candidate.semanticRole}`
+      ] || "direct",
       documentIdentity:
         options.documentIdentities?.[candidate.sourceDocumentId] ||
         candidate.sourceDocumentId,
       locationId: options.locationId,
       chargerId: options.chargerId,
-    }));
+    }))
+    .sort((left, right) =>
+      compareCustomerDocumentFactSourceOrder({
+        sourceDocumentType: left.sourceType,
+        immutableSourceIdentity: left.documentIdentity || left.sourceId,
+        semanticRole: left.semanticRole,
+        sourceLabel: left.sourceLabel,
+        value: left.observedValue,
+      }, {
+        sourceDocumentType: right.sourceType,
+        immutableSourceIdentity: right.documentIdentity || right.sourceId,
+        semanticRole: right.semanticRole,
+        sourceLabel: right.sourceLabel,
+        value: right.observedValue,
+      })
+    );
   const manualValue = options.manualValue ??
     options.manualValues?.[row.scopeKey];
-  const userValue = manualValue
+  const userValue = options.forceInformational && options.sourceType
+    ? ""
+    : manualValue
     ? typeof manualValue === "string" ? clean(manualValue) : visibleValue(row)
     : row.confirmed || (!sources.length && row.declared.value)
     ? visibleValue(row)
@@ -232,11 +275,47 @@ function observationSources(
       binding: options.userBinding || "Door gebruiker",
       observedValue: userValue,
       normalizedValue: normalizedValue(userValue),
+      semanticRole: "unknown",
+      extractionStatus: "found",
+      relationship: "direct",
       locationId: options.locationId,
       chargerId: options.chargerId,
     });
   }
   return sources;
+}
+
+export function deriveFactSourceConsistency(
+  _factKey: DocumentFactKey,
+  sources: readonly FactPresentationSource[],
+  _partyKind: "natural_person" | "organization" = "natural_person",
+): FactSourceConsistency {
+  const found = sources.filter((source) =>
+    source.sourceType !== "user" && source.extractionStatus === "found" &&
+    Boolean(source.observedValue)
+  );
+  if (found.length === 0) return "MISSING";
+  const comparable = found.filter((source) => source.relationship === "direct");
+  if (comparable.length === 0) return "NOT_COMPARABLE";
+  if (comparable.length === 1) {
+    return found.length === 1 ? "SINGLE_SOURCE" : "NOT_COMPARABLE";
+  }
+  let hasComparableSet = false;
+  for (const source of comparable) {
+    const sameRoleSet = comparable.filter((candidate) =>
+      source.locationId === candidate.locationId &&
+      source.chargerId === candidate.chargerId &&
+      semanticRolesComparable(source.semanticRole, candidate.semanticRole)
+    );
+    if (sameRoleSet.length < 2) continue;
+    hasComparableSet = true;
+    if (
+      distinctNormalizedCustomerDocumentFactSourceValues(
+        sameRoleSet.map((candidate) => candidate.observedValue),
+      ).length >= 2
+    ) return "CONFLICT";
+  }
+  return hasComparableSet ? "MATCH" : "NOT_COMPARABLE";
 }
 
 function sourceRelation(
@@ -247,7 +326,10 @@ function sourceRelation(
   return deriveSignupSourceRelationV1({
     factKey,
     partyKind,
-    sources: sources.filter((source) => source.sourceType !== "user").map(
+    sources: sources.filter((source) =>
+      source.sourceType !== "user" && source.extractionStatus === "found" &&
+      Boolean(source.observedValue) && source.relationship === "direct"
+    ).map(
       (source) => ({
         identity: source.documentIdentity || source.sourceId,
         observedValue: source.observedValue,
@@ -262,7 +344,10 @@ function resolveRow(
   manualValue: DocumentFirstFactValue | undefined,
   partyKind: "natural_person" | "organization",
 ): { state: FactResolutionState; reason: FactResolutionReason } {
-  const documents = sources.filter((source) => source.sourceType !== "user");
+  const documents = sources.filter((source) =>
+    source.sourceType !== "user" && source.extractionStatus === "found" &&
+    Boolean(source.observedValue) && source.relationship === "direct"
+  );
   const relation = sourceRelation(row.factKey, sources, partyKind);
   if (
     row.correctedManually &&
@@ -314,7 +399,7 @@ function resolveRow(
         : "unresolved_document_conflict",
     };
   }
-  if (relation === "equal") return { state: "confirmed", reason: null };
+  if (relation === "equal") return { state: "pending", reason: null };
   if (relation === "probable") return { state: "pending", reason: null };
   if (row.decisionStatus === "blocked" || row.decisionStatus === "ambiguous") {
     return { state: "blocked", reason: "unresolved_document_conflict" };
@@ -365,8 +450,14 @@ export function projectFactPresentationRow(
   const resolution = resolveRow(row, sources, manualValue, partyKind);
   const isInformational = options.forceInformational ||
     row.applicability === "informational";
-  const candidateValue = visibleValue(row) ||
-    sources.find((source) => source.sourceType !== "user")?.observedValue || "";
+  const sourceCandidate =
+    sources.find((source) =>
+      source.sourceType !== "user" && source.extractionStatus === "found" &&
+      source.relationship === "direct"
+    )?.observedValue || "";
+  const candidateValue = options.forceInformational && options.sourceType
+    ? sourceCandidate
+    : visibleValue(row) || sourceCandidate;
   if (isInformational && !candidateValue) return null;
   const canonicalValue = resolution.state === "blocked" ? "" : candidateValue;
   return {
@@ -376,15 +467,19 @@ export function projectFactPresentationRow(
     sources,
     sourceValues: sources.map((source) => source.observedValue),
     sourceLabels: sources.map((source) => source.sourceLabel),
+    sourceConsistency: deriveFactSourceConsistency(
+      row.factKey,
+      sources,
+      partyKind,
+    ),
     applicability: isInformational ? "informational" : row.applicability,
     resolutionState: resolution.state,
     resolutionReason: resolution.reason,
     judgment: judgment(resolution.state),
-    confirmationState: resolution.state === "confirmed"
-      ? "confirmed"
-      : "unconfirmed",
+    confirmationState: row.confirmed ? "confirmed" : "unconfirmed",
     correctionState: row.correctedManually ? "manual" : "unchanged",
     correctionValue: manualValue,
+    customerConfirmedValue: options.confirmedValues?.[row.scopeKey],
     isRequired: !isInformational && row.required,
     isInformational,
     actions: actions(row, resolution.state, resolution.reason),
@@ -432,6 +527,9 @@ function syntheticRow(input: {
     binding: input.sourceLabel,
     observedValue: value,
     normalizedValue: normalizedValue(value),
+    semanticRole: "unknown",
+    extractionStatus: "found",
+    relationship: "direct",
     locationId: input.locationId,
     chargerId: input.chargerId,
   };
@@ -443,6 +541,7 @@ function syntheticRow(input: {
     sources: value ? [source] : [],
     sourceValues: value ? [value] : [],
     sourceLabels: value ? [input.sourceLabel] : [],
+    sourceConsistency: value ? "SINGLE_SOURCE" : "MISSING",
     applicability: "required",
     resolutionState,
     resolutionReason: resolutionState === "review_required"
@@ -453,6 +552,7 @@ function syntheticRow(input: {
       ? "confirmed"
       : "unconfirmed",
     correctionState: "unchanged",
+    customerConfirmedValue: undefined,
     isRequired: true,
     isInformational: false,
     actions: [],
@@ -464,15 +564,160 @@ function syntheticRow(input: {
 
 function selectRows(
   rows: DocumentReviewRow[],
-  factKeys: ReadonlyArray<{ factKey: DocumentFactKey; label?: string }>,
+  definitions: readonly CustomerDocumentFactRowDefinition[],
+  scopeRef: string,
   options: Omit<RowProjectionOptions, "id" | "label">,
 ): FactPresentationRow[] {
-  return factKeys.flatMap(({ factKey, label }) => {
-    const row = rows.find((candidate) => candidate.factKey === factKey);
+  return definitions.flatMap((definition) => {
+    const row = rows.find((candidate) =>
+      candidate.factKey === definition.factKey
+    );
     if (!row) return [];
-    const projected = projectFactPresentationRow(row, { ...options, label });
-    return projected ? [projected] : [];
+    const bindingFor = (observation: DocumentFactObservation) =>
+      customerDocumentEvidenceBindingFor(definition, observation);
+    const scopedObservations = row.observations.filter((observation) =>
+      Boolean(bindingFor(observation)) &&
+      !(definition.group === "charger" &&
+        observation.sourceDocumentType === "energy_bill_or_contract" &&
+        options.allowLocationDocumentForCharger !== true)
+    );
+    const decisionObservations = scopedObservations.filter((observation) =>
+      bindingFor(observation)?.relationship === "direct"
+    );
+    const decision = decideDocumentFact({
+      factKey: row.factKey,
+      declaredValue: row.declared.value,
+      observations: decisionObservations,
+      correctedValue: row.correctedManually ? visibleValue(row) : null,
+      confirmedValue: row.confirmed ? visibleValue(row) : null,
+      partyKind: options.partyKind,
+    });
+    const scopedRow: DocumentReviewRow = {
+      ...row,
+      scopeKey: row.scopeKey,
+      observations: scopedObservations,
+      sourceDocuments: scopedObservations.map((observation) => ({
+        documentId: observation.sourceDocumentId,
+        documentType: observation.sourceDocumentType,
+      })),
+      decisionStatus: decision.status,
+      decisionReason: decision.reason,
+      canonicalValue: decision.canonicalValue,
+      proposedValue: decision.canonicalValue,
+      choices: Object.freeze([
+        ...new Set(
+          scopedObservations.flatMap((observation) =>
+            observation.displayable && observation.value
+              ? [clean(observation.value)]
+              : []
+          ),
+        ),
+      ]),
+      correctedManually: row.correctedManually,
+      confirmed: row.confirmed,
+      normalizationApplied: decision.normalizationApplied,
+      blocksProgress: decision.blocksProgress,
+    };
+    const projected = projectFactPresentationRow(scopedRow, {
+      ...options,
+      evidenceRelationships: Object.fromEntries(
+        definition.evidenceBindings.flatMap((binding) =>
+          binding.semanticRoles.map((semanticRole) => [
+            `${binding.sourceDocumentType}:${semanticRole}`,
+            binding.relationship,
+          ])
+        ),
+      ),
+      id: customerDocumentFactInstanceRowId(definition, scopeRef),
+      label: definition.label,
+    });
+    if (!projected) return [];
+    const workflowSources = options.activeSourceSlots
+      ? options.activeSourceSlots.flatMap((slot) => {
+          const observed = projected.sources.find((source) =>
+            source.sourceType !== "user" &&
+            source.sourceId === slot.sourceRef &&
+            source.extractionStatus === "found" &&
+            Boolean(source.observedValue) &&
+            source.relationship !== "provenance_only"
+          );
+          const displayBinding = observed
+            ? customerDocumentEvidenceBindingFor(definition, {
+              sourceDocumentType: slot.sourceDocumentType,
+              semanticRole: observed.semanticRole,
+            })
+            : customerDocumentVisibleEvidenceBindingFor(
+              definition,
+              slot.sourceDocumentType,
+            );
+          if (!displayBinding) return [];
+          return [Object.freeze({
+            sourceRef: observed
+              ? `${observed.sourceId}:${observed.binding}`
+              : `${slot.sourceRef}:${definition.id}`,
+            evidenceRootRef: slot.evidenceRootRef,
+            contentFingerprint: slot.contentFingerprint,
+            fileName: slot.fileName,
+            sourceDocumentType: slot.sourceDocumentType,
+            semanticRole: observed?.semanticRole ||
+              displayBinding.semanticRoles[0],
+            relationship: observed?.relationship ||
+              displayBinding.relationship,
+            observedValue: observed?.observedValue || null,
+            current: true,
+          })];
+        })
+      : undefined;
+    const activeProjected = workflowSources
+      ? { ...projected, workflowSources }
+      : projected;
+    return activeProjected.sourceConsistency === "CONFLICT"
+      ? [{
+        ...activeProjected,
+        resolutionState: "review_required" as const,
+        resolutionReason: "unresolved_document_conflict" as const,
+        judgment: "ENVAL-controle nodig" as const,
+      }]
+      : [activeProjected];
   });
+}
+
+function mergeReviewRows(
+  matrices: readonly DocumentReviewRow[][],
+): DocumentReviewRow[] {
+  const byFactKey = new Map<DocumentFactKey, DocumentReviewRow>();
+  for (const rows of matrices) {
+    for (const row of rows) {
+      const current = byFactKey.get(row.factKey);
+      if (!current) {
+        byFactKey.set(row.factKey, row);
+        continue;
+      }
+      const observations = [...current.observations, ...row.observations];
+      const unique = [...new Map(observations.map((observation) => [
+        [
+          observation.sourceDocumentId,
+          observation.factKey,
+          observation.semanticRole,
+          observation.extractionStatus,
+          observation.value || "",
+        ].join(":"),
+        observation,
+      ])).values()];
+      byFactKey.set(row.factKey, {
+        ...current,
+        observations: unique,
+        sourceDocuments: [...new Map(unique.map((observation) => [
+          observation.sourceDocumentId,
+          {
+            documentId: observation.sourceDocumentId,
+            documentType: observation.sourceDocumentType,
+          },
+        ])).values()],
+      });
+    }
+  }
+  return [...byFactKey.values()];
 }
 
 function documentFilename(file: File | null): string {
@@ -502,7 +747,42 @@ export function selectUnifiedFactPresentation(
       cache.contentFingerprint,
     ]),
   );
+  const sourceNames = Object.fromEntries([
+    [
+      draft.organizationDocument.clientId,
+      documentFilename(draft.organizationDocument.file),
+    ],
+    ...Object.values(draft.energyDocumentsByLocationId).map((document) => [
+      document.clientId,
+      documentFilename(document.file),
+    ]),
+    ...Object.values(draft.chargerDocumentsByChargerId).flat().map((
+      document,
+    ) => [
+      document.clientId,
+      documentFilename(document.file),
+    ]),
+  ]);
+  const activeSourceSlot = (
+    document: Readonly<{ clientId: string; file: File | null }>,
+    sourceDocumentType: FactPresentationActiveSourceSlot["sourceDocumentType"],
+  ): FactPresentationActiveSourceSlot | null =>
+    document.file
+      ? Object.freeze({
+        sourceRef: document.clientId,
+        evidenceRootRef: identities[document.clientId] || document.clientId,
+        contentFingerprint: identities[document.clientId] || null,
+        fileName: sourceNames[document.clientId],
+        sourceDocumentType,
+      })
+      : null;
   const corrections = manualValues(draft);
+  const confirmedValues = Object.fromEntries(
+    Object.entries(draft.customerConfirmations).map(([key, confirmation]) => [
+      key,
+      confirmation.value,
+    ]),
+  );
   const chargerNumbers = new Map<string, number>();
   let chargerNumber = 0;
   draft.locationOrder.forEach((locationId) => {
@@ -516,7 +796,9 @@ export function selectUnifiedFactPresentation(
     organizationReviewRows,
     {
       documentIdentities: identities,
+      sourceNames,
       manualValues: corrections,
+      confirmedValues,
       partyKind,
       sourceBindings: { organization_extract: "Account" },
       userBinding: "Account",
@@ -557,27 +839,43 @@ export function selectUnifiedFactPresentation(
   draft.locationOrder.forEach((locationId, locationIndex) => {
     const locationNumber = locationIndex + 1;
     const chargerIds = draft.chargerOrderByLocationId[locationId] || [];
-    const representativeChargerId = chargerIds[0] || "";
-    const representativeMatrix = representativeChargerId
-      ? selectDocumentReviewMatrix(draft, locationId, representativeChargerId)
-      : null;
-    const representativeChargerNumber = chargerNumbers.get(
-      representativeChargerId,
+    const energyDocument = draft.energyDocumentsByLocationId[locationId];
+    const locationActiveSourceSlots = [
+      energyDocument
+        ? activeSourceSlot(energyDocument, "energy_bill_or_contract")
+        : null,
+      ...chargerIds.map((chargerId) => {
+        const document = draft.chargerDocumentsByChargerId[chargerId]?.find(
+          (candidate) => candidate.documentType === "installation_invoice",
+        );
+        return document
+          ? activeSourceSlot(document, "installation_invoice")
+          : null;
+      }),
+    ].filter((slot): slot is FactPresentationActiveSourceSlot => Boolean(slot));
+    const locationMatrices = chargerIds.map((chargerId) =>
+      selectDocumentReviewMatrix(draft, locationId, chargerId)
     );
-    const locationRows = representativeMatrix
-      ? selectRows(representativeMatrix.rows, LOCATION_FACTS, {
-        documentIdentities: identities,
+    const locationRows = locationMatrices.length > 0
+      ? selectRows(
+        mergeReviewRows(locationMatrices.map((matrix) => matrix.rows)),
+        selectCustomerDocumentFactRows("location"),
         locationId,
-        manualValues: corrections,
-        partyKind,
-        sourceBindings: {
-          energy_bill_or_contract: `Locatie ${locationNumber}`,
-          installation_invoice: representativeChargerNumber
-            ? `Locatie ${locationNumber} · Laadpaal ${representativeChargerNumber}`
-            : `Locatie ${locationNumber}`,
+        {
+          documentIdentities: identities,
+          activeSourceSlots: locationActiveSourceSlots,
+          sourceNames,
+          locationId,
+          manualValues: corrections,
+          confirmedValues,
+          partyKind,
+          sourceBindings: {
+            energy_bill_or_contract: `Locatie ${locationNumber}`,
+            installation_invoice: `Locatie ${locationNumber}`,
+          },
+          userBinding: `Locatie ${locationNumber}`,
         },
-        userBinding: `Locatie ${locationNumber}`,
-      })
+      )
       : [];
     const address = locationRows.find((row) =>
       row.reviewRow?.factKey === "structuredAddress"
@@ -592,7 +890,6 @@ export function selectUnifiedFactPresentation(
       locationId,
     });
 
-    const energyDocument = draft.energyDocumentsByLocationId[locationId];
     if (energyDocument) {
       documentRows.push(syntheticRow({
         id: energyDocument.clientId,
@@ -609,41 +906,39 @@ export function selectUnifiedFactPresentation(
       const chargerBinding =
         `Locatie ${locationNumber} · Laadpaal ${globalChargerNumber}`;
       const matrix = selectDocumentReviewMatrix(draft, locationId, chargerId);
-      const chargerRows = selectRows(matrix.rows, CHARGER_FACTS, {
-        chargerId,
-        documentIdentities: identities,
-        locationId,
-        manualValues: corrections,
-        partyKind,
-        sourceBindings: { installation_invoice: chargerBinding },
-        userBinding: chargerBinding,
-      });
-      const invoicePartyRow = matrix.rows.find((row) =>
-        row.factKey === "partyName"
+      const chargerDocument = draft.chargerDocumentsByChargerId[chargerId]
+        ?.find((document) =>
+          document.documentType === "installation_invoice"
+        );
+      const chargerActiveSourceSlots = [
+        chargerDocument
+          ? activeSourceSlot(chargerDocument, "installation_invoice")
+          : null,
+        chargerIds.length === 1 && energyDocument
+          ? activeSourceSlot(energyDocument, "energy_bill_or_contract")
+          : null,
+      ].filter((slot): slot is FactPresentationActiveSourceSlot =>
+        Boolean(slot)
       );
-      const invoiceParty = invoicePartyRow
-        ? projectFactPresentationRow(invoicePartyRow, {
+      const chargerDefinitions = selectCustomerDocumentFactRows("charger");
+      const chargerRows = selectRows(
+        matrix.rows,
+        chargerDefinitions,
+        chargerId,
+        {
           chargerId,
           documentIdentities: identities,
-          forceInformational: true,
-          id: `charger:${chargerId}:invoice-party-name`,
-          label: "Naam op installatiefactuur",
+          activeSourceSlots: chargerActiveSourceSlots,
+          sourceNames,
           locationId,
           manualValues: corrections,
+          confirmedValues,
           partyKind,
+          allowLocationDocumentForCharger: chargerIds.length === 1,
           sourceBindings: { installation_invoice: chargerBinding },
-          sourceType: "installation_invoice",
           userBinding: chargerBinding,
-        })
-        : null;
-      const linkedLocation = syntheticRow({
-        id: `charger:${chargerId}:location`,
-        label: "Gekoppelde locatie",
-        value: locationTitle,
-        sourceLabel: "Door gebruiker",
-        locationId,
-        chargerId,
-      });
+        },
+      );
       const brand = chargerRows.find((row) =>
         row.reviewRow?.factKey === "chargerBrand"
       )?.canonicalValue;
@@ -651,23 +946,18 @@ export function selectUnifiedFactPresentation(
         row.reviewRow?.factKey === "chargerModel"
       )?.canonicalValue;
       const descriptor = clean(`${brand || ""} ${model || ""}`);
-      const chargerTitle = `Laadpaal ${globalChargerNumber}${
-        descriptor ? ` · ${descriptor}` : ""
-      }`;
+      const chargerTitle =
+        `Laadpaal ${globalChargerNumber} · Locatie ${locationNumber}${
+          descriptor ? ` · ${descriptor}` : ""
+        }`;
       chargers.push({
         id: chargerId,
         title: chargerTitle,
-        rows: [
-          linkedLocation,
-          ...(invoiceParty ? [invoiceParty] : []),
-          ...chargerRows,
-        ],
+        rows: chargerRows,
         locationId,
         chargerId,
       });
 
-      const chargerDocument = draft.chargerDocumentsByChargerId[chargerId]
-        ?.find((document) => document.documentType === "installation_invoice");
       if (chargerDocument) {
         documentRows.push(syntheticRow({
           id: chargerDocument.clientId,

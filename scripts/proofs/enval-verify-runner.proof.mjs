@@ -50,6 +50,7 @@ assert(validateManifest().length === 0, "manifest_metadata_invalid");
 for (
   const id of [
     "deno-check-changed",
+    "deno-check-app-changed",
     "deno-check-browser-proof",
     "edge-static-check",
   ]
@@ -78,6 +79,77 @@ assert(
       check.commandId === "deno-check-changed"
     ),
   "browser_proof_typecheck_profile_not_isolated",
+);
+
+const appTsxPlan = buildPlan({
+  paths: [
+    "app/src/features/dashboard/customerCorrectionSourceResolution.proof.tsx",
+  ],
+  mode: "QUICK",
+});
+assert(
+  appTsxPlan.selected.length === 2 &&
+    appTsxPlan.selected.some((check) =>
+      check.commandId === "deno-check-app-changed" &&
+      check.argv.includes("app/tsconfig.json")
+    ) &&
+    !appTsxPlan.selected.some((check) =>
+      check.commandId === "deno-check-changed"
+    ),
+  "app_tsx_typecheck_profile_not_isolated",
+);
+
+const deletedAppPath =
+  "app/src/features/signup/presentation/CompactFactCorrectionEditor.tsx";
+const deletedAppPlan = buildPlan({
+  paths: [deletedAppPath],
+  mode: "TARGETED",
+});
+assert(
+  deletedAppPlan.paths.includes(deletedAppPath) &&
+    !deletedAppPlan.selected.some((check) => check.path === deletedAppPath) &&
+    deletedAppPlan.selected.some((check) =>
+      check.commandId === "signup-journey-pure"
+    ),
+  "deleted_app_source_was_compiled_or_hidden_from_path_routing",
+);
+
+const renamedAppOldPath =
+  "app/src/features/dashboard/customerCorrectionSourceResolution.old.tsx";
+const renamedAppNewPath =
+  "app/src/features/dashboard/customerCorrectionSourceResolution.proof.tsx";
+const renamedAppPlan = buildPlan({
+  paths: [renamedAppOldPath, renamedAppNewPath],
+  mode: "QUICK",
+});
+assert(
+  renamedAppPlan.paths.includes(renamedAppOldPath) &&
+    renamedAppPlan.paths.includes(renamedAppNewPath) &&
+    !renamedAppPlan.selected.some((check) =>
+      check.path === renamedAppOldPath
+    ) &&
+    renamedAppPlan.selected.some((check) =>
+      check.commandId === "deno-check-app-changed" &&
+      check.path === renamedAppNewPath
+    ),
+  "renamed_app_source_did_not_check_only_existing_destination",
+);
+
+const denoNativePlan = buildPlan({
+  paths: [
+    "platform/runtime/customer-fact-resolution/customer_fact_resolution_policy.ts",
+  ],
+  mode: "QUICK",
+});
+assert(
+  denoNativePlan.selected.length === 2 &&
+    denoNativePlan.selected.some((check) =>
+      check.commandId === "deno-check-changed"
+    ) &&
+    !denoNativePlan.selected.some((check) =>
+      check.commandId === "deno-check-app-changed"
+    ),
+  "deno_native_typecheck_profile_not_isolated",
 );
 
 const currentPaths = [
@@ -973,11 +1045,11 @@ assert(
 
 const compactRun = verify({
   mode: "QUICK",
-  executor() {
+  executor(check) {
     return {
       exitCode: 0,
       durationMs: 1,
-      stdout: "green-log-that-must-not-appear",
+      stdout: check.expectedMarker ?? "green-log-that-must-not-appear",
       stderr: "",
     };
   },

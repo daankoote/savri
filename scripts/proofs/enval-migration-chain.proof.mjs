@@ -320,20 +320,21 @@ try {
     (select count(*) from public.app_evidence_review_correction_handoffs),
     (select count(*) from public.app_customer_correction_replacement_uploads),
     (select count(*) from public.app_customer_correction_replacement_candidates),
+    (select count(*) from public.app_customer_correction_replacement_candidate_events),
     (select count(*) from public.app_evidence_review_customer_submission_replacements)
   );`,
   );
   assert(
-    empty === "0|0|0|0|0|15|6|72|6|0|0|0|0|0",
+    empty === "0|0|0|0|0|15|6|72|6|0|0|0|0|0|0",
     "fresh_data_boundary_failed",
   );
   const security = psql(
     DATABASE,
     `select (
     (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%') = 70
+      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%') = 74
     and (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%' and c.relrowsecurity) = 70
+      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%' and c.relrowsecurity) = 74
     and not exists (select 1 from information_schema.role_table_grants
       where table_schema='public' and table_name like 'app\\_%'
         and grantee in ('anon','authenticated') and privilege_type in ('INSERT','UPDATE','DELETE','TRUNCATE'))
@@ -352,7 +353,14 @@ try {
     and not has_table_privilege('service_role','public.app_customer_correction_replacement_uploads','INSERT')
     and has_table_privilege('service_role','public.app_customer_correction_replacement_candidates','SELECT')
     and not has_table_privilege('service_role','public.app_customer_correction_replacement_candidates','INSERT')
+    and has_table_privilege('service_role','public.app_customer_correction_replacement_candidate_events','SELECT')
+    and not has_table_privilege('service_role','public.app_customer_correction_replacement_candidate_events','INSERT')
     and not has_table_privilege('service_role','public.app_evidence_review_customer_submission_replacements','SELECT')
+    and not has_table_privilege('service_role','public.app_customer_correction_fact_resolution_challenge_bindings','SELECT')
+    and has_table_privilege('service_role','public.app_evidence_review_customer_submission_fact_resolutions','SELECT')
+    and not has_table_privilege('service_role','public.app_evidence_review_customer_submission_fact_resolutions','INSERT')
+    and has_table_privilege('service_role','public.app_evidence_review_customer_submission_fact_resolution_sources','SELECT')
+    and not has_table_privilege('service_role','public.app_evidence_review_customer_submission_fact_resolution_sources','INSERT')
   )::text;`,
   );
   assert(security === "true", "rls_privilege_parity_failed");
@@ -385,17 +393,23 @@ try {
     and to_regclass('public.app_evidence_review_correction_handoffs') is not null
     and to_regclass('public.app_customer_correction_replacement_uploads') is not null
     and to_regclass('public.app_customer_correction_replacement_candidates') is not null
+    and to_regclass('public.app_customer_correction_replacement_candidate_events') is not null
     and to_regclass('public.app_evidence_review_customer_submissions') is not null
     and to_regclass('public.app_evidence_review_customer_submission_items') is not null
     and to_regclass('public.app_evidence_review_customer_submission_replacements') is not null
     and to_regclass('public.app_evidence_review_decision_carry_forwards') is not null
     and to_regclass('public.app_customer_correction_signer_challenge_bindings') is not null
     and to_regclass('public.app_customer_correction_signer_evidence_bindings') is not null
+    and to_regclass('public.app_customer_correction_fact_resolution_challenge_bindings') is not null
+    and to_regclass('public.app_evidence_review_customer_submission_fact_resolutions') is not null
+    and to_regclass('public.app_evidence_review_customer_submission_fact_resolution_sources') is not null
     and to_regprocedure('public.app_customer_correction_challenge_issue_v1(uuid,text,jsonb,text,text,timestamptz,text,text,text,text,text,text)') is not null
     and to_regprocedure('public.app_customer_correction_challenge_issue_v2(uuid,text,jsonb,text,text,timestamptz,text,text,text,text,text,text)') is not null
     and to_regprocedure('public.app_customer_correction_challenge_issue_v3(uuid,text,jsonb,text,text,text,timestamptz,text,text,text,text,text,text)') is not null
+    and to_regprocedure('public.app_customer_correction_challenge_issue_v4(uuid,text,jsonb,jsonb,text,text,text,timestamptz,text,text,text,text,text,text)') is not null
     and to_regprocedure('public.app_customer_correction_finalize_v1(uuid,text,uuid,text,text,text,text,text,text,text,text)') is not null
     and to_regprocedure('public.app_customer_correction_finalize_v2(uuid,text,uuid,text,text,text,text,text,text,text)') is not null
+    and to_regprocedure('public.app_customer_correction_finalize_v3(uuid,text,uuid,text,text,text,text,text,text,text)') is not null
     and to_regprocedure('public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)') is not null
     and to_regprocedure('public.app_evidence_review_current_correction_handoff_v1(uuid,text,text)') is not null
     and to_regprocedure('public.app_evidence_review_correction_supersede_v1(uuid,text,text,jsonb,text,text,text,text,text,timestamptz)') is not null
@@ -405,11 +419,15 @@ try {
     and to_regprocedure('public.app_customer_correction_replacement_upload_resolve_v1(uuid,text,text)') is not null
     and to_regprocedure('public.app_customer_correction_replacement_upload_confirm_v1(uuid,text,text,bigint,text,text,text,text,text,text,timestamptz,text)') is not null
     and to_regprocedure('public.app_customer_correction_replacement_resolution_v1(uuid,text)') is not null
+    and to_regprocedure('public.app_customer_correction_replacement_resolution_v2(uuid,text)') is not null
+    and to_regprocedure('public.app_customer_correction_replacement_withdraw_v1(uuid,text,text,text,text,text,text,timestamptz,text)') is not null
     and position('access_grant.customer_id <> v_case.customer_id' in pg_get_functiondef('public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)'::regprocedure)) > 0
     and position('access_grant.customer_id = v_case.customer_id' in pg_get_functiondef('public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)'::regprocedure)) = 0
     and to_regprocedure('public.app_customer_correction_handoff_read_v1(uuid,text)') is not null
     and to_regprocedure('public.app_customer_correction_handoff_read_v2(uuid,text)') is not null
     and to_regprocedure('public.app_customer_correction_handoff_read_v3(uuid,text)') is not null
+    and to_regprocedure('public.app_customer_correction_handoff_read_v4(uuid,text)') is not null
+    and to_regprocedure('public.app_customer_correction_handoff_read_v5(uuid,text)') is not null
     and to_regprocedure('public.app_customer_correction_signer_context_v1(uuid,text)') is not null
     and to_regprocedure('public.app_customer_correction_item_ref_v1(uuid,uuid,uuid,text)') is not null
     and to_regprocedure('public.app_customer_correction_prepare_v2(uuid,text,jsonb)') is not null
@@ -443,6 +461,10 @@ try {
     and not has_function_privilege('authenticated','public.app_customer_correction_replacement_upload_confirm_v1(uuid,text,text,bigint,text,text,text,text,text,text,timestamptz,text)','EXECUTE')
     and has_function_privilege('service_role','public.app_customer_correction_replacement_resolution_v1(uuid,text)','EXECUTE')
     and not has_function_privilege('authenticated','public.app_customer_correction_replacement_resolution_v1(uuid,text)','EXECUTE')
+    and has_function_privilege('service_role','public.app_customer_correction_replacement_resolution_v2(uuid,text)','EXECUTE')
+    and not has_function_privilege('authenticated','public.app_customer_correction_replacement_resolution_v2(uuid,text)','EXECUTE')
+    and has_function_privilege('service_role','public.app_customer_correction_replacement_withdraw_v1(uuid,text,text,text,text,text,text,timestamptz,text)','EXECUTE')
+    and not has_function_privilege('authenticated','public.app_customer_correction_replacement_withdraw_v1(uuid,text,text,text,text,text,text,timestamptz,text)','EXECUTE')
     and not has_function_privilege('service_role','public.app_evidence_review_current_correction_handoff_v1(uuid,text,text)','EXECUTE')
     and has_function_privilege('service_role','public.app_customer_correction_handoff_read_v1(uuid,text)','EXECUTE')
     and not has_function_privilege('authenticated','public.app_customer_correction_handoff_read_v1(uuid,text)','EXECUTE')
@@ -450,15 +472,23 @@ try {
     and not has_function_privilege('authenticated','public.app_customer_correction_handoff_read_v2(uuid,text)','EXECUTE')
     and has_function_privilege('service_role','public.app_customer_correction_handoff_read_v3(uuid,text)','EXECUTE')
     and not has_function_privilege('authenticated','public.app_customer_correction_handoff_read_v3(uuid,text)','EXECUTE')
+    and has_function_privilege('service_role','public.app_customer_correction_handoff_read_v4(uuid,text)','EXECUTE')
+    and not has_function_privilege('authenticated','public.app_customer_correction_handoff_read_v4(uuid,text)','EXECUTE')
+    and has_function_privilege('service_role','public.app_customer_correction_handoff_read_v5(uuid,text)','EXECUTE')
+    and not has_function_privilege('authenticated','public.app_customer_correction_handoff_read_v5(uuid,text)','EXECUTE')
     and has_function_privilege('service_role','public.app_customer_correction_signer_context_v1(uuid,text)','EXECUTE')
     and not has_function_privilege('authenticated','public.app_customer_correction_signer_context_v1(uuid,text)','EXECUTE')
     and not has_function_privilege('service_role','public.app_customer_correction_challenge_issue_v2(uuid,text,jsonb,text,text,timestamptz,text,text,text,text,text,text)','EXECUTE')
     and not has_function_privilege('authenticated','public.app_customer_correction_challenge_issue_v2(uuid,text,jsonb,text,text,timestamptz,text,text,text,text,text,text)','EXECUTE')
-    and has_function_privilege('service_role','public.app_customer_correction_challenge_issue_v3(uuid,text,jsonb,text,text,text,timestamptz,text,text,text,text,text,text)','EXECUTE')
+    and not has_function_privilege('service_role','public.app_customer_correction_challenge_issue_v3(uuid,text,jsonb,text,text,text,timestamptz,text,text,text,text,text,text)','EXECUTE')
     and not has_function_privilege('authenticated','public.app_customer_correction_challenge_issue_v3(uuid,text,jsonb,text,text,text,timestamptz,text,text,text,text,text,text)','EXECUTE')
+    and has_function_privilege('service_role','public.app_customer_correction_challenge_issue_v4(uuid,text,jsonb,jsonb,text,text,text,timestamptz,text,text,text,text,text,text)','EXECUTE')
+    and not has_function_privilege('authenticated','public.app_customer_correction_challenge_issue_v4(uuid,text,jsonb,jsonb,text,text,text,timestamptz,text,text,text,text,text,text)','EXECUTE')
     and not has_function_privilege('service_role','public.app_customer_correction_finalize_v1(uuid,text,uuid,text,text,text,text,text,text,text,text)','EXECUTE')
-    and has_function_privilege('service_role','public.app_customer_correction_finalize_v2(uuid,text,uuid,text,text,text,text,text,text,text)','EXECUTE')
+    and not has_function_privilege('service_role','public.app_customer_correction_finalize_v2(uuid,text,uuid,text,text,text,text,text,text,text)','EXECUTE')
     and not has_function_privilege('authenticated','public.app_customer_correction_finalize_v2(uuid,text,uuid,text,text,text,text,text,text,text)','EXECUTE')
+    and has_function_privilege('service_role','public.app_customer_correction_finalize_v3(uuid,text,uuid,text,text,text,text,text,text,text)','EXECUTE')
+    and not has_function_privilege('authenticated','public.app_customer_correction_finalize_v3(uuid,text,uuid,text,text,text,text,text,text,text)','EXECUTE')
     and not has_function_privilege('service_role','public.app_customer_correction_item_ref_v1(uuid,uuid,uuid,text)','EXECUTE')
     and not has_function_privilege('service_role','public.app_customer_correction_prepare_v2(uuid,text,jsonb)','EXECUTE')
     and not has_function_privilege('service_role','public.app_workforce_authorize_v1(uuid,text,uuid,uuid,timestamptz)','EXECUTE')

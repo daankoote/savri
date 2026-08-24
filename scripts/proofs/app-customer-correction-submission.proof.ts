@@ -48,10 +48,18 @@ const allFacts = Array.from({ length: 10 }, (_, index) => ({
   itemRef: itemRef(index + 1),
   correctedValue: index === 2 ? "871234567890123456" : `Value ${index}`,
 }));
+const manualFactResolutions = (
+  responses: readonly { itemRef: string; correctedValue: string }[],
+) => responses.map((response) => ({
+  itemRefs: [response.itemRef],
+  resolutionType: "MANUAL",
+  sources: [],
+}));
 
 for (const responses of [one, threeDomain, crossDocument, allFacts]) {
   const parsed = parseCorrectionChallengeRequest({
     caseRef,
+    factResolutions: manualFactResolutions(responses),
     responses,
     typedFullName: "Proof Person",
   });
@@ -61,13 +69,19 @@ for (const responses of [one, threeDomain, crossDocument, allFacts]) {
   );
 }
 assert(
-  parseCorrectionChallengeRequest({
+      parseCorrectionChallengeRequest({
         caseRef,
+        factResolutions: [],
         responses: [],
         typedFullName: "Proof Person",
       }) === null &&
     parseCorrectionChallengeRequest({
         caseRef,
+        factResolutions: [{
+          itemRefs: [itemRef(1)],
+          resolutionType: "MANUAL",
+          sources: [],
+        }],
         typedFullName: "Proof Person",
         responses: [
           { itemRef: itemRef(1), correctedValue: "A" },
@@ -76,6 +90,11 @@ assert(
       }) === null &&
     parseCorrectionChallengeRequest({
         caseRef,
+        factResolutions: [{
+          itemRefs: [itemRef(1)],
+          resolutionType: "MANUAL",
+          sources: [],
+        }],
         typedFullName: "Proof Person",
         responses: [{
           itemRef: itemRef(1),
@@ -88,6 +107,7 @@ assert(
 assert(
   parseCorrectionChallengeRequest({
         caseRef,
+        factResolutions: [],
         typedFullName: "Proof Person",
         responses: [{
           itemRef: itemRef(1),
@@ -96,6 +116,11 @@ assert(
       }) !== null &&
     parseCorrectionChallengeRequest({
         caseRef,
+        factResolutions: [{
+          itemRefs: [itemRef(1)],
+          resolutionType: "MANUAL",
+          sources: [],
+        }],
         typedFullName: "Proof Person",
         responses: [{
           itemRef: itemRef(1),
@@ -192,11 +217,11 @@ assert(
     signerAuthorityMigration.includes("current_account_owner_person_v1") &&
     signerAuthorityMigration.includes("current_authorized_representative_v1") &&
     signerAuthorityMigration.includes("customer_type in ('zakelijk', 'vve')") &&
-    challenge.includes("app_customer_correction_challenge_issue_v3") &&
+    challenge.includes("app_customer_correction_challenge_issue_v4") &&
     challenge.includes("app_customer_correction_signer_context_v1") &&
     challenge.indexOf("app_customer_correction_signer_context_v1") <
       challenge.indexOf("generateSigningOtp()") &&
-    finalize.includes("app_customer_correction_finalize_v2"),
+    finalize.includes("app_customer_correction_finalize_v3"),
   "runtime_reuse_or_secret_boundary_failed",
 );
 

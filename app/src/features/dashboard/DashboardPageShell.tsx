@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import { ActivePrivateDashboard } from "./ActivePrivateDashboard";
 import { ContactChoicePanel } from "./ContactChoicePanel";
@@ -15,12 +15,22 @@ type PortalSection = "active" | "history" | "contact";
 export function DashboardPageShell({ navigate }: { navigate: AppNavigate }) {
   const auth = useAuth();
   const [activeSection, setActiveSection] = useState<PortalSection>("active");
-  const [selectedDossierId, setSelectedDossierId] = useState<string | null>(null);
+  const [selectedDossierId, setSelectedDossierId] = useState<string | null>(
+    null,
+  );
   const authDossiers = auth.summary?.dossiers ?? [];
-  const selectedDossierExists = authDossiers.some((dossier) => dossier.dossier_id === selectedDossierId);
-  const effectiveDossierId = selectedDossierExists ? selectedDossierId : authDossiers[0]?.dossier_id ?? null;
+  const selectedDossierExists = authDossiers.some((dossier) =>
+    dossier.dossier_id === selectedDossierId
+  );
+  const effectiveDossierId = selectedDossierExists
+    ? selectedDossierId
+    : authDossiers[0]?.dossier_id ?? null;
   const cacheScope = auth.session && auth.summary ? auth.session.user.id : null;
-  const dashboardRead = useDashboardRead(auth.session?.access_token ?? null, cacheScope, effectiveDossierId);
+  const dashboardRead = useDashboardRead(
+    auth.session?.access_token ?? null,
+    cacheScope,
+    effectiveDossierId,
+  );
   const selectedCaseRef = activeSection === "active"
     ? authDossiers.find((dossier) => dossier.dossier_id === effectiveDossierId)
       ?.case_reference ?? null
@@ -30,6 +40,11 @@ export function DashboardPageShell({ navigate }: { navigate: AppNavigate }) {
     cacheScope,
     selectedCaseRef,
   );
+  const actionableDocumentWorkflow = activeSection === "active" &&
+    correctionHandoff.status === "ready" &&
+    correctionHandoff.model.handoff !== null;
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const previousActionableWorkflow = useRef(false);
 
   function startNewApplication() {
     clearSignupIntakeSession();
@@ -43,27 +58,59 @@ export function DashboardPageShell({ navigate }: { navigate: AppNavigate }) {
     }
   }, [authDossiers, selectedDossierExists]);
 
+  useEffect(() => {
+    if (
+      actionableDocumentWorkflow && !previousActionableWorkflow.current
+    ) {
+      setSidebarOpen(false);
+    } else if (
+      !actionableDocumentWorkflow && previousActionableWorkflow.current
+    ) {
+      setSidebarOpen(true);
+    }
+    previousActionableWorkflow.current = actionableDocumentWorkflow;
+  }, [actionableDocumentWorkflow]);
+
   const dossierOptions = useMemo(() => authDossiers, [authDossiers]);
 
   return (
-    <main className="portal-shell">
-      <DashboardSidebar activeSection={activeSection} navigate={navigate} onSelectSection={setActiveSection} />
+    <main
+      className={sidebarOpen
+        ? "portal-shell"
+        : "portal-shell portal-shell--sidebar-collapsed"}
+    >
+      <DashboardSidebar
+        activeSection={activeSection}
+        collapsed={!sidebarOpen}
+        id="portal-dashboard-sidebar"
+        navigate={navigate}
+        onToggle={() => setSidebarOpen((current) => !current)}
+        onSelectSection={setActiveSection}
+        showToggle={actionableDocumentWorkflow}
+      />
       <section className="portal-main" aria-live="polite">
-        {activeSection === "active" ? (
-          <ActivePrivateDashboard
-            accessToken={auth.session?.access_token ?? null}
-            correctionHandoff={correctionHandoff}
-            dashboardRead={dashboardRead}
-            dossierOptions={dossierOptions}
-            onSelectDossier={setSelectedDossierId}
-            onRefreshSelectedDossier={dashboardRead.refreshSelectedDossier}
-            onStartNewApplication={startNewApplication}
-            selectedDossierId={effectiveDossierId}
-          />
-        ) : null}
-        {activeSection === "history" ? (
-          <TodoPlaceholderPanel title="History" note="Afgeronde jaren en eerdere dossiers komen later hier." />
-        ) : null}
+        {activeSection === "active"
+          ? (
+            <ActivePrivateDashboard
+              accessToken={auth.session?.access_token ?? null}
+              correctionHandoff={correctionHandoff}
+              dashboardRead={dashboardRead}
+              dossierOptions={dossierOptions}
+              onSelectDossier={setSelectedDossierId}
+              onRefreshSelectedDossier={dashboardRead.refreshSelectedDossier}
+              onStartNewApplication={startNewApplication}
+              selectedDossierId={effectiveDossierId}
+            />
+          )
+          : null}
+        {activeSection === "history"
+          ? (
+            <TodoPlaceholderPanel
+              title="History"
+              note="Afgeronde jaren en eerdere dossiers komen later hier."
+            />
+          )
+          : null}
         {activeSection === "contact" ? <ContactChoicePanel /> : null}
       </section>
     </main>

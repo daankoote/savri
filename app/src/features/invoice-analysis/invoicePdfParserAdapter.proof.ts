@@ -44,7 +44,7 @@ export async function runInvoicePdfParserAdapterProof(
     "parser kind must stay stable",
   );
   assert(
-    result.parser_version === "2026-08-04-unified-document-v5",
+    result.parser_version === "2026-08-23-unified-document-v7",
     "parser version must include unified deterministic observations",
   );
   assert(

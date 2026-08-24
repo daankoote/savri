@@ -11,7 +11,6 @@ import { AppHeader } from "../../shared/components/AppHeader";
 import { useAuth } from "../auth/AuthProvider";
 import { clearDashboardReadCache } from "../dashboard/dashboardReadCache";
 import { parseInvoicePdfInput } from "../invoice-analysis/invoicePdfParserAdapter";
-import { DocumentFirstCheckMatrix } from "./DocumentFirstCheckMatrix";
 import { DocumentFirstDocumentsStep } from "./DocumentFirstDocumentsStep";
 import {
   createSigningCustomerState,
@@ -36,7 +35,10 @@ import {
 } from "./documentFirstSignupSelectors";
 import type { DocumentReviewRow } from "./documentReviewMatrix";
 import { OrganizationDocumentStepPanel } from "./OrganizationDocumentStepPanel";
-import { selectUnifiedFactPresentation } from "./presentation/factPresentationModel";
+import {
+  type FactPresentationSource,
+  selectUnifiedFactPresentation,
+} from "./presentation/factPresentationModel";
 import { PersonalInfoSection } from "./PersonalInfoSection";
 import { SignupFlowNavigation } from "./SignupFlowNavigation";
 import {
@@ -393,18 +395,17 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
     });
   };
 
-  const confirmRow = (row: DocumentReviewRow) => {
-    if (
-      !row.proposedValue ||
-      row.decisionStatus === "blocked" || row.decisionStatus === "ambiguous" ||
-      row.decisionStatus === "missing" ||
-      row.decisionStatus === "not_applicable"
-    ) return;
+  const confirmRow = (
+    row: DocumentReviewRow,
+    selectedValue?: DocumentFirstFactValue,
+  ) => {
+    const value = selectedValue ?? row.proposedValue;
+    if (!value) return;
     dispatch({
       type: "confirm_fact",
       factKey: row.scopeKey,
       canonicalFactKey: row.factKey,
-      value: row.proposedValue,
+      value,
       sourceDocuments: row.sourceDocuments,
       confirmedAt: new Date().toISOString(),
       decisionStatus: row.decisionStatus,
@@ -507,6 +508,49 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
     });
   };
 
+  const invalidateRowConfirmation = (row: DocumentReviewRow) => {
+    dispatch({
+      type: "invalidate_fact_confirmation",
+      factKey: row.scopeKey,
+    });
+  };
+
+  const selectSourceRow = (
+    row: DocumentReviewRow,
+    source: FactPresentationSource,
+  ) => {
+    if (source.sourceType === "user") return;
+    dispatch({
+      type: "clear_manual_correction",
+      factKey: row.scopeKey,
+    });
+    dispatch({
+      type: "confirm_fact",
+      factKey: row.scopeKey,
+      canonicalFactKey: row.factKey,
+      value: source.observedValue,
+      sourceDocuments: [{
+        documentId: source.sourceId,
+        documentType: source.sourceType,
+      }],
+      confirmedAt: new Date().toISOString(),
+      decisionStatus: "review_required",
+      normalizationApplied: false,
+      pendingPersistence: false,
+    });
+  };
+
+  const restoreRowSource = (row: DocumentReviewRow) => {
+    dispatch({
+      type: "invalidate_fact_confirmation",
+      factKey: row.scopeKey,
+    });
+    dispatch({
+      type: "clear_manual_correction",
+      factKey: row.scopeKey,
+    });
+  };
+
   const replaceRowDocument = (
     target: Pick<DocumentReviewRow, "sourceDocuments">,
   ) => {
@@ -598,31 +642,22 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
       <>
         <DocumentFirstDocumentsStep
           activeLocationId={activeLocationId}
+          canContinue={completeness.documents}
           dispatch={dispatch}
           draft={draft}
           draftGeneration={draftGenerationRef.current}
           isDraftGenerationCurrent={isDraftGenerationCurrent}
+          onConfirm={confirmRow}
+          onContinue={() => changeActiveStep("signing")}
+          onCorrect={correctRow}
+          onInvalidateConfirmation={invalidateRowConfirmation}
+          onReplaceDocument={replaceRowDocument}
+          onRestoreSource={restoreRowSource}
+          onSelectSource={selectSourceRow}
           onSelectLocation={setActiveLocationId}
+          reviewChargers={presentation.chargers}
+          reviewLocations={presentation.locations}
         />
-        <section
-          aria-labelledby="document-first-review-title"
-          className="signup-section"
-          id="signup-document-review"
-        >
-          <div className="signup-section-header">
-            <p className="eyebrow">Upload en controle</p>
-            <h2 id="document-first-review-title">
-              Controleer de documentgegevens
-            </h2>
-          </div>
-          <DocumentFirstCheckMatrix
-            chargers={presentation.chargers}
-            locations={presentation.locations}
-            onConfirm={confirmRow}
-            onCorrect={correctRow}
-            onReplaceDocument={replaceRowDocument}
-          />
-        </section>
       </>
     )
     : (
@@ -811,6 +846,7 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
               <SignupFlowNavigation
                 activeStep={activeStep}
                 canContinue={canContinue}
+                showNext={activeStep !== "documents"}
                 onStepChange={changeActiveStep}
               />
             </DocumentFirstSignupFlow>

@@ -22,17 +22,15 @@ export function OrganizationDocumentStepPanel({
   onDocumentChange,
   rows,
 }: OrganizationDocumentStepPanelProps) {
-  const helpText = document.parseStatus === "parsing"
-    ? "Documentgegevens worden lokaal uitgelezen…"
-    : document.file && !hasObservation
+  const helpText = document.parseStatus !== "parsing" &&
+      document.file && !hasObservation
     ? "Geen gegevens gevonden."
-    : "Upload één uittreksel voor dit zakelijke of VvE-account.";
+    : undefined;
 
   return (
     <div className="document-groups" id="organization-document-upload">
       <DocumentUploadSlot
         document={document}
-        documentBinding="Account"
         helpText={helpText}
         onChange={onDocumentChange}
         scope="Accountdocument"

@@ -371,7 +371,7 @@ pass();
 const invoiceDateOnlyResult: InvoicePdfParserResult = {
   ok: true,
   parser_kind: "invoice_pdf_parser",
-  parser_version: "2026-08-04-unified-document-v5",
+  parser_version: "2026-08-23-unified-document-v7",
   source_kind: "pdf",
   observed_fields: {
     customer_name: null,
@@ -397,7 +397,7 @@ const invoiceDateOnlyResult: InvoicePdfParserResult = {
   ean_candidates: [],
   energy_document_observation: {} as EnergyDocumentObservation,
   observation_envelope: {
-    parserVersion: "2026-08-04-unified-document-v5",
+    parserVersion: "2026-08-23-unified-document-v7",
     contentFingerprint: "fixture-digest",
     pageCount: 1,
     documentTypeCandidates: [],
@@ -411,7 +411,7 @@ const invoiceDateOnlyResult: InvoicePdfParserResult = {
   },
   limitations: [],
   summary: {
-    mode: "unified_document_extract_app_adapter_v5",
+    mode: "unified_document_extract_app_adapter_v7",
     reason: "client_pdf_text_extract_completed",
     byte_length: 1,
     pdf_text_length: 1,

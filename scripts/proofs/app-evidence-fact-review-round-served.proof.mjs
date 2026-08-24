@@ -173,6 +173,7 @@ function fixture(prefix, authUserId) {
   return Object.freeze({
     prefix,
     authUserId,
+    fixtureHash: authUserId.replaceAll("-", "").padEnd(64, "0"),
     customerIdentityId: uuid(),
     email: `${prefix}@example.test`,
     customerId: uuid(),
@@ -217,6 +218,9 @@ function pilotState(runtime) {
       (select count(*)
        from public.app_customer_correction_replacement_candidates candidate
        join pilot on pilot.id=candidate.case_id),
+      (select count(*)
+       from public.app_customer_correction_replacement_candidate_events event
+       join pilot on pilot.id=event.case_id),
       (select count(*) from public.app_evidence_review_customer_submissions s
        join pilot on pilot.id=s.case_id),
       (select count(*) from public.app_signup_signing_challenges ch
@@ -246,6 +250,8 @@ function relevantFingerprint(runtime) {
     (select count(*) from public.app_evidence_review_correction_handoffs),
     (select count(*) from public.app_customer_correction_replacement_uploads),
     (select count(*) from public.app_customer_correction_replacement_candidates),
+    (select count(*)
+      from public.app_customer_correction_replacement_candidate_events),
     (select count(*) from public.app_parser_observation_envelopes
       where source_kind='correction_replacement_candidate'),
     (select count(*) from public.app_evidence_review_customer_submissions),
@@ -429,7 +435,7 @@ function setupFixture(runtime, f, seniority = "reviewer") {
           jsonb_build_object('fact_id','serial','fact_key','serialNumber','label','Serienummer',
             'value','PROOF-SERIAL','resolution_state','review_required','required',true,
             'location_id','location-1','charger_id','charger-1')
-        ))), '${HASH}',clock_timestamp());
+        ))), '${f.fixtureHash}',clock_timestamp());
     insert into public.app_signup_promotions (
       id,intake_id,customer_id,identity_id,service_recipient_party_id,
       contact_party_id,case_id,signing_snapshot_id,mandate_id,
@@ -438,7 +444,8 @@ function setupFixture(runtime, f, seniority = "reviewer") {
       idempotency_key,actor_type,actor_ref,environment,promoted_at
     ) values ('${f.promotionId}',gen_random_uuid(),'${f.customerId}',gen_random_uuid(),
       '${f.partyId}','${f.partyId}','${f.caseId}','${f.snapshotId}',gen_random_uuid(),
-      gen_random_uuid(),'particulier','${HASH}','${HASH}','${HASH}',
+      gen_random_uuid(),'particulier','${f.fixtureHash}','${f.fixtureHash}',
+      '${f.fixtureHash}',
       '${f.prefix}-promotion','${f.prefix}-promotion','system','proof:${f.prefix}',
       'local',clock_timestamp());
     insert into public.app_evidence_files (
@@ -508,7 +515,15 @@ async function requestCorrectionChallenge(
   key,
   responses,
   typedFullName,
+  factResolutions = null,
 ) {
+  const submittedFactResolutions = factResolutions ?? responses
+    .filter((response) => typeof response.correctedValue === "string")
+    .map((response) => ({
+      itemRefs: [response.itemRef],
+      resolutionType: "MANUAL",
+      sources: [],
+    }));
   return await jsonRequest(
     `${runtime.apiUrl}/functions/v1/api-app-customer-correction-signing-challenge`,
     {
@@ -520,7 +535,12 @@ async function requestCorrectionChallenge(
         "Content-Type": "application/json",
         "Idempotency-Key": key,
       },
-      body: JSON.stringify({ caseRef: f.caseRef, responses, typedFullName }),
+      body: JSON.stringify({
+        caseRef: f.caseRef,
+        responses,
+        factResolutions: submittedFactResolutions,
+        typedFullName,
+      }),
     },
   );
 }
@@ -784,6 +804,22 @@ export function cleanupFixture(runtime, f) {
     runtime,
     `begin;
     set local session_replication_role = replica;
+    delete from public.app_evidence_review_customer_submission_fact_resolution_sources
+      where fact_resolution_id in (
+        select resolution.id
+        from public.app_evidence_review_customer_submission_fact_resolutions resolution
+        join public.app_evidence_review_customer_submissions submission
+          on submission.id=resolution.submission_id
+        where submission.case_id='${f.caseId}'
+      );
+    delete from public.app_evidence_review_customer_submission_fact_resolutions
+      where submission_id in (select id
+        from public.app_evidence_review_customer_submissions
+        where case_id='${f.caseId}');
+    delete from public.app_customer_correction_fact_resolution_challenge_bindings
+      where correction_handoff_id in (select id
+        from public.app_evidence_review_correction_handoffs
+        where case_id='${f.caseId}');
     delete from public.app_customer_correction_signer_evidence_bindings
       where case_id='${f.caseId}';
     delete from public.app_customer_correction_signer_challenge_bindings
@@ -829,6 +865,8 @@ export function cleanupFixture(runtime, f) {
         from public.app_customer_correction_replacement_candidates
         where case_id='${f.caseId}'
       );
+    delete from public.app_customer_correction_replacement_candidate_events
+      where case_id='${f.caseId}';
     delete from public.app_customer_correction_replacement_candidates
       where case_id='${f.caseId}';
     delete from public.app_customer_correction_replacement_uploads
@@ -896,6 +934,9 @@ export function residueCount(runtime, f) {
     (select count(*) from public.app_customer_correction_replacement_candidates
       where case_id='${f.caseId}') +
     (select count(*)
+      from public.app_customer_correction_replacement_candidate_events
+      where case_id='${f.caseId}') +
+    (select count(*)
       from public.app_evidence_review_customer_submission_replacements r
       join public.app_evidence_review_customer_submissions s
         on s.id=r.submission_id
@@ -908,6 +949,23 @@ export function residueCount(runtime, f) {
       where case_id='${f.caseId}') +
     (select count(*) from public.app_customer_correction_signer_evidence_bindings
       where case_id='${f.caseId}') +
+    (select count(*)
+      from public.app_customer_correction_fact_resolution_challenge_bindings b
+      join public.app_evidence_review_correction_handoffs h
+        on h.id=b.correction_handoff_id
+      where h.case_id='${f.caseId}') +
+    (select count(*)
+      from public.app_evidence_review_customer_submission_fact_resolutions r
+      join public.app_evidence_review_customer_submissions s
+        on s.id=r.submission_id
+      where s.case_id='${f.caseId}') +
+    (select count(*)
+      from public.app_evidence_review_customer_submission_fact_resolution_sources source
+      join public.app_evidence_review_customer_submission_fact_resolutions r
+        on r.id=source.fact_resolution_id
+      join public.app_evidence_review_customer_submissions s
+        on s.id=r.submission_id
+      where s.case_id='${f.caseId}') +
     (select count(*) from public.app_customer_access_grants
       where auth_user_id='${f.authUserId}' and customer_id='${f.customerId}') +
     (select count(*) from public.app_workforce_identities
@@ -1128,7 +1186,7 @@ async function main() {
     const customerSerialized = JSON.stringify(customerRead.body);
     assert(
       customerRead.status === 200 &&
-        customerRead.body?.schemaVersion === "customer-correction-handoff-v3" &&
+        customerRead.body?.schemaVersion === "customer-correction-handoff-v5" &&
         customerRead.body?.caseRef === f.caseRef &&
         customerRead.body?.handoff?.signerAuthority?.status === "available" &&
         customerRead.body?.handoff?.signerAuthority
@@ -1382,7 +1440,12 @@ async function main() {
         worklist.status === 200 &&
         reentered?.overallReviewStatus === "TO_REVIEW" &&
         reentered?.unresolvedFactCount === 1,
-      "post_correction_projection_invalid",
+      `post_correction_projection_invalid:${answered.status}:` +
+        `${answered.body?.handoff === null}:` +
+        `${postCorrection.overallReviewStatus}:` +
+        `${postCorrection.reviewManifestHash !== current.reviewManifestHash}:` +
+        `${worklist.status}:${reentered?.overallReviewStatus ?? "NONE"}:` +
+        `${reentered?.unresolvedFactCount ?? "NONE"}`,
     );
   } catch (error) {
     proofError = error;

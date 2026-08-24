@@ -1,4 +1,8 @@
 import { payloadHash } from "./app_foundation.ts";
+import {
+  CUSTOMER_CORRECTION_RESOLUTION_TYPES,
+  type CustomerCorrectionResolutionType,
+} from "./app_customer_correction_resolution.ts";
 import { safeString, validUuid } from "./signup_signing.ts";
 
 export const CUSTOMER_CORRECTION_ACTIONS = [
@@ -37,8 +41,21 @@ export type CorrectionResponse =
 export type CorrectionChallengeRequest = {
   caseRef: string;
   responses: CorrectionResponse[];
+  factResolutions: CorrectionFactResolution[];
   typedFullName: string;
 };
+
+export type CorrectionFactResolutionSource = Readonly<{
+  candidateRef: string;
+  relationship: "direct" | "supporting";
+  selected: boolean;
+}>;
+
+export type CorrectionFactResolution = Readonly<{
+  itemRefs: readonly string[];
+  resolutionType: CustomerCorrectionResolutionType;
+  sources: readonly CorrectionFactResolutionSource[];
+}>;
 
 export type CorrectionFinalizeRequest = {
   caseRef: string;
@@ -78,7 +95,12 @@ export function parseCorrectionChallengeRequest(
 ): CorrectionChallengeRequest | null {
   if (
     !isRecord(value) ||
-    !hasExactKeys(value, ["caseRef", "responses", "typedFullName"])
+    !hasExactKeys(value, [
+      "caseRef",
+      "factResolutions",
+      "responses",
+      "typedFullName",
+    ])
   ) {
     return null;
   }
@@ -87,7 +109,9 @@ export function parseCorrectionChallengeRequest(
   if (
     !caseRef || !typedFullName || typedFullName.length > 200 ||
     !Array.isArray(value.responses) ||
-    value.responses.length < 1 || value.responses.length > 100
+    value.responses.length < 1 || value.responses.length > 100 ||
+    !Array.isArray(value.factResolutions) ||
+    value.factResolutions.length > 100
   ) return null;
   const responses: CorrectionResponse[] = [];
   const itemRefs = new Set<string>();
@@ -132,7 +156,73 @@ export function parseCorrectionChallengeRequest(
       ...(hasReplacementCandidate ? { replacementCandidateRef } : {}),
     } as CorrectionResponse);
   }
-  return { caseRef, responses, typedFullName };
+  const correctedItemRefs = new Set(
+    responses.flatMap((response) =>
+      "correctedValue" in response ? [response.itemRef] : []
+    ),
+  );
+  const resolvedItemRefs = new Set<string>();
+  const factResolutions: CorrectionFactResolution[] = [];
+  for (const resolution of value.factResolutions) {
+    if (
+      !isRecord(resolution) ||
+      !hasExactKeys(resolution, ["itemRefs", "resolutionType", "sources"]) ||
+      !Array.isArray(resolution.itemRefs) ||
+      resolution.itemRefs.length < 1 || resolution.itemRefs.length > 100 ||
+      typeof resolution.resolutionType !== "string" ||
+      !CUSTOMER_CORRECTION_RESOLUTION_TYPES.includes(
+        resolution.resolutionType as CustomerCorrectionResolutionType,
+      ) ||
+      !Array.isArray(resolution.sources) || resolution.sources.length > 100
+    ) return null;
+    const resolutionItemRefs: string[] = [];
+    for (const itemRef of resolution.itemRefs) {
+      if (
+        typeof itemRef !== "string" || !ITEM_REFERENCE_RE.test(itemRef) ||
+        !correctedItemRefs.has(itemRef) || resolvedItemRefs.has(itemRef)
+      ) return null;
+      resolvedItemRefs.add(itemRef);
+      resolutionItemRefs.push(itemRef);
+    }
+    const sources: CorrectionFactResolutionSource[] = [];
+    const candidateRefs = new Set<string>();
+    let selectedCount = 0;
+    for (const source of resolution.sources) {
+      if (
+        !isRecord(source) ||
+        !hasExactKeys(source, ["candidateRef", "relationship", "selected"]) ||
+        typeof source.candidateRef !== "string" ||
+        !REPLACEMENT_CANDIDATE_REFERENCE_RE.test(source.candidateRef) ||
+        (source.relationship !== "direct" &&
+          source.relationship !== "supporting") ||
+        typeof source.selected !== "boolean" ||
+        candidateRefs.has(source.candidateRef)
+      ) return null;
+      candidateRefs.add(source.candidateRef);
+      if (source.selected) selectedCount += 1;
+      sources.push(Object.freeze({
+        candidateRef: source.candidateRef,
+        relationship: source.relationship,
+        selected: source.selected,
+      }));
+    }
+    if (
+      (resolution.resolutionType === "SOURCE_CONFLICT_SELECTED" &&
+        selectedCount !== 1) ||
+      (resolution.resolutionType !== "SOURCE_CONFLICT_SELECTED" &&
+        selectedCount !== 0)
+    ) return null;
+    factResolutions.push(Object.freeze({
+      itemRefs: Object.freeze(resolutionItemRefs),
+      resolutionType: resolution.resolutionType as CustomerCorrectionResolutionType,
+      sources: Object.freeze(sources),
+    }));
+  }
+  if (
+    resolvedItemRefs.size !== correctedItemRefs.size ||
+    [...correctedItemRefs].some((itemRef) => !resolvedItemRefs.has(itemRef))
+  ) return null;
+  return { caseRef, responses, factResolutions, typedFullName };
 }
 
 export function parseCorrectionFinalizeRequest(
@@ -174,6 +264,7 @@ export async function correctionResponsePayloadHash(
   return await payloadHash({
     case_ref: request.caseRef,
     responses: request.responses,
+    fact_resolutions: request.factResolutions,
     typed_full_name: request.typedFullName,
     expected_signer_authority_ref: expectedSignerAuthorityRef,
     signing_method: "typed_name_otp_v1",

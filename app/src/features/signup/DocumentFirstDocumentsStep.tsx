@@ -1,4 +1,9 @@
 import { type Dispatch, useRef } from "react";
+import {
+  allRequiredDocumentEvidenceReady,
+  DocumentEvidenceWorkflow,
+} from "../documents/DocumentEvidenceWorkflow.tsx";
+import { createCustomerDocumentWorkflowModel } from "../documents/CustomerDocumentWorkflowController.ts";
 import { getConfirmableEnergyEanCandidates } from "../invoice-analysis/energyEanCandidateExtractor";
 import { parseInvoicePdfInput } from "../invoice-analysis/invoicePdfParserAdapter";
 import { projectParserObservationForCurrentIntake } from "../invoice-analysis/parserObservationProjection.ts";
@@ -8,12 +13,20 @@ import {
 } from "./documentFirstSignupModel";
 import { documentFirstSignupToLegacyDraft } from "./documentFirstSignupModel";
 import { projectEnergyEanCandidates } from "./documentSemanticProjector";
-import { DocumentUploadSlot } from "./DocumentUploadSlot";
+import {
+  createDocumentUploadCardModel,
+  isDocumentUploadReady,
+} from "./DocumentUploadSlot";
 import {
   removeSignupDocument,
   uploadSignupDocument,
 } from "./signupQuarantineUploadClient";
 import { SignupLocationTabs } from "./SignupLocationTabs";
+import { createDocumentFirstWorkflowGroups } from "./DocumentFirstCheckMatrix.tsx";
+import type { DocumentFirstFactValue } from "./documentFirstSignupModel.ts";
+import type { DocumentReviewRow } from "./documentReviewMatrix.ts";
+import type { FactPresentationSection } from "./presentation/factPresentationModel.ts";
+import type { FactPresentationSource } from "./presentation/factPresentationModel.ts";
 import type {
   ChargerDocumentDraft,
   ConnectionDeclarationDraft,
@@ -27,15 +40,41 @@ type DocumentFirstDocumentsStepProps = {
   draftGeneration: number;
   isDraftGenerationCurrent: (generation: number) => boolean;
   onSelectLocation: (locationId: string) => void;
+  reviewChargers: FactPresentationSection[];
+  reviewLocations: FactPresentationSection[];
+  onConfirm: (
+    row: DocumentReviewRow,
+    value?: DocumentFirstFactValue,
+  ) => void;
+  onCorrect: (row: DocumentReviewRow, value: DocumentFirstFactValue) => void;
+  onInvalidateConfirmation: (row: DocumentReviewRow) => void;
+  onReplaceDocument: (row: DocumentReviewRow) => void;
+  onRestoreSource: (row: DocumentReviewRow) => void;
+  onSelectSource: (
+    row: DocumentReviewRow,
+    source: FactPresentationSource,
+  ) => void;
+  canContinue: boolean;
+  onContinue: () => void;
 };
 
 export function DocumentFirstDocumentsStep({
   activeLocationId,
+  canContinue,
   dispatch,
   draft,
   draftGeneration,
   isDraftGenerationCurrent,
+  onConfirm,
+  onContinue,
+  onCorrect,
+  onInvalidateConfirmation,
+  onReplaceDocument,
+  onRestoreSource,
+  onSelectSource,
   onSelectLocation,
+  reviewChargers,
+  reviewLocations,
 }: DocumentFirstDocumentsStepProps) {
   const energyAttempts = useRef(new Map<string, number>());
   const chargerAttempts = useRef(new Map<string, number>());
@@ -74,9 +113,9 @@ export function DocumentFirstDocumentsStep({
     energyAbortControllers.current.get(locationId)?.abort();
     const documents = [
       draft.energyDocumentsByLocationId[locationId],
-      ...(draft.chargerOrderByLocationId[locationId] || []).flatMap((chargerId) =>
-        draft.chargerDocumentsByChargerId[chargerId] || []
-      ),
+      ...(draft.chargerOrderByLocationId[locationId] || []).flatMap((
+        chargerId,
+      ) => draft.chargerDocumentsByChargerId[chargerId] || []),
     ].filter(
       (document): document is LocationDocumentDraft | ChargerDocumentDraft =>
         Boolean(document),
@@ -153,8 +192,10 @@ export function DocumentFirstDocumentsStep({
       file: document.file,
       signal: controller.signal,
     });
-    if (energyAttempts.current.get(locationId) !== attempt ||
-      !isDraftGenerationCurrent(generation) || (!upload.ok && upload.aborted)) return;
+    if (
+      energyAttempts.current.get(locationId) !== attempt ||
+      !isDraftGenerationCurrent(generation) || (!upload.ok && upload.aborted)
+    ) return;
     if (upload.ok && upload.receipt.parserObservation) {
       const envelope = projectParserObservationForCurrentIntake(
         upload.receipt.parserObservation,
@@ -283,8 +324,10 @@ export function DocumentFirstDocumentsStep({
       file: document.file,
       signal: controller.signal,
     });
-    if (chargerAttempts.current.get(chargerId) !== attempt ||
-      !isDraftGenerationCurrent(generation) || (!upload.ok && upload.aborted)) return;
+    if (
+      chargerAttempts.current.get(chargerId) !== attempt ||
+      !isDraftGenerationCurrent(generation) || (!upload.ok && upload.aborted)
+    ) return;
     dispatch({
       type: "update_charger_document",
       document: upload.ok
@@ -298,111 +341,165 @@ export function DocumentFirstDocumentsStep({
     });
   };
 
-  return (
-    <section
-      aria-labelledby="document-first-documents-title"
-      className="signup-section"
-      id="signup-documents"
-    >
-      <div className="signup-section-header">
-        <p className="eyebrow">Stap 2</p>
-        <h2 id="document-first-documents-title">Documenten</h2>
-      </div>
-
+  const uploads = activeLocation
+    ? [
+      {
+        id: activeLocation.energyDocument.clientId,
+        card: createDocumentUploadCardModel({
+          document: activeLocation.energyDocument,
+          helpText: draft.parserObservations.byDocumentId[
+              activeLocation.energyDocument.clientId
+            ]?.envelope.factCandidates.length === 0
+            ? "Geen gegevens gevonden."
+            : undefined,
+          onChange: (document) => void handleEnergyDocument(document),
+          scope: `Locatie ${activeLocationNumber}`,
+          title: "Energienota of energiecontract",
+        }),
+        itemAction: draft.accountBasis.accountType !== "particulier"
+          ? (
+            <button
+              className="button button-ghost button-compact"
+              disabled={draft.locationOrder.length <= 1}
+              onClick={() => void removeLocation(activeLocation.clientId)}
+              type="button"
+            >
+              Locatie verwijderen
+            </button>
+          )
+          : undefined,
+      },
+      ...(draft.chargerOrderByLocationId[activeLocation.clientId] || [])
+        .flatMap((chargerId) => {
+          const document = draft.chargerDocumentsByChargerId[chargerId]
+            ?.find((candidate) =>
+              candidate.documentType === "installation_invoice"
+            );
+          if (!document) return [];
+          const chargerNumber = globalChargerNumber(chargerId);
+          return [
+            {
+              id: document.clientId,
+              card: createDocumentUploadCardModel({
+                document,
+                helpText:
+                  draft.parserObservations.byDocumentId[document.clientId]
+                      ?.envelope.factCandidates.length === 0
+                    ? "Geen gegevens gevonden."
+                    : undefined,
+                onChange: (next) => void handleChargerDocument(next),
+                scope: `Laadpaal ${chargerNumber}`,
+                title: "Installatiefactuur",
+              }),
+              itemAction: (
+                <button
+                  aria-label="Laadpaal verwijderen"
+                  className="document-upload-card-remove"
+                  disabled={(draft.chargerOrderByLocationId[
+                    activeLocation.clientId
+                  ] || []).length <= 1}
+                  onClick={() =>
+                    void removeCharger(activeLocation.clientId, chargerId)}
+                  title="Laadpaal verwijderen"
+                  type="button"
+                >
+                  <span aria-hidden="true">×</span>
+                </button>
+              ),
+            },
+          ];
+        }),
+    ]
+    : [];
+  const evidenceSlots = [
+    ...draft.locationOrder.flatMap((locationId) => {
+      const document = draft.energyDocumentsByLocationId[locationId];
+      return document
+        ? [{
+          id: document.clientId,
+          required: true,
+          replacementRequired: false,
+          usableEvidenceReady: isDocumentUploadReady(document),
+        }]
+        : [];
+    }),
+    ...draft.locationOrder.flatMap((locationId) =>
+      (draft.chargerOrderByLocationId[locationId] || []).map(
+        (chargerId) => {
+          const document = (draft.chargerDocumentsByChargerId[chargerId] || [])
+            .find((candidate) =>
+              candidate.documentType === "installation_invoice"
+            );
+          return {
+            id: document?.clientId || `missing-installation:${chargerId}`,
+            required: true,
+            replacementRequired: false,
+            usableEvidenceReady: document
+              ? isDocumentUploadReady(document)
+              : false,
+          };
+        },
+      )
+    ),
+  ];
+  const groups = createDocumentFirstWorkflowGroups({
+    chargers: reviewChargers,
+    evidenceReady: allRequiredDocumentEvidenceReady(evidenceSlots),
+    locations: reviewLocations,
+    onConfirm,
+    onCorrect,
+    onInvalidateConfirmation,
+    onReplaceDocument,
+    onRestoreSource,
+    onSelectSource,
+  });
+  const workflowModel = createCustomerDocumentWorkflowModel({
+    evidenceSlots,
+    groups,
+    id: "signup-document-workflow",
+    primaryAction: {
+      disabled: !canContinue,
+      label: "Volgende",
+      onClick: onContinue,
+    },
+    uploadActions: activeLocation
+      ? (
+        <>
+          <button
+            className="button button-secondary"
+            onClick={() =>
+              dispatch({
+                type: "add_charger",
+                locationId: activeLocation.clientId,
+              })}
+            type="button"
+          >
+            + Laadpaal toevoegen
+          </button>
+          {draft.accountBasis.accountType !== "particulier"
+            ? (
+              <button
+                className="button button-secondary"
+                onClick={() => dispatch({ type: "add_location" })}
+                type="button"
+              >
+                + Locatie toevoegen
+              </button>
+            )
+            : null}
+        </>
+      )
+      : undefined,
+    uploadPrelude: (
       <SignupLocationTabs
         activeLocationId={activeLocation?.clientId || ""}
         chargerCountByLocation
         locations={legacy.locations}
         onSelectLocation={onSelectLocation}
       />
+    ),
+    uploads,
+  });
 
-      {activeLocation
-        ? (
-          <div className="document-location-group">
-            <div className="document-upload-grid">
-              <DocumentUploadSlot
-                document={activeLocation.energyDocument}
-                documentBinding={`Locatie ${activeLocationNumber}`}
-                helpText={draft.parserObservations.byDocumentId[
-                    activeLocation.energyDocument.clientId
-                  ]?.envelope.factCandidates.length === 0
-                  ? "Geen gegevens gevonden."
-                  : "Upload het energiecontract of de energienota voor deze locatie."}
-                hideDocumentLabel
-                onChange={(document) => void handleEnergyDocument(document)}
-                scope={`Locatie ${activeLocationNumber}`}
-                scopeAction={draft.accountBasis.accountType !== "particulier"
-                  ? {
-                    disabled: draft.locationOrder.length <= 1,
-                    label: "Locatie verwijderen",
-                    onClick: () => void removeLocation(activeLocation.clientId),
-                  }
-                  : undefined}
-                title="Energienota of energiecontract"
-              />
-
-              {(draft.chargerOrderByLocationId[activeLocation.clientId] || [])
-                .map((chargerId) => {
-                  const document = draft.chargerDocumentsByChargerId[chargerId]
-                    ?.find((candidate) =>
-                      candidate.documentType === "installation_invoice"
-                    );
-                  if (!document) return null;
-                  const chargerNumber = globalChargerNumber(chargerId);
-                  return (
-                    <DocumentUploadSlot
-                      document={document}
-                      documentBinding={`Locatie ${activeLocationNumber} · Laadpaal ${chargerNumber}`}
-                      helpText={draft.parserObservations
-                          .byDocumentId[document.clientId]
-                          ?.envelope.factCandidates.length === 0
-                        ? "Geen gegevens gevonden."
-                        : "Upload de installatiefactuur voor deze laadpaal."}
-                      hideDocumentLabel
-                      key={chargerId}
-                      onChange={(next) => void handleChargerDocument(next)}
-                      scope={`Laadpaal ${chargerNumber}`}
-                      scopeAction={{
-                        disabled: (draft.chargerOrderByLocationId[
-                          activeLocation.clientId
-                        ] || []).length <= 1,
-                        label: "Laadpaal verwijderen",
-                        onClick: () =>
-                          void removeCharger(activeLocation.clientId, chargerId),
-                      }}
-                      title="Installatiefactuur"
-                    />
-                  );
-                })}
-            </div>
-
-            <div className="section-actions">
-              <button
-                className="button button-secondary"
-                onClick={() =>
-                  dispatch({
-                    type: "add_charger",
-                    locationId: activeLocation.clientId,
-                  })}
-                type="button"
-              >
-                + Laadpaal toevoegen
-              </button>
-              {draft.accountBasis.accountType !== "particulier"
-                ? (
-                  <button
-                    className="button button-secondary"
-                    onClick={() => dispatch({ type: "add_location" })}
-                    type="button"
-                  >
-                    + Locatie toevoegen
-                  </button>
-                )
-                : null}
-            </div>
-          </div>
-        )
-        : null}
-    </section>
-  );
+  return <DocumentEvidenceWorkflow {...workflowModel} />;
 }

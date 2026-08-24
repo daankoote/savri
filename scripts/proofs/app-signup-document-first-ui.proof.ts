@@ -55,6 +55,18 @@ const organizationPanel = await source(
 const matrix = await source(
   "app/src/features/signup/DocumentFirstCheckMatrix.tsx",
 );
+const sharedWorkflow = await source(
+  "app/src/features/documents/DocumentEvidenceWorkflow.tsx",
+);
+const workflowController = await source(
+  "app/src/features/documents/CustomerDocumentWorkflowController.ts",
+);
+const customerInteraction = await source(
+  "app/src/features/documents/CustomerDocumentFactInteraction.tsx",
+);
+const correctionWorkflow = await source(
+  "app/src/features/dashboard/CustomerCorrectionHandoffPanel.tsx",
+);
 const factTable = await source(
   "app/src/features/signup/presentation/FactTable.tsx",
 );
@@ -120,19 +132,31 @@ assert(
   documents.includes("DocumentUploadSlot") &&
     documents.includes("parseInvoicePdfInput") &&
     documents.includes("chargerDocumentsByChargerId") &&
-    shell.includes("DocumentFirstCheckMatrix") &&
+    documents.includes("DocumentEvidenceWorkflow") &&
+    documents.includes("createDocumentFirstWorkflowGroups") &&
+    matrix.includes("createDocumentFirstWorkflowGroups") &&
     shell.includes('activeStep === "documents"'),
   "step_two_upload_and_review_composition_missing",
 );
 pass();
 
 assert(
-  matrix.includes("locations.flatMap") && matrix.includes("sections.map") &&
-    factTable.includes("visibleRows.map") &&
+  matrix.includes("locations.flatMap") &&
+    matrix.includes("createCustomerDocumentWorkflowGroup") &&
+    documents.includes("createCustomerDocumentWorkflowModel") &&
+    documents.includes("<DocumentEvidenceWorkflow") &&
+    sharedWorkflow.includes("<DocumentFactMatrix") &&
+    workflowController.includes("resolveCustomerFactResolutionPolicy") &&
+    !matrix.includes("resolveCustomerFactResolutionPolicy") &&
+    !correctionWorkflow.includes("resolveCustomerFactResolutionPolicy") &&
+    !matrix.includes("CustomerDocumentFactInteraction") &&
+    !correctionWorkflow.includes("CustomerDocumentFactInteraction") &&
+    factTable.includes("DocumentFactMatrix") &&
     factTable.includes("FactReviewControls") &&
     reviewControls.includes("Document vervangen") &&
-    reviewControls.includes("CompactFactCorrectionEditor") &&
-    reviewControls.includes("Andere waarde") &&
+    customerInteraction.includes("onConfirm") &&
+    customerInteraction.includes('model.onConfirm(value, "manual")') &&
+    customerInteraction.includes("onCancelResolution") &&
     !matrix.includes("compareEnergy") && !matrix.includes("compareCharger") &&
     matrixSelector.includes("selectDocumentReviewMatrix") &&
     matrixSelector.includes("selectDocumentFactApplicability") &&
