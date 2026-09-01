@@ -598,17 +598,19 @@ async function main(): Promise<void> {
   await run("Q04_expired_otp", async () => {
     const fixture = await createFixture(service, "expired");
     const challenge = await issueChallenge(service, fixture, "expired");
+    const expiredReferenceMs = Date.now();
     const shifted = await service.from("app_signup_signing_challenges").update({
-      created_at: new Date(Date.now() - 20 * 60_000).toISOString(),
-      expires_at: new Date(Date.now() - 10 * 60_000).toISOString(),
+      created_at: new Date(expiredReferenceMs - 20 * 60_000).toISOString(),
+      expires_at: new Date(expiredReferenceMs - 11 * 60_000).toISOString(),
     }).eq("id", challenge.id);
     assert(!shifted.error, "expiry_shift_failed");
     const result = await service.rpc(
       "app_signup_signing_finalize_v1",
       await finalizationArgs(fixture, challenge, "expired"),
     );
+    assert(!result.error, "expired_otp_rpc_failed");
     assert(
-      !result.error && (result.data as Json).code === "otp_expired",
+      (result.data as Json).code === "otp_expired",
       "expired_otp_not_rejected",
     );
   });
