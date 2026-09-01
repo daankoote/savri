@@ -1,8 +1,8 @@
 # ENVAL App TODO
 
-Status: CURRENT app/MVP TODO — Wave A1 current local proof reconciled through
-commits `5dfaed1` and `4f0542f` on 2026-09-01. Earlier bounded work-package
-records retain their own dated proof status.
+Status: CURRENT app/MVP TODO — Wave A1 and TF01 current local proof reconciled
+through commit `034691e` on 2026-09-01. Earlier bounded work-package records
+retain their own dated proof status.
 
 This queue is primarily for the new `/app`, `api-app-*`, and `app_*`
 implementation. Bounded legacy-caller cutover and white-label foundation status
@@ -12,19 +12,26 @@ implementation.
 
 ## Single Current NEXT
 
-- NEXT — `TF01`: resolved tenant/data-plane execution-context binding.
-  - Propagate the immutable server-resolved tenant/data-plane context through
-    the shared app boundary and prove parity with the actual fixed data-plane
-    client/deployment target.
-  - Fail closed on spoofed browser authority, inactive or ambiguous resolution,
-    and locator/client mismatch.
-  - Exclude dynamic data-plane switching, tenant #2 provisioning, schema
-    tenancy, legal/fee/provider configuration, UI, remote changes and deploy.
+- DONE / CURRENT PROVEN LOCAL — `TF01`: commit `034691e` propagates immutable
+  server-resolved tenant execution context only after exact fixed data-plane
+  parity. The point-in-time inventory is 33/33 current tenant-business
+  endpoints shared-gated, with 0 manual duplicate parity and 0 ungated.
+- NEXT — **approved/versioned tenant operational/legal/fee/provider
+  configuration**.
+  - Bound this to the approved architecture/contract and the minimum
+    implementation needed to select one approved version for the fixed
+    resolved tenant.
+  - This is not a full tenant configuration system and does not include
+    dynamic switching, tenant #2, provisioning, production routing/isolation,
+    portable provenance, workforce/platform redesign, pricing, SLA or privacy
+    completion.
 - Later sequence remains TARGET, not implemented:
-  `TF01` → approved/versioned tenant operational/legal/fee/provider
-  configuration → signing/case portable tenant provenance → workforce/platform
-  authority separation → isolated design-tenant data plane → two-plane
-  isolation proof.
+  approved/versioned tenant operational/legal/fee/provider configuration →
+  pin tenant/operator/config provenance into new case/signing truth → portable
+  tenant provenance for audit/idempotency/export → workforce/platform
+  administration separation as needed → manually provision an isolated
+  design-tenant data plane → prove two-plane isolation. Later evidence may
+  refine dependencies; this is not an immutable implementation order.
 - A2/A3/A4 qualification and the earlier `Minimal internal Compliance Worklist
   UI` remain future separately approved work.
 
@@ -527,6 +534,10 @@ Local proof is not production proof. Remote migration/function deploy, productio
   LOCAL; the commercial white-label product remains TARGET:
   - [x] WL02-WL04 approved the TARGET boundaries recorded in `docs/app/architecture/white-label-control-plane.md`, `docs/app/contracts/platform-control-plane.md` and `docs/app/architecture/platform-control-plane-physical-foundation.md`.
   - [x] WL05-WL11E implement and deterministically prove the bounded local foundation through commit `8b47126`: physically separate control-plane workdir/migrations, explicit fail-closed target selection, tenant/routing/locator/platform-audit records, provider-neutral managed/static tenant resolution, trusted ingress, authoritative gating of the inventoried CURRENT `api-app-*` surface, versioned presentation configuration, managed/static presentation sources, safe public presentation bootstrap and React provider consumption.
+  - [x] TF01 commit `034691e` adds one shared fixed-execution parity authority,
+    propagates immutable `tenant_execution` only after success, and records the
+    point-in-time 33/33 current tenant-business endpoint inventory with 0
+    manual duplicate parity implementations and 0 ungated.
   - [x] The root project remains reference/data-plane #1 without customer/case
     copies or a convenience tenant-local `tenant_id` backfill. Its ENVAL label
     proves no operator or first tenant. The control plane owns only platform

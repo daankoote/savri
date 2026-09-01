@@ -65,6 +65,28 @@ verifier or NEa acceptance, REV readiness, third-party checks, parser/kWh
 qualification or later A2/A3/A4 qualification. Historical assessment rows and
 counts below remain dated evidence and are not rewritten.
 
+2026-09-01 TF01 current-status overlay: commit `034691e` now binds the
+server-derived tenant/data-plane resolution result to the immutable fixed
+server execution identity before any tenant business database, private
+Storage or service-role access. The shared gate propagates a frozen, non-secret
+`tenant_execution` context. Missing/invalid fixed identity, resolution
+failure/timeout, inactive or ambiguous resolution and any parity mismatch fail
+closed. The point-in-time current tenant-business endpoint inventory is 33/33
+shared-gated, 0 manual duplicate parity implementations and 0 ungated.
+Presentation consumes this authoritative context and does not re-resolve or
+recompute parity. The served presentation endpoint returned HTTP 200 with the
+safe schema. TF01 added no schema or migration and creates no dynamic tenant
+client.
+
+This is fixed-plane local evidence only. `DYNAMIC_DATA_PLANE_SWITCHING=NO`;
+tenant #2, production routing/isolation, approved/versioned tenant
+operational/legal/fee/provider configuration and portable tenant/data-plane
+provenance remain TARGET or unproven. Wave A1 remains `REVIEW_COMPLETE`: TF01
+adds a compatible pre-business-access tenant execution boundary. Customer Auth,
+workforce exact-case authority, signing replay and refresh/audit lineage remain
+compatible; automatic cleanup remains intact and the real pilot remains
+unchanged.
+
 ## Pre-Task Confirmation
 
 - `docs/legacy` does not exist.

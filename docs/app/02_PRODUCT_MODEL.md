@@ -31,7 +31,10 @@ Status split:
 - CURRENT PROVEN: intake capture, app dossier foundation, app audit/idempotency, authenticated dashboard document lifecycle, immutable document versions, and customer-safe dashboard projection where current code/schema/proofs show them.
 - TARGET: tenant-bound legal identity, branding, customer contracts, fee
   configuration, signing/legal bundles, audit and deny-by-default isolation,
-  with a minimum tenant-ready foundation determined only after a gap audit.
+  with the minimum tenant-ready sequence governed by the completed SaaS gap
+  audit. TF01 fixed-plane execution binding is CURRENT PROVEN LOCAL; tenant
+  configuration, portable provenance, tenant #2 and production isolation are
+  not.
 - SUPERSEDED/HISTORICAL: 30/70 or 70/30 operational partnership, IP transfer
   or shared ownership, an assumed partner as first tenant, ENVAL B.V. as the
   generic fixed operator/end-customer contracting party, and 90/10 as a

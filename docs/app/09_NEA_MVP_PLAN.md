@@ -110,19 +110,28 @@ It does not prove CAR access, REV field compatibility, legal mandate wording, cu
 
 Next product architecture work package:
 
-`TF01 — resolved tenant/data-plane execution-context binding`.
+**approved/versioned tenant operational/legal/fee/provider configuration**.
 
-TF01 propagates the immutable server-resolved tenant/data-plane context through
-the shared app boundary and proves parity with the actual fixed data-plane
-client/deployment target. It fails closed on browser spoofing, inactive or
-ambiguous resolution and locator/client mismatch. It does not add dynamic
-data-plane switching, schema tenancy, tenant #2 provisioning, legal/fee/provider
-configuration, UI, remote action, deployment or production acceptance.
+TF01 is DONE / CURRENT PROVEN LOCAL at commit `034691e`: immutable
+server-resolved tenant execution context is exposed only after exact parity
+with the fixed server execution identity. Its point-in-time inventory covers
+33/33 current tenant-business endpoints through the shared gate, with zero
+manual duplicate parity implementations and zero ungated endpoints. This is
+local fixed-plane evidence only; dynamic switching, tenant #2 and production
+isolation remain unproven.
 
-The later TARGET sequence remains: approved/versioned tenant
-operational/legal/fee/provider configuration; portable signing/case tenant
-provenance; workforce/platform authority separation; an isolated design-tenant
-data plane; and two-plane isolation proof. None is implemented by this plan.
+The next batch is a bounded architecture/contract plus the minimum
+implementation needed to select an approved version for the fixed resolved
+tenant. It is not a complete tenant configuration system and does not include
+dynamic switching, tenant #2, provisioning, production routing/isolation,
+portable provenance, workforce/platform redesign, pricing, SLA or privacy
+completion.
+
+The later TARGET sequence remains: pin tenant/operator/config provenance into
+new case/signing truth; portable tenant provenance for audit/idempotency/export;
+workforce/platform administration separation as needed; manually provision an
+isolated design-tenant data plane; and prove two-plane isolation. None is
+implemented by this plan, and later evidence may refine dependencies.
 
 The `Minimal internal Compliance Worklist UI`, A2/A3/A4 qualification and the
 representation-authority validation brief remain separately parked. The brief

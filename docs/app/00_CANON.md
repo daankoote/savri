@@ -181,9 +181,9 @@ Supporting documents have one responsibility each and do not compete with the pr
 | `docs/app/06A_NEA_REGULATORY_COMPLETENESS_AUDIT.md` | official source coverage and source blockers | PROOF ONLY |
 | `docs/app/06B_CURRENT_IMPLEMENTATION_ASSESSMENT.md` | current code/database/function/proof assessment | PROOF ONLY |
 | `docs/app/architecture/database-target-model.md` | technical data entities, relations, history, constraints, RLS intent, object dispositions | DRAFT — AWAITING DAAN APPROVAL; APPENDIX, NOT PRIMARY ARCHITECTURE |
-| `docs/app/architecture/white-label-control-plane.md` | focused separate-tenant-data-plane and minimum-control-plane boundary, subordinate to the primary target architecture | CURRENT PROVEN LOCAL foundation through WL11E; remaining sections TARGET; REMOTE / PRODUCTION NOT PROVEN |
-| `docs/app/contracts/platform-control-plane.md` | minimum control-plane records, field classifications, routing, platform access, deployment state, audit and tenant-readiness contract | CURRENT PROVEN LOCAL implemented subset; remaining domain TARGET/DEFERRED; REMOTE / PRODUCTION NOT PROVEN |
-| `docs/app/architecture/platform-control-plane-physical-foundation.md` | repository, project, local-targeting, schema/runtime and presentation-bootstrap boundary for the separate control plane | CURRENT PROVEN LOCAL foundation plus TARGET remote/operations and LEGACY completed-plan snapshot; REMOTE PROVIDER / PRODUCTION NOT SELECTED |
+| `docs/app/architecture/white-label-control-plane.md` | focused separate-tenant-data-plane and minimum-control-plane boundary, subordinate to the primary target architecture | CURRENT PROVEN LOCAL foundation through TF01 / commit `034691e`; remaining sections TARGET; REMOTE / PRODUCTION NOT PROVEN |
+| `docs/app/contracts/platform-control-plane.md` | minimum control-plane records, field classifications, routing, platform access, deployment state, audit and tenant-readiness contract | CURRENT PROVEN LOCAL implemented subset through TF01 / commit `034691e`; remaining domain TARGET/DEFERRED; REMOTE / PRODUCTION NOT PROVEN |
+| `docs/app/architecture/platform-control-plane-physical-foundation.md` | repository, project, local-targeting, schema/runtime, fixed data-plane parity and presentation-bootstrap boundary for the separate control plane | CURRENT PROVEN LOCAL foundation through TF01 / commit `034691e` plus TARGET remote/operations and LEGACY completed-plan snapshot; REMOTE PROVIDER / PRODUCTION NOT SELECTED |
 | `docs/app/decisions/architecture-and-environment-decisions.md` | historical/current architecture and environment strategy decisions | DECISION RECORD — BOUNDED INTERNAL FOUNDATION GO; EXCLUDED SCOPES NO-GO |
 | `docs/app/operations/remote-baseline-and-retirement.md` | legacy freeze, baseline waves, cutover, rollback, retirement conditions, execution prerequisites, abort criteria | TARGET — EXECUTION NOT APPROVED |
 | `docs/app/operations/nea-implementation-roadmap.md` | compact daily sequence, progress, evidence, blockers, and internal/external work tracks; subordinate to requirements, traceability, target architecture, and MVP gates | TARGET — LIVE EXECUTION TRACKER |
@@ -284,13 +284,26 @@ Current technical primitives retained as proven or partially proven where code/p
   public presentation configuration
 - trusted-ingress and authoritative tenant gate coverage for the inventoried
   CURRENT `api-app-*` runtime surface
+- immutable server-derived `tenant_execution` context bound to the fixed
+  server execution identity before tenant business data, Storage or
+  service-role access
+- one canonical parity authority,
+  `evaluateAppTenantResolutionBinding`, shared by the 33 inventoried current
+  tenant-business endpoints; presentation consumes that result and does not
+  re-resolve or recompute parity
 - server-owned presentation source composition, safe public bootstrap and
   React `PresentationBrandProvider` consumption
 
 These white-label foundations are CURRENT PROVEN LOCAL through commit
-`8b47126`. They do not prove tenant #2, live control-plane bootstrap,
+`034691e`. The 33-of-33 endpoint inventory and zero manual duplicate parity
+implementations are point-in-time repository evidence. They do not prove
+tenant #2, live control-plane bootstrap,
 production ingress/domain ownership, remote deployment, dynamic data-plane
 switching, provisioning, administration UI or a finished white-label product.
+The next bounded foundation target is exactly **approved/versioned tenant
+operational/legal/fee/provider configuration** as a bounded architecture and
+contract plus minimum implementation, not a complete tenant configuration
+system.
 
 The recent app frontend Auth/session flow is retained as local proof:
 

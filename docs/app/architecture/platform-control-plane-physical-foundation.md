@@ -1,7 +1,7 @@
 # Platform Control-Plane Physical Foundation
 
-Status: CURRENT PROVEN LOCAL physical/runtime foundation through WL11E /
-commit `8b47126`; TARGET remote/operations; LEGACY completed WL05 plan snapshot
+Status: CURRENT PROVEN LOCAL physical/runtime foundation through TF01 /
+commit `034691e`; TARGET remote/operations; LEGACY completed WL05 plan snapshot
 
 Strategic status overlay: DECIDED/TARGET on 2026-09-01. The ENVAL software and
 generic IP remain independently owned. The root project is the
@@ -13,13 +13,13 @@ foundation for the WL02 architecture in
 `docs/app/architecture/white-label-control-plane.md` and the WL03 domain
 contract in `docs/app/contracts/platform-control-plane.md`. Those documents
 remain controlling for ownership, field classification and no-inference
-rules. WL04 originally granted no implementation authority; WL05 through WL11E
+rules. WL04 originally granted no implementation authority; WL05 through TF01
 subsequently implemented the bounded local foundation described below. This
 does not grant remote project, deployment or production authority.
 
 The selection is a repository and isolation boundary, not a remote hosting
 provider decision. The separate local control-plane schema/runtime and tenant
-#1 parity are CURRENT PROVEN LOCAL. A live remote control plane, production
+#1 fixed execution parity are CURRENT PROVEN LOCAL. A live remote control plane, production
 ingress and commercial tenant-management operations remain TARGET/UNKNOWN.
 
 ## 1. Repository Evidence
@@ -339,6 +339,15 @@ LabelUP/SaaS/white-label package, brand, support provider, deployment owner or
 adapter implementation. Adapter-specific connection/bootstrap work stays
 outside customer/case/signing/evidence domain modules.
 
+TF01 fixes the local execution binding without adding dynamic client
+selection. `evaluateAppTenantResolutionBinding` is the one authority that
+compares the resolved context with the immutable server execution identity and
+emits `AppTenantExecutionContext` only on exact parity. The shared app
+foundation attaches that frozen, non-secret context as
+`AppRequestMeta.tenant_execution`; tenant business database, private Storage
+and service-role access remain downstream. Presentation consumes this context
+and does not implement a second resolver or parity check.
+
 The WL05 proof uses synthetic control-plane fixtures inside a disposable local
 control-plane transaction and rolls them back. It proves exact host success;
 unknown/inactive/ambiguous host denial; inactive/missing locator denial;
@@ -458,8 +467,10 @@ The former file estimate and “not implemented” wording in this section were 
 WL04 planning snapshot. WL05 completed the local managed foundation; WL06-WL11E
 then added static resolution, trusted ingress, authoritative gate propagation,
 presentation contracts/sources, versioned presentation storage and the safe
-browser bootstrap/provider seam. The current implementation and evidence
-anchors are listed in `docs/app/01_SYSTEM_MAP.md`.
+browser bootstrap/provider seam. TF01 later bound that resolution to the fixed
+server execution identity and propagated the immutable result. The current
+implementation and evidence anchors are listed in
+`docs/app/01_SYSTEM_MAP.md`.
 
 The exclusions that remain current are: platform/customer administration UI,
 tenant #2, live tenant onboarding/bootstrap, customer-data movement, tenant #1

@@ -1,6 +1,6 @@
 # White-Label And Control-Plane Architecture
 
-Status: CURRENT PROVEN LOCAL foundation through WL11E / commit `8b47126`;
+Status: CURRENT PROVEN LOCAL foundation through TF01 / commit `034691e`;
 remaining architecture TARGET; REMOTE / PRODUCTION NOT PROVEN
 
 Strategic status overlay: DECIDED/TARGET on 2026-09-01. ENVAL is the generic
@@ -234,7 +234,9 @@ trusted server/deployment routing context
 -> opaque resolved tenant reference
 -> TenantDataPlaneLocator
 -> approved tenant application/data-plane destination
--> authoritative app tenant gate
+-> compare with immutable fixed server execution identity
+-> authoritative app tenant gate emits AppTenantExecutionContext
+-> AppRequestMeta.tenant_execution for tenant-business handlers
 -> server-owned presentation source and safe public projection
 -> tenant-local Auth and data-plane services without dynamic client switching
 ```
@@ -268,6 +270,21 @@ cannot override the resolved data plane.
 Unknown hosts, inactive tenants, ambiguous managed mappings, invalid fixed
 standalone context, locator mismatch and unavailable destinations fail closed
 without falling back to ENVAL or another tenant.
+
+TF01 adds one canonical parity decision in
+`evaluateAppTenantResolutionBinding`. Tenant, environment, locator, deployment
+ownership, provider and data-plane reference must exactly match the fixed
+server execution identity before the immutable, non-secret execution context
+is propagated. Missing/invalid fixed identity, resolution failure/timeout or
+any mismatch fails closed before tenant business database, private Storage or
+service-role access. Harmless server-owned environment and routing metadata may
+be read earlier because they are not tenant business truth.
+
+At commit `034691e`, all 33 inventoried current tenant-business endpoints use
+the shared gate; 0 use a manual duplicate parity implementation and 0 are
+ungated. This is point-in-time local source/proof evidence. Presentation
+consumes `tenant_execution` after the gate and neither re-resolves tenant
+context nor recomputes parity.
 
 Trusted ingress is server/deployment-owned. Raw browser/request `Host` and
 `X-Forwarded-Host` values are not production authority, and the production
@@ -411,7 +428,7 @@ the ENVAL data plane.
 
 The original WL02 statement that no control-plane or resolver implementation
 existed is a LEGACY pre-implementation status snapshot, superseded by WL05
-through WL11E. CURRENT PROVEN LOCAL now includes:
+through TF01. CURRENT PROVEN LOCAL now includes:
 
 - a separate `platform/control-plane/` Supabase workdir, migrations and
   fail-closed target/migration verification;
@@ -421,6 +438,9 @@ through WL11E. CURRENT PROVEN LOCAL now includes:
 - shadow then authoritative tenant gating for the inventoried CURRENT
   `api-app-*` runtime surface, without fallback or dynamic data-plane client
   switching;
+- immutable fixed-execution parity and propagated `tenant_execution` context
+  for the 33/33 point-in-time current tenant-business endpoint inventory, with
+  zero manual duplicate parity implementations and zero ungated endpoints;
 - `PresentationBrandConfigV1`, managed/static presentation sources and a
   versioned local control-plane presentation table/view;
 - a safe server-issued public presentation bootstrap and React
@@ -486,7 +506,7 @@ Current local implementation evidence is intentionally concise:
 |---|---|---|---|
 | physical separation and migration targeting | `platform/control-plane/`, `enval-supabase-target.mjs`, ENVAL verifier | `platform-control-plane-foundation.proof.ts`, `enval-verify-runner.proof.mjs` | CURRENT PROVEN LOCAL; no remote project/deploy |
 | tenant resolution and ingress | `platform/runtime/tenant-resolution/`, `app_tenant_resolution_shadow.ts` | `tenant-resolution-composition.proof.ts`, `trusted-ingress-boundary.proof.ts`, `app-tenant-resolution-shadow.proof.ts` | CURRENT PROVEN LOCAL; production ingress UNKNOWN |
-| CURRENT app gate propagation | shared app foundation/workforce authorization | `api-app-ops-location-callers.proof.ts` plus tenant-gate proof | CURRENT PROVEN LOCAL for inventoried CURRENT surface |
+| CURRENT app gate, fixed execution parity and context propagation | `app_tenant_resolution_shadow.ts`, shared app foundation/workforce authorization | `app-tenant-resolution-shadow.proof.ts`, `api-app-ops-location-callers.proof.ts` | CURRENT PROVEN LOCAL at `034691e`; point-in-time 33/33, 0 manual duplicate, 0 ungated |
 | presentation sources/config | `platform/runtime/presentation/`, control-plane presentation migration | `presentation-brand-config.proof.ts`, `presentation-brand-sources.proof.ts` | CURRENT PROVEN LOCAL; no brand administration |
 | public bootstrap/provider | `app_presentation_bootstrap.ts`, `api-app-presentation-bootstrap/`, `app/src/shared/presentation/` | `PresentationBrandRuntime.proof.tsx`, `PresentationBrandProvider.proof.tsx` | CURRENT PROVEN LOCAL; no remote/browser acceptance claim |
 

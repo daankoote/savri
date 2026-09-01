@@ -1,7 +1,7 @@
 # Platform Control-Plane Domain Contract
 
-Status: CURRENT PROVEN LOCAL implemented subset through WL11E / commit
-`8b47126`; remaining control-plane domain TARGET/DEFERRED; REMOTE / PRODUCTION
+Status: CURRENT PROVEN LOCAL implemented subset through TF01 / commit
+`034691e`; remaining control-plane domain TARGET/DEFERRED; REMOTE / PRODUCTION
 NOT PROVEN
 
 Strategic status overlay: DECIDED/TARGET on 2026-09-01. Each tenant is the
@@ -20,7 +20,8 @@ CURRENT PROVEN LOCAL evidence now covers the separate control-plane workdir and
 physical tenant/routing/locator/action-audit records, opaque locator secret
 reference, versioned presentation configuration/current view, managed/static
 resolver and presentation adapters, trusted ingress, authoritative tenant
-gate, safe public presentation bootstrap and React consumption. The exact
+gate, immutable fixed-execution parity, propagated `tenant_execution` context,
+safe public presentation bootstrap and React consumption. The exact
 physical migration columns remain authoritative for that implemented subset.
 Conceptual platform principals/memberships, deployment-state orchestration,
 secret-registry lifecycle, support elevation, tenant #2 and other later
@@ -357,7 +358,8 @@ trusted server/deployment routing context
    -> platform_control_plane_v1: active RoutingIdentity -> active Tenant
    or static_single_tenant_v1: one fixed deployment-local Tenant context
 -> resolve exactly one active compatible DataPlaneLocator/context
--> resolve server-side route/config and secrets as separately authorized
+-> compare against the immutable fixed server execution identity
+-> emit AppTenantExecutionContext only on exact parity
 -> start the selected tenant application/bootstrap
 -> initialize tenant-local customer Auth and data-plane services
 ```
@@ -385,6 +387,18 @@ Resolution fails closed without fallback to ENVAL or another tenant when:
 - observed configuration is stale/unknown where policy requires freshness, or
   schema/application/function drift is incompatible; or
 - the server-side locator/secret boundary cannot resolve safely.
+
+For the current fixed data-plane runtime,
+`evaluateAppTenantResolutionBinding` is the single parity authority. It
+compares tenant, environment, locator, deployment ownership, provider and
+data-plane reference and emits no execution context on missing/invalid fixed
+identity, resolver failure/timeout or mismatch. The shared app gate completes
+before tenant business database, private Storage or service-role access and
+propagates the frozen, non-secret result through
+`AppRequestMeta.tenant_execution`. Presentation consumes that result rather
+than re-resolving or recomputing parity. At commit `034691e`, the point-in-time
+inventory is 33/33 current tenant-business endpoints shared-gated, with 0
+manual duplicate parity implementations and 0 ungated.
 
 For static resolution, absent, multiple, mutable/untrusted or incompatible
 fixed contexts fail closed. Managed-mode control-plane failure cannot cause

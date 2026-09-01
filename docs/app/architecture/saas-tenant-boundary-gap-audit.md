@@ -8,6 +8,25 @@ authorize or claim implementation, tenant onboarding, schema application,
 database mutation, deployment, remote proof, legal approval, or production
 readiness.
 
+Current supersession overlay (2026-09-01): commit `034691e` completes the
+bounded TF01 gap identified by this dated audit. Immutable server-derived
+tenant execution context is now emitted only after exact parity with the fixed
+server execution identity and is propagated through the shared app boundary.
+Missing/invalid fixed identity, resolver failure/timeout, inactive or ambiguous
+resolution and mismatch fail closed before tenant business database, private
+Storage or service-role access. The point-in-time inventory is 33/33 current
+tenant-business endpoints shared-gated, with 0 manual duplicate parity
+implementations and 0 ungated. Presentation consumes authoritative
+`tenant_execution` and does not re-resolve or recompute parity.
+
+Accordingly, the audit-date statements below that the gate discards resolved
+context, E2 is open, TF01 is future, or this binding remains a current critical
+gap are HISTORICAL chronology, not active current-state claims. TF01 does not
+prove dynamic data-plane switching, tenant #2, a second data plane,
+provisioning, production routing/isolation, approved/versioned tenant
+operational/legal/fee/provider configuration, portable tenant/data-plane
+provenance, workforce/platform redesign, pricing, SLA or privacy completion.
+
 ## 1. Decision
 
 ENVAL does not need a full shared-database multi-tenant rewrite. The approved
@@ -284,12 +303,16 @@ UNKNOWN 4. There are 6 cross-tenant critical gaps.
 | U3 | Controller/processor roles, SaaS terms, SLA, pricing and tenant fee authority | Legal/commercial approval; code cannot infer it. |
 | U4 | Concrete CAR/EAN/MID/verifier providers, availability and credential custody | Provider agreements, security review and adapter acceptance. |
 
-## 6. Six cross-tenant critical gaps
+## 6. Historical six cross-tenant critical gaps
+
+These are the six gaps at the audit snapshot. Item 2 is closed for the bounded
+fixed-plane local scope by TF01 / commit `034691e`; the others remain open.
 
 1. No second isolated tenant data plane, Auth realm, Storage project, route and
    credential set has been provisioned and accepted.
-2. The authoritative resolution gate does not propagate and bind the resolved
-   tenant/data-plane context to the business client used by handlers.
+2. HISTORICAL / CLOSED BY TF01 LOCALLY: the authoritative resolution gate did
+   not propagate and bind the resolved tenant/data-plane context to the fixed
+   server execution identity used by handlers.
 3. No approved versioned tenant operational configuration owns legal operator,
    bundle, fee, communications and provider references.
 4. Signing snapshots do not pin the responsible tenant/operator and exact
@@ -299,7 +322,7 @@ UNKNOWN 4. There are 6 cross-tenant critical gaps.
 6. Tenant-scoped administrative/provider/workforce deployment authority is not
    fully modeled and proven separately from platform membership.
 
-## 7. Minimum ordered tenant-ready foundation
+## 7. Historical minimum ordered tenant-ready foundation
 
 At this audit date, the Wave A1 signing replay defect had to be corrected first
 because it was an existing single-tenant product-contract failure independent
@@ -307,10 +330,11 @@ of tenant topology. That prerequisite is now closed by commit `5dfaed1`; the
 historical finding remains recorded here and was not hidden inside a SaaS
 foundation batch.
 
-After that repair, the minimum foundation order is:
+At that audit point, the minimum foundation order was:
 
-1. propagate an immutable resolved tenant/data-plane execution context through
-   the shared app foundation and prove client/locator parity;
+1. DONE LOCALLY BY TF01 / `034691e`: propagate an immutable resolved
+   tenant/data-plane execution context through the shared app foundation and
+   prove fixed execution parity;
 2. define the versioned tenant operational configuration and legal/fee approval
    boundary;
 3. pin operator, tenant/data-plane and legal/fee configuration provenance in
@@ -324,15 +348,15 @@ After that repair, the minimum foundation order is:
 7. run a two-plane acceptance scenario using the same customer email, separate
    reviewers, distinct legal/fee bundles and distinct private objects.
 
-The first implementation batch proposed by this audit is exactly one bounded
+The first implementation batch proposed by this audit was exactly one bounded
 batch: **TF01 — resolved tenant execution-context propagation and fixed
-data-plane client parity**. Extend the shared tenant gate and request metadata
-so every current `api-app-*` handler receives the immutable server-resolved
-tenant/data-plane context and fails closed if it does not match the actual
-fixed Supabase client/deployment target. Include static contract proofs for
-spoofed browser input, inactive/ambiguous resolution and locator/client
-mismatch. Do not add dynamic switching, schema tenancy, tenant B provisioning,
-legal configuration, UI, remote changes or deployment in TF01.
+data-plane client parity**. Its historical scope was to extend the shared
+tenant gate and request metadata so every current `api-app-*` handler received
+the immutable server-resolved tenant/data-plane context and failed closed if it
+did not match the actual fixed Supabase client/deployment target, with static
+contract proofs and without dynamic switching, schema tenancy, tenant B,
+legal configuration, UI, remote changes or deployment. Commit `034691e`
+completes that bounded local scope.
 
 ## 8. Wave A1 impact
 
@@ -341,9 +365,10 @@ ONLY`. Commit `5dfaed1` restored exact authenticated signing-finalize replay
 through the single authoritative RPC, and commit `4f0542f` hardened the
 separate proof-only expired-OTP fixture. The fresh qualification reaches
 `REVIEW_COMPLETE`, refresh/resume and audit lineage with cleanup and real-pilot
-invariance. This supersedes only the active failure status below; it does not
-change any tenant-boundary finding, prove tenant #2 or production, or move
-TF01.
+invariance. This supersedes only the active failure status below. TF01 later
+adds a compatible pre-business-access fixed execution boundary without
+changing Wave A1 signing, review, cleanup or retained-pilot semantics; neither
+batch proves tenant #2 or production.
 
 Wave A1 currently assumes one local ENVAL tenant data plane, one Auth/Storage
 namespace, ENVAL legal/fee/OTP material and workforce grants within
@@ -360,10 +385,12 @@ binding and canonical input construction in the Edge boundary while the v1 RPC
 behind v2 remained authoritative for replay/conflict, mutable readiness, OTP,
 finalization and snapshot persistence.
 
-Historical recommendation `SIGNING_FIX_FIRST` is complete. Current NEXT is
-`TF01`, unchanged from this audit's tenant-ready foundation. New tenant/operator
-snapshot fields remain a separate forward-only batch; existing signed evidence
-must never be rewritten.
+Historical recommendation `SIGNING_FIX_FIRST` is complete. Historical TF01 is
+also complete at commit `034691e`. Current NEXT is exactly
+**approved/versioned tenant operational/legal/fee/provider configuration**, as
+a bounded architecture/contract plus minimum implementation rather than a full
+configuration system. New tenant/operator snapshot fields remain a separate
+forward-only batch; existing signed evidence must never be rewritten.
 
 ## 9. Static validation result
 
@@ -372,9 +399,9 @@ must never be rewritten.
   system; this audit introduces no UI or CSS;
 - inline CSS in implementation source: none found after excluding proof files;
   the 10 raw `style=` matches are assertion strings inside proof sources;
-- all 33 inventoried current `api-app-*` routes use the shared request/tenant
-  gate: 28 call it in their route-local handler and 5 use a shared gated
-  handler;
+- all 33 inventoried current tenant-business `api-app-*` endpoints use the
+  shared request/tenant gate, with 0 manual duplicate parity implementations
+  and 0 ungated;
 - root data-plane migrations contain no operational `tenant_id`, `operator_id`
   or organization-tenant row boundary;
 - browser RLS is deny-by-default/deny-all for the inspected app tables, while
@@ -388,8 +415,9 @@ must never be rewritten.
 
 The current code contains substantial reusable isolation, resolution, Auth,
 workforce, private Storage, safe projection and provenance foundations. It does
-not require a full rewrite. It requires a fail-closed binding from trusted
-tenant resolution to the actual tenant data plane, approved versioned
+not require a full rewrite. TF01 now supplies the bounded fail-closed
+fixed-plane binding from trusted tenant resolution to the actual server
+execution identity. The remaining path still requires approved versioned
 operator/legal/fee/provider configuration, portable historical provenance and
 a manually accepted second isolated deployment before any design partner can
 be treated as safely operational.

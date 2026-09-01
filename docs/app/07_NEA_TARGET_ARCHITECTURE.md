@@ -37,9 +37,12 @@ production use or claim compliance completeness.
 Strategic status overlay (DECIDED/TARGET, 2026-09-01): tenant legal identity,
 brand, customer contracts, fees, signing/legal bundles and operational audit
 must be tenant-bound. The current ENVAL-branded journey is the
-reference/default tenant journey only. A complete multi-tenant rewrite and
-billing/control-plane productization remain gated on a read-only gap audit and
-market/operating evidence.
+reference/default tenant journey only. The completed SaaS gap audit governs the
+bounded tenant-foundation sequence; TF01 fixed-plane execution binding is
+CURRENT PROVEN LOCAL, while tenant #2, dynamic switching, tenant
+operational/legal/fee/provider configuration, portable provenance, production
+isolation and billing/control-plane productization remain TARGET/UNKNOWN and
+gated by later evidence.
 
 Local app foundations that depend on regulatory semantics are not automatically approved for reuse or implementation. Their disposition remains:
 

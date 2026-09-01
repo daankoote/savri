@@ -1757,3 +1757,29 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   replay/conflict coverage.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-09-01 — Bind tenant resolution to data-plane execution
+
+- Commit `034691e` binds the server-derived tenant/data-plane resolution result
+  to the immutable fixed server execution identity before tenant business
+  database, private Storage or service-role access.
+- `evaluateAppTenantResolutionBinding` remains the single parity authority.
+  Missing/invalid fixed identity, resolver failure/timeout, inactive or
+  ambiguous resolution and any tenant/environment/locator/ownership/provider/
+  data-plane mismatch fail closed.
+- The shared gate propagates a frozen, non-secret `tenant_execution` context.
+  Presentation consumes that authoritative result; its endpoint-local
+  duplicate parity implementation was removed, so it neither re-resolves the
+  tenant nor recomputes parity.
+- Point-in-time local evidence records 33/33 current tenant-business endpoints
+  shared-gated, 0 manual duplicate parity implementations and 0 ungated.
+  Targeted proof was 19/19 PASS, integration proof 31/31 PASS, and Wave A1
+  remained `REVIEW_COMPLETE` with cleanup and real-pilot protection unchanged.
+- This does not prove dynamic data-plane switching, tenant #2, a second data
+  plane, provisioning, production routing/isolation, tenant
+  operational/legal/fee/provider configuration or portable provenance. The
+  next bounded foundation target is exactly **approved/versioned tenant
+  operational/legal/fee/provider configuration** as an architecture/contract
+  plus minimum implementation, not a full configuration system.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
