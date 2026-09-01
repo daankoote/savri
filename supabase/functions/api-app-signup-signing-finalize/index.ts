@@ -238,7 +238,6 @@ function safeFacts(
         !file || seen.has(source.fileReference) ||
         file.client_slot_id !== source.clientSlotId ||
         file.document_type !== source.documentType ||
-        file.status !== "confirmed_quarantine" ||
         file.server_sha256 !== source.contentSha256
       ) return null;
       seen.add(source.fileReference);
@@ -289,6 +288,77 @@ function safeFacts(
     });
   }
   return facts;
+}
+
+async function authorizeSigningContext(
+  req: Request,
+  SB: ReturnType<typeof signupServiceClient> & object,
+  intakeId: string,
+  authenticatedAuthUserId: string,
+  manageHash: string,
+  meta: AppRequestMeta,
+): Promise<
+  | { ok: true }
+  | { ok: false; response: Response }
+> {
+  const statusResult = await SB.rpc("app_signup_signing_status_v2", {
+    p_intake_id: intakeId,
+    p_manage_token_sha256: manageHash,
+  });
+  const statusRpc = statusResult.error
+    ? null
+    : publicRpcBody(statusResult.data);
+  if (!statusRpc || statusRpc.body.ok !== true) {
+    return {
+      ok: false,
+      response: appErrorResponse(
+        req,
+        403,
+        "Deze aanmelding is niet beschikbaar.",
+        "intake_unavailable",
+      ),
+    };
+  }
+
+  const provenance = await SB.from(
+    "app_signup_authenticated_intake_provenance",
+  ).select("auth_user_id").eq("intake_id", intakeId).maybeSingle();
+  if (
+    provenance.error ||
+    (provenance.data &&
+      provenance.data.auth_user_id !== authenticatedAuthUserId)
+  ) {
+    return {
+      ok: false,
+      response: appErrorResponse(
+        req,
+        403,
+        "Deze aanmelding is niet beschikbaar.",
+        "intake_unavailable",
+      ),
+    };
+  }
+
+  if (statusRpc.body.signing_state === "finalized") {
+    const claim = await SB.rpc("app_signup_authenticated_intake_claim_v1", {
+      p_intake_id: intakeId,
+      p_authenticated_auth_user_id: authenticatedAuthUserId,
+      p_request_id: meta.request_id,
+    });
+    if (claim.error || !isRecord(claim.data) || claim.data.ok !== true) {
+      return {
+        ok: false,
+        response: appErrorResponse(
+          req,
+          403,
+          "Deze aanmelding is niet beschikbaar.",
+          "intake_unavailable",
+        ),
+      };
+    }
+  }
+
+  return { ok: true };
 }
 
 function connectionScope(facts: SafeFact[]) {
@@ -527,11 +597,32 @@ serve(async (req) => {
     );
   }
 
+  const verifiedAuth = await requireVerifiedSupabaseAuthUser(req, SB);
+  if (!verifiedAuth.ok) {
+    return appErrorResponse(
+      req,
+      verifiedAuth.status,
+      verifiedAuth.message,
+      verifiedAuth.code,
+    );
+  }
+
   const intake = await SB.from("app_signup_intakes").select(
     "email_normalized,status,submitted_payload",
   )
     .eq("id", intakeId).maybeSingle();
   if (intake.error || !intake.data) {
+    return appErrorResponse(
+      req,
+      403,
+      "Deze aanmelding is niet beschikbaar.",
+      "intake_unavailable",
+    );
+  }
+  if (
+    String(intake.data.email_normalized || "") !==
+      verifiedAuth.context.emailNormalized
+  ) {
     return appErrorResponse(
       req,
       403,
@@ -551,8 +642,19 @@ serve(async (req) => {
     );
   }
 
+  const manageHash = await sha256Hex(capability);
+  const authorization = await authorizeSigningContext(
+    req,
+    SB,
+    intakeId,
+    verifiedAuth.context.authUserId,
+    manageHash,
+    meta,
+  );
+  if (!authorization.ok) return authorization.response;
+
   const intakeFiles = await SB.from("app_signup_intake_files").select(
-    "id,client_slot_id,document_type,status,server_sha256",
+    "id,client_slot_id,document_type,server_sha256",
   ).eq("intake_id", intakeId).in("id", requiredFileIds);
   const facts = intakeFiles.error
     ? null
@@ -565,6 +667,29 @@ serve(async (req) => {
       "resolution_provenance_invalid",
     );
   }
+
+  const verifier = await otpVerifier(secret, otpCode);
+  const channelHash = await channelReference(
+    secret,
+    String(intake.data.email_normalized || ""),
+  );
+  const normalizedPayloadHash = await payloadHash({
+    intake_reference: intakeId,
+    challenge_reference: challengeId,
+    otp_verifier_sha256: verifier,
+    account_type: accountType,
+    typed_full_name: typedFullName,
+    signer_role: signerRole,
+    mandate_year: mandateYear,
+    canonical_facts: facts,
+    required_file_references: [...requiredFileIds].sort(),
+    legal_actions: {
+      privacy_notice_read: true,
+      service_terms_accepted: true,
+      fee_terms_accepted: true,
+      mandate_signed: true,
+    },
+  });
 
   const legalProjection = await signingLegalRuntimeProjection();
   const legalDocuments = legalProjection.map((
@@ -632,24 +757,6 @@ serve(async (req) => {
     server_issue_date: issuedAt,
   };
   const snapshotSha256 = await signingSha256Hex(stableSigningJson(snapshot));
-  const verifier = await otpVerifier(secret, otpCode);
-  const channelHash = await channelReference(
-    secret,
-    String(intake.data.email_normalized || ""),
-  );
-  const manageHash = await sha256Hex(capability);
-  const normalizedPayloadHash = await payloadHash({
-    intake_reference: intakeId,
-    challenge_reference: challengeId,
-    otp_verifier_sha256: verifier,
-    account_type: accountType,
-    typed_full_name: typedFullName,
-    signer_role: signerRole,
-    mandate_year: mandateYear,
-    canonical_facts: facts,
-    required_file_references: [...requiredFileIds].sort(),
-    legal_actions: snapshot.legal_actions,
-  });
   const result = await SB.rpc("app_signup_signing_finalize_v2", {
     p_intake_id: intakeId,
     p_manage_token_sha256: manageHash,
