@@ -108,10 +108,6 @@ It does not prove CAR access, REV field compatibility, legal mandate wording, cu
 
 ## Current Next Batch
 
-Next product architecture work package:
-
-**approved/versioned tenant operational/legal/fee/provider configuration**.
-
 TF01 is DONE / CURRENT PROVEN LOCAL at commit `034691e`: immutable
 server-resolved tenant execution context is exposed only after exact parity
 with the fixed server execution identity. Its point-in-time inventory covers
@@ -120,18 +116,32 @@ manual duplicate parity implementations and zero ungated endpoints. This is
 local fixed-plane evidence only; dynamic switching, tenant #2 and production
 isolation remain unproven.
 
-The next batch is a bounded architecture/contract plus the minimum
-implementation needed to select an approved version for the fixed resolved
-tenant. It is not a complete tenant configuration system and does not include
-dynamic switching, tenant #2, provisioning, production routing/isolation,
-portable provenance, workforce/platform redesign, pricing, SLA or privacy
-completion.
+TF02-B is DONE / CURRENT PROVEN LOCAL at commit `9f9f310`: the strict
+versioned tenant-configuration manifest and four component-revision reference
+boundaries, canonical hash integrity, exact execution-context tenant/environment
+binding and server-owned event-time selection fail closed through one static
+adapter. Q01-Q38 and runtime export authority pass. No database, real tenant
+configuration content or business consumer was added.
 
-The later TARGET sequence remains: pin tenant/operator/config provenance into
-new case/signing truth; portable tenant provenance for audit/idempotency/export;
-workforce/platform administration separation as needed; manually provision an
-isolated design-tenant data plane; and prove two-plane isolation. None is
-implemented by this plan, and later evidence may refine dependencies.
+Next product architecture work package:
+
+**TF02-C — tenant-local durable approved component-revision and manifest
+persistence/read authority**.
+
+TF02-C is limited to a forward-only tenant-data-plane migration, immutable
+approved revision and manifest persistence, exact local effective selection,
+minimum grants, deny-by-default RLS, service-role server authority, SQL proofs
+and reuse of the existing port/adapter. Signing, case and provider-evidence
+cutovers; real legal/fee/operator content; admin UI; tenant #2; dynamic
+switching; and production deployment are explicitly outside that batch.
+
+The later TARGET sequence remains: bind/pin tenant/operator/config provenance
+into new signing truth; bind opening/material configuration provenance into
+case truth; bind provider evidence configuration provenance; add portable
+tenant provenance for audit/idempotency/export; separate workforce/platform
+administration as needed; manually provision an isolated design-tenant data
+plane; and prove two-plane isolation. None is implemented by this plan, and
+later evidence may refine dependencies.
 
 The `Minimal internal Compliance Worklist UI`, A2/A3/A4 qualification and the
 representation-authority validation brief remain separately parked. The brief

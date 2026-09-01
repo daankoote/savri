@@ -21,7 +21,7 @@ Ports `5173` and `5174` are reserved for other projects.
 
 ## Current White-Label And Control-Plane Foundation
 
-Status: CURRENT PROVEN LOCAL through TF01 / commit `034691e`. This is local
+Status: CURRENT PROVEN LOCAL through TF02-B / commit `9f9f310`. This is local
 architecture/runtime readiness, not a production deployment or a finished
 commercial tenant-management product.
 
@@ -58,6 +58,28 @@ trusted server/deployment routing context
 → PresentationBrandProvider
 → AppHeader / DashboardSidebar / NotFoundPage
 ```
+
+The separate TF02-B configuration foundation is CURRENT PROVEN LOCAL but has
+no current business consumer:
+
+```text
+AppTenantExecutionContext tenant/environment
++ server-composition-owned TenantConfigurationClockPort
+→ createTenantConfigurationServerSelectionAuthorityV1(clock)
+→ StaticSingleTenantConfigurationV1Adapter.resolveForExecutionContext(context)
+→ strict manifest/component validation and canonical SHA-256 verification
+→ server-time effective-window selection
+→ exactly one immutable resolved configuration or fail closed
+```
+
+The normal runtime port accepts only `AppTenantExecutionContext`; it exposes no
+raw `evaluatedAt`/`effectiveAt`, independent tenant/environment argument,
+request object or generic configuration payload. The trusted-time wrapper and
+low-level selector are module-private. The core owns all validation, hash,
+approval-time, effective-window, zero-match, ambiguity and minimal
+supersession rules. The static adapter owns immutable source injection, fixed
+execution-context composition, server-clock composition and delegation; it
+duplicates none of those policies.
 
 `evaluateAppTenantResolutionBinding` is the single canonical resolution/parity
 authority. It compares tenant, environment, locator, deployment ownership,
@@ -102,6 +124,18 @@ TF01 authority map:
 | immutable request propagation | `AppTenantExecutionContext` via `AppRequestMeta.tenant_execution` |
 | presentation selection | presentation bootstrap consumes the propagated context; it does not resolve or compare again |
 
+TF02-B configuration authority map:
+
+| responsibility | single authority / consumer |
+|---|---|
+| tenant and environment | immutable `AppTenantExecutionContext` |
+| canonical serialization/hash | existing `app_foundation.ts` `payloadHash` authority |
+| component and manifest validation, effective selection and ambiguity | `app_tenant_configuration.ts` |
+| event-time source | server-composition-owned `TenantConfigurationClockPort`, read once per resolution |
+| immutable static source and context-only public port | `StaticSingleTenantConfigurationV1Adapter` |
+| presentation | separate `PresentationBrandConfigV1`; no legal/fee/provider authority |
+| current business consumers | none |
+
 `PresentationBrandConfigV1` is presentation-only. Tenant identity,
 presentation brand, legal operator identity and support-provider identity are
 separate concepts. Presentation values grant no Auth/RLS/customer/case access,
@@ -120,14 +154,17 @@ Implementation and proof anchors:
 | trusted ingress, fixed execution parity and authoritative propagation | `trusted_ingress.ts`, `app_tenant_resolution_shadow.ts`, `app_foundation.ts`, shared workforce gate | `trusted-ingress-boundary.proof.ts`, `app-tenant-resolution-shadow.proof.ts`, `api-app-ops-location-callers.proof.ts` |
 | presentation contract and sources | `platform/runtime/presentation/`, versioned control-plane presentation migration | `presentation-brand-config.proof.ts`, `presentation-brand-sources.proof.ts` |
 | safe browser bootstrap and React consumption | `app_presentation_bootstrap.ts`, `api-app-presentation-bootstrap/`, `app/src/shared/presentation/` | `PresentationBrandRuntime.proof.tsx`, `PresentationBrandProvider.proof.tsx` |
+| tenant-configuration contract and safe static selection | `app_tenant_configuration.ts`, `app_tenant_configuration_static_single_tenant_v1.ts` | `app-tenant-configuration-manifest.proof.ts` Q01-Q38 plus runtime export proof |
 
 Still TARGET/DEFERRED: a real tenant #2, real customer white-label onboarding,
 live control-plane bootstrap/deployment, production custom domains and trusted
 proxy topology, dynamic data-plane switching, tenant/fleet provisioning,
 customer-cloud or self-host installation automation, brand/domain/admin UI,
-uploaded logos or arbitrary themes, approved/versioned tenant
-operational/legal/fee/provider configuration, portable tenant/data-plane
-provenance, configurable legal/support authority,
+uploaded logos or arbitrary themes, real approved tenant
+operational/legal/fee/provider content, durable tenant-local configuration
+persistence/read authority, approval administration, secret binding and
+signing/case/provider consumer cutovers, portable tenant/data-plane provenance,
+configurable legal/support authority,
 central conflict registry and live remote white-label proof.
 
 Strategic role overlay (DECIDED/TARGET, 2026-09-01): the current root data

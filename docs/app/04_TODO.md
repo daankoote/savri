@@ -1,7 +1,7 @@
 # ENVAL App TODO
 
-Status: CURRENT app/MVP TODO — Wave A1 and TF01 current local proof reconciled
-through commit `034691e` on 2026-09-01. Earlier bounded work-package records
+Status: CURRENT app/MVP TODO — Wave A1, TF01 and TF02-B current local proof
+reconciled through commit `9f9f310` on 2026-09-01. Earlier bounded work-package records
 retain their own dated proof status.
 
 This queue is primarily for the new `/app`, `api-app-*`, and `app_*`
@@ -16,22 +16,29 @@ implementation.
   server-resolved tenant execution context only after exact fixed data-plane
   parity. The point-in-time inventory is 33/33 current tenant-business
   endpoints shared-gated, with 0 manual duplicate parity and 0 ungated.
-- NEXT — **approved/versioned tenant operational/legal/fee/provider
-  configuration**.
-  - Bound this to the approved architecture/contract and the minimum
-    implementation needed to select one approved version for the fixed
-    resolved tenant.
-  - This is not a full tenant configuration system and does not include
-    dynamic switching, tenant #2, provisioning, production routing/isolation,
-    portable provenance, workforce/platform redesign, pricing, SLA or privacy
-    completion.
+- DONE / CURRENT PROVEN LOCAL — `TF02-B`: commit `9f9f310` adds the strict
+  versioned four-component manifest/revision-reference contract, canonical
+  hash integrity and server-time, tenant/environment-bound static selection.
+  Q01-Q38 and runtime export authority pass. It adds no database, real tenant
+  configuration content or consumer cutover.
+- NEXT — **TF02-C: tenant-local durable approved component-revision and
+  manifest persistence/read authority**.
+  - Use a forward-only data-plane migration, immutable approved revision and
+    manifest persistence, exact tenant/data-plane-local effective selection,
+    minimum privileges, deny-by-default RLS, service-role server authority,
+    SQL proofs and reuse of the existing adapter/port.
+  - Exclude signing, case and provider-evidence cutovers; real legal/fee/operator
+    values; admin UI; tenant #2; dynamic switching; and production deployment.
+    Do not design or implement those adjacent concerns in TF02-C.
 - Later sequence remains TARGET, not implemented:
-  approved/versioned tenant operational/legal/fee/provider configuration →
-  pin tenant/operator/config provenance into new case/signing truth → portable
-  tenant provenance for audit/idempotency/export → workforce/platform
-  administration separation as needed → manually provision an isolated
-  design-tenant data plane → prove two-plane isolation. Later evidence may
-  refine dependencies; this is not an immutable implementation order.
+  TF02-C durable tenant-local configuration persistence/read authority → bind
+  and pin approved tenant/operator/config provenance into new signing truth →
+  bind opening/material configuration provenance into case truth → provider
+  evidence configuration provenance → portable tenant provenance for
+  audit/idempotency/export → workforce/platform administration separation as
+  needed → manually provision an isolated design-tenant data plane → prove
+  two-plane isolation. Later evidence may refine dependencies; this is not an
+  immutable implementation order.
 - A2/A3/A4 qualification and the earlier `Minimal internal Compliance Worklist
   UI` remain future separately approved work.
 
@@ -78,8 +85,8 @@ controller/processor allocation requires legal review.
   `5dfaed1` and `4f0542f`. Current local qualification status is owned by
   `00_CANON.md` and `06B_CURRENT_IMPLEMENTATION_ASSESSMENT.md`; chronology is
   append-preserved in `03_CHANGELOG_APPEND_ONLY.md`.
-- Wave A1 remains local proof only. Production, tenant #2, tenant
-  legal/fee/provider configuration, independent verifier/NEa acceptance, REV,
+- Wave A1 remains local proof only. Production, tenant #2, real approved tenant
+  legal/fee/provider content and signing consumer cutover, independent verifier/NEa acceptance, REV,
   third-party checks, parser/kWh qualification and A2/A3/A4 remain unproven.
 
 - CUSTOMER04C is `CURRENT PROVEN — LOCAL` at commit `d613592`; its recorded
@@ -538,6 +545,11 @@ Local proof is not production proof. Remote migration/function deploy, productio
     propagates immutable `tenant_execution` only after success, and records the
     point-in-time 33/33 current tenant-business endpoint inventory with 0
     manual duplicate parity implementations and 0 ungated.
+  - [x] TF02-B commit `9f9f310` adds one strict versioned tenant-configuration
+    manifest/revision contract and safe static selection authority. The four
+    concerns remain descriptor-only; server-owned event time and exact
+    execution-context tenant/environment choose one immutable approved result
+    or fail closed. Q01-Q38 and runtime export proof pass.
   - [x] The root project remains reference/data-plane #1 without customer/case
     copies or a convenience tenant-local `tenant_id` backfill. Its ENVAL label
     proves no operator or first tenant. The control plane owns only platform
@@ -553,7 +565,7 @@ Local proof is not production proof. Remote migration/function deploy, productio
   - [x] Canon/system-map/architecture/contract status promotion is committed in
     `e076a23`; it promotes only local code/proof facts and keeps remote and
     production unproven.
-  - [ ] TARGET/DEFERRED: real tenant #2 and customer onboarding; live control-plane bootstrap/deployment; production custom domains, ownership verification and trusted proxy topology; dynamic data-plane switching; provisioning/fleet/customer-cloud/self-host automation; tenant/domain/brand administration UI; uploaded assets/themes; legal/support authority configuration; central conflict registry; and remote/production white-label proof.
+  - [ ] TARGET/DEFERRED: TF02-C durable tenant-local approved configuration persistence/read authority; real approved operational/legal/fee/provider content; approval/secret lifecycle and signing/case/provider consumer cutovers; real tenant #2 and customer onboarding; live control-plane bootstrap/deployment; production custom domains, ownership verification and trusted proxy topology; dynamic data-plane switching; provisioning/fleet/customer-cloud/self-host automation; tenant/domain/brand administration UI; uploaded assets/themes; legal/support authority configuration; central conflict registry; and remote/production white-label proof.
   - [ ] UNKNOWN until separately evidenced: remote control-plane provider/project/region/recovery, production ingress authority and live white-label operational readiness.
 - Legacy caller retirement and live-cutover separation:
   - DONE — LOCAL SOURCE: commit `cf226df` removes the shipped static

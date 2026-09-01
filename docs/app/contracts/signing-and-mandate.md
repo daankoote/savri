@@ -260,10 +260,19 @@ invariance. The signing runtime regression is `14/14 PASS`; Q04's prior failure
 was proof-fixture-only, and the deterministic one-clock fixture proves the
 unchanged product expiry path returns `otp_expired`.
 
-This authority and evidence are local only. Production legal/OTP/Auth,
-tenant-specific legal/fee/provider configuration, tenant #2 and cross-tenant
-isolation, independent verifier/NEa acceptance, REV operations, third-party
-checks, parser/kWh qualification and A2/A3/A4 remain unproven.
+This authority and evidence are local only. TF02-B / commit `9f9f310` now
+provides the CURRENT PROVEN LOCAL versioned tenant-configuration descriptor and
+safe static selection foundation, but signing does not consume it. The current
+ENVAL B.V./legal-bundle/mandate/10/90 assumptions and OTP/provider settings are
+unchanged known debt, not tenantized values. A later bounded signing cutover
+must consume durable approved tenant revisions and pin exact operator,
+legal-bundle, fee and provider/configuration provenance without rewriting
+historical signed evidence.
+
+Production legal/OTP/Auth, real approved tenant content and signing cutover,
+tenant #2 and cross-tenant isolation, independent verifier/NEa acceptance, REV
+operations, third-party checks, parser/kWh qualification and A2/A3/A4 remain
+unproven.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 

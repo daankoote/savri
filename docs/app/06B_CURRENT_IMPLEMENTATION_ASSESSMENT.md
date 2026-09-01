@@ -60,7 +60,8 @@ The signing runtime regression proof is `14/14 PASS`. The former Q04 failure
 was proof-fixture-only and was hardened with one captured reference clock;
 product expiry semantics were unchanged and the product RPC returns
 `otp_expired`. None of this proves production/deployment, tenant #2 or
-cross-tenant isolation, tenant legal/fee/provider configuration, independent
+cross-tenant isolation, real approved tenant legal/fee/provider content or
+consumer cutover, independent
 verifier or NEa acceptance, REV readiness, third-party checks, parser/kWh
 qualification or later A2/A3/A4 qualification. Historical assessment rows and
 counts below remain dated evidence and are not rewritten.
@@ -78,14 +79,39 @@ recompute parity. The served presentation endpoint returned HTTP 200 with the
 safe schema. TF01 added no schema or migration and creates no dynamic tenant
 client.
 
-This is fixed-plane local evidence only. `DYNAMIC_DATA_PLANE_SWITCHING=NO`;
-tenant #2, production routing/isolation, approved/versioned tenant
-operational/legal/fee/provider configuration and portable tenant/data-plane
-provenance remain TARGET or unproven. Wave A1 remains `REVIEW_COMPLETE`: TF01
+This is fixed-plane local evidence only. At the TF01 checkpoint,
+`DYNAMIC_DATA_PLANE_SWITCHING=NO`; tenant #2, production routing/isolation,
+approved/versioned tenant operational/legal/fee/provider configuration and
+portable tenant/data-plane provenance remained TARGET or unproven. Wave A1
+remains `REVIEW_COMPLETE`: TF01
 adds a compatible pre-business-access tenant execution boundary. Customer Auth,
 workforce exact-case authority, signing replay and refresh/audit lineage remain
 compatible; automatic cleanup remains intact and the real pilot remains
 unchanged.
+
+2026-09-01 TF02-B current-status overlay: commit `9f9f310` supersedes only the
+broad configuration-foundation gap immediately above. CURRENT PROVEN LOCAL now
+includes a strict versioned tenant-configuration manifest contract with exactly
+one approved operational, legal, fee/commercial and provider/integration
+component revision reference, canonical content hashes and whole-manifest
+SHA-256 integrity through the existing `app_foundation` hashing authority.
+
+Selection is bound to `AppTenantExecutionContext` tenant/environment plus a
+server-composition-owned `TenantConfigurationClockPort`. The normal runtime
+port is `resolveForExecutionContext(context)` and exposes no raw request/browser
+event time; trusted-time minting and the low-level selector are module-private.
+The core fails closed on malformed, unknown or secret-like fields, unapproved
+or mismatched revisions, invalid hashes, gaps and ambiguity. Resolved output is
+runtime immutable and supersession validation is minimal and linear. The
+static adapter duplicates no selection policy.
+
+Evidence is TF02-B Q01-Q38 PASS, runtime export authority PASS, TF01 regression
+PASS, Deno check/lint/format PASS and PRE_COMMIT_GATE PASS. This foundation has
+no database, migration, real operator/legal/fee/provider content, secret
+binding, business consumer, signing/case/provider provenance cutover, dynamic
+data-plane switching, tenant #2, remote or production proof. TF02-C durable
+tenant-local approved revision/manifest persistence and read authority is
+therefore the exact next foundation.
 
 ## Pre-Task Confirmation
 

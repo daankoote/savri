@@ -1783,3 +1783,26 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   plus minimum implementation, not a full configuration system.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-09-01 — Add tenant configuration manifest foundation
+
+- Commit `9f9f310` adds a strict versioned tenant-configuration manifest with
+  exactly four typed approved component references: operational, legal,
+  fee/commercial and provider/integration. Each reference binds revision
+  identity and canonical content hash; manifest integrity reuses the existing
+  canonical SHA-256 authority.
+- Selection is bound exactly to `AppTenantExecutionContext` tenant/environment
+  and a server-composition-owned clock. The normal runtime port accepts only
+  the execution context; low-level trusted time and selection remain private.
+- Unapproved, malformed, unknown/secret-like, hash-mismatched, missing,
+  expired/future or ambiguous configuration fails closed. Resolved revisions
+  are runtime immutable and supersession validation remains minimal.
+- The static single-tenant adapter and Q01-Q38 proof are green, including the
+  runtime export-authority proof. TF01 regression, Deno check/lint/format and
+  the pre-commit gate pass.
+- This is local proof only: no database, migration, real tenant configuration
+  content, secret binding, current signing/case/provider consumer cutover,
+  dynamic switching, tenant #2, remote action or production isolation is
+  claimed.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

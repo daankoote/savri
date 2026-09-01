@@ -1,6 +1,6 @@
 # White-Label And Control-Plane Architecture
 
-Status: CURRENT PROVEN LOCAL foundation through TF01 / commit `034691e`;
+Status: CURRENT PROVEN LOCAL foundation through TF02-B / commit `9f9f310`;
 remaining architecture TARGET; REMOTE / PRODUCTION NOT PROVEN
 
 Strategic status overlay: DECIDED/TARGET on 2026-09-01. ENVAL is the generic
@@ -17,6 +17,10 @@ local control-plane presentation configuration, safe server-issued
 presentation bootstrap and React provider consumption. Tenant #1 core rows and
 client target remain unchanged; `DYNAMIC_DATA_PLANE_SWITCHING=NO`. Remote and
 production presence remain separate and unproven.
+
+TF02-B additionally proves the strict versioned tenant-configuration
+manifest/revision-reference contract and safe static selection authority. It
+does not persist configuration or cut over a business consumer.
 
 Deferred / unknown: physical control-plane provider and hosting, cross-tenant
 customer federation, support-elevation workflow detail, tenant provisioning
@@ -133,13 +137,48 @@ Every tenant data plane exclusively owns:
 - customer-safe dashboard and document projections;
 - tenant workforce identities, capabilities, scopes, reviews and operational
   actions;
-- tenant audit, lifecycle, idempotency, retention and incident evidence; and
+- tenant audit, lifecycle, idempotency, retention and incident evidence;
+- future durable approved operational, legal, fee/commercial and
+  provider/integration configuration revisions and manifests; and
 - all future kWh, eligibility, booking, verifier-exchange, settlement,
   entitlement, payout and reconciliation truth.
 
 Tenant data is authoritative only in its owning tenant data plane. The control
 plane may hold an opaque tenant/data-plane reference but may not copy ordinary
 tenant truth for convenience, search, support, analytics or administration.
+
+### C1. CURRENT Tenant Configuration Selection Foundation
+
+TF02-B / commit `9f9f310` is CURRENT PROVEN LOCAL for the runtime contract and
+static selector only. One strict versioned manifest references exactly one
+approved revision descriptor for each of `operational`, `legal`,
+`fee_commercial` and `provider_integration`. References carry revision identity
+and canonical content hash; the whole manifest reuses the existing canonical
+SHA-256 authority. Unknown or secret-like fields are structurally rejected.
+
+Selection authority is:
+
+```text
+AppTenantExecutionContext tenant/environment
++ server-composition-owned TenantConfigurationClockPort
+→ core manifest validation and server-time effective selection
+→ exactly one immutable approved result or fail closed
+```
+
+The normal `TenantConfigurationSourcePort.resolveForExecutionContext(context)`
+accepts no raw event time, independent tenant/environment, browser request or
+generic config payload. The trusted-time wrapper and pure selector are
+module-private; the static adapter composes the clock once and duplicates no
+effective-window or ambiguity policy. `PresentationBrandConfigV1` remains
+presentation only and owns no operator identity, contracting party, mandate
+recipient, controller/privacy role, fee term or provider credential.
+
+There is no real configuration content, database reader, control-plane or
+tenant-data-plane persistence, approval UI/capability lifecycle, secret
+resolution or current business consumer. The TARGET plane split remains:
+central control-plane publishing intent/opaque references only, with durable
+reconstructable material configuration truth in the owning tenant data plane.
+TF02-C is the exact next persistence/read foundation.
 
 ## D. Minimum Separate Control Plane
 
@@ -428,7 +467,7 @@ the ENVAL data plane.
 
 The original WL02 statement that no control-plane or resolver implementation
 existed is a LEGACY pre-implementation status snapshot, superseded by WL05
-through TF01. CURRENT PROVEN LOCAL now includes:
+through TF02-B. CURRENT PROVEN LOCAL now includes:
 
 - a separate `platform/control-plane/` Supabase workdir, migrations and
   fail-closed target/migration verification;
@@ -446,6 +485,9 @@ through TF01. CURRENT PROVEN LOCAL now includes:
 - a safe server-issued public presentation bootstrap and React
   `PresentationBrandProvider`; and
 - deterministic ENVAL parity plus synthetic alternate-brand proof.
+- the TF02-B strict four-component tenant-configuration contract and
+  server-time, context-bound static selection authority, with Q01-Q38 and
+  runtime export proof green and no current consumer.
 
 Still TARGET/DEFERRED or UNKNOWN:
 
@@ -459,8 +501,10 @@ Still TARGET/DEFERRED or UNKNOWN:
 - central customer Auth, customer directory or cross-tenant SSO;
 - platform-admin UI, tenant/domain/brand administration, uploaded logos or
   arbitrary theme overrides;
-- legal-operator and support-provider configuration/authority or support
-  elevation;
+- real approved legal-operator/fee/provider content, durable tenant-local
+  configuration persistence/read authority, approval and secret lifecycle,
+  signing/case/provider provenance cutovers, support-provider authority or
+  support elevation;
 - shared Storage, universal service-role/fleet credentials, conflict registry,
   cross-tenant analytics and settlement/payment implementation.
 
@@ -492,6 +536,7 @@ to its component, owning plane, security boundary and deterministic proof.
 | `WL-DEPLOY-001` controlled fleet operations | migration/deployment/schema-state tooling | control plane operations | one explicitly selected tenant and audited action | drift, partial rollout, rollback and wrong-tenant denial |
 | `WL-CORE-001` one core across commercial models | shared tenant-local business modules/contracts | tenant data plane | package/brand/support values grant no authority and select no fork | identical core-contract and no-package-branch proof |
 | `WL-RESOLVE-002` provider-independent resolution | managed and static single-tenant adapters behind the same ports | deployment boundary | trusted server/deployment config only; no browser override | adapter contract parity, standalone control-plane-outage operation and fail-closed config tests |
+| `WL-CONFIG-001` approved tenant configuration | strict manifest/revision contract now; durable revisions/manifests later | tenant data plane; control plane may hold publishing intent/reference only | execution context owns tenant/environment; server clock owns event time; no credentials or presentation authority | Q01-Q38 current static proof; TF02-C SQL/RLS/read proof; later consumer provenance proofs |
 | `WL-SUPPORT-002` optional external physical support | tenant-local support/workforce authorization | tenant data plane | explicit tenant/capability/purpose/time scope; evidence stays tenant-local | LabelUP non-authority and cross-tenant denial proofs |
 | `WL-CONFLICT-002` deployment-independent participation | future `ConflictCheckPort` adapter | tenant/platform boundary | connected opt-in only; unavailable is not no-conflict | managed/self-hosted parity and offline-unavailable proof |
 

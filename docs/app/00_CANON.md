@@ -294,16 +294,20 @@ Current technical primitives retained as proven or partially proven where code/p
 - server-owned presentation source composition, safe public bootstrap and
   React `PresentationBrandProvider` consumption
 
-These white-label foundations are CURRENT PROVEN LOCAL through commit
-`034691e`. The 33-of-33 endpoint inventory and zero manual duplicate parity
-implementations are point-in-time repository evidence. They do not prove
-tenant #2, live control-plane bootstrap,
-production ingress/domain ownership, remote deployment, dynamic data-plane
-switching, provisioning, administration UI or a finished white-label product.
-The next bounded foundation target is exactly **approved/versioned tenant
-operational/legal/fee/provider configuration** as a bounded architecture and
-contract plus minimum implementation, not a complete tenant configuration
-system.
+These white-label foundations are CURRENT PROVEN LOCAL through TF02-B / commit
+`9f9f310`. TF01 supplies the fixed-plane execution binding. TF02-B adds the
+strict versioned tenant-configuration manifest/revision-reference contract and
+safe static selection authority for operational, legal, fee/commercial and
+provider/integration concerns. Selection is bound to
+`AppTenantExecutionContext` tenant/environment and server-owned event time;
+invalid, unapproved, hash-mismatched, missing or ambiguous configuration fails
+closed. The 33-of-33 endpoint inventory remains point-in-time TF01 evidence.
+
+TF02-B is a local runtime contract/port and static adapter only. It adds no
+real tenant configuration content, persistence in either plane, secret
+binding, business-consumer cutover, tenant #2, dynamic data-plane switching or
+production isolation. The next bounded foundation is **TF02-C — tenant-local
+durable approved component-revision and manifest persistence/read authority**.
 
 The recent app frontend Auth/session flow is retained as local proof:
 

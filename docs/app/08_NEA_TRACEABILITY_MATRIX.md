@@ -23,6 +23,13 @@ Assessment source: `docs/app/06B_CURRENT_IMPLEMENTATION_ASSESSMENT.md`.
 
 The current implementation columns below are governed by the proof-only assessment overlay. The electricity TKV source blocker is resolved. WP3H proves the exact empty three-table location foundation locally, WP3J proves four bounded operational location RPCs, and WP3L-B/WP3N prove the workforce/capability/scope/maker-checker foundation plus four operation-family callers and eight database-authorized atomic bridge RPCs. WP3P adds a central database-authoritative nine-capability policy foundation; WP3Q locally activates one approved verified first admin, closes genesis and proves the default and solo-compatible policy variants without weakening hard authorization floors. REG02–REG03I add a bounded `CURRENT PROVEN — LOCAL` delivery-year compliance foundation: a 2026-only calendar and fail-closed reconstructed state, derived action/worklist projections, separate tenant-wide view/record authority, immutable accepted source facts, controlled capture and an authenticated zero-write worklist read. Operations UI, future calendars, correction/remediation, schedulers, notifications, additional workforce population, recovery, remote apply and cutover remain blocked/deferred. No full NEA-VER, NEA-OPS, NEA-EAN, NEA-CHG, NEA-AUD, NEA-COR or NEA-SEC requirement is promoted, and no general Wet/NEa seniority or two-eyes rule is inferred.
 
+TF02-B / commit `9f9f310` is CURRENT PROVEN LOCAL platform foundation: a
+strict versioned four-component tenant-configuration manifest contract and
+server-time, execution-context-bound static selector. It promotes no complete
+NEa requirement. Real configuration content and durable persistence plus
+signing, case, provider-evidence and portable audit provenance cutovers remain
+TARGET and must be traced in separate bounded batches.
+
 Historical coverage counts from the 2026-07-19 current assessment (before the 2026-08-16 `REG-CONFLICT-001` source overlay):
 
 - CURRENT PROVEN: 0

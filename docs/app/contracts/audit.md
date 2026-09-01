@@ -82,6 +82,23 @@ Status: `CURRENT PROVEN — LOCAL ONLY` through commits `5dfaed1` and `4f0542f`.
 These are local qualification invariants, not production, tenant #2,
 independent-verifier, NEa, REV, third-party, parser or kWh proof.
 
+## Tenant Configuration Provenance Boundary
+
+TF02-B / commit `9f9f310` is CURRENT PROVEN LOCAL only for the strict versioned
+manifest/revision-reference contract and safe static server-time selection.
+It adds no audit row, portable provenance envelope, database persistence or
+business consumer. Current signing, case and provider evidence therefore pin
+no TF02-B configuration revision merely because the foundation exists.
+
+Later bounded cutovers must append, never infer or overwrite, the exact
+tenant/data-plane, manifest, component revision and content-hash provenance
+material to each new signing snapshot, case opening/material-change event and
+provider evidence record where applicable. Legacy origin remains unknown
+unless independently proven. Configuration contains no credential values;
+future opaque secret-binding lifecycle and provider credential governance stay
+outside ordinary audit payloads. Presentation configuration is not legal,
+fee, provider or audit authority.
+
 ## Required Fields And Metadata
 
 Audit events should preserve enough metadata to reconstruct:

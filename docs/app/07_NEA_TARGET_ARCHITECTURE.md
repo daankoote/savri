@@ -38,11 +38,23 @@ Strategic status overlay (DECIDED/TARGET, 2026-09-01): tenant legal identity,
 brand, customer contracts, fees, signing/legal bundles and operational audit
 must be tenant-bound. The current ENVAL-branded journey is the
 reference/default tenant journey only. The completed SaaS gap audit governs the
-bounded tenant-foundation sequence; TF01 fixed-plane execution binding is
-CURRENT PROVEN LOCAL, while tenant #2, dynamic switching, tenant
-operational/legal/fee/provider configuration, portable provenance, production
-isolation and billing/control-plane productization remain TARGET/UNKNOWN and
-gated by later evidence.
+bounded tenant-foundation sequence. TF01 fixed-plane execution binding and the
+TF02-B versioned tenant-configuration manifest/revision-reference contract with
+safe static server-time selection are CURRENT PROVEN LOCAL. Real approved
+operational/legal/fee/provider content, durable tenant-local persistence/read
+authority, signing/case/provider provenance cutovers, portable provenance,
+tenant #2, dynamic switching, production isolation and billing/control-plane
+productization remain TARGET/UNKNOWN and gated by later evidence.
+
+TF02-B changes no NEa bounded-context or regulated decision authority. It is a
+tenant-foundation port/contract only: `AppTenantExecutionContext` owns tenant
+and environment, the server-composed clock owns evaluation time, the core owns
+strict validation/hash/effective selection, and the static adapter owns source
+composition. Presentation remains separate, credentials are excluded, and no
+configuration is persisted in either the control plane or tenant data plane.
+The detailed authority and remaining-gap split are maintained in
+`architecture/white-label-control-plane.md` and
+`architecture/saas-tenant-boundary-gap-audit.md`.
 
 Local app foundations that depend on regulatory semantics are not automatically approved for reuse or implementation. Their disposition remains:
 

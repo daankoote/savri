@@ -32,9 +32,11 @@ Status split:
 - TARGET: tenant-bound legal identity, branding, customer contracts, fee
   configuration, signing/legal bundles, audit and deny-by-default isolation,
   with the minimum tenant-ready sequence governed by the completed SaaS gap
-  audit. TF01 fixed-plane execution binding is CURRENT PROVEN LOCAL; tenant
-  configuration, portable provenance, tenant #2 and production isolation are
-  not.
+  audit. TF01 fixed-plane execution binding and the TF02-B strict versioned
+  tenant-configuration manifest/revision-reference contract with safe static
+  server-time selection are CURRENT PROVEN LOCAL. Real approved configuration
+  content, durable persistence/read authority, business-consumer provenance
+  cutover, portable provenance, tenant #2 and production isolation are not.
 - SUPERSEDED/HISTORICAL: 30/70 or 70/30 operational partnership, IP transfer
   or shared ownership, an assumed partner as first tenant, ENVAL B.V. as the
   generic fixed operator/end-customer contracting party, and 90/10 as a

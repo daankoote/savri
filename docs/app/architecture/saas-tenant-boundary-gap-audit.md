@@ -19,13 +19,31 @@ tenant-business endpoints shared-gated, with 0 manual duplicate parity
 implementations and 0 ungated. Presentation consumes authoritative
 `tenant_execution` and does not re-resolve or recompute parity.
 
+Current TF02-B overlay (2026-09-01): commit `9f9f310` completes only the
+runtime contract/static-selection foundation of historical gap N1. CURRENT
+PROVEN LOCAL now includes a strict versioned manifest that references exactly
+one approved operational, legal, fee/commercial and provider/integration
+revision descriptor, with revision identity, content hash and canonical
+whole-manifest SHA-256. Selection uses `AppTenantExecutionContext`
+tenant/environment and a server-composition-owned clock. Missing, invalid,
+unapproved, hash-mismatched, future/expired or ambiguous configuration fails
+closed, and resolved output is immutable. The public runtime port accepts no
+raw event time; the trusted-time wrapper and low-level selector are private.
+
+This closes neither N1 as a whole nor the consumer gaps. There is no real
+approved tenant content, persistence/read authority in either plane,
+approval-capability administration, secret binding, signing/case/provider
+cutover or portable provenance. `PresentationBrandConfigV1` remains a separate
+presentation-only authority.
+
 Accordingly, the audit-date statements below that the gate discards resolved
 context, E2 is open, TF01 is future, or this binding remains a current critical
 gap are HISTORICAL chronology, not active current-state claims. TF01 does not
 prove dynamic data-plane switching, tenant #2, a second data plane,
-provisioning, production routing/isolation, approved/versioned tenant
-operational/legal/fee/provider configuration, portable tenant/data-plane
-provenance, workforce/platform redesign, pricing, SLA or privacy completion.
+provisioning, production routing/isolation, real approved tenant configuration
+content, durable persistence/read authority, consumer provenance cutover,
+portable tenant/data-plane provenance, workforce/platform redesign, pricing,
+SLA or privacy completion.
 
 ## 1. Decision
 
@@ -172,24 +190,29 @@ That does not require copying `tenant_id` onto every operational child row.
 
 ### 3.7 Signing, operator identity, legal bundle and fees
 
-The current signing runtime is not tenant-safe for a second operator. It
+The current signing runtime is not tenant-safe for a second operator. It still
 hardcodes ENVAL-branded/operator material, ENVAL B.V. legal roles, a 90/10 fee
 projection, mandate text, export names and parts of the OTP/mail presentation.
-The immutable signing snapshot pins document versions, hashes and content
-values, but not an authoritative tenant/operator configuration, legal-bundle
-configuration, fee configuration or deployment/data-plane identity.
+TF02-B changed none of those consumers. Its descriptor-only manifest
+foundation does not supply real legal/operator/fee values and is not imported
+by signing. The immutable signing snapshot pins document versions, hashes and
+content values, but not an authoritative tenant/operator configuration,
+legal-bundle configuration, fee configuration or deployment/data-plane
+identity.
 
 Presentation configuration cannot substitute for legal identity. A future
 tenant B could receive the wrong contracting party, mandate and fee split even
-if its logo and routing were correct. Finalization must resolve an approved,
-versioned tenant-local legal/fee configuration and persist the exact operator,
-bundle, fee and configuration references/hashes used.
+if its logo and routing were correct. A later signing cutover must consume real
+approved, durably read tenant-local legal/fee revisions and persist the exact
+operator, bundle, fee and configuration references/hashes used.
 
 ### 3.8 External providers
 
 The parser port/adapter and its observation provenance are strong reusable
-patterns. OTP also has a port/adapter boundary. Current credentials and sender
-configuration are deployment environment values rather than a versioned,
+patterns. OTP also has a port/adapter boundary. TF02-B supplies only a typed
+provider/integration revision descriptor; it contains no provider credentials
+and no provider consumer uses it. Current credentials and sender configuration
+remain deployment environment values rather than a durably resolved,
 tenant-bound provider selection with a non-secret configuration fingerprint.
 Future CAR/EAN/MID and verifier integrations remain TARGET/UNKNOWN.
 
@@ -279,7 +302,7 @@ UNKNOWN 4. There are 6 cross-tenant critical gaps.
 
 | ID | New foundation | Exact need and consequence | Minimum target, dependencies and reuse | Migration/data/test/priority |
 |---|---|---|---|---|
-| N1 | versioned tenant operational configuration | No authority exists for operator legal identity, approved legal bundle, fee model, communications and provider references. | Create a tenant-local immutable/versioned configuration bundle keyed to the fixed resolved tenant; the control plane stores only safe locator/public/reference metadata. Reuse presentation versioning and legal hashing. | Forward-only schema and explicit approval state; ENVAL defaults require deliberate import, not implicit truth. Version/approval/rollback-reference tests. CRITICAL. |
+| N1 | versioned tenant operational configuration | PARTIAL FOUNDATION CLOSED by TF02-B / `9f9f310`: the strict four-component manifest/revision-reference contract, canonical hash and safe static server-time selection exist. Real approved operator/legal/fee/provider content, durable persistence/read, approval administration, secret binding and consumers do not. | NEXT TF02-C: persist immutable approved revisions/manifests and read exactly within the owning fixed tenant data plane. The control plane may later hold publishing intent or opaque references only; `PresentationBrandConfigV1` remains separate. Later consumer cutovers stay separate. | Forward-only data-plane schema, minimum grants, deny-by-default RLS, service-role read authority and SQL proofs; no implicit ENVAL defaults. CRITICAL. |
 | N2 | manual design-tenant provisioning and acceptance record | A modeled tenant row is not an isolated Auth/DB/Storage/Edge/credential deployment. | Define a human-gated procedure/record for a second tenant: verified route, separate project, credentials, buckets, migrations, config and proof evidence. No self-service automation. Depends on E1/N1. | No autonomous provisioning or remote mutation. Acceptance must prove isolation and record exact versions. CRITICAL. |
 | N3 | portable tenant/data-plane provenance envelope | Tenant attribution disappears when audit, evidence or receipts leave their database. | Define a non-secret immutable envelope containing platform tenant ref, data-plane ref, environment/config ref and source record identity. Reuse existing audit/evidence provenance conventions. Depends on E2. | Versioned envelope; legacy origin unknown unless proven. Serialization, hash, redaction and central collision tests. HIGH. |
 | N4 | platform principal-to-tenant administration boundary | Platform actions have tenant audit support but no complete tenant membership/change authority contract; platform role could be confused with tenant operational access. | Define platform principals, exact tenant-management capabilities and audited changes, explicitly excluding tenant dossier access. Reuse control-plane deny/default RLS. | Separate control-plane migration; no customer identity federation. Least-privilege and negative dossier-access proofs. HIGH. |
@@ -313,8 +336,10 @@ fixed-plane local scope by TF01 / commit `034691e`; the others remain open.
 2. HISTORICAL / CLOSED BY TF01 LOCALLY: the authoritative resolution gate did
    not propagate and bind the resolved tenant/data-plane context to the fixed
    server execution identity used by handlers.
-3. No approved versioned tenant operational configuration owns legal operator,
-   bundle, fee, communications and provider references.
+3. PARTIAL FOUNDATION CLOSED BY TF02-B: the versioned four-component
+   configuration contract and safe static selector exist, but no durable
+   approved content/read authority owns legal operator, bundle, fee,
+   communications or provider values and no consumer uses it.
 4. Signing snapshots do not pin the responsible tenant/operator and exact
    legal/fee configuration.
 5. Case/audit/idempotency/evidence exports lack portable tenant/data-plane
@@ -335,17 +360,21 @@ At that audit point, the minimum foundation order was:
 1. DONE LOCALLY BY TF01 / `034691e`: propagate an immutable resolved
    tenant/data-plane execution context through the shared app foundation and
    prove fixed execution parity;
-2. define the versioned tenant operational configuration and legal/fee approval
-   boundary;
-3. pin operator, tenant/data-plane and legal/fee configuration provenance in
-   new signing and case-root evidence;
-4. extend audit/idempotency/document exports with the portable provenance
+2. DONE LOCALLY BY TF02-B / `9f9f310`: define the versioned four-component
+   configuration manifest/revision-reference contract and safe static
+   server-time selection boundary;
+3. NEXT TF02-C: add tenant-local durable approved component-revision and
+   manifest persistence/read authority;
+4. in separate batches, bind and pin operator/config provenance into new
+   signing truth, opening/material configuration provenance into case truth,
+   and provider configuration provenance into provider evidence;
+5. extend audit/idempotency/document exports with the portable provenance
    envelope;
-5. bind workforce tenant-wide authority and platform administration to their
+6. bind workforce tenant-wide authority and platform administration to their
    distinct resolved contexts;
-6. manually register and provision one design tenant with separate Auth,
+7. manually register and provision one design tenant with separate Auth,
    database, Storage, Edge runtime and credentials;
-7. run a two-plane acceptance scenario using the same customer email, separate
+8. run a two-plane acceptance scenario using the same customer email, separate
    reviewers, distinct legal/fee bundles and distinct private objects.
 
 The first implementation batch proposed by this audit was exactly one bounded
@@ -386,11 +415,11 @@ behind v2 remained authoritative for replay/conflict, mutable readiness, OTP,
 finalization and snapshot persistence.
 
 Historical recommendation `SIGNING_FIX_FIRST` is complete. Historical TF01 is
-also complete at commit `034691e`. Current NEXT is exactly
-**approved/versioned tenant operational/legal/fee/provider configuration**, as
-a bounded architecture/contract plus minimum implementation rather than a full
-configuration system. New tenant/operator snapshot fields remain a separate
-forward-only batch; existing signed evidence must never be rewritten.
+also complete at commit `034691e`, and the TF02-B contract/static-selection
+foundation is complete at `9f9f310`. Current NEXT is exactly **TF02-C —
+tenant-local durable approved component-revision and manifest persistence/read
+authority**. Signing, case and provider-evidence cutovers remain separate
+forward-only batches; existing signed evidence must never be rewritten.
 
 ## 9. Static validation result
 
@@ -417,7 +446,9 @@ The current code contains substantial reusable isolation, resolution, Auth,
 workforce, private Storage, safe projection and provenance foundations. It does
 not require a full rewrite. TF01 now supplies the bounded fail-closed
 fixed-plane binding from trusted tenant resolution to the actual server
-execution identity. The remaining path still requires approved versioned
-operator/legal/fee/provider configuration, portable historical provenance and
-a manually accepted second isolated deployment before any design partner can
-be treated as safely operational.
+execution identity. TF02-B now supplies the strict versioned configuration
+contract and safe static selector. The remaining path still requires durable
+tenant-local approved configuration persistence/read authority, real approved
+operator/legal/fee/provider content, separate consumer/provenance cutovers,
+portable historical provenance and a manually accepted second isolated
+deployment before any design partner can be treated as safely operational.

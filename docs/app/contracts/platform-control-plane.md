@@ -1,7 +1,7 @@
 # Platform Control-Plane Domain Contract
 
-Status: CURRENT PROVEN LOCAL implemented subset through TF01 / commit
-`034691e`; remaining control-plane domain TARGET/DEFERRED; REMOTE / PRODUCTION
+Status: CURRENT PROVEN LOCAL implemented subset through TF02-B / commit
+`9f9f310`; remaining control-plane domain TARGET/DEFERRED; REMOTE / PRODUCTION
 NOT PROVEN
 
 Strategic status overlay: DECIDED/TARGET on 2026-09-01. Each tenant is the
@@ -23,6 +23,9 @@ resolver and presentation adapters, trusted ingress, authoritative tenant
 gate, immutable fixed-execution parity, propagated `tenant_execution` context,
 safe public presentation bootstrap and React consumption. The exact
 physical migration columns remain authoritative for that implemented subset.
+TF02-B adds a tenant-data-plane configuration contract/port and static
+selection foundation only; it adds no control-plane configuration table,
+publishing flow or tenant-data-plane persistence.
 Conceptual platform principals/memberships, deployment-state orchestration,
 secret-registry lifecycle, support elevation, tenant #2 and other later
 records in this contract remain TARGET/DEFERRED.
@@ -281,6 +284,39 @@ customer truth or finalized signing/legal snapshot. Missing, invalid,
 ambiguous, tenant-mismatched or environment-mismatched configuration fails
 closed. Canonical ENVAL defaults are allowed only through explicit
 server-owned standalone configuration, never as a global white-label fallback.
+
+### 3.10 Tenant Operational Configuration Boundary
+
+Status: CURRENT PROVEN LOCAL for the TF02-B runtime contract/static selector;
+TARGET for durable content, persistence, publishing and consumers.
+
+The current `TenantConfigurationManifestV1` references exactly one approved
+revision descriptor for operational, legal, fee/commercial and
+provider/integration concerns. References carry revision identity and
+canonical content hash; canonical whole-manifest SHA-256 reuses
+`app_foundation`. Strict exact-key validation rejects generic payloads,
+extension bags and credential-like fields.
+
+Tenant/environment authority comes only from `AppTenantExecutionContext`.
+Event time comes from a server-composition-owned `TenantConfigurationClockPort`.
+The normal port is `resolveForExecutionContext(context)`; it exposes no raw
+event time, independent tenant/environment or request/browser input. Core
+validation, approval/effective-window selection, zero-match, ambiguity and
+minimal supersession are single-authority and fail closed. The static adapter
+owns immutable source and clock composition only.
+
+This contract does not persist configuration in the control plane or tenant
+data plane. TARGET durable material revisions/manifests belong to the owning
+tenant data plane. A future control plane may own minimized publishing intent,
+status or opaque references, never the material legal/fee/provider content or
+credentials. `PresentationBrandConfigV1` remains separate public presentation
+authority and cannot supply operator identity, contracting party, mandate
+recipient, controller/privacy role, fee terms or provider credentials.
+
+TF02-C is the next bounded foundation: tenant-local durable approved
+component-revision and manifest persistence/read authority. Real content,
+approval administration, opaque secret-binding lifecycle, signing/case/provider
+cutovers, tenant #2, dynamic switching and production remain later work.
 
 ## 4. Forbidden Central Data
 
@@ -576,7 +612,9 @@ remain TARGET/DEFERRED or UNKNOWN:
 - platform support/break-glass workflow implementation;
 - tenant/domain/brand administration UI, dynamic/uploaded logos and arbitrary
   theme overrides;
-- legal-operator and support-provider configuration/authority;
+- real legal-operator/fee/provider content, durable tenant-local configuration
+  persistence/read authority, publishing/approval and secret-binding lifecycle,
+  consumer provenance cutovers and support-provider authority;
 - separate LabelUP, SaaS or white-label application/business-code forks;
 - customer-cloud and standalone/self-host installation, update distribution or
   support lifecycle automation;
