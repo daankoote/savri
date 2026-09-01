@@ -1806,3 +1806,20 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   claimed.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-09-01 — Add tenant configuration persistence
+
+- Commit `8480b8f` adds exactly two tenant-data-plane-local tables for approved
+  component-revision and manifest metadata, with append-only immutability,
+  deny-by-default RLS and minimum service-role `SELECT` + `INSERT` authority.
+- The database reader requires canonical TF01 gate-issued execution context,
+  uses the fixed data-plane client for two bounded reads and reuses TF02-B
+  validation, hashing, server-time and selection. Database failure fails closed
+  without a static/global fallback.
+- TF02-C Q01-Q36, TF02-B Q01-Q38, TF01 regression and Integration 19/19 are
+  green; synthetic configuration rows returned to zero.
+- This is local proof only. No real tenant values or configuration payloads,
+  secrets, signing/case/provider consumer cutover, dynamic switching, tenant #2,
+  remote application or production proof is claimed.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

@@ -1,8 +1,8 @@
 # ENVAL App TODO
 
-Status: CURRENT app/MVP TODO — Wave A1, TF01 and TF02-B current local proof
-reconciled through commit `9f9f310` on 2026-09-01. Earlier bounded work-package records
-retain their own dated proof status.
+Status: CURRENT app/MVP TODO — Wave A1, TF01 and TF02-C current local proof
+reconciled through commit `8480b8f` on 2026-09-01. Earlier bounded work-package
+records retain their own dated proof status.
 
 This queue is primarily for the new `/app`, `api-app-*`, and `app_*`
 implementation. Bounded legacy-caller cutover and white-label foundation status
@@ -21,20 +21,28 @@ implementation.
   hash integrity and server-time, tenant/environment-bound static selection.
   Q01-Q38 and runtime export authority pass. It adds no database, real tenant
   configuration content or consumer cutover.
-- NEXT — **TF02-C: tenant-local durable approved component-revision and
-  manifest persistence/read authority**.
-  - Use a forward-only data-plane migration, immutable approved revision and
-    manifest persistence, exact tenant/data-plane-local effective selection,
-    minimum privileges, deny-by-default RLS, service-role server authority,
-    SQL proofs and reuse of the existing adapter/port.
-  - Exclude signing, case and provider-evidence cutovers; real legal/fee/operator
-    values; admin UI; tenant #2; dynamic switching; and production deployment.
-    Do not design or implement those adjacent concerns in TF02-C.
+- DONE / CURRENT PROVEN LOCAL — `TF02-C`: commit `8480b8f` adds exactly two
+  tenant-data-plane tables for approved component-revision and manifest
+  metadata, with relational context constraints, append-only immutability,
+  deny-by-default RLS and service-role `SELECT` + `INSERT` only. Its database
+  adapter requires the canonical TF01 gate-issued execution context, uses the
+  fixed data-plane client for two bounded reads and reuses TF02-B validation,
+  hashing, server-time and selection authority. Database failure fails closed
+  without static/global fallback. Q01-Q36, TF02-B Q01-Q38, TF01 and Integration
+  19/19 pass; synthetic configuration rows returned to zero.
+- NEXT — **signing/legal tenant-config provenance cutover**: make new signing
+  truth consume and immutably pin the relevant tenant/operator/legal/fee
+  configuration provenance. Real approved values and approval/write governance
+  remain prerequisites or separately bounded inputs; existing signed evidence
+  must not be rewritten.
+- No further standalone horizontal tenant-config foundation is currently
+  planned. Tenant #2, dynamic switching, provisioning, billing, custom domains,
+  theme management and a tenant administration portal remain need-driven future
+  work, not the next batch.
 - Later sequence remains TARGET, not implemented:
-  TF02-C durable tenant-local configuration persistence/read authority → bind
-  and pin approved tenant/operator/config provenance into new signing truth →
-  bind opening/material configuration provenance into case truth → provider
-  evidence configuration provenance → portable tenant provenance for
+  bind and pin approved tenant/operator/config provenance into new signing
+  truth → bind opening/material configuration provenance into case truth →
+  provider evidence configuration provenance → portable tenant provenance for
   audit/idempotency/export → workforce/platform administration separation as
   needed → manually provision an isolated design-tenant data plane → prove
   two-plane isolation. Later evidence may refine dependencies; this is not an
@@ -550,6 +558,11 @@ Local proof is not production proof. Remote migration/function deploy, productio
     concerns remain descriptor-only; server-owned event time and exact
     execution-context tenant/environment choose one immutable approved result
     or fail closed. Q01-Q38 and runtime export proof pass.
+  - [x] TF02-C commit `8480b8f` adds two tenant-data-plane-local metadata tables
+    for immutable approved component revisions and manifests, deny-by-default
+    RLS, minimum service-role `SELECT` + `INSERT`, and a TF01-bound fixed-client
+    reader that composes two bounded queries with TF02-B selection. It persists
+    no configuration payloads or secrets and adds no consumer cutover.
   - [x] The root project remains reference/data-plane #1 without customer/case
     copies or a convenience tenant-local `tenant_id` backfill. Its ENVAL label
     proves no operator or first tenant. The control plane owns only platform
@@ -565,7 +578,15 @@ Local proof is not production proof. Remote migration/function deploy, productio
   - [x] Canon/system-map/architecture/contract status promotion is committed in
     `e076a23`; it promotes only local code/proof facts and keeps remote and
     production unproven.
-  - [ ] TARGET/DEFERRED: TF02-C durable tenant-local approved configuration persistence/read authority; real approved operational/legal/fee/provider content; approval/secret lifecycle and signing/case/provider consumer cutovers; real tenant #2 and customer onboarding; live control-plane bootstrap/deployment; production custom domains, ownership verification and trusted proxy topology; dynamic data-plane switching; provisioning/fleet/customer-cloud/self-host automation; tenant/domain/brand administration UI; uploaded assets/themes; legal/support authority configuration; central conflict registry; and remote/production white-label proof.
+  - [ ] TARGET/DEFERRED: real approved operational/legal/fee/provider content;
+    approval/write governance and secret lifecycle; signing/legal, case-root and
+    provider-evidence provenance cutovers; real tenant #2 and customer
+    onboarding; live control-plane bootstrap/deployment; production custom
+    domains, ownership verification and trusted proxy topology; dynamic
+    data-plane switching; provisioning/fleet/customer-cloud/self-host
+    automation; tenant/domain/brand administration UI; uploaded assets/themes;
+    legal/support authority configuration; central conflict registry; and
+    remote/production white-label proof.
   - [ ] UNKNOWN until separately evidenced: remote control-plane provider/project/region/recovery, production ingress authority and live white-label operational readiness.
 - Legacy caller retirement and live-cutover separation:
   - DONE — LOCAL SOURCE: commit `cf226df` removes the shipped static

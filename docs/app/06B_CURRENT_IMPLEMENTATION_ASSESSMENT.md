@@ -109,9 +109,35 @@ Evidence is TF02-B Q01-Q38 PASS, runtime export authority PASS, TF01 regression
 PASS, Deno check/lint/format PASS and PRE_COMMIT_GATE PASS. This foundation has
 no database, migration, real operator/legal/fee/provider content, secret
 binding, business consumer, signing/case/provider provenance cutover, dynamic
-data-plane switching, tenant #2, remote or production proof. TF02-C durable
-tenant-local approved revision/manifest persistence and read authority is
-therefore the exact next foundation.
+data-plane switching, tenant #2, remote or production proof.
+
+2026-09-01 TF02-C current-status overlay: commit `8480b8f` supersedes only the
+durable-persistence/read gap immediately above. CURRENT PROVEN LOCAL now adds
+exactly two tenant-data-plane-local tables for approved component-revision
+metadata and manifest metadata. The four component kinds remain operational,
+legal, fee/commercial and provider/integration; manifests reference those rows
+relationally within the same tenant/environment context. Configuration payloads
+and credentials/secrets are not persisted.
+
+Approved rows are append-only: update, delete and truncate reuse the database
+immutability guard. Both tables have deny-by-default RLS, no direct
+anonymous/authenticated access and service-role `SELECT` + `INSERT` only. The
+database-backed `TenantConfigurationSourcePort` adapter accepts only the
+canonical TF01 gate-issued execution context, uses the fixed data-plane client
+for exactly two bounded context-filtered queries and delegates validation,
+hashing, server-owned event-time and selection to the TF02-B authority. It
+creates no dynamic client and database/read/shape failure fails closed as
+`tenant_configuration_source_unavailable`, with no static or global fallback.
+
+Evidence is TF02-C Q01-Q36 PASS, TF02-B Q01-Q38 regression PASS, TF01
+regression PASS, Integration 19/19 PASS and local SQL catalog proof of the
+tables, constraints, triggers, policies and grants. Synthetic configuration
+rows returned to zero. This is local proof only and does not make a real tenant
+configuration operational: actual approved operational/legal/operator/fee/
+provider values, approval/write governance, administration UI, secret binding,
+signing/legal, case-root and provider-evidence provenance cutovers, tenant #2,
+dynamic switching, provisioning, remote migration application and production
+proof remain TARGET or open.
 
 ## Pre-Task Confirmation
 
