@@ -6,6 +6,28 @@ Authority: operational tracker only; it does not override the official TKV sourc
 
 Architecture decision: TARGET — approved by Daan on 2026-07-22; not CURRENT PROVEN.
 
+## Managed-SaaS / White-Label Strategic Sequence
+
+Status: DECIDED/TARGET — 2026-09-01. This sequence governs strategy ordering;
+it does not downgrade later CURRENT PROVEN local evidence in this tracker or
+authorize implementation.
+
+| phase | target | gate |
+|---|---|---|
+| 0 | truth/documentation alignment | Documentation-only; no runtime/database/remote changes. |
+| 1 | preserve/finish bounded existing core work | No new ENVAL-operator hardcoding. |
+| 2 | read-only SaaS boundary gap audit | No full multi-tenant rewrite before evidence. |
+| 3 | minimum tenant-ready foundation | Only gaps proven in Phase 2; deny-by-default isolation. |
+| 4 | evidence/provider integrations | Provider-independent ports; observed/derived output never mutates core truth. |
+| 5 | design-partner pilot | Concrete tenant, legal roles and acceptance gates required. |
+| 6 | managed-SaaS productization | Pricing, SLA, operations and support require market/operating evidence. |
+| 7 | enterprise variants | Only on proven demand. |
+
+Product development and design-partner/market validation run in parallel. The
+first tenant, willingness to pay, SaaS pricing, SLA, provider availability and
+controller/processor allocation remain UNKNOWN. The current ENVAL portal is
+the reference/default tenant journey only.
+
 Signup lane note: PILOT-SIGNUP-QUARANTINE-UPLOAD-09B1 is CURRENT PROVEN — LOCAL ONLY for collecting intake, capability-scoped private upload, server byte/hash confirmation, immutable replacement and document-first gating. It is transport proof, not regulatory/evidence acceptance. 09B2 signing finalization is now CURRENT PROVEN locally within its explicit legal/runtime gates; internal promotion/dashboard projection remains 09C. Remote, deploy and production remain open.
 
 Signup convergence note: 09B2 signing finalization, lock, receipt and status recovery are CURRENT PROVEN locally. `typed_name_otp_v1` already supplies bounded email control, so the former separate email-verification promotion trigger is `SUPERSEDED`. 09C1A service-only case-owned database/RPC promotion is CURRENT PROVEN locally and is never external inboekverificatie; Storage/Edge/Auth/dashboard integration remains TARGET.
@@ -155,7 +177,7 @@ TARGET approval authorizes none of these domains for blanket implementation. Eac
 | 10 | External ports, adapters and manual fallbacks | Connect external capabilities without provider-specific core architecture. | TODO | NEA-SEC-003 plus applicable domain requirements | Provider-independent port; adapters and controlled manual fallback; external data is not automatic core truth. | Hybrid | Stable core contracts from work packages 2-9; external access | Capability ports, adapters, external references, retries, manual intake | External references/imports only; no provider fields in core | Contract, mapping, provenance, retry/failure, supersede, and provider-substitution proofs | Port/adapter invariants are defined in `07`, database appendix, and `10`. | Prioritize port contracts; keep provider adapters blocked until access exists. |
 | 11 | Verifier support, location visits, sampling, findings and CAPA | Support the external verifier lifecycle while preserving professional authority. | BLOCKED — EXTERNAL | NEA-VER-001-017; NEA-COR; NEA-RET | Risk, materiality, sample, official visit, sufficiency, findings closure, statement, and fraud reporting remain external. | External professional plus internal support | Work packages 7-10; verifier/protocol/RvA/NEa/minister access and decisions | Engagement, scope, plan, visits, samples, findings, CAPA, external results | Dedicated external-provenance records | Actor boundary, immutability, no-self-verification, safe projection, pack reconstruction, and retention proofs | All 19 present TKV clauses are mapped; implementation and verifier access remain open. | Research qualified verifier/protocol path while keeping internal records provider-independent. |
 | 12 | Booking batches, ERE calculation and REV readiness | Produce reproducible candidate batches, calculations, REV inputs, results, and reconciliation. | BLOCKED — EXTERNAL | NEA-BOOK; NEA-KWH; NEA-OPS; NEA-VER-002/007/015 | Internal batch/calculation truth is separate from REV and external verification outcomes. | Hybrid | Work packages 5-11; formula, source-resolved deadlines, REV account/interface | Batches, items, calculations, REV submissions/responses | New booking/calculation/REV entities | Replay, formula/version, blockers, role, input completeness, reconciliation, distinct-event deadline and actor proofs | Requirements and target entities exist; `REG-CONFLICT-001` is source-resolved, while REV interface/account and verifier operations remain open. | Resolve REV access/interface and verifier operations; design internal batch contract against the separate 1 March/1 April/before-1-May events. |
-| 13 | Finance, settlement, payouts, retention, legal and production hardening | Implement finance late around the approved commercial 10/90 formula; preferred pilot hypothesis is ENVAL own-account receipt/reconciliation/fee retention/customer payout, with PSP/split-payment only as fallback or risk reduction. | BLOCKED — EXTERNAL LEGAL/TAX/PAYMENT VALIDATION | NEA-FIN; NEA-AUD; NEA-RET; NEA-SEC; NEA-COR; NEA-OPS | Bruto verkoopopbrengst, directe externe transactiekosten, netto gerealiseerde verkoopopbrengst, ENVAL-succesfee, klantaandeel, settlement, payout execution, reconciliation, corrections, legal decisions, privacy and production authority remain distinct. | Hybrid | Work packages 2-12; proven party/case, EAN/kWh, booking/calculation and recorded ERE sale/proceeds; legal, tax, banking, payment-regulatory, retention, provider, remote and deploy approvals | Settlement core, ledger, legal-party entitlement, statements, payout port, own-account manual path, reconciliation, retention actions, incidents; possible later bank/PSP adapters | Finance/retention/operations entities only after a separately approved batch | Append-only ledger, formula/version, four-eyes, instruction/import idempotency, settlementrevision, manual reconciliation, reversal/bounded-clawback, privacy/retention and later adapter-contract gates | F-01 through F-15 are approved commercial direction; `contracts/settlement-and-payouts.md` remains TARGET and own-account legal/tax/PSD2/Wft/safeguarding classification remains UNKNOWN. | Obtain financial-legal, tax and banking advice, then design a separately bounded pilot batch; do not approve implementation or provider adapters here. |
+| 13 | Tenant-configured finance, settlement, payouts, retention, legal and production hardening | Implement finance late only after the resolved tenant's approved legal identity, customer contract, fee configuration and money-flow model are known. The former generic ENVAL 10/90 and own-account hypothesis is SUPERSEDED/HISTORICAL. | BLOCKED — TENANT COMMERCIAL + EXTERNAL LEGAL/TAX/PAYMENT VALIDATION | NEA-FIN; NEA-AUD; NEA-RET; NEA-SEC; NEA-COR; NEA-OPS | Tenant sale/proceeds, fee, customer entitlement, settlement, payout execution, reconciliation, corrections, legal decisions, privacy and production authority remain distinct. | Hybrid | Work packages 2-12; proven party/case, EAN/kWh, booking/calculation and recorded ERE sale/proceeds; tenant commercial model; legal, tax, banking, payment-regulatory, retention, provider, remote and deploy approvals | Tenant-bound settlement core, ledger, legal-party entitlement, statements, payout port, reconciliation, retention actions and incidents; later provider adapters only if evidenced | Finance/retention/operations entities only after a separately approved batch | Append-only ledger, tenant fee/config version, four-eyes, instruction/import idempotency, settlementrevision, manual reconciliation, reversal/bounded-clawback, privacy/retention and later adapter-contract gates | Generic F-01 through F-15 and ENVAL own-account assumptions are superseded; reusable settlement boundaries remain TARGET while SaaS pricing and tenant money flow are UNKNOWN. | Obtain tenant/market evidence plus financial-legal, tax and banking advice, then design a separately bounded pilot batch; do not approve implementation or provider adapters here. |
 
 ## Parser Position And Boundaries
 
@@ -201,7 +223,7 @@ External research may run in parallel, but it may not introduce provider-specifi
 | External research | kWh API/export | BLOCKED — EXTERNAL | Raw format, cadence, hash, retry, corrections, and replay contract. |
 | External research | REV | BLOCKED — EXTERNAL | Account, roles, interface/fields, submission, response, and reconciliation. |
 | External research | verificateur | BLOCKED — EXTERNAL | Engagement, protocol, requests, plan, visits, findings, result, and access boundaries. |
-| External research | bank/PSP/payment provider | BLOCKED — EXTERNAL VALIDATION | Preferred pilot hypothesis is ENVAL own-account receipt, reconciliation, 10% retention and 90% payout. PSP/split-payment is fallback, not standard. Financial-legal, tax, banking, PSD2/Wft and safeguarding classification remains UNKNOWN; later adapters require separate approval. |
+| External research | bank/PSP/payment provider | BLOCKED — TENANT MODEL / EXTERNAL VALIDATION | No generic ENVAL own-account or 90/10 default remains. The tenant money flow, provider route, financial-legal, tax, banking, PSD2/Wft and safeguarding classification are UNKNOWN; later adapters require tenant/market evidence and separate approval. |
 
 ## Detailed Tracking — Current Work Package 2
 
@@ -1060,7 +1082,8 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
 ### PILOT-SIGNUP-ENTITY-TERM-MANDATE-DECISIONS-09B2A2
 
-DOCUMENTATION/DECISION ONLY — FIVE TARGET DIRECTIONS APPROVED; ENTITY DETAILS,
+HISTORICAL DOCUMENTATION/DECISION SNAPSHOT — FIXED ENVAL B.V. P-01/T-01 AND
+GENERIC F-01–F-15 DIRECTIONS SUPERSEDED ON 2026-09-01; TENANT BUNDLE,
 LEGAL/VERIFIER VALIDATION AND RUNTIME REMAIN OPEN.
 
 P-01 approves future ENVAL B.V. as the intended core-service controller and

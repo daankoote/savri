@@ -2,6 +2,13 @@
 
 Status: MIXED — `typed_name_otp_v1` SIGNING AND 09C1A/B/C POST-SIGNING HANDOFF CURRENT PROVEN LOCALLY; PRODUCTION LEGAL/OTP NOT CURRENT
 
+Strategic status overlay (DECIDED/TARGET, 2026-09-01): the signing mechanics
+and CURRENT PROVEN local evidence retain their status. The former fixed ENVAL
+B.V. controller/contracting-party and 90/10 bundle direction is SUPERSEDED as
+a generic platform default. Future legal documents, fees and signing bundles
+resolve from the tenant's approved identity/configuration.
+Controller/processor allocation remains TARGET LEGAL REVIEW.
+
 ## Bounded 09A decision
 
 The active MVP signature method is `typed_name_otp_v1`. It represents a simple
@@ -342,14 +349,13 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 Status: APPROVED TARGET DIRECTIONS — ENTITY DETAILS AND LEGAL/VERIFIER
 VALIDATION OPEN — NO RUNTIME IMPLEMENTATION
 
-P-01 and T-01 approve the future ENVAL B.V. as the intended core-service
-controller and contracting party. The same future legal entity receives the
-customer assignment, manages the service and performs the agreed financial
-settlement. Its full statutory name, legal form, KvK number, statutory seat,
-correspondence address, general contact and privacy contact remain mandatory
-before either document may become CURRENT. A holding, shareholder, software
-vendor, partner or verifier is not silently assigned the controller role;
-future separate or joint partner roles require legal assessment. Particulier,
+P-01 and T-01's former fixed ENVAL B.V. direction is SUPERSEDED as a generic
+default. The resolved tenant's approved legal identity is the prospective
+operator/customer contract party; purpose-specific controller/processor and
+any ENVAL Software role require legal assessment. Full applicable statutory
+and contact details remain mandatory before a bundle may become CURRENT. A
+brand, holding, shareholder, software vendor, partner or verifier is never
+silently assigned a legal or privacy role. Particulier,
 Zakelijk and VvE are limited to the approved Dutch MVP definitions, and foreign
 enterprises/registers remain post-MVP. A business/VvE signer declaration is
 still neither ENVAL authority review nor verifier acceptance.

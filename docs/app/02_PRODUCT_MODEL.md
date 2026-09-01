@@ -2,46 +2,75 @@
 
 ## Product Position
 
-ENVAL is a customer-facing commercial ERE-E inboekdienstverlener service for eligible home-charging users.
+Status: DECIDED/TARGET for the managed-SaaS/white-label product direction;
+CURRENT PROVEN only where explicitly tied to current code/schema/proof.
 
-ENVAL:
+ENVAL is one generic B2B managed-SaaS and white-label software platform for
+separate ERE-E inboekdienstverleners. The current ENVAL-branded portal is the
+reference/default tenant journey. It is not proof that ENVAL Software is the
+regulated operator, REV account holder, ERE trader, independent verifier or
+end-customer contracting party.
 
-- checks whether customers may be eligible
-- binds customers directly
-- collects charger, address, consent, invoice, and evidence information
-- builds and manages an audit-worthy customer dossier for the inboeking
-- guides the customer-facing process toward inboeking within final regulatory, operational, and commercial terms
+The platform:
 
-The product is no longer positioned primarily as neutral dossier infrastructure. Dossier structure and audit trail remain critical, but they support a direct commercial service.
+- supports a tenant-owned customer journey and eligibility workflow;
+- collects tenant-local charger, address, consent, invoice and evidence data;
+- builds and manages an audit-worthy tenant-local customer dossier;
+- supports the tenant's inbooking workflow within that tenant's approved
+  regulatory, operational, legal and commercial terms; and
+- keeps generic platform ownership/configuration separate from tenant business
+  truth and authority.
+
+The tenant/inboekdienstverlener carries the regulated operational
+responsibility. ENVAL supplies the software layer. Tenant identity,
+presentation brand, legal operator, support provider, customer contracting
+party and privacy role are separate concepts.
 
 Status split:
 
 - CURRENT PROVEN: intake capture, app dossier foundation, app audit/idempotency, authenticated dashboard document lifecycle, immutable document versions, and customer-safe dashboard projection where current code/schema/proofs show them.
-- TARGET: ENVAL's ERE-E inboekdienstverlener service, including final mandate, contract, verifier, REV, and inboeking operations.
-- UNKNOWN: REV account/list publication, threshold/mandate readiness, production inboeking execution, final verifier process, and final fee trigger until proven from current sources.
+- TARGET: tenant-bound legal identity, branding, customer contracts, fee
+  configuration, signing/legal bundles, audit and deny-by-default isolation,
+  with a minimum tenant-ready foundation determined only after a gap audit.
+- SUPERSEDED/HISTORICAL: 30/70 or 70/30 operational partnership, IP transfer
+  or shared ownership, an assumed partner as first tenant, ENVAL B.V. as the
+  generic fixed operator/end-customer contracting party, and 90/10 as a
+  generic ENVAL software price.
+- UNKNOWN: controller/processor allocation, SaaS pricing, SLA, first tenant,
+  willingness to pay, concrete providers and tenant-specific REV/listing,
+  verifier, mandate and production readiness.
 
 Role boundaries:
 
-- ENVAL is geen verificateur.
-- ENVAL is geen certificeerder.
-- ENVAL must not claim NEa approval, accreditation, REV access, list publication, mandate volume, verifier readiness, or production eligibility until current evidence proves it.
-- ENVAL does not make compliance, certification, verification, acceptance, payout, revenue, timing, or document-approval guarantees.
+- ENVAL Software is geen inboekdienstverlener, REV-rekeninghouder,
+  ERE-handelaar, verificateur of certificeerder by default.
+- The resolved tenant must not claim NEa approval, accreditation, REV access,
+  list publication, mandate volume, verifier readiness or production
+  eligibility until tenant-bound evidence proves it.
+- Neither the platform nor tenant journey makes compliance, certification,
+  verification, acceptance, payout, revenue, timing or document-approval
+  guarantees.
 - ENVAL keeps internal audit/evidence truth separate from customer-facing status and customer timeline copy.
 - Frontend may assist; backend decides.
 - Frontend prechecks and parsing can improve UX, latency, and support load, but backend validation, normalization, authorization, hashing, audit, and lifecycle decisions remain the source of truth.
 
 ## Commercial Model
 
-- Intended customer-facing result-based fee model: 10% success fee.
-- The strategic goal is to compete through a lower fee and a simpler, clearer process.
-- Do not state competitor percentages as fact unless they are later sourced and verified.
-- The lower fee only works if the product is low-support by design and highly audit-worthy by design.
+- Tenant customer fees are tenant-bound configuration and require the tenant's
+  approved legal/commercial bundle.
+- The former 90/10 settlement direction is historical and is not a generic
+  platform price, default tenant fee or SaaS price.
+- SaaS pricing, SLA and willingness to pay remain UNKNOWN pending market and
+  operating evidence.
+- Do not state competitor percentages as fact unless sourced and verified.
 - Customer-facing flows must be explicit about required documents, current status, missing information, and claim boundaries.
 - Audit readiness is critical because audit handling and support overhead are likely major cost drivers.
-- Exact fee trigger and definition of "success" must be finalized in the terms.
-- Exact legal definition of "result" must be finalized before result-based fee production use.
-- Future backend work must store the accepted fee model/version per customer.
-- Working commercial source of truth: `docs/app/legal/fee-model-and-service-terms.md`.
+- Exact fee trigger, fee base and definition of result belong to each tenant's
+  approved fee configuration and contract bundle.
+- Future tenant runtime must pin the accepted tenant fee configuration/version
+  to the applicable customer/legal snapshot.
+- Historical operator-fee context remains in
+  `docs/app/legal/fee-model-and-service-terms.md`; it is not SaaS pricing.
 
 ## Audit, Evidence, And Anti-Fraud Doctrine
 
@@ -83,8 +112,8 @@ Legal/audit doctrine remains valid for internal docs, legal terms, service descr
 
 ## Core Product Areas
 
-- ENVAL service explanation
-- Price / fee model
+- tenant service explanation and approved legal identity
+- tenant-bound price / fee model
 - Eligibility check
 - Signup and intake
 - Charger and address data
@@ -95,18 +124,39 @@ Legal/audit doctrine remains valid for internal docs, legal terms, service descr
 - Audit events and evidence history
 - ERE education and source-based information
 - Privacy, terms, contact, and NL/EN support
+- tenant branding, contract/signing bundle and audit configuration
 
 ## Claim Boundaries
 
 - Do not promise that EREs will always be granted.
 - Do not imply that uploaded documents are automatically accepted by all parties.
 - Do not imply that confirmed upload equals accepted evidence.
-- Do not imply that ENVAL is NEa-approved, accredited, listed, REV-ready, or production-ready until separately proven.
+- Do not imply that ENVAL Software is the regulated tenant/operator or that a
+  tenant is NEa-approved, accredited, listed, REV-ready or production-ready
+  until separately proven.
 - Avoid careless guarantee language around revenue, approval, timing, or certification.
 - Do not guarantee payout, value realization, certification, or acceptance of every uploaded document.
 - ENVAL may pause, reject, or request more information when evidence is insufficient.
 - Keep role boundaries explicit in public copy and terms.
-- Legal and commercial responsibility must be clarified before final terms go live.
+- Tenant legal identity, commercial responsibility, controller/processor roles
+  and platform/tenant responsibilities must be clarified before final terms go
+  live.
+
+## Strategic Delivery Order
+
+1. Phase 0 — truth/documentation alignment.
+2. Phase 1 — preserve and finish bounded existing core work without new
+   ENVAL-operator hardcoding.
+3. Phase 2 — read-only SaaS boundary gap audit.
+4. Phase 3 — minimum tenant-ready foundation based only on gap evidence.
+5. Phase 4 — evidence/provider integrations.
+6. Phase 5 — design-partner pilot.
+7. Phase 6 — managed-SaaS productization.
+8. Phase 7 — enterprise variants only on proven demand.
+
+Product development and design-partner/market validation proceed in parallel.
+There is no full multi-tenant rewrite before Phase 2 and no billing or broad
+control-plane build without market and operating evidence.
 
 ## Rebuild Scope
 

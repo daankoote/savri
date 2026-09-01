@@ -2,6 +2,12 @@
 
 Status: PROOF ONLY.
 
+Strategic supersession notice (2026-09-01): this dated proof-only assessment's
+quoted ENVAL-as-inboekdienstverlener premise is historical. Current canon
+assigns regulated operator obligations to the resolved tenant and preserves
+the technical implementation findings without role inference. Historical
+inventory rows and counts are not rewritten.
+
 Disposition rule: local foundations that depend on open regulatory semantics are `PROVISIONALLY REUSABLE — FINAL DISPOSITION AFTER REGULATORY CANON`. Local proof does not approve target architecture, remote deployment, REV compatibility, CAR access, verifier workflow, mandate wording, AO/IB detail, or CAPA detail.
 
 Audit date: 2026-07-19.

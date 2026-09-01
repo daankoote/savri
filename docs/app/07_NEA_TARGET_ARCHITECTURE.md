@@ -28,7 +28,18 @@ Architecture source order:
 
 No derived ENVAL document may contradict the official PDF. A conflict or a new official version is a hard stop requiring a source diff, impacted-requirement/trace review, architecture impact review, and explicit supersede decision.
 
-This document defines the approved TARGET direction for ENVAL as inboekdienstverlener for ERE-E. It does not drop database objects, rewrite runtime code, approve production use, or claim compliance completeness.
+This document defines the approved TARGET architecture used by a resolved
+tenant in its role as ERE-E inboekdienstverlener. ENVAL Software supplies the
+generic managed-SaaS/white-label platform and is not the regulated operator by
+default. It does not drop database objects, rewrite runtime code, approve
+production use or claim compliance completeness.
+
+Strategic status overlay (DECIDED/TARGET, 2026-09-01): tenant legal identity,
+brand, customer contracts, fees, signing/legal bundles and operational audit
+must be tenant-bound. The current ENVAL-branded journey is the
+reference/default tenant journey only. A complete multi-tenant rewrite and
+billing/control-plane productization remain gated on a read-only gap audit and
+market/operating evidence.
 
 Local app foundations that depend on regulatory semantics are not automatically approved for reuse or implementation. Their disposition remains:
 
@@ -273,7 +284,7 @@ An internal support control may never automatically create or advance `officiall
 
 | boundary | capabilities | architecture rule |
 |---|---|---|
-| INTERNAL — BUILDABLE ONLY IN AN EXPLICITLY APPROVED BOUNDED PACKAGE | customer/person/organization; representation; locations; connections; chargers; charge points; meters/MID; documents/evidence; mandates; kWh raw/normalized; internal reviews; support controls; corrections; audit/provenance; evidence packs; verifier request/response records | ENVAL owns modular domain truth and support workflows, but no module may perform professional verifier decisions. |
+| INTERNAL — BUILDABLE ONLY IN AN EXPLICITLY APPROVED BOUNDED PACKAGE | customer/person/organization; representation; locations; connections; chargers; charge points; meters/MID; documents/evidence; mandates; kWh raw/normalized; internal reviews; support controls; corrections; audit/provenance; evidence packs; verifier request/response records | The tenant data plane owns modular domain truth and support workflows; the ENVAL platform supplies bounded software capabilities, and no module may perform professional verifier decisions. |
 | EXTERNAL — RESEARCH AND CONNECT LATER | CAR; EAN/aangeslotene; distribution-system operator; KvK; MID/certificate source; charger provider/CPO/backoffice; energy supplier; kWh API/export; REV; verifier; payment provider where relevant | Each capability is reached through a provider-independent port, zero or more adapters, and a manual fallback where allowed. |
 
 Every external capability contract carries: raw response/evidence reference, source system, external reference, retrieval time, valid-from/valid-to, payload/content hash, transformation provenance, internal review status, decision reference, and failure/retry state.

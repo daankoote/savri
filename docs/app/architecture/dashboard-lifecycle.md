@@ -2,9 +2,16 @@
 
 Status: source of truth for the next ENVAL phase.
 
+Strategic status overlay (DECIDED/TARGET, 2026-09-01): this is the
+reference/default tenant customer and backoffice journey. Operational requests,
+review tasks, findings and audit belong to the resolved tenant and its
+authorized workforce. `ENVAL` in historical/current reference copy is a
+presentation label, not fixed operator, contract-party or reviewer authority.
+
 ## 1. Purpose
 
-ENVAL is moving from signup intake to a customer dashboard and dossier lifecycle.
+The platform is moving from signup intake to a tenant-operated customer
+dashboard and dossier lifecycle.
 
 The dashboard is the customer-facing post-signup surface. After signup, the customer should be able to see dossier status, requests, documents, communication, consents, and a readable timeline.
 
@@ -14,8 +21,9 @@ The old `dossier.html` wizard is source material only. It is not the target arch
 
 - Signup creates or starts a dossier.
 - The customer receives dashboard access.
-- ENVAL reviews the dossier internally.
-- The customer is generally done until ENVAL requests more information or later yearly kWh/value input.
+- The resolved tenant's authorized workforce reviews the dossier internally.
+- The customer is generally done until the tenant requests more information or
+  later yearly kWh/value input.
 - Email notifies the customer.
 - The dashboard is where the customer responds, uploads, corrects data, or views status.
 - The customer sees:
@@ -59,7 +67,9 @@ Do not carry these assumptions into the target dashboard model:
 - One-document-per-charger-type rules as the final upload model.
 - Old `terms`, `privacy`, and `mandaat` booleans as the full legal model.
 - Old export/payment gate assumptions.
-- Old neutral infrastructure positioning where ENVAL is not the customer-facing inboekservice.
+- Old binary positioning that either makes ENVAL Software the fixed
+  customer-facing operator or removes the tenant-owned customer journey. The
+  target is a generic platform with a resolved tenant-operated journey.
 - Raw audit rows shown directly to customers.
 
 ## 5. Target Frontend Architecture
@@ -95,7 +105,8 @@ Implementation sequence:
 - Unsupported sections remain explicitly unavailable/open.
 - Keep customer copy short and action-oriented.
 - Do not wire backend writes until backend contracts are reviewed.
-- Keep internal ENVAL review tooling out of the customer dashboard until roles and auth boundaries are defined.
+- Keep tenant-workforce review tooling out of the customer dashboard until
+  roles and Auth boundaries are defined.
 
 Optional later routes:
 
@@ -248,12 +259,12 @@ The frontend must use backend-derived capabilities for mutation. It must not inf
 
 Flow:
 
-1. ENVAL creates a request.
+1. The resolved tenant creates a request through authorized workforce tooling.
 2. An email notification goes out.
 3. The customer opens the dashboard.
 4. The customer responds in the dashboard.
 5. The response can include text, upload, data correction, consent update, or kWh input.
-6. ENVAL reviews the response.
+6. The tenant's authorized workforce reviews the response.
 7. The request moves to the next status.
 
 Every request needs:
@@ -268,7 +279,7 @@ Every request needs:
 - status
 - email notification event
 - customer response record
-- ENVAL review outcome
+- tenant review outcome
 - audit trail
 
 Example requests:
@@ -326,9 +337,9 @@ Withdrawal/change handling:
 
 Legal copy is draft until reviewed.
 
-## 10. ENVAL Review Model
+## 10. Tenant Review Model
 
-ENVAL review should check:
+Tenant review should check:
 
 - address/person/company match
 - energy bill or equivalent evidence
@@ -345,7 +356,7 @@ Analysis model:
 - Keep declared customer data separate from observed document data.
 - Keep observed data separate from evaluated comparisons.
 - Human review decisions are separate from automated analysis.
-- Analysis supports ENVAL review.
+- Analysis supports tenant human review.
 - Analysis must not be treated as an automatic compliance, certification, or acceptance claim.
 
 ## 11. Customer-Readable Audit/Timeline
@@ -359,7 +370,7 @@ Timeline examples:
 - Adres gecontroleerd
 - Factuur ontvangen
 - Document geaccepteerd / opnieuw nodig
-- ENVAL vraagt aanvullende informatie
+- {{tenant_display_name}} vraagt aanvullende informatie
 - Reactie ontvangen
 - Dossier in beoordeling
 - Jaaroverzicht beschikbaar
@@ -474,13 +485,15 @@ Phase 6: customer document module
 
 Phase 7: request/respond + uploads
 
-- ENVAL can request information.
+- The resolved tenant can request information through authorized workforce.
 - Customer responds and uploads through dashboard.
 
 Phase 8: internal review workflow
 
-- Add ENVAL review tasks, findings, human review decisions, and customer follow-up requests.
+- Add tenant-bound review tasks, findings, human review decisions and customer
+  follow-up requests.
 
 Phase 9: yearly kWh/result/fee lifecycle
 
-- Add yearly kWh input/readout, result events, fee calculation, and customer year overview.
+- Add yearly kWh input/readout, result events, tenant-configured fee calculation
+  and customer year overview.

@@ -1684,3 +1684,39 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   remote action, deploy, commit, push or merge was performed.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-09-01 — Align strategic truth to independent managed SaaS / white-label
+
+- Recorded Daan's decision that the proposed 30/70 or 70/30 operational
+  partnership does not proceed and that Daan retains the ENVAL software,
+  architecture and generic IP independently.
+- Repositioned ENVAL as the generic B2B managed-SaaS/white-label software
+  platform for separate inboekdienstverlener tenants. The resolved tenant owns
+  the regulated operator, REV, trading, end-customer contract and tenant-local
+  operational responsibility; ENVAL Software has none of those roles by
+  default and remains distinct from the independent verifier.
+- Preserved the current ENVAL-branded portal/root data plane as the
+  reference/default tenant journey and technical compatibility baseline only.
+  It proves neither a first commercial tenant nor a fixed ENVAL legal/operator
+  identity.
+- Classified tenant legal identity, brand, customer contracts, fee
+  configuration, signing/legal bundles, tenant audit and deny-by-default
+  isolation as DECIDED/TARGET. Existing CURRENT PROVEN local customer,
+  evidence, signing, review, compliance and control-plane foundations retain
+  their exact technical status.
+- Classified fixed ENVAL B.V. controller/contract-party/operator direction,
+  generic 90/10 pricing and the ENVAL own-account hypothesis as
+  SUPERSEDED/HISTORICAL. Exact controller/processor allocation, SaaS pricing,
+  SLA, first tenant, willingness to pay and concrete provider availability
+  remain UNKNOWN / TARGET LEGAL REVIEW.
+- Recorded Phase 0 through Phase 7 order: documentation alignment; bounded
+  existing-core completion without operator hardcoding; read-only SaaS gap
+  audit; evidence-based minimum tenant foundation; providers; design-partner
+  pilot; productization; demand-proven enterprise variants. Product development
+  and market/design-partner validation proceed in parallel.
+- Documentation-only change: no code, database, migration, test, generated
+  artifact, dependency, deployment configuration, remote action, staging,
+  commit or push.
+
+TKV ALIGNMENT GUARD — TENANT-BOUND REGULATORY ARCHITECTURE, NOT PLATFORM OR
+VERIFIER AUTHORITY

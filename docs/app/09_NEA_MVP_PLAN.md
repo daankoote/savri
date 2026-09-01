@@ -4,6 +4,16 @@ Status: GO — BOUNDED INTERNAL FOUNDATION ONLY; EXCLUDED SCOPES REMAIN NO-GO
 
 DAAN DECISION: GO — BOUNDED INTERNAL FOUNDATION PHASE
 
+Strategic status overlay (DECIDED/TARGET, 2026-09-01): this plan now applies to
+the generic software core and tenant-local data plane of a resolved
+inboekdienstverlener tenant. ENVAL Software is not the operator by default.
+The managed-SaaS sequence is Phase 0 documentation alignment; Phase 1 bounded
+existing core completion without operator hardcoding; Phase 2 read-only gap
+audit; Phase 3 evidence-based minimum tenant foundation; Phase 4 providers;
+Phase 5 design-partner pilot; Phase 6 productization; Phase 7 demand-proven
+enterprise variants. No full multi-tenant rewrite or billing/control-plane
+build is authorized before the stated evidence gates.
+
 This normative gate plan permits only the bounded internal foundation scope recorded in `docs/app/decisions/architecture-and-environment-decisions.md`, `docs/app/10_ARCHITECTURE_GO_NO_GO_AUDIT.md`, and `docs/app/operations/nea-implementation-roadmap.md`. It does not authorize remote schema apply, remote migration, deployment, production, push, external provider adapters, REV integration, official verifier decisions, final retention/legal/mandate execution, booking, or settlement execution.
 
 Baseline evidence: commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805` (`Establish NEa documentation baseline`).

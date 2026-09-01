@@ -4,6 +4,11 @@ Status: CURRENT PROVEN LOCAL implemented subset through WL11E / commit
 `8b47126`; remaining control-plane domain TARGET/DEFERRED; REMOTE / PRODUCTION
 NOT PROVEN
 
+Strategic status overlay: DECIDED/TARGET on 2026-09-01. Each tenant is the
+regulated inboekdienstverlener/operator. ENVAL is the generic platform/IP
+layer. The existing reference data plane selects neither a tenant legal
+identity nor a first commercial tenant.
+
 Authority: this contract refines
 `docs/app/architecture/white-label-control-plane.md` within its approved WL02
 separate-data-plane architecture. It is subordinate to
@@ -37,6 +42,8 @@ Terminology is strict:
 
 - `tenant` is the stable platform identity for one service provider or
   inboekdienstverlener;
+- each tenant's legal identity, customer contracts, fees, signing/legal bundle
+  and tenant audit remain tenant-bound; the ENVAL brand supplies none of them;
 - `tenant != customer`;
 - `tenant != case/dossier`;
 - `tenant != party or organization represented by a customer`;
@@ -312,9 +319,10 @@ authorized owning plane.
    replaceable deployment destination, not the tenant itself.
 5. All cross-control-plane references use opaque platform identifiers. They do
    not require copying tenant-local customer, party, case or evidence IDs.
-6. ENVAL tenant #1 receives one new stable platform `tenant_id` only in the
-   future control plane. Existing ENVAL tenant-local identifiers and rows are
-   not rewritten.
+6. Reference data-plane #1 receives a stable platform `tenant_id` only after
+   the actual operator/tenant identity is resolved. The ENVAL brand/project
+   label cannot supply that identity. Existing tenant-local identifiers and
+   rows are not rewritten.
 
 ### 5.1 Orthogonal Operating Configuration
 
@@ -329,7 +337,8 @@ independent and do not change the stable `tenant_id`:
 | support model | `DIGITAL_ONLY`, `DIGITAL_PLUS_PHYSICAL`, `EXTERNAL_SUPPORT_PROVIDER` or `NONE_CUSTOMER_OPERATED` where applicable | `AUTHORITATIVE_PLATFORM_CONFIG`; names service shape only, while every actual access grant remains separate `AUTHORITATIVE_PLATFORM_ACCESS` |
 | conflict-registry participation | connected eligible/opt-in participation or no platform-wide participation | `AUTHORITATIVE_PLATFORM_CONFIG`; independent of deployment owner and never evidence of no conflict |
 
-ENVAL SaaS, managed white-label, customer-owned cloud and contractually agreed
+Managed SaaS with the default ENVAL presentation, managed white-label,
+customer-owned cloud and contractually agreed
 standalone/self-hosted/source-license deployment are compositions of these
 dimensions over one core. They do not create separate table families,
 contracts, business modules or code forks. Branding never supplies an
@@ -458,18 +467,20 @@ provider dossier store.
   Network, IAM, provider, logging, recovery and penetration evidence remain
   required before any production assurance.
 
-## 10. ENVAL Tenant/Data-Plane #1 Bootstrap
+## 10. Reference Data-Plane #1 Registration
 
 Future bootstrap is additive control-plane registration only:
 
-1. allocate one stable opaque `tenant_id` for ENVAL;
-2. register and verify the trusted ENVAL host/domain routing identity;
-3. register one active locator pointing to the existing ENVAL application and
+1. resolve the actual operator/tenant identity before activation; the ENVAL
+   brand or current project label cannot supply it;
+2. allocate one stable opaque `tenant_id` for that resolved tenant;
+3. register and verify the trusted ENVAL reference host/domain routing identity;
+4. register one active locator pointing to the existing ENVAL application and
    isolated data plane, with tenant-scoped secret references;
-4. register desired schema/application/function versions and separately
+5. register desired schema/application/function versions and separately
    observed deployment/health state;
-5. activate routing only after compatibility and fail-closed proofs pass; and
-6. audit every registration, activation and later change.
+6. activate routing only after compatibility and fail-closed proofs pass; and
+7. audit every registration, activation and later change.
 
 Bootstrap does not rewrite or migrate existing customer/case/party/evidence
 IDs, add `tenant_id` to isolated core tables, copy cross-plane customer data or

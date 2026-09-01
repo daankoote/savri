@@ -89,6 +89,12 @@ customer-cloud or self-host installation automation, brand/domain/admin UI,
 uploaded logos or arbitrary themes, configurable legal/support authority,
 central conflict registry and live remote white-label proof.
 
+Strategic role overlay (DECIDED/TARGET, 2026-09-01): the current root data
+plane and ENVAL-branded portal are the technical reference/default tenant
+journey. They do not prove an ENVAL Software operator, REV, trader, verifier,
+controller or end-customer contract-party role, and they do not select a first
+commercial tenant. Existing local proof remains unchanged.
+
 ## Current Workforce Authorization Foundation
 
 Status: CURRENT PROVEN — LOCAL ONLY through commit `be2e247`, including the
@@ -210,7 +216,12 @@ the local proof.
 
 ## Target Direction
 
-The rebuild should support ENVAL as a customer-facing commercial ERE inboekservice. The frontend should separate public commercial pages and product flows into clear modules:
+The rebuild should support one generic managed-SaaS/white-label software core
+for separately resolved inboekdienstverlener tenants. The current
+ENVAL-branded experience remains the reference/default tenant journey. The
+frontend should separate public commercial pages and product flows into clear
+modules whose legal identity, brand, fee and contract/signing bundle resolve
+from tenant-bound approved configuration:
 
 - ENVAL info
 - Price / fee
@@ -224,6 +235,12 @@ The rebuild should support ENVAL as a customer-facing commercial ERE inboekservi
 - NL/EN support
 
 Backend integration should happen through explicit API contracts rather than copied assumptions from legacy browser scripts.
+
+Tenant resolution, tenant legal/operator identity, presentation brand, support
+provider and customer context remain separate. Missing or ambiguous authority
+fails closed. A complete multi-tenant rewrite, billing/control-plane product,
+tenant #2 and production tenant isolation remain TARGET and require the Phase
+2 gap audit plus separately approved evidence-driven batches.
 
 ## Current Auth Flow
 

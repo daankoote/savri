@@ -7,6 +7,24 @@ used by `typed_name_otp_v1`. Product directions are internally approved, but
 none of the four documents is CURRENT or approved legal advice. Verifier,
 financial-regulatory and production acceptance remain external where stated.
 
+## 2026-09-01 Strategic Supersession Overlay
+
+Status: DECIDED/TARGET — LEGAL REVIEW OPEN
+
+The fixed future ENVAL B.V. controller/contracting-party direction, all F-01
+through F-15 fixed 90/10 directions and the own-account settlement hypothesis
+are SUPERSEDED as generic platform defaults. The decision registry and draft
+customer text below are retained as historical proposal evidence and must not
+be rendered or treated as CURRENT merely because their original cells say
+`APPROVED`.
+
+TARGET: the resolved tenant supplies its approved legal identity, privacy
+roles, customer contract, fee terms and mandate/signing bundle. ENVAL Software
+supplies the generic platform and is not the end-customer contract party or
+controller by default. Exact controller/processor allocation per purpose,
+SaaS terms/pricing, SLA, tenant fee terms and the first tenant remain UNKNOWN /
+TARGET LEGAL REVIEW.
+
 ## Canonical decision registry
 
 This is the only canonical P/T/F/M decision table in this document. A product
@@ -15,13 +33,13 @@ payment-regulatory validation remains open.
 
 | ID | Canonical status | Approved direction | Remaining live gate |
 | --- | --- | --- | --- |
-| P-01 | APPROVED PRODUCT/LEGAL DIRECTION — ENTITY DETAILS PENDING | Future ENVAL B.V. is the intended controller for the core service; no incomplete brand name is used as legal identity. | Complete statutory and contact details; legal assessment of any separate or joint partner role. |
+| P-01 | SUPERSEDED AS GENERIC DEFAULT — TARGET LEGAL REVIEW | The resolved tenant's approved legal identity and purpose-specific privacy role must be bound explicitly; ENVAL branding is never legal identity. | Decide controller/processor allocation per purpose and complete the applicable tenant/platform statutory and contact details. |
 | P-02 | APPROVED PRODUCT/PRIVACY DIRECTION — LEGAL VALIDATION REQUIRED | Contract/precontract for the necessary core service; law only where demonstrably applicable; legitimate interest only after a recorded balancing test; consent only for genuinely optional processing. | Purpose-by-purpose legal-basis validation and legitimate-interest assessments. |
 | P-03 | APPROVED PRODUCT/PRIVACY DIRECTION — LEGAL VALIDATION REQUIRED | Recipients are disclosed by category; no unnecessary vendor list and no non-EEA transfer without a recorded safeguard. | Validate roles, processor arrangements, transfer locations and safeguards. |
 | P-04 | APPROVED PRODUCT/PRIVACY DIRECTION — LEGAL VALIDATION REQUIRED | Category-based retention, preserving known official minima without extending them to unrelated data. | Validate non-verification periods, start events, legal holds and deletion/minimization rules. |
 | P-05 | APPROVED PRODUCT/PRIVACY DIRECTION — LEGAL VALIDATION REQUIRED | One privacy contact and one statutory rights procedure with reliable identity checking. | Validate the complete rights workflow, deadlines and exception handling. |
 | P-06 | APPROVED PRODUCT/PRIVACY DIRECTION — LEGAL VALIDATION REQUIRED | Material changes are actively notified and never applied retroactively. | Validate when renewed acknowledgement or another customer action is required. |
-| T-01 | APPROVED PRODUCT/LEGAL DIRECTION — ENTITY DETAILS PENDING | Future ENVAL B.V. contracts, receives the assignment, manages the service and performs agreed financial settlement; Dutch Particulier, Zakelijk and VvE definitions apply. | Complete legal-entity details; foreign entities and registers remain post-MVP. |
+| T-01 | SUPERSEDED AS GENERIC DEFAULT — TARGET LEGAL REVIEW | The resolved tenant's approved legal identity is the prospective end-customer contracting/operating party; ENVAL Software is not that party by default. | Complete tenant-specific roles, entity details and contract/settlement allocation; foreign entities and registers remain post-MVP. |
 | T-02 | APPROVED PRODUCT/LEGAL DIRECTION | Contract formation requires successful atomic server finalization and a safe-reference submission confirmation; exact one-year scope with no silent renewal. | Final legal review of the clause and its relationship with statutory consumer rights. |
 | T-03 | APPROVED PRODUCT/CONTRACT DIRECTION — LEGAL VALIDATION REQUIRED | Termination is prospective; ENVAL may block or terminate for fraud, deliberate falsehood, persistent non-cooperation, illegality or objective impossibility. | Validate notice, cure, statutory withdrawal/cooling-off and effects on active work and accrued rights. |
 | T-04 | APPROVED LIABILITY DIRECTION — NUMERIC CAP PENDING INSURANCE AND LEGAL ADVICE | Liability remains proportionate and never excludes mandatory rights; no numeric cap is invented. | Insurance scope, legal advice and a defensible numeric cap, if permitted. |
@@ -352,7 +370,8 @@ authority chains remain post-MVP.
 
 ## Consolidated external pilot-live gates
 
-- complete statutory and contact details for the future ENVAL B.V.;
+- complete statutory and contact details for the resolved tenant and any
+  purpose-specific ENVAL Software role;
 - privacy legal-basis, recipient/processor, transfer, retention and rights
   validation;
 - consumer-law, termination, liability/insurance, force-majeure, change,

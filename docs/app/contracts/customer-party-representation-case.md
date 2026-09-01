@@ -4,6 +4,13 @@ Status: TARGET — WP2 DESIGN/CONTRACT
 
 This document is the bounded WP2 current-to-target contract. It grants no further implementation authority. `CURRENT PROVEN` below means only built behavior with the cited local green evidence; it does not mean regulatory compliance, remote presence, production readiness, or acceptance by the NEa or a verifier.
 
+Strategic status overlay (DECIDED/TARGET, 2026-09-01): every party,
+representation, case and audit record is tenant-local. The tenant's legal
+identity and operating authority are not inferred from ENVAL branding,
+platform membership, Auth, customer access or support. ENVAL Software remains
+the generic platform supplier; exact platform/tenant privacy roles remain
+TARGET LEGAL REVIEW.
+
 ## Source Requirements
 
 Normative order and scope:

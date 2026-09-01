@@ -30,10 +30,15 @@ Deferred:
 
 Resolved product role decision:
 
-- ENVAL is now a customer-facing commercial ERE-E inboekdienstverlener service.
-- ENVAL guides the customer-facing process toward inboeking within final regulatory, operational, and commercial terms.
-- ENVAL is geen verificateur.
-- ENVAL is geen certificeerder.
+- The current ENVAL-branded portal is the reference/default tenant journey for
+  a resolved ERE-E inboekdienstverlener tenant. ENVAL Software is the generic
+  platform supplier, not the regulated operator or customer contract party by
+  default.
+- The tenant journey guides the customer-facing process toward inboeking
+  within the resolved tenant's approved regulatory, operational and commercial
+  terms.
+- Neither ENVAL Software nor the tenant is the independent verifier or a
+  certifier.
 - ENVAL gives no guarantee of ERE award, acceptance, payout, revenue, timing, certification, or document approval.
 - ENVAL keeps the internal audit/evidence layer separate from customer-facing statuses and customer timeline copy.
 - The result-based fee model remains subject to final legal definition of "result", fee base, fee moment, partial success, reversal, and clawback.
@@ -332,7 +337,7 @@ Contract rules:
 | `support_messages` | Customer/support messages. | Yes | Medium | New. | Privacy and moderation. |
 | `legal_text_versions` | Version/hash/language of legal and commercial text. | No, labels only | High | Replace fixed `v1.0` consent. | Legal copy drift. |
 | `consent_acceptances` | Accepted processing/control/mandate/no-guarantee consent records. | Yes, summarized | High | Replace `dossier_consents`. | Withdrawal/change handling. |
-| `fee_terms_acceptances` | Accepted 10% success fee terms/version. | Yes | High | New. | Fee trigger/gross-net/VAT/clawback ambiguity. |
+| `fee_terms_acceptances` | Accepted tenant-bound fee terms/configuration version; historical 10% is not a platform default. | Yes | High | New. | Tenant fee trigger/base/tax/clawback ambiguity. |
 | `review_tasks` | Internal ENVAL review work. | No | High | Adapt `dossier_checks` concept. | Internal state leaking to customers. |
 | `review_findings` | Evidence/review findings. | Sometimes summarized | High | Adapt analysis/check concepts. | Automated finding mistaken for decision. |
 | `kwh_periods` | Period/year requiring kWh input/readout. | Yes | High | New. | Wrong claim year. |
@@ -680,7 +685,10 @@ Coexistence phases:
 
 ## 10. Risks / Open Decisions
 
-- Legacy wording drift has been removed from the repo; current `/app` direction resolves ENVAL as a customer-facing ERE-E inboekdienstverlener service.
+- The current `/app` direction resolves one tenant-scoped customer journey;
+  brand and Auth never resolve tenant legal/operator identity. Historical
+  ENVAL-as-fixed-inboekdienstverlener wording is superseded by the 2026-09-01
+  managed-SaaS/white-label decision.
 - Auth production risk: Supabase Auth configuration, recovery, redirects, RLS, and support access still need production proof.
 - RLS risk: service-role Edge writes are safer for writes, but customer reads still need strict access boundaries.
 - Duplicate customer/dossier creation: signup retries and repeated emails need deterministic idempotency/dedupe.

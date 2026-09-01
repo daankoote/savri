@@ -3,6 +3,12 @@
 Status: CURRENT PROVEN LOCAL foundation through WL11E / commit `8b47126`;
 remaining architecture TARGET; REMOTE / PRODUCTION NOT PROVEN
 
+Strategic status overlay: DECIDED/TARGET on 2026-09-01. ENVAL is the generic
+software/IP platform; every regulated operator is a separately resolved
+tenant. The current ENVAL-branded root data plane is the technical
+reference/default tenant journey only. It does not prove ENVAL Software as
+operator or select a first commercial tenant.
+
 Current-evidence status: CURRENT PROVEN LOCAL for the bounded separate
 control-plane workdir/schema, managed and static tenant-resolution adapters,
 trusted-ingress boundary, authoritative gate over the inventoried CURRENT
@@ -40,8 +46,10 @@ isolated in separate data planes.
 1. Each service provider has a separate tenant data plane containing its
    customer Auth, Postgres business truth, private Storage, data-plane Edge
    services and tenant workforce authorization.
-2. ENVAL is tenant/data-plane #1. Its isolated customer, case, party, signing
-   and evidence tables do not gain `tenant_id` merely to represent ENVAL.
+2. The current root project is the technical reference/data-plane #1. Its
+   isolated customer, case, party, signing and evidence tables do not gain
+   `tenant_id` merely to represent that deployment. The `ENVAL` label is not
+   legal/operator identity and proves no first commercial tenant.
 3. Customer Auth is tenant-local. There is no central customer identity
    authority in the initial architecture.
 4. The platform control plane is a separate isolated system and contains only
@@ -66,7 +74,7 @@ isolated in separate data planes.
 12. `CURRENT PROVEN`, `TARGET`, and `DEFERRED / UNKNOWN` remain explicit. A
     TARGET boundary never proves runtime, remote, production or regulatory
     acceptance.
-13. One ENVAL software core serves ENVAL SaaS, managed white-label,
+13. One ENVAL software core serves managed SaaS, managed white-label,
     customer-owned cloud and contractually agreed
     standalone/self-hosted/source-license deployment. Commercial packaging
     never selects a code fork.
@@ -84,8 +92,9 @@ isolated in separate data planes.
 
 ## B. CURRENT Tenant #1 Data-Plane State
 
-The CURRENT tenant #1 data plane remains one ENVAL operator and one tenant
-Supabase project:
+The CURRENT reference/data-plane #1 remains one isolated tenant-shaped
+Supabase project. Its local `enval` project label and ENVAL-branded presentation
+do not establish the legal operator or first commercial tenant:
 
 - `supabase/config.toml` identifies the local project as `enval`;
 - the frontend is configured with one Supabase URL and anon key;
@@ -161,7 +170,7 @@ commercial/deployment models without code forks:
 
 | operating model | tenant/operator | deployment and presentation | optional relationships |
 |---|---|---|---|
-| ENVAL SaaS | ENVAL as the actual operator/tenant | ENVAL-managed dedicated data plane with ENVAL presentation | support relationships remain separate |
+| managed SaaS with default ENVAL presentation | resolved inboekdienstverlener tenant; exact first tenant UNKNOWN | ENVAL-managed dedicated data plane with reference presentation | legal identity and support relationships remain separate |
 | managed white-label | the actual inboeker/service provider is the tenant; ENVAL operates the deployment | ENVAL-managed dedicated data plane with tenant presentation | support and conflict participation independently selectable |
 | customer-owned cloud | the actual inboeker/service provider is the tenant | customer-owned isolated cloud boundary using the shared core | operations/support responsibilities are separately contracted |
 | standalone/self-hosted/source-license where contractually agreed | the actual inboeker/service provider is the tenant | fixed trusted deployment-local mode without required live ENVAL control-plane access | update, support and connected conflict participation remain independent |
@@ -449,7 +458,7 @@ to its component, owning plane, security boundary and deterministic proof.
 | requirement | component / concept | owning plane | mandatory security boundary | later proof expectation |
 |---|---|---|---|---|
 | `WL-ISO-001` separate customer data planes | tenant Auth/Postgres/Storage/Edge deployment | tenant data plane | no cross-tenant credential, network or object reach | negative tenant-A/tenant-B Auth, SQL, RPC and Storage tests |
-| `WL-CUR-001` preserve current ENVAL foundations | ENVAL tenant/data-plane #1 | tenant data plane | no convenience `tenant_id` rewrite | schema/data hash and current-proof preservation |
+| `WL-CUR-001` preserve current ENVAL foundations | reference/data-plane #1; operator identity unresolved | tenant data plane | no convenience `tenant_id` rewrite | schema/data hash and current-proof preservation |
 | `WL-AUTH-001` tenant-local customer Auth | tenant Auth configuration and customer access helpers | tenant data plane | no central customer authority | wrong-tenant token and identity denial |
 | `WL-CTRL-001` minimum control plane | tenant registry, membership and platform audit | control plane | no ordinary tenant truth | schema allowlist and forbidden-field/data-flow proof |
 | `WL-ROUTE-001` trusted resolution | `TenantResolverPort` | control plane boundary | server-observed host only; ambiguity fails closed | host spoof, unknown host and browser-override rejection |

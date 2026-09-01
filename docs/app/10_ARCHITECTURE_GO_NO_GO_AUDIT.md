@@ -4,6 +4,12 @@ Status: PROOF ONLY - DECISION AUDIT.
 
 Audit evidence status: PROOF ONLY
 
+Strategic supersession notice (2026-09-01): this dated audit's decision rows
+that treat ENVAL as the inboekdienstverlener are historical. The current
+managed-SaaS/white-label canon assigns that regulated role to the resolved
+tenant and retains ENVAL Software as generic platform/IP layer. The audit
+history remains append-preserved and does not override current canon.
+
 Canon and target architecture decision status: TARGET — APPROVED BY DAAN ON 2026-07-22; NOT CURRENT PROVEN.
 
 Audit date: 2026-07-20; source-governance, documentation-baseline, bounded-foundation, and TARGET-approval updates through 2026-07-22.

@@ -1,12 +1,20 @@
 # Fee Model And Service Terms
 
-Status: APPROVED COMMERCIAL DIRECTION — LEGAL, TAX AND PAYMENT-REGULATORY VALIDATION REQUIRED
+Status: SUPERSEDED/HISTORICAL FIXED OPERATOR-FEE PROPOSAL — NOT GENERIC SAAS
+PRICING OR ACTIVE TENANT DEFAULT
 
-This document is the central commercial source for F-01 through F-15. It is
-not CURRENT legal text, legal or tax advice, PSD2/Wft approval, verifier
-approval, implementation proof or authority to receive, retain or pay funds.
-The customer-facing legal text remains DRAFT in
-`signing-legal-bundle-approval.md`.
+This document preserves the former F-01 through F-15 operator-fee proposal for
+audit history. The 2026-09-01 managed-SaaS/white-label decision supersedes the
+fixed 90/10 formula, ENVAL own-account flow and ENVAL success fee as a generic
+platform rule, default tenant fee or SaaS price. None is CURRENT legal text,
+legal or tax advice, PSD2/Wft approval, verifier approval, implementation proof
+or authority to receive, retain or pay funds.
+
+TARGET: each tenant has an explicitly tenant-bound fee configuration and
+approved customer contract bundle. UNKNOWN: SaaS pricing, tenant fee economics,
+tax/payment treatment and the exact party roles. Every section below is
+retained as historical design context unless a later tenant-specific approved
+bundle explicitly re-adopts it.
 
 ## Commercial Formula
 
@@ -127,9 +135,9 @@ Illustratief rekenvoorbeeld, zonder marktprijsgarantie:
 
 ## Preferred Operating Hypothesis
 
-Status: TARGET — PREFERRED OPERATING MODEL, REGULATORY CLASSIFICATION UNKNOWN
+Status: SUPERSEDED/HISTORICAL — NOT A PLATFORM OR TENANT DEFAULT
 
-Preferred operating hypothesis for pilot: ENVAL receives the realized sale
+Historical operating hypothesis for pilot: ENVAL receives the realized sale
 proceeds on its own ENVAL bank account, performs reconciliation, retains the
 10% all-in fee and pays the remaining 90% customer entitlement.
 
@@ -145,8 +153,9 @@ before production.
 
 - No guarantee of ERE award, acceptance, sale, price, proceeds, payout, timing,
   certification or document acceptance.
-- The approved commercial direction is not approved legal wording. The legal
-  bundle remains DRAFT.
+- The historical commercial proposal is not approved legal wording or active
+  tenant configuration. Any future tenant legal bundle remains separately
+  gated.
 - VAT calculation/invoicing, money-flow qualification, PSD2/Wft applicability,
   safeguarding, beneficiary verification and bank/PSP contracts remain blocked
   on external validation.

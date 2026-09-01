@@ -2,6 +2,12 @@
 
 Status: CURRENT audit doctrine for the new `/app` backend.
 
+Strategic status overlay (DECIDED/TARGET, 2026-09-01): ordinary operational
+audit is tenant-bound and remains in the owning tenant data plane. Platform
+action audit is separate and contains no tenant dossier copy. ENVAL branding,
+platform membership or support grants no tenant audit access or operator
+authority. Existing CURRENT PROVEN event evidence retains its exact scope.
+
 ## Doctrine
 
 Frontend may assist; backend decides.
@@ -164,14 +170,14 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
 ## PILOT-SIGNUP-FEE-DECISION-09B2A1 Audit Boundary
 
-Status: APPROVED COMMERCIAL DIRECTION — TARGET AUDIT; NOT IMPLEMENTED.
+Status: SUPERSEDED/HISTORICAL FIXED 90/10 DIRECTION — GENERIC TENANT FINANCE
+AUDIT REMAINS TARGET; NOT IMPLEMENTED.
 
-F-01 through F-15 now define the commercial calculation and reporting inputs,
-but create no CURRENT legal text, ledger, fee calculation, settlement, payment
-or audit event. Future server-owned finance audit must reconstruct the bruto
-verkoopopbrengst, every directe externe transactiekost, netto gerealiseerde
-verkoopopbrengst, ENVAL-succesfee, klantaandeel, VAT specification, payout and
-reconciliation from immutable source/formula versions.
+F-01 through F-15 preserve the former fixed calculation/reporting proposal but
+create no CURRENT tenant configuration, legal text, ledger, fee calculation,
+settlement, payment or audit event. Future tenant-owned finance audit must
+reconstruct the tenant's approved sale, fee, entitlement, VAT, payout and
+reconciliation inputs from immutable configuration/source/formula versions.
 
 Every final NEa, verifier, quantity or sale correction creates a separate
 append-only settlementrevision. Reversal of result proportionally reverses the
@@ -179,11 +185,11 @@ related fee. Any clawback is capped at evidenced net overpayment and remains
 subject to a separately validated legal basis. No original settlement is
 overwritten and no silent or unbounded negative balance is an audit state.
 
-The preferred own-ENVAL-account flow and PSP/split-payment fallback remain
-TARGET with regulatory classification UNKNOWN. Audit requirements do not prove
-ownership, entitlement, safeguarding, tax, PSD2/Wft, bank or payment-services
-compliance. Raw bank/PSP payloads and full account details remain outside broad
-audit and customer projections.
+The former own-ENVAL-account/PSP hypothesis is SUPERSEDED as a generic default.
+The tenant money flow and provider route remain UNKNOWN. Audit requirements do
+not prove ownership, entitlement, safeguarding, tax, PSD2/Wft, bank or
+payment-services compliance. Raw bank/PSP payloads and full account details
+remain outside broad audit and customer projections.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 

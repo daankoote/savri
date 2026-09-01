@@ -2,6 +2,12 @@
 
 Status: source of truth for the `/aanmelden` submit and dashboard bootstrap contract.
 
+Strategic status overlay (DECIDED/TARGET, 2026-09-01): CURRENT PROVEN journey
+and component evidence remains unchanged. The former fixed ENVAL B.V.
+controller/contract-party and 90/10 fee direction is SUPERSEDED as a generic
+platform default. Legal identity, privacy roles, fee configuration and
+signing/legal bundle must resolve from the tenant's approved configuration.
+
 This document defines the intended backend contract for the moment a customer clicks `Start dossier` in the new Vite `/aanmelden` flow. Current implementation status is tracked below; this document remains the contract source of truth, not an implementation file.
 
 ## 1. Purpose
@@ -95,12 +101,16 @@ Environment boundary:
 
 Product role:
 
-- ENVAL is now a customer-facing commercial ERE inboekservice.
-- ENVAL begeleidt en dient/inboekt namens klant of via een aangewezen partij binnen de voorwaarden.
-- ENVAL is geen verificateur.
-- ENVAL is geen certificeerder.
-- ENVAL gives no guarantee of ERE award, acceptance, payout, revenue, timing, certification, or document approval.
-- The result-based fee model requires a final legal definition of "result" before production use.
+- The current ENVAL-branded flow is the reference/default tenant journey.
+- The resolved tenant operates the customer-facing inboekservice within its
+  approved legal, regulatory and commercial bundle; ENVAL Software supplies
+  the platform and is not the operator or customer contract party by default.
+- Neither ENVAL Software nor the tenant is the independent verifier or a
+  certifier.
+- The platform and tenant journey give no guarantee of ERE award, acceptance,
+  payout, revenue, timing, certification or document approval.
+- Any fee/result definition must come from the tenant-bound approved terms;
+  the historical 90/10 direction is not a platform default.
 
 Public copy boundary:
 
@@ -818,11 +828,12 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
 ## Entity, formation, year and withdrawal-09B2A2 customer boundary
 
-P-01 and T-01 are approved product/legal direction with entity details pending.
-The intended core-service controller and contracting party is the future ENVAL
-B.V.; that same entity receives the assignment, manages the service and performs
-the agreed financial settlement. Full statutory identity and contact details
-must be filled before CURRENT. Particulier is a natural person acting for their
+P-01 and T-01's former fixed ENVAL B.V. direction is SUPERSEDED as a generic
+default. The resolved tenant's approved legal identity is the prospective
+operator/customer contract party. Purpose-specific controller/processor and
+any ENVAL Software roles remain TARGET LEGAL REVIEW. Applicable statutory and
+contact details must be complete before a tenant bundle becomes CURRENT.
+Particulier is a natural person acting for their
 own relevant connection; Zakelijk is a Dutch enterprise/organization acting for
 its own relevant connection; VvE is a Dutch owners association acting through
 the stated natural person. A Zakelijk/VvE authority declaration is not ENVAL

@@ -12,6 +12,46 @@ Approval applies to the ENVAL canon and target architecture direction. It is not
 
 Decision evidence: Daan's explicit 2026-07-22 decision, recorded in `docs/app/10_ARCHITECTURE_GO_NO_GO_AUDIT.md` and the append-only changelog. The documentation baseline remains commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; bounded execution state is tracked only in `docs/app/operations/nea-implementation-roadmap.md`.
 
+## Phase 0 Managed-SaaS And White-Label Decision
+
+Status: DECIDED/TARGET — DAAN DECISION 2026-09-01; NOT CURRENT PROVEN
+
+ENVAL is developed independently as one generic B2B managed-SaaS and
+white-label software platform for separate inboekdienstverleners. Daan retains
+the ENVAL software, architecture and generic IP. No 30/70 or 70/30 operational
+partnership, IP transfer, shared ownership or assumed partner-as-first-tenant
+remains part of the active direction.
+
+The resolved tenant is the regulated inboekdienstverlener/operator. ENVAL
+Software, as generic platform supplier, is not by default the
+inboekdienstverlener, REV account holder, ERE trader, independent verifier or
+contracting party of the tenant's end customer. A tenant owns its operational
+regulatory responsibility and tenant-local business truth. Tenant legal
+identity, branding, customer contract bundle, fee configuration, signing/legal
+bundle and operational audit must be explicitly tenant-bound and must never be
+inferred from the ENVAL presentation brand or platform identity.
+
+The current ENVAL-branded portal and root data plane remain the
+reference/default tenant journey and technical compatibility baseline. That
+label proves neither the first commercial tenant nor an ENVAL legal/operator
+role. Existing CURRENT PROVEN customer, evidence, signing, review, compliance
+and control-plane foundations retain their exact local proof status.
+
+TARGET platform boundaries are deny-by-default tenant isolation and the
+minimum tenant-ready foundation justified by a read-only gap audit. A second
+tenant, complete multi-tenant product, billing/control-plane productization,
+live tenant onboarding and production isolation remain unproven. No full
+multi-tenant rewrite precedes the gap audit, and no billing/control-plane build
+is authorized without market and operating evidence.
+
+UNKNOWN / TARGET LEGAL REVIEW:
+
+- exact controller/processor allocation per processing purpose;
+- SaaS pricing and tenant fee economics;
+- SLA and support obligations;
+- first tenant and willingness to pay; and
+- concrete provider availability and contracts.
+
 This file is the only primary navigation and status index for active app documentation. It overrides every legacy document for new app work. If a legacy file conflicts with this document, this document wins.
 
 NEa compliance hierarchy:
@@ -48,7 +88,10 @@ Supersede procedure: retain the current snapshot immutably, download any new off
 
 ## Product Canon
 
-ENVAL is being built as a customer-facing commercial ERE-E inboekdienstverlener.
+ENVAL is being built as the generic software layer for tenant-operated ERE-E
+inboekdienstverlener services. The current ENVAL-branded customer journey is
+the reference/default tenant journey, not proof that ENVAL Software is the
+regulated operator or end-customer contracting party.
 
 The current `/app` product scope includes:
 
@@ -58,31 +101,38 @@ The current `/app` product scope includes:
 
 CURRENT PROVEN scope is customer intake, dossier construction, evidence lifecycle, audit trail, and app document handling foundations where current code, schema, and proof output show that behavior.
 
-TARGET scope is the ERE-E inboekdienstverlener service within final legal, regulatory, operational, and commercial terms.
+TARGET scope is a tenant-ready managed-SaaS/white-label platform through which
+each resolved tenant operates its own ERE-E inboekdienstverlener service within
+its approved legal, regulatory, operational and commercial terms.
 
 UNKNOWN until separately proven:
 
-- REV account status
+- tenant REV account and operator-registration status
 - NEa list publication status
-- mandate and contract execution model
+- tenant-bound mandate and contract execution model
 - exact inboeking execution process
 - verifier interaction model
-- final legal/commercial responsibility split
+- controller/processor and final legal/commercial responsibility split
+- SaaS pricing, SLA, first tenant and willingness to pay
 
 Commercial direction:
 
-- Intended customer-facing model: 10% success fee.
-- Exact result definition, fee trigger, fee base, partial success, reversal, audit correction, and clawback remain legal/commercial open items.
+- Tenant customer-fee configuration is TARGET and tenant-bound; no percentage
+  is a generic ENVAL software price.
+- The former 90/10 customer settlement proposal is SUPERSEDED as a generic
+  ENVAL platform rule and retained only as historical product/legal context.
+- SaaS pricing and the exact tenant commercial model remain UNKNOWN pending
+  market evidence and legal/commercial decisions.
 - No public competitor fee claims may be made without verified sources.
 
-ENVAL is not:
+Neither ENVAL Software nor the platform is:
 
 - a verifier
 - a certifier
 - a compliance authority
 - a result guarantor
 
-ENVAL does not guarantee:
+The platform does not guarantee:
 
 - eligibility
 - acceptance
@@ -97,7 +147,12 @@ ENVAL does not guarantee:
 
 Official law, NEa publications, current app code/schema/tests, and green proof output lead over every document.
 
-The ENVAL role direction is ERE-E inboekdienstverlener. That does not by itself prove NEa approval, accreditation, REV account access, list publication, mandate volume, verifier readiness, or production eligibility. Those claims require current regulatory and implementation evidence.
+The regulated role direction belongs to the resolved tenant as ERE-E
+inboekdienstverlener. It does not by itself prove tenant NEa approval,
+accreditation, REV account access, list publication, mandate volume, verifier
+readiness or production eligibility. Those claims require current tenant-bound
+regulatory and implementation evidence. ENVAL Software's platform role must
+not be used as a fallback regulatory identity.
 
 Removed legacy documentation is never regulatory source of truth. Old claims about neutral infrastructure, external inboekers, fixed export fees, private-only scope, maximum document counts, old endpoints, old session models, or old dossier states are historical unless this document or a focused app contract explicitly re-adopts the principle.
 
@@ -397,12 +452,16 @@ Private-only MVP work may not silently become a global rule. A document, endpoin
 
 Public copy must remain simple, commercial, and customer-oriented.
 
-Public copy may say:
+Reference/default tenant copy may say only when the resolved tenant's approved
+legal and commercial bundle supports it:
 
 - ENVAL helpt je met het aanmeld- en inboekproces.
 - Je betaalt alleen bij resultaat.
 - Geen garantie op resultaat.
 - Wij zorgen dat je dossier controleerbaar en compleet wordt opgebouwd.
+
+Branding never supplies the operator, controller, contract party or fee. Public
+copy must resolve those values from the tenant-bound approved bundle.
 
 Public copy must not expose internal legal/audit/anti-fraud doctrine except in legal, FAQ, or terms context.
 
@@ -423,3 +482,5 @@ Public copy must not expose internal legal/audit/anti-fraud doctrine except in l
 - Document upload contract: `docs/app/contracts/document-upload.md`
 - Edge contract: `docs/app/contracts/edge-functions.md`
 - Audit contract: `docs/app/contracts/audit.md`
+- White-label architecture: `docs/app/architecture/white-label-control-plane.md`
+- Platform control-plane contract: `docs/app/contracts/platform-control-plane.md`

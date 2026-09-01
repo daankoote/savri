@@ -3,9 +3,20 @@
 Status: TARGET — FINANCE/SETTLEMENT CONTRACT
 
 Operating-model status:
-`TARGET — PREFERRED OPERATING MODEL, REGULATORY CLASSIFICATION UNKNOWN`
+`SUPERSEDED/HISTORICAL FIXED ENVAL 90/10 AND OWN-ACCOUNT HYPOTHESIS`
 
-This document defines the provider-independent ENVAL TARGET contract for settlement and payouts. It is product architecture and an ENVAL INTERNAL CONTROL design, not implementation proof, legal advice, a statutory or NEa requirement, or authorization to execute settlement or payments.
+This document retains the provider-independent settlement/ledger boundaries as
+TARGET. Its former fixed ENVAL 90/10 formula and own-account operating
+hypothesis are SUPERSEDED as generic platform defaults by the 2026-09-01
+managed-SaaS/white-label decision. The historical formula remains below for
+audit context only; it is not SaaS pricing, tenant configuration,
+implementation proof, legal advice, a statutory or NEa requirement, or
+authorization to execute settlement or payments.
+
+Any future settlement uses the resolved tenant's legal identity, fee
+configuration, contract bundle, financial beneficiary model and provider
+route. Those inputs, including whether ENVAL Software has any financial role,
+remain UNKNOWN until tenant-specific legal/commercial approval.
 
 ## Responsibility And Source Ownership
 
@@ -23,13 +34,12 @@ It reuses, but does not replace:
 - `docs/app/09_NEA_MVP_PLAN.md` and `docs/app/operations/nea-implementation-roadmap.md` for sequencing and implementation gates.
 
 No new official NEa or legal obligation is created here. The 90/10 split and
-closed transaction-cost model are
-`APPROVED COMMERCIAL DIRECTION — LEGAL, TAX AND PAYMENT-REGULATORY VALIDATION REQUIRED`.
-They are not CURRENT legal text. Contract wording, tax/invoicing treatment,
+closed transaction-cost model are `SUPERSEDED/HISTORICAL` and are not CURRENT
+legal text or a platform/tenant default. Contract wording, tax/invoicing treatment,
 legal money-flow qualification, bank-account structure, safeguarding,
 licensing, withholding and PSD2/Wft obligations remain `UNKNOWN`.
 
-## Commercial Inputs — Approved Direction, Not Legal Approval
+## Historical Commercial Inputs — Superseded, Not Tenant Configuration
 
 The settlement core imports, and does not redefine, the exact commercial
 formula from `docs/app/legal/fee-model-and-service-terms.md`:
@@ -55,9 +65,9 @@ compliance/verification work, general bank costs, overhead, internal sales
 effort and ENVAL risk margin are not additionally deductible. They are covered
 by the 10% ENVAL-succesfee.
 
-## Expected Business Flow — TARGET
+## Historical Expected Business Flow — Superseded Operator Hypothesis
 
-The current expected flow is:
+The historical proposed flow was:
 
 1. ENVAL books qualifying customer kWh under a separately controlled booking and REV process.
 2. ENVAL receives EREs resulting from the accepted external process.
@@ -212,9 +222,9 @@ Core rules contain no bank- or PSP-specific status, payload, callback, account f
 - General audit logs contain only minimized references and safe metadata, never raw bank statements, full account details, secrets, access tokens, or provider payloads.
 - Exports and finance packs use explicit scope, redaction, access logging, expiry, and retention controls.
 
-## Pilot Boundary And Sequencing
+## Historical Pilot Boundary And Sequencing
 
-The preferred controlled pilot hypothesis uses ENVAL's own bank account for
+The historical controlled-pilot hypothesis used ENVAL's own bank account for
 receipt, reconciliation, fee retention and customer payout. If external advice
 does not validate that route, PSP/split-payment may be selected as a fallback
 or risk-reducing route through a separate decision.

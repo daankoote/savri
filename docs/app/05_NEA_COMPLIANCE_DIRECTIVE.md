@@ -2,7 +2,8 @@
 
 Status: CURRENT - HIGHEST INTERNAL COMPLIANCE DIRECTIVE.
 
-ENVAL is een inboekdienstverlener voor ERE-E.
+The resolved tenant is the inboekdienstverlener for ERE-E. ENVAL Software is
+the generic platform supplier and is not the regulated operator by default.
 
 Iedere requirement moet traceerbaar zijn van officiële bron naar requirement, controle, data, test en bewijs.
 
@@ -63,16 +64,27 @@ The official document page states that the framework consolidates requirements f
 
 Superseding this snapshot requires: keep the current repository file immutable; retrieve the new official file outside the repository; verify URL, publication date, byte size, page count and SHA-256; store the new version under a distinct versioned filename; diff every present clause and normative reference; map affected requirement IDs and trace rows; review architecture and test/evidence impact; record approval and only then change the primary operational designation. No in-place replacement is allowed.
 
-## Role Of ENVAL
+## Role Of The Resolved Tenant And ENVAL Software
 
-ENVAL is an ERE-E inboekdienstverlener.
+The resolved tenant is the ERE-E inboekdienstverlener. ENVAL Software provides
+the software layer and does not acquire the tenant's regulated role, REV
+account, trading role, verifier role or end-customer contract merely by
+hosting, branding or supporting the platform.
 
-All applicable rules must be assessed from the role of inboekdienstverlener. They must not be assessed from the role of customer, neutral software supplier, or external inboeker.
+All applicable operational rules must be assessed against the resolved tenant
+in its role as inboekdienstverlener. They must not be assigned to ENVAL
+Software by brand or platform inference.
 
-ENVAL remains neither the NEa nor an independent verifier. ENVAL may prepare, control, administer, and submit an inboekdienstverlener basis only where the official rules, account/access status, mandates, evidence, and verification path support that role.
+Neither the tenant nor ENVAL Software is the NEa or an independent verifier.
+The tenant may prepare, control, administer and submit an
+inboekdienstverlener basis only where the official rules, tenant account/access
+status, mandates, evidence and verification path support that role. The
+software may support those steps without owning their regulatory authority.
 
-ENVAL is not:
+ENVAL Software is not by default:
 
+- the inboekdienstverlener/operator;
+- the REV account holder or ERE trader;
 - the NEa;
 - a verifier;
 - a certifier;
@@ -83,15 +95,21 @@ ENVAL is not:
 
 | actor | responsibility in the TKV chain | ENVAL boundary |
 |---|---|---|
-| VERIFICATEUR | accreditation/temporary designation eligibility, professional risk and materiality judgment, sample selection, location work, evidence evaluation, findings, statement, and fraud-suspicion reporting | external professional authority; ENVAL must not replace or automate the judgment |
-| INBOEKER | provide complete administration, locations, quantities, books, staff access, corrections, and other verification inputs | ENVAL owns this duty for its own inboeking administration |
-| INBOEKDIENSTVERLENER | additionally prove valid customer mandates and customer/location eligibility inputs | ENVAL must collect, preserve, and expose the required mandate and evidence package |
+| VERIFICATEUR | accreditation/temporary designation eligibility, professional risk and materiality judgment, sample selection, location work, evidence evaluation, findings, statement, and fraud-suspicion reporting | external professional authority; ENVAL Software must not replace or automate the judgment |
+| INBOEKER | provide complete administration, locations, quantities, books, staff access, corrections, and other verification inputs | the resolved tenant owns this duty for its own inboeking administration; ENVAL Software may support it |
+| INBOEKDIENSTVERLENER | additionally prove valid customer mandates and customer/location eligibility inputs | the resolved tenant must collect, preserve, and expose the required mandate and evidence package through its tenant data plane |
 | ONDERNEMING/NATUURLIJKE PERSOON | provide valid mandate, connection/EAN facts, location access, and retained source information where applicable | customer workflow must capture these facts without treating ordinary legal acceptance as a complete mandate |
 | NEa | assess protocols, receive verification results through the official chain, obtain distributor data under mandate, and receive fraud suspicions | external authority; no ENVAL substitute |
 | RvA | perform schema evaluation and accreditation oversight | external dependency |
 | MINISTER | decide protocol approval on NEa advice | external decision; never represented as ENVAL approval |
 
-ENVAL may facilitate data, evidence, scheduling, traceability, request/response handling, correction history, and safe projections. ENVAL does not independently select the verifier's sample, decide verification materiality, perform the professional risk judgment, issue the official verification statement, mark an inboeking verified without an external result, register the verifier's professional result in REV, or report fraud suspicions on behalf of the verifier.
+The ENVAL software may facilitate tenant data, evidence, scheduling,
+traceability, request/response handling, correction history and safe
+projections. Neither ENVAL Software nor the tenant independently replaces the
+verifier's sample selection, materiality or professional risk judgment. ENVAL
+Software does not issue the official statement, mark an inboeking verified,
+register a professional result in REV or report fraud suspicions on behalf of
+the verifier.
 
 ENVAL may also perform preparatory `INTERNAL SUPPORT CONTROL` checks, selected `manual`, `random`, `risk_based`, or `verifier_request`, when they are audit-worthy and historized. An internal support control is never the external verifier's official location visit, never replaces independent verification, and never grants ENVAL the authority to set professional risk/materiality, issue a statement, or register the verifier's REV result.
 
@@ -120,7 +138,9 @@ First concrete cycle:
 
 The 2026-07-09 electricity TKV explains and consolidates protocol requirements and expressly adds no requirements beyond the Wm, Besluit, and Regeling. Its clauses govern verifier work, statement contents, issuance/no-issuance, findings and REV management; the TKV does not state a separate 1 April or 1 May deadline and no deadline is inferred from it.
 
-ENVAL is responsible for controlling its own inboeking chain:
+The resolved tenant is responsible for controlling its own inboeking chain;
+the software must support the required controls without claiming their
+authority:
 
 - correctness;
 - completeness;
@@ -134,7 +154,10 @@ ENVAL is responsible for controlling its own inboeking chain:
 - audit trail;
 - correction handling.
 
-External verification does not remove ENVAL's own control responsibility. Verification is an independent control layer after ENVAL has produced a controlled, complete, reconstructable inboeking basis.
+External verification does not remove the tenant's own control responsibility.
+Verification is an independent control layer after the tenant has produced a
+controlled, complete, reconstructable inboeking basis using its approved
+systems and procedures.
 
 ## Compliance Principles
 

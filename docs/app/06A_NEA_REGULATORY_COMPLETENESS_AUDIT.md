@@ -4,6 +4,12 @@ Status: PROOF ONLY.
 
 Audit date: 2026-07-19; official electricity TKV completion update: 2026-07-21; `REG-CONFLICT-001` source reconciliation: 2026-08-16.
 
+Strategic supersession notice (2026-09-01): this proof-only audit's ENVAL-as-
+inboekdienstverlener scope is historical. Its regulatory source mapping remains
+evidence, but current canon applies those operator obligations to the resolved
+tenant; ENVAL Software is the generic platform supplier. Historical rows are
+not rewritten.
+
 Repo: `/Users/daankoote/dev/enval`.
 
 Branch at audit start: `main`.

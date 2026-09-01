@@ -4,6 +4,12 @@ Status: DRAFT claim-by-claim migration audit.
 
 Post-removal status: PROOF-ONLY. Legacy consolidation and in-repo legacy documentation removal are complete. This audit remains evidence for the migration/removal process until the new NEa canon foundation is created.
 
+Strategic supersession notice (2026-09-01): role conclusions in this dated
+audit that treat ENVAL as the inboekdienstverlener are historical. Current
+canon assigns the regulated operator role to the resolved tenant and ENVAL
+Software to the generic managed-SaaS/white-label platform layer. The historical
+claim matrix is intentionally not rewritten.
+
 NEa foundation closure status, 2026-07-19: PROOF-ONLY / CLOSED FOR ARCHITECTURE USE. The first NEa compliance foundation now lives in `docs/app/05_NEA_COMPLIANCE_DIRECTIVE.md`, `docs/app/06_NEA_REQUIREMENTS.md`, `docs/app/07_NEA_TARGET_ARCHITECTURE.md`, `docs/app/08_NEA_TRACEABILITY_MATRIX.md`, and `docs/app/09_NEA_MVP_PLAN.md`. This audit is no longer an active architecture source.
 
 Audit date: 2026-07-19.

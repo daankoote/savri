@@ -14,7 +14,10 @@ Regulatory status: PARTIAL — ELECTRICITY TKV CLAUSES MAPPED; OTHER REGULATORY 
 
 TKV-dependent verifier detail is mapped as target data boundaries. Professional verifier judgments remain external and no table proposed here grants ENVAL authority to make them.
 
-This document proposes a target table model for ENVAL as inboekdienstverlener for ERE-E. It does not create migrations, approve SQL, drop objects, or claim current implementation proof.
+This document proposes a tenant-data-plane target table model for a resolved
+tenant acting as inboekdienstverlener for ERE-E. ENVAL Software is the generic
+platform supplier, not the regulated operator by default. It does not create
+migrations, approve SQL, drop objects or claim current implementation proof.
 
 Target table count: 55.
 

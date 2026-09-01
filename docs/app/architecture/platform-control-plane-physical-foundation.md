@@ -3,6 +3,11 @@
 Status: CURRENT PROVEN LOCAL physical/runtime foundation through WL11E /
 commit `8b47126`; TARGET remote/operations; LEGACY completed WL05 plan snapshot
 
+Strategic status overlay: DECIDED/TARGET on 2026-09-01. The ENVAL software and
+generic IP remain independently owned. The root project is the
+reference/default tenant data plane, not proof that ENVAL Software is the
+regulated operator or that a first commercial tenant has been selected.
+
 Authority: this document selects the smallest repository-realistic physical
 foundation for the WL02 architecture in
 `docs/app/architecture/white-label-control-plane.md` and the WL03 domain
@@ -68,7 +73,7 @@ core. One unchanged core must support:
 
 | model | operator/tenant | deployment ownership | brand/support composition |
 |---|---|---|---|
-| ENVAL SaaS | ENVAL | `ENVAL_MANAGED_DEDICATED` | ENVAL presentation; support remains separate |
+| managed SaaS with default ENVAL presentation | resolved inboekdienstverlener tenant; exact first tenant UNKNOWN | `ENVAL_MANAGED_DEDICATED` | ENVAL reference presentation; legal identity and support remain separate |
 | managed white-label | actual inboeker/service-provider tenant | `ENVAL_MANAGED_DEDICATED` | tenant presentation; support separately contracted |
 | customer-owned cloud | actual inboeker/service-provider tenant | `CUSTOMER_MANAGED_SELF_HOSTED` | customer presentation; operational/support ownership separately contracted |
 | standalone/self-hosted/source-license where contractually agreed | actual inboeker/service-provider tenant | `CUSTOMER_MANAGED_SELF_HOSTED` | fixed trusted local resolution; updates, support and conflict participation separate |
@@ -345,16 +350,18 @@ shadow/authoritative gating, presentation-source parity and safe React runtime
 consumption. There is still no tenant/platform administration UI, production
 routing proof or dynamic tenant data-plane client selection.
 
-## 9. ENVAL Tenant #1 Future Bootstrap
+## 9. Reference Data-Plane #1 Future Registration
 
-The first real bootstrap, after its own approval, needs only:
+Any real registration, after a first tenant is selected and after its own
+approval, needs only:
 
-- one stable opaque ENVAL `tenant_id` and active lifecycle;
-- bounded ENVAL public slug/display metadata;
-- each verified normalized ENVAL host/domain as a separate active routing
+- one stable opaque `tenant_id` for the resolved operator and active lifecycle;
+- bounded public slug/display metadata, which may use the ENVAL reference
+  presentation but never supplies legal identity;
+- each verified normalized reference host/domain as a separate active routing
   identity with administrative provenance;
 - one active locator for the exact environment, containing provider type,
-  existing tenant #1 project reference, region/application route reference and
+  existing reference-project identity, region/application route reference and
   an opaque tenant-scoped secret reference;
 - compatible desired/observed deployment state before live activation; and
 - one atomic platform audit chain for registration, verification, locator

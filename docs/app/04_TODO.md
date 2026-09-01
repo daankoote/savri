@@ -12,16 +12,37 @@ implementation.
 
 ## Single Current NEXT
 
-- NEXT — `Minimal internal Compliance Worklist UI` using the existing
-  authenticated `api-app-compliance-worklist` GET endpoint.
-  - Priority: NEA.
-  - Reason: REG01–REG03I now provide the source semantics, immutable facts,
-    deterministic derivation, workforce authorization and authenticated
-    read-only runtime needed to expose the first useful internal projection
-    without inventing another compliance foundation.
-  - Boundary: read-only internal workforce UI in the existing
-    dashboard/backoffice shell, delivery year 2026 only; no capture form,
-    scheduler, mail, notifications, acknowledgement or task persistence.
+- NEXT — Phase 1: preserve and finish bounded existing core work without new
+  ENVAL-operator hardcoding.
+  - Preserve the already-started Wave A1 qualification proof and all other
+    pre-existing non-document worktree artifacts unchanged in this Phase 0
+    documentation batch.
+  - Re-evaluate the earlier `Minimal internal Compliance Worklist UI` NEXT only
+    within a separately approved bounded batch after the SaaS role boundary is
+    applied; this decision does not authorize that UI.
+  - Phase 2 is a read-only SaaS boundary gap audit. No full multi-tenant rewrite
+    or billing/control-plane build may start before its evidence is reviewed.
+
+## Managed-SaaS / White-Label Strategic Roadmap
+
+Status: DECIDED/TARGET — 2026-09-01
+
+1. Phase 0 — truth/documentation alignment. DONE by this documentation-only
+   alignment; no runtime, database or remote state is claimed.
+2. Phase 1 — preserve/finish bounded existing core work without new
+   ENVAL-operator hardcoding.
+3. Phase 2 — read-only SaaS boundary gap audit.
+4. Phase 3 — minimum tenant-ready foundation based only on gap evidence.
+5. Phase 4 — evidence/provider integrations.
+6. Phase 5 — design-partner pilot.
+7. Phase 6 — managed-SaaS productization.
+8. Phase 7 — enterprise variants only on proven demand.
+
+Product development and design-partner/market validation proceed in parallel.
+The first tenant, willingness to pay, SaaS pricing, SLA and concrete provider
+availability remain UNKNOWN. Tenant legal identity, brand, contracts, fees,
+signing/legal bundles and audit are TARGET tenant-bound concerns;
+controller/processor allocation requires legal review.
 
 ## Completed Regulatory Source Decision
 
@@ -493,8 +514,16 @@ Local proof is not production proof. Remote migration/function deploy, productio
   LOCAL; the commercial white-label product remains TARGET:
   - [x] WL02-WL04 approved the TARGET boundaries recorded in `docs/app/architecture/white-label-control-plane.md`, `docs/app/contracts/platform-control-plane.md` and `docs/app/architecture/platform-control-plane-physical-foundation.md`.
   - [x] WL05-WL11E implement and deterministically prove the bounded local foundation through commit `8b47126`: physically separate control-plane workdir/migrations, explicit fail-closed target selection, tenant/routing/locator/platform-audit records, provider-neutral managed/static tenant resolution, trusted ingress, authoritative gating of the inventoried CURRENT `api-app-*` surface, versioned presentation configuration, managed/static presentation sources, safe public presentation bootstrap and React provider consumption.
-  - [x] ENVAL remains tenant/data-plane #1 without customer/case copies or a convenience tenant-local `tenant_id` backfill. The control plane owns only platform routing/configuration, locator/secret references and platform audit; it owns no ordinary customer/case/signing/evidence/settlement truth.
-  - [x] One core supports ENVAL SaaS, managed white-label, customer-owned cloud and contractually agreed standalone/self-hosted/source-license deployment through orthogonal operator, deployment ownership, branding, support and conflict-participation dimensions; these modes do not create code forks or authority by inference.
+  - [x] The root project remains reference/data-plane #1 without customer/case
+    copies or a convenience tenant-local `tenant_id` backfill. Its ENVAL label
+    proves no operator or first tenant. The control plane owns only platform
+    routing/configuration, locator/secret references and platform audit; it owns
+    no ordinary customer/case/signing/evidence/settlement truth.
+  - [x] One core supports managed SaaS with the default ENVAL presentation,
+    managed white-label, customer-owned cloud and contractually agreed
+    standalone/self-hosted/source-license deployment through orthogonal
+    operator, deployment ownership, branding, support and conflict-participation
+    dimensions; these modes do not create code forks or authority by inference.
   - [x] Tenant identity, presentation brand, legal operator and support provider remain separate. LabelUP is only a conceptual optional support-provider relationship unless separately authorized; it is not automatically tenant, contracting entity, platform admin or representation authority.
   - [x] Current local routing does not switch the tenant data-plane client dynamically: `DYNAMIC_DATA_PLANE_SWITCHING=NO`. Browser-controlled host/payload/query/storage/config values cannot select tenant, locator, source mode or brand authority.
   - [x] Canon/system-map/architecture/contract status promotion is committed in
@@ -561,9 +590,12 @@ Local proof is not production proof. Remote migration/function deploy, productio
     Auth mutation or remote SQL until a read-only remote cutover comparison is
     complete and Daan approves the exact mutation batch.
 - Settlement & Payouts TARGET contract:
-  - DONE documentair: provider-independent boundary from bruto verkoopopbrengst through direct external transaction costs, netto gerealiseerde verkoopopbrengst, 10% ENVAL-succesfee, 90% klantaandeel, settlement, payout, reconciliation, correction, reversal and bounded clawback;
-  - F-01 through F-15 are `APPROVED COMMERCIAL DIRECTION — LEGAL, TAX AND PAYMENT-REGULATORY VALIDATION REQUIRED`;
-  - preferred pilot hypothesis is receipt on ENVAL's own bank account, reconciliation, retention of the 10% all-in fee and payout of the 90% klantaandeel;
+  - DONE documentair: provider-independent ledger/settlement boundaries remain
+    TARGET and reusable only with tenant-bound legal/commercial inputs;
+  - SUPERSEDED/HISTORICAL: fixed F-01 through F-15 90/10 direction and ENVAL
+    own-account pilot hypothesis as generic platform defaults;
+  - TARGET/UNKNOWN: tenant fee configuration, tenant financial party/flow and
+    SaaS pricing require separate commercial/legal evidence;
   - PSP/split-payment is fallback/risk-reduction, not the standard architecture;
   - implementation remains late, separately bounded, and not approved;
   - legal/payment-regulatory analysis of the own-account money flow remains open;
@@ -1211,6 +1243,15 @@ CURRENT PROVEN — LOCAL RUNTIME/SOURCE ONLY.
 - [ ] OPEN: production TTL/rate-limit/retention settings, remote migration/deploy, production Storage and interactive browser acceptance.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## Historical 09B2A–09B2A3 Legal/Commercial Decision Checkpoints
+
+Strategic overlay (2026-09-01): the completed mechanics/documentation work
+below remains historical evidence. Fixed ENVAL B.V. P-01/T-01, generic F-01
+through F-15 90/10 and own-account directions are SUPERSEDED as platform
+defaults. New TARGET is a tenant-bound legal identity, privacy-role decision,
+customer contract, fee configuration and signing/legal bundle. SaaS pricing,
+SLA and controller/processor allocation remain UNKNOWN / TARGET LEGAL REVIEW.
 
 ## PILOT-SIGNUP-LEGAL-BUNDLE-APPROVAL-09B2A checkpoint
 
