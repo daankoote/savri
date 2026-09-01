@@ -1,5 +1,5 @@
 import {
-  createResolvedPresentationSourceContext,
+  createPresentationSourceContextFromTenantBinding,
   type PresentationBrandSourceFailureCode,
 } from "../../../platform/runtime/presentation/presentation_brand_source.ts";
 import {
@@ -11,7 +11,11 @@ import {
   type ServerOwnedPresentationSourceComposition,
 } from "../../../platform/runtime/presentation/presentation_source_composition.ts";
 import type { PlatformPresentationConfigReader } from "../../../platform/runtime/presentation/adapters/platform_control_plane_presentation_v1.ts";
-import type { ResolvedTenantContext } from "../../../platform/runtime/tenant-resolution/tenant_resolution.ts";
+
+export type AppPresentationTenantBinding = Readonly<{
+  tenantId: string;
+  environment: string;
+}>;
 
 export type ServerPresentationEnvironmentReader = Readonly<{
   get(name: string): string | undefined;
@@ -62,7 +66,7 @@ function parseStaticCustomConfig(
 
 export function buildServerOwnedPresentationSourceComposition(
   environment: ServerPresentationEnvironmentReader,
-  resolvedTenant: ResolvedTenantContext,
+  tenantExecution: AppPresentationTenantBinding,
   managedReader: PlatformPresentationConfigReader | null = null,
 ): ServerOwnedPresentationSourceComposition | null {
   const deploymentMode = environmentValue(
@@ -87,8 +91,8 @@ export function buildServerOwnedPresentationSourceComposition(
     return Object.freeze({
       deploymentMode,
       staticPresentationConfigurations: [Object.freeze({
-        tenantId: resolvedTenant.tenantId,
-        environment: resolvedTenant.dataPlane.environment,
+        tenantId: tenantExecution.tenantId,
+        environment: tenantExecution.environment,
         presentationMode,
       })],
     });
@@ -99,8 +103,8 @@ export function buildServerOwnedPresentationSourceComposition(
   return Object.freeze({
     deploymentMode,
     staticPresentationConfigurations: [Object.freeze({
-      tenantId: resolvedTenant.tenantId,
-      environment: resolvedTenant.dataPlane.environment,
+      tenantId: tenantExecution.tenantId,
+      environment: tenantExecution.environment,
       presentationMode,
       presentationConfig,
     })],
@@ -108,12 +112,12 @@ export function buildServerOwnedPresentationSourceComposition(
 }
 
 export async function resolveAppPresentationBootstrap(
-  resolvedTenant: ResolvedTenantContext,
+  tenantExecution: AppPresentationTenantBinding,
   sourceComposition: ServerOwnedPresentationSourceComposition,
 ): Promise<AppPresentationBootstrapResult> {
   try {
-    const sourceContext = createResolvedPresentationSourceContext(
-      resolvedTenant,
+    const sourceContext = createPresentationSourceContextFromTenantBinding(
+      tenantExecution,
     );
     if (!sourceContext.ok) {
       return { ok: false, code: sourceContext.code };

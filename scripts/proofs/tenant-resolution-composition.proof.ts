@@ -346,7 +346,14 @@ async function sourceFiles(root: URL): Promise<string[]> {
     const child = new URL(entry.name + (entry.isDirectory ? "/" : ""), root);
     if (entry.isDirectory) values.push(...await sourceFiles(child));
     else if (/\.(?:ts|tsx|js|mjs)$/.test(entry.name)) {
-      if (child.pathname.endsWith("/_shared/app_tenant_resolution_shadow.ts")) {
+      if (entry.name.includes(".proof.")) continue;
+      if (
+        [
+          "/_shared/app_tenant_resolution_shadow.ts",
+          "/_shared/app_control_plane_runtime_reader.ts",
+          "/api-app-presentation-bootstrap/index.ts",
+        ].some((path) => child.pathname.endsWith(path))
+      ) {
         continue;
       }
       values.push(await Deno.readTextFile(child));

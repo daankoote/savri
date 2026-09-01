@@ -52,6 +52,43 @@ export type PresentationSourceContextResult =
     code: "invalid_presentation_source_context";
   }>;
 
+export type ResolvedTenantPresentationBinding = Readonly<{
+  tenantId: string;
+  environment: string;
+}>;
+
+function resolvedPresentationSourceContext(
+  tenantId: unknown,
+  environment: unknown,
+): PresentationSourceContextResult {
+  if (
+    !isValidTenantReference(tenantId) || typeof environment !== "string" ||
+    !/^[a-z][a-z0-9_-]{1,63}$/.test(environment)
+  ) {
+    return { ok: false, code: "invalid_presentation_source_context" };
+  }
+  return {
+    ok: true,
+    value: new ResolvedPresentationSourceContext(
+      tenantId,
+      environment,
+      CONTEXT_CONSTRUCTION_TOKEN,
+    ),
+  };
+}
+
+export function createPresentationSourceContextFromTenantBinding(
+  binding: ResolvedTenantPresentationBinding,
+): PresentationSourceContextResult {
+  if (!binding || typeof binding !== "object" || Array.isArray(binding)) {
+    return { ok: false, code: "invalid_presentation_source_context" };
+  }
+  return resolvedPresentationSourceContext(
+    binding.tenantId,
+    binding.environment,
+  );
+}
+
 export function createResolvedPresentationSourceContext(
   resolvedTenant: ResolvedTenantContext,
 ): PresentationSourceContextResult {
@@ -63,14 +100,10 @@ export function createResolvedPresentationSourceContext(
   ) {
     return { ok: false, code: "invalid_presentation_source_context" };
   }
-  return {
-    ok: true,
-    value: new ResolvedPresentationSourceContext(
-      resolvedTenant.tenantId,
-      resolvedTenant.dataPlane.environment,
-      CONTEXT_CONSTRUCTION_TOKEN,
-    ),
-  };
+  return resolvedPresentationSourceContext(
+    resolvedTenant.tenantId,
+    resolvedTenant.dataPlane.environment,
+  );
 }
 
 export function isResolvedPresentationSourceContext(

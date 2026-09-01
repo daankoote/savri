@@ -22,6 +22,13 @@ const REQUEST_TIMEOUT_MS = 5_000;
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
+function fixedLocalDataPlaneReference() {
+  const config = readFileSync(resolve(ROOT, "supabase/config.toml"), "utf8");
+  const match = config.match(/^project_id\s*=\s*"([a-z0-9][a-z0-9_-]{1,63})"\s*$/m);
+  if (!match) fail("tenant_fixed_data_plane_reference_unavailable");
+  return match[1];
+}
+
 const CURRENT_EDGE_ENTRYPOINTS = Object.freeze([
   "supabase/functions/api-app-auth-bootstrap/index.ts",
   "supabase/functions/api-app-presentation-bootstrap/index.ts",
@@ -131,6 +138,7 @@ function assertLocalUrl(raw, expectedPort) {
 }
 
 function managedLocalConfiguration(controlPlaneStatus) {
+  const fixedDataPlaneReference = fixedLocalDataPlaneReference();
   assertLocalUrl(controlPlaneStatus.environment.API_URL, 56321);
   const databaseUrl = assertLocalUrl(
     controlPlaneStatus.environment.DB_URL.replace(/^postgresql:/, "http:"),
@@ -193,7 +201,8 @@ function managedLocalConfiguration(controlPlaneStatus) {
     !UUID_PATTERN.test(secretReferenceId) ||
     routingIdentity !== "enval.localhost" ||
     deploymentOwnership !== "ENVAL_MANAGED_DEDICATED" ||
-    providerType !== "supabase" || dataPlaneReference !== "enval" ||
+    providerType !== "supabase" ||
+    dataPlaneReference !== fixedDataPlaneReference ||
     !applicationRouteReference
   ) fail("control_plane_local_config_invalid");
 
@@ -215,6 +224,7 @@ function managedLocalConfiguration(controlPlaneStatus) {
     ENVAL_DATA_PLANE_DEPLOYMENT_OWNERSHIP: deploymentOwnership,
     ENVAL_DATA_PLANE_PROVIDER_TYPE: providerType,
     ENVAL_DATA_PLANE_REFERENCE: dataPlaneReference,
+    ENVAL_FIXED_DATA_PLANE_REFERENCE: fixedDataPlaneReference,
     ENVAL_APPLICATION_ROUTE_REFERENCE: applicationRouteReference,
     ENVAL_DATA_PLANE_SECRET_REFERENCE_ID: secretReferenceId,
     ENVAL_PRESENTATION_SOURCE_MODE: "platform_control_plane_presentation_v1",

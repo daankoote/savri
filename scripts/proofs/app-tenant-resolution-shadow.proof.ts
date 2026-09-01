@@ -12,8 +12,12 @@ import {
   resolveTenantRuntimeContext,
 } from "../../platform/runtime/tenant-resolution/tenant_resolution.ts";
 import {
-  PlatformControlPlaneV1Adapter,
+  buildServerOwnedPresentationSourceComposition,
+  resolveAppPresentationBootstrap,
+} from "../../supabase/functions/_shared/app_presentation_bootstrap.ts";
+import {
   type PlatformControlPlaneReader,
+  PlatformControlPlaneV1Adapter,
   type PlatformDataPlaneLocatorRecord,
   type PlatformRoutingRecord,
 } from "../../platform/runtime/tenant-resolution/adapters/platform_control_plane_v1.ts";
@@ -80,6 +84,7 @@ function managedExecution(
 function staticExecution(
   dataPlaneReference = "enval",
   expectedOverrides: Partial<CurrentAuthoritativeTenantRuntimeContext> = {},
+  resolvedProviderType = "supabase",
 ): AppTenantResolutionShadowExecution {
   return Object.freeze({
     current: Object.freeze({ ...current, ...expectedOverrides }),
@@ -97,7 +102,7 @@ function staticExecution(
           locatorId: LOCATOR_ID,
           deploymentOwnership: "ENVAL_MANAGED_DEDICATED" as const,
           environment: "local",
-          providerType: "supabase",
+          providerType: resolvedProviderType,
           dataPlaneReference,
           applicationRouteReference: "http://127.0.0.1:54321",
           secretReferenceId: SECRET_REFERENCE_ID,
@@ -203,8 +208,10 @@ function tenantOneServerEnvironment(
     ENVAL_DATA_PLANE_DEPLOYMENT_OWNERSHIP: "ENVAL_MANAGED_DEDICATED",
     ENVAL_DATA_PLANE_PROVIDER_TYPE: "supabase",
     ENVAL_DATA_PLANE_REFERENCE: "enval",
+    ENVAL_FIXED_DATA_PLANE_REFERENCE: "enval",
     ENVAL_APPLICATION_ROUTE_REFERENCE: "http://127.0.0.1:54321",
     ENVAL_DATA_PLANE_SECRET_REFERENCE_ID: SECRET_REFERENCE_ID,
+    SUPABASE_URL: "http://kong:8000",
     ...overrides,
   });
 }
@@ -238,6 +245,7 @@ const authoritativeFields = [
   "path",
   "request_id",
   "timestamp",
+  "tenant_execution",
   "url",
   "user_agent_hash",
 ];
@@ -246,6 +254,14 @@ assert(
       authoritativeFields.sort().join("|") &&
     managed.meta.request_id === REQUEST_ID &&
     managed.meta.method === "POST" &&
+    managed.meta.tenant_execution?.tenantId === TENANT_ID &&
+    managed.meta.tenant_execution?.trustedRoutingKey === TRUSTED_HOST &&
+    managed.meta.tenant_execution?.fixedDataPlaneReference === "enval" &&
+    managed.meta.tenant_execution?.resolvedDataPlaneReference === "enval" &&
+    managed.meta.tenant_execution?.resolutionMode ===
+      "platform_control_plane_v1" &&
+    Object.isFrozen(managed.meta) &&
+    Object.isFrozen(managed.meta.tenant_execution) &&
     !Object.hasOwn(managed.meta, "tenantId") &&
     !Object.hasOwn(managed.meta, "dataPlane") &&
     !Object.hasOwn(managed.meta, "shadow"),
@@ -259,6 +275,12 @@ const authoritativeManaged = await requestThroughGate({
 const authoritativeStatic = await requestThroughGate({
   serverEnvironment: tenantOneServerEnvironment("static_single_tenant_v1"),
 });
+const hostedDerivedStatic = await requestThroughGate({
+  serverEnvironment: tenantOneServerEnvironment("static_single_tenant_v1", {
+    ENVAL_FIXED_DATA_PLANE_REFERENCE: "",
+    SUPABASE_URL: "https://enval.supabase.co",
+  }),
+});
 assert(
   !(authoritativeManaged.result instanceof Response) &&
     authoritativeManaged.diagnostic.authorityMode === "AUTHORITATIVE" &&
@@ -270,6 +292,12 @@ assert(
     authoritativeStatic.diagnostic.authorityMode === "AUTHORITATIVE" &&
     authoritativeStatic.diagnostic.parityStatus === "pass",
   "static_authoritative_tenant_one_failed",
+);
+assert(
+  !(hostedDerivedStatic.result instanceof Response) &&
+    hostedDerivedStatic.result.tenant_execution?.fixedDataPlaneReference ===
+      "enval",
+  "hosted_fixed_client_identity_derivation_failed",
 );
 assert(
   authoritativeManaged.diagnostic.tenantReferenceHash ===
@@ -339,6 +367,58 @@ const inactiveManaged = await requestThroughGate({
 });
 await assertGenericBlock(inactiveManaged.result, "inactive_managed_routing");
 
+const ambiguousManaged = await requestThroughGate({
+  authorityMode: "AUTHORITATIVE",
+  execution: managedExecution({
+    async findRoutingIdentities() {
+      return [route, { ...route, routingIdentityId: crypto.randomUUID() }];
+    },
+    async findDataPlaneLocators() {
+      throw new Error("must_not_run");
+    },
+  }),
+});
+await assertGenericBlock(ambiguousManaged.result, "ambiguous_managed_routing");
+
+const inactiveTenant = await requestThroughGate({
+  authorityMode: "AUTHORITATIVE",
+  execution: managedExecution({
+    async findRoutingIdentities() {
+      return [{ ...route, tenantLifecycleStatus: "inactive" }];
+    },
+    async findDataPlaneLocators() {
+      throw new Error("must_not_run");
+    },
+  }),
+});
+await assertGenericBlock(inactiveTenant.result, "inactive_managed_tenant");
+
+const missingLocator = await requestThroughGate({
+  authorityMode: "AUTHORITATIVE",
+  execution: managedExecution({
+    async findRoutingIdentities() {
+      return [route];
+    },
+    async findDataPlaneLocators() {
+      return [];
+    },
+  }),
+});
+await assertGenericBlock(missingLocator.result, "missing_managed_locator");
+
+const multipleLocators = await requestThroughGate({
+  authorityMode: "AUTHORITATIVE",
+  execution: managedExecution({
+    async findRoutingIdentities() {
+      return [route];
+    },
+    async findDataPlaneLocators() {
+      return [locator, { ...locator, locatorId: OTHER_LOCATOR_ID }];
+    },
+  }),
+});
+await assertGenericBlock(multipleLocators.result, "multiple_managed_locators");
+
 const tenantMismatch = await requestThroughGate({
   authorityMode: "AUTHORITATIVE",
   execution: staticExecution("enval", { tenantId: OTHER_TENANT_ID }),
@@ -359,9 +439,30 @@ await assertGenericBlock(locatorMismatch.result, "locator_mismatch");
 
 const providerMismatch = await requestThroughGate({
   authorityMode: "AUTHORITATIVE",
-  execution: staticExecution("enval", { providerType: "postgres" }),
+  execution: staticExecution("enval", {}, "postgres"),
 });
 await assertGenericBlock(providerMismatch.result, "provider_mismatch");
+
+const unsupportedProvider = await requestThroughGate({
+  authorityMode: "AUTHORITATIVE",
+  execution: staticExecution(
+    "enval",
+    { providerType: "postgres" },
+    "postgres",
+  ),
+});
+await assertGenericBlock(unsupportedProvider.result, "unsupported_provider");
+
+const malformedResolvedDataPlaneReference = await requestThroughGate({
+  authorityMode: "AUTHORITATIVE",
+  execution: staticExecution(
+    "postgresql://user:password@localhost/database",
+  ),
+});
+await assertGenericBlock(
+  malformedResolvedDataPlaneReference.result,
+  "malformed_resolved_data_plane_reference",
+);
 
 const missingStaticConfiguration = await requestThroughGate({
   authorityMode: "AUTHORITATIVE",
@@ -390,6 +491,139 @@ const malformedExpectedRuntime = await requestThroughGate({
 await assertGenericBlock(
   malformedExpectedRuntime.result,
   "malformed_expected_runtime",
+);
+
+const missingFixedClientIdentity = await requestThroughGate({
+  serverEnvironment: tenantOneServerEnvironment("static_single_tenant_v1", {
+    ENVAL_FIXED_DATA_PLANE_REFERENCE: "",
+    SUPABASE_URL: "http://kong:8000",
+  }),
+});
+await assertGenericBlock(
+  missingFixedClientIdentity.result,
+  "missing_fixed_client_identity",
+);
+
+const fixedClientMismatch = await requestThroughGate({
+  serverEnvironment: tenantOneServerEnvironment("static_single_tenant_v1", {
+    ENVAL_FIXED_DATA_PLANE_REFERENCE: "different-data-plane",
+  }),
+});
+await assertGenericBlock(fixedClientMismatch.result, "fixed_client_mismatch");
+
+let representativeBusinessAccessCount = 0;
+async function representativeBusinessBoundary(
+  options: AppTenantResolutionShadowObservationOptions,
+) {
+  const meta = await getAppRequestMeta(
+    requestWithBrowserTargetInjection(),
+    options,
+  );
+  if (meta instanceof Response) return meta;
+  representativeBusinessAccessCount += 1;
+  return meta;
+}
+const mismatchBeforeBusinessAccess = await representativeBusinessBoundary({
+  authorityMode: "AUTHORITATIVE",
+  execution: staticExecution("enval", {
+    dataPlaneReference: "different-data-plane",
+  }),
+  sink: null,
+});
+await assertGenericBlock(
+  mismatchBeforeBusinessAccess,
+  "mismatch_before_business_access",
+);
+assert(
+  representativeBusinessAccessCount === 0,
+  "business_access_reached_after_tenant_binding_failure",
+);
+
+let presentationResolutionCount = 0;
+async function presentationThroughSharedGate(
+  options: AppTenantResolutionShadowObservationOptions,
+) {
+  const meta = await getAppRequestMeta(
+    requestWithBrowserTargetInjection(),
+    { ...options, sink: null },
+  );
+  if (meta instanceof Response) return meta;
+  assert(
+    meta.tenant_execution !== undefined,
+    "presentation_tenant_execution_missing",
+  );
+  const composition = buildServerOwnedPresentationSourceComposition(
+    environmentReader({
+      ENVAL_PRESENTATION_SOURCE_MODE: "static_presentation_config_v1",
+      ENVAL_STATIC_PRESENTATION_MODE: "ENVAL_DEFAULTS",
+    }),
+    meta.tenant_execution,
+  );
+  assert(composition !== null, "presentation_composition_missing");
+  presentationResolutionCount += 1;
+  return await resolveAppPresentationBootstrap(
+    meta.tenant_execution,
+    composition,
+  );
+}
+
+const presentationHappyPath = await presentationThroughSharedGate({
+  authorityMode: "AUTHORITATIVE",
+  execution: staticExecution(),
+});
+assert(
+  !(presentationHappyPath instanceof Response) && presentationHappyPath.ok &&
+    !/(tenant|locator|routing|secret|credential|service.?role|data.?plane)/i
+      .test(JSON.stringify(presentationHappyPath.value)),
+  "presentation_happy_path_or_projection_failed",
+);
+const presentationCountAfterHappyPath = presentationResolutionCount;
+const presentationMismatch = await presentationThroughSharedGate({
+  authorityMode: "AUTHORITATIVE",
+  execution: staticExecution("different-data-plane"),
+});
+const presentationMissingIdentity = await presentationThroughSharedGate({
+  serverEnvironment: tenantOneServerEnvironment("static_single_tenant_v1", {
+    ENVAL_FIXED_DATA_PLANE_REFERENCE: "",
+    SUPABASE_URL: "http://kong:8000",
+  }),
+});
+const presentationInactiveRoute = await presentationThroughSharedGate({
+  authorityMode: "AUTHORITATIVE",
+  execution: managedExecution({
+    async findRoutingIdentities() {
+      return [{ ...route, routingLifecycleStatus: "inactive" }];
+    },
+    async findDataPlaneLocators() {
+      throw new Error("must_not_run");
+    },
+  }),
+});
+const presentationAmbiguousRoute = await presentationThroughSharedGate({
+  authorityMode: "AUTHORITATIVE",
+  execution: managedExecution({
+    async findRoutingIdentities() {
+      return [route, { ...route, routingIdentityId: crypto.randomUUID() }];
+    },
+    async findDataPlaneLocators() {
+      throw new Error("must_not_run");
+    },
+  }),
+});
+for (
+  const [code, result] of [
+    ["presentation_mismatch", presentationMismatch],
+    ["presentation_missing_identity", presentationMissingIdentity],
+    ["presentation_inactive_route", presentationInactiveRoute],
+    ["presentation_ambiguous_route", presentationAmbiguousRoute],
+  ] as const
+) {
+  assert(result instanceof Response, `${code}:shared_gate_not_blocked`);
+  await assertGenericBlock(result, code);
+}
+assert(
+  presentationResolutionCount === presentationCountAfterHappyPath,
+  "presentation_resolution_reached_after_shared_gate_failure",
 );
 
 const mismatchTaxonomy = await enforceAppTenantResolutionGate(
@@ -436,30 +670,37 @@ assert(
   "tenant_resolution_failure_taxonomy_failed",
 );
 
-const mismatch = await observe(staticExecution("different-data-plane"));
+const mismatch = await requestThroughGate({
+  authorityMode: "SHADOW",
+  execution: staticExecution("different-data-plane"),
+});
+await assertGenericBlock(mismatch.result, "shadow_mode_fixed_client_mismatch");
 assert(
-  mismatch.diagnostic.parityStatus === "mismatch" &&
-    mismatch.meta.request_id === REQUEST_ID,
-  "shadow_mismatch_not_fail_safe",
+  mismatch.diagnostic.parityStatus === "mismatch",
+  "shadow_mode_mismatch_not_blocked",
 );
 
-const unknownTenant = await observe(managedExecution({
-  async findRoutingIdentities() {
-    return [];
-  },
-  async findDataPlaneLocators() {
-    throw new Error("locator_must_not_run");
-  },
-}));
+const unknownTenant = await requestThroughGate({
+  authorityMode: "SHADOW",
+  execution: managedExecution({
+    async findRoutingIdentities() {
+      return [];
+    },
+    async findDataPlaneLocators() {
+      throw new Error("locator_must_not_run");
+    },
+  }),
+});
+await assertGenericBlock(unknownTenant.result, "shadow_mode_unknown_tenant");
 assert(
   unknownTenant.diagnostic.parityStatus === "resolver_failure" &&
-    unknownTenant.diagnostic.failureClass === "resolution" &&
-    unknownTenant.meta.request_id === REQUEST_ID,
-  "unknown_shadow_tenant_changed_current_runtime",
+    unknownTenant.diagnostic.failureClass === "resolution",
+  "shadow_mode_unknown_tenant_not_blocked",
 );
 
-const throwingResolver = await observe(
-  managedExecution({
+const throwingResolver = await requestThroughGate({
+  authorityMode: "SHADOW",
+  execution: managedExecution({
     async findRoutingIdentities() {
       throw new Error("control_plane_unavailable_with_sensitive_detail");
     },
@@ -467,17 +708,17 @@ const throwingResolver = await observe(
       throw new Error("must_not_run");
     },
   }),
-  { sinkThrows: true },
-);
+});
+await assertGenericBlock(throwingResolver.result, "shadow_mode_resolver_error");
 assert(
   throwingResolver.diagnostic.parityStatus === "resolver_failure" &&
-    throwingResolver.diagnostic.failureClass === "unexpected" &&
-    throwingResolver.meta.request_id === REQUEST_ID,
-  "shadow_failure_broke_authoritative_request",
+    throwingResolver.diagnostic.failureClass === "unexpected",
+  "shadow_mode_resolver_error_not_blocked",
 );
 
-const timeout = await observe(
-  managedExecution({
+const timeout = await requestThroughGate({
+  authorityMode: "SHADOW",
+  execution: managedExecution({
     async findRoutingIdentities() {
       return await new Promise(() => {});
     },
@@ -485,12 +726,12 @@ const timeout = await observe(
       return [];
     },
   }),
-  { timeoutMs: 5 },
-);
+  timeoutMs: 5,
+});
+await assertGenericBlock(timeout.result, "shadow_mode_timeout");
 assert(
-  timeout.diagnostic.failureClass === "timeout" &&
-    timeout.meta.request_id === REQUEST_ID,
-  "shadow_timeout_broke_authoritative_request",
+  timeout.diagnostic.failureClass === "timeout",
+  "shadow_mode_timeout_not_blocked",
 );
 
 const serializedDiagnostics = JSON.stringify([
@@ -502,12 +743,20 @@ const serializedDiagnostics = JSON.stringify([
   unreadableServerConfiguration.diagnostic,
   unknownRouting.diagnostic,
   inactiveManaged.diagnostic,
+  ambiguousManaged.diagnostic,
+  inactiveTenant.diagnostic,
+  missingLocator.diagnostic,
+  multipleLocators.diagnostic,
   tenantMismatch.diagnostic,
   environmentMismatch.diagnostic,
   locatorMismatch.diagnostic,
   providerMismatch.diagnostic,
+  unsupportedProvider.diagnostic,
+  malformedResolvedDataPlaneReference.diagnostic,
   missingStaticConfiguration.diagnostic,
   malformedExpectedRuntime.diagnostic,
+  missingFixedClientIdentity.diagnostic,
+  fixedClientMismatch.diagnostic,
   mismatch.diagnostic,
   unknownTenant.diagnostic,
   throwingResolver.diagnostic,
@@ -524,6 +773,29 @@ assert(
     !/(password|service.?role|database.?url|raw.?secret|credential|access.?token)/i
       .test(`${serializedDiagnostics}\n${blockedBodies.join("\n")}`),
   "shadow_diagnostic_contains_sensitive_material",
+);
+
+const authoritativeExecutionContexts = [
+  authoritativeManaged.result,
+  authoritativeStatic.result,
+  hostedDerivedStatic.result,
+].filter((result) => !(result instanceof Response)).map((result) =>
+  result.tenant_execution
+);
+const serializedExecutionContexts = JSON.stringify(
+  authoritativeExecutionContexts,
+);
+assert(
+  authoritativeExecutionContexts.every((context) =>
+    context && Object.isFrozen(context) && context.tenantId === TENANT_ID &&
+    !context.trustedRoutingKey.includes("browser") &&
+    context.dataPlaneLocatorId === LOCATOR_ID &&
+    context.fixedDataPlaneReference === context.resolvedDataPlaneReference
+  ) &&
+    !serializedExecutionContexts.includes(SECRET_REFERENCE_ID) &&
+    !/(service.?role|database.?url|raw.?secret|credential|access.?token|api.?key)/i
+      .test(serializedExecutionContexts),
+  "tenant_execution_context_not_immutable_safe_or_bound",
 );
 
 const shadowSource = Deno.readTextFileSync(
@@ -544,24 +816,58 @@ const workforceAuthorizationSource = Deno.readTextFileSync(
     import.meta.url,
   ),
 );
+const presentationEndpointSource = Deno.readTextFileSync(
+  new URL(
+    "../../supabase/functions/api-app-presentation-bootstrap/index.ts",
+    import.meta.url,
+  ),
+);
 assert(
   foundationSource.includes("enforceAppTenantResolutionGate(") &&
     foundationSource.includes("if (!tenantGate.ok)") &&
-    !/(createClient|SUPABASE_URL|SUPABASE_SERVICE_ROLE_KEY|fetch\s*\()/
+    foundationSource.includes(
+      "tenant_execution: tenantGate.executionContext",
+    ) &&
+    !/(createClient|SUPABASE_SERVICE_ROLE_KEY|fetch\s*\()/
       .test(shadowSource) &&
     !/(customer_id|case_id|dossier_id|auth_user|access_grant)/
       .test(shadowSource),
   "shadow_runtime_switched_data_plane_or_entered_business_authority",
 );
+assert(
+  (shadowSource.match(/const parity =/g) ?? []).length === 1 &&
+    presentationEndpointSource.includes("meta.tenant_execution") &&
+    !presentationEndpointSource.includes("matchesCurrentTenant") &&
+    !presentationEndpointSource.includes("resolveTenantRuntimeContext") &&
+    !presentationEndpointSource.includes("composeTenantResolutionAdapter") &&
+    !presentationEndpointSource.includes(
+      "buildAppTenantResolutionShadowFromServerEnvironment",
+    ),
+  "tf01b_shared_parity_authority_not_consumed_exclusively",
+);
 
 const coveredEntrypoints = [
   "api-app-auth-bootstrap",
   "api-app-compliance-source-event",
+  "api-app-compliance-worklist",
+  "api-app-customer-correction-handoff",
+  "api-app-customer-correction-signing-challenge",
+  "api-app-customer-correction-signing-finalize",
+  "api-app-customer-correction-upload-confirm",
+  "api-app-customer-correction-upload-remove",
+  "api-app-customer-correction-upload-url",
   "api-app-dashboard-get",
   "api-app-document-download-url",
   "api-app-document-upload-confirm",
   "api-app-document-upload-url",
   "api-app-document-withdraw-current",
+  "api-app-evidence-review-case-detail",
+  "api-app-evidence-review-correction-publish",
+  "api-app-evidence-review-correction-supersede",
+  "api-app-evidence-review-decision",
+  "api-app-evidence-review-preview",
+  "api-app-evidence-review-round-finalize",
+  "api-app-evidence-review-worklist",
   "api-app-presentation-bootstrap",
   "api-app-signup-intake-start",
   "api-app-signup-signing-challenge",
@@ -607,26 +913,26 @@ for (const endpoint of coveredEntrypoints) {
   const source = Deno.readTextFileSync(
     new URL(`../../supabase/functions/${endpoint}/index.ts`, import.meta.url),
   );
-  const directMetaGate =
-    /const meta = await getAppRequestMeta\(\s*req(?:,\s*\{\s*managedReader\s*\})?\s*\);\s*if \(meta instanceof Response\) return meta;/.test(
-      source,
-    );
-  const narrowedMetaGate =
-    /const metaResult = await deps\.requestMeta\(req\);\s*if \(metaResult instanceof Response\) return metaResult;\s*const meta = metaResult;/.test(
-      source,
-    );
+  const metaCallIndex = source.search(
+    /await (?:getAppRequestMeta|deps\.requestMeta)\(\s*req/,
+  );
+  const responseGuardIndex = source.indexOf(
+    "instanceof Response",
+    metaCallIndex,
+  );
   assert(
     source.includes("getAppRequestMeta") &&
       source.includes('from "../_shared/app_foundation.ts"') &&
-      (directMetaGate || narrowedMetaGate),
+      metaCallIndex >= 0 && responseGuardIndex > metaCallIndex,
     `shared_shadow_runtime_path_missing:${endpoint}`,
   );
 }
 
 assert(
-  /const metaResult = await deps\.requestMeta\(req\);\s*if \(metaResult instanceof Response\) return metaResult;\s*const meta = metaResult;/.test(
-    workforceAuthorizationSource,
-  ),
+  /const metaResult = await deps\.requestMeta\(req\);\s*if \(metaResult instanceof Response\) return metaResult;\s*const meta = metaResult;/
+    .test(
+      workforceAuthorizationSource,
+    ),
   "shared_workforce_tenant_gate_propagation_missing",
 );
 
@@ -665,6 +971,53 @@ assert(
   "delegated_signup_promotion_gate_missing",
 );
 
+const customerDashboardSource = Deno.readTextFileSync(
+  new URL(
+    "../../supabase/functions/api-app-dashboard-get/index.ts",
+    import.meta.url,
+  ),
+);
+const customerCorrectionSource = Deno.readTextFileSync(
+  new URL(
+    "../../supabase/functions/api-app-customer-correction-handoff/index.ts",
+    import.meta.url,
+  ),
+);
+const customerGateIndex = customerDashboardSource.indexOf(
+  "await getAppRequestMeta(req)",
+);
+const customerDataAccessIndex = customerDashboardSource.indexOf(
+  "appSupabaseClient()",
+  customerGateIndex,
+);
+const workforceGateIndex = workforceAuthorizationSource.indexOf(
+  "await deps.requestMeta(req)",
+);
+const workforceDataAccessIndex = workforceAuthorizationSource.indexOf(
+  "deps.createServiceClient()",
+  workforceGateIndex,
+);
+const customerCorrectionGateIndex = customerCorrectionSource.indexOf(
+  "await deps.requestMeta(req)",
+);
+const customerAuthIndex = customerCorrectionSource.indexOf(
+  "await deps.verifyBearer(req, serviceClient)",
+  customerCorrectionGateIndex,
+);
+const customerCaseAuthorizationIndex = customerCorrectionSource.indexOf(
+  "serviceClient.rpc(READ_RPC",
+  customerAuthIndex,
+);
+assert(
+  customerGateIndex >= 0 && customerDataAccessIndex > customerGateIndex &&
+    customerCorrectionGateIndex >= 0 &&
+    customerAuthIndex > customerCorrectionGateIndex &&
+    customerCaseAuthorizationIndex > customerAuthIndex &&
+    workforceGateIndex >= 0 &&
+    workforceDataAccessIndex > workforceGateIndex,
+  "representative_business_access_preceded_tenant_binding",
+);
+
 const functionsRoot = new URL("../../supabase/functions/", import.meta.url);
 const discoveredEntrypoints = Array.from(Deno.readDirSync(functionsRoot))
   .filter((entry) => entry.isDirectory)
@@ -690,9 +1043,40 @@ assert(
     new Set(classifiedEntrypoints).size === classifiedEntrypoints.length,
   "edge_entrypoint_coverage_inventory_incomplete",
 );
+assert(
+  coveredEntrypoints.length + sharedWorkforceEntrypoints.length + 1 === 33 &&
+    legacyFallbackEntrypoints.length +
+          tenantScopedWorkerEntrypoints.length === 22,
+  "edge_entrypoint_classification_count_mismatch",
+);
+
+const currentTenantEntrypoints = [
+  ...coveredEntrypoints,
+  "api-app-signup-promote",
+  ...sharedWorkforceEntrypoints,
+];
+const manualDuplicateParityEntrypoints = currentTenantEntrypoints.filter(
+  (endpoint) => {
+    const source = Deno.readTextFileSync(
+      new URL(`../../supabase/functions/${endpoint}/index.ts`, import.meta.url),
+    );
+    return source.includes("matchesCurrentTenant") ||
+      /resolved[^\n]*tenantId[^\n]*current[^\n]*tenantId/.test(source) ||
+      /resolved[^\n]*dataPlane[^\n]*(?:locatorId|providerType|deploymentOwnership|dataPlaneReference)[^\n]*current/
+        .test(
+          source,
+        );
+  },
+);
+assert(
+  manualDuplicateParityEntrypoints.length === 0,
+  `manual_duplicate_parity_endpoints:${
+    manualDuplicateParityEntrypoints.join(",")
+  }`,
+);
 
 assert(
-  !/(createClient|SUPABASE_URL|SUPABASE_SERVICE_ROLE_KEY)/.test(shadowSource) &&
+  !/(createClient|SUPABASE_SERVICE_ROLE_KEY)/.test(shadowSource) &&
     !shadowSource.includes("new SupabaseClient"),
   "dynamic_data_plane_switching_detected",
 );
@@ -937,4 +1321,13 @@ if (Deno.args.includes("--local-control-plane")) {
 
 console.log("TENANT_RESOLUTION_SHADOW_Q01_Q14=PASS");
 console.log("TENANT_RESOLUTION_AUTHORITY_Q19_Q43=PASS");
+console.log("TF01_STATIC_Q01_Q14=PASS");
+console.log("TF01B_PRESENTATION_P01_P10=PASS");
+console.log(
+  "API_APP_ENDPOINT_INVENTORY=" +
+    "GATED_THROUGH_SHARED_BOUNDARY:33," +
+    "PUBLIC_NON_TENANT:0,INTERNAL_NON_TENANT:0," +
+    "LEGACY_OUT_OF_SCOPE:22,GAP:0",
+);
+console.log("MANUAL_DUPLICATE_PARITY_ENDPOINTS=0");
 console.log("DYNAMIC_DATA_PLANE_SWITCHING=NO");

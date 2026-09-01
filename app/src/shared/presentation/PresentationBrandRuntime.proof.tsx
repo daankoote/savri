@@ -15,8 +15,8 @@ import {
   validatePresentationBrandConfigV1,
 } from "../../../../platform/runtime/presentation/presentation_brand_config.ts";
 import type { ServerOwnedPresentationSourceComposition } from "../../../../platform/runtime/presentation/presentation_source_composition.ts";
-import type { ResolvedTenantContext } from "../../../../platform/runtime/tenant-resolution/tenant_resolution.ts";
 import {
+  type AppPresentationTenantBinding,
   buildServerOwnedPresentationSourceComposition,
   resolveAppPresentationBootstrap,
 } from "../../../../supabase/functions/_shared/app_presentation_bootstrap.ts";
@@ -40,25 +40,15 @@ async function source(path: string): Promise<string> {
 
 const TENANT_ID = "51000000-0000-4000-8000-000000000001";
 const OTHER_TENANT_ID = "51000000-0000-4000-8000-000000000002";
-const LOCATOR_ID = "53000000-0000-4000-8000-000000000001";
-const SECRET_REFERENCE_ID = "54000000-0000-4000-8000-000000000001";
 
 Object.defineProperty(globalThis, "window", {
   configurable: true,
   value: { location: { origin: "https://proof.invalid" } },
 });
 
-const resolvedTenant: ResolvedTenantContext = Object.freeze({
+const tenantExecution: AppPresentationTenantBinding = Object.freeze({
   tenantId: TENANT_ID,
-  dataPlane: Object.freeze({
-    locatorId: LOCATOR_ID,
-    deploymentOwnership: "ENVAL_MANAGED_DEDICATED",
-    environment: "local",
-    providerType: "supabase",
-    dataPlaneReference: "enval",
-    applicationRouteReference: "http://127.0.0.1:54321",
-    secretReferenceId: SECRET_REFERENCE_ID,
-  }),
+  environment: "local",
 });
 
 const syntheticValidation = validatePresentationBrandConfigV1({
@@ -117,9 +107,9 @@ function environment(values: Record<string, string>) {
 
 async function bootstrap(
   composition: ServerOwnedPresentationSourceComposition,
-  tenant = resolvedTenant,
+  execution = tenantExecution,
 ) {
-  const result = await resolveAppPresentationBootstrap(tenant, composition);
+  const result = await resolveAppPresentationBootstrap(execution, composition);
   assert(result.ok, "presentation_bootstrap_failed");
   const decoded = decodePresentationBootstrapResponse(result.value);
   assert(decoded.ok, "browser_projection_decode_failed");
@@ -149,7 +139,7 @@ const managedEnvalComposition = buildServerOwnedPresentationSourceComposition(
   environment({
     ENVAL_PRESENTATION_SOURCE_MODE: "platform_control_plane_presentation_v1",
   }),
-  resolvedTenant,
+  tenantExecution,
   managedEnvalReader,
 );
 assert(managedEnvalComposition !== null, "managed_enval_composition_failed");
@@ -159,7 +149,7 @@ const standaloneEnvalComposition =
       ENVAL_PRESENTATION_SOURCE_MODE: "static_presentation_config_v1",
       ENVAL_STATIC_PRESENTATION_MODE: "ENVAL_DEFAULTS",
     }),
-    resolvedTenant,
+    tenantExecution,
   );
 assert(
   standaloneEnvalComposition !== null,
@@ -180,7 +170,7 @@ const managedSyntheticComposition =
     environment({
       ENVAL_PRESENTATION_SOURCE_MODE: "platform_control_plane_presentation_v1",
     }),
-    resolvedTenant,
+    tenantExecution,
     managedReader([record(synthetic)]),
   );
 const standaloneSyntheticComposition =
@@ -190,7 +180,7 @@ const standaloneSyntheticComposition =
       ENVAL_STATIC_PRESENTATION_MODE: "CUSTOM_V1",
       ENVAL_STATIC_PRESENTATION_CONFIG_V1: JSON.stringify(synthetic),
     }),
-    resolvedTenant,
+    tenantExecution,
   );
 assert(
   managedSyntheticComposition !== null &&
@@ -222,7 +212,7 @@ assert(
 );
 
 const sourceUnavailable = await resolveAppPresentationBootstrap(
-  resolvedTenant,
+  tenantExecution,
   {
     deploymentMode: "platform_control_plane_presentation_v1",
     platformControlPlaneReader: {
@@ -232,17 +222,17 @@ const sourceUnavailable = await resolveAppPresentationBootstrap(
     },
   },
 );
-const ambiguous = await resolveAppPresentationBootstrap(resolvedTenant, {
+const ambiguous = await resolveAppPresentationBootstrap(tenantExecution, {
   deploymentMode: "platform_control_plane_presentation_v1",
   platformControlPlaneReader: managedReader([record(), record()]),
 });
-const invalid = await resolveAppPresentationBootstrap(resolvedTenant, {
+const invalid = await resolveAppPresentationBootstrap(tenantExecution, {
   deploymentMode: "platform_control_plane_presentation_v1",
   platformControlPlaneReader: managedReader([
     record(ENVAL_PRESENTATION_BRAND_CONFIG_V1, { displayName: "<invalid>" }),
   ]),
 });
-const tenantMismatch = await resolveAppPresentationBootstrap(resolvedTenant, {
+const tenantMismatch = await resolveAppPresentationBootstrap(tenantExecution, {
   deploymentMode: "platform_control_plane_presentation_v1",
   platformControlPlaneReader: managedReader([
     record(ENVAL_PRESENTATION_BRAND_CONFIG_V1, { tenantId: OTHER_TENANT_ID }),
@@ -261,11 +251,11 @@ const missingManagedReader = buildServerOwnedPresentationSourceComposition(
   environment({
     ENVAL_PRESENTATION_SOURCE_MODE: "platform_control_plane_presentation_v1",
   }),
-  resolvedTenant,
+  tenantExecution,
 );
 const unknownMode = buildServerOwnedPresentationSourceComposition(
   environment({ ENVAL_PRESENTATION_SOURCE_MODE: "browser_selected" }),
-  resolvedTenant,
+  tenantExecution,
   managedEnvalReader,
 );
 const malformedStandalone = buildServerOwnedPresentationSourceComposition(
@@ -274,7 +264,7 @@ const malformedStandalone = buildServerOwnedPresentationSourceComposition(
     ENVAL_STATIC_PRESENTATION_MODE: "CUSTOM_V1",
     ENVAL_STATIC_PRESENTATION_CONFIG_V1: "{bad-json",
   }),
-  resolvedTenant,
+  tenantExecution,
 );
 assert(
   missingManagedReader === null && unknownMode === null &&
@@ -334,12 +324,17 @@ const [
 
 assert(
   endpointSource.indexOf("getAppRequestMeta(req") <
-      endpointSource.indexOf("resolveTenantRuntimeContext(") &&
-    endpointSource.indexOf("resolveTenantRuntimeContext(") <
+      endpointSource.indexOf("meta.tenant_execution") &&
+    endpointSource.indexOf("meta.tenant_execution") <
       endpointSource.indexOf("resolveAppPresentationBootstrap(") &&
-    endpointSource.includes("matchesCurrentTenant") &&
+    !endpointSource.includes("matchesCurrentTenant") &&
+    !endpointSource.includes("resolveTenantRuntimeContext") &&
+    !endpointSource.includes("composeTenantResolutionAdapter") &&
+    !endpointSource.includes(
+      "buildAppTenantResolutionShadowFromServerEnvironment",
+    ) &&
     endpointSource.includes("managedReader"),
-  "Q08_tenant_resolution_does_not_precede_presentation",
+  "Q08_shared_tenant_execution_does_not_precede_presentation",
 );
 assert(
   !/(req\.json|URLSearchParams|req\.headers\.get\([^)]*(tenant|brand|mode|locator))/i

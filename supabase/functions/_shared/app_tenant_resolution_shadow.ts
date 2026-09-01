@@ -1,9 +1,11 @@
 import {
   isValidTenantReference,
+  type ResolvedTenantContext,
   resolveTenantRuntimeContext,
 } from "../../../platform/runtime/tenant-resolution/tenant_resolution.ts";
 import {
   buildTrustedTenantRoutingContext,
+  type TrustedRoutingProvenance,
   type TrustedTenantRoutingContext,
 } from "../../../platform/runtime/tenant-resolution/trusted_ingress.ts";
 import type { PlatformControlPlaneReader } from "../../../platform/runtime/tenant-resolution/adapters/platform_control_plane_v1.ts";
@@ -39,6 +41,21 @@ export type AppTenantResolutionShadowExecution = Readonly<{
   composition: ServerOwnedTenantResolutionComposition;
 }>;
 
+export type AppTenantExecutionContext = Readonly<{
+  tenantId: string;
+  environment: string;
+  trustedRoutingKey: string;
+  routingProvenance: TrustedRoutingProvenance;
+  resolutionMode: TenantResolutionDeploymentMode;
+  dataPlaneLocatorId: string;
+  resolvedDataPlaneReference: string;
+  fixedDataPlaneReference: string;
+  providerType: string;
+  deploymentOwnership:
+    | "ENVAL_MANAGED_DEDICATED"
+    | "CUSTOMER_MANAGED_SELF_HOSTED";
+}>;
+
 export type AppTenantResolutionShadowDiagnostic = Readonly<{
   authorityMode: AppTenantResolutionAuthorityMode | "unknown";
   mode: TenantResolutionDeploymentMode | "unknown";
@@ -67,6 +84,7 @@ export type AppTenantResolutionGateResult =
     ok: true;
     authorityMode: AppTenantResolutionAuthorityMode;
     diagnostic: AppTenantResolutionShadowDiagnostic;
+    executionContext: AppTenantExecutionContext;
   }>
   | Readonly<{
     ok: false;
@@ -84,7 +102,13 @@ const UUID_PATTERN =
 const TOKEN_PATTERN = /^[a-z][a-z0-9_-]{1,63}$/;
 const CREDENTIAL_PATTERN =
   /(password|passwd|service.?role|database.?url|raw.?secret|credential|access.?token|api.?key)/i;
+const FIXED_EXECUTION_PROVIDER_TYPE = "supabase";
 const DEFAULT_TIMEOUT_MS = 250;
+
+type AppTenantResolutionBindingObservation = Readonly<{
+  diagnostic: AppTenantResolutionShadowDiagnostic;
+  executionContext: AppTenantExecutionContext | null;
+}>;
 
 function bounded(value: unknown, max: number): value is string {
   return typeof value === "string" && value === value.trim() &&
@@ -153,54 +177,63 @@ function normalizeCurrent(
       "ENVAL_MANAGED_DEDICATED",
       "CUSTOMER_MANAGED_SELF_HOSTED",
     ].includes(current.deploymentOwnership) ||
-    !TOKEN_PATTERN.test(current.providerType) ||
+    current.providerType !== FIXED_EXECUTION_PROVIDER_TYPE ||
     !bounded(current.dataPlaneReference, 200)
   ) return null;
   return Object.freeze({ ...current });
 }
 
-export async function runAppTenantResolutionShadow(
+async function evaluateAppTenantResolutionBinding(
   execution: AppTenantResolutionShadowExecution,
   correlationReference: string | null = null,
   authorityMode: AppTenantResolutionAuthorityMode = "SHADOW",
-): Promise<AppTenantResolutionShadowDiagnostic> {
+): Promise<AppTenantResolutionBindingObservation> {
   const mode = execution?.composition?.deploymentMode;
   try {
     const current = normalizeCurrent(execution.current);
     if (!current) {
-      return await diagnostic(
-        mode,
-        "resolver_failure",
-        null,
-        correlationReference,
-        "composition",
-        authorityMode,
-      );
+      return Object.freeze({
+        diagnostic: await diagnostic(
+          mode,
+          "resolver_failure",
+          null,
+          correlationReference,
+          "composition",
+          authorityMode,
+        ),
+        executionContext: null,
+      });
     }
     const composition = composeTenantResolutionAdapter(execution.composition);
     if (!composition.ok) {
-      return await diagnostic(
-        mode,
-        "resolver_failure",
-        current.tenantId,
-        correlationReference,
-        "composition",
-        authorityMode,
-      );
+      return Object.freeze({
+        diagnostic: await diagnostic(
+          mode,
+          "resolver_failure",
+          current.tenantId,
+          correlationReference,
+          "composition",
+          authorityMode,
+        ),
+        executionContext: null,
+      });
     }
     const resolved = await resolveTenantRuntimeContext(
       composition.adapter,
       execution.trustedRoutingContext,
     );
     if (!resolved.ok) {
-      return await diagnostic(
-        mode,
-        "resolver_failure",
-        current.tenantId,
-        correlationReference,
-        "resolution",
-        authorityMode,
-      );
+      return Object.freeze({
+        diagnostic: await diagnostic(
+          mode,
+          "resolver_failure",
+          current.tenantId,
+          correlationReference,
+          "resolution",
+          authorityMode,
+        ),
+        executionContext: null,
+      });
     }
     const shadow = {
       tenantId: resolved.value.tenantId,
@@ -216,24 +249,71 @@ export async function runAppTenantResolutionShadow(
       current.deploymentOwnership === shadow.deploymentOwnership &&
       current.providerType === shadow.providerType &&
       current.dataPlaneReference === shadow.dataPlaneReference;
-    return await diagnostic(
-      mode,
-      parity ? "pass" : "mismatch",
-      current.tenantId,
-      correlationReference,
-      null,
-      authorityMode,
-    );
+    const selectedMode = safeMode(mode);
+    const executionContext = parity && selectedMode !== "unknown"
+      ? tenantExecutionContext(
+        execution,
+        current,
+        resolved.value,
+        selectedMode,
+      )
+      : null;
+    return Object.freeze({
+      diagnostic: await diagnostic(
+        mode,
+        parity ? "pass" : "mismatch",
+        current.tenantId,
+        correlationReference,
+        null,
+        authorityMode,
+      ),
+      executionContext,
+    });
   } catch {
-    return await diagnostic(
-      mode,
-      "resolver_failure",
-      null,
-      correlationReference,
-      "unexpected",
-      authorityMode,
-    );
+    return Object.freeze({
+      diagnostic: await diagnostic(
+        mode,
+        "resolver_failure",
+        null,
+        correlationReference,
+        "unexpected",
+        authorityMode,
+      ),
+      executionContext: null,
+    });
   }
+}
+
+function tenantExecutionContext(
+  execution: AppTenantResolutionShadowExecution,
+  current: CurrentAuthoritativeTenantRuntimeContext,
+  resolved: ResolvedTenantContext,
+  resolutionMode: TenantResolutionDeploymentMode,
+): AppTenantExecutionContext {
+  return Object.freeze({
+    tenantId: resolved.tenantId,
+    environment: resolved.dataPlane.environment,
+    trustedRoutingKey: execution.trustedRoutingContext.trustedRoutingKey,
+    routingProvenance: execution.trustedRoutingContext.provenance,
+    resolutionMode,
+    dataPlaneLocatorId: resolved.dataPlane.locatorId,
+    resolvedDataPlaneReference: resolved.dataPlane.dataPlaneReference,
+    fixedDataPlaneReference: current.dataPlaneReference,
+    providerType: resolved.dataPlane.providerType,
+    deploymentOwnership: resolved.dataPlane.deploymentOwnership,
+  });
+}
+
+export async function runAppTenantResolutionShadow(
+  execution: AppTenantResolutionShadowExecution,
+  correlationReference: string | null = null,
+  authorityMode: AppTenantResolutionAuthorityMode = "SHADOW",
+): Promise<AppTenantResolutionShadowDiagnostic> {
+  return (await evaluateAppTenantResolutionBinding(
+    execution,
+    correlationReference,
+    authorityMode,
+  )).diagnostic;
 }
 
 function environmentValue(
@@ -241,6 +321,34 @@ function environmentValue(
   name: string,
 ): string {
   return String(environment.get(name) ?? "").trim();
+}
+
+function fixedDataPlaneReferenceFromServerEnvironment(
+  environment: ServerEnvironmentReader,
+): string {
+  const configured = environmentValue(
+    environment,
+    "ENVAL_FIXED_DATA_PLANE_REFERENCE",
+  );
+  const rawSupabaseUrl = environmentValue(environment, "SUPABASE_URL");
+  let derived = "";
+  if (rawSupabaseUrl) {
+    try {
+      const parsed = new URL(rawSupabaseUrl);
+      if (
+        !["http:", "https:"].includes(parsed.protocol) || parsed.username ||
+        parsed.password
+      ) return "";
+      const match = parsed.hostname.toLowerCase().match(
+        /^([a-z0-9][a-z0-9-]{1,62})\.supabase\.co$/,
+      );
+      derived = match?.[1] ?? "";
+    } catch {
+      return "";
+    }
+  }
+  if (derived && configured && derived !== configured) return "";
+  return derived || configured;
 }
 
 export function buildAppTenantResolutionShadowFromServerEnvironment(
@@ -276,9 +384,12 @@ export function buildAppTenantResolutionShadowFromServerEnvironment(
     environment,
     "ENVAL_DATA_PLANE_LOCATOR_ID",
   );
-  const dataPlaneReference = environmentValue(
+  const resolvedDataPlaneReference = environmentValue(
     environment,
     "ENVAL_DATA_PLANE_REFERENCE",
+  );
+  const fixedDataPlaneReference = fixedDataPlaneReferenceFromServerEnvironment(
+    environment,
   );
   const current = {
     tenantId,
@@ -292,7 +403,7 @@ export function buildAppTenantResolutionShadowFromServerEnvironment(
       environment,
       "ENVAL_DATA_PLANE_PROVIDER_TYPE",
     ),
-    dataPlaneReference,
+    dataPlaneReference: fixedDataPlaneReference,
   };
   let composition: ServerOwnedTenantResolutionComposition;
   if (mode === "platform_control_plane_v1") {
@@ -317,7 +428,7 @@ export function buildAppTenantResolutionShadowFromServerEnvironment(
           environment,
           "ENVAL_DATA_PLANE_PROVIDER_TYPE",
         ),
-        dataPlaneReference,
+        dataPlaneReference: resolvedDataPlaneReference,
         applicationRouteReference: environmentValue(
           environment,
           "ENVAL_APPLICATION_ROUTE_REFERENCE",
@@ -366,6 +477,47 @@ function emitSafeDiagnostic(
   }
 }
 
+async function observeAppTenantResolutionBinding(
+  execution: AppTenantResolutionShadowExecution,
+  correlationReference: string | null,
+  authorityMode: AppTenantResolutionAuthorityMode,
+  options: AppTenantResolutionShadowObservationOptions,
+): Promise<AppTenantResolutionBindingObservation> {
+  const timeoutMs = Number.isInteger(options.timeoutMs) &&
+      Number(options.timeoutMs) > 0 && Number(options.timeoutMs) <= 2_000
+    ? Number(options.timeoutMs)
+    : DEFAULT_TIMEOUT_MS;
+  let timeoutId: number | undefined;
+  const timeout = new Promise<AppTenantResolutionBindingObservation>(
+    (resolve) => {
+      timeoutId = setTimeout(async () =>
+        resolve(Object.freeze({
+          diagnostic: await diagnostic(
+            execution.composition.deploymentMode,
+            "resolver_failure",
+            execution.current.tenantId,
+            correlationReference,
+            "timeout",
+            authorityMode,
+          ),
+          executionContext: null,
+        })), timeoutMs);
+    },
+  );
+  try {
+    return await Promise.race([
+      evaluateAppTenantResolutionBinding(
+        execution,
+        correlationReference,
+        authorityMode,
+      ),
+      timeout,
+    ]);
+  } finally {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
+  }
+}
+
 export async function observeAppTenantResolutionShadow(
   runtimeEnvironment: string,
   correlationReference: string | null,
@@ -389,39 +541,12 @@ export async function observeAppTenantResolutionShadow(
         authorityMode,
       );
     }
-    const timeoutMs = Number.isInteger(options.timeoutMs) &&
-        Number(options.timeoutMs) > 0 && Number(options.timeoutMs) <= 2_000
-      ? Number(options.timeoutMs)
-      : DEFAULT_TIMEOUT_MS;
-    let timeoutId: number | undefined;
-    const timeout = new Promise<AppTenantResolutionShadowDiagnostic>(
-      (resolve) => {
-        timeoutId = setTimeout(async () =>
-          resolve(
-            await diagnostic(
-              execution.composition.deploymentMode,
-              "resolver_failure",
-              execution.current.tenantId,
-              correlationReference,
-              "timeout",
-              authorityMode,
-            ),
-          ), timeoutMs);
-      },
-    );
-    let observed: AppTenantResolutionShadowDiagnostic;
-    try {
-      observed = await Promise.race([
-        runAppTenantResolutionShadow(
-          execution,
-          correlationReference,
-          authorityMode === "unknown" ? "SHADOW" : authorityMode,
-        ),
-        timeout,
-      ]);
-    } finally {
-      if (timeoutId !== undefined) clearTimeout(timeoutId);
-    }
+    const observed = (await observeAppTenantResolutionBinding(
+      execution,
+      correlationReference,
+      authorityMode === "unknown" ? "SHADOW" : authorityMode,
+      options,
+    )).diagnostic;
     emitSafeDiagnostic(observed, options.sink);
     return observed;
   } catch {
@@ -489,19 +614,6 @@ export async function enforceAppTenantResolutionGate(
     });
   }
 
-  if (authorityMode === "SHADOW") {
-    const observed = await observeAppTenantResolutionShadow(
-      runtimeEnvironment,
-      correlationReference,
-      { ...options, authorityMode },
-    );
-    return Object.freeze({
-      ok: true,
-      authorityMode,
-      diagnostic: observed,
-    });
-  }
-
   let execution: AppTenantResolutionShadowExecution | null;
   try {
     execution = options.execution ??
@@ -531,13 +643,21 @@ export async function enforceAppTenantResolutionGate(
     });
   }
 
-  const observed = await observeAppTenantResolutionShadow(
-    runtimeEnvironment,
+  const observation = await observeAppTenantResolutionBinding(
+    execution,
     correlationReference,
-    { ...options, authorityMode, execution },
+    authorityMode,
+    options,
   );
-  if (observed.parityStatus === "pass") {
-    return Object.freeze({ ok: true, authorityMode, diagnostic: observed });
+  const observed = observation.diagnostic;
+  emitSafeDiagnostic(observed, options.sink);
+  if (observed.parityStatus === "pass" && observation.executionContext) {
+    return Object.freeze({
+      ok: true,
+      authorityMode,
+      diagnostic: observed,
+      executionContext: observation.executionContext,
+    });
   }
   const code: AppTenantResolutionGateFailureCode =
     observed.parityStatus === "mismatch"

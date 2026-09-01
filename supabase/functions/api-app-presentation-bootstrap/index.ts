@@ -11,19 +11,10 @@ import { createPlatformControlPlaneRuntimeReader } from "../_shared/app_control_
 import {
   buildServerOwnedPresentationSourceComposition,
   resolveAppPresentationBootstrap,
+  type ServerPresentationEnvironmentReader,
 } from "../_shared/app_presentation_bootstrap.ts";
-import {
-  buildAppTenantResolutionShadowFromServerEnvironment,
-  type CurrentAuthoritativeTenantRuntimeContext,
-  type ServerEnvironmentReader,
-} from "../_shared/app_tenant_resolution_shadow.ts";
-import { composeTenantResolutionAdapter } from "../../../platform/runtime/tenant-resolution/tenant_resolution_composition.ts";
-import {
-  type ResolvedTenantContext,
-  resolveTenantRuntimeContext,
-} from "../../../platform/runtime/tenant-resolution/tenant_resolution.ts";
 
-function serverEnvironment(): ServerEnvironmentReader {
+function serverEnvironment(): ServerPresentationEnvironmentReader {
   return { get: (name) => Deno.env.get(name) };
 }
 
@@ -40,18 +31,6 @@ function controlPlaneReader() {
     db: { schema: "platform" },
   });
   return createPlatformControlPlaneRuntimeReader(client);
-}
-
-function matchesCurrentTenant(
-  resolved: ResolvedTenantContext,
-  current: CurrentAuthoritativeTenantRuntimeContext,
-): boolean {
-  return resolved.tenantId === current.tenantId &&
-    resolved.dataPlane.environment === current.environment &&
-    resolved.dataPlane.locatorId === current.locatorId &&
-    resolved.dataPlane.deploymentOwnership === current.deploymentOwnership &&
-    resolved.dataPlane.providerType === current.providerType &&
-    resolved.dataPlane.dataPlaneReference === current.dataPlaneReference;
 }
 
 serve(async (req) => {
@@ -72,40 +51,20 @@ serve(async (req) => {
   }
 
   try {
-    const tenantExecution = buildAppTenantResolutionShadowFromServerEnvironment(
-      environment,
-      meta.environment,
-      managedReader,
-    );
+    const tenantExecution = meta.tenant_execution;
     if (!tenantExecution) throw new Error("tenant_resolution_unavailable");
-    const tenantComposition = composeTenantResolutionAdapter(
-      tenantExecution.composition,
-    );
-    if (!tenantComposition.ok) {
-      throw new Error("tenant_resolution_unavailable");
-    }
-    const resolvedTenant = await resolveTenantRuntimeContext(
-      tenantComposition.adapter,
-      tenantExecution.trustedRoutingContext,
-    );
-    if (
-      !resolvedTenant.ok ||
-      !matchesCurrentTenant(resolvedTenant.value, tenantExecution.current)
-    ) {
-      throw new Error("tenant_resolution_unavailable");
-    }
 
     const presentationComposition =
       buildServerOwnedPresentationSourceComposition(
         environment,
-        resolvedTenant.value,
+        tenantExecution,
         managedReader,
       );
     if (!presentationComposition) {
       throw new Error("presentation_source_unavailable");
     }
     const presentation = await resolveAppPresentationBootstrap(
-      resolvedTenant.value,
+      tenantExecution,
       presentationComposition,
     );
     if (!presentation.ok) {

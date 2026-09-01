@@ -340,7 +340,7 @@ assert(
   "Q10_browser_or_data_plane_selection_surface_present",
 );
 assert(
-  reactMainSource.includes("<PresentationBrandProvider>") &&
+  reactMainSource.includes("<PresentationBrandRuntime>") &&
     !reactMainSource.includes("PresentationBrandSource") &&
     !reactMainSource.includes("platform_control_plane_presentation") &&
     !legalSource.includes("PresentationBrandSource") &&

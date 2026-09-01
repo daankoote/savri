@@ -219,8 +219,10 @@ function appEnvironment(
     ENVAL_DATA_PLANE_DEPLOYMENT_OWNERSHIP: "ENVAL_MANAGED_DEDICATED",
     ENVAL_DATA_PLANE_PROVIDER_TYPE: "supabase",
     ENVAL_DATA_PLANE_REFERENCE: "enval",
+    ENVAL_FIXED_DATA_PLANE_REFERENCE: "enval",
     ENVAL_APPLICATION_ROUTE_REFERENCE: "http://127.0.0.1:54321",
     ENVAL_DATA_PLANE_SECRET_REFERENCE_ID: SECRET_REFERENCE_ID,
+    SUPABASE_URL: "http://kong:8000",
   });
 }
 
@@ -290,6 +292,8 @@ const managedAccepted = await getAppRequestMeta(untrustedRequest.clone(), {
 });
 assert(
   !(managedAccepted instanceof Response) &&
+    managedAccepted.tenant_execution?.tenantId === TENANT_ID &&
+    managedAccepted.tenant_execution?.fixedDataPlaneReference === "enval" &&
     directEdgeReads.join("|") === "route|locator",
   "managed_local_proof_ingress_not_accepted",
 );
@@ -320,10 +324,11 @@ const shadowGate = await enforceAppTenantResolutionGate(
   },
 );
 assert(
-  !(shadowWithoutIngress instanceof Response) &&
-    shadowGate.ok && shadowGate.diagnostic.parityStatus === "not_configured" &&
+  shadowWithoutIngress instanceof Response &&
+    !shadowGate.ok &&
+    shadowGate.diagnostic.parityStatus === "resolver_failure" &&
     directEdgeReads.join("|") === "route|locator",
-  "shadow_failure_promoted_untrusted_ingress_or_blocked_request",
+  "shadow_mode_allowed_untrusted_ingress_without_execution_binding",
 );
 
 const contextEvidence = JSON.stringify([

@@ -7,6 +7,7 @@
 // load time. The app foundation migration may not be applied in a local DB yet.
 
 import {
+  type AppTenantExecutionContext,
   type AppTenantResolutionShadowObservationOptions,
   enforceAppTenantResolutionGate,
 } from "./app_tenant_resolution_shadow.ts";
@@ -39,7 +40,7 @@ export type AppScopeType =
   | "fee"
   | "retention";
 
-export type AppRequestMeta = {
+export type AppRequestMeta = Readonly<{
   request_id: string;
   idempotency_key: string | null;
   ip_hash: string | null;
@@ -50,7 +51,8 @@ export type AppRequestMeta = {
   origin: string | null;
   timestamp: string;
   environment: string;
-};
+  tenant_execution?: AppTenantExecutionContext;
+}>;
 
 export type AppAuditEventInput = {
   event_type: string;
@@ -195,7 +197,10 @@ export async function getAppRequestMeta(
       "service_unavailable",
     );
   }
-  return meta;
+  return Object.freeze({
+    ...meta,
+    tenant_execution: tenantGate.executionContext,
+  });
 }
 
 function parseAllowedOrigins(): string[] {
