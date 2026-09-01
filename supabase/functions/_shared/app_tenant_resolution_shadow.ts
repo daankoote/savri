@@ -104,6 +104,7 @@ const CREDENTIAL_PATTERN =
   /(password|passwd|service.?role|database.?url|raw.?secret|credential|access.?token|api.?key)/i;
 const FIXED_EXECUTION_PROVIDER_TYPE = "supabase";
 const DEFAULT_TIMEOUT_MS = 250;
+const BOUND_APP_TENANT_EXECUTION_CONTEXTS = new WeakSet<object>();
 
 type AppTenantResolutionBindingObservation = Readonly<{
   diagnostic: AppTenantResolutionShadowDiagnostic;
@@ -290,7 +291,7 @@ function tenantExecutionContext(
   resolved: ResolvedTenantContext,
   resolutionMode: TenantResolutionDeploymentMode,
 ): AppTenantExecutionContext {
-  return Object.freeze({
+  const context = Object.freeze({
     tenantId: resolved.tenantId,
     environment: resolved.dataPlane.environment,
     trustedRoutingKey: execution.trustedRoutingContext.trustedRoutingKey,
@@ -302,6 +303,16 @@ function tenantExecutionContext(
     providerType: resolved.dataPlane.providerType,
     deploymentOwnership: resolved.dataPlane.deploymentOwnership,
   });
+  BOUND_APP_TENANT_EXECUTION_CONTEXTS.add(context);
+  return context;
+}
+
+export function isBoundAppTenantExecutionContext(
+  value: unknown,
+): value is AppTenantExecutionContext {
+  return Boolean(value) && typeof value === "object" &&
+    Object.isFrozen(value) &&
+    BOUND_APP_TENANT_EXECUTION_CONTEXTS.has(value as object);
 }
 
 export async function runAppTenantResolutionShadow(

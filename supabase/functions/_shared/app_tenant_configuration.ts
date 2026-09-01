@@ -83,6 +83,7 @@ export type TenantConfigurationFailureCode =
   | "manifest_supersession_invalid"
   | "tenant_configuration_missing"
   | "tenant_configuration_ambiguous"
+  | "tenant_configuration_source_unavailable"
   | "component_revision_missing"
   | "component_revision_mismatch"
   | "component_revision_not_approved_at_event_time";

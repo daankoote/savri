@@ -332,9 +332,9 @@ try {
     DATABASE,
     `select (
     (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%') = 74
+      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%') = 76
     and (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%' and c.relrowsecurity) = 74
+      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%' and c.relrowsecurity) = 76
     and not exists (select 1 from information_schema.role_table_grants
       where table_schema='public' and table_name like 'app\\_%'
         and grantee in ('anon','authenticated') and privilege_type in ('INSERT','UPDATE','DELETE','TRUNCATE'))
@@ -361,6 +361,14 @@ try {
     and not has_table_privilege('service_role','public.app_evidence_review_customer_submission_fact_resolutions','INSERT')
     and has_table_privilege('service_role','public.app_evidence_review_customer_submission_fact_resolution_sources','SELECT')
     and not has_table_privilege('service_role','public.app_evidence_review_customer_submission_fact_resolution_sources','INSERT')
+    and has_table_privilege('service_role','public.app_tenant_configuration_component_revisions','SELECT')
+    and has_table_privilege('service_role','public.app_tenant_configuration_component_revisions','INSERT')
+    and not has_table_privilege('service_role','public.app_tenant_configuration_component_revisions','UPDATE')
+    and not has_table_privilege('service_role','public.app_tenant_configuration_component_revisions','DELETE')
+    and has_table_privilege('service_role','public.app_tenant_configuration_manifests','SELECT')
+    and has_table_privilege('service_role','public.app_tenant_configuration_manifests','INSERT')
+    and not has_table_privilege('service_role','public.app_tenant_configuration_manifests','UPDATE')
+    and not has_table_privilege('service_role','public.app_tenant_configuration_manifests','DELETE')
   )::text;`,
   );
   assert(security === "true", "rls_privilege_parity_failed");
