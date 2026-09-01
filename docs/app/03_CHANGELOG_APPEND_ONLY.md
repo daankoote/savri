@@ -1823,3 +1823,25 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   remote application or production proof is claimed.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-09-01 — Add tenant signing material authority
+
+Commit: `8bfc56c Add tenant signing material authority`
+
+- Added separate typed operational, legal and fee/commercial signing material.
+  Canonical material hashes must equal the corresponding approved TF02
+  component content hash; the legal concern structurally requires exactly the
+  privacy notice, service terms, fee terms and mandate provenance slots while
+  reusing the existing legal-document/hash authorities.
+- Added immutable relational persistence and explicit append-only invalidation
+  separately from supersession, with no generic config JSON or secret fields.
+  Five tables are RLS deny-default and grant service-role `SELECT` + `INSERT`
+  only.
+- SL01-B Q01-Q28, Wave A1 and TF02 regressions and the independent local SQL
+  catalog gate pass; proof residue returned to zero.
+- This is local inert authority only. No real approved ENVAL tenant values were
+  seeded and no current signing consumer changed. Presentation receipt,
+  persisted acceptance, receipt-bound OTP, snapshot/finalize/replay cutover,
+  legal/verifier activation approval, remote and production remain open.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

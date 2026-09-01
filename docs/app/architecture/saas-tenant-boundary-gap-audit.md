@@ -313,7 +313,7 @@ UNKNOWN 4. There are 6 cross-tenant critical gaps.
 
 | ID | New foundation | Exact need and consequence | Minimum target, dependencies and reuse | Migration/data/test/priority |
 |---|---|---|---|---|
-| N1 | versioned tenant operational configuration | FOUNDATION CLOSED through TF02-C / `8480b8f`: TF02-B owns the strict four-component contract, canonical hash and safe server-time selection; TF02-C adds immutable tenant-local metadata persistence and a safe TF01-bound database reader/selection composition. Real approved operator/legal/fee/provider content, approval/write governance, secret binding and consumers remain open. | NEXT: signing/legal tenant-config provenance cutover must consume and pin the relevant approved operator/legal/fee references for new signing truth. Case-root and provider-evidence cutovers remain separate; `PresentationBrandConfigV1` remains separate. | Current local schema has two relational metadata tables, minimum grants, deny-by-default RLS, service-role `SELECT` + `INSERT` and bounded reads. No implicit ENVAL defaults, payload persistence or secrets. CRITICAL consumer gap remains. |
+| N1 | versioned tenant operational configuration | HORIZONTAL FOUNDATION CLOSED through TF02-C / `8480b8f`; inert signing-material authority added by SL01-B / `8bfc56c`. TF02-B owns the strict four-component contract/hash/selection, TF02-C the tenant-local metadata reader, and SL01-B typed operational/legal/fee material plus explicit invalidation. Real approved content, approval/write governance, secret binding and current signing consumption remain open. | NEXT: SL01-C must add immutable server presentation receipt, explicit persisted acceptance, receipt-bound OTP and server-resolved browser bundle. SL01-D or later must pin provenance into snapshot/finalization/replay. Case/provider cutovers remain separate; `PresentationBrandConfigV1` remains separate. | Current local schema has two TF02 metadata and five SL01-B typed/invalidation tables with minimum grants and deny-default RLS. No real values, implicit ENVAL defaults, generic config JSON or secrets. CRITICAL consumer gap remains. |
 | N2 | manual design-tenant provisioning and acceptance record | A modeled tenant row is not an isolated Auth/DB/Storage/Edge/credential deployment. | Define a human-gated procedure/record for a second tenant: verified route, separate project, credentials, buckets, migrations, config and proof evidence. No self-service automation. Depends on E1/N1. | No autonomous provisioning or remote mutation. Acceptance must prove isolation and record exact versions. CRITICAL. |
 | N3 | portable tenant/data-plane provenance envelope | Tenant attribution disappears when audit, evidence or receipts leave their database. | Define a non-secret immutable envelope containing platform tenant ref, data-plane ref, environment/config ref and source record identity. Reuse existing audit/evidence provenance conventions. Depends on E2. | Versioned envelope; legacy origin unknown unless proven. Serialization, hash, redaction and central collision tests. HIGH. |
 | N4 | platform principal-to-tenant administration boundary | Platform actions have tenant audit support but no complete tenant membership/change authority contract; platform role could be confused with tenant operational access. | Define platform principals, exact tenant-management capabilities and audited changes, explicitly excluding tenant dossier access. Reuse control-plane deny/default RLS. | Separate control-plane migration; no customer identity federation. Least-privilege and negative dossier-access proofs. HIGH. |
@@ -349,10 +349,12 @@ governance and consumer concerns and items 1 and 4–6 remain open.
 2. HISTORICAL / CLOSED BY TF01 LOCALLY: the authoritative resolution gate did
    not propagate and bind the resolved tenant/data-plane context to the fixed
    server execution identity used by handlers.
-3. HORIZONTAL FOUNDATION CLOSED THROUGH TF02-C: the versioned four-component
-   contract, safe selection, durable tenant-local metadata persistence and
-   TF01-bound database reader exist. Real approved values, approval/write
-   governance, secret binding and consumers remain open.
+3. HORIZONTAL FOUNDATION CLOSED THROUGH TF02-C; INERT SIGNING-MATERIAL
+   AUTHORITY ADDED BY SL01-B / `8bfc56c`: the versioned four-component
+   contract, safe selection, durable tenant-local metadata persistence,
+   TF01-bound database reader and typed operational/legal/fee signing-material
+   authority exist. Real approved values, approval/write governance, secret
+   binding and current signing consumers remain open.
 4. Signing snapshots do not pin the responsible tenant/operator and exact
    legal/fee configuration.
 5. Case/audit/idempotency/evidence exports lack portable tenant/data-plane
@@ -378,8 +380,11 @@ At that audit point, the minimum foundation order was:
    server-time selection boundary;
 3. DONE LOCALLY BY TF02-C / `8480b8f`: add tenant-local durable approved
    component-revision and manifest metadata persistence/read authority;
-4. NEXT — SIGNING/LEGAL TENANT-CONFIG PROVENANCE CUTOVER: bind and pin the
-   relevant operator/legal/fee configuration provenance into new signing truth;
+4. IN PROGRESS VERTICALLY: SL01-B / `8bfc56c` completes only the inert typed
+   signing-material authority and explicit invalidation foundation. NEXT is
+   SL01-C presentation receipt, explicit persisted acceptance and OTP challenge
+   binding; SL01-D or later must pin provenance into snapshot/finalization and
+   replay without rewriting historical truth;
 5. in separate batches, bind opening/material configuration provenance into
    case truth and provider configuration provenance into provider evidence;
 6. extend audit/idempotency/document exports with the portable provenance
@@ -430,14 +435,16 @@ finalization and snapshot persistence.
 
 Historical recommendation `SIGNING_FIX_FIRST` is complete. Historical TF01 is
 complete at `034691e`, the TF02-B contract/static-selection foundation is
-complete at `9f9f310`, and the TF02-C durable tenant-local metadata
-persistence/read foundation is complete at `8480b8f`. Current NEXT is exactly
-**SIGNING/LEGAL TENANT-CONFIG PROVENANCE CUTOVER**. No further standalone
-horizontal tenant-config foundation is currently planned. Case and
-provider-evidence cutovers remain separate forward-only batches; existing
-signed evidence must never be rewritten. Tenant #2, dynamic switching,
-provisioning, billing, custom domains, theme management and a tenant admin
-portal remain need-driven future work.
+complete at `9f9f310`, the TF02-C durable tenant-local metadata
+persistence/read foundation is complete at `8480b8f`, and SL01-B adds the inert
+typed signing-material authority at `8bfc56c`. Current NEXT is exactly
+**SL01-C — PRESENTATION RECEIPT + EXPLICIT ACCEPTANCE + OTP CHALLENGE
+BINDING**. Snapshot v2, finalize/replay provenance cutover and hardcode removal
+remain SL01-D or later. No further standalone horizontal tenant-config
+foundation is currently planned. Case and provider-evidence cutovers remain
+separate forward-only batches; existing signed evidence must never be
+rewritten. Tenant #2, dynamic switching, provisioning, billing, custom domains,
+theme management and a tenant admin portal remain need-driven future work.
 
 ## 9. Static validation result
 
@@ -462,12 +469,13 @@ portal remain need-driven future work.
 
 The current code contains substantial reusable isolation, resolution, Auth,
 workforce, private Storage, safe projection and provenance foundations. It does
-not require a full rewrite. TF01 now supplies the bounded fail-closed
-fixed-plane binding from trusted tenant resolution to the actual server
-execution identity. TF02-B supplies the strict versioned configuration contract
-and safe selector; TF02-C supplies durable tenant-local metadata persistence and
-the TF01-bound database reader/selection composition. The remaining path still
-requires real approved operator/legal/fee/provider content, approval/write
-governance, separate consumer/provenance cutovers, portable historical
-provenance and a manually accepted second isolated deployment before any design
-partner can be treated as safely operational.
+not require a full rewrite. TF01 supplies the bounded fail-closed fixed-plane
+binding from trusted tenant resolution to actual server execution. TF02-B/C
+supply the strict versioned configuration contract, safe selector, durable
+tenant-local metadata and TF01-bound reader. SL01-B adds only the inert typed
+signing-material/content-hash and explicit-invalidation authority. The remaining
+path still requires real approved operator/legal/fee/provider content,
+approval/write governance, SL01-C presentation/acceptance/challenge binding,
+SL01-D snapshot/finalize/replay provenance, portable historical provenance and
+a manually accepted second isolated deployment before any design partner can
+be treated as safely operational.

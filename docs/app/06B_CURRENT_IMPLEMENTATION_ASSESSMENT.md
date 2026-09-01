@@ -139,6 +139,27 @@ signing/legal, case-root and provider-evidence provenance cutovers, tenant #2,
 dynamic switching, provisioning, remote migration application and production
 proof remain TARGET or open.
 
+2026-09-01 SL01-B current-status overlay: commit `8bfc56c` adds a typed,
+inert signing-material authority for operational, legal and fee/commercial
+concerns. Each canonical material hash must equal its approved TF02 component
+revision content hash. Operational material contains only the operator legal
+entity reference/identity hash and strict signing roles; legal material reuses
+the canonical legal-document/hash authorities and enforces exactly privacy
+notice, service terms, fee terms and mandate provenance; fee material contains
+only governing `fee_terms` document provenance. No generic config JSON, legal
+text copy, numeric fee field, provider signing material or secret field exists.
+
+The root plus typed-child persistence is append-only and deny-by-default. Five
+tables have RLS, no anonymous/authenticated access and service-role `SELECT` +
+`INSERT` only. Explicit invalidation is a separate immutable authority and
+supersession creates no invalidation. Evidence is SL01-B Q01-Q28 PASS, Wave A1
+and TF02 regressions PASS, independent local SQL catalog gate PASS and zero
+proof residue. No real ENVAL tenant content was seeded. Current signing does
+not consume this authority, so presentation receipt, persisted acceptance,
+receipt-bound OTP, snapshot v2, tenant-aware finalization/replay, hardcode
+removal, live activation, legal/verifier approval, remote and production proof
+remain TARGET or open.
+
 ## Pre-Task Confirmation
 
 - `docs/legacy` does not exist.

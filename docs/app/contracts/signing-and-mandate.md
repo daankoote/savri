@@ -260,19 +260,33 @@ invariance. The signing runtime regression is `14/14 PASS`; Q04's prior failure
 was proof-fixture-only, and the deterministic one-clock fixture proves the
 unchanged product expiry path returns `otp_expired`.
 
-This authority and evidence are local only. TF02-B / commit `9f9f310` now
-provides the CURRENT PROVEN LOCAL versioned tenant-configuration descriptor and
-safe static selection foundation, but signing does not consume it. The current
-ENVAL B.V./legal-bundle/mandate/10/90 assumptions and OTP/provider settings are
-unchanged known debt, not tenantized values. A later bounded signing cutover
-must consume durable approved tenant revisions and pin exact operator,
-legal-bundle, fee and provider/configuration provenance without rewriting
-historical signed evidence.
+This authority and evidence are local only. TF02-B/C provide the versioned
+tenant-configuration descriptor, selection and durable metadata foundations.
+SL01-B / commit `8bfc56c` now adds the CURRENT PROVEN LOCAL but inert typed
+signing-material authority: operational, legal and fee/commercial content is
+strictly relational and its canonical hash must equal the corresponding
+approved TF02 component hash. The legal concern has exactly four provenance
+slots and reuses the existing legal-document/content-hash authority; explicit
+append-only invalidation is separate from supersession. Q01-Q28, Wave A1,
+TF02 and local SQL/catalog evidence pass with zero fixture residue, five
+deny-by-default tables and service-role `SELECT` + `INSERT` only. No real ENVAL
+tenant values were seeded and no current signing module imports the authority.
 
-Production legal/OTP/Auth, real approved tenant content and signing cutover,
-tenant #2 and cross-tenant isolation, independent verifier/NEa acceptance, REV
-operations, third-party checks, parser/kWh qualification and A2/A3/A4 remain
-unproven.
+The adopted TARGET policy binds a future signing attempt when the server issues
+an immutable legal-presentation receipt. Explicit persisted acceptance precedes
+and binds the OTP challenge to that receipt. Ordinary supersession does not
+invalidate an accepted valid M1; explicit invalidation before first
+finalization requires new presentation, acceptance and OTP. Successful history
+is never rewritten and replay never silently adopts newer configuration. This
+policy is not CURRENT: SL01-C must prove presentation/acceptance/challenge
+binding, and SL01-D or later must prove snapshot v2, tenant-aware finalization
+and config-aware replay before current global signing assumptions can be
+removed.
+
+Production legal/OTP/Auth, real approved tenant operator/legal/fee content,
+legal and verifier activation approval, live signing activation, tenant #2 and
+cross-tenant isolation, independent verifier/NEa acceptance, REV operations,
+third-party checks, parser/kWh qualification and A2/A3/A4 remain unproven.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 

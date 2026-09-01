@@ -1,8 +1,8 @@
 # ENVAL App TODO
 
-Status: CURRENT app/MVP TODO — Wave A1, TF01 and TF02-C current local proof
-reconciled through commit `8480b8f` on 2026-09-01. Earlier bounded work-package
-records retain their own dated proof status.
+Status: CURRENT app/MVP TODO — Wave A1, TF01, TF02-C and SL01-B current local
+proof reconciled through commit `8bfc56c` on 2026-09-01. Earlier bounded
+work-package records retain their own dated proof status.
 
 This queue is primarily for the new `/app`, `api-app-*`, and `app_*`
 implementation. Bounded legacy-caller cutover and white-label foundation status
@@ -30,11 +30,22 @@ implementation.
   hashing, server-time and selection authority. Database failure fails closed
   without static/global fallback. Q01-Q36, TF02-B Q01-Q38, TF01 and Integration
   19/19 pass; synthetic configuration rows returned to zero.
-- NEXT — **signing/legal tenant-config provenance cutover**: make new signing
-  truth consume and immutably pin the relevant tenant/operator/legal/fee
-  configuration provenance. Real approved values and approval/write governance
-  remain prerequisites or separately bounded inputs; existing signed evidence
-  must not be rewritten.
+- DONE / CURRENT PROVEN LOCAL — `SL01-B`: commit `8bfc56c` adds the inert typed
+  operational, legal and fee/commercial signing-material authority. Canonical
+  material hashes must equal the corresponding approved TF02 component hash;
+  the legal concern enforces exactly privacy notice, service terms, fee terms
+  and mandate references. Five deny-by-default, append-only tables store typed
+  relational material and explicit invalidation separately from supersession,
+  with service-role `SELECT` + `INSERT` only. Q01-Q28, Wave A1, TF02 and local
+  SQL catalog gates pass with zero fixture residue. No real ENVAL tenant values
+  were seeded and current signing imports none of this authority.
+- NEXT — **SL01-C — PRESENTATION RECEIPT + EXPLICIT ACCEPTANCE + OTP CHALLENGE
+  BINDING**: server-resolve the signing-material bundle, issue an immutable
+  presentation receipt, persist explicit acceptance before OTP, bind the
+  challenge to the exact receipt/config and make the browser consume that
+  server-resolved bundle. Snapshot v2, finalize/replay provenance cutover,
+  current hardcode removal, case/provider provenance, tenant #2 and admin UI
+  remain SL01-D or later unless technically inseparable.
 - No further standalone horizontal tenant-config foundation is currently
   planned. Tenant #2, dynamic switching, provisioning, billing, custom domains,
   theme management and a tenant administration portal remain need-driven future
@@ -94,8 +105,10 @@ controller/processor allocation requires legal review.
   `00_CANON.md` and `06B_CURRENT_IMPLEMENTATION_ASSESSMENT.md`; chronology is
   append-preserved in `03_CHANGELOG_APPEND_ONLY.md`.
 - Wave A1 remains local proof only. Production, tenant #2, real approved tenant
-  legal/fee/provider content and signing consumer cutover, independent verifier/NEa acceptance, REV,
-  third-party checks, parser/kWh qualification and A2/A3/A4 remain unproven.
+  legal/fee/operator content, presentation/acceptance/OTP receipt binding,
+  snapshot v2, finalize/replay provenance cutover, live signing activation,
+  independent verifier/NEa acceptance, REV, third-party checks, parser/kWh
+  qualification and A2/A3/A4 remain unproven.
 
 - CUSTOMER04C is `CURRENT PROVEN — LOCAL` at commit `d613592`; its recorded
   final pre-commit Integration gate was `127/127 PASS`.
