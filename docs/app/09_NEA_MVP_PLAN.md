@@ -108,21 +108,23 @@ It does not prove CAR access, REV field compatibility, legal mandate wording, cu
 
 ## Current Next Batch
 
-Next local execution work package:
+Next product architecture work package:
 
-`Minimal internal Compliance Worklist UI` using the existing authenticated
-`api-app-compliance-worklist` GET endpoint.
+`TF01 — resolved tenant/data-plane execution-context binding`.
 
-REG01–REG03I close the bounded compliance-foundation phase locally: the 2026
-calendar and fail-closed reconstructed state, derived action/worklist,
-tenant-wide view/record authority, immutable accepted source facts, controlled
-capture and authenticated zero-write read are proven. The smallest next
-NEa-priority value slice is therefore a read-only internal workforce view in
-the existing dashboard/backoffice shell, rather than another foundation.
+TF01 propagates the immutable server-resolved tenant/data-plane context through
+the shared app boundary and proves parity with the actual fixed data-plane
+client/deployment target. It fails closed on browser spoofing, inactive or
+ambiguous resolution and locator/client mismatch. It does not add dynamic
+data-plane switching, schema tenancy, tenant #2 provisioning, legal/fee/provider
+configuration, UI, remote action, deployment or production acceptance.
 
-This UI batch is 2026-only and does not include a capture form, scheduler,
-mail, notifications, acknowledgement/dismiss/snooze, task persistence,
-verifier integration, REV adapter, remote action or production acceptance.
-The representation-authority validation brief remains separately parked as
-`DRAFT — PENDING LEGAL AND VERIFIER VALIDATION`; representation authority
-remains `NOT SCHEMA READY`.
+The later TARGET sequence remains: approved/versioned tenant
+operational/legal/fee/provider configuration; portable signing/case tenant
+provenance; workforce/platform authority separation; an isolated design-tenant
+data plane; and two-plane isolation proof. None is implemented by this plan.
+
+The `Minimal internal Compliance Worklist UI`, A2/A3/A4 qualification and the
+representation-authority validation brief remain separately parked. The brief
+is still `DRAFT — PENDING LEGAL AND VERIFIER VALIDATION`; representation
+authority remains `NOT SCHEMA READY`.

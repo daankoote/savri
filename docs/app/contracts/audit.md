@@ -56,6 +56,32 @@ Current locally proven app flows include:
 
 Exact runtime event names live in the current endpoint and RPC code. This document defines doctrine and table ownership, not a substitute for code inspection.
 
+## Wave A1 Signing And Review Audit Boundary
+
+Status: `CURRENT PROVEN — LOCAL ONLY` through commits `5dfaed1` and `4f0542f`.
+
+- Verified Auth and caller/intake/capability/provenance authorization precede
+  any persisted replay result. An idempotency key, intake/signing/request
+  reference or capability alone cannot disclose it.
+- The canonical immutable request fingerprint binds the signing inputs. Exact
+  replay returns the persisted logical result; a changed canonical payload with
+  the same key returns conflict and unauthorized replay fails closed.
+- The proof compares signing state before and after replay: snapshot, signature,
+  mandate, legal-acceptance, OTP-consumption, intake-finalization, finalization
+  audit, promotion, customer and case state remain byte-for-byte/count stable.
+  Replay therefore performs zero new finalization or signed-snapshot writes and
+  does not consume the OTP twice.
+- The clean workforce review is exact-case scoped, finalizes one round over 10
+  subjects representing 8 unique canonical fact keys, reaches
+  `REVIEW_COMPLETE` with no correction handoff and preserves the signed
+  snapshot hash.
+- Refresh/resume returns the same case without duplicate customer, case,
+  snapshot or review truth. App audit lineage is present. Disposable cleanup
+  succeeds and the retained real pilot is unchanged.
+
+These are local qualification invariants, not production, tenant #2,
+independent-verifier, NEa, REV, third-party, parser or kWh proof.
+
 ## Required Fields And Metadata
 
 Audit events should preserve enough metadata to reconstruct:
@@ -79,10 +105,8 @@ Future app work must define app-specific events for:
 - auth bootstrap/login/recovery
 - intake finalization / `Start dossier`
 - legal acceptance during public intake
-- signing challenge delivery/consumption and atomic signing finalization
-- pre-auth intake promotion
-- immutable initial intake/submission snapshot creation
-- quarantine evidence promotion
+- production/tenant-bound signing and promotion extensions beyond the current
+  locally proven event families
 - targeted section unlock
 - targeted correction submission / `Correcties indienen`
 - promotion reject/failure
@@ -196,6 +220,9 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 ## PILOT-SIGNUP-SIGNATURE-CORE-09A Audit Boundary
 
 CURRENT PROVEN — LOCAL FRONTEND CONTRACT/PRESENTATION ONLY.
+
+Historical 09A boundary: the Wave A1 section above supersedes its former
+runtime-missing implication while preserving this frontend-only checkpoint.
 
 The 09A signing intent, evidence-envelope type, legal registry and mandate model
 create no audit event or evidence. Typed name, role, intent checkbox, selected

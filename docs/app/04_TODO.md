@@ -1,8 +1,8 @@
 # ENVAL App TODO
 
-Status: CURRENT app/MVP TODO — CUSTOMER04C documentation reconciled through
-commit `d613592` on 2026-08-24. Earlier bounded work-package records retain
-their own dated proof status.
+Status: CURRENT app/MVP TODO — Wave A1 current local proof reconciled through
+commits `5dfaed1` and `4f0542f` on 2026-09-01. Earlier bounded work-package
+records retain their own dated proof status.
 
 This queue is primarily for the new `/app`, `api-app-*`, and `app_*`
 implementation. Bounded legacy-caller cutover and white-label foundation status
@@ -12,16 +12,21 @@ implementation.
 
 ## Single Current NEXT
 
-- NEXT — Phase 1: preserve and finish bounded existing core work without new
-  ENVAL-operator hardcoding.
-  - Preserve the already-started Wave A1 qualification proof and all other
-    pre-existing non-document worktree artifacts unchanged in this Phase 0
-    documentation batch.
-  - Re-evaluate the earlier `Minimal internal Compliance Worklist UI` NEXT only
-    within a separately approved bounded batch after the SaaS role boundary is
-    applied; this decision does not authorize that UI.
-  - Phase 2 is a read-only SaaS boundary gap audit. No full multi-tenant rewrite
-    or billing/control-plane build may start before its evidence is reviewed.
+- NEXT — `TF01`: resolved tenant/data-plane execution-context binding.
+  - Propagate the immutable server-resolved tenant/data-plane context through
+    the shared app boundary and prove parity with the actual fixed data-plane
+    client/deployment target.
+  - Fail closed on spoofed browser authority, inactive or ambiguous resolution,
+    and locator/client mismatch.
+  - Exclude dynamic data-plane switching, tenant #2 provisioning, schema
+    tenancy, legal/fee/provider configuration, UI, remote changes and deploy.
+- Later sequence remains TARGET, not implemented:
+  `TF01` → approved/versioned tenant operational/legal/fee/provider
+  configuration → signing/case portable tenant provenance → workforce/platform
+  authority separation → isolated design-tenant data plane → two-plane
+  isolation proof.
+- A2/A3/A4 qualification and the earlier `Minimal internal Compliance Worklist
+  UI` remain future separately approved work.
 
 ## Managed-SaaS / White-Label Strategic Roadmap
 
@@ -61,6 +66,14 @@ controller/processor allocation requires legal review.
     runbook remain unimplemented.
 
 ## Current / Locally Proven
+
+- The former Wave A1 signing-idempotency blocker is CLOSED through commits
+  `5dfaed1` and `4f0542f`. Current local qualification status is owned by
+  `00_CANON.md` and `06B_CURRENT_IMPLEMENTATION_ASSESSMENT.md`; chronology is
+  append-preserved in `03_CHANGELOG_APPEND_ONLY.md`.
+- Wave A1 remains local proof only. Production, tenant #2, tenant
+  legal/fee/provider configuration, independent verifier/NEa acceptance, REV,
+  third-party checks, parser/kWh qualification and A2/A3/A4 remain unproven.
 
 - CUSTOMER04C is `CURRENT PROVEN — LOCAL` at commit `d613592`; its recorded
   final pre-commit Integration gate was `127/127 PASS`.

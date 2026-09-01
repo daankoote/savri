@@ -1720,3 +1720,40 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
 TKV ALIGNMENT GUARD — TENANT-BOUND REGULATORY ARCHITECTURE, NOT PLATFORM OR
 VERIFIER AUTHORITY
+
+## 2026-09-01 — Fix idempotent signup signing finalize replay
+
+- Commit `5dfaed1` closes the first Wave A1 product-contract failure: after a
+  successful finalization/promotion, an identical authenticated replay had
+  re-entered mutable quarantine provenance validation and returned
+  `resolution_provenance_invalid` instead of the persisted logical result.
+- The first FIX-01 candidate was rejected at architecture review because it
+  duplicated idempotency and mutable-readiness authority in the Edge endpoint.
+  FIX-01B retained Auth and context binding before replay and consolidated
+  idempotency lookup, exact replay/conflict, mutable readiness, OTP
+  validation/consumption, finalization and snapshot persistence in the single
+  authoritative `app_signup_signing_finalize_v1` RPC, invoked through v2.
+- The fresh local Wave A1 qualification then completed through exact-case
+  workforce review and `REVIEW_COMPLETE`. Exact replay preserved the original
+  result and immutable signing state with zero new finalization/snapshot writes
+  and no second OTP consumption; changed payload and unauthorized replay paths
+  failed closed.
+- This is local proof only. It does not prove production, tenant #2, legal or
+  fee configuration, independent verifier acceptance, NEa approval, REV
+  readiness, third-party integrations, parser qualification or kWh
+  qualification.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-09-01 — Harden expired OTP regression fixture
+
+- Commit `4f0542f` changes only the Q04 proof fixture. One captured reference
+  clock now places the challenge unambiguously in the past while keeping its
+  stored lifetime inside the database constraint.
+- The failure was `PROOF_FIXTURE_ONLY`: product expiry comparison and signing
+  semantics were not changed. The product RPC path proves an expired challenge
+  returns `otp_expired`.
+- The complete local signing runtime proof is `14/14 PASS`, including direct
+  replay/conflict coverage.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

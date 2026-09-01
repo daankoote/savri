@@ -206,6 +206,23 @@ authority and signing/legal authority remain separate.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
+## Wave A1 private clean local traceability checkpoint
+
+| boundary | CURRENT PROVEN — LOCAL evidence | invariant | explicit non-claim |
+|---|---|---|---|
+| private clean lifecycle | `qualification-wave-a1-private-clean.proof.ts`; commits `5dfaed1`, `4f0542f` | evidence ready; customer confirmation remains distinct from workforce acceptance; `typed_name_otp_v1` and immutable signed snapshot complete | no production, external verifier or NEa acceptance |
+| signing replay | exact authenticated replay plus changed-payload and unauthorized negatives | Auth/context binding precedes replay; persisted result is returned without new finalization/snapshot writes or second OTP consumption; mismatch fails closed | no tenant #2 or production cross-tenant isolation proof |
+| workforce review | exact-case review; 10 subjects over 8 unique canonical fact keys | complete accepted review reaches `REVIEW_COMPLETE`; signed snapshot remains immutable | no independent-verifier judgment or A2/A3/A4 qualification |
+| resume and audit | repeated Auth bootstrap, correction absence, duplicate counts and audit query | refresh/resume reconstructs current lifecycle state with no duplicate truth; audit lineage is reconstructable | no annual inboekverificatie, REV submission or third-party-check proof |
+| fixture protection | automatic cleanup and real-pilot before/after equality | disposable fixture residue is zero and retained pilot is unchanged | no real-pilot mutation or production proof |
+| signing runtime Q04 | complete proof `14/14 PASS`; expired challenge returns `otp_expired` | one captured proof reference clock removes the equality race; product expiry semantics unchanged | fixture correction is not a product semantic change |
+
+This checkpoint supports internal NEA-MAND/NEA-AUD/NEA-SEC controls only. It
+does not promote any complete NEa requirement or change the existing
+tenant-boundary conclusions.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## PILOT-SIGNUP-ENERGY-DOCUMENT-CROSSCHECK-01 local traceability
 
 | Concern                                                  | Current state                                | Local evidence                                                    | Boundary                                                                            |

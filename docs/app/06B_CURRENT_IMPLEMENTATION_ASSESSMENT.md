@@ -38,6 +38,33 @@ notifications, remote and production remain absent. Current traceability is
 maintained in `08_NEA_TRACEABILITY_MATRIX.md`; the historical rows and counts
 in this proof-only snapshot are not rewritten.
 
+2026-09-01 Wave A1 current-status overlay: commits `5dfaed1` and `4f0542f`
+prove the bounded private clean Particulier lifecycle locally from evidence
+readiness and customer confirmation through `typed_name_otp_v1`, immutable
+snapshot, atomic promotion, exact-case workforce review, `REVIEW_COMPLETE`,
+refresh/resume, audit lineage, disposable cleanup and retained-pilot
+invariance. The current review contract deliberately contains 10 subjects over
+8 unique canonical fact keys. Customer confirmation is not workforce
+acceptance.
+
+Signing replay is now CURRENT PROVEN locally only after verified Auth and
+caller/intake/capability/provenance binding. An exact canonical request with
+the same idempotency key returns the persisted logical result with zero new
+finalization/snapshot writes and no second OTP consumption; changed canonical
+payload and unauthorized replay fail closed. The Edge endpoint constructs the
+canonical immutable input and invokes `app_signup_signing_finalize_v2`; the
+v1 RPC behind v2 remains the single authority for idempotency, mutable
+readiness, OTP consumption, finalization and snapshot persistence.
+
+The signing runtime regression proof is `14/14 PASS`. The former Q04 failure
+was proof-fixture-only and was hardened with one captured reference clock;
+product expiry semantics were unchanged and the product RPC returns
+`otp_expired`. None of this proves production/deployment, tenant #2 or
+cross-tenant isolation, tenant legal/fee/provider configuration, independent
+verifier or NEa acceptance, REV readiness, third-party checks, parser/kWh
+qualification or later A2/A3/A4 qualification. Historical assessment rows and
+counts below remain dated evidence and are not rewritten.
+
 ## Pre-Task Confirmation
 
 - `docs/legacy` does not exist.

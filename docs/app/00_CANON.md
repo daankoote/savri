@@ -388,6 +388,30 @@ Signed-intake and promotion lifecycle:
 - The single active post-signing customer status is `submitted_for_review`: finalized/locked and waiting for ENVAL internal review. Customer copy is `Ondertekend en ingediend` / `In behandeling`; it is not formal NEa inboekverificatie.
 - Signing OTP, safe reference and receipt grant no Auth, promotion or dashboard authority. Production legal/OTP/Auth, operations review, external verifier, remote apply/deploy and regulatory booking remain outside CURRENT PROVEN.
 
+Wave A1 qualification status:
+
+- Status: `CURRENT PROVEN — LOCAL ONLY` through commits `5dfaed1` and
+  `4f0542f`; this is not production proof, deployment proof, tenant #2 proof or
+  regulatory/verifier acceptance.
+- The disposable private Particulier qualification completes the current clean
+  customer lifecycle from account-first signup and evidence readiness through
+  `typed_name_otp_v1`, immutable signed snapshot, promoted case, exact-case
+  workforce review, `REVIEW_COMPLETE`, refresh/resume and reconstructable audit
+  lineage. Customer confirmation remains customer intent and is not workforce
+  acceptance.
+- Identical authenticated signing-finalize replay returns the persisted logical
+  result with the original signing reference, hash and server timestamp. It
+  creates no second signing-finalization or snapshot write and does not consume
+  the OTP again. A changed canonical payload with the same idempotency key and
+  an unauthorized replay both fail closed.
+- The clean review contract deliberately projects 10 review subjects over 8
+  unique canonical fact keys. Qualification cleanup removes the disposable
+  fixture and proves the retained real pilot unchanged.
+- The signing runtime regression proof is `14/14 PASS`. Its former Q04 failure
+  was proof-fixture-only: one captured reference clock now makes the expired
+  challenge deterministic, while production expiry semantics remain unchanged
+  and the product path returns `otp_expired`.
+
 ## Source-Of-Truth Order
 
 When sources conflict, use this order:

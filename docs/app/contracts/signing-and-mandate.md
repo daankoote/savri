@@ -220,6 +220,53 @@ development; missing production configuration returns a customer-safe 503.
 The local exception does not make the validation-candidate legal bundle
 CURRENT and does not approve production legal or OTP behavior.
 
+## Wave A1 authoritative finalization and replay
+
+Status: `CURRENT PROVEN — LOCAL ONLY` through commits `5dfaed1` and `4f0542f`.
+
+The Edge Function owns only request parsing, verified authentication,
+caller/intake/capability/provenance authorization and binding, canonical
+immutable input/fingerprint construction, RPC invocation/orchestration and safe
+response mapping. It performs no direct `app_idempotency_keys` query and does
+not duplicate confirmed-file readiness or other mutable signing business-state
+validation owned by the database.
+
+`app_signup_signing_finalize_v1`, invoked through v2, is the single authority
+for idempotency lookup, same-request replay, idempotency conflict,
+first-finalization mutable readiness, OTP validation and consumption,
+finalization and immutable signed-snapshot persistence. The effective order is:
+
+```text
+request parsing
+→ verified Auth
+→ caller/intake/capability/provenance authorization and context binding
+→ canonical immutable input and fingerprint construction
+→ authoritative finalize RPC
+→ exact persisted replay
+  OR first-finalization mutable validation and mutation
+```
+
+No persisted response is disclosed from an idempotency key, intake reference,
+signing reference, request ID or capability alone. Exact authenticated replay
+returns the original logical result and preserves signing reference, snapshot
+hash and server timestamp while creating zero new finalization/snapshot writes
+and consuming no OTP twice. A changed canonical payload with the same key
+returns `idempotency_conflict`; unauthorized replay fails closed.
+
+The private clean Wave A1 qualification continues through exact-case workforce
+review, the deliberate 10-subject/8-unique-key contract, `REVIEW_COMPLETE`,
+refresh/resume, audit lineage, disposable cleanup and retained real-pilot
+invariance. The signing runtime regression is `14/14 PASS`; Q04's prior failure
+was proof-fixture-only, and the deterministic one-clock fixture proves the
+unchanged product expiry path returns `otp_expired`.
+
+This authority and evidence are local only. Production legal/OTP/Auth,
+tenant-specific legal/fee/provider configuration, tenant #2 and cross-tenant
+isolation, independent verifier/NEa acceptance, REV operations, third-party
+checks, parser/kWh qualification and A2/A3/A4 remain unproven.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
 ## 09B2C-R3 frontend challenge readiness
 
 The frontend challenge CTA gates only observable customer prerequisites:

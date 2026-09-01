@@ -301,9 +301,11 @@ UNKNOWN 4. There are 6 cross-tenant critical gaps.
 
 ## 7. Minimum ordered tenant-ready foundation
 
-The Wave A1 signing replay defect should be corrected first because it is an
-existing single-tenant product-contract failure and is independent of tenant
-topology. It must not be hidden inside a SaaS foundation batch.
+At this audit date, the Wave A1 signing replay defect had to be corrected first
+because it was an existing single-tenant product-contract failure independent
+of tenant topology. That prerequisite is now closed by commit `5dfaed1`; the
+historical finding remains recorded here and was not hidden inside a SaaS
+foundation batch.
 
 After that repair, the minimum foundation order is:
 
@@ -334,24 +336,34 @@ legal configuration, UI, remote changes or deployment in TF01.
 
 ## 8. Wave A1 impact
 
+Current supersession (2026-09-01): Wave A1 is now `CURRENT PROVEN — LOCAL
+ONLY`. Commit `5dfaed1` restored exact authenticated signing-finalize replay
+through the single authoritative RPC, and commit `4f0542f` hardened the
+separate proof-only expired-OTP fixture. The fresh qualification reaches
+`REVIEW_COMPLETE`, refresh/resume and audit lineage with cleanup and real-pilot
+invariance. This supersedes only the active failure status below; it does not
+change any tenant-boundary finding, prove tenant #2 or production, or move
+TF01.
+
 Wave A1 currently assumes one local ENVAL tenant data plane, one Auth/Storage
 namespace, ENVAL legal/fee/OTP material and workforce grants within
 `CURRENT_TENANT_DATA_PLANE`. Those assumptions make it a valid single-plane
 qualification source, not a two-tenant acceptance proof.
 
-The first observed A1 product-contract failure remains the identical signing
+Historical first observed A1 product-contract failure was the identical signing
 finalize replay returning `resolution_provenance_invalid` after the first
 successful finalization/promotion. The replay revalidates mutable quarantine
 file state before reaching the stored idempotent finalization result; promotion
-has already changed that state. The repair should return the persisted safe
-result for an identical key/payload before mutable post-promotion provenance is
-rechecked, while retaining conflict behavior and immutable legal evidence.
+had already changed that state. The first FIX-01 candidate was rejected because
+it duplicated authority in the endpoint. FIX-01B instead kept Auth/context
+binding and canonical input construction in the Edge boundary while the v1 RPC
+behind v2 remained authoritative for replay/conflict, mutable readiness, OTP,
+finalization and snapshot persistence.
 
-Recommendation: `SIGNING_FIX_FIRST`. That repair is safe before tenant
-foundation work because it restores an existing idempotency contract and does
-not choose tenant topology, operator identity or legal configuration. New
-tenant/operator snapshot fields must be a separate forward-only batch; existing
-signed evidence must never be rewritten.
+Historical recommendation `SIGNING_FIX_FIRST` is complete. Current NEXT is
+`TF01`, unchanged from this audit's tenant-ready foundation. New tenant/operator
+snapshot fields remain a separate forward-only batch; existing signed evidence
+must never be rewritten.
 
 ## 9. Static validation result
 
