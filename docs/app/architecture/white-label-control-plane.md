@@ -263,11 +263,61 @@ reference, approved token/accent values, tenant customer-support identity,
 customer-facing contacts and approved e-mail display identity. It may not carry
 arbitrary CSS, JavaScript, HTML, operator/legal authority or code forks.
 
-The preferred future default route is an ENVAL-owned tenant subdomain such as
-`<tenant>.enval.nl`, not a separate `enval-<tenant>.nl` registration. Enterprise
-custom domains remain TARGET and require verified ownership/CNAME, certificate
-and trusted-ingress controls. No domain or branding administration is authorized
-by this decision.
+The approved TARGET namespace is:
+
+| host/route | surface |
+|---|---|
+| `enval.nl` | ENVAL commercial/public B2B SaaS site |
+| `<tenant>.enval.nl/aanmelden` | Tenant Public Intake |
+| `<tenant>.enval.nl/dashboard` | Tenant Customer Portal |
+| `<tenant>.enval.nl/beheer` | Tenant Operator Console |
+| `control.enval.nl` | ENVAL Control Console |
+| `verificatie.enval.nl` | central Verifier Audit Console |
+
+Do not use `<tenant>.enval.nl/<tenant>dashboard` or `intern-dashboard` as the
+canonical operator route. A verifier-specific subdomain is not an authorization
+boundary. The central verifier surface resolves Auth principal, verifier-
+organization membership, engagement, tenant/year/case/sample scope and
+capabilities server-side. Enterprise custom domains remain TARGET and require
+verified ownership/CNAME, certificate and trusted-ingress controls. No custom
+domain or branding administration is authorized by this decision.
+
+One Auth foundation may authenticate all four actor classes, but customer,
+workforce, ENVAL platform and verifier contexts are independently server-derived
+and authorized. Shared login code does not create shared business authority.
+
+Relevant dashboard shells may show one reusable exact attribution:
+`Powered by ENVAL`. This is platform attribution only and never legal/operator,
+controller, contracting-party, mandate-grantee or verifier truth.
+
+## D3. TARGET Tenant Integration/API Seam
+
+API/CRM readiness is a design constraint, not approval to build unused API
+infrastructure. UI and future tenant CRM/ERP/BI/charging-provider adapters must
+reuse the same server-side application capabilities and provider-neutral domain
+core:
+
+```text
+UI -> typed application client -> application capability -> domain/core
+tenant integration -> versioned adapter/API -> same capability -> same core
+```
+
+Future external integrations are tenant-bound, authenticated, capability-
+scoped, least-privilege, versioned, rate-limited, auditable, revocable and
+idempotent for retryable mutations. Server-owned tenant resolution precedes
+business execution. Integrations receive no direct database access, RLS bypass,
+service-role key, data-plane credential or other-tenant identifiers/data.
+
+External DTOs do not automatically equal database rows, internal events,
+frontend component state or raw audit records. REST versus GraphQL and `/v1`
+contracts remain undecided. Future significant lifecycle events may feed a
+controlled outbox/webhook adapter, but exact events and delivery contracts are
+not canonized and tenant data-plane truth remains authoritative.
+
+Integration credentials/settings belong to authorized tenant admins in Tenant
+Operator `Organisatie`, not general workforce. ENVAL Control may expose safe
+integration configuration, health, last-success and error metadata, never
+ordinary tenant payload/business truth.
 
 ## E. Identity And Access Separation
 

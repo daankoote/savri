@@ -44,7 +44,9 @@ Rules:
 - Components define reusable visual patterns.
 - Utilities are small, generic helpers.
 - Avoid page-specific CSS unless justified.
-- Avoid inline styling except trivial dynamic values if unavoidable.
+- Inline CSS and page-local style objects are forbidden, including for trivial
+  dynamic values. Represent dynamic presentation through controlled classes,
+  modifiers, attributes, and design tokens.
 - Components should reuse shared classes and established patterns.
 
 ## Design System v1
@@ -77,9 +79,24 @@ applications:
 - future restricted Verifier Workspace, not authorized for implementation now.
 
 Routes, shells and navigation must not mix these audiences or infer authority
-from a friendly role label. UX01 first audits the current journeys read-only;
-information architecture and surface boundaries require Daan + ChatGPT agreement
-before new shells/design work.
+from a friendly role label.
+
+The approved TARGET host and route model is:
+
+| host/route | surface |
+|---|---|
+| `enval.nl` | ENVAL commercial/public B2B SaaS site |
+| `<tenant>.enval.nl/aanmelden` | Tenant Public Intake |
+| `<tenant>.enval.nl/dashboard` | Tenant Customer Portal |
+| `<tenant>.enval.nl/beheer` | Tenant Operator Console |
+| `control.enval.nl` | ENVAL Control Console |
+| `verificatie.enval.nl` | central Verifier Audit Console |
+
+`<tenant>.enval.nl/<tenant>dashboard` and `intern-dashboard` are not canonical
+routes. A verifier-specific hostname is never an authorization boundary. The
+central verifier console derives access server-side from Auth principal,
+verifier-organization membership, verification engagement, tenant/year/case/
+sample scope, and capabilities. Verifier UI is not authorized now.
 
 White-label variation uses shared components, layouts and tokens with controlled
 tenant display name, logo reference, approved token/accent, customer-support
@@ -87,6 +104,64 @@ identity/contact and approved e-mail display identity. Arbitrary tenant CSS,
 JavaScript, HTML and per-tenant code forks are prohibited. The future default is
 an ENVAL-owned tenant subdomain such as `<tenant>.enval.nl`; custom domains and
 theme administration are not MVP work.
+
+One Auth foundation is shared. Authentication reuse never merges the distinct
+server-derived actor contexts for tenant customer, tenant workforce, ENVAL
+platform actor, and verifier actor. UI visibility is not authorization.
+
+## HARD UI Implementation Boundary
+
+KISS is the default. Customer UI is task/status-first, Tenant Operator UI is
+action/decision-first, and ENVAL Control is metadata/platform-health-first.
+Expose only what the actor needs for the current task.
+
+Do not invent headings, paragraphs, marketing/explanatory copy, helper text,
+tooltips, microcopy, compliance/legal claims, or additional status labels.
+Use, in order: approved Daan copy, CURRENT canonical copy, then only minimum
+functional/access/error wording. Report any required new functional wording.
+
+The mandatory reuse order and exact frontend pre-flight/evidence markers in
+repository `AGENTS.md` apply to every frontend batch. Reuse as-is, extend through
+props/configuration, compose, add a shared modifier/token, and create a new
+primitive only for a genuinely new responsibility. Inline CSS, near-duplicate
+components/CSS, arbitrary tenant presentation code, and page-local primitive
+reinvention are hard failures.
+
+## TARGET Information Architecture
+
+Tenant Customer Portal MVP navigation is exactly:
+
+- `Overzicht`
+- `Dossiers`
+- `Documenten`
+- `Berichten`
+- `Account`
+
+Open actions/tasks appear prominently in `Overzicht`; MVP has no separate main
+`Taken` item. `Berichten` is tenant customer-to-workforce communication, never
+ENVAL platform support.
+
+Tenant Operator Console MVP navigation is exactly:
+
+- `Overzicht`
+- `Dossiers`
+- `Klanten`
+- `Organisatie`
+
+`Overzicht` is action-first and groups `Te beoordelen`, `Wacht op klant`,
+`Geblokkeerd`, `Klaar voor volgende stap`, and `Afgerond`. `Rapportage` is later
+unless a concrete requirement moves it into MVP. Candidate dossier detail is
+limited to `Samenvatting`, `Gegevens`, `Documenten`, `kWh`, `Controle`, `Vragen`,
+and `Historie`. `Gegevens` composes party, representation, EAN/connection,
+location, assets/charge points, and MID/meter information. Do not invent more
+tabs.
+
+The ENVAL Control IA is tenant/configuration/platform-health/support/audit
+metadata-first. It is never a universal tenant-data console.
+
+Relevant dashboard shells will later render one reusable exact attribution:
+`Powered by ENVAL`. It is platform attribution only and must not imply legal,
+operator, controller, contracting-party, or verifier responsibility.
 
 ## Routes And Pages
 
@@ -103,10 +178,16 @@ Current routes:
 - `/privacy`
 - `/voorwaarden`
 - `/dashboard`
+- `/intern/compliance`
+- `/intern/dossiers`
+- `/intern/dossiers/:caseRef`
 
 Rules:
 
 - Use the internal route map and History API for now.
+- The `/intern/*` routes are CURRENT transitional workforce routes. They do not
+  establish the TARGET operator shell or canonical route; future operator UI
+  belongs under `<tenant>.enval.nl/beheer`.
 - Do not add React Router unless route complexity later justifies it.
 - Home stays the commercial landing page.
 - `Aanmerking` is currently a home section at `/#aanmerking`, not a separate page.
@@ -206,6 +287,55 @@ Rules:
 - Do not use polling or custom token refresh loops.
 - Do not manually persist access or refresh tokens.
 - Do not claim unsupported dashboard domains are real until backed by implemented app sources.
+
+## API And CRM Integration Readiness
+
+Status: TARGET design constraint; no public API, connector, webhook engine, or
+external contract is implemented or authorized here.
+
+Interactive business/data flow follows:
+
+```text
+UI
+-> typed frontend/application client
+-> server-side application/service capability
+-> domain/core
+-> persistence/provider adapters
+```
+
+Future tenant integration follows:
+
+```text
+tenant CRM/API client
+-> versioned tenant integration adapter/API
+-> the same server-side application/service capabilities
+-> the same domain/core
+```
+
+React components do not own business decisions, consume database rows as their
+domain contract, write business truth directly to the database, or know
+Storage/database/provider internals. Use explicit DTOs/read models and mutation
+commands. Add application services and ports/adapters only when a current
+responsibility needs them; API readiness is not permission for API-first
+overengineering.
+
+Do not choose REST versus GraphQL, freeze an external contract, or add `/v1`
+endpoints now. Future public DTOs remain separate from database rows, internal
+events, component state, and raw audit records.
+
+Future external integrations are tenant-bound, authenticated, capability-
+scoped, least-privilege, versioned, rate-limited, auditable, revocable, and
+idempotent for retryable mutations, with explicit integration identity. They
+receive no service-role credential, database access, RLS bypass, cross-plane
+credential, or other-tenant identifiers/data. The server resolves tenant
+authority before business execution.
+
+Future significant lifecycle changes may feed a controlled outbox/webhook
+adapter. Exact event names and delivery contracts remain undecided; tenant
+data-plane business/audit truth is authoritative and delivery is derived.
+Integration credentials/settings belong only to authorized tenant admins under
+Tenant Operator `Organisatie`. ENVAL Control may expose safe configuration,
+health, last-success, and error metadata, not ordinary tenant payloads.
 
 ## Homepage Copy Rule
 

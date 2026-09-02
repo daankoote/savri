@@ -14,15 +14,16 @@ implementation.
 
 ## Single Current NEXT
 
-- CURRENT ORDER — governance/architecture/test-policy reconciliation in this
-  GOV-UX00 batch, then `UX01` read-only frontend surface/journey audit.
-- After UX01, Daan + ChatGPT must agree the information architecture and exact
-  boundaries between ENVAL Control Console, Tenant Operator Console, Tenant
-  Customer Portal and future Verifier Workspace before design implementation.
-- Shared shells, components and tokens follow only after that decision. Browser/UI
-  work is grouped into coherent batches; SL01-C browser acceptance returns as
-  part of the appropriate UI/signing batch. SL01-D snapshot/finalize/replay
-  provenance cutover follows that acceptance boundary.
+- CURRENT ORDER — `GLOBAL-GOV01 + ENVAL UI-GOV01` records the universal golden
+  engineering/documentation rules plus the approved ENVAL surface/host/IA
+  boundaries and API/CRM-readiness direction. Commit this guidance separately
+  after approval; it changes no product runtime.
+- Then execute exactly one functional SL01-C browser acceptance, close/commit
+  SL01-C, and begin `UI-01` shared shells/navigation/actor boundaries. Do not mix
+  shell/refactor work into the current SL01-C candidate.
+- UI work proceeds in coherent reusable batches under the mandatory pre-flight,
+  reuse, KISS, no-invented-copy and API-coupling gates in `AGENTS.md`. SL01-D
+  snapshot/finalize/replay provenance follows the SL01-C acceptance boundary.
 - PARTIAL — `SL01-C`: the presentation-receipt, explicit-acceptance and
   receipt-bound OTP implementation exists in the current candidate, but is not
   CURRENT PROVEN until deliberate browser/UI acceptance is recorded. The

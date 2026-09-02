@@ -75,6 +75,35 @@ architecture boundaries over one shared core:
 4. **Verifier Workspace** — a future restricted evidence/verification surface;
    it is not generic tenant-admin access and is not authorized for implementation.
 
+Approved TARGET host/surface ownership is:
+
+- `enval.nl`: ENVAL commercial/public B2B SaaS site;
+- `<tenant>.enval.nl/aanmelden`: Tenant Public Intake;
+- `<tenant>.enval.nl/dashboard`: Tenant Customer Portal;
+- `<tenant>.enval.nl/beheer`: Tenant Operator Console;
+- `control.enval.nl`: ENVAL Control Console; and
+- `verificatie.enval.nl`: central Verifier Audit Console.
+
+`intern-dashboard` and `<tenant>.enval.nl/<tenant>dashboard` are not canonical.
+Verifier authorization never derives from the hostname; it derives server-side
+from Auth principal, verifier-organization membership, verification engagement,
+tenant/year/case/sample scope, and capabilities.
+
+One Auth foundation is shared across surfaces, but server-derived tenant
+customer, tenant workforce, ENVAL platform, and verifier actor contexts remain
+separate. Authentication is not authorization, and UI hiding never establishes
+authority.
+
+Approved TARGET MVP navigation is deliberately small. Tenant Customer uses
+`Overzicht`, `Dossiers`, `Documenten`, `Berichten`, and `Account`; open actions
+belong in `Overzicht`, not a separate MVP `Taken` item. Tenant Operator uses
+`Overzicht`, `Dossiers`, `Klanten`, and `Organisatie`; `Overzicht` is action-first
+with `Te beoordelen`, `Wacht op klant`, `Geblokkeerd`, `Klaar voor volgende stap`,
+and `Afgerond`. `Rapportage` remains later unless a concrete requirement moves
+it into MVP. Operator dossier detail is limited to `Samenvatting`, `Gegevens`,
+`Documenten`, `kWh`, `Controle`, `Vragen`, and `Historie`; `Gegevens` composes the
+domain facts and is not permission to add further tabs.
+
 Auth principal, tenant, workforce membership, customer party, representation
 authority and case authority remain distinct. Tenant workforce authorization is
 capability-based; friendly role names may compose capabilities but never become
@@ -96,10 +125,35 @@ preferred future default is an ENVAL-owned tenant subdomain such as
 `<tenant>.enval.nl`; custom domains require verified ownership and are future
 enterprise capability, not MVP scope.
 
-The TARGET domain direction is party -> representation/authority ->
-connection/EAN -> location -> charging asset(s) -> annual case/claim period ->
-mandate/evidence/kWh/review/verification state. Permanent connection/asset truth
-must not be cloned merely because a new calendar-year case starts.
+The TARGET domain direction is Party -> Representation Authority -> Location ->
+Connection/EAN -> Charging Installation/Charging Asset(s) -> Charge Point(s) ->
+MID Meter/Metering Installation -> MID/Conformity Evidence. An Annual Case/
+Claim Period references the relevant party, representation, location,
+connection/EAN, installation/assets, charge points, MID/meter truth and
+conformity evidence, plus period-specific mandate, evidence applicability, kWh,
+review and verification state. Durable asset/MID/meter identity must not be
+duplicated merely because a new calendar-year case starts.
+
+Customer-to-tenant workforce dossier questions and tenant-to-ENVAL platform
+support are separate systems. Only `platform_support.request` permits the latter;
+the request grants no tenant-data access. Platform support elevation is a
+separate purpose-, tenant-, actor-, scope-, time- and audit-bound authority.
+
+Controlled tenant presentation may later include display name, logo, approved
+accent/design tokens and tenant customer-support name/e-mail/phone. Branding is
+never contracting-party, regulated-operator, controller, mandate-grantee, fee,
+legal-version or verifier authority. Relevant shells may render the exact shared
+platform attribution `Powered by ENVAL`; it is attribution only.
+
+API/CRM readiness is a TARGET design constraint, not authorization to build a
+public API. UI and future versioned tenant CRM/ERP/BI/provider adapters must
+reuse the same server-side application capabilities and provider-neutral domain
+core. UI owns no business truth. External integrations are tenant-bound,
+authenticated, capability-scoped, least-privilege, versioned, rate-limited,
+auditable, revocable and idempotent where retryable. They receive no direct
+database/RLS bypass, service-role or cross-data-plane credentials. REST versus
+GraphQL, `/v1`, public contracts, webhook names and outbox implementation remain
+undecided/unimplemented until concrete need and security/audit scope exist.
 
 Cross-tenant duplicate/fraud signalling must not centralize raw EAN, MID or
 customer truth. A future separately approved collision capability may use a

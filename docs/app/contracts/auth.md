@@ -731,6 +731,13 @@ case/location scope, representation authority or four-eyes. Current code uses
 no JWT role, `app_metadata`, `user_metadata`, AAL or other claim as operations
 authorization.
 
+TARGET keeps one shared Auth foundation while deriving four independent actor
+contexts server-side: tenant customer, tenant workforce, ENVAL platform actor,
+and verifier actor. Authentication primitives may be reused; authorization,
+membership, object scope and capability evaluation may not be collapsed into a
+single generic role or frontend guard. Hostname and UI visibility are never
+authorization.
+
 Future internal location callers must keep these layers separate:
 
 1. server-verified principal;

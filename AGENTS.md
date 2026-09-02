@@ -1,5 +1,117 @@
 # ENVAL Execution Contract
 
+## Global inheritance and ENVAL priority
+
+The global golden engineering, orchestration, testing, documentation-governance,
+and reporting rules in the effective global `AGENTS.md` apply unchanged. This
+repository contract extends them with ENVAL-specific correctness. ENVAL rules may
+strengthen the global baseline but never silently weaken or contradict it; the
+explicit current task further bounds authorized work.
+
+When ENVAL concerns compete, prioritize in this order:
+
+1. law and official NEa authority;
+2. auditability;
+3. correctness;
+4. security and Auth;
+5. contracts;
+6. customer/operator journey and UI; and
+7. performance and cost.
+
+ENVAL documentation status is explicit: `CURRENT PROVEN`, `TARGET`, `DRAFT`,
+`UNKNOWN`, `LEGACY`, and `PROOF ONLY`. A TARGET design becomes CURRENT PROVEN
+only after implementation and its required green proof. Documentation wording
+alone never promotes implementation status.
+
+## HARD frontend engineering gates
+
+These are architecture gates, not style preferences. A frontend batch is
+incomplete when it violates them.
+
+### KISS is the default
+
+- Minimize screens, navigation, tabs, controls, dialogs, statuses, steps,
+  explanatory text, duplicated information, and abstractions without a proven
+  current need.
+- Show an actor only what is needed for the current task, not everything the
+  backend knows.
+- Customer UI is task/status-first and extremely simple. Tenant Operator UI is
+  action/decision-first, not implementation-detail-first. ENVAL Control is
+  metadata/platform-health-first, not tenant-data-first.
+
+### Do not invent UI copy
+
+- Do not invent unrequested headings, paragraphs, marketing or explanatory
+  copy, helper text, tooltips, microcopy, compliance claims, legal wording, or
+  extra status labels.
+- Copy priority is: explicitly approved Daan copy; CURRENT canonical existing
+  copy; then minimum strictly necessary functional, access, or error wording.
+- When new functional wording is technically required, keep it minimal, report
+  it explicitly, and never create persuasive, legal, or marketing wording.
+- Never silently add text as a UX improvement.
+
+### CRITICAL mandatory modular UI reuse
+
+Before every frontend implementation, inspect the applicable existing
+components, modules, helpers, hooks, services, shells, navigation, headers,
+footers, forms and fields, buttons, tables/lists, cards, statuses, notices,
+errors, empty states, dialogs, document/evidence and upload components, layout
+primitives, CSS, tokens, and responsive patterns.
+
+Mandatory order:
+
+1. reuse an existing component/module as-is;
+2. extend the shared component through props or configuration;
+3. compose existing primitives;
+4. add a narrow shared modifier or token; and
+5. only then create a component/module for a genuinely new responsibility.
+
+A difference in columns, labels, spacing, state, icon, actions, or responsive
+behavior does not justify another near-identical primitive. Do not independently
+create another Button, Card, Table, FormRow, input wrapper, StatusPill,
+StatusDot, PageHeader, Sidebar, Shell, Notice, EmptyState, ErrorState,
+DocumentCard, or UploadCard when an existing primitive can be extended.
+
+Inline CSS and page-local one-off style objects are forbidden. Do not duplicate
+a CSS selector family to avoid changing a shared component. Use, in order, an
+existing token/class, a modifier, a reusable shared class, and only then new CSS
+for a genuinely new reusable responsibility. Arbitrary tenant CSS, JavaScript,
+HTML, and per-tenant frontend forks are forbidden.
+
+### Mandatory frontend pre-flight and evidence
+
+Before coding, report:
+
+- `EXISTING_COMPONENTS_INSPECTED`
+- `EXISTING_MODULES_INSPECTED`
+- `EXISTING_CSS_INSPECTED`
+- `EXISTING_TOKENS_INSPECTED`
+- `EXISTING_LAYOUT_PATTERNS_INSPECTED`
+
+After implementation, report:
+
+- `REUSED_AS_IS`
+- `EXTENDED_EXISTING`, with the reason
+- `COMPOSED_EXISTING`
+- `NEW_COMPONENTS`, with each genuinely new responsibility
+- `NEW_MODULES`, with each genuinely new responsibility
+- `NEW_CSS`, including why current reusable CSS was insufficient
+- `INLINE_CSS=NONE`
+- `NEAR_DUPLICATE_COMPONENT_INTRODUCED=NO`
+- `NEAR_DUPLICATE_CSS_INTRODUCED=NO`
+
+Any new table, card, form, button, header, shell, or status primitive additionally
+requires `EXISTING_PRIMITIVE_INSUFFICIENT_BECAUSE`; without that justification,
+the batch is incomplete.
+
+For material frontend business/data interaction, also report:
+
+- `UI_BUSINESS_LOGIC_ADDED` (`NONE` expected, otherwise justify)
+- `DIRECT_DB_COUPLING_ADDED=NO`
+- `PROVIDER_SPECIFIC_UI_COUPLING_ADDED=NO`
+- `APPLICATION_CONTRACT_REUSED`
+- `API_INTEGRATION_READINESS_PRESERVED=YES`
+
 ## Source routing
 
 - Start with `docs/app/00_CANON.md`; it is the authority and navigation index.
@@ -18,6 +130,22 @@
 - Do not use inline CSS. Prefer tokens, shared classes, composition, and modifiers.
 - Keep a small coherent fileset; avoid cosmetic refactors outside the task.
 - Preserve unrelated and dirty worktree changes exactly.
+
+## Application and integration boundary
+
+- UI consumes explicit typed presentation/application DTOs and mutation command
+  contracts. It does not own business decisions, use database rows as domain/UI
+  contracts, perform direct browser business writes, or know database, Storage,
+  or provider-specific internals.
+- Reuse server-authoritative application/domain capabilities through narrow
+  ports and adapters where a real responsibility exists. Do not mechanically
+  add service layers for static presentation or pre-build unused API machinery.
+- Future tenant CRM, ERP, BI, and provider integrations must enter through
+  versioned, tenant-bound integration adapters and reuse the same application
+  capabilities and provider-neutral core as the UI.
+- External integrations never receive direct database access, RLS bypass,
+  service-role credentials, cross-data-plane credentials, or another tenant's
+  identifiers/data. Server-side tenant resolution precedes business execution.
 
 ## Truth and safety boundaries
 

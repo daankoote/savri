@@ -90,6 +90,19 @@ CSS, JavaScript or HTML and per-tenant frontend clones are prohibited. The
 preferred future default is `<tenant>.enval.nl` or another approved ENVAL-owned
 namespace. Verified custom domains are future enterprise scope, not MVP.
 
+Approved TARGET routing is `enval.nl` for the commercial site,
+`<tenant>.enval.nl/aanmelden` for public intake,
+`<tenant>.enval.nl/dashboard` for customers,
+`<tenant>.enval.nl/beheer` for tenant operators, `control.enval.nl` for ENVAL
+Control, and `verificatie.enval.nl` for the central verifier console. Hostname is
+never authorization. One Auth foundation serves distinct server-derived
+customer, workforce, platform, and verifier actor contexts.
+
+Customer MVP navigation is `Overzicht`, `Dossiers`, `Documenten`, `Berichten`,
+and `Account`; open tasks live in `Overzicht`. Operator MVP navigation is
+`Overzicht`, `Dossiers`, `Klanten`, and `Organisatie`; its landing is action-first
+and reporting remains later without a concrete requirement.
+
 ## Tenant, Support And Domain Boundaries
 
 Auth principal, tenant, workforce membership, customer party, representation
@@ -110,14 +123,38 @@ prohibited and break-glass remains separate future high-assurance design.
 The domain direction is:
 
 ```text
-party -> representation/authority -> connection/EAN -> location
-      -> charging asset(s) -> annual case/claim period
-      -> mandate + evidence + kWh + review + verification state
+Party -> Representation Authority -> Location -> Connection/EAN
+      -> Charging Installation/Charging Asset(s) -> Charge Point(s)
+      -> MID Meter/Metering Installation -> MID/Conformity Evidence
 ```
 
-Connection and charging-asset truth may persist across years. Mandate, kWh,
-claim, evidence validity, review and status remain period-specific where
-required. Do not create a permanent charger copy per calendar year.
+An Annual Case/Claim Period references those durable entities and the relevant
+mandate, evidence, kWh, review, and verification state. Connection, installation,
+asset, charge-point, MID/meter and conformity-evidence identity may persist
+across years. Validity, mandate, kWh, evidence applicability, review and
+verification may vary by annual case. Do not create permanent-asset or meter
+copies per calendar year.
+
+Customer dossier communication is tenant customer-to-workforce. ENVAL platform
+support is a separate capability-gated system. Shared shells may show the exact
+attribution `Powered by ENVAL`; attribution never establishes legal, operator,
+controller, mandate, fee, or verifier identity.
+
+## API And CRM Readiness
+
+API/CRM readiness is TARGET architecture, not a public-API implementation
+requirement. The browser UI and future tenant CRM, ERP, BI, and charging-provider
+integrations must reuse the same server-side application capabilities and
+provider-neutral core through explicit contracts and adapters. UI components do
+not own business decisions or database/provider truth.
+
+Future external integrations are tenant-bound, authenticated, scoped,
+least-privilege, versioned, rate-limited, auditable, revocable, and idempotent
+for retryable mutations. They never receive direct database access, RLS bypass,
+service-role credentials, cross-plane credentials, or other-tenant data. No
+REST/GraphQL choice, external `/v1` contract, connector, webhook event catalogue,
+or outbox implementation is approved now. Build those only for a concrete need
+with known operations, scopes, audit implications, and responsible versioning.
 
 Cross-tenant collision/fraud detection, if approved later, uses a dedicated
 privacy-preserving seam over normalized identifiers and keyed cryptographic
