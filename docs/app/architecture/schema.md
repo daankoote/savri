@@ -1494,7 +1494,7 @@ G. Implement document upload issue/confirm
 
 H. Implement customer requests
 
-- ENVAL creates requests.
+- The resolved tenant's authorized workforce creates customer requests.
 - Email notification goes out.
 - Customer responds in dashboard.
 - Response is audited and reviewed.

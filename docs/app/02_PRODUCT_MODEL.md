@@ -59,6 +59,72 @@ Role boundaries:
 - Frontend may assist; backend decides.
 - Frontend prechecks and parsing can improve UX, latency, and support load, but backend validation, normalization, authorization, hashing, audit, and lifecycle decisions remain the source of truth.
 
+## Target Product Surfaces
+
+`PAAS_PRODUCT=NO`. ENVAL is one browser-based vertical B2B managed-SaaS /
+white-label product with four TARGET surfaces over shared contracts and design
+primitives:
+
+1. **ENVAL Control Console** for authorized ENVAL platform personnel: tenant
+   onboarding/lifecycle, platform health, version/config visibility, incidents,
+   platform audit, controlled support elevation and future usage/billing.
+2. **Tenant Operator Console** for one tenant's workforce: work queues, dossier
+   creation, evidence/review, customer questions, corrections, annual kWh,
+   locks/finalization preparation, reporting and capability administration.
+3. **Tenant Customer Portal** for particulier, onderneming, VvE and later
+   extensible party types without cloned apps: intake, authority information,
+   connection/EAN, locations/assets, evidence, signing, annual-period work,
+   status, questions and corrections.
+4. **Verifier Workspace** as a future narrowly authorized surface for evidence
+   packs, samples and findings. It is not generic tenant-admin access and is not
+   authorized for implementation now.
+
+The customer portal is tenant-facing white-label. Customers primarily perceive
+the tenant/inboekdienstverlener as service provider, with ENVAL identified as
+platform technology only where legally and contractually appropriate.
+
+Safe presentation configuration is limited to controlled display name, logo
+reference, approved design-token/accent values, tenant customer-support identity,
+customer-facing contact details and approved e-mail display identity. Arbitrary
+CSS, JavaScript or HTML and per-tenant frontend clones are prohibited. The
+preferred future default is `<tenant>.enval.nl` or another approved ENVAL-owned
+namespace. Verified custom domains are future enterprise scope, not MVP.
+
+## Tenant, Support And Domain Boundaries
+
+Auth principal, tenant, workforce membership, customer party, representation
+authority and case authority are separate. A tenant owns its workforce, end
+customers, cases, evidence, signing truth and audit inside its isolated data
+plane. Workforce business authority is capability-based; friendly owner/admin,
+reviewer, support and operations roles may compose capabilities but never grant
+authority by name alone.
+
+Only tenant principals with explicit `platform_support.request` may open ENVAL
+platform-support requests. Default assignment may be tenant owner/admin or a
+designated support contact. General tenant workforce escalates internally. Any
+future ENVAL tenant-data access must be explicitly requested and justified,
+tenant/actor/purpose/resource/time-bound, least-privilege and audited. Platform
+health metadata is preferred; universal or permanent data-plane access is
+prohibited and break-glass remains separate future high-assurance design.
+
+The domain direction is:
+
+```text
+party -> representation/authority -> connection/EAN -> location
+      -> charging asset(s) -> annual case/claim period
+      -> mandate + evidence + kWh + review + verification state
+```
+
+Connection and charging-asset truth may persist across years. Mandate, kWh,
+claim, evidence validity, review and status remain period-specific where
+required. Do not create a permanent charger copy per calendar year.
+
+Cross-tenant collision/fraud detection, if approved later, uses a dedicated
+privacy-preserving seam over normalized identifiers and keyed cryptographic
+transforms with minimum central metadata. Raw EAN, MID and customer truth stays
+tenant-local; a collision signal exposes no other tenant's underlying data. The
+legal basis, privacy/security design and final cryptographic protocol remain open.
+
 ## Commercial Model
 
 - Tenant customer fees are tenant-bound configuration and require the tenant's
@@ -76,6 +142,10 @@ Role boundaries:
   to the applicable customer/legal snapshot.
 - Historical operator-fee context remains in
   `docs/app/legal/fee-model-and-service-terms.md`; it is not SaaS pricing.
+- Future SaaS billing must derive from explicit immutable usage/billable events,
+  preferably a meaningful annual-case lifecycle milestone. Raw draft creation,
+  abandoned/spam/incomplete cases and a fixed euro, percentage or volume tier
+  are not automatically billable and no price is adopted here.
 
 ## Audit, Evidence, And Anti-Fraud Doctrine
 

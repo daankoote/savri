@@ -65,6 +65,29 @@ Component approach:
 - Avoid one-off page CSS. Add reusable layout/component primitives when a pattern is likely to repeat.
 - The standard local dev URL remains `http://localhost:5175/`.
 
+## TARGET Surface And White-Label Boundary
+
+The shared frontend core must support four distinct surfaces without cloned
+applications:
+
+- ENVAL Control Console for authorized platform personnel;
+- Tenant Operator Console for one tenant's capability-authorized workforce;
+- Tenant Customer Portal for particulier, onderneming, VvE and authorized
+  representatives; and
+- future restricted Verifier Workspace, not authorized for implementation now.
+
+Routes, shells and navigation must not mix these audiences or infer authority
+from a friendly role label. UX01 first audits the current journeys read-only;
+information architecture and surface boundaries require Daan + ChatGPT agreement
+before new shells/design work.
+
+White-label variation uses shared components, layouts and tokens with controlled
+tenant display name, logo reference, approved token/accent, customer-support
+identity/contact and approved e-mail display identity. Arbitrary tenant CSS,
+JavaScript, HTML and per-tenant code forks are prohibited. The future default is
+an ENVAL-owned tenant subdomain such as `<tenant>.enval.nl`; custom domains and
+theme administration are not MVP work.
+
 ## Routes And Pages
 
 The `/app` frontend uses lightweight client-side routing for now.
@@ -89,13 +112,20 @@ Rules:
 - `Aanmerking` is currently a home section at `/#aanmerking`, not a separate page.
 - Pricing/fee content stays on the homepage for now, not in a separate route.
 - Placeholder pages are intentionally short: one clear title, one short paragraph, and one action or note.
-- Do not wire backend calls from these pages yet.
+- Placeholder/public information pages remain presentation-only unless a
+  separately approved backend contract applies; signup, Auth and dashboard use
+  their current proven app endpoints.
 - Do not change Netlify redirects or production root behavior for these app routes yet.
 - Section targets must account for the sticky header with CSS scroll offsets.
 - Signup/intake architecture lives in `docs/app/architecture/signup-intake.md`.
-- `/aanmelden` is implemented as a frontend-first draft flow with local validation, payload mapping, and controlled submit wiring to `api-app-signup-submit` write v3.
-- `/aanmelden` stays on-page after submit and does not bootstrap a customer Auth session or redirect to the dashboard yet.
-- Document upload in `/aanmelden` remains local preview/file selection only; authenticated dashboard document upload uses the committed document module.
+- `/aanmelden` is the current account-first authenticated document-first signup
+  journey. It uses the intake/capability boundary, quarantine upload/confirmation,
+  customer fact confirmation, signing and signed-intake promotion authorities.
+- Successful authenticated promotion may hand off to `/dashboard`; account,
+  customer, party, representation and case authority remain separate.
+- SL01-C server-resolved presentation, explicit acceptance and receipt-bound OTP
+  are an active PARTIAL candidate pending browser/UI acceptance. Its temporary
+  finalize guard remains until SL01-D provenance cutover.
 - `/dashboard` is a protected customer portal using the real customer-safe dashboard projection for factual app-backed fields.
 - Dashboard is person-first: one customer can have multiple assets such as private home, business, VVE, or second home.
 - Dashboard currently has a frontend Auth/session guard, locally proven backend read endpoint, and real frontend read projection.
@@ -115,7 +145,10 @@ Rules:
 - Inner sections are: Laadpaal, Locatie, Toestemmingen, kWh, Rapportages, and Aanpassingen.
 - The generic Documenten section is removed: charger evidence lives under Laadpaal, and address evidence lives under Locatie.
 - Top charger rows use text status pills; inner section headers and cards use small status dots for calmer scanning.
-- Sidebar order is: Nieuwe aanvraag, Actief, History, Contact ENVAL, Settings, and Uitloggen.
+- The current reference sidebar label remains `Contact ENVAL` as implemented,
+  but it is mock-only and not the generic target. The white-label target resolves
+  the tenant customer-support identity/contact and creates no ENVAL platform
+  ticket authority.
 - History is its own mock menu tab.
 - Verhuizing and Zakelijk rijden live under the Aanpassingen section, not in the sidebar.
 - Laadpaal and Locatie sections use read-only table-style summaries after submit.
@@ -197,7 +230,10 @@ Rules:
 - The homepage calculator is local-only until a backend/API contract exists.
 - Do not store calculator input.
 - The calculator has two modes: yearly kilometers and yearly kWh.
-- Current visible assumptions are explicit: kilometers, kWh per 100 km, yearly kWh, value per kWh, and 10% ENVAL fee.
+- The current reference calculator visibly contains kilometers, kWh per 100 km,
+  yearly kWh, value per kWh and a historical 10% ENVAL-fee assumption. That is
+  implemented legacy/reference presentation, not SaaS pricing or a generic
+  tenant fee; UX01 must classify its disposition before redesign.
 - Calculator copy must show indication/no-guarantee language.
 - Calculator assumptions must be documented before it becomes production copy.
 
@@ -229,19 +265,25 @@ The year overview is customer-facing output and later supports the audit-worthy 
 - Dashboard modules live under `app/src/features/dashboard/`.
 - Dashboard copy should be customer-readable: status, open actions, documents, support, timeline, consents, kWh/value, and downloads.
 - Do not expose raw audit rows or internal technical payloads in customer-facing views.
-- The dashboard sidebar owns primary portal navigation: Nieuwe aanvraag, Actief, History, Contact ENVAL, Settings, and Uitloggen.
+- The dashboard sidebar owns the current reference portal navigation. Its
+  `Contact ENVAL` label is not a generic product rule; future customer support
+  presentation is tenant-bound.
 - Verhuizing and Zakelijk rijden are dashboard Aanpassingen items because regulatory handling is still unclear.
 - ENVAL release/edit mode should later reuse signup form components when a read-only field needs customer correction.
 - Contact ENVAL is mock-only and currently shows AI bot and message placeholders.
+  It neither opens an ENVAL platform-support ticket nor grants support access.
 - ENVAL/internal view is deferred until role-based access and internal review architecture are defined.
 - Do not add direct Supabase table reads, localStorage, sessionStorage, polling, or realtime subscriptions from the dashboard.
 
 ## Signup Intake Rule
 
-- `/aanmelden` currently has a locally proven frontend submit path: local validation, draft-to-payload mapping, frontend API client, and `api-app-signup-submit` write v3.
-- The current submit path creates the backend dossier foundation through the app submit endpoint, then stays on the page.
-- It does not create a customer Auth session, redirect/bootstrap the dashboard, or upload selected files.
-- The signup page has personal information, charger information, document upload/file-selection preview, and consent/signature sections.
+- `/aanmelden` currently uses verified Auth where required, a disposable intake
+  capability, confirmed quarantine uploads, shared document/fact presentation,
+  customer confirmation, `typed_name_otp_v1`, finalization/promotion and
+  dashboard handoff boundaries.
+- The signup page has account/party information, location/charger evidence,
+  document review and signing sections. Parser observations remain derived;
+  customer confirmation is not tenant-workforce acceptance.
 - Step 1 uses tabs for Particulier, Zakelijk, and VVE. Do not replace these with radio-button UI.
 - Step 1 uses account-specific banners and field labels.
 - Zakelijk and VVE use location tabs in Step 2. Particulier uses the Step 1 address as its single location.
@@ -252,8 +294,9 @@ The year overview is customer-facing output and later supports the audit-worthy 
 - Charger model options are intentionally scaffolded and incomplete until sourced from verified data.
 - Solar panel exportability is captured for later review; the frontend must not make final eligibility claims from it.
 - Documents attach per charger client ID.
-- Current file inputs, KVK placeholders, PDF preview, and signature placeholders are local only.
-- Do not upload files or call document upload endpoints from `/aanmelden` yet.
+- Signup PDF inputs use the current quarantine upload/confirm/remove authorities;
+  local preview/parser output never substitutes for server confirmation or
+  evidence acceptance.
 - Feature files live under `app/src/features/signup/`.
 
 ### Unified signup fact presentation
@@ -298,14 +341,19 @@ The year overview is customer-facing output and later supports the audit-worthy 
   reuses `selectUnifiedFactPresentation` plus the `FactTable` document variant.
   Mandate, legal, signer and readiness components extend it; they do not create
   a second dossier summary.
-- Legal status, signer input, intent, year scope and readiness are browser-local
-  09A state outside the protected signup submit mapper. No signing API client,
-  OTP control, evidence creation, snapshot hash or success state exists yet.
+- Legal actions and signer input remain browser interaction state until submitted,
+  while server authorities own presentation receipts, explicit acceptance, OTP
+  challenge, immutable finalization and signed snapshots. SL01-C presentation/
+  acceptance binding is PARTIAL pending browser/UI acceptance; SL01-D owns the
+  final provenance cutover.
 - Signing UI reuses `components.css` document, form, checkbox, button and status
   tokens. New selectors are signing-document scoped; no stylesheet or global
   typography rule was added.
 
 ### Compact signing presentation 09A1
+
+Status: HISTORICAL FOUNDATION retained by the current Wave A1/SL01-C signing
+composition; its former no-runtime statements below are superseded.
 
 - Step 3 renders exactly four major sections. Fact tables remain subparts of
   the single summary and do not become separate signing cards.
@@ -320,8 +368,9 @@ The year overview is customer-facing output and later supports the audit-worthy 
   next, back and reachability correction. It uses immediate scrolling and
   focuses the newly visible heading; ordinary transitions do not recreate the
   reducer draft.
-- The signing method and evidence contracts are unchanged. There is still no
-  active signing, OTP, finalization, persistence or success UI.
+- The 09A method/evidence composition remains reused. Active OTP, finalization,
+  persistence, success/recovery UI and the SL01-C candidate now exist under
+  their later contracts and proof status.
 
 ### Compact signing layout 09A2
 
@@ -338,8 +387,8 @@ The year overview is customer-facing output and later supports the audit-worthy 
   filename remains the value. No third column or alternate document projector
   exists.
 - The three signing sections share an equal-column desktop grid and stack in
-  source order on narrow screens. The empty primary-action boundary is reserved
-  for 09B and renders no control in 09A2.
+  source order on narrow screens. The former empty 09A2 primary-action boundary
+  is now occupied by the current signing controls.
 - Signer name normalization imports the existing `normalizeName` helper and
   runs on blur, preserving controlled input behavior while typing.
 

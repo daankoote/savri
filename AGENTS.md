@@ -48,19 +48,47 @@
 
 ## Verification strategy
 
-- During each small iteration, run only the smallest sufficient checks for the scope:
-  a relevant unit/client/contract proof, targeted TypeScript or Deno check, focused
-  security assertion, or safe read-only SQL introspection when necessary.
-- Do not routinely run the full regression suite, all integration proofs,
-  performance suites, destructive/local-service suites, or a complete app build.
-- Run a build during an iteration only when bundling, imports, or runtime boundaries move.
-- Before Daan commits a coherent round, run one broader non-destructive integration gate
-  covering relevant regression, type correctness, build/integration, security/RLS/Auth,
-  and applicable efficiency/performance behavior.
-- Reserve full or heavy suites for release, architecture, or high-risk security, Auth,
-  signing, and database boundaries.
-- Never reduce coverage for speed; optimize selection, timing, and duplicate execution.
-- Daan need not repeat an already-green deterministic check solely to duplicate evidence.
+- Classify verification before running it:
+  - Tier A is the default after each small implementation step. Identify changed
+    layers, affected shared dependencies/callers and realistic regression risks,
+    then run the minimum targeted checks that cover that risk cone.
+  - Tier B is the logical-batch gate for a coherent feature or workstream slice.
+    Run the relevant broader regression, build, browser, SQL/security and
+    integration checks only where that batch changed or depends on them.
+  - Tier C is release-grade/full validation. Use it only for release/deploy
+    readiness, a major cross-cutting architecture milestone, explicit Daan/ChatGPT
+    instruction, or evidence from lower tiers that materially broadens risk.
+- A normal local commit is not automatically Tier B or Tier C.
+- Documentation-only work uses targeted document/reference/consistency checks and
+  no runtime suite unless an executable contract changed.
+- Run a build only when bundling, imports, runtime boundaries or a logical frontend
+  batch make build coverage useful. Small visual/copy changes use targeted
+  frontend/static checks; defer responsive/browser proof to the coherent UI batch
+  unless interaction, Auth or data flow requires it earlier.
+- RLS, authorization, capabilities, tenant boundaries, signing, OTP,
+  finalization/replay, schema/migrations, immutable history, locks, evidence
+  independence, corrections, parser authority and platform-support boundaries
+  require heavier Tier A coverage or an earlier Tier B gate, not unrelated suites.
+- Within one logical batch, reuse a green expensive check while its relevant
+  production code, shared dependencies, proof/test, schema/migration and
+  configuration/environment remain unchanged. Re-run it when that risk cone changes.
+- Never reduce regression quality for speed; reduce latency by selecting checks,
+  reusing valid green evidence and avoiding duplicate execution.
+
+## Failure loop guard
+
+- Do not repeat an identical failing command more than twice without a new
+  hypothesis or changed condition.
+- Every retry must state the hypothesis or condition being tested.
+- After bounded attempts, report the exact failure, hypotheses tested, changes
+  attempted, likely root cause and recommended next action. Stop for direction
+  before materially expanding scope or risk.
+
+## Architecture and documentation sync
+
+- Reconcile architecture/docs only when a canon/invariant, ownership boundary,
+  architectural dependency, security/Auth model or CURRENT/TARGET workstream status
+  materially changes. Small implementation details do not trigger documentation churn.
 
 ## Terminal ownership
 
@@ -75,7 +103,9 @@ Report compactly:
 
 - changed/new files;
 - reused modules and CSS, plus any new module and its reason;
-- checks run with status and useful counts/timing, without full green logs;
+- `TEST_TIER_USED`, changed layers, regression risks, targeted checks and results;
+- valid previously-green checks reused, broader checks intentionally excluded, and
+  whether Tier B or Tier C is required now with a reason;
 - diff-check and diffstat;
 - remaining risks and intentionally deferred gates;
 - staged state and final Git status.

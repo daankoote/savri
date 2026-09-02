@@ -1022,7 +1022,7 @@ returns a safe receipt. It creates no customer, Auth session, dossier or case.
 
 The previous separate email-verification promotion trigger is `SUPERSEDED`.
 CURRENT stored lifecycle truth is `submitted_for_review`: finalized/locked and
-waiting for ENVAL internal handling. The unchanged 09B2 frontend temporarily
+waiting for the resolved tenant's authorized internal handling. The unchanged 09B2 frontend temporarily
 receives legacy discriminator `pending_verification` until its separately
 authorized receipt/client cutover. Neither value is an external
 inboekverificatie status or promotion credential.

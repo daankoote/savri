@@ -453,6 +453,27 @@ Physical rules:
 Codes are schema CHECK values, not rows in a generic permission catalog.
 Human titles and Auth/JWT claims are never authorization sources.
 
+### 9.1 Managed-SaaS Platform-Support Capability Overlay
+
+Status: DECIDED/TARGET — NOT PART OF THE SIX WP3L LOCATION CAPABILITIES; NOT
+IMPLEMENTED
+
+`platform_support.request` is a separate future tenant-workforce capability for
+opening an ENVAL platform-support request. It does not extend the closed WP3L
+location-operation vocabulary or authorize case, dossier, evidence or customer
+access.
+
+- Default friendly role composition may assign it to tenant owner/admin or an
+  explicitly designated tenant support contact.
+- General tenant workforce does not receive it and escalates internally.
+- Authorization evaluates the exact capability, never a role name, title, Auth
+  claim or matching e-mail.
+- A support request grants no ENVAL support elevation. Any later access remains
+  separately justified, tenant/actor/purpose/resource/time-bound,
+  least-privilege and audited.
+- No universal ENVAL service role or permanent cross-tenant operator access is
+  permitted. Break-glass remains a separate high-assurance future design.
+
 ## 10. Fail-Closed Authorization And Execution
 
 For every operation time T:

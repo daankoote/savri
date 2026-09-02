@@ -69,7 +69,7 @@ payment-regulatory validation remains open.
 | M-05 | APPROVED PRODUCT DIRECTION | Issue date is assigned only server-side at finalization. | Runtime implementation and timestamp-evidence proof. |
 | M-06 | APPROVED PRODUCT DIRECTION — LEGAL/VERIFIER VALIDATION REQUIRED | Withdrawal is prospective, authenticated and recorded as a new immutable event without changing the original mandate. | Exact effective date, unfinished booking, irreversibility, notifications and retention. |
 | M-07 | APPROVED PRODUCT DIRECTION — LEGAL/VERIFIER VALIDATION REQUIRED | Simple e-sign evidence contains the canonical snapshot and hash, legal versions/hashes, typed name, separate intents, challenge/channel references, server time, method version and minimized audit metadata; never raw OTP. | Legal and verifier acceptance; no advanced or qualified-signature claim. |
-| M-08 | APPROVED PRODUCT DIRECTION — LEGAL/VERIFIER VALIDATION REQUIRED | Zakelijk/VvE authority requires a separate ENVAL review and blocks downstream use until sufficient; joint signing and authority chains are post-MVP. | Corporate-law, register and verifier validation of the review standard. |
+| M-08 | APPROVED PRODUCT DIRECTION — LEGAL/VERIFIER VALIDATION REQUIRED | Zakelijk/VvE authority requires a separate resolved-tenant authorized review and blocks downstream use until sufficient; joint signing and authority chains are post-MVP. | Corporate-law, register and verifier validation of the review standard. |
 | M-09 | APPROVED PRODUCT DIRECTION — LEGAL/VERIFIER VALIDATION REQUIRED | Written verifier acceptance of the template and evidence pack is a hard pilot-live gate. | Named verifier acceptance and recorded acceptance date. |
 
 ## Registry reconciliation

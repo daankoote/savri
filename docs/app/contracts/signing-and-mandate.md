@@ -191,7 +191,7 @@ capability. Supabase Auth verification/login remains a separate post-promotion
 account-access boundary and signing OTP creates no Auth session.
 
 CURRENT database truth is `submitted_for_review`: finalized, locked and awaiting
-ENVAL internal handling. 09C1A migrated old stored rows and all new database
+the resolved tenant's authorized internal handling. 09C1A migrated old stored rows and all new database
 writes; 09C1C removes the temporary frontend discriminator and versions the
 presentation receipt instead of silently changing v1. Customer
 copy remains `Ondertekend en ingediend`; external verifier states remain in a
@@ -488,7 +488,7 @@ channel references, server time, method version and minimized audit metadata.
 Raw OTP is forbidden. The method remains a simple electronic-signature target
 without an advanced or qualified claim.
 
-Zakelijk/VvE authority is a separate ENVAL review and blocks required
+Zakelijk/VvE authority is a separate resolved-tenant authorized review and blocks required
 downstream use until sufficient. Joint signing and authority chains remain
 post-MVP. Exact permission wording, legal signature sufficiency and written
 verifier acceptance remain hard pilot-live gates.

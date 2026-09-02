@@ -52,6 +52,66 @@ UNKNOWN / TARGET LEGAL REVIEW:
 - first tenant and willingness to pay; and
 - concrete provider availability and contracts.
 
+### Managed-SaaS Product And Governance Boundary
+
+Status: DECIDED/TARGET — NOT CURRENT PROVEN
+
+`PAAS_PRODUCT=NO`. ENVAL is a browser-based vertical B2B managed-SaaS /
+white-label product. It supplies software, workflow and orchestration to one
+inboekdienstverlener organization per tenant; it is not a generic PaaS product.
+
+The four TARGET product surfaces are separate authorization and information-
+architecture boundaries over one shared core:
+
+1. **ENVAL Control Console** — authorized ENVAL personnel manage tenant
+   onboarding/lifecycle, platform health, configuration/version visibility,
+   incidents, controlled support elevation, future usage/billing and platform
+   audit. It is not normal tenant operations.
+2. **Tenant Operator Console** — one tenant's authorized workforce performs
+   customer/case work, evidence review, corrections, annual workflows,
+   finalization preparation, reporting and capability administration.
+3. **Tenant Customer Portal** — a white-label tenant-facing journey for
+   particulier, onderneming and VvE customers and authorized representatives.
+4. **Verifier Workspace** — a future restricted evidence/verification surface;
+   it is not generic tenant-admin access and is not authorized for implementation.
+
+Auth principal, tenant, workforce membership, customer party, representation
+authority and case authority remain distinct. Tenant workforce authorization is
+capability-based; friendly role names may compose capabilities but never become
+business authority by themselves.
+
+Only a tenant principal with explicit `platform_support.request` capability may
+open an ENVAL platform-support request. Default assignment may be owner/admin or
+an explicitly designated tenant support contact. General tenant workforce
+escalates internally. Any later ENVAL access to tenant data is requested,
+justified, tenant/actor/purpose/resource/time-bound, least-privilege and audited.
+No permanent universal ENVAL data-plane access or universal service role is
+allowed; break-glass remains a separate future high-assurance mechanism.
+
+White-label presentation may expose only controlled fields such as display name,
+logo reference, approved design-token/accent values, tenant support identity,
+customer-facing contact details and approved e-mail display identity. Arbitrary
+tenant CSS, JavaScript, HTML and per-tenant frontend forks are prohibited. The
+preferred future default is an ENVAL-owned tenant subdomain such as
+`<tenant>.enval.nl`; custom domains require verified ownership and are future
+enterprise capability, not MVP scope.
+
+The TARGET domain direction is party -> representation/authority ->
+connection/EAN -> location -> charging asset(s) -> annual case/claim period ->
+mandate/evidence/kWh/review/verification state. Permanent connection/asset truth
+must not be cloned merely because a new calendar-year case starts.
+
+Cross-tenant duplicate/fraud signalling must not centralize raw EAN, MID or
+customer truth. A future separately approved collision capability may use a
+normalized identifier plus keyed cryptographic transform and minimal metadata;
+it reveals no other tenant's underlying data and requires legal/privacy/security
+review. No final cryptographic protocol is approved.
+
+Future billing requires immutable explicit usage/billable events tied preferably
+to a meaningful annual-case lifecycle milestone. Draft, abandoned, spam or
+incomplete case creation is not automatically billable. No amount, percentage,
+tier or price is canonized.
+
 This file is the only primary navigation and status index for active app documentation. It overrides every legacy document for new app work. If a legacy file conflicts with this document, this document wins.
 
 NEa compliance hierarchy:
@@ -181,7 +241,7 @@ Supporting documents have one responsibility each and do not compete with the pr
 | `docs/app/06A_NEA_REGULATORY_COMPLETENESS_AUDIT.md` | official source coverage and source blockers | PROOF ONLY |
 | `docs/app/06B_CURRENT_IMPLEMENTATION_ASSESSMENT.md` | current code/database/function/proof assessment | PROOF ONLY |
 | `docs/app/architecture/database-target-model.md` | technical data entities, relations, history, constraints, RLS intent, object dispositions | DRAFT — AWAITING DAAN APPROVAL; APPENDIX, NOT PRIMARY ARCHITECTURE |
-| `docs/app/architecture/white-label-control-plane.md` | focused separate-tenant-data-plane and minimum-control-plane boundary, subordinate to the primary target architecture | CURRENT PROVEN LOCAL foundation through TF01 / commit `034691e`; remaining sections TARGET; REMOTE / PRODUCTION NOT PROVEN |
+| `docs/app/architecture/white-label-control-plane.md` | focused separate-tenant-data-plane and minimum-control-plane boundary, subordinate to the primary target architecture | CURRENT PROVEN LOCAL foundation through TF02-C / commit `8480b8f`; remaining sections TARGET; REMOTE / PRODUCTION NOT PROVEN |
 | `docs/app/contracts/platform-control-plane.md` | minimum control-plane records, field classifications, routing, platform access, deployment state, audit and tenant-readiness contract | CURRENT PROVEN LOCAL implemented subset through TF01 / commit `034691e`; remaining domain TARGET/DEFERRED; REMOTE / PRODUCTION NOT PROVEN |
 | `docs/app/architecture/platform-control-plane-physical-foundation.md` | repository, project, local-targeting, schema/runtime, fixed data-plane parity and presentation-bootstrap boundary for the separate control plane | CURRENT PROVEN LOCAL foundation through TF01 / commit `034691e` plus TARGET remote/operations and LEGACY completed-plan snapshot; REMOTE PROVIDER / PRODUCTION NOT SELECTED |
 | `docs/app/decisions/architecture-and-environment-decisions.md` | historical/current architecture and environment strategy decisions | DECISION RECORD — BOUNDED INTERNAL FOUNDATION GO; EXCLUDED SCOPES NO-GO |
@@ -403,7 +463,7 @@ Signed-intake and promotion lifecycle:
 - Account and case remain separate roots: one safely resolved account may own
   multiple preserved cases, and every new signed intake creates exactly one new
   `app_cases` root rather than merging an existing case.
-- The single active post-signing customer status is `submitted_for_review`: finalized/locked and waiting for ENVAL internal review. Customer copy is `Ondertekend en ingediend` / `In behandeling`; it is not formal NEa inboekverificatie.
+- The single active post-signing customer status is `submitted_for_review`: finalized/locked and waiting for the resolved tenant's authorized internal review. Customer copy is `Ondertekend en ingediend` / `In behandeling`; it is not formal NEa inboekverificatie.
 - Signing OTP, safe reference and receipt grant no Auth, promotion or dashboard authority. Production legal/OTP/Auth, operations review, external verifier, remote apply/deploy and regulatory booking remain outside CURRENT PROVEN.
 
 Wave A1 qualification status:
@@ -448,7 +508,7 @@ When sources conflict, use this order:
 
 - ENVAL follows the official electricity TKV as its primary operational verification-architecture source and implements no competing proprietary verification framework.
 - Professional verifier work remains external: risk judgment, materiality judgment, official sample selection, official location control, issuance of the verification statement, official fraud reporting, and REV management of the verification result.
-- ENVAL may perform preparatory internal support checks selected manually, randomly, risk-based, or at verifier request. Those checks must be audit-worthy, historized, and may never replace official verification.
+- The resolved tenant's authorized workforce may perform preparatory internal checks selected manually, randomly, risk-based, or at verifier request. ENVAL Software may provide the managed workflow and explicitly authorized support, but does not thereby become the regulated reviewer, customer contract party or external verifier. Those checks must be audit-worthy, historized, and may never replace official verification.
 - Internal capabilities are built only in separately approved bounded work packages. External APIs and registers are researched in parallel and connected later through provider-independent ports and adapters.
 - External provider data is observed/external provenance, not automatic core truth.
 
@@ -463,6 +523,12 @@ Every execution batch must have one explicit bounded scope and must:
 - remove nothing without dependency, caller, data, migration, rollback, and audit evidence;
 - make database, Auth, RLS, UI, runtime, remote, or deployment changes only in their own explicitly approved batches; and
 - never commit, push, merge, or deploy without explicit permission.
+
+Verification follows `AGENTS.md` Tier A/B/C orchestration. A commit is not a
+release gate. Previously green expensive evidence remains reusable within one
+logical batch until its code/dependency/proof/schema/configuration risk cone
+changes. Architecture/docs reconciliation is required only for a material canon,
+ownership, boundary, dependency, security/Auth or CURRENT/TARGET status change.
 
 ## Removed Legacy Documentation Rule
 

@@ -1,6 +1,7 @@
 # Dashboard Dossier Lifecycle Architecture
 
-Status: source of truth for the next ENVAL phase.
+Status: CURRENT/TARGET Tenant Customer Portal lifecycle authority; not the
+current implementation-order tracker.
 
 Strategic status overlay (DECIDED/TARGET, 2026-09-01): this is the
 reference/default tenant customer and backoffice journey. Operational requests,
@@ -14,6 +15,12 @@ The platform is moving from signup intake to a tenant-operated customer
 dashboard and dossier lifecycle.
 
 The dashboard is the customer-facing post-signup surface. After signup, the customer should be able to see dossier status, requests, documents, communication, consents, and a readable timeline.
+
+This document owns the Tenant Customer Portal lifecycle only. Tenant Operator
+Console work queues/review, the ENVAL Control Console and future Verifier
+Workspace are separate surfaces and authorization boundaries. Customer support
+presentation resolves the tenant's approved support identity; it is not a
+general ENVAL platform-ticket channel.
 
 The old `dossier.html` wizard is source material only. It is not the target architecture for the new `/app` dashboard.
 
@@ -34,6 +41,11 @@ The old `dossier.html` wizard is source material only. It is not the target arch
   - accepted consents and terms
   - readable dossier timeline
   - later yearly kWh/value/result information
+
+The TARGET domain direction is party -> representation/authority ->
+connection/EAN -> location -> persistent charging asset(s) -> annual case/claim
+period -> mandate/evidence/kWh/review/verification state. A new calendar year
+creates period-specific truth, not a cloned permanent charger or connection.
 
 ## 3. Legacy Assets To Reuse Conceptually
 
@@ -168,6 +180,10 @@ Communication:
 - `support_messages`
 - `notification_events`
 - outbound email worker integration
+
+These future support records are tenant-local customer-service communication.
+They are not ENVAL platform-support tickets. Tenant platform-support requests
+require a separate workforce capability and control-plane workflow.
 
 Legal and commercial:
 

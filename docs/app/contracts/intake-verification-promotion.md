@@ -81,9 +81,9 @@ Historical changelog evidence is retained. Active target text must not reintrodu
 - evidence acceptance, MID conformity or booking readiness;
 - NEa inboekverificatie.
 
-### 4.2 ENVAL Internal Review
+### 4.2 Resolved-Tenant Internal Review
 
-ENVAL internal review is an operational assessment of a promoted signed case: completeness, evidence provenance, authority follow-up, declared EAN/location, MID and other bounded controls. It may create `action_needed`, rejection or readiness for a later process phase. It is never an external verification statement and may not use customer copy that implies verifier or NEa approval.
+Resolved-tenant internal review is an operational assessment by that tenant's authorized workforce of a promoted signed case: completeness, evidence provenance, authority follow-up, declared EAN/location, MID and other bounded controls. ENVAL Software may orchestrate the managed workflow or act through an explicit tenant-bound support capability, but is not the regulated reviewer by default. The review may create `action_needed`, rejection or readiness for a later process phase. It is never an external verification statement and may not use customer copy that implies verifier or NEa approval.
 
 ### 4.3 External Inboekverificatie
 

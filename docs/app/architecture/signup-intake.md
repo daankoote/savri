@@ -544,7 +544,7 @@ Future public intake should move toward:
 
 1. Customer completes public form, parser-assisted review, quarantine documents and legal/signing actions.
 2. `typed_name_otp_v1` proves signing intent and control of the used email channel and atomically finalizes the intake.
-3. The active status `submitted_for_review` means finalized/locked and awaiting internal ENVAL review; it has no external-verifier meaning.
+3. The active status `submitted_for_review` means finalized/locked and awaiting the resolved tenant's authorized internal review; it has no external-verifier meaning.
 4. A server-only caller prepares durable private file copies and invokes one idempotent promotion transaction.
 5. Promotion safely creates/reuses customer, identity and parties, creates one `app_cases` root, asserted case roles, declared location observations/links, durable evidence versions and internal-review state. Anonymous intake leaves the identity unbound; verified Auth provenance binds the compatible identity to the already proven Auth subject inside that same transaction.
 6. Promotion never creates an `app_customer_dossiers` core, authority truth, accepted EAN/location/MID/evidence or external-verifier state.

@@ -286,6 +286,14 @@ ambiguous, tenant-mismatched or environment-mismatched configuration fails
 closed. Canonical ENVAL defaults are allowed only through explicit
 server-owned standalone configuration, never as a global white-label fallback.
 
+Future safe extensions are limited to controlled display name, logo/asset
+reference, approved design-token/accent values, tenant customer-support identity,
+customer-facing contact details and approved e-mail display identity. Arbitrary
+tenant CSS, JavaScript, HTML and per-tenant frontend code are forbidden. The
+preferred future default routing namespace is an ENVAL-owned tenant subdomain
+such as `<tenant>.enval.nl`; custom enterprise domains require separately
+verified ownership and trusted-ingress controls and are not MVP scope.
+
 ### 3.10 Tenant Operational Configuration Boundary
 
 Status: CURRENT PROVEN LOCAL for the TF02-B runtime contract/static selector;
@@ -473,6 +481,18 @@ Detailed support and break-glass workflow is DEFERRED. Any later design must use
 a distinct, temporary `SupportElevation` authorization rather than widening
 platform membership. Its minimum conceptual fields are:
 
+Support request authority precedes but never creates elevation authority:
+
+- only a tenant-local principal with `platform_support.request` may open an
+  ENVAL platform-support request;
+- default friendly role composition may assign it to tenant owner/admin or an
+  explicitly designated support contact, but authorization evaluates the
+  capability rather than the role name;
+- general tenant workforce escalates internally and cannot open ENVAL tickets;
+- a request is not dossier access, customer access or a service-role grant; and
+- platform-health metadata is preferred before any tenant-data access is
+  considered.
+
 | field | boundary | classification |
 |---|---|---|
 | `support_elevation_id` | opaque immutable grant identity | `AUTHORITATIVE_PLATFORM_ACCESS` |
@@ -490,6 +510,9 @@ be enforced through tenant-local authorization, recorded in immutable platform
 audit and applicable tenant audit, and must not expose a service role or create
 customer access. Approval count, tenant participation, emergency policy,
 resource vocabulary, execution channel and retention remain DEFERRED.
+
+Break-glass, if ever approved, is a separate high-assurance mechanism and never
+a permanent universal ENVAL operator path across tenant data planes.
 
 An external physical support organization such as LabelUP is neither a
 platform principal category nor a tenant type. Each future support relationship

@@ -95,6 +95,11 @@ isolated in separate data planes.
 17. A standalone single-tenant deployment can resolve its fixed tenant and
     data plane from trusted deployment-local server configuration. Ordinary
     tenant-local workflows do not require live ENVAL control-plane access.
+18. Only a tenant principal with explicit `platform_support.request` may open a
+    platform-support request. Friendly role names are not authorization and
+    general tenant workforce escalates internally.
+19. Tenant presentation permits controlled values only; arbitrary CSS,
+    JavaScript, HTML and per-tenant frontend forks are prohibited.
 
 ## B. CURRENT Tenant #1 Data-Plane State
 
@@ -242,6 +247,28 @@ relationship. It does not automatically become tenant/operator, contracting
 entity, platform admin, customer identity, case role or representation
 authority.
 
+## D2. TARGET Product Surfaces And Presentation Namespace
+
+The one shared core has four separate TARGET surfaces:
+
+| surface | authorized users | boundary |
+|---|---|---|
+| ENVAL Control Console | authorized ENVAL platform personnel | onboarding/lifecycle, platform health, version/config visibility, incidents, platform audit, controlled support elevation and future usage/billing; never ordinary tenant operations |
+| Tenant Operator Console | one tenant's capability-authorized workforce | tenant-local cases, evidence/review, customer requests, corrections, annual workflows, finalization preparation, reporting and workforce administration |
+| Tenant Customer Portal | one tenant's end customers/authorized representatives | white-label intake, authority information, connections, locations/assets, evidence, signing, annual-period tasks/status and corrections |
+| Verifier Workspace | future separately authorized verifier actors | narrow evidence packs, samples/findings and verification exchange; never generic tenant-admin access; not built now |
+
+Presentation configuration may contain only controlled display name, logo/asset
+reference, approved token/accent values, tenant customer-support identity,
+customer-facing contacts and approved e-mail display identity. It may not carry
+arbitrary CSS, JavaScript, HTML, operator/legal authority or code forks.
+
+The preferred future default route is an ENVAL-owned tenant subdomain such as
+`<tenant>.enval.nl`, not a separate `enval-<tenant>.nl` registration. Enterprise
+custom domains remain TARGET and require verified ownership/CNAME, certificate
+and trusted-ingress controls. No domain or branding administration is authorized
+by this decision.
+
 ## E. Identity And Access Separation
 
 | concept | owning plane | responsibility | must not imply |
@@ -383,6 +410,13 @@ Platform administration covers control-plane tenants, routing, membership,
 deployment metadata and platform audit only. It grants zero implicit tenant
 dossier access.
 
+A tenant may initiate platform support only through a tenant-local principal
+holding exact capability `platform_support.request`. The default role
+composition may grant it to owner/admin or an explicitly designated support
+contact; it is not granted to general tenant workforce. The request itself
+grants no ENVAL tenant-data access. Ordinary tenant employees escalate inside
+their tenant, preserving the tenant as support boundary.
+
 Future support elevation must be a separate TARGET capability that is:
 
 - requested for one explicit tenant and purpose/reason reference;
@@ -431,6 +465,11 @@ pseudonymized matching signals and minimal workflow state. It must:
 
 Exact MID/EAN/year matching, normalization, false-positive handling, HMAC key
 ownership and rotation, legal basis and retention are DEFERRED / UNKNOWN.
+
+The direction is limited to a normalized identifier plus a purpose-specific
+keyed cryptographic transform (for example HMAC or an equivalent
+privacy-preserving index) and minimum collision metadata. This is not approval
+of a final protocol, central raw-identifier index or implementation.
 
 A fully disconnected/offline standalone deployment cannot receive
 platform-wide cross-tenant matching while disconnected. The core must surface

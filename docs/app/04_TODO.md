@@ -1,8 +1,10 @@
 # ENVAL App TODO
 
 Status: CURRENT app/MVP TODO — Wave A1, TF01, TF02-C and SL01-B current local
-proof reconciled through commit `8bfc56c` on 2026-09-01. Earlier bounded
-work-package records retain their own dated proof status.
+proof reconciled through commit `8bfc56c` on 2026-09-01. SL01-C is an active
+implementation candidate but remains PARTIAL pending deliberate browser/UI
+acceptance. Earlier bounded work-package records retain their own dated proof
+status.
 
 This queue is primarily for the new `/app`, `api-app-*`, and `app_*`
 implementation. Bounded legacy-caller cutover and white-label foundation status
@@ -11,6 +13,21 @@ legacy documentation and external historical copies do not drive new app
 implementation.
 
 ## Single Current NEXT
+
+- CURRENT ORDER — governance/architecture/test-policy reconciliation in this
+  GOV-UX00 batch, then `UX01` read-only frontend surface/journey audit.
+- After UX01, Daan + ChatGPT must agree the information architecture and exact
+  boundaries between ENVAL Control Console, Tenant Operator Console, Tenant
+  Customer Portal and future Verifier Workspace before design implementation.
+- Shared shells, components and tokens follow only after that decision. Browser/UI
+  work is grouped into coherent batches; SL01-C browser acceptance returns as
+  part of the appropriate UI/signing batch. SL01-D snapshot/finalize/replay
+  provenance cutover follows that acceptance boundary.
+- PARTIAL — `SL01-C`: the presentation-receipt, explicit-acceptance and
+  receipt-bound OTP implementation exists in the current candidate, but is not
+  CURRENT PROVEN until deliberate browser/UI acceptance is recorded. The
+  temporary finalize compatibility guard remains intentionally stricter until
+  SL01-D.
 
 - DONE / CURRENT PROVEN LOCAL — `TF01`: commit `034691e` propagates immutable
   server-resolved tenant execution context only after exact fixed data-plane
@@ -39,13 +56,9 @@ implementation.
   with service-role `SELECT` + `INSERT` only. Q01-Q28, Wave A1, TF02 and local
   SQL catalog gates pass with zero fixture residue. No real ENVAL tenant values
   were seeded and current signing imports none of this authority.
-- NEXT — **SL01-C — PRESENTATION RECEIPT + EXPLICIT ACCEPTANCE + OTP CHALLENGE
-  BINDING**: server-resolve the signing-material bundle, issue an immutable
-  presentation receipt, persist explicit acceptance before OTP, bind the
-  challenge to the exact receipt/config and make the browser consume that
-  server-resolved bundle. Snapshot v2, finalize/replay provenance cutover,
-  current hardcode removal, case/provider provenance, tenant #2 and admin UI
-  remain SL01-D or later unless technically inseparable.
+- `SL01-C — PRESENTATION RECEIPT + EXPLICIT ACCEPTANCE + OTP CHALLENGE
+  BINDING` remains PARTIAL as described above; do not relabel it CURRENT PROVEN
+  from automated evidence alone.
 - No further standalone horizontal tenant-config foundation is currently
   planned. Tenant #2, dynamic switching, provisioning, billing, custom domains,
   theme management and a tenant administration portal remain need-driven future
@@ -60,6 +73,9 @@ implementation.
   immutable implementation order.
 - A2/A3/A4 qualification and the earlier `Minimal internal Compliance Worklist
   UI` remain future separately approved work.
+- Do not start tenant #2, dynamic provisioning, billing implementation, custom
+  domains, custom-theme administration, Verifier Workspace or a cross-tenant
+  collision service in GOV-UX00/UX01.
 
 ## Managed-SaaS / White-Label Strategic Roadmap
 
@@ -742,7 +758,7 @@ customer confirmation, the green Integration gate or local database state.
 - NL/EN language structure.
 - Legacy documentation removal: DONE on 2026-07-19 after external copy by Daan.
 - Legacy function retirement plan after `/app` production replacement is proven.
-- Internal ENVAL review/admin tooling.
+- Resolved-tenant workforce review/admin tooling with capability-based authority.
 - Image OCR worker/internal analysis lane.
 
 ## Boundaries
@@ -1174,8 +1190,9 @@ CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF AND TWO LOCAL REAL PDF FIXTURES.
 - [x] Missing informational facts show no action and do not block; not-needed
       rows show neutral `Niet nodig` and stay outside `Wordt gebruikt`.
 - [x] UI-default `Nederland` creates no correction or confirmation. An explicit
-      complete manual address save preserves observations and remains marked
-      for ENVAL review.
+      complete manual address save preserves observations and retains the
+      CURRENT reference-brand review marker; UX01 must reconcile its copy with
+      resolved-tenant review ownership without changing fact authority.
 - [x] The existing signing summary includes confirmed applicable facts, bound
       safe document names and found informational facts without technical
       parser metadata.

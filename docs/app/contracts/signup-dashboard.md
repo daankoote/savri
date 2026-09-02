@@ -7,6 +7,10 @@ and component evidence remains unchanged. The former fixed ENVAL B.V.
 controller/contract-party and 90/10 fee direction is SUPERSEDED as a generic
 platform default. Legal identity, privacy roles, fee configuration and
 signing/legal bundle must resolve from the tenant's approved configuration.
+References below to `ENVAL-controle nodig` describe CURRENT reference-brand
+copy only; they do not assign reviewer authority to ENVAL Software. UX01 must
+reconcile that copy with resolved-tenant ownership without changing the
+underlying fact-state contract.
 
 This document defines the intended backend contract for the moment a customer clicks `Start dossier` in the new Vite `/aanmelden` flow. Current implementation status is tracked below; this document remains the contract source of truth, not an implementation file.
 
@@ -459,13 +463,13 @@ Triggers:
 
 - `draft`: backend draft exists but customer has not clicked final submit, if draft saving is implemented later.
 - `submitted`: customer clicked `Start dossier`, backend accepted payload, and initial dossier was created.
-- `under_review`: ENVAL starts reviewing the dossier.
-- `needs_customer_action`: ENVAL creates at least one customer request that blocks progress.
+- `under_review`: the resolved tenant's authorized workforce starts reviewing the dossier.
+- `needs_customer_action`: the resolved tenant's authorized workforce creates at least one customer request that blocks progress.
 
 Rules:
 
 - Submit should normally produce `submitted`.
-- `under_review` should reflect ENVAL action, not merely customer submit.
+- `under_review` should reflect authorized resolved-tenant action, not merely customer submit.
 - `needs_customer_action` should be request-driven.
 - Customer statuses should remain simpler than internal statuses.
 

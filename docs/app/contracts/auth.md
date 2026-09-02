@@ -24,7 +24,7 @@ Deferred:
 
 - Exact Supabase Auth UX: magic link only, email OTP, passwordless, or later password support.
 - Exact RLS policy design.
-- Admin/support auth and role management.
+- Resolved-tenant workforce auth/capabilities and the separate ENVAL Software platform-support authorization model.
 - Whether old users/dossiers get migrated, bridged, or kept legacy-only.
 - Whether dashboard draft saving exists before final submit.
 
@@ -279,14 +279,15 @@ Dashboard access must be computed from:
 
 Customer dashboard endpoints must never trust a client-supplied `customer_id`.
 
-### Support/Admin Boundary
+### Tenant Workforce / Platform Support Boundary
 
-Customer and ENVAL support/admin access are separate concerns.
+Customer, tenant-workforce and ENVAL Software platform-support access are separate concerns.
 
 - Customer dashboard: customer identity, customer-owned dossiers only.
-- Support/admin tooling: separate role model, likely separate internal route/app area.
-- Support/admin actions must produce internal audit events and, where relevant, customer-readable timeline events.
-- Do not expose internal ENVAL review controls in customer dashboard until role-based access is implemented.
+- Tenant-workforce tooling: separate role and capability model in the resolved tenant context, likely a separate internal route/app area.
+- ENVAL Software support: only an explicit tenant-bound support capability such as `platform_support.request`; no generic staff bypass or implicit tenant role.
+- Workforce and support actions must produce internal audit events and, where relevant, customer-readable timeline events.
+- Do not expose tenant-workforce review controls in the customer dashboard until role-based access is implemented.
 
 ## 4. New Backend Contract Boundary
 
@@ -301,9 +302,9 @@ All names below are conceptual. Do not create functions until contracts and sche
 | `api-app-document-upload-confirm` | Confirm uploaded file with server-side SHA-256 and create document version/file record. | Supabase Auth customer session and dossier access. | Required. | Required. | Customer-visible action. | Keep/adapt `api-dossier-upload-confirm` hash-confirm pattern. |
 | `api-app-document-download-url` | Resolve the current document server-side and issue a short-lived signed download URL. | Supabase Auth customer session and dossier access. | Not required for pure read. | No successful-read audit write. | Customer-visible action. | New app endpoint. Does not expose legacy sessions or storage internals. |
 | `api-app-document-withdraw-current` | Withdraw the current document before lock/finalization while preserving immutable evidence. | Supabase Auth customer session and dossier access. | Required. | Required. | Customer-visible action. | New app endpoint. No hard delete and no customer-supplied file/version/storage internals. |
-| `api-app-customer-request-create` | ENVAL creates a request for missing information, correction, document, consent, or kWh. | Internal/support/admin only. | Required. | Required. | Internal action; customer sees resulting request. | Adapt audit/mail queue pattern. |
+| `api-app-customer-request-create` | Resolved-tenant workforce creates a request for missing information, correction, document, consent, or kWh. | Authorized tenant workforce only. | Required. | Required. | Tenant-internal action; customer sees resulting request. | Adapt audit/mail queue pattern. |
 | `api-app-customer-request-respond` | Customer responds to a request with text, upload link, data correction, or kWh value. | Supabase Auth customer session and dossier access. | Required. | Required. | Customer-visible action. | Adapt session-scoped idempotency and status transition audit. |
-| `api-app-support-message-create` | Create a customer/support message in a support thread. | Customer session or support/admin role depending actor. | Required for sends. | Required. | Customer-visible thread; internal metadata hidden. | Adapt outbound email notification, not old raw mail body as source of truth. |
+| `api-app-support-message-create` | Create a customer/resolved-tenant workforce message in a tenant-local service thread; this is not an ENVAL platform-support ticket. | Customer session or authorized resolved-tenant workforce depending actor. | Required for sends. | Required. | Customer-visible thread; internal metadata hidden. | Adapt outbound email notification, not old raw mail body as source of truth. |
 | `api-app-kwh-submit` | Submit yearly kWh manually for a dossier/charger/period. | Supabase Auth customer session and dossier access. | Required. | Required. | Customer-visible action. | New contract; may reuse validation/audit discipline. |
 | `api-app-result-event-read` | Read customer-safe result/value realization status. | Supabase Auth customer session and dossier access. | Not required for read. | Reject audit required; read audit optional. | Customer-visible. | Adapt export/read model concepts. |
 | `api-app-fee-event-read` | Read customer-safe fee status and fee calculation summary. | Supabase Auth customer session and dossier access. | Not required for read. | Reject audit required; read audit optional. | Customer-visible. | New contract; must align with fee terms. |
@@ -331,14 +332,14 @@ Contract rules:
 | `document_slots` | Required/optional evidence slots before file exists. | Yes | High | Replace implicit old doc type rules. | Wrong requirements create support load. |
 | `document_files` | Uploaded file metadata and storage reference. | Yes, summarized | High | Adapt `dossier_documents`. | Storage leakage, file access scope. |
 | `document_versions` | Replacement/version history per slot. | Yes, summarized | High | Extend old one-doc model. | Confusing latest vs historic evidence. |
-| `customer_requests` | ENVAL asks customer for action/information. | Yes | High | New; adapt audit/mail pattern. | Email vs dashboard source of truth. |
+| `customer_requests` | Resolved tenant asks customer for action/information. | Yes | High | New; adapt audit/mail pattern. | Email vs dashboard source of truth. |
 | `request_responses` | Customer answers requests. | Yes | High | New. | Partial responses, duplicate submits. |
-| `support_threads` | Conversation container. | Yes | Medium | New; mail queue only not enough. | Support messages becoming legal record unintentionally. |
-| `support_messages` | Customer/support messages. | Yes | Medium | New. | Privacy and moderation. |
+| `support_threads` | Tenant-local customer-service conversation container; not platform support. | Yes | Medium | New; mail queue only not enough. | Support messages becoming legal record unintentionally. |
+| `support_messages` | Customer/resolved-tenant workforce messages. | Yes | Medium | New. | Privacy and moderation. |
 | `legal_text_versions` | Version/hash/language of legal and commercial text. | No, labels only | High | Replace fixed `v1.0` consent. | Legal copy drift. |
 | `consent_acceptances` | Accepted processing/control/mandate/no-guarantee consent records. | Yes, summarized | High | Replace `dossier_consents`. | Withdrawal/change handling. |
 | `fee_terms_acceptances` | Accepted tenant-bound fee terms/configuration version; historical 10% is not a platform default. | Yes | High | New. | Tenant fee trigger/base/tax/clawback ambiguity. |
-| `review_tasks` | Internal ENVAL review work. | No | High | Adapt `dossier_checks` concept. | Internal state leaking to customers. |
+| `review_tasks` | Resolved-tenant internal review work. | No | High | Adapt `dossier_checks` concept. | Internal state leaking to customers. |
 | `review_findings` | Evidence/review findings. | Sometimes summarized | High | Adapt analysis/check concepts. | Automated finding mistaken for decision. |
 | `kwh_periods` | Period/year requiring kWh input/readout. | Yes | High | New. | Wrong claim year. |
 | `kwh_readings` | Manual or provider-sourced kWh values. | Yes | High | New. | Source trust and corrections. |
@@ -457,7 +458,7 @@ Do not reject solely because:
 - backend supplier is empty
 - optional manual backend supplier is empty when no custom supplier is selected
 - selected files are not uploaded yet, unless final product decides files are mandatory at submit
-- PDOK was temporarily unavailable, if customer can still submit and ENVAL reviews address evidence later
+- PDOK was temporarily unavailable, if customer can still submit and the resolved tenant's authorized workforce reviews address evidence later
 
 Creates on successful submit:
 
@@ -591,7 +592,7 @@ Document lifecycle:
 4. server confirms file exists
 5. server computes SHA-256
 6. document file/version confirmed
-7. ENVAL review accepts, rejects, or asks for replacement
+7. resolved-tenant authorized review accepts, rejects, or asks for replacement
 8. customer download and withdrawal actions stay behind authenticated app endpoints
 
 `issued` is not the same as `confirmed`.

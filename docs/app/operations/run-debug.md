@@ -9,7 +9,50 @@ Status: CURRENT operational notes for app backend debugging.
 - Do not treat local proof as production proof.
 - Do not run remote deploy/apply unless explicitly requested.
 - Prefer terminal-first proof for non-visible backend, SQL, recovery, and inventory checks.
-- Use full browser checks only when the changed behavior is browser-visible or when a required platform fact has no safe terminal interface.
+- Apply the Tier A/B/C policy below; browser scope follows the changed
+  interaction/risk cone rather than visibility alone.
+
+## Test Orchestration
+
+- **Tier A — targeted:** default for each small step. Identify changed layers,
+  affected shared dependencies/callers and realistic regression risks, then run
+  the minimum relevant proof/static/type/browser/SQL check.
+- **Tier B — logical batch:** when one coherent signing, tenant-boundary,
+  correction or UI-flow batch completes, run only its relevant broader
+  regression, build, browser, security/SQL and integration gates.
+- **Tier C — full/release-grade:** only for release/deploy readiness, major
+  cross-cutting architecture milestones, explicit Daan/ChatGPT instruction or
+  lower-tier evidence of broader risk. A normal local commit is not Tier C.
+
+Within one logical batch, reuse green expensive evidence while its relevant
+code, shared dependencies, test/proof, schema/migration and configuration/
+environment are unchanged. Re-run when that risk cone changes. Cheap
+`git diff --check` and narrow formatting checks may run frequently.
+
+High-risk RLS, authorization, capabilities, tenant, signing/OTP/finalization,
+schema, immutable-history, corrections, parser-authority and platform-support
+changes justify heavier Tier A or earlier Tier B coverage, not unrelated suites.
+
+Do not repeat an identical failing command more than twice without a new
+hypothesis or changed condition. After bounded attempts report the exact
+failure, hypotheses, attempted changes, likely cause and next action before
+expanding scope.
+
+Every implementation report states:
+
+```text
+TEST_TIER_USED=<A|B|C>
+CHANGED_LAYERS=<list>
+REGRESSION_RISKS=<list>
+TARGETED_CHECKS_RUN=<list + result>
+PREVIOUS_GREEN_CHECKS_REUSED=<list>
+BROADER_CHECKS_NOT_RUN=<list + reason>
+TIER_B_REQUIRED_NOW=<YES|NO + reason>
+TIER_C_REQUIRED_NOW=<YES|NO + reason>
+```
+
+An intentionally excluded broader check is not a defect when the changed risk
+cone does not require it.
 
 ## First Checks
 
@@ -176,11 +219,19 @@ Before running any production dump, prove a recoverable encryption recipient fir
 
 ## Browsercheck Policy
 
-Browserchecks are required for visible frontend/UI changes, customer journey changes, browser Auth/session behavior, upload/download/customer-facing flows, console/network regressions, and dashboard-only platform settings when no safe terminal interface exists.
+Small visual/copy changes use targeted frontend/static checks and accumulate for
+responsive/browser proof at the coherent UI Tier B gate. Browser proof is used
+earlier when interaction, layout behavior, customer journey, Auth/session,
+upload/download, data flow, console/network behavior or a dashboard-only fact
+cannot be covered safely through a terminal interface.
 
 Browserchecks are not required for documentation-only batches, read-only schema inventory, SQL proposal review, shadow apply, collision proof, migration lint, remote function inventory, PostgREST functional request-path checks when authorized terminal evidence is available, backup manifests, restore dry-runs, or non-visible backend proposal batches.
 
 A dashboard-only fact requires at most a targeted manual confirmation. It does not require a full browser regression batch. The backup subscription decision is closed and should not be rechecked unless Daan explicitly changes the owner decision.
+
+Documentation/architecture reconciliation is triggered only by a material
+canon/invariant, ownership, dependency, security/Auth boundary or CURRENT/TARGET
+status change. Small implementation details do not create a docs gate.
 
 ## Idempotency
 

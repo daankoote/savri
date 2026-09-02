@@ -55,6 +55,14 @@ not change `.gitignore` for that reason.
 Daan commits only after requested validation passes. Codex leaves the worktree
 unstaged and reports the validation and diff evidence.
 
+A normal small local commit does not automatically require a full/release gate.
+Validation follows the active Tier A/B/C policy in `AGENTS.md` and
+`docs/app/operations/run-debug.md`: targeted checks for small steps, relevant
+broader checks at a logical batch boundary, and full gates only for release,
+major cross-cutting milestones, explicit instruction or evidence of broader
+risk. Valid green expensive checks are reused until their dependency/risk cone
+changes.
+
 Before commit:
 
 ```bash
