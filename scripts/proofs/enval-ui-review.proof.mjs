@@ -178,6 +178,65 @@ test("launcher creates a new ephemeral read-only Codex exec without bypasses", (
   assert.equal(MAX_REVIEW_FIX_CYCLES, 2);
 });
 
+test("real launch uses guarded readiness without generic curl", async () => {
+  const root = fixture();
+  const events = [];
+  const run = (command, args) => {
+    if (command === "node") {
+      events.push({ command, args });
+      return { status: 0, stdout: "LOCAL_READY=PASS\n", stderr: "" };
+    }
+    return fakeRun(command, args);
+  };
+  await startUiReview(requestArgs(), {
+    root,
+    run,
+    launch: async () => {
+      events.push({ command: "codex", args: ["exec"] });
+      return 0;
+    },
+  });
+  assert.deepEqual(events, [
+    {
+      command: "node",
+      args: [
+        "scripts/tools/enval-local-dev.mjs",
+        "--operation",
+        "ready",
+        "--vite-url",
+        "http://localhost:5175",
+      ],
+    },
+    { command: "codex", args: ["exec"] },
+  ]);
+});
+
+test("failed guarded local readiness stops before reviewer launch", async () => {
+  const root = fixture();
+  let launched = false;
+  const run = (command, args) => {
+    if (command === "node") {
+      return { status: 1, stdout: "", stderr: "LOCAL_READY=FAIL\n" };
+    }
+    return fakeRun(command, args);
+  };
+  await assert.rejects(
+    () =>
+      startUiReview(requestArgs(), {
+        root,
+        run,
+        launch: async () => {
+          launched = true;
+          return 0;
+        },
+      }),
+    (error) =>
+      error instanceof UiReviewLaunchError &&
+      error.code === "local_review_readiness_failed",
+  );
+  assert.equal(launched, false);
+});
+
 test("current capability contract requires browser, computer, screenshot and CUA", () => {
   const capability = inspectCliVisualReviewCapability(fixture(), fakeRun);
   assert.deepEqual(capability, {

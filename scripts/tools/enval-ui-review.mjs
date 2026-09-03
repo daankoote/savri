@@ -15,6 +15,7 @@ export const ENVAL_REVIEW_ADAPTER = ".agents/skills/enval-ui-review/SKILL.md";
 export const MAX_REVIEW_FIX_CYCLES = 2;
 
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1"]);
+const LOCAL_READINESS_TOOL = "scripts/tools/enval-local-dev.mjs";
 const TEXT_VALUE_PATTERN = /^[^\r\n]{1,240}$/;
 
 export class UiReviewLaunchError extends Error {
@@ -219,6 +220,29 @@ export function inspectCliVisualReviewCapability(
   });
 }
 
+function inspectLocalReviewReadiness(
+  baseUrl,
+  root = ENVAL_ROOT,
+  run = defaultRun,
+) {
+  const output = checkedRun(
+    run,
+    "node",
+    [
+      LOCAL_READINESS_TOOL,
+      "--operation",
+      "ready",
+      "--vite-url",
+      baseUrl,
+    ],
+    root,
+    "local_review_readiness_failed",
+  );
+  if (!/^LOCAL_READY=PASS$/m.test(output)) {
+    fail("local_review_readiness_invalid");
+  }
+}
+
 export function launchCodexCli({ args, cwd }) {
   return new Promise((resolveLaunch, rejectLaunch) => {
     const child = spawn("codex", args, { cwd, stdio: "inherit", shell: false });
@@ -256,6 +280,7 @@ export async function startUiReview(argv, options = {}) {
       exitCode: null,
     });
   }
+  inspectLocalReviewReadiness(request.baseUrl, root, options.run);
   const launch = options.launch ?? launchCodexCli;
   const exitCode = await launch(launchRequest);
   if (exitCode !== 0) fail(`codex_cli_exit:${exitCode}`);
