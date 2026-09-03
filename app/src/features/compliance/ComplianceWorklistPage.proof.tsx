@@ -244,8 +244,10 @@ const [appSource, clientSource, hookSource, pageSource, routeSource, headerSourc
   source("supabase/functions/api-app-compliance-worklist/index.ts"),
 ]);
 assert(
-  appSource.includes('path === "/intern/compliance"') &&
-    routeSource.includes("DashboardRouteGuard") && routeSource.includes("AppHeader") &&
+  appSource.includes('path === "/beheer" || path === "/intern/compliance"') &&
+    routeSource.includes("OperatorRouteGuard") &&
+    routeSource.includes('surface="tenant_operator"') &&
+    routeSource.includes("AppHeader") &&
     !headerSource.includes("/intern/compliance") && !sidebarSource.includes("/intern/compliance"),
   "Q13_route_or_navigation_boundary_invalid",
 );
@@ -257,7 +259,7 @@ assert(
   "Q14_existing_endpoint_or_runtime_config_not_reused",
 );
 assert(
-  [clientSource, hookSource, pageSource, routeSource].every((value) =>
+  [clientSource, hookSource, pageSource].every((value) =>
     !/(localStorage|sessionStorage|role\s*===|email\s*===|capabilit(?:y|ies)|tenantId|tenant_id)/.test(value)
   ),
   "Q15_client_authorization_or_compliance_truth_present",

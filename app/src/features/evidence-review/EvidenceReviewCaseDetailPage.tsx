@@ -191,7 +191,7 @@ function BackToWorklist({ onBack }: { onBack: () => void }) {
   return (
     <a
       className="button button-secondary button-compact"
-      href="/intern/dossiers"
+      href="/beheer/dossiers"
       onClick={(event) => {
         event.preventDefault();
         onBack();

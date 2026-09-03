@@ -10,11 +10,12 @@ import {
 } from "./authClient";
 import { bootstrapAppCustomerAuth } from "./authBootstrapClient";
 import { isTerminalBootstrapBindingError, safeAuthError } from "./authErrorMapping";
-import type { AuthActionResult, AuthBootstrapSummary, AuthContextValue, AuthSafeError, AuthStatus } from "./authTypes";
+import type { AuthActionResult, AuthAudience, AuthBootstrapSummary, AuthContextValue, AuthSafeError, AuthStatus } from "./authTypes";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 type BootstrapAttempt = {
+  audience: AuthAudience;
   idempotencyKey: string;
   promise: Promise<AuthActionResult>;
   userId: string;
@@ -32,11 +33,14 @@ function createIdempotencyKey(): string {
   return `auth-bootstrap-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-function readyResult(summary: AuthBootstrapSummary): AuthActionResult {
+function readyResult(summary: AuthBootstrapSummary | null): AuthActionResult {
   return { ok: true, status: "ready", summary };
 }
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({
+  audience = "customer",
+  children,
+}: Readonly<{ audience?: AuthAudience; children: ReactNode }>) {
   const [status, setStatus] = useState<AuthStatus>("initializing");
   const [session, setSession] = useState<Session | null>(null);
   const [summary, setSummary] = useState<AuthBootstrapSummary | null>(null);
@@ -76,12 +80,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { ok: false, error: nextError };
     }
 
-    if (readyUserIdRef.current === userId && summaryRef.current) {
+    if (
+      readyUserIdRef.current === userId &&
+      (audience === "operator" || summaryRef.current)
+    ) {
       setStatus("ready");
-      return readyResult(summaryRef.current);
+      return readyResult(audience === "operator" ? null : summaryRef.current);
     }
 
-    if (bootstrapAttemptRef.current?.userId === userId) {
+    if (
+      bootstrapAttemptRef.current?.userId === userId &&
+      bootstrapAttemptRef.current.audience === audience
+    ) {
       return bootstrapAttemptRef.current.promise;
     }
 
@@ -90,6 +100,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSummary(null);
       setError(null);
       readyUserIdRef.current = null;
+    }
+
+    if (audience === "operator") {
+      bootstrapAttemptRef.current = null;
+      readyUserIdRef.current = userId;
+      summaryRef.current = null;
+      setSummary(null);
+      setStatus("ready");
+      return readyResult(null);
     }
 
     setStatus("authenticated_unbound");
@@ -125,9 +144,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return readyResult(result.summary);
     });
 
-    bootstrapAttemptRef.current = { idempotencyKey, promise, userId };
+    bootstrapAttemptRef.current = {
+      audience,
+      idempotencyKey,
+      promise,
+      userId,
+    };
     return promise;
-  }, []);
+  }, [audience]);
 
   useEffect(() => {
     let active = true;
@@ -219,6 +243,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [clearBoundState]);
 
   const value = useMemo<AuthContextValue>(() => ({
+    audience,
     error,
     retryBootstrap,
     session,
@@ -227,7 +252,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signUpWithPassword,
     status,
     summary,
-  }), [error, retryBootstrap, session, signInWithPassword, signOut, signUpWithPassword, status, summary]);
+  }), [audience, error, retryBootstrap, session, signInWithPassword, signOut, signUpWithPassword, status, summary]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

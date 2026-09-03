@@ -205,7 +205,7 @@ function detailHtml(
 
 const detailRoute = buildEvidenceReviewDetailRoute(CASE_REF);
 assert(
-  detailRoute === `/intern/dossiers/${CASE_REF}` &&
+  detailRoute === `/beheer/dossiers/${CASE_REF}` &&
     parseEvidenceReviewDetailRoute(detailRoute) === CASE_REF,
   "Q01_valid_detail_route_rejected",
 );
@@ -1191,7 +1191,7 @@ const [
   source("app/src/App.tsx"),
   source("app/src/features/evidence-review/evidenceReviewRoutes.ts"),
   source("app/src/features/auth/postLoginNavigation.ts"),
-  source("app/src/features/auth/DashboardRouteGuard.tsx"),
+  source("app/src/features/operator/OperatorRouteGuard.tsx"),
   source("app/src/features/evidence-review/EvidenceReviewWorklistPage.tsx"),
   source("app/src/features/evidence-review/evidenceReviewDetailClient.ts"),
   source("app/src/features/evidence-review/useEvidenceReviewCaseDetail.ts"),
@@ -1215,7 +1215,8 @@ assert(
   appSource.includes("parseEvidenceReviewDetailRoute(path)") &&
     appSource.includes("EvidenceReviewCaseDetailPage") &&
     routeSource.includes("DETAIL_ROUTE_RE") &&
-    pageSource.includes("DashboardRouteGuard") &&
+    pageSource.includes("OperatorRouteGuard") &&
+    pageSource.includes('surface="tenant_operator"') &&
     pageSource.includes("returnTo={currentPath}") &&
     guardSource.includes("buildInternalLoginRoute(returnTo)") &&
     navigationSource.includes("parseEvidenceReviewDetailRoute(value)"),
@@ -1331,7 +1332,7 @@ assert(
     !detailClientSource.includes("storagePath") &&
     !detailClientSource.includes("storage_path") &&
     !detailClientSource.includes("bucket") &&
-    detailSource.includes('href="/intern/dossiers"') &&
+    detailSource.includes('href="/beheer/dossiers"') &&
     Object.keys(EVIDENCE_REVIEW_REASON_LABELS).length === 6 &&
     EVIDENCE_REVIEW_REASON_LABELS.GENERIC_REVIEW_REQUIRED ===
       "Historisch niet vastgelegd",

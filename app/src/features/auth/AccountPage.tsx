@@ -31,7 +31,9 @@ function safeErrorText(error: AuthSafeError | null) {
 export function AccountPageContent({ navigate }: AccountPageContentProps) {
   const auth = useAuth();
   const [mode, setMode] = useState<AuthMode>(() =>
-    window.location.hash === "#activeren" ? "activate" : "signin"
+    auth.audience === "customer" && window.location.hash === "#activeren"
+      ? "activate"
+      : "signin"
   );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -59,7 +61,7 @@ export function AccountPageContent({ navigate }: AccountPageContentProps) {
     setSubmitting(true);
 
     const result =
-      mode === "activate"
+      auth.audience === "customer" && mode === "activate"
         ? await auth.signUpWithPassword(email, password, passwordConfirmation)
         : await auth.signInWithPassword(email, password);
 
@@ -92,8 +94,8 @@ export function AccountPageContent({ navigate }: AccountPageContentProps) {
         <section className="section">
           <div className="container">
             <div className="review-panel" role="status" aria-live="polite">
-              <h3>Klantportaal openen</h3>
-              <p>We openen uw dashboard.</p>
+              <h3>{auth.audience === "operator" ? "Beheer" : "Klantportaal openen"}</h3>
+              <p>{auth.audience === "operator" ? "Even geduld." : "We openen uw dashboard."}</p>
             </div>
           </div>
         </section>
@@ -106,13 +108,14 @@ export function AccountPageContent({ navigate }: AccountPageContentProps) {
       <section className="section">
         <div className="container account-layout">
           <div className="page-intro">
-            <p className="eyebrow">Klantportaal</p>
+            <p className="eyebrow">{auth.audience === "operator" ? "Beheer" : "Klantportaal"}</p>
             <h1>{copy.action}</h1>
             <p>{copy.helper}</p>
           </div>
 
           <section className="signup-section account-card" aria-label={copy.action}>
-            <div className="mode-tabs" aria-label="Account modus">
+            {auth.audience === "customer" ? (
+              <div className="mode-tabs" aria-label="Account modus">
               <button
                 className={mode === "signin" ? "mode-tab mode-tab-active" : "mode-tab"}
                 onClick={() => {
@@ -133,7 +136,8 @@ export function AccountPageContent({ navigate }: AccountPageContentProps) {
               >
                 Account aanmaken
               </button>
-            </div>
+              </div>
+            ) : null}
 
             <form className="account-form" onSubmit={handleSubmit}>
               <label className="field">
@@ -160,7 +164,7 @@ export function AccountPageContent({ navigate }: AccountPageContentProps) {
                 />
               </label>
 
-              {mode === "activate" ? (
+              {auth.audience === "customer" && mode === "activate" ? (
                 <label className="field">
                   <span>Wachtwoord herhalen</span>
                   <input

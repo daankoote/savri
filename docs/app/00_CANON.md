@@ -104,6 +104,30 @@ it into MVP. Operator dossier detail is limited to `Samenvatting`, `Gegevens`,
 `Documenten`, `kWh`, `Controle`, `Vragen`, and `Historie`; `Gegevens` composes the
 domain facts and is not permission to add further tabs.
 
+UI-01B is `CURRENT PROVEN — LOCAL ONLY` for the bounded Tenant Operator entry.
+The canonical local `/beheer` route uses a server-bound `tenant_operator`
+context: unauthenticated access enters the operator login flow with the safe
+return route, an authenticated principal without an active workforce identity
+receives the normal `Geen toegang` state, and authorized tenant workforce is
+admitted. Tenant and effective capabilities are server-derived by reusing the
+existing compliance and evidence-review application boundaries;
+`app_workforce_authorize_v1` remains private. The current active operator
+navigation is exactly `Overzicht` and `Dossiers`; `Klanten`, `Organisatie`,
+tenant workforce administration, ENVAL Control Console and Verifier Console
+remain TARGET/unimplemented. `/intern/compliance` and `/intern/dossiers` are
+temporarily retained compatibility paths under the same operator authority;
+their later redirect/removal is separately bounded. Ordinary workforce gains
+no implicit `platform_support.request`. The shared operator shell renders the
+exact attribution `Powered by ENVAL` once.
+
+The local status is backed by focused operator-context Q01-Q14, unchanged
+compliance/evidence authorization regressions, served allow/deny evidence,
+human browser acceptance including refresh before disposable-fixture cleanup,
+and cleanup with zero synthetic rows and unchanged real pilot. It proves no
+remote or production deployment, tenant #2, multi-tenant switching, complete
+operator console, general workforce platform support, ENVAL Control Console or
+Verifier Console.
+
 Auth principal, tenant, workforce membership, customer party, representation
 authority and case authority remain distinct. Tenant workforce authorization is
 capability-based; friendly role names may compose capabilities but never become
@@ -295,7 +319,7 @@ Supporting documents have one responsibility each and do not compete with the pr
 | `docs/app/06A_NEA_REGULATORY_COMPLETENESS_AUDIT.md` | official source coverage and source blockers | PROOF ONLY |
 | `docs/app/06B_CURRENT_IMPLEMENTATION_ASSESSMENT.md` | current code/database/function/proof assessment | PROOF ONLY |
 | `docs/app/architecture/database-target-model.md` | technical data entities, relations, history, constraints, RLS intent, object dispositions | DRAFT — AWAITING DAAN APPROVAL; APPENDIX, NOT PRIMARY ARCHITECTURE |
-| `docs/app/architecture/white-label-control-plane.md` | focused separate-tenant-data-plane and minimum-control-plane boundary, subordinate to the primary target architecture | CURRENT PROVEN LOCAL foundation through TF02-C / commit `8480b8f`; remaining sections TARGET; REMOTE / PRODUCTION NOT PROVEN |
+| `docs/app/architecture/white-label-control-plane.md` | focused separate-tenant-data-plane, minimum-control-plane and bounded operator-entry boundary, subordinate to the primary target architecture | CURRENT PROVEN LOCAL bounded foundations through TF02-C / commit `8480b8f` and UI-01B; remaining sections TARGET; REMOTE / PRODUCTION NOT PROVEN |
 | `docs/app/contracts/platform-control-plane.md` | minimum control-plane records, field classifications, routing, platform access, deployment state, audit and tenant-readiness contract | CURRENT PROVEN LOCAL implemented subset through TF01 / commit `034691e`; remaining domain TARGET/DEFERRED; REMOTE / PRODUCTION NOT PROVEN |
 | `docs/app/architecture/platform-control-plane-physical-foundation.md` | repository, project, local-targeting, schema/runtime, fixed data-plane parity and presentation-bootstrap boundary for the separate control plane | CURRENT PROVEN LOCAL foundation through TF01 / commit `034691e` plus TARGET remote/operations and LEGACY completed-plan snapshot; REMOTE PROVIDER / PRODUCTION NOT SELECTED |
 | `docs/app/decisions/architecture-and-environment-decisions.md` | historical/current architecture and environment strategy decisions | DECISION RECORD — BOUNDED INTERNAL FOUNDATION GO; EXCLUDED SCOPES NO-GO |

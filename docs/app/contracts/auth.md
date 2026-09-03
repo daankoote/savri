@@ -2,7 +2,10 @@
 
 Status: architecture source of truth for `/app` backend auth and endpoint boundaries. Some foundation pieces are implemented and locally proven; open items remain marked explicitly.
 
-Scope: `/app` signup submit, document upload, and customer dashboard backend boundaries. This document does not itself implement endpoints, schema, migrations, auth, Supabase changes, or production wiring.
+Scope: `/app` signup submit, document upload, customer dashboard and bounded
+Tenant Operator authorization boundaries. This document does not itself
+implement endpoints, schema, migrations, auth, Supabase changes, or production
+wiring.
 
 ## 1. Executive Decision
 
@@ -24,7 +27,8 @@ Deferred:
 
 - Exact Supabase Auth UX: magic link only, email OTP, passwordless, or later password support.
 - Exact RLS policy design.
-- Resolved-tenant workforce auth/capabilities and the separate ENVAL Software platform-support authorization model.
+- Tenant workforce administration and the separate ENVAL Software
+  platform-support authorization workflow beyond the bounded UI-01B read entry.
 - Whether old users/dossiers get migrated, bridged, or kept legacy-only.
 - Whether dashboard draft saving exists before final submit.
 
@@ -281,13 +285,34 @@ Customer dashboard endpoints must never trust a client-supplied `customer_id`.
 
 ### Tenant Workforce / Platform Support Boundary
 
+Status: UI-01B CURRENT PROVEN — LOCAL ONLY for the bounded Tenant Operator
+entry; workforce administration and platform-support workflow remain TARGET.
+
 Customer, tenant-workforce and ENVAL Software platform-support access are separate concerns.
 
 - Customer dashboard: customer identity, customer-owned dossiers only.
-- Tenant-workforce tooling: separate role and capability model in the resolved tenant context, likely a separate internal route/app area.
+- Tenant-workforce tooling: `/beheer` uses a separate server-bound
+  `tenant_operator` context. `api-app-operator-context` verifies Auth, derives
+  tenant context from trusted server request metadata, and derives effective
+  capabilities by reusing the existing
+  `app_compliance_worklist_source_events_read_v1` and
+  `app_evidence_review_worklist_source_read_v4` application boundaries.
+  `app_workforce_authorize_v1` remains private; the browser supplies neither
+  tenant nor capability authority.
+- Unauthenticated `/beheer` access enters the operator login flow with the safe
+  return route. Authenticated principals without an active workforce identity
+  receive the normal `Geen toegang` state; authorized active workforce is
+  admitted. Current operator navigation is exactly `Overzicht` and `Dossiers`.
+- `/intern/compliance` and `/intern/dossiers` remain temporary compatibility
+  paths using the same operator context and authority. Later removal/redirect
+  cleanup requires a separate bounded task.
 - ENVAL Software support: only an explicit tenant-bound support capability such as `platform_support.request`; no generic staff bypass or implicit tenant role.
 - Workforce and support actions must produce internal audit events and, where relevant, customer-readable timeline events.
 - Do not expose tenant-workforce review controls in the customer dashboard until role-based access is implemented.
+
+UI-01B does not implement `Klanten`, `Organisatie`, tenant workforce
+administration, ENVAL Control Console, Verifier Console, tenant #2,
+multi-tenant switching, remote deployment or production proof.
 
 ## 4. New Backend Contract Boundary
 
@@ -298,6 +323,7 @@ All names below are conceptual. Do not create functions until contracts and sche
 | `api-app-signup-submit` | Accept normalized `/aanmelden` payload and create/match pre-auth customer, identity, dossier, locations, chargers, document slots, and legal/fee acceptance. | Public pre-auth with abuse controls; creates pre-auth app customer/identity/dossier state. It does not create Auth users or Auth sessions. | Required. | Required for rejects and writes; pre-dossier rejects go to intake audit. | Customer-facing submit. | Adapt `api-lead-submit` idempotency, audit, mail queue; replace old payload and `/dossier.html` link. |
 | `api-app-auth-bootstrap` | Authenticated CORE endpoint that validates a verified Supabase Auth user, derives verified email server-side, binds an existing pre-auth app identity, and returns accessible customer dossier summaries. It does not create customers, dossiers, or Auth sessions. | Supabase Auth customer session plus service-role RPC binding. | Required. | Required. | Customer-visible account activation/bootstrap. | New app endpoint. Does not reuse legacy dossier sessions. |
 | `api-app-dashboard-get` | CURRENT / LOCAL PROOF. Pure authenticated read endpoint for customer-safe dossier summaries, selected dossier, locations, chargers, document slots/current document state, and legal acceptance summaries. | Supabase Auth customer session through `requireAppCustomer` and `requireAppDossierAccess`. | Not required for pure read. | No successful-read audit write; scoped rejects may use safe fail-open audit. | Customer-visible. | New app endpoint. Does not use legacy dossier sessions or legacy read endpoints. |
+| `api-app-operator-context` | UI-01B CURRENT PROVEN — LOCAL ONLY. Read-only safe Tenant Operator context with server-derived tenant reference and effective compliance/evidence capabilities. | Verified Supabase Auth plus existing database-authoritative workforce application boundaries; no browser-selected tenant or capability. | Not required for pure read. | Reused application boundaries retain their current audit behavior; the context endpoint adds no write. | Tenant-workforce-safe projection only. | Reuses existing compliance/evidence boundaries; does not call private `app_workforce_authorize_v1` directly. |
 | `api-app-document-upload-url` | Issue signed upload URL for a document slot/request response. | Supabase Auth customer session and dossier access. | Required. | Required. | Customer-visible action. | Adapt `api-dossier-upload-url`; replace old doc type rules. |
 | `api-app-document-upload-confirm` | Confirm uploaded file with server-side SHA-256 and create document version/file record. | Supabase Auth customer session and dossier access. | Required. | Required. | Customer-visible action. | Keep/adapt `api-dossier-upload-confirm` hash-confirm pattern. |
 | `api-app-document-download-url` | Resolve the current document server-side and issue a short-lived signed download URL. | Supabase Auth customer session and dossier access. | Not required for pure read. | No successful-read audit write. | Customer-visible action. | New app endpoint. Does not expose legacy sessions or storage internals. |

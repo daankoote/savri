@@ -1,6 +1,7 @@
 import type { Session } from "@supabase/supabase-js";
 
 export type AuthMode = "activate" | "signin";
+export type AuthAudience = "customer" | "operator";
 
 export type AuthStatus =
   | "initializing"
@@ -48,11 +49,12 @@ export type AuthSafeError = {
 };
 
 export type AuthActionResult =
-  | { ok: true; status: "ready"; summary: AuthBootstrapSummary }
+  | { ok: true; status: "ready"; summary: AuthBootstrapSummary | null }
   | { ok: true; status: "verification_required"; message: string }
   | { ok: false; error: AuthSafeError };
 
 export type AuthContextValue = {
+  audience: AuthAudience;
   status: AuthStatus;
   session: Session | null;
   summary: AuthBootstrapSummary | null;

@@ -148,6 +148,10 @@ Tenant Operator Console MVP navigation is exactly:
 - `Klanten`
 - `Organisatie`
 
+UI-01B proves only the current local operator subset: `Overzicht` and
+`Dossiers`. `Klanten` and `Organisatie` remain TARGET/unimplemented, as do the
+ENVAL Control Console and Verifier Console.
+
 `Overzicht` is action-first and groups `Te beoordelen`, `Wacht op klant`,
 `Geblokkeerd`, `Klaar voor volgende stap`, and `Afgerond`. `Rapportage` is later
 unless a concrete requirement moves it into MVP. Candidate dossier detail is
@@ -159,8 +163,9 @@ tabs.
 The ENVAL Control IA is tenant/configuration/platform-health/support/audit
 metadata-first. It is never a universal tenant-data console.
 
-Relevant dashboard shells will later render one reusable exact attribution:
-`Powered by ENVAL`. It is platform attribution only and must not imply legal,
+The CURRENT local operator shell renders one reusable exact attribution:
+`Powered by ENVAL`. Other relevant dashboard shells may adopt the same shared
+attribution later. It is platform attribution only and must not imply legal,
 operator, controller, contracting-party, or verifier responsibility.
 
 ## Routes And Pages
@@ -178,6 +183,9 @@ Current routes:
 - `/privacy`
 - `/voorwaarden`
 - `/dashboard`
+- `/beheer`
+- `/beheer/dossiers`
+- `/beheer/dossiers/:caseRef`
 - `/intern/compliance`
 - `/intern/dossiers`
 - `/intern/dossiers/:caseRef`
@@ -185,9 +193,15 @@ Current routes:
 Rules:
 
 - Use the internal route map and History API for now.
-- The `/intern/*` routes are CURRENT transitional workforce routes. They do not
-  establish the TARGET operator shell or canonical route; future operator UI
-  belongs under `<tenant>.enval.nl/beheer`.
+- `/beheer` is the CURRENT PROVEN LOCAL canonical Tenant Operator entry and
+  `/beheer/dossiers` uses the existing evidence-review worklist/detail flow.
+- `/intern/compliance` and `/intern/dossiers` are CURRENT temporary
+  compatibility paths using the same server-authorized operator surface and
+  authority. Their later redirect/removal cleanup is separately bounded.
+- The operator route guard sends unauthenticated access through the operator
+  login flow, denies authenticated non-workforce with the normal `Geen toegang`
+  state, and admits only a server-derived active workforce context. Tenant and
+  effective capabilities are not selected by the browser.
 - Do not add React Router unless route complexity later justifies it.
 - Home stays the commercial landing page.
 - `Aanmerking` is currently a home section at `/#aanmerking`, not a separate page.

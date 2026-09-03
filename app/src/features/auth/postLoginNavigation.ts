@@ -5,6 +5,8 @@ export const INTERNAL_LOGIN_ROUTE = "/inloggen";
 export const POST_LOGIN_RETURN_QUERY_KEY = "returnTo";
 
 const SAFE_INTERNAL_RETURN_ROUTES = new Set([
+  "/beheer",
+  "/beheer/dossiers",
   "/intern/compliance",
   "/intern/dossiers",
 ]);

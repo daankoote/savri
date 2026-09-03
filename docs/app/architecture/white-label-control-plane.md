@@ -1,7 +1,8 @@
 # White-Label And Control-Plane Architecture
 
-Status: CURRENT PROVEN LOCAL foundation through TF02-C / commit `8480b8f`;
-remaining architecture TARGET; REMOTE / PRODUCTION NOT PROVEN
+Status: CURRENT PROVEN LOCAL bounded foundations through TF02-C / commit
+`8480b8f` and UI-01B; remaining architecture TARGET; REMOTE / PRODUCTION NOT
+PROVEN
 
 Strategic status overlay: DECIDED/TARGET on 2026-09-01. ENVAL is the generic
 software/IP platform; every regulated operator is a separately resolved
@@ -17,6 +18,16 @@ local control-plane presentation configuration, safe server-issued
 presentation bootstrap and React provider consumption. Tenant #1 core rows and
 client target remain unchanged; `DYNAMIC_DATA_PLANE_SWITCHING=NO`. Remote and
 production presence remain separate and unproven.
+
+UI-01B additionally proves the bounded local canonical `/beheer` Tenant
+Operator entry. It derives the `tenant_operator` context, tenant and effective
+capabilities server-side through existing compliance and evidence-review
+application boundaries; denies unauthenticated and non-workforce access; keeps
+`/intern/compliance` and `/intern/dossiers` only as compatibility paths under
+the same authority; and grants no implicit `platform_support.request`.
+Current operator navigation is exactly `Overzicht` and `Dossiers`, with shared
+`Powered by ENVAL` attribution. Broader operator administration, `Klanten`,
+`Organisatie`, ENVAL Control Console and Verifier Console remain TARGET.
 
 TF02-B additionally proves the strict versioned tenant-configuration
 manifest/revision-reference contract and safe static selection authority. It
@@ -583,6 +594,9 @@ through TF02-C. CURRENT PROVEN LOCAL now includes:
   runtime export proof green and no current consumer; and
 - the TF02-C two-table tenant-data-plane metadata persistence and TF01-bound,
   two-query database reader, with Q01-Q36 and regressions green.
+- the UI-01B server-authorized local `/beheer` Tenant Operator entry, current
+  `Overzicht` and `Dossiers` navigation, unified `/intern/*` compatibility
+  authority and shared `Powered by ENVAL` attribution.
 
 Still TARGET/DEFERRED or UNKNOWN:
 
@@ -648,6 +662,7 @@ Current local implementation evidence is intentionally concise:
 | CURRENT app gate, fixed execution parity and context propagation | `app_tenant_resolution_shadow.ts`, shared app foundation/workforce authorization | `app-tenant-resolution-shadow.proof.ts`, `api-app-ops-location-callers.proof.ts` | CURRENT PROVEN LOCAL at `034691e`; point-in-time 33/33, 0 manual duplicate, 0 ungated |
 | presentation sources/config | `platform/runtime/presentation/`, control-plane presentation migration | `presentation-brand-config.proof.ts`, `presentation-brand-sources.proof.ts` | CURRENT PROVEN LOCAL; no brand administration |
 | public bootstrap/provider | `app_presentation_bootstrap.ts`, `api-app-presentation-bootstrap/`, `app/src/shared/presentation/` | `PresentationBrandRuntime.proof.tsx`, `PresentationBrandProvider.proof.tsx` | CURRENT PROVEN LOCAL; no remote/browser acceptance claim |
+| Tenant Operator entry | `api-app-operator-context`, `OperatorRouteGuard`, shared surface shell and existing compliance/evidence pages | `app-operator-context.proof.ts`, route/auth/presentation proofs and human browser acceptance | CURRENT PROVEN LOCAL; no tenant #2, administration, remote or production claim |
 
 ## Deferred Decisions And Next Gate
 

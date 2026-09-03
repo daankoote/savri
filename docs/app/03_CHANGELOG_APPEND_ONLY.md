@@ -1872,3 +1872,31 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   REV integration or regulatory approval.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-09-03 — Close UI-01B secure Tenant Operator entry
+
+- UI-01B is CURRENT PROVEN LOCAL for the bounded canonical `/beheer` Tenant
+  Operator entry. Unauthenticated access enters the operator login flow with a
+  safe return route, authenticated non-workforce receives the normal
+  `Geen toegang` state, and authorized active workforce is admitted.
+- `api-app-operator-context` derives tenant and effective capabilities
+  server-side by reusing the existing compliance and evidence-review
+  application boundaries. `app_workforce_authorize_v1` remains private and
+  ordinary workforce gains no implicit `platform_support.request`.
+- Current operator navigation is exactly `Overzicht` and `Dossiers`.
+  `/intern/compliance` and `/intern/dossiers` remain temporary compatibility
+  paths using the same authority. The shared shell renders `Powered by ENVAL`
+  exactly once.
+- Focused operator-context Q01-Q14, compliance/evidence authorization
+  regressions, served allow/deny evidence and human browser acceptance are
+  green. Refresh was accepted before disposable-fixture cleanup; cleanup
+  removed all synthetic rows and left the real pilot unchanged. A stale
+  deleted-fixture session is not required to work after cleanup.
+- `Klanten`, `Organisatie`, tenant workforce administration, ENVAL Control
+  Console, Verifier Console, tenant #2, multi-tenant switching, `/intern/*`
+  cleanup, remote deployment and production remain TARGET/unproven.
+- UI01B-CLOSE updates only the active documentation that owns this status. It
+  changes no product runtime, database, migration, grant, CSS, fixture,
+  permission policy or global/project rule.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

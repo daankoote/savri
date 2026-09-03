@@ -1,9 +1,9 @@
 # ENVAL App TODO
 
 Status: CURRENT app/MVP TODO — Wave A1, TF01, TF02-C and SL01-B current local
-proof reconciled through commit `8bfc56c` on 2026-09-01. SL01-C is CURRENT
-PROVEN LOCAL after targeted proof, functional browser acceptance and narrow
-server-row reconciliation. Earlier
+proof reconciled through commit `8bfc56c` on 2026-09-01. SL01-C and UI-01B are
+CURRENT PROVEN LOCAL after their bounded automated and human browser evidence.
+Earlier
 bounded work-package records retain their own dated proof status.
 
 This queue is primarily for the new `/app`, `api-app-*`, and `app_*`
@@ -14,13 +14,30 @@ implementation.
 
 ## Single Current NEXT
 
-- CURRENT ORDER — close and commit the coherent SL01-C candidate without mixing
-  in shell/refactor work.
-- NEXT PRODUCT WORKSTREAM — begin `UI-01` shared surface shells, navigation and
-  actor boundaries under the adopted modular KISS rules.
+- CURRENT CLOSURE — `UI-01B` is CURRENT PROVEN LOCAL for the secure canonical
+  `/beheer` Tenant Operator entry. This close records status only and does not
+  select or start another product workstream.
+- NEXT PRODUCT WORKSTREAM — not selected by UI01B-CLOSE. Do not start UI-01C,
+  `/intern/*` cleanup or another roadmap item without a separate bounded task.
 - UI work proceeds in coherent reusable batches under the mandatory pre-flight,
   reuse, KISS, no-invented-copy and API-coupling gates in `AGENTS.md`. SL01-D
   snapshot/finalize/replay provenance remains a later bounded TARGET.
+- DONE / CURRENT PROVEN LOCAL — `UI-01B`: the canonical local `/beheer` route
+  resolves a server-bound `tenant_operator` context for authenticated active
+  workforce. Unauthenticated access enters the operator login flow with a safe
+  return route; authenticated non-workforce receives `Geen toegang`; tenant and
+  effective capabilities are server-derived through the existing compliance
+  and evidence-review application boundaries. Active navigation is exactly
+  `Overzicht` and `Dossiers`. `/intern/compliance` and `/intern/dossiers` remain
+  temporary compatibility paths under the same authority. Ordinary workforce
+  gains no implicit `platform_support.request`, and the shared operator shell
+  renders `Powered by ENVAL` once. Focused Q01-Q14, authorization regressions,
+  served allow/deny evidence, browser acceptance before fixture cleanup, and
+  cleanup with zero synthetic rows and unchanged real pilot are green.
+- TARGET / NOT IMPLEMENTED after UI-01B: `Klanten`, `Organisatie`, tenant
+  admin/workforce management UI, ENVAL Control Console, Verifier Console,
+  tenant #2, multi-tenant switching, production deployment and later
+  `/intern/*` redirect/removal cleanup.
 - DONE / CURRENT PROVEN LOCAL — `SL01-C`: the server-resolved immutable signing
   presentation receipt binds tenant, Auth actor, intake and selected
   signing-material/legal provenance. Presentation is not acceptance; explicit

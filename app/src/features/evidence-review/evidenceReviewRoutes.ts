@@ -1,7 +1,7 @@
 const CASE_REFERENCE_RE =
   /^CASE-(?:[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 const DETAIL_ROUTE_RE =
-  /^\/intern\/dossiers\/(CASE-(?:[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))$/i;
+  /^\/(?:beheer|intern)\/dossiers\/(CASE-(?:[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))$/i;
 
 export function isEvidenceReviewCaseRef(value: string): boolean {
   return value === value.trim() && CASE_REFERENCE_RE.test(value);
@@ -9,7 +9,7 @@ export function isEvidenceReviewCaseRef(value: string): boolean {
 
 export function buildEvidenceReviewDetailRoute(caseRef: string): string | null {
   return isEvidenceReviewCaseRef(caseRef)
-    ? `/intern/dossiers/${caseRef}`
+    ? `/beheer/dossiers/${caseRef}`
     : null;
 }
 

@@ -1,7 +1,9 @@
-import { DashboardRouteGuard } from "../features/auth/DashboardRouteGuard.tsx";
 import { EvidenceReviewCaseDetailPageContent } from "../features/evidence-review/EvidenceReviewCaseDetailPage.tsx";
+import { OperatorRouteGuard } from "../features/operator/OperatorRouteGuard.tsx";
+import { buildOperatorNavigation } from "../features/operator/operatorNavigation.ts";
 import type { RoutedPageProps } from "../routes/types.ts";
 import { AppHeader } from "../shared/components/AppHeader.tsx";
+import { SurfaceShell } from "../shared/components/SurfaceShell.tsx";
 
 type EvidenceReviewCaseDetailPageProps =
   & RoutedPageProps
@@ -15,20 +17,36 @@ export function EvidenceReviewCaseDetailPage({
   navigate,
 }: EvidenceReviewCaseDetailPageProps) {
   return (
-    <div className="site-frame">
-      <AppHeader currentPath={currentPath} navigate={navigate} />
-      <DashboardRouteGuard navigate={navigate} returnTo={currentPath}>
-        <main className="page-shell">
-          <section className="section">
-            <div className="container">
-              <EvidenceReviewCaseDetailPageContent
-                caseRef={caseRef}
-                onBack={() => navigate("/intern/dossiers")}
-              />
-            </div>
-          </section>
-        </main>
-      </DashboardRouteGuard>
-    </div>
+    <OperatorRouteGuard
+      navigate={navigate}
+      requiredCapability="evidence.review.view"
+      returnTo={currentPath}
+    >
+      {(context) => (
+        <SurfaceShell
+          navigation={
+            <AppHeader
+              currentPath={currentPath}
+              navigate={navigate}
+              navigation={buildOperatorNavigation(context)}
+              surface="tenant_operator"
+            />
+          }
+          platformAttribution
+          surface="tenant_operator"
+        >
+          <main className="page-shell">
+            <section className="section">
+              <div className="container">
+                <EvidenceReviewCaseDetailPageContent
+                  caseRef={caseRef}
+                  onBack={() => navigate("/beheer/dossiers")}
+                />
+              </div>
+            </section>
+          </main>
+        </SurfaceShell>
+      )}
+    </OperatorRouteGuard>
   );
 }

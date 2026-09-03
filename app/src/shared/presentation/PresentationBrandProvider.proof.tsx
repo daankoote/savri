@@ -298,9 +298,11 @@ assert(
   "Q16_portal_attribution_grid_placement_invalid",
 );
 assert(
-  appSource.includes('path === "/intern/compliance"') &&
-    appSource.includes('path === "/intern/dossiers"') &&
-    !appSource.includes('path === "/beheer"') &&
+  appSource.includes('path === "/beheer" || path === "/intern/compliance"') &&
+    appSource.includes(
+      'path === "/beheer/dossiers" || path === "/intern/dossiers"',
+    ) &&
+    appSource.includes('<AuthProvider audience="operator">') &&
     sidebarSource.includes("Overzicht") &&
     (sidebarSource.match(/navigate\("\/account"\)/g) || []).length === 1 &&
     !sidebarSource.match(

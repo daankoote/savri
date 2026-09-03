@@ -202,6 +202,36 @@ separate from workforce membership.
 Still TARGET/DEFERRED: workforce and policy management UI, more workforce
 population, recovery ceremony, production activation and remote proof.
 
+## Current Tenant Operator Entry
+
+Status: UI-01B CURRENT PROVEN — LOCAL ONLY. This is the bounded secure operator
+entry, not a complete operator console, remote deployment or production proof.
+
+The canonical local `/beheer` route resolves a separate server-bound
+`tenant_operator` context. Unauthenticated access enters the operator login
+flow with a safe return route; an authenticated principal without an active
+workforce identity receives the normal `Geen toegang` state; authorized active
+workforce is admitted. `api-app-operator-context` derives tenant and effective
+capabilities from trusted server context by reusing
+`app_compliance_worklist_source_events_read_v1` and
+`app_evidence_review_worklist_source_read_v4`.
+`app_workforce_authorize_v1` remains private, and no browser field or JWT role
+selects tenant/workforce authority.
+
+The current operator navigation is exactly `Overzicht` and `Dossiers`.
+`/intern/compliance` and `/intern/dossiers` remain temporary compatibility
+paths using the same authority. The shared operator shell renders `Powered by
+ENVAL` once, and ordinary workforce gains no implicit
+`platform_support.request`.
+
+Focused operator-context Q01-Q14, route/Auth, compliance/evidence and
+presentation proofs, served allow/deny evidence and human browser acceptance
+are green. Browser refresh was proven before disposable-fixture cleanup;
+cleanup left zero synthetic rows and the real pilot unchanged. `Klanten`,
+`Organisatie`, workforce management UI, ENVAL Control Console, Verifier
+Console, tenant #2, dynamic tenant switching and `/intern/*` cleanup remain
+TARGET/unimplemented.
+
 ## Current Delivery-Year Compliance Foundation
 
 Status: CURRENT PROVEN — LOCAL ONLY through REG03I at commit `be2e247`.

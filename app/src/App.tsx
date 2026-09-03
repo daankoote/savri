@@ -9,6 +9,7 @@ import { TermsPage } from "./pages/TermsPage";
 import { UploadPage } from "./pages/UploadPage";
 import type { AppNavigate, RoutedPageProps } from "./routes/types";
 import { parseEvidenceReviewDetailRoute } from "./features/evidence-review/evidenceReviewRoutes";
+import { readSafePostLoginReturnRoute } from "./features/auth/postLoginNavigation";
 
 const AccountPage = lazy(() => import("./pages/AccountPage").then((module) => ({ default: module.AccountPage })));
 const DashboardPage = lazy(() =>
@@ -50,6 +51,12 @@ const routes = {
 
 type PageComponent = (props: RoutedPageProps) => ReactElement;
 
+function isOperatorRoute(path: string): boolean {
+  return path === "/beheer" || path === "/beheer/dossiers" ||
+    path === "/intern/compliance" || path === "/intern/dossiers" ||
+    parseEvidenceReviewDetailRoute(path) !== null;
+}
+
 export function App() {
   const [path, setPath] = useState(() => normalizePath(window.location.pathname));
 
@@ -83,10 +90,19 @@ export function App() {
     }
   };
 
+  const evidenceReviewCaseRef = parseEvidenceReviewDetailRoute(path);
+  const loginReturnTo = path === "/inloggen"
+    ? readSafePostLoginReturnRoute(window.location.search)
+    : null;
+
   if (path === "/account" || path === "/inloggen") {
     return (
       <Suspense fallback={<RouteLoading />}>
-        <AuthProvider>
+        <AuthProvider
+          audience={loginReturnTo && isOperatorRoute(loginReturnTo)
+            ? "operator"
+            : "customer"}
+        >
           <AccountPage navigate={navigate} currentPath={path} />
         </AuthProvider>
       </Suspense>
@@ -103,31 +119,30 @@ export function App() {
     );
   }
 
-  if (path === "/intern/compliance") {
+  if (path === "/beheer" || path === "/intern/compliance") {
     return (
       <Suspense fallback={<RouteLoading />}>
-        <AuthProvider>
+        <AuthProvider audience="operator">
           <ComplianceWorklistPage navigate={navigate} currentPath={path} />
         </AuthProvider>
       </Suspense>
     );
   }
 
-  if (path === "/intern/dossiers") {
+  if (path === "/beheer/dossiers" || path === "/intern/dossiers") {
     return (
       <Suspense fallback={<RouteLoading />}>
-        <AuthProvider>
+        <AuthProvider audience="operator">
           <EvidenceReviewWorklistPage navigate={navigate} currentPath={path} />
         </AuthProvider>
       </Suspense>
     );
   }
 
-  const evidenceReviewCaseRef = parseEvidenceReviewDetailRoute(path);
   if (evidenceReviewCaseRef) {
     return (
       <Suspense fallback={<RouteLoading />}>
-        <AuthProvider>
+        <AuthProvider audience="operator">
           <EvidenceReviewCaseDetailPage
             caseRef={evidenceReviewCaseRef}
             navigate={navigate}

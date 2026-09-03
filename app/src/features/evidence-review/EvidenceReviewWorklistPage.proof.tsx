@@ -290,8 +290,11 @@ const [
   source("supabase/functions/api-app-evidence-review-worklist/index.ts"),
 ]);
 assert(
-  appSource.includes('path === "/intern/dossiers"') &&
-    pageSource.includes("DashboardRouteGuard") &&
+  appSource.includes(
+    'path === "/beheer/dossiers" || path === "/intern/dossiers"',
+  ) &&
+    pageSource.includes("OperatorRouteGuard") &&
+    pageSource.includes('surface="tenant_operator"') &&
     pageSource.includes("AppHeader") &&
     !headerSource.includes("/intern/dossiers") &&
     !sidebarSource.includes("/intern/dossiers"),

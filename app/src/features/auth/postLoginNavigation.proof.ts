@@ -25,6 +25,8 @@ const dossiersLogin = buildInternalLoginRoute("/intern/dossiers");
 const complianceLogin = buildInternalLoginRoute("/intern/compliance");
 const detailRoute = "/intern/dossiers/CASE-7E4CC75CD19F";
 const detailLogin = buildInternalLoginRoute(detailRoute);
+const operatorLogin = buildInternalLoginRoute("/beheer");
+const operatorDossiersLogin = buildInternalLoginRoute("/beheer/dossiers");
 assert(
   dossiersLogin === "/inloggen?returnTo=%2Fintern%2Fdossiers" &&
     resolvePostLoginDestination(new URL(dossiersLogin, "https://enval.local").search) ===
@@ -49,6 +51,14 @@ assert(
     DEFAULT_POST_LOGIN_DESTINATION === "/dashboard" &&
     INTERNAL_LOGIN_ROUTE === "/inloggen",
   "Q03_normal_login_destination_changed",
+);
+assert(
+  operatorLogin === "/inloggen?returnTo=%2Fbeheer" &&
+    operatorDossiersLogin === "/inloggen?returnTo=%2Fbeheer%2Fdossiers" &&
+    resolvePostLoginDestination(
+      new URL(operatorDossiersLogin, "https://enval.local").search,
+    ) === "/beheer/dossiers",
+  "Q03b_operator_login_return_invalid",
 );
 
 for (const target of [
@@ -101,7 +111,7 @@ const [
 ] = await Promise.all([
   source("app/src/App.tsx"),
   source("app/src/routes/types.ts"),
-  source("app/src/features/auth/DashboardRouteGuard.tsx"),
+  source("app/src/features/operator/OperatorRouteGuard.tsx"),
   source("app/src/features/auth/AccountPage.tsx"),
   source("app/src/features/auth/AuthProvider.tsx"),
   source("app/src/pages/EvidenceReviewWorklistPage.tsx"),
@@ -159,7 +169,7 @@ assert(
 );
 assert(
   evidenceEndpointSource.includes("requireVerifiedSupabaseAuthUser") &&
-    evidenceEndpointSource.includes("app_evidence_review_worklist_source_read_v3") &&
+    evidenceEndpointSource.includes("app_evidence_review_worklist_source_read_v4") &&
     complianceEndpointSource.includes("requireVerifiedSupabaseAuthUser") &&
     complianceEndpointSource.includes(
       "app_compliance_worklist_source_events_read_v1",
