@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import {
   mkdirSync,
   mkdtempSync,
@@ -150,32 +151,47 @@ test("launcher creates a new ephemeral read-only Codex exec without bypasses", (
   const root = fixture();
   const request = parseReviewRequest(requestArgs("2"), root);
   const argv = buildReviewerArgv(root, request);
-  assert.equal(argv[0], "exec");
-  assert.ok(argv.includes("--ephemeral"));
   assert.deepEqual(
-    argv.slice(argv.indexOf("--sandbox"), argv.indexOf("--sandbox") + 2),
+    argv,
     [
+      "--ask-for-approval",
+      "never",
+      "exec",
+      "--ephemeral",
+      "--cd",
+      root,
       "--sandbox",
       "read-only",
+      "--config",
+      'web_search="disabled"',
+      "--enable",
+      "hooks",
+      "--strict-config",
+      buildReviewPrompt(request),
     ],
   );
-  assert.deepEqual(
-    argv.slice(
-      argv.indexOf("--ask-for-approval"),
-      argv.indexOf("--ask-for-approval") + 2,
-    ),
-    ["--ask-for-approval", "never"],
-  );
-  assert.ok(argv.includes('web_search="disabled"'));
-  assert.ok(argv.includes("hooks"));
-  assert.ok(argv.includes("--strict-config"));
   assert.ok(!argv.includes("resume"));
   assert.ok(!argv.includes("fork"));
+  assert.ok(!argv.includes("--approve-for-me"));
   assert.ok(!argv.includes("danger-full-access"));
   assert.ok(!argv.includes("--dangerously-bypass-approvals-and-sandbox"));
   assert.match(buildReviewPrompt(request), /cycle 2/);
   assert.match(buildReviewPrompt(request), /STOP_TO_HUMAN=YES/);
   assert.equal(MAX_REVIEW_FIX_CYCLES, 2);
+});
+
+test("installed Codex CLI parses the generated reviewer option order", () => {
+  const root = fixture();
+  const request = parseReviewRequest(requestArgs(), root);
+  const argv = buildReviewerArgv(root, request);
+  const result = spawnSync("codex", [...argv.slice(0, -1), "--help"], {
+    cwd: root,
+    encoding: "utf8",
+    shell: false,
+  });
+  assert.equal(result.error, undefined);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /^Run Codex non-interactively$/m);
 });
 
 test("real launch uses guarded readiness without generic curl", async () => {

@@ -147,14 +147,14 @@ export function buildReviewPrompt(request) {
 
 export function buildReviewerArgv(root, request) {
   return Object.freeze([
+    "--ask-for-approval",
+    "never",
     "exec",
     "--ephemeral",
     "--cd",
     root,
     "--sandbox",
     "read-only",
-    "--ask-for-approval",
-    "never",
     "--config",
     'web_search="disabled"',
     "--enable",
