@@ -1,6 +1,7 @@
 import type { MouseEvent } from "react";
 import type { RoutedPageProps } from "../routes/types";
 import { AppHeader } from "../shared/components/AppHeader";
+import { SurfaceShell } from "../shared/components/SurfaceShell";
 
 type PagePlaceholderProps = RoutedPageProps & {
   actionHref?: string;
@@ -27,8 +28,10 @@ export function PagePlaceholder({
   };
 
   return (
-    <div className="site-frame">
-      <AppHeader currentPath={currentPath} navigate={navigate} />
+    <SurfaceShell
+      navigation={<AppHeader currentPath={currentPath} navigate={navigate} />}
+      surface="public"
+    >
       <main className="page-shell">
         <section className="section">
           <div className="container page-intro">
@@ -43,6 +46,6 @@ export function PagePlaceholder({
           </div>
         </section>
       </main>
-    </div>
+    </SurfaceShell>
   );
 }

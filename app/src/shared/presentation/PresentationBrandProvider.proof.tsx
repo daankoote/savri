@@ -1,8 +1,12 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { AuthProvider } from "../../features/auth/AuthProvider.tsx";
+import { DashboardPageShell } from "../../features/dashboard/DashboardPageShell.tsx";
 import { DashboardSidebar } from "../../features/dashboard/DashboardSidebar.tsx";
+import { SignupPageShell } from "../../features/signup/SignupPageShell.tsx";
 import { NotFoundPage } from "../../pages/NotFoundPage.tsx";
 import { AppHeader } from "../components/AppHeader.tsx";
+import { SurfaceShell } from "../components/SurfaceShell.tsx";
+import { APP_SURFACES } from "../surfaces/surfaceModel.ts";
 import { ENVAL_PRESENTATION_BRAND_CONFIG_V1 } from "../../../../platform/runtime/presentation/enval_presentation_defaults.ts";
 import {
   projectPresentationBrand,
@@ -33,7 +37,7 @@ Object.defineProperty(globalThis, "window", {
 });
 
 const navigate = (_href: string) => undefined;
-const selectSection = (_section: "active" | "history" | "contact") => undefined;
+const selectSection = (_section: "active" | "contact") => undefined;
 
 function renderConsumerSet(
   presentation = projectPresentationBrand(
@@ -42,7 +46,19 @@ function renderConsumerSet(
 ): string {
   return renderToStaticMarkup(
     <PresentationBrandProvider presentation={presentation}>
-      <AppHeader currentPath="/" navigate={navigate} />
+      <SurfaceShell
+        navigation={
+          <AppHeader
+            currentPath="/aanmelden"
+            navigate={navigate}
+            surface="tenant_public"
+          />
+        }
+        platformAttribution
+        surface="tenant_public"
+      >
+        <main>Surface proof</main>
+      </SurfaceShell>
       <AuthProvider>
         <DashboardSidebar
           activeSection="active"
@@ -51,6 +67,34 @@ function renderConsumerSet(
         />
       </AuthProvider>
       <NotFoundPage currentPath="/missing" navigate={navigate} />
+    </PresentationBrandProvider>,
+  );
+}
+
+function renderTenantPublicPath(
+  presentation = projectPresentationBrand(
+    ENVAL_PRESENTATION_BRAND_CONFIG_V1,
+  ),
+): string {
+  return renderToStaticMarkup(
+    <PresentationBrandProvider presentation={presentation}>
+      <AuthProvider>
+        <SignupPageShell currentPath="/aanmelden" navigate={navigate} />
+      </AuthProvider>
+    </PresentationBrandProvider>,
+  );
+}
+
+function renderCustomerDashboardPath(
+  presentation = projectPresentationBrand(
+    ENVAL_PRESENTATION_BRAND_CONFIG_V1,
+  ),
+): string {
+  return renderToStaticMarkup(
+    <PresentationBrandProvider presentation={presentation}>
+      <AuthProvider>
+        <DashboardPageShell navigate={navigate} />
+      </AuthProvider>
     </PresentationBrandProvider>,
   );
 }
@@ -74,6 +118,8 @@ const envalHtml = renderConsumerSet();
 const syntheticHtml = renderConsumerSet(
   projectPresentationBrand(syntheticResult.value),
 );
+const tenantPublicHtml = renderTenantPublicPath();
+const customerDashboardHtml = renderCustomerDashboardPath();
 assert(
   envalHtml.includes("ENVAL") && envalHtml.includes(">E<") &&
     envalHtml.includes("ERE inboekservice") &&
@@ -96,10 +142,10 @@ assert(
   "Q03_support_identity_changed_with_presentation",
 );
 assert(
-  envalHtml.includes("Account") && syntheticHtml.includes("Account") &&
-    envalHtml.includes("Nieuwe aanvraag") &&
+  envalHtml.includes("Nieuwe aanvraag") &&
     syntheticHtml.includes("Nieuwe aanvraag") &&
-    envalHtml.includes("Actief") && syntheticHtml.includes("Actief"),
+    envalHtml.includes("Overzicht") && syntheticHtml.includes("Overzicht") &&
+    !envalHtml.includes("History") && !syntheticHtml.includes("Settings"),
   "Q04_auth_or_dashboard_behavior_changed_with_presentation",
 );
 
@@ -116,6 +162,12 @@ const [
   tenantResolutionSource,
   legalSource,
   signingFinalizeSource,
+  surfaceShellSource,
+  surfaceModelSource,
+  homePageSource,
+  signupShellSource,
+  dashboardShellSource,
+  layoutSource,
 ] = await Promise.all([
   source("app/src/shared/presentation/PresentationBrandProvider.tsx"),
   source("app/src/shared/presentation/PresentationBrandRuntime.tsx"),
@@ -129,6 +181,12 @@ const [
   source("platform/runtime/tenant-resolution/tenant_resolution.ts"),
   source("supabase/functions/_shared/signing_legal_runtime.ts"),
   source("supabase/functions/api-app-signup-signing-finalize/index.ts"),
+  source("app/src/shared/components/SurfaceShell.tsx"),
+  source("app/src/shared/surfaces/surfaceModel.ts"),
+  source("app/src/pages/HomePage.tsx"),
+  source("app/src/features/signup/SignupPageShell.tsx"),
+  source("app/src/features/dashboard/DashboardPageShell.tsx"),
+  source("app/src/styles/layout.css"),
 ]);
 
 assert(
@@ -204,5 +262,57 @@ assert(
   "Q12_migrated_consumer_or_css_boundary_invalid",
 );
 
-console.log("PRESENTATION_BRAND_CONSUMERS_Q01_Q12=PASS");
+assert(
+  APP_SURFACES.join("|") ===
+      "public|tenant_public|tenant_customer|tenant_operator|enval_control|verifier" &&
+    syntheticHtml.includes('data-app-surface="tenant_public"') &&
+    syntheticHtml.includes(">Powered by ENVAL</footer>") &&
+    (syntheticHtml.match(/Powered by ENVAL/g) || []).length === 1,
+  "Q13_surface_model_or_shared_attribution_invalid",
+);
+assert(
+  homePageSource.includes("<SurfaceShell") &&
+    signupShellSource.includes('surface="tenant_public"') &&
+    dashboardShellSource.includes('surface="tenant_customer"') &&
+    (dashboardShellSource.match(/platformAttribution/g) || []).length === 1 &&
+    (surfaceShellSource.match(/Powered by ENVAL/g) || []).length === 1 &&
+    !surfaceShellSource.match(/useAuth|Supabase|capability|tenantId/) &&
+    !surfaceModelSource.match(/useAuth|Supabase|capability|tenantId/) &&
+    !surfaceShellSource.includes("style={{"),
+  "Q14_shared_shell_or_authority_boundary_invalid",
+);
+assert(
+  (tenantPublicHtml.match(/Powered by ENVAL/g) || []).length === 1 &&
+    tenantPublicHtml.includes('data-app-surface="tenant_public"') &&
+    (customerDashboardHtml.match(/Powered by ENVAL/g) || []).length === 1 &&
+    customerDashboardHtml.includes('data-app-surface="tenant_customer"'),
+  "Q15_actual_surface_attribution_count_invalid",
+);
+assert(
+  layoutSource.includes(
+    ".portal-shell > .surface-attribution {\n  grid-column: 2;\n}",
+  ) &&
+    layoutSource.includes(
+      ".portal-shell:not(.portal-shell--sidebar-collapsed) > .surface-attribution {\n    grid-column: 1;\n  }",
+    ),
+  "Q16_portal_attribution_grid_placement_invalid",
+);
+assert(
+  appSource.includes('path === "/intern/compliance"') &&
+    appSource.includes('path === "/intern/dossiers"') &&
+    !appSource.includes('path === "/beheer"') &&
+    sidebarSource.includes("Overzicht") &&
+    (sidebarSource.match(/navigate\("\/account"\)/g) || []).length === 1 &&
+    !sidebarSource.match(
+      /onClick=\{\(\) => navigate\("\/account"\)\}[\s\S]{0,120}>\s*Account/,
+    ) &&
+    !sidebarSource.includes("Berichten") &&
+    !sidebarSource.includes("Settings") &&
+    !sidebarSource.includes("History"),
+  "Q17_route_or_customer_navigation_scope_invalid",
+);
+
+console.log("CUSTOMER_DASHBOARD_ATTRIBUTION_COUNT=1");
+console.log("TENANT_PUBLIC_ATTRIBUTION_COUNT=1");
+console.log("PRESENTATION_BRAND_CONSUMERS_Q01_Q17=PASS");
 Deno.exit(0);

@@ -8,6 +8,7 @@ import {
 } from "react";
 import type { RoutedPageProps } from "../../routes/types";
 import { AppHeader } from "../../shared/components/AppHeader";
+import { SurfaceShell } from "../../shared/components/SurfaceShell";
 import { useAuth } from "../auth/AuthProvider";
 import { clearDashboardReadCache } from "../dashboard/dashboardReadCache";
 import { parseInvoicePdfInput } from "../invoice-analysis/invoicePdfParserAdapter";
@@ -691,8 +692,17 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
 
   if (recoveryStatus === "loading" || recoveryStatus === "error") {
     return (
-      <div className="site-frame">
-        <AppHeader currentPath={currentPath} navigate={navigate} />
+      <SurfaceShell
+        navigation={
+          <AppHeader
+            currentPath={currentPath}
+            navigate={navigate}
+            surface="tenant_public"
+          />
+        }
+        platformAttribution
+        surface="tenant_public"
+      >
         <main className="page-shell">
           <section className="section">
             <div className="container">
@@ -727,14 +737,23 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
             </div>
           </section>
         </main>
-      </div>
+      </SurfaceShell>
     );
   }
 
   if (submissionReceipt) {
     return (
-      <div className="site-frame">
-        <AppHeader currentPath={currentPath} navigate={navigate} />
+      <SurfaceShell
+        navigation={
+          <AppHeader
+            currentPath={currentPath}
+            navigate={navigate}
+            surface="tenant_public"
+          />
+        }
+        platformAttribution
+        surface="tenant_public"
+      >
         <main className="page-shell">
           <div className="container">
             <section
@@ -827,13 +846,22 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
             </section>
           </div>
         </main>
-      </div>
+      </SurfaceShell>
     );
   }
 
   return (
-    <div className="site-frame">
-      <AppHeader currentPath={currentPath} navigate={navigate} />
+    <SurfaceShell
+      navigation={
+        <AppHeader
+          currentPath={currentPath}
+          navigate={navigate}
+          surface="tenant_public"
+        />
+      }
+      platformAttribution
+      surface="tenant_public"
+    >
       <main className="page-shell">
         <div className="container">
           <fieldset className="signup-lock-boundary" disabled={signupLocked}>
@@ -853,6 +881,6 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
           </fieldset>
         </div>
       </main>
-    </div>
+    </SurfaceShell>
   );
 }

@@ -3,14 +3,14 @@ import { useAuth } from "../auth/AuthProvider";
 import { ActivePrivateDashboard } from "./ActivePrivateDashboard";
 import { ContactChoicePanel } from "./ContactChoicePanel";
 import { DashboardSidebar } from "./DashboardSidebar";
-import { TodoPlaceholderPanel } from "./TodoPlaceholderPanel";
 import { useDashboardRead } from "./useDashboardRead";
 import { useCustomerCorrectionHandoff } from "./useCustomerCorrectionHandoff";
 import type { AppNavigate } from "../../routes/types";
 import { clearSignupIntakeSession } from "../signup/signupIntakeCapabilityStore";
 import { clearSignupSubmissionReceipt } from "../signup/signupSubmissionReceiptStore";
+import { SurfaceShell } from "../../shared/components/SurfaceShell";
 
-type PortalSection = "active" | "history" | "contact";
+type PortalSection = "active" | "contact";
 
 export function DashboardPageShell({ navigate }: { navigate: AppNavigate }) {
   const auth = useAuth();
@@ -74,20 +74,25 @@ export function DashboardPageShell({ navigate }: { navigate: AppNavigate }) {
   const dossierOptions = useMemo(() => authDossiers, [authDossiers]);
 
   return (
-    <main
+    <SurfaceShell
+      as="main"
       className={sidebarOpen
         ? "portal-shell"
         : "portal-shell portal-shell--sidebar-collapsed"}
+      navigation={
+        <DashboardSidebar
+          activeSection={activeSection}
+          collapsed={!sidebarOpen}
+          id="portal-dashboard-sidebar"
+          navigate={navigate}
+          onToggle={() => setSidebarOpen((current) => !current)}
+          onSelectSection={setActiveSection}
+          showToggle={actionableDocumentWorkflow}
+        />
+      }
+      platformAttribution
+      surface="tenant_customer"
     >
-      <DashboardSidebar
-        activeSection={activeSection}
-        collapsed={!sidebarOpen}
-        id="portal-dashboard-sidebar"
-        navigate={navigate}
-        onToggle={() => setSidebarOpen((current) => !current)}
-        onSelectSection={setActiveSection}
-        showToggle={actionableDocumentWorkflow}
-      />
       <section className="portal-main" aria-live="polite">
         {activeSection === "active"
           ? (
@@ -103,16 +108,8 @@ export function DashboardPageShell({ navigate }: { navigate: AppNavigate }) {
             />
           )
           : null}
-        {activeSection === "history"
-          ? (
-            <TodoPlaceholderPanel
-              title="History"
-              note="Afgeronde jaren en eerdere dossiers komen later hier."
-            />
-          )
-          : null}
         {activeSection === "contact" ? <ContactChoicePanel /> : null}
       </section>
-    </main>
+    </SurfaceShell>
   );
 }

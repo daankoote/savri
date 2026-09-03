@@ -7,6 +7,7 @@ import { SectionHeader } from "../shared/components/SectionHeader";
 import { StepCard } from "../shared/components/StepCard";
 import { RevenueCalculator } from "../features/calculator/RevenueCalculator";
 import type { RoutedPageProps } from "../routes/types";
+import { SurfaceShell } from "../shared/components/SurfaceShell";
 
 const steps = [
   {
@@ -83,8 +84,10 @@ const faqs = [
 
 export function HomePage({ currentPath, navigate }: RoutedPageProps) {
   return (
-    <div className="site-frame">
-      <AppHeader currentPath={currentPath} navigate={navigate} />
+    <SurfaceShell
+      navigation={<AppHeader currentPath={currentPath} navigate={navigate} />}
+      surface="public"
+    >
       <main>
         <HeroSection navigate={navigate} />
         <RevenueCalculator />
@@ -161,6 +164,6 @@ export function HomePage({ currentPath, navigate }: RoutedPageProps) {
           secondaryActionHref="/aanmelden"
         />
       </main>
-    </div>
+    </SurfaceShell>
   );
 }

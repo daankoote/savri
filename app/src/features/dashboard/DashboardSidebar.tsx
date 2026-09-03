@@ -4,14 +4,15 @@ import { clearDashboardReadCache } from "./dashboardReadCache";
 import { clearSignupIntakeSession } from "../signup/signupIntakeCapabilityStore";
 import { clearSignupSubmissionReceipt } from "../signup/signupSubmissionReceiptStore";
 import { usePresentationBrand } from "../../shared/presentation/PresentationBrandProvider";
+import type { SurfaceNavigationItem } from "../../shared/surfaces/surfaceModel";
 
 type DashboardSidebarProps = {
-  activeSection: "active" | "history" | "contact";
+  activeSection: "active" | "contact";
   collapsed?: boolean;
   id?: string;
   navigate: AppNavigate;
   onToggle?: () => void;
-  onSelectSection: (section: "active" | "history" | "contact") => void;
+  onSelectSection: (section: "active" | "contact") => void;
   showToggle?: boolean;
 };
 
@@ -26,6 +27,13 @@ export function DashboardSidebar({
 }: DashboardSidebarProps) {
   const auth = useAuth();
   const presentation = usePresentationBrand();
+  const navigation = [
+    {
+      active: activeSection === "active",
+      label: "Overzicht",
+      onSelect: () => onSelectSection("active"),
+    },
+  ] satisfies readonly SurfaceNavigationItem[];
 
   function handleLogout() {
     clearDashboardReadCache();
@@ -101,24 +109,18 @@ export function DashboardSidebar({
               >
                 Nieuwe aanvraag
               </button>
-              <button
-                className={activeSection === "active"
-                  ? "portal-nav-item portal-nav-item-active"
-                  : "portal-nav-item"}
-                onClick={() => onSelectSection("active")}
-                type="button"
-              >
-                Actief
-              </button>
-              <button
-                className={activeSection === "history"
-                  ? "portal-nav-item portal-nav-item-active"
-                  : "portal-nav-item"}
-                onClick={() => onSelectSection("history")}
-                type="button"
-              >
-                History
-              </button>
+              {navigation.map((item) => (
+                <button
+                  className={item.active
+                    ? "portal-nav-item portal-nav-item-active"
+                    : "portal-nav-item"}
+                  key={item.label}
+                  onClick={item.onSelect}
+                  type="button"
+                >
+                  {item.label}
+                </button>
+              ))}
             </nav>
 
             <div className="portal-sidebar-divider" />
@@ -142,9 +144,6 @@ export function DashboardSidebar({
                 type="button"
               >
                 Naar website
-              </button>
-              <button className="portal-nav-item" type="button">
-                Settings
               </button>
               <button
                 className="portal-nav-item"
