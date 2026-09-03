@@ -13,6 +13,21 @@ Codex does not autonomously stage, commit, push, merge, rebase, cherry-pick,
 revert, reset, clean, stash, amend, deploy, or otherwise mutate Git history.
 Daan owns staging decisions, commits, pushes, and consequential history changes.
 
+## Batch Launch
+
+Daan starts one isolated Codex batch from clean, current `main` with only its
+lowercase kebab-case slug:
+
+```bash
+node scripts/tools/enval-batch.mjs start <batch-slug>
+```
+
+The launcher creates `autonomy/<batch-slug>` at the current `main` HEAD, adds
+the leaf worktree `/Users/daankoote/dev/enval-worktrees/<batch-slug>`, verifies
+the project-local Codex governance baseline, and starts the interactive Codex
+CLI there with Auto-review. It fails closed on conflicts or invalid state and
+does not commit, push, deploy, clean up, or launch Codex Desktop.
+
 ## Before Edits
 
 Run:
