@@ -2,7 +2,7 @@
 
 import { spawn } from "node:child_process";
 import { lstatSync, readFileSync, realpathSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { dirname, extname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -12,8 +12,10 @@ export const ENVAL_ROOT = resolve(
   dirname(fileURLToPath(import.meta.url)),
   "../..",
 );
-export const GENERIC_REVIEWER_CORE =
-  ".agents/skills/independent-ui-review/SKILL.md";
+export const GENERIC_REVIEWER_CORE = resolve(
+  homedir(),
+  ".agents/skills/independent-ui-review/SKILL.md",
+);
 export const ENVAL_REVIEW_ADAPTER = ".agents/skills/enval-ui-review/SKILL.md";
 export const MAX_REVIEW_FIX_CYCLES = 2;
 
@@ -362,7 +364,7 @@ export function launchCodexCli({ args, cwd, prompt }) {
 export async function startUiReview(argv, options = {}) {
   const root = realpathSync(resolve(options.root ?? ENVAL_ROOT));
   regularFile(
-    resolve(root, GENERIC_REVIEWER_CORE),
+    GENERIC_REVIEWER_CORE,
     "generic_reviewer_core_missing",
   );
   regularFile(

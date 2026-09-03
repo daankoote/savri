@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -8,7 +9,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { after, test } from "node:test";
 
@@ -48,11 +49,9 @@ function temporaryRoot(prefix = "enval-ui-review-proof-") {
 
 function projectFixture() {
   const root = temporaryRoot();
-  for (const path of [GENERIC_REVIEWER_CORE, ENVAL_REVIEW_ADAPTER]) {
-    const target = join(root, path);
-    mkdirSync(dirname(target), { recursive: true });
-    writeFileSync(target, "fixture\n");
-  }
+  const adapterTarget = join(root, ENVAL_REVIEW_ADAPTER);
+  mkdirSync(dirname(adapterTarget), { recursive: true });
+  writeFileSync(adapterTarget, "fixture\n");
   writeFileSync(join(root, "acceptance.md"), "# Acceptance\n");
   return root;
 }
@@ -206,22 +205,47 @@ function assertSkillFrontmatter(source, name) {
   assert.match(frontmatter[1], /^description: .+$/m);
 }
 
-test("generic core is project-agnostic and supports artifact-only review", () => {
-  const core = readFileSync(
-    join(REPOSITORY_ROOT, GENERIC_REVIEWER_CORE),
-    "utf8",
-  );
+test("user-global generic core is project-agnostic and repo adapter stays local", () => {
+  const core = readFileSync(GENERIC_REVIEWER_CORE, "utf8");
   const adapter = readFileSync(
     join(REPOSITORY_ROOT, ENVAL_REVIEW_ADAPTER),
     "utf8",
   );
+  assert.equal(
+    GENERIC_REVIEWER_CORE,
+    join(
+      homedir(),
+      ".agents/skills/independent-ui-review/SKILL.md",
+    ),
+  );
+  assert.equal(
+    existsSync(
+      join(
+        REPOSITORY_ROOT,
+        ".agents/skills/independent-ui-review/SKILL.md",
+      ),
+    ),
+    false,
+  );
   assertSkillFrontmatter(core, "independent-ui-review");
   assertSkillFrontmatter(adapter, "enval-ui-review");
-  assert.doesNotMatch(core, /ENVAL|Daan|SurfaceShell|\/beheer/);
+  assert.doesNotMatch(
+    core,
+    /ENVAL|Daan|SurfaceShell|\/beheer|5175|enval-local-dev|scripts\/tools/,
+  );
   assert.match(core, /fresh review-only Codex session/);
   assert.match(core, /validated evidence\s+manifest/);
   assert.match(core, /do not require or\s+attempt live browser control/);
   assert.match(core, /There are at most two review\/fix cycles/);
+  for (
+    const genericSection of [
+      "## Evidence boundary",
+      "## Review method",
+      "## Review-only authority",
+      "## Independence lifecycle",
+      "## Result contract",
+    ]
+  ) assert.doesNotMatch(adapter, new RegExp(genericSection));
   for (
     const expected of [
       "SurfaceShell",
