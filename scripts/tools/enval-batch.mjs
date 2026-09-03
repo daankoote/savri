@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   lstatSync,
   mkdirSync,
@@ -13,7 +14,10 @@ import { pathToFileURL } from "node:url";
 
 export const ENVAL_ROOT = "/Users/daankoote/dev/enval";
 export const ENVAL_WORKTREES_ROOT = "/Users/daankoote/dev/enval-worktrees";
+export const HERDR_SESSION = "enval-worker";
+export const HERDR_VERSION = "0.8.2";
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const HERDR_AGENT_PATTERN = /^[a-z][a-z0-9_-]{0,31}$/;
 const GOVERNANCE_FILES = Object.freeze([
   "AGENTS.md",
   ".codex/hooks.json",
@@ -115,6 +119,18 @@ export function deriveBatchSpec(slug, worktreesRoot = ENVAL_WORKTREES_ROOT) {
   return Object.freeze({ slug, branch: `autonomy/${slug}`, worktree });
 }
 
+export function deriveHerdrAgentName(slug) {
+  if (
+    typeof slug !== "string" || slug.length > 63 || !SLUG_PATTERN.test(slug)
+  ) {
+    fail("batch_slug_invalid");
+  }
+  const digest = createHash("sha256").update(slug).digest("hex").slice(0, 12);
+  const name = `enval-${slug.slice(0, 13)}-${digest}`;
+  if (!HERDR_AGENT_PATTERN.test(name)) fail("herdr_agent_name_invalid");
+  return name;
+}
+
 function defaultRun(command, args, options) {
   return spawnSync(command, args, {
     ...options,
@@ -128,6 +144,45 @@ function checked(run, command, args, cwd, code) {
   const result = run(command, args, { cwd });
   if (result.error || result.status !== 0) fail(code);
   return String(result.stdout ?? "");
+}
+
+function herdrFailureCode(result, code) {
+  try {
+    const detail = JSON.parse(String(result.stderr ?? ""))?.error?.code;
+    if (typeof detail === "string" && /^[a-zA-Z0-9._-]+$/.test(detail)) {
+      return `${code}:${detail}`;
+    }
+  } catch {
+    // Herdr syntax and process errors are not guaranteed to be JSON.
+  }
+  return code;
+}
+
+function herdrChecked(run, args, cwd, code) {
+  const result = run("herdr", args, { cwd });
+  if (result.error || result.status !== 0) {
+    fail(herdrFailureCode(result, code));
+  }
+  return String(result.stdout ?? "");
+}
+
+function herdrResponse(run, args, cwd, expectedType, code) {
+  const stdout = herdrChecked(
+    run,
+    ["--session", HERDR_SESSION, ...args],
+    cwd,
+    code,
+  );
+  let response;
+  try {
+    response = JSON.parse(stdout);
+  } catch {
+    fail(`${code}_response_invalid`);
+  }
+  if (response?.result?.type !== expectedType) {
+    fail(`${code}_response_invalid`);
+  }
+  return response.result;
 }
 
 function git(run, root, args, code) {
@@ -255,16 +310,171 @@ export function codexLaunchArgv(worktree) {
   ]);
 }
 
-export function launchCodexCli({ args, cwd }) {
-  return new Promise((resolveLaunch, rejectLaunch) => {
-    const child = spawn("codex", args, { cwd, stdio: "inherit", shell: false });
-    child.once("error", rejectLaunch);
-    child.once("exit", (code, signal) => {
-      if (signal) {
-        rejectLaunch(new BatchLaunchError(`codex_cli_signal:${signal}`));
-      } else resolveLaunch(code ?? 1);
-    });
-  });
+export function verifyHerdrCli(run = defaultRun, cwd = ENVAL_ROOT) {
+  const version = herdrChecked(
+    run,
+    ["--version"],
+    cwd,
+    "herdr_cli_unavailable",
+  ).trim();
+  if (version !== `herdr ${HERDR_VERSION}`) {
+    fail("herdr_version_unsupported");
+  }
+
+  const rootHelp = herdrChecked(
+    run,
+    ["--help"],
+    cwd,
+    "herdr_root_help_unavailable",
+  );
+  if (!rootHelp.includes("--session <name>")) {
+    fail("herdr_session_semantics_unsupported");
+  }
+
+  const workspaceHelp = herdrChecked(
+    run,
+    ["workspace", "create", "--help"],
+    cwd,
+    "herdr_workspace_help_unavailable",
+  );
+  for (const expected of ["--cwd <PATH>", "--label <TEXT>", "--no-focus"]) {
+    if (!workspaceHelp.includes(expected)) {
+      fail("herdr_workspace_semantics_unsupported");
+    }
+  }
+
+  const agentHelp = herdrChecked(
+    run,
+    ["agent", "start", "--help"],
+    cwd,
+    "herdr_agent_help_unavailable",
+  );
+  for (
+    const expected of [
+      "agent start <NAME>",
+      "--kind <KIND>",
+      "--pane <ID>",
+      "[-- [AGENT_ARG]...]",
+      "codex",
+    ]
+  ) {
+    if (!agentHelp.includes(expected)) {
+      fail("herdr_agent_semantics_unsupported");
+    }
+  }
+  return Object.freeze({ version: HERDR_VERSION });
+}
+
+function ensureNoHerdrConflicts(run, cwd, spec, agentName) {
+  const workspaceList = herdrResponse(
+    run,
+    ["workspace", "list"],
+    cwd,
+    "workspace_list",
+    "herdr_workspace_list_failed",
+  );
+  if (!Array.isArray(workspaceList.workspaces)) {
+    fail("herdr_workspace_list_response_invalid");
+  }
+  for (const workspace of workspaceList.workspaces) {
+    const checkoutPath = workspace?.worktree?.checkout_path;
+    if (
+      workspace?.label === spec.slug ||
+      (typeof checkoutPath === "string" &&
+        resolve(checkoutPath) === spec.worktree)
+    ) {
+      fail("herdr_workspace_conflict");
+    }
+  }
+
+  const agentList = herdrResponse(
+    run,
+    ["agent", "list"],
+    cwd,
+    "agent_list",
+    "herdr_agent_list_failed",
+  );
+  if (!Array.isArray(agentList.agents)) {
+    fail("herdr_agent_list_response_invalid");
+  }
+  if (agentList.agents.some((agent) => agent?.name === agentName)) {
+    fail("herdr_agent_conflict");
+  }
+}
+
+function createHerdrWorkspace(run, spec) {
+  const result = herdrResponse(
+    run,
+    [
+      "workspace",
+      "create",
+      "--cwd",
+      spec.worktree,
+      "--label",
+      spec.slug,
+      "--no-focus",
+    ],
+    spec.worktree,
+    "workspace_created",
+    "herdr_workspace_creation_failed",
+  );
+  const workspaceId = result.workspace?.workspace_id;
+  const paneId = result.root_pane?.pane_id;
+  if (
+    typeof workspaceId !== "string" || workspaceId === "" ||
+    typeof paneId !== "string" || paneId === "" ||
+    result.workspace?.label !== spec.slug ||
+    result.root_pane?.workspace_id !== workspaceId
+  ) {
+    fail("herdr_workspace_creation_response_invalid");
+  }
+  const returnedCwd = result.root_pane?.cwd;
+  const returnedCheckout = result.workspace?.worktree?.checkout_path;
+  if (
+    !(
+      typeof returnedCwd === "string" &&
+      resolve(returnedCwd) === spec.worktree
+    ) &&
+    !(
+      typeof returnedCheckout === "string" &&
+      resolve(returnedCheckout) === spec.worktree
+    )
+  ) {
+    fail("herdr_workspace_cwd_mismatch");
+  }
+  return Object.freeze({ workspaceId, paneId });
+}
+
+export function launchHerdrCodex(
+  { run = defaultRun, args, cwd, agentName, paneId },
+) {
+  const result = herdrResponse(
+    run,
+    [
+      "agent",
+      "start",
+      agentName,
+      "--kind",
+      "codex",
+      "--pane",
+      paneId,
+      "--",
+      ...args,
+    ],
+    cwd,
+    "agent_started",
+    "herdr_agent_start_failed",
+  );
+  if (
+    result.agent?.name !== agentName ||
+    result.agent?.pane_id !== paneId ||
+    !Array.isArray(result.argv) ||
+    result.argv.length < args.length ||
+    JSON.stringify(result.argv.slice(-args.length)) !== JSON.stringify(args)
+  ) {
+    fail("herdr_agent_start_response_invalid");
+  }
+  return Object.freeze({ agentName, paneId });
 }
 
 export async function startBatch(slug, options = {}) {
@@ -279,8 +489,9 @@ export async function startBatch(slug, options = {}) {
 
   const run = options.run ?? defaultRun;
   const worktreesRoot = resolve(options.worktreesRoot ?? ENVAL_WORKTREES_ROOT);
-  const launch = options.launch ?? launchCodexCli;
+  const launch = options.launch ?? launchHerdrCodex;
   const spec = deriveBatchSpec(slug, worktreesRoot);
+  const agentName = deriveHerdrAgentName(slug);
   if (
     git(
       run,
@@ -295,9 +506,12 @@ export async function startBatch(slug, options = {}) {
   validateGovernance(root);
   noConflicts(run, root, spec);
   checked(run, "codex", ["--version"], root, "codex_cli_unavailable");
+  verifyHerdrCli(run, root);
+  ensureNoHerdrConflicts(run, root, spec, agentName);
 
   mainState(run, root, baseHead);
   noConflicts(run, root, spec);
+  ensureNoHerdrConflicts(run, root, spec, agentName);
   ensureWorktreesRoot(worktreesRoot);
   git(
     run,
@@ -319,11 +533,36 @@ export async function startBatch(slug, options = {}) {
   governanceTrackedAndClean(run, spec.worktree);
   validateGovernance(spec.worktree);
 
-  const launchExitCode = await launch({
+  const herdrWorkspace = createHerdrWorkspace(run, spec);
+  await launch({
+    run,
     args: codexLaunchArgv(spec.worktree),
     cwd: spec.worktree,
+    agentName,
+    paneId: herdrWorkspace.paneId,
   });
-  return Object.freeze({ ...spec, baseHead, launchExitCode });
+  return Object.freeze({
+    ...spec,
+    baseHead,
+    herdrSession: HERDR_SESSION,
+    herdrWorkspace: herdrWorkspace.workspaceId,
+    herdrAgent: agentName,
+  });
+}
+
+export function formatBatchHandoff(result) {
+  return [
+    "ENVAL_BATCH_START=PASS",
+    `BATCH=${result.slug}`,
+    `BRANCH=${result.branch}`,
+    `WORKTREE=${result.worktree}`,
+    `HERDR_SESSION=${result.herdrSession}`,
+    `HERDR_WORKSPACE=${result.herdrWorkspace}`,
+    `HERDR_AGENT=${result.herdrAgent}`,
+    `BASE_HEAD=${result.baseHead}`,
+    `ATTACH_COMMAND=herdr session attach ${result.herdrSession}`,
+    "",
+  ].join("\n");
 }
 
 async function main(argv) {
@@ -331,16 +570,7 @@ async function main(argv) {
     fail("usage:start_<batch-slug>");
   }
   const result = await startBatch(argv[1]);
-  if (result.launchExitCode !== 0) {
-    fail(`codex_cli_exit:${result.launchExitCode}`);
-  }
-  process.stdout.write([
-    "ENVAL_BATCH_START=PASS",
-    `BRANCH=${result.branch}`,
-    `WORKTREE=${result.worktree}`,
-    `BASE_HEAD=${result.baseHead}`,
-    "",
-  ].join("\n"));
+  process.stdout.write(formatBatchHandoff(result));
 }
 
 const invoked = process.argv[1]

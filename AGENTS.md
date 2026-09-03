@@ -266,8 +266,10 @@ For material frontend business/data interaction, also report:
   reserved for explicit recovery or debugging.
 - The launcher uses the current clean `main` HEAD, keeps `main` as the protected
   integration worktree, creates one leaf branch and worktree per implementation
-  batch, prevents stale governance bases, and starts a separate interactive Codex
-  CLI session with Auto-review and product web search disabled.
+  batch, prevents stale governance bases, creates one Herdr workspace per batch in
+  the shared named `enval-worker` session, and starts one interactive Codex agent
+  there with Auto-review and product web search disabled. Herdr does not create or
+  own the Git worktree.
 - The launcher never commits, merges, pushes, deploys, or cleans up a batch.
 - Within an approved bounded batch, Codex owns routine deterministic terminal,
   permitted local SQL, test, proof, diff/status, and permitted local-service

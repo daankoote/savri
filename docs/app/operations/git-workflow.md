@@ -28,17 +28,25 @@ as its base, keeps `main` as the protected integration worktree, creates
 `autonomy/<batch-slug>` plus the leaf worktree
 `/Users/daankoote/dev/enval-worktrees/<batch-slug>`, and refuses a stale or
 conflicting base. Every implementation batch receives its own leaf branch,
-worktree, and interactive Codex CLI session.
+worktree, Herdr workspace, and interactive Codex agent. All batch workspaces live
+in the one named persistent Herdr session `enval-worker`; the launcher uses the
+workspace root pane returned by Herdr and does not predict pane IDs or delegate
+Git-worktree creation to Herdr.
 
-The launcher verifies the project-local governance baseline and starts Codex
-with Auto-review and `web_search="disabled"`; ordinary product batches therefore
-have no hosted web-search tool by default. Governance or research tasks may use
-cached search only when explicitly required, and live search requires explicit
-task need. Shell/network permission remains a separate boundary.
+Before Git branch/worktree creation, the launcher verifies installed Herdr 0.8.2,
+the required session/workspace/agent CLI semantics, Codex availability, and the
+project-local governance baseline. It then starts Codex through Herdr's supported
+agent mechanism with on-request approval, Auto-review, hooks, strict config, and
+`web_search="disabled"`; ordinary product batches therefore have no hosted
+web-search tool by default. Governance or research tasks may use cached search
+only when explicitly required, and live search requires explicit task need.
+Shell/network permission remains a separate boundary.
 
 The launcher does not commit, merge, push, deploy, clean up, or launch Codex
-Desktop. Its single slug input and deterministic batch result remain the seam for
-possible later Herdr integration; no Herdr installation or coupling exists now.
+Desktop. Detaching a Herdr client does not stop the batch agent. The shared named
+session topology permits a later remote client attachment without changing batch
+architecture, but this workflow does not configure SSH, Tailscale, phone access,
+or a login service.
 
 ## Before Edits
 
