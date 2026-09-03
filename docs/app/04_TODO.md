@@ -38,6 +38,10 @@ implementation.
   admin/workforce management UI, ENVAL Control Console, Verifier Console,
   tenant #2, multi-tenant switching, production deployment and later
   `/intern/*` redirect/removal cleanup.
+- KNOWN PENDING UI EVIDENCE — `F01`: at `820x1180`, the existing ENVAL
+  login/navigation presentation wraps `Inloggen` onto a separate navigation row
+  and produces unnecessary vertical overflow. This governance audit records the
+  finding only; it does not fix it or make it generic reviewer policy.
 - DONE / CURRENT PROVEN LOCAL — `SL01-C`: the server-resolved immutable signing
   presentation receipt binds tenant, Auth actor, intake and selected
   signing-material/legal provenance. Presentation is not acceptance; explicit
