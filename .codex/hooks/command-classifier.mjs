@@ -543,12 +543,8 @@ function hardGate(words, cwd) {
   if (git && GIT_MUTATIONS.has(git.operation.toLowerCase())) {
     const operation = git.operation.toLowerCase();
     const args = words.slice(git.index + 1);
-    if (
-      operation === "branch" && args.length === 1 &&
-      ["--list", "--show-current"].includes(args[0])
-    ) {
-      return false;
-    }
+    if (operation === "branch" && classifyGitBranch(args)) return false;
+    if (operation === "worktree" && classifyGitWorktree(args)) return false;
     if (
       operation === "remote" &&
       args.every((argument) => ["-v", "--verbose"].includes(argument))
@@ -719,6 +715,28 @@ function classifyRg(words, cwd) {
     (paths.length === 0 || paths.every((path) => safeRepoPath(path, cwd)));
 }
 
+function classifyGitBranch(args) {
+  if (args.length === 1 && args[0] === "--show-current") return true;
+  if (args[0] !== "--list") return false;
+
+  let afterOptions = false;
+  for (const argument of args.slice(1)) {
+    if (!afterOptions && argument === "--") {
+      afterOptions = true;
+      continue;
+    }
+    if (!afterOptions && argument.startsWith("-")) return false;
+  }
+  return true;
+}
+
+function classifyGitWorktree(args) {
+  if (args[0] !== "list") return false;
+  return args.slice(1).every((argument) =>
+    ["-v", "--verbose", "--porcelain", "-z"].includes(argument)
+  );
+}
+
 function classifyGit(words) {
   const parsed = gitSubcommand(words);
   if (!parsed || parsed.index !== 1) return false;
@@ -750,9 +768,8 @@ function classifyGit(words) {
     ) return false;
     return true;
   }
-  if (operation === "branch") {
-    return args.length === 1 && ["--show-current", "--list"].includes(args[0]);
-  }
+  if (operation === "branch") return classifyGitBranch(args);
+  if (operation === "worktree") return classifyGitWorktree(args);
   return false;
 }
 

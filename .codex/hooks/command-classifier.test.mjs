@@ -12,6 +12,26 @@ import { HUMAN_GATE_MESSAGE, routeEvent } from "./enval-permission-router.mjs";
 const fixtures = Object.freeze([
   ["safe direct git status", "git status", CLASSIFICATION.ALLOW],
   [
+    "safe worktree inventory",
+    "git worktree list --porcelain",
+    CLASSIFICATION.ALLOW,
+  ],
+  [
+    "safe NUL-delimited worktree inventory",
+    "git worktree list --porcelain -z",
+    CLASSIFICATION.ALLOW,
+  ],
+  [
+    "safe named branch existence inspection",
+    "git branch --list gov-batch01",
+    CLASSIFICATION.ALLOW,
+  ],
+  [
+    "safe current-base inspection",
+    "git rev-parse --verify HEAD; git show --quiet --format=%H HEAD",
+    CLASSIFICATION.ALLOW,
+  ],
+  [
     "safe wrapped branch",
     "/bin/zsh -c 'git branch --show-current'",
     CLASSIFICATION.ALLOW,
@@ -60,6 +80,51 @@ const fixtures = Object.freeze([
   ],
   ["deny Git global-option mutation", "git -C . add .", CLASSIFICATION.DENY],
   ["deny Git branch mutation", "git branch new-topic", CLASSIFICATION.DENY],
+  [
+    "deny Git branch deletion",
+    "git branch --delete old-topic",
+    CLASSIFICATION.DENY,
+  ],
+  [
+    "deny mutating option disguised as branch listing",
+    "git branch --list --delete old-topic",
+    CLASSIFICATION.DENY,
+  ],
+  ...[
+    "add ../enval-gov-batch01 gov-batch01",
+    "remove ../enval-gov-batch01",
+    "move ../enval-gov-batch01 ../enval-gov-batch01-moved",
+    "prune",
+    "repair",
+    "lock ../enval-gov-batch01",
+    "unlock ../enval-gov-batch01",
+  ].map((operation) => [
+    `deny Git worktree ${operation.split(" ")[0]}`,
+    `git worktree ${operation}`,
+    CLASSIFICATION.DENY,
+  ]),
+  [
+    "deny ambiguous worktree operation",
+    "git worktree inspect",
+    CLASSIFICATION.DENY,
+  ],
+  [
+    "deny unsupported worktree list option",
+    "git worktree list --execute",
+    CLASSIFICATION.DENY,
+  ],
+  ...[
+    "commit -m nope",
+    "merge topic",
+    "rebase main",
+    "reset --hard HEAD",
+    "clean -fd",
+    "stash push",
+  ].map((operation) => [
+    `deny Git mutation ${operation.split(" ")[0]}`,
+    `git ${operation}`,
+    CLASSIFICATION.DENY,
+  ]),
   [
     "deny Git remote mutation",
     "git remote add origin example.invalid/repo",
@@ -151,9 +216,10 @@ test("PreToolUse does not pre-approve a safe command", () => {
   assert.equal(routeEvent(event("PreToolUse", "git status")).output, null);
 });
 
-test("PermissionRequest allows only a proven safe command", () => {
+test("PermissionRequest allows worktree inventory", () => {
   assert.deepEqual(
-    routeEvent(event("PermissionRequest", "git status")).output,
+    routeEvent(event("PermissionRequest", "git worktree list --porcelain"))
+      .output,
     {
       hookSpecificOutput: {
         hookEventName: "PermissionRequest",
@@ -188,7 +254,10 @@ test("command hook stdin/stdout protocol emits allow, deny, and no decision", ()
       encoding: "utf8",
       input: JSON.stringify(event(hookEventName, command)),
     });
-  const allowed = invoke("PermissionRequest", "git status");
+  const allowed = invoke(
+    "PermissionRequest",
+    "git worktree list --porcelain",
+  );
   const denied = invoke("PreToolUse", "git add .");
   const deferred = invoke("PermissionRequest", "frobnicate");
   assert.equal(allowed.status, 0);
