@@ -288,7 +288,15 @@ async function fetchBounded(url, init = {}) {
 function parseMigrationState() {
   const raw = command(
     "supabase",
-    ["--workdir", ROOT, "migration", "list", "--local"],
+    [
+      "--workdir",
+      ROOT,
+      "migration",
+      "list",
+      "--local",
+      "--output-format",
+      "json",
+    ],
     { failureCode: "tenant_migration_state_unavailable" },
   );
   let body;
