@@ -15,7 +15,7 @@ extends = ":workspace"
 
 [permissions.enval-dev.network]
 enabled = true
-allow_local_binding = false
+allow_local_binding = true
 allow_upstream_proxy = false
 dangerously_allow_non_loopback_proxy = false
 dangerously_allow_all_unix_sockets = false

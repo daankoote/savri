@@ -174,6 +174,29 @@ For material frontend business/data interaction, also report:
 - Default to small bounded batches: one problem or invariant where practical.
 - Avoid giant multi-feature changes, broad refactors, and unrelated cleanup.
 
+## Bounded batch operations
+
+- Within an approved bounded batch, Codex owns routine deterministic terminal,
+  permitted local SQL, test, proof, diff/status, and permitted local-service
+  evidence. Daan is not the default relay for those commands.
+- Once Daan or ChatGPT approves a bounded batch, Codex may continue autonomously
+  through its in-scope inspection, implementation, diagnosis, repair, and
+  appropriate Tier A or Tier B checks until acceptance is met or a defined human
+  stop condition is reached.
+- Every batch stops at its own acceptance boundary. Codex does not automatically
+  continue into the next roadmap or product task.
+- Daan retains manual browser and product acceptance; material product,
+  architecture, security, and permission decisions; and commit, push, merge,
+  deploy, remote, and destructive authority.
+- Parallel product implementation is not enabled. Before it can be considered,
+  one substantive approximately one-to-three-hour autonomous ENVAL product batch
+  must complete without routine-execution interruptions. A later Daan or ChatGPT
+  pilot may authorize at most two concurrent implementation worktrees: `main`
+  remains the protected integration base; each run uses its own branch, Git
+  worktree, and Codex task; write and authority cones are sufficiently disjoint;
+  mutable local services, ports, databases, and fixtures are isolated; merging is
+  never automatic; and combined integration requires a human gate.
+
 ## Verification strategy
 
 - Classify verification before running it:
