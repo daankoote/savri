@@ -18,6 +18,27 @@ export const PROOF_DEFINITIONS = Object.freeze({
     sha256: "b6b00bd0dd3a65cfb72688aa904cacc858a017a9874742c675054410be1a7465",
     marker: "ENVAL_LOCAL_READONLY_CATALOG_OK",
   }),
+  "local-runtime04-migration-parity": Object.freeze({
+    path: "scripts/proofs/local-runtime04-migration-parity.proof.sql",
+    sha256: "e8ea05adf54120fcc0563f98a8852ad016511b258c3d7a1a81004a2b23cff8cb",
+    marker: "ENVAL_LOCAL_RUNTIME04_MIGRATION_PARITY_OK",
+    outputFormat: "local-runtime04-parity-v1",
+    maxOutputBytes: 4_096,
+    sources: Object.freeze([
+      Object.freeze({
+        path:
+          "supabase/migrations/20260901220000_app_tenant_signing_material.sql",
+        sha256:
+          "62d7c9640d47334fa6b5d930680d7822016bad7200625618965fef75470366aa",
+      }),
+      Object.freeze({
+        path:
+          "supabase/migrations/20260901230000_app_signup_signing_presentation_receipt.sql",
+        sha256:
+          "c105c4808ff078623b3d5de8484ba7fabcf5efb81a8f384f5c2aa7ba316655e9",
+      }),
+    ]),
+  }),
 });
 
 function sha256(value) {
@@ -135,6 +156,71 @@ export function parseCliArgs(argv) {
   return { proofId };
 }
 
+export function validateStructuredOutput(definition, stdout) {
+  const rawOutput = String(stdout ?? "").trim();
+  if (Buffer.byteLength(rawOutput, "utf8") > definition.maxOutputBytes) {
+    throw new Error("sql_proof_output_too_large");
+  }
+  const lines = rawOutput.split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line !== "" && !["BEGIN", "ROLLBACK"].includes(line));
+  if (lines.length !== 1) throw new Error("sql_proof_output_line_count_invalid");
+  const output = lines[0];
+  let payload;
+  try {
+    payload = JSON.parse(lines[0]);
+  } catch {
+    throw new Error("sql_proof_output_json_invalid");
+  }
+  if (definition.outputFormat !== "local-runtime04-parity-v1") {
+    throw new Error("sql_proof_output_format_unknown");
+  }
+  const expectedKeys = [
+    "ledger_220000_applied",
+    "ledger_230000_applied",
+    "marker",
+    "migration_220000_mismatches",
+    "migration_220000_parity",
+    "migration_230000_mismatches",
+    "migration_230000_parity",
+    "proof",
+  ];
+  if (
+    Object.keys(payload).sort().join("|") !== expectedKeys.join("|") ||
+    payload.proof !== "LOCAL_RUNTIME04" ||
+    payload.marker !== definition.marker
+  ) {
+    throw new Error("sql_proof_output_contract_invalid");
+  }
+  const parityValues = new Set([
+    "FULL_PARITY",
+    "PARTIAL_PARITY",
+    "DIVERGENT",
+    "NOT_PRESENT",
+  ]);
+  for (const version of ["220000", "230000"]) {
+    if (!parityValues.has(payload[`migration_${version}_parity`])) {
+      throw new Error("sql_proof_output_parity_invalid");
+    }
+    const mismatches = payload[`migration_${version}_mismatches`];
+    if (
+      !Array.isArray(mismatches) || mismatches.length > 16 ||
+      mismatches.some((value) =>
+        typeof value !== "string" || !/^[a-z0-9_]{1,64}$/.test(value)
+      )
+    ) {
+      throw new Error("sql_proof_output_mismatches_invalid");
+    }
+  }
+  if (
+    typeof payload.ledger_220000_applied !== "boolean" ||
+    typeof payload.ledger_230000_applied !== "boolean"
+  ) {
+    throw new Error("sql_proof_output_ledger_invalid");
+  }
+  return Object.freeze({ output, payload: Object.freeze(payload) });
+}
+
 export function runReadOnlySqlProof({
   proofId,
   cwd = ROOT,
@@ -152,6 +238,15 @@ export function runReadOnlySqlProof({
   const sql = readFile(proofPath, "utf8");
   if (sha256(sql) !== definition.sha256) {
     throw new Error("sql_proof_hash_mismatch");
+  }
+  for (const source of definition.sources ?? []) {
+    const sourcePath = resolve(cwd, source.path);
+    if (!sourcePath.startsWith(`${resolve(cwd, "supabase/migrations")}/`)) {
+      throw new Error("sql_proof_source_path_invalid");
+    }
+    if (sha256(readFile(sourcePath, "utf8")) !== source.sha256) {
+      throw new Error(`sql_proof_source_hash_mismatch:${source.path}`);
+    }
   }
   validateReadOnlySql(sql);
 
@@ -205,14 +300,23 @@ export function runReadOnlySqlProof({
   if (markerCount !== 1) {
     throw new Error(`local_readonly_sql_marker_count:${markerCount}`);
   }
-  return { marker: definition.marker, markerCount, connection };
+  const structured = definition.outputFormat
+    ? validateStructuredOutput(definition, result.stdout)
+    : null;
+  return {
+    marker: definition.marker,
+    markerCount,
+    connection,
+    output: structured?.output ?? null,
+    payload: structured?.payload ?? null,
+  };
 }
 
 export function main(argv = process.argv.slice(2)) {
   try {
     const { proofId } = parseCliArgs(argv);
     const result = runReadOnlySqlProof({ proofId });
-    process.stdout.write(`${result.marker}\n`);
+    process.stdout.write(`${result.output ?? result.marker}\n`);
     return 0;
   } catch (error) {
     process.stderr.write(`${redactSecrets(error?.message || error)}\n`);
