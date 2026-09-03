@@ -8,6 +8,46 @@ prefix_rule(pattern = ["git", "show"], decision = "allow")
 prefix_rule(pattern = ["git", "rev-parse"], decision = "allow")
 prefix_rule(pattern = ["git", "branch"], decision = "prompt")
 
+# Exact read-only Git evidence transported by Codex Desktop. The complete inner
+# script is one literal argv token; altered, compound, and login-shell forms do
+# not match these lanes.
+prefix_rule(
+    pattern = ["/bin/zsh", "-c", "git rev-parse HEAD"],
+    decision = "allow",
+    justification = "Exact read-only HEAD evidence via Codex Desktop transport",
+    match = [["/bin/zsh", "-c", "git rev-parse HEAD"]],
+    not_match = [
+        ["/bin/zsh", "-c", "git add ."],
+        ["/bin/zsh", "-c", "git rev-parse HEAD; git add ."],
+        ["/bin/zsh", "-c", "git rev-parse HEAD && git add ."],
+        ["/bin/zsh", "-lc", "git rev-parse HEAD"],
+    ],
+)
+prefix_rule(
+    pattern = ["/bin/zsh", "-c", "git status --short"],
+    decision = "allow",
+    justification = "Exact read-only worktree evidence via Codex Desktop transport",
+    match = [["/bin/zsh", "-c", "git status --short"]],
+    not_match = [
+        ["/bin/zsh", "-c", "git status --porcelain"],
+        ["/bin/zsh", "-c", "git status --short; git add ."],
+        ["/bin/zsh", "-c", "git status --short && git add ."],
+        ["/bin/zsh", "-lc", "git status --short"],
+    ],
+)
+prefix_rule(
+    pattern = ["/bin/zsh", "-c", "git branch --show-current"],
+    decision = "allow",
+    justification = "Exact read-only branch evidence via Codex Desktop transport",
+    match = [["/bin/zsh", "-c", "git branch --show-current"]],
+    not_match = [
+        ["/bin/zsh", "-c", "git branch --list"],
+        ["/bin/zsh", "-c", "git branch --show-current; git add ."],
+        ["/bin/zsh", "-c", "git branch --show-current && git add ."],
+        ["/bin/zsh", "-lc", "git branch --show-current"],
+    ],
+)
+
 # Git history, index, branch, and worktree mutations remain human-controlled.
 prefix_rule(pattern = ["git", "add"], decision = "forbidden")
 prefix_rule(pattern = ["git", "commit"], decision = "forbidden")
@@ -65,9 +105,8 @@ prefix_rule(pattern = ["docker", "volume"], decision = "forbidden")
 prefix_rule(pattern = ["docker", "network"], decision = "forbidden")
 prefix_rule(pattern = ["docker", "system"], decision = "forbidden")
 
-# Shell evaluators and environment wrappers remain gated so historical wrapper
-# approvals cannot bypass the direct command policy below.
-prefix_rule(pattern = ["/bin/zsh"], decision = "prompt")
+# Shell evaluators and environment wrappers other than the exact Desktop lanes
+# above remain gated so wrapper approvals cannot bypass the direct command policy.
 prefix_rule(pattern = ["zsh"], decision = "prompt")
 prefix_rule(pattern = ["/bin/bash"], decision = "prompt")
 prefix_rule(pattern = ["bash"], decision = "prompt")

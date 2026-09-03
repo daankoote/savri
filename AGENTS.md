@@ -131,6 +131,19 @@ For material frontend business/data interaction, also report:
 - Keep a small coherent fileset; avoid cosmetic refactors outside the task.
 - Preserve unrelated and dirty worktree changes exactly.
 
+## Desktop-safe repository inspection
+
+- For routine source and documentation inspection, prefer available native
+  repository, file, search, and read capabilities for locating files, searching
+  symbols or text, reading ranges or docs, and inspecting existing components,
+  modules, CSS, tokens, and patterns.
+- Do not use shell `rg`, `sed`, pipelines, or compound commands merely for
+  repository browsing when an equivalent native capability is available.
+- Reserve Terminal for work that genuinely requires command execution, including
+  approved verification wrappers, tests, proofs, builds, deterministic Git
+  evidence, Docker or local-service safe lanes, and other explicitly approved
+  deterministic commands. This routing does not restrict normal in-scope edits.
+
 ## Application and integration boundary
 
 - UI consumes explicit typed presentation/application DTOs and mutation command
