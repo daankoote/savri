@@ -52,6 +52,16 @@ adds ENVAL-specific truth only.
 - Flag inline CSS and near-duplicate component, layout, status, notice, form,
   card, table, shell, or CSS responsibilities in the reviewed scope.
 
+## Artifact-evidence boundary
+
+- A project-owned browser collector may supply the manifest, final URL,
+  viewports, screenshots and console/runtime counts. In that mode, review those
+  artifacts without controlling a live browser or requiring ENVAL runtime access.
+- Treat the collector's guarded-runtime and read-only-request result as evidence
+  about capture provenance only. It does not prove Auth, tenant isolation,
+  authorization, product correctness, deployment or production state.
+- The generic reviewer remains unaware of ENVAL ports and startup commands.
+
 ## ENVAL stop boundary
 
 Daan retains final browser and product acceptance. A cycle-2 `FAIL` or `PARTIAL`
