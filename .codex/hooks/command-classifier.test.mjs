@@ -12,6 +12,31 @@ import { HUMAN_GATE_MESSAGE, routeEvent } from "./enval-permission-router.mjs";
 const fixtures = Object.freeze([
   ["safe direct git status", "git status", CLASSIFICATION.ALLOW],
   [
+    "safe local hooks-path inspection",
+    "git config --local --get core.hooksPath",
+    CLASSIFICATION.ALLOW,
+  ],
+  [
+    "safe local multi-value inspection",
+    "git config --local --get-all core.hooksPath",
+    CLASSIFICATION.ALLOW,
+  ],
+  [
+    "safe local regexp inspection",
+    "git config --local --get-regexp '^core\\.'",
+    CLASSIFICATION.ALLOW,
+  ],
+  [
+    "safe local config inventory",
+    "git config --local --list",
+    CLASSIFICATION.ALLOW,
+  ],
+  [
+    "safe local config inventory with provenance",
+    "git config --show-origin --local --show-scope --list",
+    CLASSIFICATION.ALLOW,
+  ],
+  [
     "safe worktree inventory",
     "git worktree list --porcelain",
     CLASSIFICATION.ALLOW,
@@ -79,6 +104,41 @@ const fixtures = Object.freeze([
     CLASSIFICATION.DENY,
   ],
   ["deny Git global-option mutation", "git -C . add .", CLASSIFICATION.DENY],
+  [
+    "deny local config value mutation",
+    "git config --local core.hooksPath /tmp/x",
+    CLASSIFICATION.DENY,
+  ],
+  ...[
+    "--add core.hooksPath /tmp/x",
+    "--replace-all core.hooksPath /tmp/x",
+    "--unset core.hooksPath",
+    "--unset-all core.hooksPath",
+    "--rename-section core hooks",
+    "--remove-section core",
+    "--edit",
+  ].map((operation) => [
+    `deny local Git config ${operation.split(" ")[0]}`,
+    `git config --local ${operation}`,
+    CLASSIFICATION.DENY,
+  ]),
+  ...["--global", "--system", "--worktree", "--file .git/config"].map(
+    (location) => [
+      `deny non-local Git config read ${location.split(" ")[0]}`,
+      `git config ${location} --get core.hooksPath`,
+      CLASSIFICATION.DENY,
+    ],
+  ),
+  [
+    "deny ambiguous implicit Git config read",
+    "git config --local core.hooksPath",
+    CLASSIFICATION.DENY,
+  ],
+  [
+    "deny mixed Git config read and mutation",
+    "git config --local --get core.hooksPath --unset",
+    CLASSIFICATION.DENY,
+  ],
   ["deny Git branch mutation", "git branch new-topic", CLASSIFICATION.DENY],
   [
     "deny Git branch deletion",
@@ -185,12 +245,61 @@ const fixtures = Object.freeze([
   ],
 ]);
 
+const launcherGitPreflightAudit = Object.freeze([
+  ["repository", "git rev-parse --show-toplevel", CLASSIFICATION.ALLOW],
+  ["HEAD", "git rev-parse --verify HEAD", CLASSIFICATION.ALLOW],
+  ["worktree state", "git status --short --branch", CLASSIFICATION.ALLOW],
+  ["patch hygiene", "git diff --check", CLASSIFICATION.ALLOW],
+  ["base history", "git log -1 --format=%H", CLASSIFICATION.ALLOW],
+  ["base object", "git show --quiet --format=%H HEAD", CLASSIFICATION.ALLOW],
+  ["current branch", "git branch --show-current", CLASSIFICATION.ALLOW],
+  ["target branch", "git branch --list gov-batch01", CLASSIFICATION.ALLOW],
+  [
+    "linked worktrees",
+    "git worktree list --porcelain -z",
+    CLASSIFICATION.ALLOW,
+  ],
+  [
+    "local hooks path",
+    "git config --local --get core.hooksPath",
+    CLASSIFICATION.ALLOW,
+  ],
+  [
+    "branch creation",
+    "git branch gov-batch01",
+    CLASSIFICATION.DENY,
+  ],
+  [
+    "worktree creation",
+    "git worktree add ../enval-gov-batch01 gov-batch01",
+    CLASSIFICATION.DENY,
+  ],
+  [
+    "local config mutation",
+    "git config --local core.hooksPath /tmp/x",
+    CLASSIFICATION.DENY,
+  ],
+  ["index mutation", "git add .", CLASSIFICATION.DENY],
+  ["remote mutation", "git push", CLASSIFICATION.DENY],
+]);
+
 for (const [name, command, expected] of fixtures) {
   test(name, () => {
     assert.equal(
       classifyScript(command, { cwd: ROOT }).classification,
       expected,
     );
+  });
+}
+
+for (const [metadata, command, expected] of launcherGitPreflightAudit) {
+  test(`launcher Git preflight audit: ${metadata}`, () => {
+    assert.deepEqual(classifyScript(command, { cwd: ROOT }), {
+      classification: expected,
+      reason: expected === CLASSIFICATION.ALLOW
+        ? "READ_ONLY_GIT"
+        : "HUMAN_GATE",
+    });
   });
 }
 
@@ -229,6 +338,31 @@ test("PermissionRequest allows worktree inventory", () => {
   );
 });
 
+test("PermissionRequest allows local Git config inspection", () => {
+  assert.deepEqual(
+    routeEvent(
+      event("PermissionRequest", "git config --local --get core.hooksPath"),
+    ).output,
+    {
+      hookSpecificOutput: {
+        hookEventName: "PermissionRequest",
+        decision: { behavior: "allow" },
+      },
+    },
+  );
+});
+
+test("PreToolUse denies local Git config mutation", () => {
+  const routed = routeEvent(
+    event("PreToolUse", "git config --local core.hooksPath /tmp/x"),
+  );
+  assert.equal(routed.output.hookSpecificOutput.permissionDecision, "deny");
+  assert.equal(
+    routed.output.hookSpecificOutput.permissionDecisionReason,
+    HUMAN_GATE_MESSAGE,
+  );
+});
+
 test("PermissionRequest denies a human gate", () => {
   const routed = routeEvent(event("PermissionRequest", "git push"));
   assert.deepEqual(routed.output.hookSpecificOutput.decision, {
@@ -256,7 +390,7 @@ test("command hook stdin/stdout protocol emits allow, deny, and no decision", ()
     });
   const allowed = invoke(
     "PermissionRequest",
-    "git worktree list --porcelain",
+    "git config --local --get core.hooksPath",
   );
   const denied = invoke("PreToolUse", "git add .");
   const deferred = invoke("PermissionRequest", "frobnicate");
@@ -310,5 +444,24 @@ test("project permissions retain workspace sandbox and loopback-only network aut
   assert.doesNotMatch(
     config,
     /danger-full-access|bypassPermissions|full_access|yolo/i,
+  );
+});
+
+test("exec policy leaves semantic Git metadata decisions to the hooks", () => {
+  const rules = readFileSync(
+    new URL("../rules/enval.rules", import.meta.url),
+    "utf8",
+  );
+  assert.match(
+    rules,
+    /prefix_rule\(pattern = \["git", "branch"\], decision = "prompt"\)/,
+  );
+  assert.match(
+    rules,
+    /prefix_rule\(pattern = \["git", "worktree"\], decision = "prompt"\)/,
+  );
+  assert.doesNotMatch(
+    rules,
+    /prefix_rule\(pattern = \["git", "config"\], decision = "forbidden"\)/,
   );
 });

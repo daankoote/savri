@@ -544,6 +544,7 @@ function hardGate(words, cwd) {
     const operation = git.operation.toLowerCase();
     const args = words.slice(git.index + 1);
     if (operation === "branch" && classifyGitBranch(args)) return false;
+    if (operation === "config" && classifyGitConfig(args)) return false;
     if (operation === "worktree" && classifyGitWorktree(args)) return false;
     if (
       operation === "remote" &&
@@ -730,6 +731,43 @@ function classifyGitBranch(args) {
   return true;
 }
 
+function classifyGitConfig(args) {
+  const readOperations = new Set([
+    "--get",
+    "--get-all",
+    "--get-regexp",
+    "--list",
+  ]);
+  const displayOptions = new Set(["--show-origin", "--show-scope"]);
+  const seenDisplayOptions = new Set();
+  let local = false;
+  let operation = null;
+  const operands = [];
+
+  for (const argument of args) {
+    if (argument === "--local") {
+      if (local) return false;
+      local = true;
+      continue;
+    }
+    if (displayOptions.has(argument)) {
+      if (seenDisplayOptions.has(argument)) return false;
+      seenDisplayOptions.add(argument);
+      continue;
+    }
+    if (readOperations.has(argument)) {
+      if (operation !== null) return false;
+      operation = argument;
+      continue;
+    }
+    if (argument.startsWith("-")) return false;
+    operands.push(argument);
+  }
+
+  if (!local || operation === null) return false;
+  return operation === "--list" ? operands.length === 0 : operands.length === 1;
+}
+
 function classifyGitWorktree(args) {
   if (args[0] !== "list") return false;
   return args.slice(1).every((argument) =>
@@ -769,6 +807,7 @@ function classifyGit(words) {
     return true;
   }
   if (operation === "branch") return classifyGitBranch(args);
+  if (operation === "config") return classifyGitConfig(args);
   if (operation === "worktree") return classifyGitWorktree(args);
   return false;
 }
