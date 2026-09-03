@@ -143,6 +143,27 @@ For material frontend business/data interaction, also report:
   approved verification wrappers, tests, proofs, builds, deterministic Git
   evidence, Docker or local-service safe lanes, and other explicitly approved
   deterministic commands. This routing does not restrict normal in-scope edits.
+- Do not perform ceremonial or redundant preflight checks. Optional evidence must
+  not create a human interruption when trusted equivalent evidence already exists.
+
+## Execution governance and permission routing
+
+- The sandbox remains the primary execution boundary. Project rules and hooks
+  narrow and route commands inside that boundary; they do not replace it.
+- Deterministic Bash hooks classify complete commands as `ALLOW`, `DENY`, or
+  `DEFER`. `PreToolUse` owns hard deterministic denial before execution.
+  `PermissionRequest` approves proven-safe `ALLOW` requests, denies deterministic
+  human gates, and leaves residual eligible `DEFER` cases to the normal approval
+  flow and Auto-review.
+- Hard human gates are never delegated to Auto-review. Coarse exec policy must not
+  forbid a mixed command family when a complete proven-safe read in that family
+  needs semantic hook classification; ambiguous families remain prompt-gated or
+  deferred, while known mutations are denied.
+- No generic shell authority, Full Access, danger-full-access, yolo, or approval/
+  sandbox bypass is permitted for autonomous ENVAL execution.
+- Product implementation batches must not tune permissions, rules, hooks, or
+  execution governance in scope. Such changes require a separately authorized
+  governance batch.
 
 ## Application and integration boundary
 
@@ -183,12 +204,36 @@ For material frontend business/data interaction, also report:
 
 ## Task and iteration shape
 
-- A normal task needs only: Goal, Context, Constraints, and Done when.
+- Stable execution governance belongs in `AGENTS.md`, `.codex/rules`,
+  `.codex/hooks`, and canonical tooling, not repeated product prompts.
+- A future ChatGPT-to-Codex batch handoff contains only its task-specific delta:
+  Goal, relevant current state, in/out of scope, acceptance, test tier,
+  task-specific human stop conditions, and task-specific return requirements.
+- Do not repeatedly restate permanent governance in each batch handoff.
 - Default to small bounded batches: one problem or invariant where practical.
 - Avoid giant multi-feature changes, broad refactors, and unrelated cleanup.
 
+## Web search boundary
+
+- Ordinary autonomous ENVAL product batches have web search disabled by default
+  through the canonical batch launcher.
+- A governance or research task may explicitly use cached web search when current
+  external documentation is genuinely required. Live web access requires an
+  explicit task need.
+- Never include secrets, credentials, private customer data, or PII in search
+  queries. Hosted web-search capability is separate from shell and sandbox-network
+  authority; enabling one never grants the other.
+
 ## Bounded batch operations
 
+- `scripts/tools/enval-batch.mjs` is the canonical normal batch launch path. Daan
+  supplies only the batch slug; manual branch/worktree/Codex launch composition is
+  reserved for explicit recovery or debugging.
+- The launcher uses the current clean `main` HEAD, keeps `main` as the protected
+  integration worktree, creates one leaf branch and worktree per implementation
+  batch, prevents stale governance bases, and starts a separate interactive Codex
+  CLI session with Auto-review and product web search disabled.
+- The launcher never commits, merges, pushes, deploys, or cleans up a batch.
 - Within an approved bounded batch, Codex owns routine deterministic terminal,
   permitted local SQL, test, proof, diff/status, and permitted local-service
   evidence. Daan is not the default relay for those commands.
@@ -206,7 +251,7 @@ For material frontend business/data interaction, also report:
   must complete without routine-execution interruptions. A later Daan or ChatGPT
   pilot may authorize at most two concurrent implementation worktrees: `main`
   remains the protected integration base; each run uses its own branch, Git
-  worktree, and Codex task; write and authority cones are sufficiently disjoint;
+  worktree, and Codex session; write and authority cones are sufficiently disjoint;
   mutable local services, ports, databases, and fixtures are isolated; merging is
   never automatic; and combined integration requires a human gate.
 

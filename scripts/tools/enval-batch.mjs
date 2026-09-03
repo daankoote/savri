@@ -247,6 +247,8 @@ export function codexLaunchArgv(worktree) {
     "on-request",
     "--config",
     'approvals_reviewer="auto_review"',
+    "--config",
+    'web_search="disabled"',
     "--enable",
     "hooks",
     "--strict-config",

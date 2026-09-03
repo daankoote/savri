@@ -153,7 +153,7 @@ test("slug, branch, and leaf worktree derivation are deterministic", () => {
   }
 });
 
-test("valid start uses current main HEAD and launches Codex with Auto-review argv", async () => {
+test("valid start uses current main HEAD and launches Codex with governed argv", async () => {
   const { root, worktreesRoot } = fixture();
   writeFileSync(join(root, "fixture.txt"), "second\n");
   git(root, ["add", "fixture.txt"]);
@@ -189,6 +189,20 @@ test("valid start uses current main HEAD and launches Codex with Auto-review arg
     cwd: result.worktree,
     args: codexLaunchArgv(result.worktree),
   });
+  assert.deepEqual(codexLaunchArgv(result.worktree), [
+    "--cd",
+    result.worktree,
+    "--ask-for-approval",
+    "on-request",
+    "--config",
+    'approvals_reviewer="auto_review"',
+    "--config",
+    'web_search="disabled"',
+    "--enable",
+    "hooks",
+    "--strict-config",
+  ]);
+  assert.equal(codexLaunchArgv(result.worktree).includes("--search"), false);
 
   const gitSubcommands = calls
     .filter((call) => call.command === "git")
