@@ -7,6 +7,7 @@ export type SigningLegalDocumentType =
   | "mandate";
 
 export type SigningLegalRuntimeDocument = {
+  documentReference: string;
   documentType: SigningLegalDocumentType;
   version: string;
   language: "nl";
@@ -75,6 +76,7 @@ De methode typed_name_otp_v1 gebruikt de ingevoerde volledige naam, afzonderlijk
 export const SIGNING_LEGAL_RUNTIME_DOCUMENTS:
   readonly SigningLegalRuntimeDocument[] = [
     {
+      documentReference: "legal:runtime:privacy-notice-nl-v1",
       documentType: "privacy_notice",
       version: "privacy-notice-nl-v1",
       language: "nl",
@@ -84,6 +86,7 @@ export const SIGNING_LEGAL_RUNTIME_DOCUMENTS:
       canonicalContent: PRIVACY,
     },
     {
+      documentReference: "legal:runtime:service-terms-nl-v1",
       documentType: "service_terms",
       version: "service-terms-nl-v1",
       language: "nl",
@@ -93,6 +96,7 @@ export const SIGNING_LEGAL_RUNTIME_DOCUMENTS:
       canonicalContent: SERVICE_TERMS,
     },
     {
+      documentReference: "legal:runtime:fee-terms-nl-v1",
       documentType: "fee_terms",
       version: "fee-terms-nl-v1",
       language: "nl",
@@ -102,6 +106,7 @@ export const SIGNING_LEGAL_RUNTIME_DOCUMENTS:
       canonicalContent: FEE_TERMS,
     },
     {
+      documentReference: "legal:runtime:mandate-nl-v1",
       documentType: "mandate",
       version: "mandate-nl-v1",
       language: "nl",
@@ -111,6 +116,74 @@ export const SIGNING_LEGAL_RUNTIME_DOCUMENTS:
       canonicalContent: MANDATE,
     },
   ] as const;
+
+// These four documents exist only so disposable local SL01-C fixtures can
+// exercise the complete receipt-bound flow without treating the current
+// VALIDATION_CANDIDATE texts as approved tenant truth. They are never eligible
+// outside an explicitly local Supabase runtime.
+const LOCAL_SYNTHETIC_SIGNING_LEGAL_DOCUMENTS:
+  readonly SigningLegalRuntimeDocument[] = [
+    {
+      documentReference: "legal:synthetic-privacy-v1",
+      documentType: "privacy_notice",
+      version: "privacy-synthetic-v1",
+      language: "nl",
+      status: "CURRENT",
+      effectiveFrom: "2026-01-01T00:00:00.000Z",
+      title: "Synthetische privacyverklaring",
+      canonicalContent: "Synthetic privacy proof content.",
+    },
+    {
+      documentReference: "legal:synthetic-service-v1",
+      documentType: "service_terms",
+      version: "service-synthetic-v1",
+      language: "nl",
+      status: "CURRENT",
+      effectiveFrom: "2026-01-01T00:00:00.000Z",
+      title: "Synthetische algemene voorwaarden",
+      canonicalContent: "Synthetic service terms proof content.",
+    },
+    {
+      documentReference: "legal:synthetic-fee-v1",
+      documentType: "fee_terms",
+      version: "fee-synthetic-v1",
+      language: "nl",
+      status: "CURRENT",
+      effectiveFrom: "2026-01-01T00:00:00.000Z",
+      title: "Synthetische vergoedingsvoorwaarden",
+      canonicalContent:
+        "Synthetic fee terms proof content without a percentage.",
+    },
+    {
+      documentReference: "legal:synthetic-mandate-v1",
+      documentType: "mandate",
+      version: "mandate-synthetic-v1",
+      language: "nl",
+      status: "CURRENT",
+      effectiveFrom: "2026-01-01T00:00:00.000Z",
+      title: "Synthetische machtiging",
+      canonicalContent: "Synthetic mandate proof content.",
+    },
+  ] as const;
+
+export type SigningLegalDocumentBinding = Readonly<{
+  documentReference: string;
+  documentType: SigningLegalDocumentType;
+  version: string;
+  language: "nl";
+  contentSha256: string;
+}>;
+
+export type ResolvedSigningLegalDocument = Readonly<{
+  documentReference: string;
+  documentType: SigningLegalDocumentType;
+  version: string;
+  language: "nl";
+  title: string;
+  canonicalContent: string;
+  contentSha256: string;
+  effectiveFrom: string | null;
+}>;
 
 export type SigningLegalRuntimeEnvironment = {
   supabaseUrl: string;
@@ -157,6 +230,55 @@ export async function signingSha256Hex(value: string): Promise<string> {
   return Array.from(new Uint8Array(digest)).map((byte) =>
     byte.toString(16).padStart(2, "0")
   ).join("");
+}
+
+export async function resolveSigningLegalDocumentBundle(
+  bindings: readonly SigningLegalDocumentBinding[],
+  environment: SigningLegalRuntimeEnvironment,
+): Promise<readonly ResolvedSigningLegalDocument[] | null> {
+  if (bindings.length !== 4) return null;
+  const source = isExplicitLocalSigningEnvironment(environment)
+    ? [
+      ...SIGNING_LEGAL_RUNTIME_DOCUMENTS,
+      ...LOCAL_SYNTHETIC_SIGNING_LEGAL_DOCUMENTS,
+    ]
+    : SIGNING_LEGAL_RUNTIME_DOCUMENTS;
+  const resolved: ResolvedSigningLegalDocument[] = [];
+  const seen = new Set<SigningLegalDocumentType>();
+  for (const binding of bindings) {
+    if (seen.has(binding.documentType)) return null;
+    const document = source.find((candidate) =>
+      candidate.documentReference === binding.documentReference &&
+      candidate.documentType === binding.documentType &&
+      candidate.version === binding.version &&
+      candidate.language === binding.language
+    );
+    if (!document) return null;
+    const contentSha256 = await signingSha256Hex(document.canonicalContent);
+    if (contentSha256 !== binding.contentSha256) return null;
+    seen.add(binding.documentType);
+    resolved.push(Object.freeze({
+      documentReference: document.documentReference,
+      documentType: document.documentType,
+      version: document.version,
+      language: document.language,
+      title: document.title,
+      canonicalContent: document.canonicalContent,
+      contentSha256,
+      effectiveFrom: document.effectiveFrom,
+    }));
+  }
+  const ordered = ([
+    "privacy_notice",
+    "service_terms",
+    "fee_terms",
+    "mandate",
+  ] as const).map((documentType) =>
+    resolved.find((document) => document.documentType === documentType)
+  );
+  return ordered.every(Boolean)
+    ? Object.freeze(ordered as ResolvedSigningLegalDocument[])
+    : null;
 }
 
 export async function signingLegalRuntimeProjection() {

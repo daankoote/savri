@@ -332,9 +332,9 @@ try {
     DATABASE,
     `select (
     (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%') = 76
+      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%') = 83
     and (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%' and c.relrowsecurity) = 76
+      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%' and c.relrowsecurity) = 83
     and not exists (select 1 from information_schema.role_table_grants
       where table_schema='public' and table_name like 'app\\_%'
         and grantee in ('anon','authenticated') and privilege_type in ('INSERT','UPDATE','DELETE','TRUNCATE'))
@@ -369,6 +369,14 @@ try {
     and has_table_privilege('service_role','public.app_tenant_configuration_manifests','INSERT')
     and not has_table_privilege('service_role','public.app_tenant_configuration_manifests','UPDATE')
     and not has_table_privilege('service_role','public.app_tenant_configuration_manifests','DELETE')
+    and has_table_privilege('service_role','public.app_signup_signing_presentation_receipts','SELECT')
+    and has_table_privilege('service_role','public.app_signup_signing_presentation_receipts','INSERT')
+    and not has_table_privilege('service_role','public.app_signup_signing_presentation_receipts','UPDATE')
+    and not has_table_privilege('service_role','public.app_signup_signing_presentation_receipts','DELETE')
+    and has_table_privilege('service_role','public.app_signup_signing_presentation_acceptances','SELECT')
+    and not has_table_privilege('service_role','public.app_signup_signing_presentation_acceptances','INSERT')
+    and not has_table_privilege('service_role','public.app_signup_signing_presentation_acceptances','UPDATE')
+    and not has_table_privilege('service_role','public.app_signup_signing_presentation_acceptances','DELETE')
   )::text;`,
   );
   assert(security === "true", "rls_privilege_parity_failed");
@@ -379,6 +387,8 @@ try {
     and to_regclass('public.app_cases') is not null
     and to_regclass('public.app_customer_access_grants') is not null
     and to_regclass('public.app_signup_signing_challenges') is not null
+    and to_regclass('public.app_signup_signing_presentation_receipts') is not null
+    and to_regclass('public.app_signup_signing_presentation_acceptances') is not null
     and to_regclass('public.app_signup_signature_evidence') is not null
     and to_regprocedure('public.app_signup_signing_finalize_v2(uuid,text,uuid,text,text,text,jsonb,text,jsonb,uuid[],text,integer,timestamptz,jsonb,text,text,text,text,text,text,text,text)') is not null
     and to_regprocedure('public.app_workforce_authorize_v1(uuid,text,uuid,uuid,timestamptz)') is not null

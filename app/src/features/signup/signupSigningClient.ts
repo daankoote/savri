@@ -6,6 +6,7 @@ import { readSignupIntakeSession } from "./signupIntakeCapabilityStore.ts";
 
 type SigningRuntimeConfig = {
   anonKey: string;
+  presentationEndpointUrl: string;
   challengeEndpointUrl: string;
   finalizeEndpointUrl: string;
 };
@@ -14,6 +15,22 @@ export type SigningChallengeReceipt = {
   challengeReference: string;
   expiresAt: string;
   deliveryTargetMasked: string;
+};
+
+export type SigningPresentationReceipt = {
+  receiptReference: string;
+  receiptSha256: string;
+  presentedAt: string;
+  expiresAt: string;
+  legalDocuments: readonly {
+    document_type: string;
+    version: string;
+    language: string;
+    title: string;
+    canonical_content: string;
+    content_sha256: string;
+    effective_from: string | null;
+  }[];
 };
 
 export type SigningFinalizeReceipt = {
@@ -57,6 +74,7 @@ function runtimeConfig(): SigningRuntimeConfig | null {
   const base = auth.dashboardEndpointUrl.slice(0, -suffix.length);
   return {
     anonKey: auth.anonKey,
+    presentationEndpointUrl: `${base}/api-app-signup-signing-presentation`,
     challengeEndpointUrl: `${base}/api-app-signup-signing-challenge`,
     finalizeEndpointUrl: `${base}/api-app-signup-signing-finalize`,
   };
@@ -168,7 +186,69 @@ export async function readSignupSigningStatus(): Promise<
   };
 }
 
-export async function requestSignupSigningChallenge(): Promise<
+export async function requestSignupSigningPresentation(): Promise<
+  SigningClientResult<SigningPresentationReceipt>
+> {
+  const config = runtimeConfig();
+  const session = readSignupIntakeSession();
+  if (!config || !session) {
+    return {
+      ok: false,
+      message: "De juridische documenten konden niet veilig worden geladen.",
+    };
+  }
+  const response = await postJson(
+    config.presentationEndpointUrl,
+    config.anonKey,
+    {
+      intake_reference: session.intakeReference,
+      management_capability: session.managementCapability,
+    },
+  );
+  const receiptReference = String(response.body.receipt_reference || "");
+  const receiptSha256 = String(response.body.receipt_sha256 || "");
+  const presentedAt = String(response.body.presented_at || "");
+  const expiresAt = String(response.body.expires_at || "");
+  const legalDocuments = Array.isArray(response.body.legal_documents)
+    ? response.body.legal_documents.filter((document) =>
+      document && typeof document === "object" && !Array.isArray(document)
+    ) as SigningPresentationReceipt["legalDocuments"]
+    : [];
+  if (
+    !response.ok || !/^SPR-[0-9a-f-]{36}$/.test(receiptReference) ||
+    !/^[0-9a-f]{64}$/.test(receiptSha256) ||
+    !Number.isFinite(Date.parse(presentedAt)) ||
+    !Number.isFinite(Date.parse(expiresAt)) || legalDocuments.length !== 4
+  ) {
+    return {
+      ok: false,
+      message: message(
+        response.body,
+        "De juridische documenten konden niet veilig worden geladen.",
+      ),
+    };
+  }
+  return {
+    ok: true,
+    value: {
+      receiptReference,
+      receiptSha256,
+      presentedAt,
+      expiresAt,
+      legalDocuments,
+    },
+  };
+}
+
+export async function requestSignupSigningChallenge(input: {
+  presentation: SigningPresentationReceipt;
+  legalActions: {
+    privacyNoticeRead: boolean;
+    serviceTermsAccepted: boolean;
+    feeTermsAccepted: boolean;
+    mandateSigned: boolean;
+  };
+}): Promise<
   SigningClientResult<SigningChallengeReceipt>
 > {
   const config = runtimeConfig();
@@ -182,6 +262,14 @@ export async function requestSignupSigningChallenge(): Promise<
   const response = await postJson(config.challengeEndpointUrl, config.anonKey, {
     intake_reference: session.intakeReference,
     management_capability: session.managementCapability,
+    presentation_receipt_reference: input.presentation.receiptReference,
+    presentation_receipt_sha256: input.presentation.receiptSha256,
+    legal_actions: {
+      privacy_notice_read: input.legalActions.privacyNoticeRead,
+      service_terms_accepted: input.legalActions.serviceTermsAccepted,
+      fee_terms_accepted: input.legalActions.feeTermsAccepted,
+      mandate_signed: input.legalActions.mandateSigned,
+    },
   });
   const challengeReference = String(response.body.challenge_reference || "");
   const expiresAt = String(response.body.expires_at || "");

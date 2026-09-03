@@ -695,6 +695,31 @@ serve(async (req) => {
   const legalDocuments = legalProjection.map((
     { canonical_content: _content, ...document },
   ) => document);
+  const challengeBinding = await SB.from("app_signup_signing_challenges")
+    .select(
+      "presentation_receipt_id,presentation_receipt_sha256,presentation_acceptance_id",
+    )
+    .eq("id", challengeId).eq("intake_id", intakeId).maybeSingle();
+  if (challengeBinding.error || !challengeBinding.data) {
+    return appErrorResponse(
+      req,
+      422,
+      "Vraag een nieuwe code aan.",
+      "challenge_unavailable",
+    );
+  }
+  if (challengeBinding.data.presentation_receipt_id) {
+    // SL01-D must persist the receipt/config provenance in snapshot v2 before
+    // any receipt-bound challenge can finalize. Until then, failing every v2
+    // challenge is the only way to prevent a same-document/different-config
+    // bundle from being silently finalized under the legacy global snapshot.
+    return appErrorResponse(
+      req,
+      409,
+      "Deze documentgebonden ondertekening kan nog niet veilig worden afgerond.",
+      "signing_presentation_finalize_cutover_required",
+    );
+  }
   const issuedAt = new Date().toISOString();
   const scopes = connectionScope(facts);
   if (

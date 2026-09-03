@@ -801,10 +801,12 @@ const consumerSearch = await command("rg", [
   "app",
 ]);
 assert(
-  [0, 1].includes(consumerSearch.code) &&
-    consumerSearch.stdout.split("\n").filter(Boolean).every((path) =>
-      path.endsWith("app_tenant_configuration_data_plane_v1.ts")
-    ),
+  consumerSearch.code === 0 &&
+    consumerSearch.stdout.split("\n").filter(Boolean).sort().join("|") ===
+      [
+        "supabase/functions/api-app-signup-signing-challenge/index.ts",
+        "supabase/functions/api-app-signup-signing-presentation/index.ts",
+      ].sort().join("|"),
   "Q34_current_consumer_import_present",
 );
 q(34);

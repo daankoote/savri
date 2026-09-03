@@ -703,14 +703,24 @@ assert(
 q(24);
 
 const currentSigningSources = await Promise.all([
+  "../../supabase/functions/api-app-signup-signing-presentation/index.ts",
   "../../supabase/functions/api-app-signup-signing-challenge/index.ts",
   "../../supabase/functions/api-app-signup-signing-finalize/index.ts",
   "../../supabase/functions/_shared/signup_signing.ts",
 ].map((path) => Deno.readTextFile(new URL(path, import.meta.url))));
 assert(
-  currentSigningSources.every((source) =>
-    !source.includes("app_tenant_signing_material")
-  ),
+  currentSigningSources[0].includes(
+    "app_tenant_signing_material_data_plane_v1",
+  ) &&
+    currentSigningSources[1].includes(
+      "app_tenant_signing_material_data_plane_v1",
+    ) &&
+    currentSigningSources.slice(2).every((source) =>
+      !source.includes("app_tenant_signing_material")
+    ) &&
+    currentSigningSources.every((source) =>
+      !source.includes('from "../_shared/app_tenant_signing_material.ts"')
+    ),
   "Q25_current_signing_consumer_changed",
 );
 q(25);

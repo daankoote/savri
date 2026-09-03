@@ -2050,6 +2050,8 @@ const CHECK_LIST = [
       "supabase/functions/api-app-presentation-bootstrap/index.ts",
       "supabase/functions/api-app-dashboard-get/index.ts",
       "supabase/functions/api-app-signup-submit/index.ts",
+      "supabase/functions/api-app-signup-signing-presentation/index.ts",
+      "supabase/functions/api-app-signup-signing-challenge/index.ts",
       "supabase/functions/api-app-signup-signing-finalize/index.ts",
       "supabase/functions/api-app-signup-upload-confirm/index.ts",
       "supabase/functions/api-app-compliance-source-event/index.ts",

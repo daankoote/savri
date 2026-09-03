@@ -1,10 +1,10 @@
 # ENVAL App TODO
 
 Status: CURRENT app/MVP TODO — Wave A1, TF01, TF02-C and SL01-B current local
-proof reconciled through commit `8bfc56c` on 2026-09-01. SL01-C is an active
-implementation candidate but remains PARTIAL pending deliberate browser/UI
-acceptance. Earlier bounded work-package records retain their own dated proof
-status.
+proof reconciled through commit `8bfc56c` on 2026-09-01. SL01-C is CURRENT
+PROVEN LOCAL after targeted proof, functional browser acceptance and narrow
+server-row reconciliation. Earlier
+bounded work-package records retain their own dated proof status.
 
 This queue is primarily for the new `/app`, `api-app-*`, and `app_*`
 implementation. Bounded legacy-caller cutover and white-label foundation status
@@ -14,21 +14,23 @@ implementation.
 
 ## Single Current NEXT
 
-- CURRENT ORDER — `GLOBAL-GOV01 + ENVAL UI-GOV01` records the universal golden
-  engineering/documentation rules plus the approved ENVAL surface/host/IA
-  boundaries and API/CRM-readiness direction. Commit this guidance separately
-  after approval; it changes no product runtime.
-- Then execute exactly one functional SL01-C browser acceptance, close/commit
-  SL01-C, and begin `UI-01` shared shells/navigation/actor boundaries. Do not mix
-  shell/refactor work into the current SL01-C candidate.
+- CURRENT ORDER — close and commit the coherent SL01-C candidate without mixing
+  in shell/refactor work.
+- NEXT PRODUCT WORKSTREAM — begin `UI-01` shared surface shells, navigation and
+  actor boundaries under the adopted modular KISS rules.
 - UI work proceeds in coherent reusable batches under the mandatory pre-flight,
   reuse, KISS, no-invented-copy and API-coupling gates in `AGENTS.md`. SL01-D
-  snapshot/finalize/replay provenance follows the SL01-C acceptance boundary.
-- PARTIAL — `SL01-C`: the presentation-receipt, explicit-acceptance and
-  receipt-bound OTP implementation exists in the current candidate, but is not
-  CURRENT PROVEN until deliberate browser/UI acceptance is recorded. The
-  temporary finalize compatibility guard remains intentionally stricter until
-  SL01-D.
+  snapshot/finalize/replay provenance remains a later bounded TARGET.
+- DONE / CURRENT PROVEN LOCAL — `SL01-C`: the server-resolved immutable signing
+  presentation receipt binds tenant, Auth actor, intake and selected
+  signing-material/legal provenance. Presentation is not acceptance; explicit
+  persisted acceptance binds the exact receipt and OTP challenge. Ordinary
+  supersession and explicit invalidation retain their proven policy, the
+  browser cannot choose provenance, and non-observations are excluded from
+  canonical signing source serialization. Receipt-bound finalize passes
+  ordinary prevalidation and then fails closed at HTTP 409
+  `signing_presentation_finalize_cutover_required`, with zero finalization and
+  zero signing snapshot through this temporary path. Proof is local only.
 
 - DONE / CURRENT PROVEN LOCAL — `TF01`: commit `034691e` propagates immutable
   server-resolved tenant execution context only after exact fixed data-plane
@@ -57,9 +59,11 @@ implementation.
   with service-role `SELECT` + `INSERT` only. Q01-Q28, Wave A1, TF02 and local
   SQL catalog gates pass with zero fixture residue. No real ENVAL tenant values
   were seeded and current signing imports none of this authority.
-- `SL01-C — PRESENTATION RECEIPT + EXPLICIT ACCEPTANCE + OTP CHALLENGE
-  BINDING` remains PARTIAL as described above; do not relabel it CURRENT PROVEN
-  from automated evidence alone.
+- `SL01-D — SIGNING SNAPSHOT / FINALIZE / REPLAY PROVENANCE CUTOVER` remains
+  TARGET: persist accepted receipt M1 into immutable snapshot v2, bind
+  tenant/config/material provenance and finalize fingerprint/provenance v2,
+  replay exact M1 without M2 re-resolution, and retire the compatibility guard
+  only after implementation and proof.
 - No further standalone horizontal tenant-config foundation is currently
   planned. Tenant #2, dynamic switching, provisioning, billing, custom domains,
   theme management and a tenant administration portal remain need-driven future
@@ -121,9 +125,9 @@ controller/processor allocation requires legal review.
   `5dfaed1` and `4f0542f`. Current local qualification status is owned by
   `00_CANON.md` and `06B_CURRENT_IMPLEMENTATION_ASSESSMENT.md`; chronology is
   append-preserved in `03_CHANGELOG_APPEND_ONLY.md`.
-- Wave A1 remains local proof only. Production, tenant #2, real approved tenant
-  legal/fee/operator content, presentation/acceptance/OTP receipt binding,
-  snapshot v2, finalize/replay provenance cutover, live signing activation,
+- Wave A1 and SL01-C remain local proof only. Production, tenant #2, real
+  approved tenant legal/fee/operator content, snapshot v2, finalize/replay
+  provenance cutover, live signing activation,
   independent verifier/NEa acceptance, REV, third-party checks, parser/kWh
   qualification and A2/A3/A4 remain unproven.
 

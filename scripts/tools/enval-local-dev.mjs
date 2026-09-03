@@ -24,7 +24,9 @@ const UUID_PATTERN =
 
 function fixedLocalDataPlaneReference() {
   const config = readFileSync(resolve(ROOT, "supabase/config.toml"), "utf8");
-  const match = config.match(/^project_id\s*=\s*"([a-z0-9][a-z0-9_-]{1,63})"\s*$/m);
+  const match = config.match(
+    /^project_id\s*=\s*"([a-z0-9][a-z0-9_-]{1,63})"\s*$/m,
+  );
   if (!match) fail("tenant_fixed_data_plane_reference_unavailable");
   return match[1];
 }
@@ -34,6 +36,7 @@ const CURRENT_EDGE_ENTRYPOINTS = Object.freeze([
   "supabase/functions/api-app-presentation-bootstrap/index.ts",
   "supabase/functions/api-app-dashboard-get/index.ts",
   "supabase/functions/api-app-signup-submit/index.ts",
+  "supabase/functions/api-app-signup-signing-presentation/index.ts",
   "supabase/functions/api-app-signup-signing-finalize/index.ts",
   "supabase/functions/api-app-compliance-source-event/index.ts",
   "supabase/functions/api-app-compliance-worklist/index.ts",

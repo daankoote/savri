@@ -351,6 +351,8 @@ async function sourceFiles(root: URL): Promise<string[]> {
         [
           "/_shared/app_tenant_resolution_shadow.ts",
           "/_shared/app_control_plane_runtime_reader.ts",
+          "/_shared/app_tenant_configuration_data_plane_v1.ts",
+          "/_shared/app_tenant_configuration_static_single_tenant_v1.ts",
           "/api-app-presentation-bootstrap/index.ts",
         ].some((path) => child.pathname.endsWith(path))
       ) {

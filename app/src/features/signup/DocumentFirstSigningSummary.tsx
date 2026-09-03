@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { DocumentFirstSignupDraft } from "./documentFirstSignupModel";
 import { selectSigningFileReadiness } from "./documentFirstSignupSelectors";
 import { FactTable } from "./presentation/FactTable";
@@ -6,9 +6,10 @@ import { selectUnifiedFactPresentation } from "./presentation/factPresentationMo
 import { createBrowserHtmlLegalBundleV1 } from "./signing/browserHtmlLegalBundleV1";
 import { createLegalBundleDocument } from "./signing/legalBundleDocument";
 import {
+  createReceiptBoundLegalDocuments,
   EMPTY_LEGAL_ACTION_STATE,
   type LegalActionState,
-  listLegalDocuments,
+  type LegalDocumentMetadata,
 } from "./signing/legalDocumentRegistry";
 import { MandateDocument } from "./signing/MandateDocument";
 import { getMandateYearOptions } from "./signing/mandateDocumentModel";
@@ -28,7 +29,9 @@ import { getActiveSignupSignatureMethod } from "./signing/signupSigningCompositi
 import {
   finalizeSignupSigning,
   requestSignupSigningChallenge,
+  requestSignupSigningPresentation,
   type SigningChallengeReceipt,
+  type SigningPresentationReceipt,
 } from "./signupSigningClient";
 import {
   type SignupSubmissionReceipt,
@@ -77,18 +80,69 @@ export function DocumentFirstSigningSummary(
     customerState;
   const presentation = selectUnifiedFactPresentation(draft);
   const method = getActiveSignupSignatureMethod();
-  const legalDocuments = useMemo(() => listLegalDocuments(), []);
   const exporter = useMemo(() => createBrowserHtmlLegalBundleV1(), []);
   const yearOptions = getMandateYearOptions();
   const [challenge, setChallenge] = useState<SigningChallengeReceipt | null>(
     null,
   );
+  const [serverPresentation, setServerPresentation] = useState<
+    {
+      receipt: SigningPresentationReceipt;
+      legalDocuments: readonly LegalDocumentMetadata[];
+    } | null
+  >(null);
+  const [presentationStatus, setPresentationStatus] = useState<
+    "loading" | "loaded" | "error"
+  >("loading");
+  const [presentationMessage, setPresentationMessage] = useState("");
+  const [presentationAttempt, setPresentationAttempt] = useState(0);
   const [otpCode, setOtpCode] = useState("");
   const [runtimeStatus, setRuntimeStatus] = useState<
     "idle" | "requesting" | "awaiting_otp" | "finalizing" | "success" | "error"
   >("idle");
   const [runtimeMessage, setRuntimeMessage] = useState("");
   const challengeRequestInFlightRef = useRef(false);
+  useEffect(() => {
+    let active = true;
+    if (!intakeSessionAvailable) {
+      setPresentationStatus("error");
+      setPresentationMessage(
+        "De veilige aanmeldsessie is niet beschikbaar.",
+      );
+      setServerPresentation(null);
+      return () => {
+        active = false;
+      };
+    }
+    setPresentationStatus("loading");
+    setPresentationMessage("");
+    setServerPresentation(null);
+    void requestSignupSigningPresentation().then((result) => {
+      if (!active) return;
+      if (!result.ok) {
+        setPresentationStatus("error");
+        setPresentationMessage(result.message);
+        return;
+      }
+      const legalDocuments = createReceiptBoundLegalDocuments(
+        result.value.receiptReference,
+        result.value.legalDocuments,
+      );
+      if (!legalDocuments) {
+        setPresentationStatus("error");
+        setPresentationMessage(
+          "De juridische documenten konden niet veilig worden geladen.",
+        );
+        return;
+      }
+      setServerPresentation({ receipt: result.value, legalDocuments });
+      setPresentationStatus("loaded");
+    });
+    return () => {
+      active = false;
+    };
+  }, [intakeSessionAvailable, presentationAttempt]);
+  const legalDocuments = serverPresentation?.legalDocuments ?? [];
   const effectiveLegalActions = useMemo(() => ({
     ...legalActions,
     mandateSigned: signerInput.intentAccepted,
@@ -157,7 +211,17 @@ export function DocumentFirstSigningSummary(
     setRuntimeStatus("requesting");
     setRuntimeMessage("");
     try {
-      const result = await requestSignupSigningChallenge();
+      if (!serverPresentation) {
+        setRuntimeStatus("error");
+        setRuntimeMessage(
+          "De juridische documenten konden niet veilig worden geladen.",
+        );
+        return;
+      }
+      const result = await requestSignupSigningChallenge({
+        presentation: serverPresentation.receipt,
+        legalActions: effectiveLegalActions,
+      });
       if (!result.ok) {
         setRuntimeStatus("error");
         setRuntimeMessage(result.message);
@@ -257,7 +321,28 @@ export function DocumentFirstSigningSummary(
           </span>
         </label>
       </section>
-      {signingIntent.mandate && legalBundle
+      {presentationStatus === "loading"
+        ? (
+          <p className="status-message" role="status">
+            Juridische documenten laden…
+          </p>
+        )
+        : null}
+      {presentationStatus === "error"
+        ? (
+          <div aria-live="polite">
+            <p className="status-message">{presentationMessage}</p>
+            <button
+              className="button button-secondary"
+              onClick={() => setPresentationAttempt((attempt) => attempt + 1)}
+              type="button"
+            >
+              Opnieuw proberen
+            </button>
+          </div>
+        )
+        : null}
+      {serverPresentation && signingIntent.mandate && legalBundle
         ? (
           <div className="signing-blocks">
             <MandateDocument
@@ -308,6 +393,7 @@ export function DocumentFirstSigningSummary(
                   <button
                     className="button button-primary"
                     disabled={!signingStartReadiness.ready ||
+                      presentationStatus !== "loaded" ||
                       runtimeStatus === "requesting"}
                     onClick={() => void requestChallenge()}
                     type="button"

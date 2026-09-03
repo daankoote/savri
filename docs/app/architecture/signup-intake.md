@@ -1,6 +1,13 @@
 # Signup Intake Architecture
 
-Status: MIXED. The active document-first journey, pre-auth quarantine, `typed_name_otp_v1` finalization, receipt v2, server-owned promotion, verified Auth binding and case-owned customer dashboard are CURRENT PROVEN locally. The older direct `api-app-signup-submit` path remains proven source but is not the active signed-intake owner. Production deployment, legal/OTP/Auth acceptance and review/verifier workflow remain TARGET / NOT IMPLEMENTED.
+Status: MIXED. The active document-first journey, pre-auth quarantine, the
+SL01-C server-resolved presentation/acceptance/OTP boundary, legacy
+`typed_name_otp_v1` finalization, receipt v2, server-owned promotion, verified
+Auth binding and case-owned customer dashboard are CURRENT PROVEN locally.
+SL01-D receipt-provenance finalization remains TARGET. The older direct
+`api-app-signup-submit` path remains proven source but is not the active
+signed-intake owner. Production deployment, legal/OTP/Auth acceptance and
+review/verifier workflow remain TARGET / NOT IMPLEMENTED.
 
 ## Scope
 
@@ -11,7 +18,27 @@ The new `/aanmelden` page is a single-page intake with these customer-facing sec
 3. Documentatie uploaden
 4. Toestemming en handtekening
 
-Draft edits remain browser-local. Required PDFs use the dedicated private pre-auth quarantine path; successful Step 3 `typed_name_otp_v1` finalization atomically stores the signed snapshot, legal acceptances, mandate and signature evidence and locks the intake. It does not create a customer, Auth session, dossier or case.
+Draft edits remain browser-local. Required PDFs use the dedicated private
+pre-auth quarantine path. The pre-SL01-C `typed_name_otp_v1` finalization path
+atomically stores the signed snapshot, legal acceptances, mandate and signature
+evidence and locks the intake. It does not create a customer, Auth session,
+dossier or case.
+
+SL01-C adds a server-resolved immutable presentation receipt bound to the
+tenant, verified Auth actor, intake and exact selected signing-material/legal
+provenance. Merely presenting the documents is not acceptance. Explicit
+durable acceptance of the exact receipt precedes and binds the OTP challenge;
+the browser neither selects provenance nor falls back to static/global legal
+material. Canonical signing sources omit `not_found` and blank parser
+observations while retaining valid `found` nonblank observations.
+
+The receipt-bound path does not yet finalize. After ordinary request and
+canonical-fact prevalidation it intentionally returns HTTP 409
+`signing_presentation_finalize_cutover_required`, with no finalization or
+signing snapshot. SL01-D must persist receipt M1 into immutable snapshot v2,
+bind tenant/config/material and finalize fingerprint/provenance v2, and replay
+exact M1 without M2 re-resolution before this compatibility guard may be
+removed.
 
 Signup quarantine and authenticated correction keep separate lifecycle-specific
 transport/authorization lanes, but their customer document presentation and

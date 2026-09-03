@@ -1845,3 +1845,30 @@ Commit: `8bfc56c Add tenant signing material authority`
   legal/verifier activation approval, remote and production remain open.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-09-03 — Close SL01-C as CURRENT PROVEN LOCAL
+
+- SL01-C is CURRENT PROVEN LOCAL for server-resolved signing presentation,
+  immutable tenant/Auth/intake/material-bound receipt M1, explicit durable
+  receipt acceptance and receipt/acceptance-bound OTP challenge issuance.
+  Presentation is not acceptance, and the browser has no static legal fallback
+  or provenance-selection authority.
+- Targeted proof preserves accepted-M1 ordinary supersession and explicit
+  invalidation policy. Canonical signing source serialization now omits
+  `not_found` and blank non-observations while retaining valid `found` nonblank
+  sources and the remaining fact structure.
+- Functional browser evidence reached challenge HTTP 201 and the intentional
+  finalize HTTP 409 `signing_presentation_finalize_cutover_required` guard
+  after ordinary prevalidation. Narrow local server-row reconciliation proved
+  the exact receipt/acceptance/challenge bindings, zero finalization, zero
+  signing snapshot and unchanged real pilot.
+- SL01-D remains TARGET for immutable signing snapshot v2, persisted
+  tenant/config/material provenance, finalize fingerprint/provenance v2 and
+  exact M1 replay without M2 re-resolution. The compatibility guard remains
+  required until that authority is built and proven.
+- This is local technical evidence only. It proves no production deployment,
+  tenant #2, dynamic tenant switching, successful receipt-provenance
+  finalization, legal/verifier acceptance, advanced or qualified signature,
+  REV integration or regulatory approval.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

@@ -3,6 +3,15 @@ import {
   SIGNUP_PROVENANCE_AUTHORITIES_V1,
   SIGNUP_REVIEW_REASONS_V1,
 } from "../../supabase/functions/_shared/signup_resolution_provenance.ts";
+import {
+  type CanonicalSigningSourceRegistry,
+  createCanonicalSigningFactModel,
+} from "../../app/src/features/signup/signing/canonicalSigningFacts.ts";
+import type {
+  FactPresentationRow,
+  FactPresentationSource,
+  UnifiedFactPresentation,
+} from "../../app/src/features/signup/presentation/factPresentationModel.ts";
 
 function assert(value: unknown, label: string): asserts value {
   if (!value) throw new Error(label);
@@ -97,6 +106,141 @@ assert(
   "unresolved_or_unclassified_review_became_reason",
 );
 
+const sourceCases = [
+  {
+    key: "found",
+    fileReference: "11111111-1111-4111-8111-111111111111",
+    contentSha256: "a".repeat(64),
+    extractionStatus: "found",
+    observedValue: " 871685900012345678 ",
+  },
+  {
+    key: "not-found-empty",
+    fileReference: "22222222-2222-4222-8222-222222222222",
+    contentSha256: "b".repeat(64),
+    extractionStatus: "not_found",
+    observedValue: "",
+  },
+  {
+    key: "not-found-stale",
+    fileReference: "33333333-3333-4333-8333-333333333333",
+    contentSha256: "c".repeat(64),
+    extractionStatus: "not_found",
+    observedValue: "stale non-authoritative value",
+  },
+  {
+    key: "found-blank",
+    fileReference: "44444444-4444-4444-8444-444444444444",
+    contentSha256: "d".repeat(64),
+    extractionStatus: "found",
+    observedValue: " \t ",
+  },
+] as const;
+const sourceRegistry = Object.freeze(Object.fromEntries(sourceCases.map(
+  ({ key, fileReference, contentSha256 }) => [
+    key,
+    Object.freeze({
+      fileReference,
+      clientSlotId: key,
+      documentType: "installation_invoice" as const,
+      contentSha256,
+      parserVersion: "parser-proof-v1",
+    }),
+  ],
+))) as CanonicalSigningSourceRegistry;
+const presentationSources: FactPresentationSource[] = sourceCases.map(
+  ({ key, contentSha256, extractionStatus, observedValue }) => ({
+    sourceId: key,
+    sourceType: "installation_invoice",
+    sourceLabel: "Installatiefactuur",
+    binding: "Installatiefactuur",
+    observedValue,
+    normalizedValue: observedValue.trim(),
+    semanticRole: "electricity_connection",
+    extractionStatus,
+    relationship: "direct",
+    documentIdentity: contentSha256,
+  }),
+);
+
+const canonicalSourceRow = {
+  id: "location:proof:electricity-ean",
+  label: "EAN elektriciteit",
+  canonicalValue: "871685900012345678",
+  sources: presentationSources,
+  sourceValues: [],
+  sourceLabels: [],
+  sourceConsistency: "SINGLE_SOURCE",
+  applicability: "required",
+  resolutionState: "confirmed",
+  resolutionReason: null,
+  judgment: "Bevestigd",
+  confirmationState: "confirmed",
+  correctionState: "unchanged",
+  isRequired: true,
+  isInformational: false,
+  actions: ["correct"],
+  locationId: "location-proof",
+  reviewRow: { factKey: "electricityEan" } as FactPresentationRow["reviewRow"],
+} satisfies FactPresentationRow;
+const canonicalSourcePresentation = {
+  organizationRows: [],
+  account: { id: "account", title: "Account", rows: [] },
+  locations: [{
+    id: "location-proof",
+    title: "Locatie",
+    rows: [canonicalSourceRow],
+  }],
+  chargers: [],
+  documents: { id: "documents", title: "Documenten", rows: [] },
+} satisfies UnifiedFactPresentation;
+const canonicalSourceModel = createCanonicalSigningFactModel(
+  canonicalSourcePresentation,
+  sourceRegistry,
+);
+const canonicalSourceFact = canonicalSourceModel.facts[0];
+const serializedSources = canonicalSourceFact?.resolutionInput.sources ?? [];
+
+assert(
+  serializedSources.some((item) =>
+    item.fileReference === sourceCases[0].fileReference &&
+    item.observedValue === "871685900012345678"
+  ),
+  "found_nonblank_source_not_serialized",
+);
+assert(
+  !serializedSources.some((item) =>
+    item.fileReference === sourceCases[1].fileReference
+  ),
+  "not_found_empty_source_serialized",
+);
+assert(
+  !serializedSources.some((item) =>
+    item.fileReference === sourceCases[2].fileReference
+  ),
+  "not_found_stale_source_serialized",
+);
+assert(
+  !serializedSources.some((item) =>
+    item.fileReference === sourceCases[3].fileReference
+  ),
+  "found_blank_source_serialized",
+);
+assert(
+  canonicalSourceModel.schemaVersion === "canonical-signing-facts-v1" &&
+    canonicalSourceModel.facts.length === 1 &&
+    canonicalSourceFact?.factId === canonicalSourceRow.id &&
+    canonicalSourceFact.factKey === "electricityEan" &&
+    canonicalSourceFact.label === canonicalSourceRow.label &&
+    canonicalSourceFact.value === canonicalSourceRow.canonicalValue &&
+    canonicalSourceFact.resolutionState === "confirmed" &&
+    canonicalSourceFact.required === true &&
+    canonicalSourceFact.locationId === "location-proof" &&
+    canonicalSourceFact.resolutionInput.action === "confirmed" &&
+    serializedSources.length === 1,
+  "remaining_canonical_fact_structure_changed",
+);
+
 const [endpoint, client, canonical, signingIntent, projection, baseline] =
   await Promise.all([
     Deno.readTextFile(
@@ -124,9 +268,9 @@ assert(
   endpoint.includes("deriveSignupResolutionProvenanceV1({") &&
     endpoint.includes("canonical-signing-facts-v2") &&
     endpoint.includes(
-      '"id,client_slot_id,document_type,status,server_sha256"',
+      '"id,client_slot_id,document_type,server_sha256"',
     ) &&
-    endpoint.includes('file.status !== "confirmed_quarantine"') &&
+    !endpoint.includes('file.status !== "confirmed_quarantine"') &&
     endpoint.includes("file.server_sha256 !== source.contentSha256") &&
     endpoint.includes("file.client_slot_id !== source.clientSlotId") &&
     endpoint.includes("resolution_provenance:") &&
@@ -157,6 +301,22 @@ assert(
   "client_reason_authority_or_source_binding_invalid",
 );
 assert(
+  factInputParser.includes("!observedValue") &&
+    serializedSources.every((item) =>
+      Object.keys(item).sort().join("|") ===
+        [
+          "clientSlotId",
+          "contentSha256",
+          "documentType",
+          "fileReference",
+          "observedValue",
+          "parserVersion",
+        ].sort().join("|") &&
+      item.observedValue.trim().length > 0
+    ),
+  "canonical_sources_do_not_match_server_structural_contract",
+);
+assert(
   projection.includes("canonical-signing-facts-v1") &&
     projection.includes("GENERIC_REVIEW_REQUIRED") &&
     projection.includes("canonical-signing-facts-v2") &&
@@ -174,3 +334,8 @@ console.log("REVIEW10_BLOCKED_CAUSES=PASS");
 console.log("REVIEW10_SERVER_DERIVED_HASHED_PROVENANCE=PASS");
 console.log("REVIEW10_DIRECT_REASON_TAMPER_DENIED=PASS");
 console.log("REVIEW10_PROVENANCE_AUTHORITY=PASS");
+console.log("SL01CF01_FOUND_NONBLANK_SOURCE_INCLUDED=PASS");
+console.log("SL01CF01_NOT_FOUND_SOURCE_EXCLUDED=PASS");
+console.log("SL01CF01_NOT_FOUND_STALE_VALUE_EXCLUDED=PASS");
+console.log("SL01CF01_FOUND_BLANK_VALUE_EXCLUDED=PASS");
+console.log("SL01CF01_REMAINING_FACT_STRUCTURE_PRESERVED=PASS");

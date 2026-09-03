@@ -475,6 +475,26 @@ CUSTOMER04C external customer document workflow:
 Signed-intake and promotion lifecycle:
 
 - Collecting pre-auth quarantine, `typed_name_otp_v1`, immutable signing finalization, finalized server locks, safe receipt and server-authoritative same-tab recovery are CURRENT PROVEN locally as bounded source/runtime proofs.
+- SL01-C is `CURRENT PROVEN — LOCAL ONLY` for the server-resolved signing
+  presentation path. The server issues an immutable tenant-, Auth-actor- and
+  intake-bound presentation receipt for the selected signing material/legal
+  provenance; presentation is not acceptance. Explicit durable acceptance of
+  that exact receipt precedes and binds the OTP challenge. The browser has no
+  static legal fallback or signing-provenance selection authority. Ordinary
+  supersession leaves an already accepted valid receipt usable, while explicit
+  invalidation before first finalization requires a new presentation,
+  acceptance and OTP.
+- SL01-C also proves that canonical signing sources omit `not_found` and blank
+  parser observations while retaining valid `found` nonblank observations.
+  Receipt-bound finalize passes ordinary request/provenance prevalidation but
+  intentionally returns HTTP 409
+  `signing_presentation_finalize_cutover_required`; it creates no finalization
+  or signing snapshot through that compatibility path.
+- SL01-D remains `TARGET`: accepted receipt M1 must be persisted into immutable
+  signing snapshot v2 with tenant/config/material provenance, finalize
+  fingerprint/provenance v2 and exact M1 replay without M2 re-resolution. Only
+  after that authority is built and proven may the temporary compatibility
+  guard be removed.
 - `typed_name_otp_v1` proves signing intent plus control of the used email channel; the former separate email-verification promotion trigger is `SUPERSEDED` and must not be rebuilt without a new hard requirement.
 - 09C1A/09C1B/09C1C signed-intake convergence is CURRENT PROVEN — LOCAL ONLY: atomic/idempotent `app_cases` promotion, server-owned finalize/status orchestration, receipt v2 with safe presentation state, verified Supabase Auth binding to the existing promoted customer/case, and a customer-safe case-owned dashboard projection. This flow creates no `app_customer_dossiers` row.
 - 09C1C-R2 adds on-demand compatibility convergence for one uniquely Auth-bound

@@ -84,6 +84,55 @@ export function listLegalDocuments(): readonly LegalDocumentMetadata[] {
   return LEGAL_DOCUMENT_TYPES.map(getLegalDocument);
 }
 
+export type ReceiptBoundLegalDocumentInput = {
+  document_type: string;
+  version: string;
+  language: string;
+  title: string;
+  canonical_content: string;
+  content_sha256: string;
+  effective_from: string | null;
+};
+
+export function createReceiptBoundLegalDocuments(
+  receiptReference: string,
+  input: readonly ReceiptBoundLegalDocumentInput[],
+): readonly LegalDocumentMetadata[] | null {
+  if (!/^SPR-[0-9a-f-]{36}$/.test(receiptReference) || input.length !== 4) {
+    return null;
+  }
+  const byType = new Map(input.map((document) => [
+    document.document_type,
+    document,
+  ]));
+  if (byType.size !== 4) return null;
+  const documents: LegalDocumentMetadata[] = [];
+  for (const documentType of LEGAL_DOCUMENT_TYPES) {
+    const document = byType.get(documentType);
+    if (
+      !document || !document.version || document.language !== "nl" ||
+      !document.title || !document.canonical_content ||
+      !/^[0-9a-f]{64}$/.test(document.content_sha256) ||
+      !document.effective_from ||
+      !Number.isFinite(Date.parse(document.effective_from))
+    ) return null;
+    documents.push({
+      documentType,
+      version: document.version,
+      language: "nl",
+      status: "CURRENT",
+      effectiveFrom: document.effective_from,
+      title: document.title,
+      canonicalContentReference: `presentation-receipt:${receiptReference}`,
+      canonicalRenderInput: {
+        paragraphs: document.canonical_content.split(/\n\s*\n/),
+      },
+      hashStatus: "verified",
+    });
+  }
+  return documents;
+}
+
 export function legalDocumentIsSigningReady(
   document: LegalDocumentMetadata,
 ): boolean {

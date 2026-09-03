@@ -272,17 +272,30 @@ TF02 and local SQL/catalog evidence pass with zero fixture residue, five
 deny-by-default tables and service-role `SELECT` + `INSERT` only. No real ENVAL
 tenant values were seeded and no current signing module imports the authority.
 
-The adopted TARGET policy binds a future signing attempt when the server issues
-an immutable legal-presentation receipt. Explicit persisted acceptance precedes
-and binds the OTP challenge to that receipt. Ordinary supersession does not
+SL01-C is CURRENT PROVEN LOCAL for the server-resolved signing-presentation
+boundary. The server issues immutable receipt M1 bound to tenant, Auth actor,
+intake, manifest and the selected operational/legal/fee signing material.
+Presentation is not acceptance. Explicit persisted acceptance precedes and
+binds the OTP challenge to that exact receipt. Ordinary supersession does not
 invalidate an accepted valid M1; explicit invalidation before first
-finalization requires new presentation, acceptance and OTP. Successful history
-is never rewritten and replay never silently adopts newer configuration. This
-policy is not CURRENT: SL01-C must prove presentation/acceptance/challenge
-binding, and SL01-D or later must prove snapshot v2, tenant-aware finalization
-and config-aware replay before current global signing assumptions can be
-removed.
+finalization requires new presentation, acceptance and OTP. The browser cannot
+choose provenance or fall back to static/global legal material. Canonical
+signing source serialization excludes `not_found` and blank non-observations
+while preserving valid `found` nonblank observations and the remaining fact
+structure.
 
+Receipt-bound finalize currently passes ordinary request and canonical-fact
+prevalidation and then fails closed with HTTP 409
+`signing_presentation_finalize_cutover_required`. It creates no finalization or
+signing snapshot through that path. SL01-D remains TARGET: immutable signing
+snapshot v2 must persist M1 plus tenant/config/material provenance; finalize
+fingerprint/provenance v2 must replay exact M1 without M2 re-resolution.
+Successful history is never rewritten and replay never silently adopts newer
+configuration. The temporary compatibility guard may be removed only after
+that authority is implemented and proven.
+
+This status is local technical proof, not production deployment or legal or
+regulatory approval. `typed_name_otp_v1` is not claimed advanced or qualified.
 Production legal/OTP/Auth, real approved tenant operator/legal/fee content,
 legal and verifier activation approval, live signing activation, tenant #2 and
 cross-tenant isolation, independent verifier/NEa acceptance, REV operations,

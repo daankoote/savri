@@ -872,6 +872,7 @@ const coveredEntrypoints = [
   "api-app-signup-intake-start",
   "api-app-signup-signing-challenge",
   "api-app-signup-signing-finalize",
+  "api-app-signup-signing-presentation",
   "api-app-signup-submit",
   "api-app-signup-upload-confirm",
   "api-app-signup-upload-url",
@@ -1044,7 +1045,7 @@ assert(
   "edge_entrypoint_coverage_inventory_incomplete",
 );
 assert(
-  coveredEntrypoints.length + sharedWorkforceEntrypoints.length + 1 === 33 &&
+  coveredEntrypoints.length + sharedWorkforceEntrypoints.length + 1 === 34 &&
     legacyFallbackEntrypoints.length +
           tenantScopedWorkerEntrypoints.length === 22,
   "edge_entrypoint_classification_count_mismatch",

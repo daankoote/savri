@@ -57,13 +57,17 @@ function signingFact(
   sourceRegistry: CanonicalSigningSourceRegistry,
 ): CanonicalSigningFact {
   const sources = row.sources.flatMap((source) => {
-    if (source.sourceType === "user") return [];
+    if (
+      source.sourceType === "user" || source.extractionStatus !== "found"
+    ) return [];
+    const observedValue = source.observedValue.trim();
+    if (!observedValue) return [];
     const registered = sourceRegistry[source.sourceId];
     if (
       !registered || registered.documentType !== source.sourceType ||
       source.documentIdentity !== registered.contentSha256
     ) return [];
-    return [{ ...registered, observedValue: source.observedValue }];
+    return [{ ...registered, observedValue }];
   });
   const action: SignupResolutionActionV1 =
     row.resolutionState === "pending" || row.resolutionState === "blocked"
