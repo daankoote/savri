@@ -76,6 +76,10 @@ prefix_rule(pattern = ["node", "scripts/tools/enval-verify.mjs", "--mode", "RELE
 # Self-cleaning behavioral proof for the verifier and its guarded wrappers.
 prefix_rule(pattern = ["node", "scripts/proofs/enval-verify-runner.proof.mjs"], decision = "allow")
 
+# Bounded temporary-state UI review loop. Its positional operation and
+# duplicate-free parser fail closed; reviewer launches are fresh and read-only.
+prefix_rule(pattern = ["node", "scripts/tools/enval-ui-review-loop.mjs"], decision = "allow")
+
 # Hash-pinned, loopback-only, transaction-read-only SQL proof wrapper.
 prefix_rule(pattern = ["node", "scripts/tools/enval-readonly-sql.mjs", "--proof-id", "enval-local-readonly-catalog"], decision = "allow")
 

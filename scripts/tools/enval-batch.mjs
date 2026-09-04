@@ -18,7 +18,7 @@ export const HERDR_PROJECT = "ENVAL";
 export const HERDR_SESSION = HERDR_PROJECT;
 export const HERDR_VERSION = "0.8.2";
 export const PERSISTENT_WORKSPACE = "Main";
-export const BATCH_TABS = Object.freeze(["Codex", "Terminal"]);
+export const BATCH_TABS = Object.freeze(["Codex", "Terminal", "Reviewer"]);
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const WORKSPACE_NAME_PATTERN =
   /^\p{Lu}[\p{L}\p{N}]*(?: \p{Lu}[\p{L}\p{N}]*)*$/u;
@@ -505,6 +505,7 @@ function ensurePersistentWorkspace(run, root) {
     run,
     { worktree: root },
     { workspaceId, tabId },
+    BATCH_TABS.slice(0, 2),
   );
 }
 
@@ -591,7 +592,7 @@ function createHerdrWorkspace(run, spec) {
   return Object.freeze({ workspaceId, tabId, paneId });
 }
 
-function configureStandardTabs(run, spec, workspace) {
+function configureStandardTabs(run, spec, workspace, tabs = BATCH_TABS) {
   herdrChecked(
     run,
     [
@@ -600,29 +601,31 @@ function configureStandardTabs(run, spec, workspace) {
       "tab",
       "rename",
       workspace.tabId,
-      BATCH_TABS[0],
+      tabs[0],
     ],
     spec.worktree,
     "herdr_codex_tab_rename_failed",
   );
-  herdrChecked(
-    run,
-    [
-      "--session",
-      HERDR_SESSION,
-      "tab",
-      "create",
-      "--workspace",
-      workspace.workspaceId,
-      "--cwd",
+  for (const label of tabs.slice(1)) {
+    herdrChecked(
+      run,
+      [
+        "--session",
+        HERDR_SESSION,
+        "tab",
+        "create",
+        "--workspace",
+        workspace.workspaceId,
+        "--cwd",
+        spec.worktree,
+        "--label",
+        label,
+        "--no-focus",
+      ],
       spec.worktree,
-      "--label",
-      BATCH_TABS[1],
-      "--no-focus",
-    ],
-    spec.worktree,
-    "herdr_terminal_tab_creation_failed",
-  );
+      `herdr_${label.toLowerCase()}_tab_creation_failed`,
+    );
+  }
 }
 
 export function launchHerdrCodex(

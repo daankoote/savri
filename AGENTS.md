@@ -216,18 +216,31 @@ For material frontend business/data interaction, also report:
 ## Independent artifact-based UI review
 
 - A UI implementation enters independent review only after its deterministic
-  implementation evidence is green. The project-owned browser collector then
+  implementation evidence is green and the implementation session has emitted
+  bounded machine-readable batch state. The project-owned browser collector then
   captures the acceptance-named routes, states and viewports, screenshots,
   bounded console/runtime evidence, and an evidence manifest.
 - Browser control and evidence collection are separate from independent AI
-  review. The reviewer runs in a fresh review-only Codex session, consumes the
-  validated artifacts, requires no live browser authority, and returns an
-  artifact-bounded `PASS` or `FAIL`; `PARTIAL` is reserved for missing evidence
-  or capability.
-- A cycle-1 `FAIL` or `PARTIAL` returns concrete findings to implementation. Any
-  fix receives new deterministic and browser evidence before a fresh cycle-2
-  review. There are at most two review/fix cycles; unresolved cycle-2 findings
-  stop to Daan. Daan always retains final browser and product acceptance.
+  review. Every pass runs in a fresh review-only Codex session and consumes the
+  acceptance, changed-file inventory, implementation result, validated artifacts,
+  and prior findings. The reviewer has no live browser authority and returns
+  structured `PASS` or `FAIL` findings with stable IDs, severity,
+  route/state/viewport, evidence reference, and actionable non-redesigning text.
+- The project-local state machine routes `FAIL` findings directly back to the
+  same implementation batch context. Each fix receives new deterministic and
+  browser evidence before a fresh independent review. `PASS` stops immediately
+  browser-ready; no later review or fix may run.
+- The implementation Codex owns the loop within its original turn: initialize
+  and advance the state, apply only in-scope fixes, refresh evidence, and record
+  the fix until terminal state. Intermediate implementation/reviewer handoffs
+  are not returned to Daan; only the final compact outcome is returned unless
+  an earlier human stop condition requires action.
+- The default maximum is four review/fix cycles followed by one final review.
+  If that final review fails, stop `PARTIAL` to Daan/orchestrator with unresolved
+  findings. Five review/fix cycles are the hard maximum and require explicit
+  authorization for that batch. Human gates, material product/architecture/
+  security decisions, and the Loop Guard stop immediately. Daan always retains
+  final browser and product acceptance.
 - The reviewer does not redesign, invent copy, expand scope, modify product or
   repository state, or start another review cycle.
 - The generic project-agnostic reviewer core is the user-global
@@ -276,8 +289,9 @@ For material frontend business/data interaction, also report:
   integration worktree, creates one leaf branch and worktree per implementation
   batch, prevents stale governance bases, creates one Herdr workspace per batch in
   the visible `ENVAL` project/session, names the workspace in human product
-  language, creates the visible `Codex` and `Terminal` tabs, and starts one
-  interactive Codex agent there with Auto-review and product web search disabled.
+  language, creates the visible `Codex`, `Terminal`, and `Reviewer` tabs, and
+  starts one interactive Codex agent there with Auto-review and product web
+  search disabled.
   Herdr does not create or own the Git worktree. Technical identifiers remain
   internal and are absent from the normal launcher handoff.
 - The launcher never commits, merges, pushes, deploys, or cleans up a batch.
@@ -314,12 +328,12 @@ hashes, generated agent IDs, branches, and worktree paths are forbidden in the
 normal user flow.
 
 Visible tabs are named exactly `Codex`, `Terminal`, and `Reviewer`. `Main`
-normally contains `Codex` and `Terminal`. A product batch starts with `Codex`
-and `Terminal`; `Reviewer` is added only when independent review becomes
-applicable. Internal slugs, branches, worktree paths, Herdr workspace IDs, and
-agent IDs may remain unique implementation details. The launcher/orchestrator,
-not Daan, owns every mapping between the human workspace name and those
-technical identities.
+normally contains `Codex` and `Terminal`. A product batch exposes `Codex`,
+`Terminal`, and `Reviewer`; `Reviewer` is inspection-only and automated routing
+never requires Daan to shuttle messages. Internal slugs, branches, worktree
+paths, Herdr workspace IDs, and agent IDs may remain unique implementation
+details. The launcher/orchestrator, not Daan, owns every mapping between the
+human workspace name and those technical identities.
 
 Every instruction requiring a human action must use this exact location shape:
 

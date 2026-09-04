@@ -422,7 +422,7 @@ test("valid start uses current main HEAD and starts governed Codex through Herdr
       "ENVAL_BATCH_START=PASS",
       "PROJECT=ENVAL",
       "WORKSPACE=Proof Current",
-      "TABS=Codex,Terminal",
+      "TABS=Codex,Terminal,Reviewer",
       "",
     ].join("\n"),
   );
@@ -499,6 +499,25 @@ test("valid start uses current main HEAD and starts governed Codex through Herdr
     "Terminal",
     "--no-focus",
   ]);
+  const reviewerTabCreate = sessionCalls.find(
+    (call) =>
+      call.args[2] === "tab" &&
+      call.args[3] === "create" &&
+      call.args.includes("Reviewer"),
+  );
+  assert.deepEqual(reviewerTabCreate.args, [
+    "--session",
+    HERDR_SESSION,
+    "tab",
+    "create",
+    "--workspace",
+    "w40",
+    "--cwd",
+    result.worktree,
+    "--label",
+    "Reviewer",
+    "--no-focus",
+  ]);
   const agentStart = sessionCalls.find(
     (call) => call.args[2] === "agent" && call.args[3] === "start",
   );
@@ -570,7 +589,16 @@ test("two batches receive separate workspaces in the one ENVAL session", async (
   );
   assert.deepEqual(
     batchRun.herdrState.tabs.map((tab) => tab.label),
-    ["Codex", "Terminal", "Codex", "Terminal", "Codex", "Terminal"],
+    [
+      "Codex",
+      "Terminal",
+      "Codex",
+      "Terminal",
+      "Reviewer",
+      "Codex",
+      "Terminal",
+      "Reviewer",
+    ],
   );
   assert.deepEqual(
     batchRun.herdrState.workspaces[0],
@@ -874,7 +902,7 @@ test("permanent governance owns human Herdr navigation and RYB forward naming", 
       "node scripts/tools/enval-batch.mjs start Beheer",
       "PROJECT=ENVAL",
       "WORKSPACE=<human product name>",
-      "TABS=Codex,Terminal",
+      "TABS=Codex,Terminal,Reviewer",
       "`ENVAL -> Main` naming conventions",
     ]
   ) {

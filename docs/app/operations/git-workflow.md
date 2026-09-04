@@ -37,15 +37,26 @@ delegate Git-worktree creation to Herdr.
 Batch workspace names are short product concepts such as `Beheer`, `Klanten`,
 `Organisatie`, and `Dossiers`; technical slugs, `autonomy/*`, hashes, generated
 agent IDs, and default version suffixes are not human-facing names. The launcher
-renames the batch root tab to `Codex`, creates `Terminal`, and adds no `Reviewer`
-tab until review is applicable. Its normal success output is limited to the
-human navigation contract:
+renames the batch root tab to `Codex` and creates `Terminal` and `Reviewer`.
+`Reviewer` is visibility/inspection-only: project tooling routes evidence and
+findings without Daan manually relaying messages. Its normal success output is
+limited to the human navigation contract:
 
 ```text
 PROJECT=ENVAL
 WORKSPACE=<human product name>
-TABS=Codex,Terminal
+TABS=Codex,Terminal,Reviewer
 ```
+
+For a UI-bearing batch, the same implementation Codex emits bounded temporary
+JSON state after deterministic and browser evidence is green, then advances the
+project-local `enval-ui-review-loop.mjs` state machine within the same turn. Each
+review uses a fresh ephemeral, read-only Codex invocation in `Reviewer`. A
+`FAIL` returns structured findings directly to the same implementation context;
+the next review requires refreshed deterministic and browser evidence. `PASS`
+stops immediately browser-ready. The default allows four fixes and one final
+review; an explicitly authorized batch may allow five fixes, never more. A final
+failure or an earlier human/material/Loop-Guard stop returns `PARTIAL`.
 
 Before Git branch/worktree creation, the launcher verifies installed Herdr 0.8.2,
 the required session/workspace/agent CLI semantics, Codex availability, and the
