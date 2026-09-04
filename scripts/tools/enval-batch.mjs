@@ -14,9 +14,14 @@ import { pathToFileURL } from "node:url";
 
 export const ENVAL_ROOT = "/Users/daankoote/dev/enval";
 export const ENVAL_WORKTREES_ROOT = "/Users/daankoote/dev/enval-worktrees";
-export const HERDR_SESSION = "enval-worker";
+export const HERDR_PROJECT = "ENVAL";
+export const HERDR_SESSION = HERDR_PROJECT;
 export const HERDR_VERSION = "0.8.2";
+export const PERSISTENT_WORKSPACE = "Main";
+export const BATCH_TABS = Object.freeze(["Codex", "Terminal"]);
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const WORKSPACE_NAME_PATTERN =
+  /^\p{Lu}[\p{L}\p{N}]*(?: \p{Lu}[\p{L}\p{N}]*)*$/u;
 const HERDR_AGENT_PATTERN = /^[a-z][a-z0-9_-]{0,31}$/;
 const GOVERNANCE_FILES = Object.freeze([
   "AGENTS.md",
@@ -117,6 +122,30 @@ export function deriveBatchSpec(slug, worktreesRoot = ENVAL_WORKTREES_ROOT) {
   const worktree = resolve(root, slug);
   if (dirname(worktree) !== root) fail("leaf_worktree_invalid");
   return Object.freeze({ slug, branch: `autonomy/${slug}`, worktree });
+}
+
+export function deriveBatchIdentity(
+  workspaceName,
+  technicalSlug = null,
+  allowVersionSuffix = false,
+) {
+  if (
+    typeof workspaceName !== "string" ||
+    workspaceName.length > 40 ||
+    !WORKSPACE_NAME_PATTERN.test(workspaceName) ||
+    workspaceName === PERSISTENT_WORKSPACE ||
+    (!allowVersionSuffix && /V\d+$/i.test(workspaceName))
+  ) {
+    fail("workspace_name_invalid");
+  }
+  const slug = technicalSlug ?? workspaceName
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+  deriveBatchSpec(slug);
+  return Object.freeze({ workspaceName, slug });
 }
 
 export function deriveHerdrAgentName(slug) {
@@ -343,6 +372,59 @@ export function verifyHerdrCli(run = defaultRun, cwd = ENVAL_ROOT) {
     }
   }
 
+  const workspaceRenameHelp = herdrChecked(
+    run,
+    ["workspace", "rename", "--help"],
+    cwd,
+    "herdr_workspace_rename_help_unavailable",
+  );
+  if (
+    !workspaceRenameHelp.includes(
+      "workspace rename <WORKSPACE_ID> <LABEL>...",
+    )
+  ) {
+    fail("herdr_workspace_rename_semantics_unsupported");
+  }
+
+  const tabRenameHelp = herdrChecked(
+    run,
+    ["tab", "rename", "--help"],
+    cwd,
+    "herdr_tab_rename_help_unavailable",
+  );
+  if (!tabRenameHelp.includes("tab rename <TAB_ID> <LABEL>...")) {
+    fail("herdr_tab_rename_semantics_unsupported");
+  }
+
+  const tabListHelp = herdrChecked(
+    run,
+    ["tab", "list", "--help"],
+    cwd,
+    "herdr_tab_list_help_unavailable",
+  );
+  if (!tabListHelp.includes("--workspace <WORKSPACE_ID>")) {
+    fail("herdr_tab_list_semantics_unsupported");
+  }
+
+  const tabCreateHelp = herdrChecked(
+    run,
+    ["tab", "create", "--help"],
+    cwd,
+    "herdr_tab_create_help_unavailable",
+  );
+  for (
+    const expected of [
+      "--workspace <WORKSPACE_ID>",
+      "--cwd <PATH>",
+      "--label <TEXT>",
+      "--no-focus",
+    ]
+  ) {
+    if (!tabCreateHelp.includes(expected)) {
+      fail("herdr_tab_create_semantics_unsupported");
+    }
+  }
+
   const agentHelp = herdrChecked(
     run,
     ["agent", "start", "--help"],
@@ -365,6 +447,67 @@ export function verifyHerdrCli(run = defaultRun, cwd = ENVAL_ROOT) {
   return Object.freeze({ version: HERDR_VERSION });
 }
 
+function ensurePersistentWorkspace(run, root) {
+  const workspaceList = herdrResponse(
+    run,
+    ["workspace", "list"],
+    root,
+    "workspace_list",
+    "herdr_workspace_list_failed",
+  );
+  if (!Array.isArray(workspaceList.workspaces)) {
+    fail("herdr_workspace_list_response_invalid");
+  }
+  const named = workspaceList.workspaces.filter(
+    (workspace) => workspace?.label === PERSISTENT_WORKSPACE,
+  );
+  if (named.length > 1) fail("herdr_main_workspace_conflict");
+  if (named.length === 1) return;
+
+  const rootWorkspaces = workspaceList.workspaces.filter((workspace) => {
+    const checkoutPath = workspace?.worktree?.checkout_path;
+    return typeof checkoutPath === "string" && resolve(checkoutPath) === root;
+  });
+  if (rootWorkspaces.length !== 1) fail("herdr_main_workspace_missing");
+  const workspaceId = rootWorkspaces[0]?.workspace_id;
+  if (typeof workspaceId !== "string" || workspaceId === "") {
+    fail("herdr_main_workspace_response_invalid");
+  }
+  herdrChecked(
+    run,
+    [
+      "--session",
+      HERDR_SESSION,
+      "workspace",
+      "rename",
+      workspaceId,
+      PERSISTENT_WORKSPACE,
+    ],
+    root,
+    "herdr_main_workspace_rename_failed",
+  );
+
+  const tabList = herdrResponse(
+    run,
+    ["tab", "list", "--workspace", workspaceId],
+    root,
+    "tab_list",
+    "herdr_main_tab_list_failed",
+  );
+  if (!Array.isArray(tabList.tabs) || tabList.tabs.length !== 1) {
+    fail("herdr_main_tabs_ambiguous");
+  }
+  const tabId = tabList.tabs[0]?.tab_id;
+  if (typeof tabId !== "string" || tabId === "") {
+    fail("herdr_main_tab_response_invalid");
+  }
+  configureStandardTabs(
+    run,
+    { worktree: root },
+    { workspaceId, tabId },
+  );
+}
+
 function ensureNoHerdrConflicts(run, cwd, spec, agentName) {
   const workspaceList = herdrResponse(
     run,
@@ -379,7 +522,7 @@ function ensureNoHerdrConflicts(run, cwd, spec, agentName) {
   for (const workspace of workspaceList.workspaces) {
     const checkoutPath = workspace?.worktree?.checkout_path;
     if (
-      workspace?.label === spec.slug ||
+      workspace?.label === spec.workspaceName ||
       (typeof checkoutPath === "string" &&
         resolve(checkoutPath) === spec.worktree)
     ) {
@@ -411,7 +554,7 @@ function createHerdrWorkspace(run, spec) {
       "--cwd",
       spec.worktree,
       "--label",
-      spec.slug,
+      spec.workspaceName,
       "--no-focus",
     ],
     spec.worktree,
@@ -419,11 +562,14 @@ function createHerdrWorkspace(run, spec) {
     "herdr_workspace_creation_failed",
   );
   const workspaceId = result.workspace?.workspace_id;
+  const tabId = result.tab?.tab_id;
   const paneId = result.root_pane?.pane_id;
   if (
     typeof workspaceId !== "string" || workspaceId === "" ||
+    typeof tabId !== "string" || tabId === "" ||
     typeof paneId !== "string" || paneId === "" ||
-    result.workspace?.label !== spec.slug ||
+    result.workspace?.label !== spec.workspaceName ||
+    result.tab?.workspace_id !== workspaceId ||
     result.root_pane?.workspace_id !== workspaceId
   ) {
     fail("herdr_workspace_creation_response_invalid");
@@ -442,7 +588,41 @@ function createHerdrWorkspace(run, spec) {
   ) {
     fail("herdr_workspace_cwd_mismatch");
   }
-  return Object.freeze({ workspaceId, paneId });
+  return Object.freeze({ workspaceId, tabId, paneId });
+}
+
+function configureStandardTabs(run, spec, workspace) {
+  herdrChecked(
+    run,
+    [
+      "--session",
+      HERDR_SESSION,
+      "tab",
+      "rename",
+      workspace.tabId,
+      BATCH_TABS[0],
+    ],
+    spec.worktree,
+    "herdr_codex_tab_rename_failed",
+  );
+  herdrChecked(
+    run,
+    [
+      "--session",
+      HERDR_SESSION,
+      "tab",
+      "create",
+      "--workspace",
+      workspace.workspaceId,
+      "--cwd",
+      spec.worktree,
+      "--label",
+      BATCH_TABS[1],
+      "--no-focus",
+    ],
+    spec.worktree,
+    "herdr_terminal_tab_creation_failed",
+  );
 }
 
 export function launchHerdrCodex(
@@ -477,7 +657,7 @@ export function launchHerdrCodex(
   return Object.freeze({ agentName, paneId });
 }
 
-export async function startBatch(slug, options = {}) {
+export async function startBatch(workspaceName, options = {}) {
   const configuredRoot = resolve(options.root ?? ENVAL_ROOT);
   let root;
   try {
@@ -490,8 +670,16 @@ export async function startBatch(slug, options = {}) {
   const run = options.run ?? defaultRun;
   const worktreesRoot = resolve(options.worktreesRoot ?? ENVAL_WORKTREES_ROOT);
   const launch = options.launch ?? launchHerdrCodex;
-  const spec = deriveBatchSpec(slug, worktreesRoot);
-  const agentName = deriveHerdrAgentName(slug);
+  const identity = deriveBatchIdentity(
+    workspaceName,
+    options.technicalSlug,
+    options.allowVersionSuffix ?? false,
+  );
+  const spec = Object.freeze({
+    ...deriveBatchSpec(identity.slug, worktreesRoot),
+    workspaceName: identity.workspaceName,
+  });
+  const agentName = deriveHerdrAgentName(spec.slug);
   if (
     git(
       run,
@@ -508,6 +696,7 @@ export async function startBatch(slug, options = {}) {
   checked(run, "codex", ["--version"], root, "codex_cli_unavailable");
   verifyHerdrCli(run, root);
   ensureNoHerdrConflicts(run, root, spec, agentName);
+  ensurePersistentWorkspace(run, root);
 
   mainState(run, root, baseHead);
   noConflicts(run, root, spec);
@@ -534,6 +723,7 @@ export async function startBatch(slug, options = {}) {
   validateGovernance(spec.worktree);
 
   const herdrWorkspace = createHerdrWorkspace(run, spec);
+  configureStandardTabs(run, spec, herdrWorkspace);
   await launch({
     run,
     args: codexLaunchArgv(spec.worktree),
@@ -547,27 +737,23 @@ export async function startBatch(slug, options = {}) {
     herdrSession: HERDR_SESSION,
     herdrWorkspace: herdrWorkspace.workspaceId,
     herdrAgent: agentName,
+    tabs: BATCH_TABS,
   });
 }
 
 export function formatBatchHandoff(result) {
   return [
     "ENVAL_BATCH_START=PASS",
-    `BATCH=${result.slug}`,
-    `BRANCH=${result.branch}`,
-    `WORKTREE=${result.worktree}`,
-    `HERDR_SESSION=${result.herdrSession}`,
-    `HERDR_WORKSPACE=${result.herdrWorkspace}`,
-    `HERDR_AGENT=${result.herdrAgent}`,
-    `BASE_HEAD=${result.baseHead}`,
-    `ATTACH_COMMAND=herdr session attach ${result.herdrSession}`,
+    `PROJECT=${HERDR_PROJECT}`,
+    `WORKSPACE=${result.workspaceName}`,
+    `TABS=${result.tabs.join(",")}`,
     "",
   ].join("\n");
 }
 
 async function main(argv) {
   if (argv.length !== 2 || argv[0] !== "start") {
-    fail("usage:start_<batch-slug>");
+    fail("usage:start_<human-workspace-name>");
   }
   const result = await startBatch(argv[1]);
   process.stdout.write(formatBatchHandoff(result));

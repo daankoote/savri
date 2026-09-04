@@ -262,8 +262,11 @@ For material frontend business/data interaction, also report:
 ## Bounded batch operations
 
 - `scripts/tools/enval-batch.mjs` is the canonical normal batch launch path.
-  Daan supplies only the batch slug; manual branch/worktree/Codex launch
-  composition is reserved for explicit recovery or debugging.
+  Daan supplies only a short human product workspace name such as `Beheer`;
+  the launcher/orchestrator derives or supplies the internal batch slug and
+  owns its translation to branch, worktree, workspace and agent identity.
+  Manual branch/worktree/Codex launch composition is reserved for explicit
+  recovery or debugging.
 - Worker startup, private remote control, post-reboot recovery, and M6 migration
   follow `docs/app/operations/git-workflow.md`. Stored Herdr, branch, or
   worktree state never proves that an active Codex process survived a reboot;
@@ -272,9 +275,11 @@ For material frontend business/data interaction, also report:
 - The launcher uses the current clean `main` HEAD, keeps `main` as the protected
   integration worktree, creates one leaf branch and worktree per implementation
   batch, prevents stale governance bases, creates one Herdr workspace per batch in
-  the shared named `enval-worker` session, and starts one interactive Codex agent
-  there with Auto-review and product web search disabled. Herdr does not create or
-  own the Git worktree.
+  the visible `ENVAL` project/session, names the workspace in human product
+  language, creates the visible `Codex` and `Terminal` tabs, and starts one
+  interactive Codex agent there with Auto-review and product web search disabled.
+  Herdr does not create or own the Git worktree. Technical identifiers remain
+  internal and are absent from the normal launcher handoff.
 - The launcher never commits, merges, pushes, deploys, or cleans up a batch.
 - Within an approved bounded batch, Codex owns routine deterministic terminal,
   permitted local SQL, test, proof, diff/status, and permitted local-service
@@ -296,6 +301,50 @@ For material frontend business/data interaction, also report:
   worktree, and Codex session; write and authority cones are sufficiently disjoint;
   mutable local services, ports, databases, and fixtures are isolated; merging is
   never automatic; and combined integration requires a human gate.
+
+## Human Herdr navigation and action location
+
+Human-visible Herdr navigation is always `Herdr Home -> Project -> Workspace ->
+Tab`. ENVAL uses project/session display name `ENVAL`, persistent workspace
+`Main`, and short batch workspace names in human product language such as
+`Beheer`, `Klanten`, `Organisatie`, or `Dossiers`. A version suffix is absent by
+default and is used only when two versions genuinely need to coexist. Visible
+technical names such as `enval-worker`, `operator-overview-v1`, `autonomy/*`,
+hashes, generated agent IDs, branches, and worktree paths are forbidden in the
+normal user flow.
+
+Visible tabs are named exactly `Codex`, `Terminal`, and `Reviewer`. `Main`
+normally contains `Codex` and `Terminal`. A product batch starts with `Codex`
+and `Terminal`; `Reviewer` is added only when independent review becomes
+applicable. Internal slugs, branches, worktree paths, Herdr workspace IDs, and
+agent IDs may remain unique implementation details. The launcher/orchestrator,
+not Daan, owns every mapping between the human workspace name and those
+technical identities.
+
+Every instruction requiring a human action must use this exact location shape:
+
+```text
+WHERE
+Project: <human project name>
+Workspace: <human workspace name>
+Tab: <Codex|Terminal|Reviewer>
+
+DO
+<exact action>
+```
+
+An action outside Herdr must say so explicitly, for example `WHERE` followed by
+`MacBook -> ordinary Terminal`, or `iPhone -> Moshi -> ENVAL -> Beheer ->
+Codex`, before the exact `DO` action. Instructions such as “run this in
+terminal”, “paste this in Codex”, or “open the branch” without the exact human
+location are incomplete. Lean handoffs remain task-delta-only; this permanent
+location block is included only when the task actually requires a human action.
+
+For later RYB adoption, the complete forward naming convention is: project
+`RYB`; persistent workspace `Main`; short product batch workspaces such as
+`Daily`, `Games`, `Rankings`, and `Profile`; tabs `Codex`, `Terminal`, and
+`Reviewer`. This records naming only and does not authorize or require any RYB
+repository change.
 
 ## Verification strategy
 

@@ -15,23 +15,37 @@ Daan owns staging decisions, commits, pushes, and consequential history changes.
 
 ## Canonical Batch Launch
 
-For normal batches, Daan supplies only a lowercase kebab-case slug to the
-canonical launcher:
+For normal batches, Daan supplies only a short human product workspace name to
+the canonical launcher:
 
 ```bash
-node scripts/tools/enval-batch.mjs start <batch-slug>
+node scripts/tools/enval-batch.mjs start Beheer
 ```
 
 Do not manually compose branch, worktree, and Codex launch commands except for
 explicit recovery or debugging. The launcher uses the current clean `main` HEAD
-as its base, keeps `main` as the protected integration worktree, creates
-`autonomy/<batch-slug>` plus the leaf worktree
-`/Users/daankoote/dev/enval-worktrees/<batch-slug>`, and refuses a stale or
-conflicting base. Every implementation batch receives its own leaf branch,
-worktree, Herdr workspace, and interactive Codex agent. All batch workspaces live
-in the one named persistent Herdr session `enval-worker`; the launcher uses the
-workspace root pane returned by Herdr and does not predict pane IDs or delegate
-Git-worktree creation to Herdr.
+as its base, keeps `main` as the protected integration worktree, derives or
+accepts the orchestrator-owned internal slug, creates the internal leaf branch
+and worktree, and refuses a stale or conflicting base. Daan does not invent,
+type, select, or interpret those technical identifiers in normal use. Every
+implementation batch receives its own leaf branch, worktree, human-named Herdr
+workspace, and interactive Codex agent. All workspaces live in the visible
+Herdr project/session `ENVAL`; its persistent workspace is `Main`. The launcher
+uses the workspace root pane returned by Herdr and does not predict pane IDs or
+delegate Git-worktree creation to Herdr.
+
+Batch workspace names are short product concepts such as `Beheer`, `Klanten`,
+`Organisatie`, and `Dossiers`; technical slugs, `autonomy/*`, hashes, generated
+agent IDs, and default version suffixes are not human-facing names. The launcher
+renames the batch root tab to `Codex`, creates `Terminal`, and adds no `Reviewer`
+tab until review is applicable. Its normal success output is limited to the
+human navigation contract:
+
+```text
+PROJECT=ENVAL
+WORKSPACE=<human product name>
+TABS=Codex,Terminal
+```
 
 Before Git branch/worktree creation, the launcher verifies installed Herdr 0.8.2,
 the required session/workspace/agent CLI semantics, Codex availability, and the
@@ -59,9 +73,9 @@ After reboot and user login, the expected worker dependency order is:
 3. the `moshi-hook` LaunchAgent starts from
    `~/Library/LaunchAgents/app.getmoshi.moshi-hook.plist`.
 4. Docker Desktop starts and its engine becomes available.
-5. Herdr is available on demand; its stored `enval-worker` session may be
+5. Herdr is available on demand; its stored `ENVAL` project/session may be
    stopped.
-6. Moshi may reopen the stored `enval-worker/enval` workspace, while the
+6. Moshi may reopen `ENVAL -> Main`, while the
    canonical batch launcher remains the normal path for creating a new batch
    workspace and Codex agent.
 
@@ -79,10 +93,10 @@ creating, deleting, cleaning, or replacing state. Automatic reboot-resume is not
 enabled.
 
 Daan does not manually compose normal Git, Herdr, and Codex recovery commands.
-For normal control Daan either reopens the stored workspace in Moshi or supplies
-the batch slug to the canonical launcher. Until canonical tooling provides a
-safe explicit recovery action for any further case, that case stops with the
-stored state intact for Daan.
+For normal control Daan either reopens the human-named workspace in Moshi or
+supplies its human product name to the canonical launcher. Until canonical
+tooling provides a safe explicit recovery action for any further case, that
+case stops with the stored state intact for Daan.
 
 ## Private Remote Control
 
@@ -114,7 +128,7 @@ assets and settings without assuming that copied files prove active services:
 - Tailscale device and account setup;
 - macOS Remote Login configuration;
 - Docker startup configuration and engine readiness;
-- Herdr installation and the `enval-worker` session conventions; and
+- Herdr installation and the `ENVAL -> Main` naming conventions; and
 - Codex CLI installation and configuration.
 
 The M6 must retain the same private Tailscale -> SSH/Moshi -> Herdr -> Codex
