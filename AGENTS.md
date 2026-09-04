@@ -261,9 +261,14 @@ For material frontend business/data interaction, also report:
 
 ## Bounded batch operations
 
-- `scripts/tools/enval-batch.mjs` is the canonical normal batch launch path. Daan
-  supplies only the batch slug; manual branch/worktree/Codex launch composition is
-  reserved for explicit recovery or debugging.
+- `scripts/tools/enval-batch.mjs` is the canonical normal batch launch path.
+  Daan supplies only the batch slug; manual branch/worktree/Codex launch
+  composition is reserved for explicit recovery or debugging.
+- Worker startup, private remote control, post-reboot recovery, and M6 migration
+  follow `docs/app/operations/git-workflow.md`. Stored Herdr, branch, or
+  worktree state never proves that an active Codex process survived a reboot;
+  unsafe or ambiguous recovery stops to Daan, and automatic reboot-resume is not
+  enabled.
 - The launcher uses the current clean `main` HEAD, keeps `main` as the protected
   integration worktree, creates one leaf branch and worktree per implementation
   batch, prevents stale governance bases, creates one Herdr workspace per batch in
