@@ -275,9 +275,11 @@ For material frontend business/data interaction, also report:
 ## Bounded batch operations
 
 - `scripts/tools/enval-batch.mjs` is the canonical normal batch launch path.
-  Daan supplies only a short human product workspace name such as `Beheer`;
-  the launcher/orchestrator derives or supplies the internal batch slug and
-  owns its translation to branch, worktree, workspace and agent identity.
+  The orchestrator owns the approved human workspace registry and every mapping
+  to branch, worktree, workspace and agent identity. The launcher accepts only
+  an exact assigned registry name. Neither an agent nor the launcher may invent
+  a human workspace name. Adding a registry entry requires Daan's prior explicit
+  agreement in a separately bounded governance change.
   Manual branch/worktree/Codex launch composition is reserved for explicit
   recovery or debugging.
 - Worker startup, private remote control, post-reboot recovery, and M6 migration
@@ -285,13 +287,15 @@ For material frontend business/data interaction, also report:
   worktree state never proves that an active Codex process survived a reboot;
   unsafe or ambiguous recovery stops to Daan, and automatic reboot-resume is not
   enabled.
-- The launcher uses the current clean `main` HEAD, keeps `main` as the protected
-  integration worktree, creates one leaf branch and worktree per implementation
-  batch, prevents stale governance bases, creates one Herdr workspace per batch in
-  the visible `ENVAL` project/session, names the workspace in human product
-  language, creates the visible `Codex`, `Terminal`, and `Reviewer` tabs, and
-  starts one interactive Codex agent there with Auto-review and product web
-  search disabled.
+- Before product execution the launcher reconciles the assigned registry binding
+  and the complete Herdr workspace/tab/agent topology. It reuses the exact
+  existing human workspace, branch and worktree on retry or resume and never
+  creates an alternate such as `Previous X`, `X 2`, or `Autonomy X`. One human
+  workspace has at most one active batch/worktree binding. Only when an approved
+  assigned binding does not exist may the launcher provision that exact binding.
+  The launcher keeps `main` as the protected integration worktree and gives a
+  batch the visible `Codex`, `Terminal`, and `Reviewer` tabs plus one interactive
+  Codex agent with Auto-review and product web search disabled.
   Herdr does not create or own the Git worktree. Technical identifiers remain
   internal and are absent from the normal launcher handoff.
 - The launcher never commits, merges, pushes, deploys, or cleans up a batch.
@@ -319,21 +323,27 @@ For material frontend business/data interaction, also report:
 ## Human Herdr navigation and action location
 
 Human-visible Herdr navigation is always `Herdr Home -> Project -> Workspace ->
-Tab`. ENVAL uses project/session display name `ENVAL`, persistent workspace
-`Main`, and short batch workspace names in human product language such as
-`Beheer`, `Klanten`, `Organisatie`, or `Dossiers`. A version suffix is absent by
-default and is used only when two versions genuinely need to coexist. Visible
-technical names such as `enval-worker`, `operator-overview-v1`, `autonomy/*`,
-hashes, generated agent IDs, branches, and worktree paths are forbidden in the
-normal user flow.
+Tab`. The current exact orchestrator-owned ENVAL topology is `Main` with `Codex`
+and `Terminal`, `_Setup` with `Codex`, `Terminal`, and `Reviewer`, and `Beheer`
+with `Codex`, `Terminal`, and `Reviewer`. No other human workspace name is
+approved. Visible technical names such as internal slugs, hashes, generated
+agent IDs, branches, and worktree paths are forbidden in the normal user flow.
 
 Visible tabs are named exactly `Codex`, `Terminal`, and `Reviewer`. `Main`
-normally contains `Codex` and `Terminal`. A product batch exposes `Codex`,
+contains `Codex` and `Terminal`. `Main -> Terminal` is the default location for
+project-wide shell, Git, and administration work; a batch `Terminal` is used
+only for genuinely batch-local work. A product batch exposes `Codex`,
 `Terminal`, and `Reviewer`; `Reviewer` is inspection-only and automated routing
 never requires Daan to shuttle messages. Internal slugs, branches, worktree
 paths, Herdr workspace IDs, and agent IDs may remain unique implementation
 details. The launcher/orchestrator, not Daan, owns every mapping between the
 human workspace name and those technical identities.
+
+Every autonomous run writes its compact final `RETURN` block to the sole
+project-level human result entrypoint `~/.herdr-results/ENVAL/latest.txt` through
+the canonical launcher result command before returning the same block to Daan.
+Internal per-run history may exist, but no handoff may require Daan to locate or
+interpret it.
 
 Every instruction requiring a human action must use this exact location shape:
 

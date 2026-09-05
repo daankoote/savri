@@ -15,29 +15,48 @@ Daan owns staging decisions, commits, pushes, and consequential history changes.
 
 ## Canonical Batch Launch
 
-For normal batches, Daan supplies only a short human product workspace name to
-the canonical launcher:
+For normal batches, the orchestrator supplies an exact already-approved human
+workspace name to the canonical launcher:
 
 ```bash
 node scripts/tools/enval-batch.mjs start Beheer
 ```
 
 Do not manually compose branch, worktree, and Codex launch commands except for
-explicit recovery or debugging. The launcher uses the current clean `main` HEAD
-as its base, keeps `main` as the protected integration worktree, derives or
-accepts the orchestrator-owned internal slug, creates the internal leaf branch
-and worktree, and refuses a stale or conflicting base. Daan does not invent,
-type, select, or interpret those technical identifiers in normal use. Every
-implementation batch receives its own leaf branch, worktree, human-named Herdr
-workspace, and interactive Codex agent. All workspaces live in the visible
-Herdr project/session `ENVAL`; its persistent workspace is `Main`. The launcher
-uses the workspace root pane returned by Herdr and does not predict pane IDs or
+explicit recovery or debugging. The launcher owns the fixed human-to-technical
+binding, keeps `main` as the protected integration worktree, and refuses stale,
+ambiguous, or conflicting state. Daan does not invent, type, select, or interpret
+technical identifiers in normal use. On retry or resume the launcher reconciles
+and reuses the exact assigned workspace, branch, worktree, tabs, and agent; it
+does not create another workspace. One human workspace has at most one active
+batch/worktree binding. Only an exact approved binding that is absent may be
+provisioned. All workspaces live in the visible Herdr project/session `ENVAL`.
+The launcher discovers the existing Codex pane and does not predict pane IDs or
 delegate Git-worktree creation to Herdr.
 
-Batch workspace names are short product concepts such as `Beheer`, `Klanten`,
-`Organisatie`, and `Dossiers`; technical slugs, `autonomy/*`, hashes, generated
-agent IDs, and default version suffixes are not human-facing names. The launcher
-renames the batch root tab to `Codex` and creates `Terminal` and `Reviewer`.
+The exact approved topology is:
+
+```text
+ENVAL
+- Main
+  - Codex
+  - Terminal
+- _Setup
+  - Codex
+  - Terminal
+  - Reviewer
+- Beheer
+  - Codex
+  - Terminal
+  - Reviewer
+```
+
+Topology and human names are orchestrator-owned. A new workspace requires
+Daan's prior explicit agreement and a bounded registry/governance update.
+Agents and the launcher never derive or invent names such as `Previous Beheer`,
+`Beheer 2`, or `Autonomy Beheer`. Technical slugs, hashes, generated agent IDs,
+branches, and worktree paths are not human-facing names. The launcher reconciles
+the exact `Codex`, `Terminal`, and `Reviewer` batch tabs.
 `Reviewer` is visibility/inspection-only: project tooling routes evidence and
 findings without Daan manually relaying messages. Its normal success output is
 limited to the human navigation contract:
@@ -71,6 +90,24 @@ The launcher does not commit, merge, push, deploy, clean up, or launch Codex
 Desktop. Detaching a Herdr client does not stop the batch agent. The shared named
 session topology permits a later remote client attachment without changing batch
 architecture.
+
+`Main -> Terminal` is the default human location for project-wide shell, Git,
+and administration work. A batch `Terminal` is only for genuinely batch-local
+work. Daan performs commits, cherry-picks, and pushes there; Codex performs none
+of them. Product prompts contain only their task-specific delta because stable
+topology, Git, result, and review-loop governance lives here, in `AGENTS.md`, and
+in canonical tooling.
+
+Every autonomous run writes its compact final `RETURN` block through
+`node scripts/tools/enval-batch.mjs result` to the only project-level human
+entrypoint:
+
+```text
+~/.herdr-results/ENVAL/latest.txt
+```
+
+The command accepts the final block on standard input and atomically replaces
+the entrypoint. Internal per-run history may exist, but Daan never needs its path.
 
 ## Worker Startup And Recovery
 

@@ -11,22 +11,25 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, test } from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
+  APPROVED_BATCH_BINDINGS,
   BATCH_TABS,
   BatchLaunchError,
   CODEX_UPDATE_OVERRIDE,
   codexLaunchArgv,
   deriveBatchIdentity,
   deriveBatchSpec,
-  deriveHerdrAgentName,
   formatBatchHandoff,
   HERDR_PROJECT,
   HERDR_SESSION,
+  MAIN_TABS,
   PERSISTENT_WORKSPACE,
   startBatch,
   verifyCodexCli,
   verifyHerdrCli,
+  writeProjectResult,
 } from "../tools/enval-batch.mjs";
 
 const temporaryRoots = [];
@@ -83,13 +86,12 @@ function writeGovernance(root, { omit = null } = {}) {
     [
       ".codex/rules/enval.rules",
       [
-        ...["add", "commit", "push", "merge", "rebase", "reset", "clean"].map(
-          (command) =>
-            `prefix_rule(pattern = ["git", "${command}"], decision = "forbidden")`,
-        ),
-        ...["branch", "worktree"].map(
-          (command) =>
-            `prefix_rule(pattern = ["git", "${command}"], decision = "prompt")`,
+        ...["add", "commit", "push", "merge", "rebase", "reset", "clean"]
+          .map((command) =>
+            `prefix_rule(pattern = ["git", "${command}"], decision = "forbidden")`
+          ),
+        ...["branch", "worktree"].map((command) =>
+          `prefix_rule(pattern = ["git", "${command}"], decision = "prompt")`
         ),
         "",
       ].join("\n"),
@@ -127,10 +129,6 @@ function fixture(options = {}) {
   return { parent, root, worktreesRoot };
 }
 
-function fakeCodex() {
-  return { status: 0, stdout: "codex-cli 0.0.0\n", stderr: "", error: null };
-}
-
 function commandResult(stdout = "") {
   return { status: 0, stdout, stderr: "", error: null };
 }
@@ -143,77 +141,73 @@ function recordingRun(calls, options = {}) {
   const state = {
     workspaces: [...(options.workspaces ?? [])],
     agents: [...(options.agents ?? [])],
-    tabs: [],
+    tabs: [...(options.tabs ?? [])],
+    panes: [...(options.panes ?? [])],
     nextWorkspace: 40,
   };
   const recorded = (command, args, commandOptions) => {
     calls.push({ command, args: [...args], cwd: commandOptions.cwd });
-    if (command === "codex") return fakeCodex();
+    if (command === "codex") return commandResult("codex-cli 0.0.0\n");
     if (command !== "herdr") return run(command, args, commandOptions);
 
     if (args.length === 1 && args[0] === "--version") {
       return commandResult(options.version ?? "herdr 0.8.2\n");
     }
-    if (args.length === 1 && args[0] === "--help") {
-      return commandResult(
-        options.rootHelp ?? "Usage: herdr --session <name> [options]\n",
-      );
-    }
-    if (args.join(" ") === "workspace create --help") {
-      return commandResult(
-        options.workspaceHelp ??
-          "Usage: herdr workspace create [OPTIONS]\n--cwd <PATH>\n--label <TEXT>\n--no-focus\n",
-      );
-    }
-    if (args.join(" ") === "workspace rename --help") {
-      return commandResult(
-        options.workspaceRenameHelp ??
-          "Usage: herdr workspace rename <WORKSPACE_ID> <LABEL>...\n",
-      );
-    }
-    if (args.join(" ") === "tab rename --help") {
-      return commandResult(
-        options.tabRenameHelp ??
-          "Usage: herdr tab rename <TAB_ID> <LABEL>...\n",
-      );
-    }
-    if (args.join(" ") === "tab list --help") {
-      return commandResult(
-        options.tabListHelp ??
-          "Usage: herdr tab list [OPTIONS]\n--workspace <WORKSPACE_ID>\n",
-      );
-    }
-    if (args.join(" ") === "tab create --help") {
-      return commandResult(
-        options.tabCreateHelp ??
-          "Usage: herdr tab create [OPTIONS]\n--workspace <WORKSPACE_ID>\n--cwd <PATH>\n--label <TEXT>\n--no-focus\n",
-      );
-    }
-    if (args.join(" ") === "agent start --help") {
-      return commandResult(
-        options.agentHelp ??
-          "Usage: herdr agent start <NAME> --kind <KIND> --pane <ID> [-- [AGENT_ARG]...]\npossible values: codex\n",
-      );
+    const help = new Map([
+      ["--help", "Usage: herdr --session <name> [options]\n"],
+      [
+        "workspace create --help",
+        "Usage: herdr workspace create [OPTIONS]\n--cwd <PATH>\n--label <TEXT>\n--no-focus\n",
+      ],
+      [
+        "workspace rename --help",
+        "Usage: herdr workspace rename <WORKSPACE_ID> <LABEL>...\n",
+      ],
+      ["tab rename --help", "Usage: herdr tab rename <TAB_ID> <LABEL>...\n"],
+      [
+        "tab list --help",
+        "Usage: herdr tab list [OPTIONS]\n--workspace <WORKSPACE_ID>\n",
+      ],
+      [
+        "tab create --help",
+        "Usage: herdr tab create [OPTIONS]\n--workspace <WORKSPACE_ID>\n--cwd <PATH>\n--label <TEXT>\n--no-focus\n",
+      ],
+      [
+        "pane list --help",
+        "Usage: herdr pane list [OPTIONS]\n--workspace <WORKSPACE_ID>\n",
+      ],
+      [
+        "agent start --help",
+        "Usage: herdr agent start <NAME> --kind <KIND> --pane <ID> [-- [AGENT_ARG]...]\npossible values: codex\n",
+      ],
+    ]);
+    if (help.has(args.join(" "))) {
+      return commandResult(help.get(args.join(" ")));
     }
 
     assert.deepEqual(args.slice(0, 2), ["--session", HERDR_SESSION]);
     const sessionArgs = args.slice(2);
     if (sessionArgs.join(" ") === "workspace list") {
-      if (
-        !state.workspaces.some(
-          (workspace) =>
-            workspace.worktree?.checkout_path === commandOptions.cwd,
-        )
-      ) {
-        state.workspaces.unshift({
-          workspace_id: "w-main",
-          label: "enval",
-          worktree: { checkout_path: commandOptions.cwd },
-        });
-        state.tabs.unshift({
-          tab_id: "w-main:t1",
-          workspace_id: "w-main",
-        });
+      if (!state.workspaces.some((item) => item.workspace_id === "w-main")) {
+        state.workspaces.unshift({ workspace_id: "w-main", label: "Main" });
+        state.tabs.unshift(
+          { tab_id: "w-main:t1", workspace_id: "w-main", label: "Codex" },
+          { tab_id: "w-main:t2", workspace_id: "w-main", label: "Terminal" },
+        );
+        state.panes.unshift(
+          {
+            pane_id: "w-main:p1",
+            tab_id: "w-main:t1",
+            workspace_id: "w-main",
+            cwd: commandOptions.cwd,
+          },
+          {
+            pane_id: "w-main:p2",
+            tab_id: "w-main:t2",
+            workspace_id: "w-main",
+            cwd: commandOptions.cwd,
+          },
+        );
       }
       return herdrJson({
         type: "workspace_list",
@@ -231,34 +225,33 @@ function recordingRun(calls, options = {}) {
       workspace.label = sessionArgs.slice(3).join(" ");
       return herdrJson({ type: "workspace_renamed", workspace });
     }
+    if (sessionArgs[0] === "workspace" && sessionArgs[1] === "create") {
+      const cwd = sessionArgs[sessionArgs.indexOf("--cwd") + 1];
+      const label = sessionArgs[sessionArgs.indexOf("--label") + 1];
+      const workspaceId = `w${state.nextWorkspace++}`;
+      const workspace = { workspace_id: workspaceId, label };
+      const tab = { tab_id: `${workspaceId}:t1`, workspace_id: workspaceId };
+      const pane = {
+        pane_id: `${workspaceId}:p1`,
+        tab_id: tab.tab_id,
+        workspace_id: workspaceId,
+        cwd,
+      };
+      state.workspaces.push(workspace);
+      state.tabs.push(tab);
+      state.panes.push(pane);
+      return herdrJson({
+        type: "workspace_created",
+        workspace,
+        tab,
+        root_pane: pane,
+      });
+    }
     if (sessionArgs[0] === "tab" && sessionArgs[1] === "list") {
       const workspaceId = sessionArgs[sessionArgs.indexOf("--workspace") + 1];
       return herdrJson({
         type: "tab_list",
         tabs: state.tabs.filter((tab) => tab.workspace_id === workspaceId),
-      });
-    }
-    if (sessionArgs[0] === "workspace" && sessionArgs[1] === "create") {
-      const workspaceCwd = sessionArgs[sessionArgs.indexOf("--cwd") + 1];
-      const label = sessionArgs[sessionArgs.indexOf("--label") + 1];
-      const workspaceId = `w${state.nextWorkspace++}`;
-      const workspace = {
-        workspace_id: workspaceId,
-        label,
-        worktree: { checkout_path: workspaceCwd },
-      };
-      state.workspaces.push(workspace);
-      const tab = { tab_id: `${workspaceId}:t7`, workspace_id: workspaceId };
-      state.tabs.push(tab);
-      return herdrJson({
-        type: "workspace_created",
-        workspace,
-        tab,
-        root_pane: {
-          pane_id: `${workspaceId}:p93`,
-          workspace_id: workspaceId,
-          cwd: workspaceCwd,
-        },
       });
     }
     if (sessionArgs[0] === "tab" && sessionArgs[1] === "rename") {
@@ -272,19 +265,25 @@ function recordingRun(calls, options = {}) {
       const cwd = sessionArgs[sessionArgs.indexOf("--cwd") + 1];
       const label = sessionArgs[sessionArgs.indexOf("--label") + 1];
       const tab = {
-        tab_id: `${workspaceId}:t${state.tabs.length + 7}`,
+        tab_id: `${workspaceId}:t${state.tabs.length + 1}`,
         workspace_id: workspaceId,
         label,
       };
+      const pane = {
+        pane_id: `${workspaceId}:p-${label.toLowerCase()}`,
+        tab_id: tab.tab_id,
+        workspace_id: workspaceId,
+        cwd,
+      };
       state.tabs.push(tab);
+      state.panes.push(pane);
+      return herdrJson({ type: "tab_created", tab, root_pane: pane });
+    }
+    if (sessionArgs[0] === "pane" && sessionArgs[1] === "list") {
+      const workspaceId = sessionArgs[sessionArgs.indexOf("--workspace") + 1];
       return herdrJson({
-        type: "tab_created",
-        tab,
-        root_pane: {
-          pane_id: `${workspaceId}:p-terminal`,
-          workspace_id: workspaceId,
-          cwd,
-        },
+        type: "pane_list",
+        panes: state.panes.filter((pane) => pane.workspace_id === workspaceId),
       });
     }
     if (sessionArgs[0] === "agent" && sessionArgs[1] === "start") {
@@ -292,17 +291,20 @@ function recordingRun(calls, options = {}) {
         return {
           status: 1,
           stdout: "",
-          stderr: JSON.stringify({
-            id: "proof",
-            error: { code: options.agentStartError, message: "proof failure" },
-          }),
+          stderr: JSON.stringify({ error: { code: options.agentStartError } }),
           error: null,
         };
       }
       const name = sessionArgs[2];
       const paneId = sessionArgs[sessionArgs.indexOf("--pane") + 1];
       const nativeArgs = sessionArgs.slice(sessionArgs.indexOf("--") + 1);
-      const agent = { name, pane_id: paneId };
+      const pane = state.panes.find((item) => item.pane_id === paneId);
+      assert.ok(pane);
+      const agent = {
+        name,
+        pane_id: paneId,
+        workspace_id: pane.workspace_id,
+      };
       state.agents.push(agent);
       return herdrJson({
         type: "agent_started",
@@ -326,115 +328,84 @@ async function captureFailure(action) {
   assert.fail("expected BatchLaunchError");
 }
 
-test("slug, branch, and leaf worktree derivation are deterministic", () => {
-  const spec = deriveBatchSpec("gov-batch01", "/tmp/enval-worktrees");
-  assert.equal(spec.branch, "autonomy/gov-batch01");
-  assert.equal(spec.worktree, "/tmp/enval-worktrees/gov-batch01");
-  for (
-    const invalid of ["", "Gov-batch", "a/b", "a..b", "a_b", "a;touch-pwned"]
-  ) {
-    assert.throws(() => deriveBatchSpec(invalid), {
-      name: "BatchLaunchError",
-      code: "batch_slug_invalid",
-    });
-  }
+test("orchestrator registry owns the exact approved topology", () => {
+  assert.equal(HERDR_PROJECT, "ENVAL");
+  assert.equal(HERDR_SESSION, "ENVAL");
+  assert.equal(PERSISTENT_WORKSPACE, "Main");
+  assert.deepEqual(MAIN_TABS, ["Codex", "Terminal"]);
+  assert.deepEqual(BATCH_TABS, ["Codex", "Terminal", "Reviewer"]);
+  assert.deepEqual(APPROVED_BATCH_BINDINGS, {
+    _Setup: { slug: "setup", branch: "setup", agentName: "enval-setup" },
+    Beheer: { slug: "beheer", branch: "beheer", agentName: "enval-beheer" },
+  });
+  assert.deepEqual(deriveBatchIdentity("_Setup"), {
+    workspaceName: "_Setup",
+    ...APPROVED_BATCH_BINDINGS._Setup,
+  });
+  assert.deepEqual(deriveBatchSpec("beheer", "/tmp/worktrees", "beheer"), {
+    slug: "beheer",
+    branch: "beheer",
+    worktree: "/tmp/worktrees/beheer",
+  });
 });
 
-test("human workspace names map to hidden technical slugs", () => {
-  assert.deepEqual(deriveBatchIdentity("Beheer"), {
-    workspaceName: "Beheer",
-    slug: "beheer",
-  });
-  assert.deepEqual(deriveBatchIdentity("Mijn Dossiers", "dossiers-q3"), {
-    workspaceName: "Mijn Dossiers",
-    slug: "dossiers-q3",
-  });
-  assert.deepEqual(deriveBatchIdentity("Beheer V2", "beheer-v2", true), {
-    workspaceName: "Beheer V2",
-    slug: "beheer-v2",
-  });
+test("unapproved and alternate workspace names fail before commands", async () => {
   for (
-    const invalid of [
-      "",
+    const workspace of [
+      "Previous Beheer",
+      "Beheer 2",
+      "Autonomy Beheer",
       "beheer",
-      "operator-overview-v1",
-      "Operator Overview V1",
-      "BeheerV1",
-      "autonomy/beheer",
-      PERSISTENT_WORKSPACE,
+      "Dossiers",
+      "Main",
     ]
   ) {
-    assert.throws(() => deriveBatchIdentity(invalid), {
-      name: "BatchLaunchError",
-      code: "workspace_name_invalid",
-    });
+    const calls = [];
+    assert.equal(
+      await captureFailure(() =>
+        startBatch(workspace, { run: recordingRun(calls) })
+      ),
+      "workspace_not_approved",
+    );
+    assert.equal(calls.length, 0);
   }
 });
 
-test("Herdr agent names are deterministic, constrained, and collision-resistant", () => {
-  const shortName = deriveHerdrAgentName("gov-herdr01");
-  const longName = deriveHerdrAgentName("a".repeat(63));
-  assert.equal(shortName, deriveHerdrAgentName("gov-herdr01"));
-  assert.notEqual(shortName, deriveHerdrAgentName("gov-herdr02"));
-  for (const name of [shortName, longName]) {
-    assert.match(name, /^[a-z][a-z0-9_-]{0,31}$/);
-    assert.ok(name.length <= 32);
-  }
-});
-
-test("installed Herdr 0.8.2 exposes the launcher-required CLI semantics", () => {
+test("installed CLIs expose the required deterministic semantics", () => {
   assert.deepEqual(verifyHerdrCli(), { version: "0.8.2" });
-});
-
-test("installed Codex accepts the strict non-updating override and returns a version", () => {
   assert.match(verifyCodexCli().version, /^\d+\.\d+\.\d+/);
 });
 
-test("valid start uses current main HEAD and starts governed Codex through Herdr", async () => {
+test("exact supplied workspace is provisioned without name leakage", async () => {
   const { root, worktreesRoot } = fixture();
-  writeFileSync(join(root, "fixture.txt"), "second\n");
-  git(root, ["add", "fixture.txt"]);
-  git(root, [
-    "-c",
-    "user.name=ENVAL Proof",
-    "-c",
-    "user.email=proof@invalid.local",
-    "commit",
-    "-m",
-    "current-main",
-  ]);
-  const expectedHead = git(root, ["rev-parse", "HEAD"]);
   const calls = [];
-  const result = await startBatch("Proof Current", {
+  const batchRun = recordingRun(calls);
+  const result = await startBatch("Beheer", {
     root,
     worktreesRoot,
-    run: recordingRun(calls),
+    run: batchRun,
   });
 
-  assert.equal(result.baseHead, expectedHead);
-  assert.equal(git(result.worktree, ["rev-parse", "HEAD"]), expectedHead);
-  assert.equal(
-    git(result.worktree, ["branch", "--show-current"]),
-    result.branch,
+  assert.equal(result.workspaceName, "Beheer");
+  assert.equal(result.branch, "beheer");
+  assert.equal(result.workspaceReused, false);
+  assert.equal(result.agentReused, false);
+  assert.deepEqual(
+    batchRun.herdrState.workspaces.map((workspace) => workspace.label),
+    ["Main", "Beheer"],
   );
-  assert.equal(result.herdrSession, HERDR_SESSION);
-  assert.equal(result.herdrSession, HERDR_PROJECT);
-  assert.equal(result.herdrWorkspace, "w40");
-  assert.equal(result.herdrAgent, deriveHerdrAgentName("proof-current"));
-  assert.deepEqual(result.tabs, BATCH_TABS);
+  assert.deepEqual(
+    batchRun.herdrState.tabs.map((tab) => tab.label),
+    ["Codex", "Terminal", "Codex", "Terminal", "Reviewer"],
+  );
+  const handoff = formatBatchHandoff(result);
   assert.equal(
-    formatBatchHandoff(result),
-    [
-      "ENVAL_BATCH_START=PASS",
-      "PROJECT=ENVAL",
-      "WORKSPACE=Proof Current",
-      "TABS=Codex,Terminal,Reviewer",
-      "",
-    ].join("\n"),
+    handoff,
+    "ENVAL_BATCH_START=PASS\nPROJECT=ENVAL\nWORKSPACE=Beheer\nTABS=Codex,Terminal,Reviewer\n",
   );
   assert.doesNotMatch(
-    formatBatchHandoff(result),
-    /BATCH=|BRANCH=|WORKTREE=|HERDR_|AGENT=|autonomy\//,
+    handoff,
+    /branch|worktree|agent|slug|autonomy|enval-beheer/i,
   );
   assert.deepEqual(codexLaunchArgv(result.worktree), [
     "--cd",
@@ -451,352 +422,206 @@ test("valid start uses current main HEAD and starts governed Codex through Herdr
     "hooks",
     "--strict-config",
   ]);
-  assert.equal(codexLaunchArgv(result.worktree).includes("--search"), false);
-
-  const sessionCalls = calls.filter(
-    (call) => call.command === "herdr" && call.args[0] === "--session",
+  const workspaceCreates = calls.filter((call) =>
+    call.command === "herdr" && call.args[2] === "workspace" &&
+    call.args[3] === "create"
   );
-  assert.ok(sessionCalls.length > 0);
-  for (const call of sessionCalls) {
-    assert.deepEqual(call.args.slice(0, 2), ["--session", HERDR_SESSION]);
-  }
-  const workspaceCreate = sessionCalls.find(
-    (call) => call.args[2] === "workspace" && call.args[3] === "create",
-  );
-  assert.deepEqual(workspaceCreate.args, [
-    "--session",
-    HERDR_SESSION,
-    "workspace",
-    "create",
-    "--cwd",
-    result.worktree,
-    "--label",
-    "Proof Current",
-    "--no-focus",
-  ]);
-  const tabRename = sessionCalls.find(
-    (call) =>
-      call.args[2] === "tab" &&
-      call.args[3] === "rename" &&
-      call.args[4] === "w40:t7",
-  );
-  assert.deepEqual(tabRename.args, [
-    "--session",
-    HERDR_SESSION,
-    "tab",
-    "rename",
-    "w40:t7",
-    "Codex",
-  ]);
-  const tabCreate = sessionCalls.find(
-    (call) =>
-      call.args[2] === "tab" &&
-      call.args[3] === "create" &&
-      call.args.includes("w40"),
-  );
-  assert.deepEqual(tabCreate.args, [
-    "--session",
-    HERDR_SESSION,
-    "tab",
-    "create",
-    "--workspace",
-    "w40",
-    "--cwd",
-    result.worktree,
-    "--label",
-    "Terminal",
-    "--no-focus",
-  ]);
-  const reviewerTabCreate = sessionCalls.find(
-    (call) =>
-      call.args[2] === "tab" &&
-      call.args[3] === "create" &&
-      call.args.includes("Reviewer"),
-  );
-  assert.deepEqual(reviewerTabCreate.args, [
-    "--session",
-    HERDR_SESSION,
-    "tab",
-    "create",
-    "--workspace",
-    "w40",
-    "--cwd",
-    result.worktree,
-    "--label",
-    "Reviewer",
-    "--no-focus",
-  ]);
-  const agentStart = sessionCalls.find(
-    (call) => call.args[2] === "agent" && call.args[3] === "start",
-  );
-  assert.deepEqual(agentStart.args, [
-    "--session",
-    HERDR_SESSION,
-    "agent",
-    "start",
-    result.herdrAgent,
-    "--kind",
-    "codex",
-    "--pane",
-    "w40:p93",
-    "--",
-    ...codexLaunchArgv(result.worktree),
-  ]);
-
-  const gitSubcommands = calls
-    .filter((call) => call.command === "git")
-    .map((call) => call.args[2]);
-  assert.equal(
-    gitSubcommands.filter((command) => command === "worktree").length >= 1,
-    true,
-  );
-  for (
-    const forbidden of [
-      "add",
-      "commit",
-      "push",
-      "merge",
-      "rebase",
-      "reset",
-      "clean",
-      "remove",
-      "prune",
-    ]
-  ) {
-    assert.equal(gitSubcommands.includes(forbidden), false, forbidden);
-  }
+  assert.equal(workspaceCreates.length, 1);
+  assert.equal(workspaceCreates[0].args.includes("Beheer"), true);
 });
 
-test("two batches receive separate workspaces in the one ENVAL session", async () => {
+test("retry and dirty resume reuse workspace, worktree, tabs, and agent", async () => {
   const { root, worktreesRoot } = fixture();
   const calls = [];
   const batchRun = recordingRun(calls);
-  const first = await startBatch("Workspace One", {
+  const first = await startBatch("Beheer", {
     root,
     worktreesRoot,
     run: batchRun,
   });
-  const second = await startBatch("Workspace Two", {
+  writeFileSync(join(first.worktree, "fixture.txt"), "in progress\n");
+  const second = await startBatch("Beheer", {
     root,
     worktreesRoot,
     run: batchRun,
   });
 
-  assert.equal(first.herdrSession, HERDR_SESSION);
-  assert.equal(second.herdrSession, HERDR_SESSION);
-  assert.notEqual(first.herdrWorkspace, second.herdrWorkspace);
-  assert.deepEqual(
-    batchRun.herdrState.workspaces.slice(1).map((workspace) => ({
-      label: workspace.label,
-      cwd: workspace.worktree.checkout_path,
-    })),
-    [
-      { label: "Workspace One", cwd: first.worktree },
-      { label: "Workspace Two", cwd: second.worktree },
-    ],
-  );
-  assert.deepEqual(
-    batchRun.herdrState.tabs.map((tab) => tab.label),
-    [
-      "Codex",
-      "Terminal",
-      "Codex",
-      "Terminal",
-      "Reviewer",
-      "Codex",
-      "Terminal",
-      "Reviewer",
-    ],
-  );
-  assert.deepEqual(
-    batchRun.herdrState.workspaces[0],
-    {
-      workspace_id: "w-main",
-      label: "Main",
-      worktree: { checkout_path: root },
-    },
+  assert.equal(second.herdrWorkspace, first.herdrWorkspace);
+  assert.equal(second.workspaceReused, true);
+  assert.equal(second.agentReused, true);
+  assert.equal(batchRun.herdrState.workspaces.length, 2);
+  assert.equal(
+    calls.filter((call) =>
+      call.command === "herdr" && call.args[2] === "workspace" &&
+      call.args[3] === "create"
+    ).length,
+    1,
   );
   assert.equal(
-    calls.some(
-      (call) =>
-        call.command === "herdr" &&
-        call.args[0] === "--session" &&
-        call.args[2] === "worktree",
+    calls.filter((call) =>
+      call.command === "git" && call.args[2] === "worktree" &&
+      call.args[3] === "add"
+    ).length,
+    1,
+  );
+  assert.equal(
+    calls.filter((call) =>
+      call.command === "herdr" && call.args[2] === "agent" &&
+      call.args[3] === "start"
+    ).length,
+    1,
+  );
+});
+
+test("a workspace cannot share another workspace worktree binding", async () => {
+  const { root, worktreesRoot } = fixture();
+  const beheerPath = join(worktreesRoot, "beheer");
+  const calls = [];
+  const batchRun = recordingRun(calls, {
+    workspaces: [{ workspace_id: "w-setup", label: "_Setup" }],
+    tabs: [{ tab_id: "w-setup:t1", workspace_id: "w-setup", label: "Codex" }],
+    panes: [{
+      pane_id: "w-setup:p1",
+      tab_id: "w-setup:t1",
+      workspace_id: "w-setup",
+      cwd: beheerPath,
+    }],
+  });
+  assert.equal(
+    await captureFailure(() =>
+      startBatch("Beheer", { root, worktreesRoot, run: batchRun })
+    ),
+    "herdr_workspace_binding_conflict",
+  );
+  assert.equal(
+    calls.some((call) =>
+      call.command === "git" && call.args[2] === "worktree" &&
+      call.args[3] === "add"
     ),
     false,
   );
 });
 
-test("a main HEAD change during preflight is refused instead of using a stale base", async () => {
-  const { root, worktreesRoot } = fixture();
-  const baseRun = recordingRun([]);
-  let advanced = false;
-  const changingRun = (command, args, options) => {
-    if (command === "codex") {
-      if (!advanced) {
-        advanced = true;
-        writeFileSync(join(root, "fixture.txt"), "advanced-during-preflight\n");
-        git(root, ["add", "fixture.txt"]);
-        git(root, [
-          "-c",
-          "user.name=ENVAL Proof",
-          "-c",
-          "user.email=proof@invalid.local",
-          "commit",
-          "-m",
-          "advance-during-preflight",
-        ]);
-      }
-    }
-    return baseRun(command, args, options);
-  };
-
-  assert.equal(
-    await captureFailure(() =>
-      startBatch("Stale Base", {
-        root,
-        worktreesRoot,
-        run: changingRun,
-      })
-    ),
-    "main_head_changed_during_launch",
-  );
-  assert.throws(() => readFileSync(join(worktreesRoot, "stale-base")), {
-    code: "ENOENT",
-  });
-});
-
-test("tracked-dirty and staged main are refused while untracked files are tolerated", async (t) => {
-  await t.test("tracked dirty", async () => {
+test("duplicate or unapproved Herdr workspaces fail closed", async (t) => {
+  await t.test("duplicate approved label", async () => {
     const { root, worktreesRoot } = fixture();
-    writeFileSync(join(root, "fixture.txt"), "dirty\n");
-    assert.equal(
-      await captureFailure(() =>
-        startBatch("Dirty", {
-          root,
-          worktreesRoot,
-          run: recordingRun([]),
-        })
-      ),
-      "main_tracked_dirty",
-    );
-  });
-
-  await t.test("staged", async () => {
-    const { root, worktreesRoot } = fixture();
-    writeFileSync(join(root, "fixture.txt"), "staged\n");
-    git(root, ["add", "fixture.txt"]);
-    assert.equal(
-      await captureFailure(() =>
-        startBatch("Staged", {
-          root,
-          worktreesRoot,
-          run: recordingRun([]),
-        })
-      ),
-      "main_tracked_dirty",
-    );
-  });
-
-  await t.test("untracked tolerated", async () => {
-    const { root, worktreesRoot } = fixture();
-    writeFileSync(join(root, "historical-artifact.txt"), "untracked\n");
-    const result = await startBatch("Untracked", {
-      root,
-      worktreesRoot,
-      run: recordingRun([]),
+    const batchRun = recordingRun([], {
+      workspaces: [
+        { workspace_id: "w-a", label: "Beheer" },
+        { workspace_id: "w-b", label: "Beheer" },
+      ],
     });
-    assert.equal(result.herdrSession, HERDR_SESSION);
-  });
-});
-
-test("existing branch and worktree path conflicts are refused", async (t) => {
-  await t.test("branch", async () => {
-    const { root, worktreesRoot } = fixture();
-    git(root, ["branch", "autonomy/existing"]);
     assert.equal(
       await captureFailure(() =>
-        startBatch("Existing", {
-          root,
-          worktreesRoot,
-          run: recordingRun([]),
-        })
-      ),
-      "branch_conflict",
-    );
-  });
-
-  await t.test("worktree path", async () => {
-    const { root, worktreesRoot } = fixture();
-    mkdirSync(worktreesRoot);
-    mkdirSync(join(worktreesRoot, "occupied"));
-    assert.equal(
-      await captureFailure(() =>
-        startBatch("Occupied", {
-          root,
-          worktreesRoot,
-          run: recordingRun([]),
-        })
-      ),
-      "worktree_path_exists",
-    );
-  });
-});
-
-test("existing Herdr workspace or agent conflicts are refused before Git creation", async (t) => {
-  await t.test("workspace label", async () => {
-    const { root, worktreesRoot } = fixture();
-    const calls = [];
-    assert.equal(
-      await captureFailure(() =>
-        startBatch("Herdr Conflict", {
-          root,
-          worktreesRoot,
-          run: recordingRun(calls, {
-            workspaces: [{
-              workspace_id: "w9",
-              label: "Herdr Conflict",
-              worktree: { checkout_path: "/tmp/other-worktree" },
-            }],
-          }),
-        })
+        startBatch("Beheer", { root, worktreesRoot, run: batchRun })
       ),
       "herdr_workspace_conflict",
     );
-    assert.equal(
-      calls.some(
-        (call) =>
-          call.command === "git" &&
-          call.args[2] === "worktree" &&
-          call.args[3] === "add",
-      ),
-      false,
-    );
   });
-
-  await t.test("agent name", async () => {
+  await t.test("unapproved human label", async () => {
     const { root, worktreesRoot } = fixture();
+    const batchRun = recordingRun([], {
+      workspaces: [{ workspace_id: "w-x", label: "Previous Beheer" }],
+    });
     assert.equal(
       await captureFailure(() =>
-        startBatch("Agent Conflict", {
-          root,
-          worktreesRoot,
-          run: recordingRun([], {
-            agents: [{ name: deriveHerdrAgentName("agent-conflict") }],
-          }),
-        })
+        startBatch("Beheer", { root, worktreesRoot, run: batchRun })
       ),
-      "herdr_agent_conflict",
+      "herdr_unapproved_workspace",
     );
   });
 });
 
-test("unsupported Herdr fails closed before Git creation", async () => {
+test("both approved batch workspaces remain separate in one ENVAL project", async () => {
+  const { root, worktreesRoot } = fixture();
+  const batchRun = recordingRun([]);
+  const beheer = await startBatch("Beheer", {
+    root,
+    worktreesRoot,
+    run: batchRun,
+  });
+  const setup = await startBatch("_Setup", {
+    root,
+    worktreesRoot,
+    run: batchRun,
+  });
+  assert.notEqual(beheer.herdrWorkspace, setup.herdrWorkspace);
+  assert.deepEqual(
+    batchRun.herdrState.workspaces.map((workspace) => workspace.label),
+    ["Main", "Beheer", "_Setup"],
+  );
+});
+
+test("the default root workspace is reconciled to Main without an alternate", async () => {
+  const { root, worktreesRoot } = fixture();
+  const batchRun = recordingRun([], {
+    workspaces: [{ workspace_id: "w-main", label: "enval" }],
+    tabs: [{ tab_id: "w-main:t1", workspace_id: "w-main" }],
+    panes: [{
+      pane_id: "w-main:p1",
+      tab_id: "w-main:t1",
+      workspace_id: "w-main",
+      cwd: root,
+    }],
+  });
+  await startBatch("Beheer", { root, worktreesRoot, run: batchRun });
+  assert.deepEqual(
+    batchRun.herdrState.workspaces.map((workspace) => workspace.label),
+    ["Main", "Beheer"],
+  );
+  assert.deepEqual(
+    batchRun.herdrState.tabs
+      .filter((tab) => tab.workspace_id === "w-main")
+      .map((tab) => tab.label),
+    MAIN_TABS,
+  );
+});
+
+test("tracked-dirty main is refused when an approved binding must be created", async () => {
+  const { root, worktreesRoot } = fixture();
+  writeFileSync(join(root, "fixture.txt"), "dirty\n");
+  const calls = [];
+  assert.equal(
+    await captureFailure(() =>
+      startBatch("Beheer", {
+        root,
+        worktreesRoot,
+        run: recordingRun(calls),
+      })
+    ),
+    "main_tracked_dirty",
+  );
+  assert.equal(
+    calls.some((call) =>
+      call.command === "git" && call.args[2] === "worktree" &&
+      call.args[3] === "add"
+    ),
+    false,
+  );
+});
+
+test("an occupied assigned worktree path fails closed", async () => {
+  const { root, worktreesRoot } = fixture();
+  mkdirSync(worktreesRoot);
+  mkdirSync(join(worktreesRoot, "beheer"));
+  assert.equal(
+    await captureFailure(() =>
+      startBatch("Beheer", {
+        root,
+        worktreesRoot,
+        run: recordingRun([]),
+      })
+    ),
+    "worktree_path_exists",
+  );
+});
+
+test("unsupported Herdr fails before worktree creation", async () => {
   const { root, worktreesRoot } = fixture();
   const calls = [];
   assert.equal(
     await captureFailure(() =>
-      startBatch("Wrong Herdr", {
+      startBatch("Beheer", {
         root,
         worktreesRoot,
         run: recordingRun(calls, { version: "herdr 0.8.3\n" }),
@@ -805,120 +630,36 @@ test("unsupported Herdr fails closed before Git creation", async () => {
     "herdr_version_unsupported",
   );
   assert.equal(
-    calls.some(
-      (call) =>
-        call.command === "git" &&
-        call.args[2] === "worktree" &&
-        call.args[3] === "add",
+    calls.some((call) =>
+      call.command === "git" && call.args[2] === "worktree" &&
+      call.args[3] === "add"
     ),
     false,
   );
 });
 
-test("unsupported Codex override fails closed before Git creation", async () => {
+test("unsupported Codex fails before Herdr or worktree mutation", async () => {
   const { root, worktreesRoot } = fixture();
   const calls = [];
   const batchRun = recordingRun(calls);
-  const refusingRun = (command, args, options) => {
-    if (command === "codex") {
-      assert.deepEqual(args, [
-        "--config",
-        CODEX_UPDATE_OVERRIDE,
-        "--strict-config",
-        "--version",
-      ]);
-      return { status: 2, stdout: "", stderr: "unknown config", error: null };
-    }
-    return batchRun(command, args, options);
-  };
-  assert.equal(
-    await captureFailure(() =>
-      startBatch("Codex Refused", {
-        root,
-        worktreesRoot,
-        run: refusingRun,
-      })
-    ),
-    "codex_cli_override_preflight_failed",
-  );
-  assert.equal(
-    calls.some(
-      (call) =>
-        call.command === "git" && call.args[2] === "worktree" &&
-        call.args[3] === "add",
-    ),
-    false,
-  );
-});
-
-test("invalid Codex version output fails closed before Git creation", async () => {
-  const { root, worktreesRoot } = fixture();
-  const calls = [];
-  const batchRun = recordingRun(calls);
-  const invalidVersionRun = (command, args, options) =>
+  const refusingRun = (command, args, options) =>
     command === "codex"
-      ? { status: 0, stdout: "Codex proof\n", stderr: "", error: null }
+      ? { status: 2, stdout: "", stderr: "unsupported", error: null }
       : batchRun(command, args, options);
   assert.equal(
     await captureFailure(() =>
-      startBatch("Codex Invalid", {
-        root,
-        worktreesRoot,
-        run: invalidVersionRun,
-      })
+      startBatch("Beheer", { root, worktreesRoot, run: refusingRun })
     ),
-    "codex_cli_version_invalid",
+    "codex_cli_override_preflight_failed",
   );
-  assert.equal(
-    calls.some(
-      (call) =>
-        call.command === "git" && call.args[2] === "worktree" &&
-        call.args[3] === "add",
-    ),
-    false,
-  );
-});
-
-test("Herdr agent startup failure leaves the created batch intact", async () => {
-  const { root, worktreesRoot } = fixture();
-  const calls = [];
-  const batchRun = recordingRun(calls, { agentStartError: "agent_not_ready" });
-  assert.equal(
-    await captureFailure(() =>
-      startBatch("Start Blocked", { root, worktreesRoot, run: batchRun })
-    ),
-    "herdr_agent_start_failed:agent_not_ready",
-  );
-  assert.equal(
-    git(root, ["branch", "--list", "autonomy/start-blocked"])
-      .endsWith("autonomy/start-blocked"),
-    true,
-  );
-  assert.equal(
-    git(join(worktreesRoot, "start-blocked"), [
-      "branch",
-      "--show-current",
-    ]),
-    "autonomy/start-blocked",
-  );
-  assert.equal(batchRun.herdrState.workspaces.length, 2);
-  assert.equal(
-    calls.some(
-      (call) =>
-        call.command === "git" &&
-        (["reset", "clean"].includes(call.args[2]) ||
-          (call.args[2] === "worktree" &&
-            ["remove", "prune"].includes(call.args[3]))),
-    ),
-    false,
-  );
+  assert.equal(calls.some((call) => call.command === "herdr"), false);
 });
 
 test("missing Codex governance baseline is refused before creation", async () => {
   const { root, worktreesRoot } = fixture({ omit: ".codex/config.toml" });
   assert.equal(
     await captureFailure(() =>
-      startBatch("No Governance", {
+      startBatch("Beheer", {
         root,
         worktreesRoot,
         run: recordingRun([]),
@@ -928,26 +669,81 @@ test("missing Codex governance baseline is refused before creation", async () =>
   );
 });
 
-test("non-human workspace text is rejected without invoking commands", async () => {
-  const { parent, root, worktreesRoot } = fixture();
+test("agent startup failure preserves the approved workspace and worktree", async () => {
+  const { root, worktreesRoot } = fixture();
   const calls = [];
+  const batchRun = recordingRun(calls, { agentStartError: "agent_not_ready" });
   assert.equal(
     await captureFailure(() =>
-      startBatch("Safe;Touch Pwned", {
-        root,
-        worktreesRoot,
-        run: recordingRun(calls),
-      })
+      startBatch("Beheer", { root, worktreesRoot, run: batchRun })
     ),
-    "workspace_name_invalid",
+    "herdr_agent_start_failed:agent_not_ready",
   );
-  assert.equal(calls.length, 0);
-  assert.throws(() => readFileSync(join(parent, "touch-pwned")), {
-    code: "ENOENT",
-  });
+  assert.equal(
+    git(root, ["branch", "--list", "beheer"]).endsWith("beheer"),
+    true,
+  );
+  assert.equal(
+    git(join(worktreesRoot, "beheer"), ["branch", "--show-current"]),
+    "beheer",
+  );
+  assert.deepEqual(
+    batchRun.herdrState.workspaces.map((workspace) => workspace.label),
+    ["Main", "Beheer"],
+  );
+  assert.equal(
+    calls.some((call) =>
+      call.command === "git" &&
+      (["reset", "clean"].includes(call.args[2]) ||
+        (call.args[2] === "worktree" &&
+          ["remove", "prune"].includes(call.args[3])))
+    ),
+    false,
+  );
 });
 
-test("permanent governance owns human Herdr navigation and RYB forward naming", () => {
+test("project result writer atomically updates only the stable entrypoint", () => {
+  const { parent } = fixture();
+  const resultFile = join(parent, ".herdr-results", "ENVAL", "latest.txt");
+  const first = "HERDR_TOPOLOGY01_STATUS=PASS\nFILES_CHANGED=proof\n";
+  const second = "NEXT_BATCH_STATUS=PARTIAL\nREASON=proof\n";
+  assert.equal(writeProjectResult(first, resultFile), resultFile);
+  assert.equal(readFileSync(resultFile, "utf8"), first);
+  writeProjectResult(second, resultFile);
+  assert.equal(readFileSync(resultFile, "utf8"), second);
+  assert.throws(() => writeProjectResult("not a return block\n", resultFile), {
+    code: "project_result_invalid",
+  });
+
+  const isolatedHome = join(parent, "home");
+  mkdirSync(isolatedHome);
+  const cliResult = spawnSync(
+    process.execPath,
+    [
+      fileURLToPath(new URL("../tools/enval-batch.mjs", import.meta.url)),
+      "result",
+    ],
+    {
+      encoding: "utf8",
+      env: { ...process.env, HOME: isolatedHome },
+      input: first,
+    },
+  );
+  assert.equal(cliResult.status, 0, cliResult.stderr);
+  assert.equal(
+    readFileSync(
+      join(isolatedHome, ".herdr-results", "ENVAL", "latest.txt"),
+      "utf8",
+    ),
+    first,
+  );
+  assert.match(
+    cliResult.stdout,
+    /RESULT_FILE=~\/\.herdr-results\/ENVAL\/latest\.txt/,
+  );
+});
+
+test("permanent authorities document topology, Git, lean handoffs, and results", () => {
   const governance = readFileSync(
     new URL("../../AGENTS.md", import.meta.url),
     "utf8",
@@ -958,38 +754,32 @@ test("permanent governance owns human Herdr navigation and RYB forward naming", 
   );
   for (
     const required of [
-      "## Human Herdr navigation and action location",
-      "Project: <human project name>",
-      "Workspace: <human workspace name>",
-      "Tab: <Codex|Terminal|Reviewer>",
-      "DO\n<exact action>",
-      "`RYB`; persistent workspace `Main`",
-      "`Daily`, `Games`, `Rankings`, and `Profile`",
+      "The current exact orchestrator-owned ENVAL topology",
+      "No other human workspace name",
+      "Main -> Terminal",
+      "~/.herdr-results/ENVAL/latest.txt",
+      "never requires Daan to shuttle messages",
+      "Lean handoffs remain task-delta-only",
     ]
-  ) {
-    assert.ok(governance.includes(required), required);
-  }
+  ) assert.ok(governance.includes(required), required);
   for (
     const required of [
-      "node scripts/tools/enval-batch.mjs start Beheer",
-      "PROJECT=ENVAL",
-      "WORKSPACE=<human product name>",
-      "TABS=Codex,Terminal,Reviewer",
-      "`ENVAL -> Main` naming conventions",
+      "A new workspace requires",
+      "Previous Beheer",
+      "One human workspace has at most one active",
+      "Main -> Terminal",
+      "Daan performs commits, cherry-picks, and pushes",
+      "node scripts/tools/enval-batch.mjs result",
+      "~/.herdr-results/ENVAL/latest.txt",
     ]
-  ) {
-    assert.ok(workflow.includes(required), required);
-  }
-  assert.equal(workflow.includes("`enval-worker`"), false);
+  ) assert.ok(workflow.includes(required), required);
 });
 
-test("launcher source has no unrelated Git config, shell, or cleanup authority", () => {
+test("launcher source has no shell, cleanup, commit, or push authority", () => {
   const source = readFileSync(
     new URL("../tools/enval-batch.mjs", import.meta.url),
     "utf8",
   );
-  assert.doesNotMatch(source, /\["config"/);
-  assert.doesNotMatch(source, /\beval\s*\(/);
   assert.doesNotMatch(source, /shell:\s*true/);
   assert.doesNotMatch(source, /\b(?:rmSync|unlinkSync|rmdirSync)\b/);
   assert.doesNotMatch(source, /\["(?:commit|push|deploy|remove|prune|clean)"/);
