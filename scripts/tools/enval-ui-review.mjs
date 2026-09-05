@@ -7,6 +7,7 @@ import { homedir, tmpdir } from "node:os";
 import { dirname, extname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { CODEX_UPDATE_OVERRIDE } from "./enval-batch.mjs";
 import { EVIDENCE_SCHEMA_VERSION } from "./enval-ui-review-collect.mjs";
 
 export const ENVAL_ROOT = resolve(
@@ -335,6 +336,8 @@ export function buildReviewerArgv(root, request) {
       root,
       "--sandbox",
       "read-only",
+      "--config",
+      CODEX_UPDATE_OVERRIDE,
       "--config",
       'web_search="disabled"',
       "--disable",

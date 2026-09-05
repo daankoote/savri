@@ -13,6 +13,7 @@ import { homedir, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { after, test } from "node:test";
 
+import { CODEX_UPDATE_OVERRIDE } from "../tools/enval-batch.mjs";
 import {
   BrowserEvidenceError,
   collectBrowserEvidence,
@@ -402,6 +403,7 @@ test("launcher creates a fresh structured read-only reviewer invocation", () => 
     const value of [
       "--ephemeral",
       "read-only",
+      CODEX_UPDATE_OVERRIDE,
       'web_search="disabled"',
       "--image",
       "--output-schema",
@@ -479,7 +481,7 @@ test("Herdr launch routes each ephemeral reviewer into the Reviewer tab", async 
         stdout: JSON.stringify({
           result: {
             type: "output_matched",
-            read: { text: `ENVAL_REVIEW_DONE_${invocation}=0` },
+            matched_line: `ENVAL_REVIEW_DONE_${invocation}=0`,
           },
         }),
       };
@@ -501,6 +503,14 @@ test("Herdr launch routes each ephemeral reviewer into the Reviewer tab", async 
     );
     assert.equal(status, 0);
     assert.equal(calls.filter((call) => call.args.includes("w4:p3")).length, 2);
+    const waitCall = calls.find((call) =>
+      call.args.slice(2, 4).join(" ") === "pane wait-output"
+    );
+    assert.equal(waitCall.args.includes("--match"), false);
+    assert.match(
+      waitCall.args[waitCall.args.indexOf("--regex") + 1],
+      /=\[0-9\]\+\$$/,
+    );
   } finally {
     rmSync(join(tmpdir(), `enval-ui-review-prompt-${invocation}.txt`), {
       force: true,
@@ -527,6 +537,23 @@ test("installed Codex CLI parses the structured reviewer option order", () => {
   assert.equal(result.error, undefined);
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /^Run Codex non-interactively$/m);
+});
+
+test("review result schema gives every const and enum an explicit type", () => {
+  const schema = JSON.parse(
+    readFileSync(
+      join(REPOSITORY_ROOT, "scripts/tools/enval-ui-review-result.schema.json"),
+      "utf8",
+    ),
+  );
+  function inspect(value) {
+    if (!value || typeof value !== "object") return;
+    if (Object.hasOwn(value, "const") || Object.hasOwn(value, "enum")) {
+      assert.equal(typeof value.type, "string");
+    }
+    for (const child of Object.values(value)) inspect(child);
+  }
+  inspect(schema);
 });
 
 test("real launch validates the structured reviewer result", async () => {
@@ -709,6 +736,42 @@ test("human/material stops and Loop Guard stop before another review", async () 
   assert.equal(state.outcome, "PARTIAL");
   assert.equal(state.stopReason.type, "LOOP_GUARD");
   assert.equal(state.reviewInvocations.length, 3);
+});
+
+test("CLI init reports a COMPLETE stop without READY_FOR_REVIEW", () => {
+  const root = projectFixture();
+  const requestPath = join(root, "request.json");
+  const statePath = join(root, "state.json");
+  writeFileSync(
+    requestPath,
+    `${
+      JSON.stringify({
+        batchId: "complete-init-proof",
+        acceptance: "acceptance.md",
+        implementationContextId: "implementation-proof-context",
+        changedFiles: ["scripts/tools/enval-ui-review-loop.mjs"],
+        implementationResult: implementationResult(),
+        browserEvidenceManifest: manifestFixture(root),
+        stopCondition: { type: "HUMAN_GATE", detail: "proof stop" },
+      })
+    }\n`,
+  );
+  const result = spawnSync(
+    "node",
+    [
+      "scripts/tools/enval-ui-review-loop.mjs",
+      "init",
+      "--request",
+      requestPath,
+      "--state",
+      statePath,
+    ],
+    { cwd: REPOSITORY_ROOT, encoding: "utf8" },
+  );
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /UI_REVIEW04_STATUS=PARTIAL/);
+  assert.doesNotMatch(result.stdout, /READY_FOR_REVIEW/);
+  assert.equal(JSON.parse(readFileSync(statePath, "utf8")).phase, "COMPLETE");
 });
 
 test("hard maximum five requires explicit authorization", () => {

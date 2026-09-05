@@ -15,12 +15,12 @@
     "humanFinalAcceptanceRequired"
   ],
   "properties": {
-    "schemaVersion": { "const": 1 },
-    "verdict": { "enum": ["PASS", "FAIL"] },
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "verdict": { "type": "string", "enum": ["PASS", "FAIL"] },
     "reviewNumber": { "type": "integer", "minimum": 1, "maximum": 6 },
     "reviewContextId": { "type": "string", "minLength": 1, "maxLength": 200 },
-    "independentContext": { "const": true },
-    "reviewOnlyAuthority": { "const": true },
+    "independentContext": { "type": "boolean", "const": true },
+    "reviewOnlyAuthority": { "type": "boolean", "const": true },
     "findings": {
       "type": "array",
       "maxItems": 100,
@@ -38,7 +38,10 @@
         ],
         "properties": {
           "id": { "type": "string", "pattern": "^UIR-[0-9]{3,}$" },
-          "severity": { "enum": ["critical", "high", "medium", "low"] },
+          "severity": {
+            "type": "string",
+            "enum": ["critical", "high", "medium", "low"]
+          },
           "route": { "type": "string", "minLength": 1, "maxLength": 500 },
           "state": { "type": "string", "minLength": 1, "maxLength": 500 },
           "viewport": { "type": "string", "minLength": 1, "maxLength": 500 },
@@ -56,7 +59,7 @@
       "maxItems": 100,
       "items": { "type": "string", "minLength": 1, "maxLength": 500 }
     },
-    "productCodeModified": { "const": false },
-    "humanFinalAcceptanceRequired": { "const": true }
+    "productCodeModified": { "type": "boolean", "const": false },
+    "humanFinalAcceptanceRequired": { "type": "boolean", "const": true }
   }
 }

@@ -6,7 +6,10 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { chromium } from "playwright";
+import {
+  PrimaryRuntimeError,
+  resolvePrimaryRuntime,
+} from "./enval-primary-runtime.mjs";
 
 export const ENVAL_ROOT = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -130,6 +133,19 @@ function defaultRun(command, args, options) {
     maxBuffer: 1024 * 1024,
     shell: false,
   });
+}
+
+async function launchPrimaryPlaywright(root, launchOptions) {
+  try {
+    const runtime = resolvePrimaryRuntime(root);
+    const playwright = await import(
+      pathToFileURL(join(runtime.rootNodeModules, "playwright/index.mjs")).href
+    );
+    return await playwright.chromium.launch(launchOptions);
+  } catch (error) {
+    if (error instanceof PrimaryRuntimeError) fail(error.code);
+    throw error;
+  }
 }
 
 function inspectLocalReviewReadiness(baseUrl, root, run) {
@@ -297,7 +313,7 @@ export async function collectBrowserEvidence(argv, options = {}) {
     options.artifactRoot ?? mkdtempSync(join(tmpdir(), "enval-ui-review-")),
   );
   const launch = options.launch ??
-    ((launchOptions) => chromium.launch(launchOptions));
+    ((launchOptions) => launchPrimaryPlaywright(root, launchOptions));
   const browser = await launch({ headless: true });
   const captures = [];
   try {

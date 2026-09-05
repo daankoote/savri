@@ -19,6 +19,7 @@ export const HERDR_SESSION = HERDR_PROJECT;
 export const HERDR_VERSION = "0.8.2";
 export const PERSISTENT_WORKSPACE = "Main";
 export const BATCH_TABS = Object.freeze(["Codex", "Terminal", "Reviewer"]);
+export const CODEX_UPDATE_OVERRIDE = "check_for_update_on_startup=false";
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const WORKSPACE_NAME_PATTERN =
   /^\p{Lu}[\p{L}\p{N}]*(?: \p{Lu}[\p{L}\p{N}]*)*$/u;
@@ -330,6 +331,8 @@ export function codexLaunchArgv(worktree) {
     "--ask-for-approval",
     "on-request",
     "--config",
+    CODEX_UPDATE_OVERRIDE,
+    "--config",
     'approvals_reviewer="auto_review"',
     "--config",
     'web_search="disabled"',
@@ -337,6 +340,20 @@ export function codexLaunchArgv(worktree) {
     "hooks",
     "--strict-config",
   ]);
+}
+
+export function verifyCodexCli(run = defaultRun, cwd = ENVAL_ROOT) {
+  const version = checked(
+    run,
+    "codex",
+    ["--config", CODEX_UPDATE_OVERRIDE, "--strict-config", "--version"],
+    cwd,
+    "codex_cli_override_preflight_failed",
+  ).trim();
+  if (!/^codex-cli \d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version)) {
+    fail("codex_cli_version_invalid");
+  }
+  return Object.freeze({ version: version.slice("codex-cli ".length) });
 }
 
 export function verifyHerdrCli(run = defaultRun, cwd = ENVAL_ROOT) {
@@ -696,7 +713,7 @@ export async function startBatch(workspaceName, options = {}) {
   governanceTrackedAndClean(run, root);
   validateGovernance(root);
   noConflicts(run, root, spec);
-  checked(run, "codex", ["--version"], root, "codex_cli_unavailable");
+  verifyCodexCli(run, root);
   verifyHerdrCli(run, root);
   ensureNoHerdrConflicts(run, root, spec, agentName);
   ensurePersistentWorkspace(run, root);

@@ -206,8 +206,8 @@ export function launchReviewerInHerdr(
       "pane",
       "wait-output",
       paneId,
-      "--match",
-      `${sentinel}=`,
+      "--regex",
+      `${sentinel}=[0-9]+$`,
       "--source",
       "recent-unwrapped",
       "--lines",
@@ -220,7 +220,9 @@ export function launchReviewerInHerdr(
     env,
     run,
   );
-  const text = typeof matched.read?.text === "string" ? matched.read.text : "";
+  const text = [matched.matched_line, matched.read?.text]
+    .filter((value) => typeof value === "string")
+    .join("\n");
   const match = text.match(new RegExp(`${sentinel}=([0-9]+)`));
   if (!match) fail("herdr_reviewer_status_missing");
   return Promise.resolve(Number(match[1]));
@@ -533,7 +535,11 @@ async function main(argv) {
     const request = jsonFile(options.get("--request"), "batch_request_invalid");
     const state = createBatchState(request);
     writeState(options.get("--state"), state);
-    process.stdout.write("UI_REVIEW_LOOP_STATE=READY_FOR_REVIEW\n");
+    process.stdout.write(
+      state.phase === "COMPLETE"
+        ? formatFinalOutcome(state)
+        : "UI_REVIEW_LOOP_STATE=READY_FOR_REVIEW\n",
+    );
     return;
   }
   const statePath = options.get("--state");

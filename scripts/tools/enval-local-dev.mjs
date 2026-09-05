@@ -1,21 +1,19 @@
 #!/usr/bin/env node
 
 import { spawn, spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
+import {
+  PrimaryRuntimeError,
+  resolvePrimaryRuntime,
+} from "./enval-primary-runtime.mjs";
 import { resolveSupabaseTarget } from "./enval-supabase-target.mjs";
 
 const ROOT = resolve(fileURLToPath(new URL("../../", import.meta.url)));
-const FUNCTIONS_ENV_FILE = resolve(ROOT, "supabase/functions/.env.local");
+const APP_ROOT = resolve(ROOT, "app");
 const DEFAULT_VITE_URL = "http://127.0.0.1:5175";
 const LOCAL_IDEMPOTENCY_TTL_SECONDS = "86400";
 const REQUEST_TIMEOUT_MS = 5_000;
@@ -259,10 +257,13 @@ function edgeRuntimePreflight() {
   );
 }
 
-function temporaryFunctionsEnvironment(runtimeEnvironment) {
+function temporaryFunctionsEnvironment(
+  functionsEnvironmentFile,
+  runtimeEnvironment,
+) {
   const directory = mkdtempSync(join(tmpdir(), "enval-local-functions-"));
   const path = join(directory, "runtime.env");
-  const existing = readFileSync(FUNCTIONS_ENV_FILE, "utf8").trimEnd();
+  const existing = readFileSync(functionsEnvironmentFile, "utf8").trimEnd();
   const derived = Object.entries(runtimeEnvironment).map(([key, value]) =>
     `${key}=${JSON.stringify(value)}`
   ).join("\n");
@@ -272,6 +273,40 @@ function temporaryFunctionsEnvironment(runtimeEnvironment) {
     mode: 0o600,
   });
   return Object.freeze({ directory, path });
+}
+
+async function startFrontend(runtime, cacheDirectory) {
+  const vite = await import(
+    pathToFileURL(join(runtime.appNodeModules, "vite/dist/node/index.js")).href
+  );
+  const reactModule = await import(
+    pathToFileURL(
+      join(runtime.appNodeModules, "@vitejs/plugin-react/dist/index.js"),
+    ).href
+  );
+  const alias = [
+    "react",
+    "react-dom",
+    "@supabase/supabase-js",
+  ].map((find) => ({
+    find,
+    replacement: join(runtime.appNodeModules, find),
+  }));
+  const server = await vite.createServer({
+    root: APP_ROOT,
+    configFile: false,
+    envDir: dirname(runtime.appEnvironmentFile),
+    cacheDir: join(cacheDirectory, "vite-cache"),
+    plugins: [reactModule.default()],
+    resolve: { alias },
+    server: {
+      host: "127.0.0.1",
+      port: 5175,
+      strictPort: true,
+    },
+  });
+  await server.listen();
+  return server;
 }
 
 async function fetchBounded(url, init = {}) {
@@ -478,25 +513,27 @@ async function ready(viteUrl) {
 }
 
 async function serve() {
-  if (!existsSync(FUNCTIONS_ENV_FILE)) fail("functions_env_file_missing");
+  let primaryRuntime;
+  try {
+    primaryRuntime = resolvePrimaryRuntime(ROOT);
+  } catch (error) {
+    if (error instanceof PrimaryRuntimeError) fail(error.code);
+    throw error;
+  }
   localStatusEnvironment("TENANT_ENVAL");
   const controlPlane = localStatusEnvironment("CONTROL_PLANE");
   const runtimeEnvironment = managedLocalConfiguration(controlPlane);
   edgeRuntimePreflight();
   const temporaryEnvironment = temporaryFunctionsEnvironment(
+    primaryRuntime.functionsEnvironmentFile,
     runtimeEnvironment,
   );
-  process.stdout.write(
-    [
-      "LOCAL_FUNCTION_RUNTIME_PREFLIGHT=PASS",
-      "TENANT_TARGET=TENANT_ENVAL",
-      "PRESENTATION_SOURCE=platform_control_plane_presentation_v1",
-      "TENANT_RESOLVER=static_single_tenant_v1",
-      "SECRETS_PRINTED=NO",
-    ].join("\n") + "\n",
-  );
-
+  let frontend = null;
   try {
+    frontend = await startFrontend(
+      primaryRuntime,
+      temporaryEnvironment.directory,
+    );
     const child = spawn(
       "supabase",
       [
@@ -516,6 +553,20 @@ async function serve() {
         stdio: "inherit",
       },
     );
+    process.stdout.write(
+      [
+        "LOCAL_RUNTIME_PREFLIGHT=PASS",
+        "LOCAL_FRONTEND_RUNTIME=OWNED",
+        "LOCAL_FUNCTIONS_RUNTIME=OWNED",
+        "TENANT_TARGET=TENANT_ENVAL",
+        "PRESENTATION_SOURCE=platform_control_plane_presentation_v1",
+        "TENANT_RESOLVER=static_single_tenant_v1",
+        "PRIMARY_DEPENDENCIES_REUSED=YES",
+        "PRIMARY_PRIVATE_ENV_REUSED=YES",
+        "TRACKED_RUNTIME_LINKS_CREATED=NO",
+        "SECRETS_PRINTED=NO",
+      ].join("\n") + "\n",
+    );
     for (const signal of ["SIGINT", "SIGTERM"]) {
       process.once(signal, () => child.kill(signal));
     }
@@ -525,6 +576,7 @@ async function serve() {
     }).catch((error) => fail("functions_serve_failed", error));
     process.exitCode = exitCode;
   } finally {
+    if (frontend) await frontend.close();
     rmSync(temporaryEnvironment.directory, { recursive: true, force: true });
   }
 }

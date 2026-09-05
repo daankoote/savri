@@ -15,6 +15,7 @@ import { after, test } from "node:test";
 import {
   BATCH_TABS,
   BatchLaunchError,
+  CODEX_UPDATE_OVERRIDE,
   codexLaunchArgv,
   deriveBatchIdentity,
   deriveBatchSpec,
@@ -24,6 +25,7 @@ import {
   HERDR_SESSION,
   PERSISTENT_WORKSPACE,
   startBatch,
+  verifyCodexCli,
   verifyHerdrCli,
 } from "../tools/enval-batch.mjs";
 
@@ -126,7 +128,7 @@ function fixture(options = {}) {
 }
 
 function fakeCodex() {
-  return { status: 0, stdout: "codex-cli proof\n", stderr: "", error: null };
+  return { status: 0, stdout: "codex-cli 0.0.0\n", stderr: "", error: null };
 }
 
 function commandResult(stdout = "") {
@@ -384,6 +386,10 @@ test("installed Herdr 0.8.2 exposes the launcher-required CLI semantics", () => 
   assert.deepEqual(verifyHerdrCli(), { version: "0.8.2" });
 });
 
+test("installed Codex accepts the strict non-updating override and returns a version", () => {
+  assert.match(verifyCodexCli().version, /^\d+\.\d+\.\d+/);
+});
+
 test("valid start uses current main HEAD and starts governed Codex through Herdr", async () => {
   const { root, worktreesRoot } = fixture();
   writeFileSync(join(root, "fixture.txt"), "second\n");
@@ -435,6 +441,8 @@ test("valid start uses current main HEAD and starts governed Codex through Herdr
     result.worktree,
     "--ask-for-approval",
     "on-request",
+    "--config",
+    CODEX_UPDATE_OVERRIDE,
     "--config",
     'approvals_reviewer="auto_review"',
     "--config",
@@ -801,6 +809,70 @@ test("unsupported Herdr fails closed before Git creation", async () => {
       (call) =>
         call.command === "git" &&
         call.args[2] === "worktree" &&
+        call.args[3] === "add",
+    ),
+    false,
+  );
+});
+
+test("unsupported Codex override fails closed before Git creation", async () => {
+  const { root, worktreesRoot } = fixture();
+  const calls = [];
+  const batchRun = recordingRun(calls);
+  const refusingRun = (command, args, options) => {
+    if (command === "codex") {
+      assert.deepEqual(args, [
+        "--config",
+        CODEX_UPDATE_OVERRIDE,
+        "--strict-config",
+        "--version",
+      ]);
+      return { status: 2, stdout: "", stderr: "unknown config", error: null };
+    }
+    return batchRun(command, args, options);
+  };
+  assert.equal(
+    await captureFailure(() =>
+      startBatch("Codex Refused", {
+        root,
+        worktreesRoot,
+        run: refusingRun,
+      })
+    ),
+    "codex_cli_override_preflight_failed",
+  );
+  assert.equal(
+    calls.some(
+      (call) =>
+        call.command === "git" && call.args[2] === "worktree" &&
+        call.args[3] === "add",
+    ),
+    false,
+  );
+});
+
+test("invalid Codex version output fails closed before Git creation", async () => {
+  const { root, worktreesRoot } = fixture();
+  const calls = [];
+  const batchRun = recordingRun(calls);
+  const invalidVersionRun = (command, args, options) =>
+    command === "codex"
+      ? { status: 0, stdout: "Codex proof\n", stderr: "", error: null }
+      : batchRun(command, args, options);
+  assert.equal(
+    await captureFailure(() =>
+      startBatch("Codex Invalid", {
+        root,
+        worktreesRoot,
+        run: invalidVersionRun,
+      })
+    ),
+    "codex_cli_version_invalid",
+  );
+  assert.equal(
+    calls.some(
+      (call) =>
+        call.command === "git" && call.args[2] === "worktree" &&
         call.args[3] === "add",
     ),
     false,
