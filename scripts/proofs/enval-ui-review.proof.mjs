@@ -328,13 +328,15 @@ test("collector uses guarded readiness and writes bounded read-only evidence", a
   });
   assert.deepEqual(events, [
     {
-      command: "node",
+      command: process.execPath,
       args: [
-        "scripts/tools/enval-local-dev.mjs",
+        join(REPOSITORY_ROOT, "scripts/tools/enval-local-dev.mjs"),
         "--operation",
         "ready",
         "--vite-url",
         "http://127.0.0.1:5175",
+        "--source-root",
+        root,
       ],
     },
   ]);

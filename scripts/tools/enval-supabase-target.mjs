@@ -39,8 +39,8 @@ function configProjectId(configText) {
   return configText.match(/^project_id\s*=\s*"([^"]+)"/m)?.[1] ?? null;
 }
 
-function scopedCwd(cwd) {
-  const rel = relative(ROOT, resolve(cwd)).replaceAll("\\", "/");
+function scopedCwd(cwd, root) {
+  const rel = relative(root, resolve(cwd)).replaceAll("\\", "/");
   if (rel === "" || (!rel.startsWith("../") && rel !== "..")) {
     if (rel === "supabase" || rel.startsWith("supabase/")) return "TENANT_ENVAL";
     if (
@@ -64,7 +64,9 @@ export function resolveSupabaseTarget({
   operation = "inspect",
   cwd = process.cwd(),
   env = process.env,
+  root = ROOT,
 } = {}) {
+  const repositoryRoot = resolve(root);
   const normalizedTarget = String(target ?? "").trim().toUpperCase();
   const definition = TARGETS[normalizedTarget];
   if (!definition) {
@@ -79,7 +81,7 @@ export function resolveSupabaseTarget({
     throw new Error("tenant_enval_mutation_not_authorized");
   }
 
-  const observedScope = scopedCwd(cwd);
+  const observedScope = scopedCwd(cwd, repositoryRoot);
   if (observedScope === "OUTSIDE_REPOSITORY") {
     throw new Error("current_directory_outside_repository");
   }
@@ -101,7 +103,7 @@ export function resolveSupabaseTarget({
     throw new Error("credential_namespace_target_mismatch");
   }
 
-  const absoluteWorkdir = resolve(ROOT, definition.workdir);
+  const absoluteWorkdir = resolve(repositoryRoot, definition.workdir);
   const configPath = resolve(absoluteWorkdir, "supabase/config.toml");
   let configText;
   try {

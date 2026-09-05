@@ -17,7 +17,10 @@ export const ENVAL_ROOT = resolve(
 );
 export const EVIDENCE_SCHEMA_VERSION = "enval_ui_review_evidence_v1";
 
-const LOCAL_READINESS_TOOL = "scripts/tools/enval-local-dev.mjs";
+const LOCAL_READINESS_TOOL = join(
+  ENVAL_ROOT,
+  "scripts/tools/enval-local-dev.mjs",
+);
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1"]);
 const TEXT_VALUE_PATTERN = /^[^\r\n]{1,240}$/;
 const REVIEW_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,79}$/;
@@ -150,8 +153,16 @@ async function launchPrimaryPlaywright(root, launchOptions) {
 
 function inspectLocalReviewReadiness(baseUrl, root, run) {
   const result = run(
-    "node",
-    [LOCAL_READINESS_TOOL, "--operation", "ready", "--vite-url", baseUrl],
+    process.execPath,
+    [
+      LOCAL_READINESS_TOOL,
+      "--operation",
+      "ready",
+      "--vite-url",
+      baseUrl,
+      "--source-root",
+      root,
+    ],
     { cwd: root },
   );
   if (
@@ -306,7 +317,11 @@ async function captureViewport(browser, request, artifactRoot, viewportSpec) {
 }
 
 export async function collectBrowserEvidence(argv, options = {}) {
-  const root = realpathSync(resolve(options.root ?? ENVAL_ROOT));
+  const root = realpathSync(
+    resolve(
+      options.root ?? process.env.ENVAL_PREVIEW_SOURCE_ROOT ?? ENVAL_ROOT,
+    ),
+  );
   const request = parseCollectorRequest(argv);
   inspectLocalReviewReadiness(request.baseUrl, root, options.run ?? defaultRun);
   const artifactRoot = checkedArtifactRoot(

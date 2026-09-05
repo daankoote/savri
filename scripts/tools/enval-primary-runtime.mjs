@@ -42,8 +42,115 @@ function sameFileContents(left, right, code) {
   if (!readFileSync(left).equals(readFileSync(right))) fail(code);
 }
 
-export function resolvePrimaryRuntime(root, run = spawnSync) {
+function dependencyRuntime(worktreeRoot, run, environment) {
+  const dependencyRootValue = environment?.ENVAL_PREVIEW_DEPENDENCY_ROOT;
+  const secretRootValue = environment?.ENVAL_PREVIEW_SECRET_ROOT;
+  if (!dependencyRootValue && !secretRootValue) return null;
+  if (!dependencyRootValue || !secretRootValue) {
+    fail("preview_runtime_configuration_incomplete");
+  }
+
+  const dependencyRoot = regularDirectory(
+    resolve(dependencyRootValue),
+    "preview_dependency_root_missing",
+  );
+  const repositoryCheck = run(
+    "git",
+    ["-C", dependencyRoot, "rev-parse", "--is-inside-work-tree"],
+    {
+      cwd: dependencyRoot,
+      encoding: "utf8",
+      maxBuffer: 1024 * 1024,
+      shell: false,
+    },
+  );
+  if (repositoryCheck.error) fail("preview_dependency_location_check_failed");
+  if (repositoryCheck.status === 0) {
+    fail("preview_dependencies_inside_repository");
+  }
+
+  const secretRoot = regularDirectory(
+    resolve(secretRootValue),
+    "preview_secret_root_missing",
+  );
+  regularDirectory(join(secretRoot, ".git"), "preview_secret_root_invalid");
+
+  for (const relativePath of ["package.json", "package-lock.json"]) {
+    sameFileContents(
+      regularFile(
+        join(worktreeRoot, relativePath),
+        "dependency_contract_missing",
+      ),
+      regularFile(
+        join(dependencyRoot, "root", relativePath),
+        "preview_dependency_contract_missing",
+      ),
+      "preview_dependency_contract_mismatch",
+    );
+    sameFileContents(
+      regularFile(
+        join(worktreeRoot, "app", relativePath),
+        "dependency_contract_missing",
+      ),
+      regularFile(
+        join(dependencyRoot, "app", relativePath),
+        "preview_dependency_contract_missing",
+      ),
+      "preview_dependency_contract_mismatch",
+    );
+  }
+
+  const rootNodeModules = regularDirectory(
+    join(dependencyRoot, "root/node_modules"),
+    "preview_root_dependencies_missing",
+  );
+  const appNodeModules = regularDirectory(
+    join(dependencyRoot, "app/node_modules"),
+    "preview_app_dependencies_missing",
+  );
+  regularDirectory(
+    join(rootNodeModules, "playwright"),
+    "preview_dependency_missing",
+  );
+  for (
+    const relativePath of [
+      "vite",
+      "@vitejs/plugin-react",
+      "react",
+      "react-dom",
+      "@supabase/supabase-js",
+    ]
+  ) {
+    regularDirectory(
+      join(appNodeModules, relativePath),
+      "preview_dependency_missing",
+    );
+  }
+
+  return Object.freeze({
+    primaryRoot: secretRoot,
+    dependencySource: "external_preview_runtime",
+    rootNodeModules,
+    appNodeModules,
+    appEnvironmentFile: regularFile(
+      join(secretRoot, "app/.env.local"),
+      "primary_app_env_missing",
+    ),
+    functionsEnvironmentFile: regularFile(
+      join(secretRoot, "supabase/functions/.env.local"),
+      "primary_functions_env_missing",
+    ),
+  });
+}
+
+export function resolvePrimaryRuntime(
+  root,
+  run = spawnSync,
+  environment = process.env,
+) {
   const worktreeRoot = realpathSync(resolve(root));
+  const previewRuntime = dependencyRuntime(worktreeRoot, run, environment);
+  if (previewRuntime) return previewRuntime;
   const result = run(
     "git",
     [
@@ -131,6 +238,7 @@ export function resolvePrimaryRuntime(root, run = spawnSync) {
 
   return Object.freeze({
     primaryRoot,
+    dependencySource: "primary_checkout",
     rootNodeModules,
     appNodeModules,
     appEnvironmentFile: regularFile(

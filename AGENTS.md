@@ -339,11 +339,55 @@ paths, Herdr workspace IDs, and agent IDs may remain unique implementation
 details. The launcher/orchestrator, not Daan, owns every mapping between the
 human workspace name and those technical identities.
 
-Every autonomous run writes its compact final `RETURN` block to the sole
-project-level human result entrypoint `~/.herdr-results/ENVAL/latest.txt` through
-the canonical launcher result command before returning the same block to Daan.
-Internal per-run history may exist, but no handoff may require Daan to locate or
-interpret it.
+Every autonomous Codex run writes its complete final `RETURN` block through
+`node scripts/tools/enval-batch.mjs result` to the serialized project-level
+human result entrypoint `~/.herdr-results/ENVAL/latest.txt`. Before returning,
+the orchestrator always includes this complete retrieval action with the actual
+human location and no omitted step:
+
+```text
+WHERE
+Project: ENVAL
+Workspace: Main
+Tab: Terminal
+
+DO
+printf '\033]52;c;%s\a' "$(base64 < ~/.herdr-results/ENVAL/latest.txt | tr -d '\n')"
+```
+
+When Daan must return output from a manual Terminal check, the same `DO` action
+must enable pipeline failure propagation, capture the complete stdout and
+stderr with `2>&1 | tee` to a semantically task-bound file under
+`~/.herdr-results/ENVAL/`, and immediately copy that file through OSC52 to the
+iPhone clipboard. For example:
+
+```text
+WHERE
+Project: ENVAL
+Workspace: Main
+Tab: Terminal
+
+DO
+set -o pipefail
+<exact check> 2>&1 | tee ~/.herdr-results/ENVAL/commit-sequence-precheck.txt
+printf '\033]52;c;%s\a' "$(base64 < ~/.herdr-results/ENVAL/commit-sequence-precheck.txt | tr -d '\n')"
+```
+
+The orchestrator substitutes the exact Project, Workspace, Tab, check and
+semantic process-step filename in every real action. Valid names describe the
+step, such as `commit-sequence-precheck.txt`, `setup-commit-result.txt`, or
+`main-integration-check.txt`. It must not use `terminal-latest.txt` when a
+meaningful task name is available. Do not make Daan manually select large
+Terminal scrollback, and do not use `cat` as the primary transport method.
+
+The shared `latest.txt` publication is serialized. If parallel autonomous runs
+are enabled in the future, each run must retain its own result and Terminal
+captures under
+`~/.herdr-results/ENVAL/<human-workspace>/<run-name>/<semantic-process-step>.txt`;
+parallel workers never write one another's path or publish concurrently to the
+shared `latest.txt`. The orchestrator serializes final publication and supplies
+the corresponding exact OSC52 retrieval action. No handoff requires Daan to
+locate, interpret, or manually select internal result history.
 
 Every instruction requiring a human action must use this exact location shape:
 

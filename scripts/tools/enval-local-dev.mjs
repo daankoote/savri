@@ -1,7 +1,14 @@
 #!/usr/bin/env node
 
 import { spawn, spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  lstatSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -12,16 +19,18 @@ import {
 } from "./enval-primary-runtime.mjs";
 import { resolveSupabaseTarget } from "./enval-supabase-target.mjs";
 
-const ROOT = resolve(fileURLToPath(new URL("../../", import.meta.url)));
-const APP_ROOT = resolve(ROOT, "app");
+const TOOL_ROOT = resolve(fileURLToPath(new URL("../../", import.meta.url)));
 const DEFAULT_VITE_URL = "http://127.0.0.1:5175";
 const LOCAL_IDEMPOTENCY_TTL_SECONDS = "86400";
 const REQUEST_TIMEOUT_MS = 5_000;
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
-function fixedLocalDataPlaneReference() {
-  const config = readFileSync(resolve(ROOT, "supabase/config.toml"), "utf8");
+function fixedLocalDataPlaneReference(sourceRoot) {
+  const config = readFileSync(
+    resolve(sourceRoot, "supabase/config.toml"),
+    "utf8",
+  );
   const match = config.match(
     /^project_id\s*=\s*"([a-z0-9][a-z0-9_-]{1,63})"\s*$/m,
   );
@@ -74,7 +83,7 @@ function fail(code, detail = "") {
 
 function command(commandName, args, options = {}) {
   const result = spawnSync(commandName, args, {
-    cwd: ROOT,
+    cwd: options.cwd ?? TOOL_ROOT,
     encoding: "utf8",
     maxBuffer: 4 * 1024 * 1024,
     timeout: options.timeout ?? 30_000,
@@ -109,8 +118,13 @@ function parseStatusEnvironment(raw) {
   return parsed;
 }
 
-function localStatusEnvironment(target) {
-  const resolved = resolveSupabaseTarget({ target, operation: "status" });
+function localStatusEnvironment(target, sourceRoot) {
+  const resolved = resolveSupabaseTarget({
+    target,
+    operation: "status",
+    cwd: sourceRoot,
+    root: sourceRoot,
+  });
   const raw = command(
     "supabase",
     ["--workdir", resolved.absoluteWorkdir, "status", "-o", "env"],
@@ -138,8 +152,8 @@ function assertLocalUrl(raw, expectedPort) {
   return url;
 }
 
-function managedLocalConfiguration(controlPlaneStatus) {
-  const fixedDataPlaneReference = fixedLocalDataPlaneReference();
+function managedLocalConfiguration(controlPlaneStatus, sourceRoot) {
+  const fixedDataPlaneReference = fixedLocalDataPlaneReference(sourceRoot);
   assertLocalUrl(controlPlaneStatus.environment.API_URL, 56321);
   const databaseUrl = assertLocalUrl(
     controlPlaneStatus.environment.DB_URL.replace(/^postgresql:/, "http:"),
@@ -239,7 +253,7 @@ function managedLocalConfiguration(controlPlaneStatus) {
   });
 }
 
-function edgeRuntimePreflight() {
+function edgeRuntimePreflight(sourceRoot) {
   command(
     "deno",
     [
@@ -251,6 +265,7 @@ function edgeRuntimePreflight() {
       ...CURRENT_EDGE_ENTRYPOINTS,
     ],
     {
+      cwd: sourceRoot,
       timeout: 60_000,
       failureCode: "edge_runtime_import_preflight_failed",
     },
@@ -275,7 +290,7 @@ function temporaryFunctionsEnvironment(
   return Object.freeze({ directory, path });
 }
 
-async function startFrontend(runtime, cacheDirectory) {
+async function startFrontend(runtime, cacheDirectory, sourceRoot) {
   const vite = await import(
     pathToFileURL(join(runtime.appNodeModules, "vite/dist/node/index.js")).href
   );
@@ -293,7 +308,7 @@ async function startFrontend(runtime, cacheDirectory) {
     replacement: join(runtime.appNodeModules, find),
   }));
   const server = await vite.createServer({
-    root: APP_ROOT,
+    root: resolve(sourceRoot, "app"),
     configFile: false,
     envDir: dirname(runtime.appEnvironmentFile),
     cacheDir: join(cacheDirectory, "vite-cache"),
@@ -320,12 +335,12 @@ async function fetchBounded(url, init = {}) {
   }
 }
 
-function parseMigrationState() {
+function parseMigrationState(sourceRoot) {
   const raw = command(
     "supabase",
     [
       "--workdir",
-      ROOT,
+      sourceRoot,
       "migration",
       "list",
       "--local",
@@ -354,9 +369,9 @@ function parseViteUrl(raw) {
   return url.toString().replace(/\/$/, "");
 }
 
-async function ready(viteUrl) {
-  const tenant = localStatusEnvironment("TENANT_ENVAL");
-  localStatusEnvironment("CONTROL_PLANE");
+async function ready(viteUrl, sourceRoot) {
+  const tenant = localStatusEnvironment("TENANT_ENVAL", sourceRoot);
+  localStatusEnvironment("CONTROL_PLANE", sourceRoot);
   assertLocalUrl(tenant.environment.API_URL, 54321);
   const anonKey = tenant.environment.ANON_KEY;
   if (!anonKey) fail("tenant_anon_key_missing");
@@ -495,7 +510,7 @@ async function ready(viteUrl) {
     ) fail("customer_correction_signing_runtime_not_ready");
   }
 
-  const pending = parseMigrationState();
+  const pending = parseMigrationState(sourceRoot);
   if (pending !== 0) fail("tenant_migrations_pending", String(pending));
   process.stdout.write(
     [
@@ -512,18 +527,21 @@ async function ready(viteUrl) {
   );
 }
 
-async function serve() {
+async function serve(sourceRoot) {
   let primaryRuntime;
   try {
-    primaryRuntime = resolvePrimaryRuntime(ROOT);
+    primaryRuntime = resolvePrimaryRuntime(sourceRoot);
   } catch (error) {
     if (error instanceof PrimaryRuntimeError) fail(error.code);
     throw error;
   }
-  localStatusEnvironment("TENANT_ENVAL");
-  const controlPlane = localStatusEnvironment("CONTROL_PLANE");
-  const runtimeEnvironment = managedLocalConfiguration(controlPlane);
-  edgeRuntimePreflight();
+  localStatusEnvironment("TENANT_ENVAL", sourceRoot);
+  const controlPlane = localStatusEnvironment("CONTROL_PLANE", sourceRoot);
+  const runtimeEnvironment = managedLocalConfiguration(
+    controlPlane,
+    sourceRoot,
+  );
+  edgeRuntimePreflight(sourceRoot);
   const temporaryEnvironment = temporaryFunctionsEnvironment(
     primaryRuntime.functionsEnvironmentFile,
     runtimeEnvironment,
@@ -533,19 +551,20 @@ async function serve() {
     frontend = await startFrontend(
       primaryRuntime,
       temporaryEnvironment.directory,
+      sourceRoot,
     );
     const child = spawn(
       "supabase",
       [
         "--workdir",
-        ROOT,
+        sourceRoot,
         "functions",
         "serve",
         "--env-file",
         temporaryEnvironment.path,
       ],
       {
-        cwd: ROOT,
+        cwd: sourceRoot,
         env: {
           ...process.env,
           SUPABASE_TELEMETRY_DISABLED: "1",
@@ -561,8 +580,8 @@ async function serve() {
         "TENANT_TARGET=TENANT_ENVAL",
         "PRESENTATION_SOURCE=platform_control_plane_presentation_v1",
         "TENANT_RESOLVER=static_single_tenant_v1",
-        "PRIMARY_DEPENDENCIES_REUSED=YES",
-        "PRIMARY_PRIVATE_ENV_REUSED=YES",
+        `DEPENDENCY_SOURCE=${primaryRuntime.dependencySource}`,
+        "PRIVATE_ENV_REFERENCED_IN_PLACE=YES",
         "TRACKED_RUNTIME_LINKS_CREATED=NO",
         "SECRETS_PRINTED=NO",
       ].join("\n") + "\n",
@@ -582,24 +601,43 @@ async function serve() {
 }
 
 function parseArgs(argv) {
-  const parsed = { operation: null, viteUrl: DEFAULT_VITE_URL };
+  const parsed = {
+    operation: null,
+    viteUrl: DEFAULT_VITE_URL,
+    sourceRoot: TOOL_ROOT,
+  };
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
     if (value === "--operation") parsed.operation = argv[++index] ?? null;
     else if (value === "--vite-url") parsed.viteUrl = argv[++index] ?? "";
-    else fail("unknown_argument", value);
+    else if (value === "--source-root") {
+      parsed.sourceRoot = argv[++index] ?? "";
+    } else fail("unknown_argument", value);
   }
   if (!["serve", "ready"].includes(parsed.operation)) {
     fail("operation_required");
   }
   parsed.viteUrl = parseViteUrl(parsed.viteUrl);
+  try {
+    const sourceRoot = realpathSync(resolve(parsed.sourceRoot));
+    const status = lstatSync(sourceRoot);
+    if (!status.isDirectory() || status.isSymbolicLink()) {
+      fail("source_root_invalid");
+    }
+    parsed.sourceRoot = sourceRoot;
+  } catch (error) {
+    if (String(error?.message ?? error).includes("source_root_invalid")) {
+      throw error;
+    }
+    fail("source_root_invalid");
+  }
   return parsed;
 }
 
 try {
   const options = parseArgs(process.argv.slice(2));
-  if (options.operation === "serve") await serve();
-  else await ready(options.viteUrl);
+  if (options.operation === "serve") await serve(options.sourceRoot);
+  else await ready(options.viteUrl, options.sourceRoot);
 } catch (error) {
   process.stderr.write(`LOCAL_READY=FAIL\nREASON=${safeDiagnostic(error)}\n`);
   process.exitCode = 1;

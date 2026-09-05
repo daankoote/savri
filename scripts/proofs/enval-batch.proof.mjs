@@ -757,7 +757,17 @@ test("permanent authorities document topology, Git, lean handoffs, and results",
       "The current exact orchestrator-owned ENVAL topology",
       "No other human workspace name",
       "Main -> Terminal",
+      "Every autonomous Codex run",
+      "node scripts/tools/enval-batch.mjs result",
       "~/.herdr-results/ENVAL/latest.txt",
+      "printf '\\033]52;c;%s\\a'",
+      "2>&1 | tee ~/.herdr-results/ENVAL/commit-sequence-precheck.txt",
+      "setup-commit-result.txt",
+      "main-integration-check.txt",
+      "must not use `terminal-latest.txt`",
+      "do not use `cat` as the primary transport method",
+      "~/.herdr-results/ENVAL/<human-workspace>/<run-name>/<semantic-process-step>.txt",
+      "parallel workers never write one another's path",
       "never requires Daan to shuttle messages",
       "Lean handoffs remain task-delta-only",
     ]
@@ -769,10 +779,11 @@ test("permanent authorities document topology, Git, lean handoffs, and results",
       "One human workspace has at most one active",
       "Main -> Terminal",
       "Daan performs commits, cherry-picks, and pushes",
-      "node scripts/tools/enval-batch.mjs result",
-      "~/.herdr-results/ENVAL/latest.txt",
+      "root `AGENTS.md` section `Human Herdr navigation and",
+      "does not duplicate its retrieval",
     ]
   ) assert.ok(workflow.includes(required), required);
+  assert.doesNotMatch(workflow, /OSC52|terminal-latest\.txt/);
 });
 
 test("launcher source has no shell, cleanup, commit, or push authority", () => {

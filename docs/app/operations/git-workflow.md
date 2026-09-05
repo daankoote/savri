@@ -98,16 +98,38 @@ of them. Product prompts contain only their task-specific delta because stable
 topology, Git, result, and review-loop governance lives here, in `AGENTS.md`, and
 in canonical tooling.
 
-Every autonomous run writes its compact final `RETURN` block through
-`node scripts/tools/enval-batch.mjs result` to the only project-level human
-entrypoint:
+### External worktree preview
+
+The persistent preview launcher is operated only from `Main -> Terminal` and
+accepts an existing approved human workspace name. For the current Beheer
+worktree, use:
 
 ```text
-~/.herdr-results/ENVAL/latest.txt
+/usr/local/bin/node ../enval-worktrees/setup/scripts/tools/enval-preview.mjs start Beheer
+/usr/local/bin/node ../enval-worktrees/setup/scripts/tools/enval-preview.mjs status Beheer
+/usr/local/bin/node ../enval-worktrees/setup/scripts/tools/enval-preview.mjs stop Beheer
 ```
 
-The command accepts the final block on standard input and atomically replaces
-the entrypoint. Internal per-run history may exist, but Daan never needs its path.
+The launcher pins the effective runtime to that explicit Node binary and refuses
+Node below 22. It snapshots tracked files plus non-ignored untracked files from
+the registered worktree into `~/.herdr-runtime/ENVAL/preview/beheer/source`.
+Git metadata, dependency trees, private environment files, logs, generated
+output and temporary artifacts are excluded. Root and app dependencies are
+installed with `npm ci` from the unchanged repository lockfiles into the same
+external runtime; no package or lockfile update is performed. Existing private
+environment files remain referenced in place by the guarded local runtime and
+are never copied.
+
+Successful `start` prints the loopback URL, owned process ID, health result,
+effective Node version, snapshot root and external dependency root. `status`
+rechecks process ownership and Vite reachability. `stop` terminates the owned
+process group, verifies termination, and compares the source worktree with the
+fingerprint captured before the snapshot.
+
+Final result publication and Terminal-output transport follow the single
+canonical contract in the root `AGENTS.md` section `Human Herdr navigation and
+action location`. This operations document does not duplicate its retrieval,
+semantic filename, or future parallel-run rules.
 
 ## Worker Startup And Recovery
 

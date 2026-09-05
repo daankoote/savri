@@ -13,7 +13,7 @@ const source = readFileSync(
   "utf8",
 );
 const migrationReadiness = source.match(
-  /function parseMigrationState\(\) \{[\s\S]*?\n\}(?=\n\nfunction parseViteUrl)/,
+  /function parseMigrationState\(sourceRoot\) \{[\s\S]*?\n\}(?=\n\nfunction parseViteUrl)/,
 )?.[0];
 
 assert.ok(migrationReadiness, "migration readiness parser missing");
@@ -35,7 +35,6 @@ assert.doesNotMatch(
 
 let observedArgs;
 const parseMigrationState = vm.runInNewContext(`(${migrationReadiness})`, {
-  ROOT: "/fixture",
   command(commandName, args) {
     assert.equal(commandName, "supabase");
     observedArgs = args;
@@ -52,7 +51,7 @@ const parseMigrationState = vm.runInNewContext(`(${migrationReadiness})`, {
   },
 });
 
-assert.equal(parseMigrationState(), 0);
+assert.equal(parseMigrationState("/fixture"), 0);
 assert.deepEqual(Array.from(observedArgs), [
   "--workdir",
   "/fixture",
