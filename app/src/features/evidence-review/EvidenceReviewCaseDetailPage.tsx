@@ -7,7 +7,6 @@ import type {
   EvidenceReviewEvidenceV1,
   EvidenceReviewReason,
 } from "../../../../supabase/functions/_shared/app_evidence_review_case_detail.ts";
-import type { EvidenceReviewOverallStatus } from "../../../../supabase/functions/_shared/app_evidence_review_overall_status.ts";
 import { useAuth } from "../auth/AuthProvider.tsx";
 import {
   type EvidenceFactReviewRoundFinalizeCall,
@@ -30,6 +29,10 @@ import {
   useEvidenceFactReviewDraft,
 } from "./useEvidenceFactReviewDraft.ts";
 import { useEvidenceCorrectionPublish } from "./useEvidenceCorrectionPublish.ts";
+import {
+  EVIDENCE_REVIEW_STATUS_PRESENTATION,
+  evidenceReviewFactStatusPresentation,
+} from "./evidenceReviewStatusPresentation.ts";
 
 type EvidenceReviewCaseDetailContentProps = Readonly<{
   caseRef: string;
@@ -101,31 +104,6 @@ function lifecycleLabel(value: string): string {
   return value === "submitted_for_review"
     ? "Ingediend voor beoordeling"
     : value;
-}
-
-const OVERALL_STATUS_PRESENTATION: Readonly<Record<
-  EvidenceReviewOverallStatus,
-  Readonly<{ className: string; label: string }>
->> = Object.freeze({
-  TO_REVIEW: { className: "status-pill-warning", label: "ENVAL beoordelen" },
-  CORRECTION_REQUIRED: {
-    className: "status-pill-danger",
-    label: "Correctie nodig",
-  },
-  WAITING_CUSTOMER: {
-    className: "status-pill-warning",
-    label: "Wacht op klant",
-  },
-  REVIEW_COMPLETE: { className: "status-pill-ok", label: "Afgerond" },
-});
-
-function factState(fact: Pick<EvidenceReviewCanonicalFactV1, "truthClass">): Readonly<{
-  className: string;
-  label: string;
-}> {
-  return fact.truthClass === "CUSTOMER_CONFIRMED"
-    ? { className: "status-pill-ok", label: "Door klant bevestigd" }
-    : { className: "status-pill-warning", label: "Beoordeling nodig" };
 }
 
 type EvidenceFactReviewRow = Readonly<{
@@ -233,12 +211,12 @@ function EvidenceFacts(props: EvidenceFactsProps) {
         <span role="columnheader">Beoordeling</span>
       </div>
       {rows.map((row) => {
-        const state = factState(row);
         const subjectRef = row.subject?.subjectRef ?? null;
         const draft = subjectRef ? props.draft[subjectRef] : undefined;
         const finalized = subjectRef
           ? props.finalizedDecisions.get(subjectRef)
           : undefined;
+        const state = evidenceReviewFactStatusPresentation(row, finalized);
         return (
           <Fragment key={row.key}>
             <div className="fact-table__row" role="row">
@@ -519,7 +497,7 @@ export function EvidenceReviewCaseDetailContent({
 
   const readyDetail = state.value;
   const overallStatus =
-    OVERALL_STATUS_PRESENTATION[readyDetail.overallReviewStatus];
+    EVIDENCE_REVIEW_STATUS_PRESENTATION[readyDetail.overallReviewStatus];
   return (
     <div className="portal-content-stack evidence-review-detail">
       <header className="portal-content-header">
@@ -530,7 +508,7 @@ export function EvidenceReviewCaseDetailContent({
               {overallStatus.label}
             </span>
           </h1>
-          <p>{lifecycleLabel(readyDetail.case.lifecycle)}</p>
+          <p>Dossierfase: {lifecycleLabel(readyDetail.case.lifecycle)}</p>
         </div>
         <BackToWorklist onBack={onBack} />
       </header>

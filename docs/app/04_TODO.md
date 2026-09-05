@@ -15,8 +15,9 @@ implementation.
 ## Single Current NEXT
 
 - CURRENT CLOSURE — `UI-01B` is CURRENT PROVEN LOCAL for the secure canonical
-  `/beheer` Tenant Operator entry. This close records status only and does not
-  select or start another product workstream.
+  Tenant Operator entry and its dedicated `/beheer` operational overview. This
+  close records status only and does not select or start another product
+  workstream.
 - NEXT PRODUCT WORKSTREAM — not selected by UI01B-CLOSE. Do not start UI-01C,
   `/intern/*` cleanup or another roadmap item without a separate bounded task.
 - UI work proceeds in coherent reusable batches under the mandatory pre-flight,
@@ -28,12 +29,20 @@ implementation.
   return route; authenticated non-workforce receives `Geen toegang`; tenant and
   effective capabilities are server-derived through the existing compliance
   and evidence-review application boundaries. Active navigation is exactly
-  `Overzicht` and `Dossiers`. `/intern/compliance` and `/intern/dossiers` remain
-  temporary compatibility paths under the same authority. Ordinary workforce
+  `Overzicht` and `Dossiers`. `/beheer` now limits server-proven `TO_REVIEW`
+  and `WAITING_CUSTOMER` previews to three items each and shows no totals or
+  duplicate all-dossiers action; `Dossiers` remains the canonical route.
+  `/beheer/dossiers` remains the complete authorized current-tenant list.
+  `WAITING_CUSTOMER` requires an exact finalized current review round plus its
+  current published, unanswered correction handoff. Finalized decisions replace
+  the earlier review-required source presentation on the same fact row.
+  `/intern/compliance` and `/intern/dossiers` remain temporary compatibility
+  paths under the same authority. Ordinary workforce
   gains no implicit `platform_support.request`, and the shared operator shell
   renders `Powered by ENVAL` once. Focused Q01-Q14, authorization regressions,
-  served allow/deny evidence, browser acceptance before fixture cleanup, and
-  cleanup with zero synthetic rows and unchanged real pilot are green.
+  served allow/deny evidence, typecheck/build, guarded desktop/tablet artifacts
+  with zero console/runtime errors or product writes, and fresh independent
+  reviewer PASS are green.
 - TARGET / NOT IMPLEMENTED after UI-01B: `Klanten`, `Organisatie`, tenant
   admin/workforce management UI, ENVAL Control Console, Verifier Console,
   tenant #2, multi-tenant switching, production deployment and later

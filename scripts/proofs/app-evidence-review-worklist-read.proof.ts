@@ -1,6 +1,6 @@
 import {
   buildEvidenceReviewWorklistResponse,
-  type EvidenceReviewWorklistResponseV3,
+  type EvidenceReviewWorklistResponseV4,
   parseAuthorizedEvidenceReviewSourceRows,
 } from "../../supabase/functions/_shared/app_evidence_review_worklist.ts";
 import {
@@ -21,6 +21,12 @@ const DATABASE = `enval_review04_proof_${
 }`;
 const MIGRATION =
   "supabase/migrations/20260819160000_app_evidence_review_overall_status.sql";
+const FACT_ROUND_MIGRATION =
+  "supabase/migrations/20260818230000_app_evidence_fact_review_rounds.sql";
+const CUSTOMER_SUBMISSION_MIGRATION =
+  "supabase/migrations/20260820090000_app_customer_correction_submissions.sql";
+const HANDOFF_SUPERSESSION_MIGRATION =
+  "supabase/migrations/20260820210000_app_correction_handoff_supersession.sql";
 const AUTH_ADMIN = "d1000000-0000-4000-8000-000000000001";
 const AUTH_ADMIN_NO_SCOPE = "d1000000-0000-4000-8000-000000000002";
 const AUTH_NO_VIEW = "d1000000-0000-4000-8000-000000000003";
@@ -256,11 +262,11 @@ async function endpointProof(): Promise<void> {
   );
   const emptyBody = await responseJson(
     empty,
-  ) as unknown as EvidenceReviewWorklistResponseV3;
+  ) as unknown as EvidenceReviewWorklistResponseV4;
   assert(
     empty.status === 200 && emptyBody.caseCount === 0 &&
       emptyBody.cases.length === 0 &&
-      emptyBody.schemaVersion === "evidence-review-worklist-v3",
+      emptyBody.schemaVersion === "evidence-review-worklist-v4",
     "empty_contract_invalid",
   );
   q(4);
@@ -293,13 +299,20 @@ async function endpointProof(): Promise<void> {
       review_attention_reasons: ["REVIEW_MODEL_UNAVAILABLE"],
       latest_review_activity_at: "2026-08-18T10:40:00.000Z",
     }),
+    sourceRow({
+      case_ref: CASE_REFS.multiple,
+      overall_review_status: "WAITING_CUSTOMER",
+      unresolved_fact_count: 0,
+      review_attention_reasons: [],
+      latest_review_activity_at: "2026-08-18T10:50:00.000Z",
+    }),
   ]));
   assert(parsed, "valid_source_rejected");
   const projected = buildEvidenceReviewWorklistResponse(
     "2026-08-18T12:00:00.000Z",
     parsed,
   );
-  assert(projected && projected.caseCount === 3, "case_projection_invalid");
+  assert(projected && projected.caseCount === 6, "case_projection_invalid");
   const acceptedThenNew = projected.cases.find((item) =>
     item.caseRef === CASE_REFS.acceptedThenNew
   );
@@ -310,8 +323,18 @@ async function endpointProof(): Promise<void> {
     acceptedThenNew?.overallReviewStatus === "TO_REVIEW" &&
       acceptedThenNew.unresolvedFactCount === 4 &&
       unavailable?.overallReviewStatus === "REVIEW_MODEL_UNAVAILABLE" &&
-      !projected.cases.some((item) => item.caseRef === CASE_REFS.accepted) &&
-      !projected.cases.some((item) => item.caseRef === CASE_REFS.correction),
+      projected.cases.some((item) =>
+        item.caseRef === CASE_REFS.accepted &&
+        item.overallReviewStatus === "REVIEW_COMPLETE"
+      ) &&
+      projected.cases.some((item) =>
+        item.caseRef === CASE_REFS.correction &&
+        item.overallReviewStatus === "CORRECTION_REQUIRED"
+      ) &&
+      projected.cases.some((item) =>
+        item.caseRef === CASE_REFS.multiple &&
+        item.overallReviewStatus === "WAITING_CUSTOMER"
+      ),
     "attention_semantics_invalid",
   );
   q(5);
@@ -366,7 +389,13 @@ async function endpointProof(): Promise<void> {
   }
   q(7);
 
-  const source = await Deno.readTextFile(MIGRATION);
+  const [source, factRoundSource, customerSubmissionSource, handoffSource] =
+    await Promise.all([
+      Deno.readTextFile(MIGRATION),
+      Deno.readTextFile(FACT_ROUND_MIGRATION),
+      Deno.readTextFile(CUSTOMER_SUBMISSION_MIGRATION),
+      Deno.readTextFile(HANDOFF_SUPERSESSION_MIGRATION),
+    ]);
   assert(
     source.includes("public.app_workforce_authorize_v1(") &&
       source.includes("'evidence.review.view'") &&
@@ -384,6 +413,33 @@ async function endpointProof(): Promise<void> {
       !source.includes("customer_display") &&
       !source.includes("check_execution") && !source.includes("review_task"),
     "bounded_read_source_missing",
+  );
+  assert(
+    factRoundSource.includes(
+      "pg_catalog.jsonb_array_length(v_subjects) <> v_decision_count",
+    ) &&
+      factRoundSource.includes("'manifest_subjects_mismatch'") &&
+      factRoundSource.includes(
+        "app_evidence_review_round_subject_decisions",
+      ) &&
+      customerSubmissionSource.includes(
+        "create or replace function public.app_evidence_review_overall_status_v1",
+      ) &&
+      customerSubmissionSource.includes(
+        "app_evidence_review_customer_submissions submission",
+      ) &&
+      handoffSource.includes(
+        "app_evidence_review_current_correction_handoff_v1",
+      ) &&
+      handoffSource.includes("handoff.manifest_version = p_manifest_version") &&
+      handoffSource.includes("handoff.manifest_hash = p_manifest_hash") &&
+      handoffSource.includes("where submission.handoff_id = handoff.id") &&
+      handoffSource.includes(
+        "where successor.supersedes_handoff_id = handoff.id",
+      ) &&
+      handoffSource.includes("return 'WAITING_CUSTOMER'") &&
+      handoffSource.includes("return 'CORRECTION_REQUIRED'"),
+    "blocking_actor_authority_incomplete",
   );
   q(8);
   console.log("EVIDENCE_REVIEW_WORKLIST_ENDPOINT=PASS");
@@ -949,7 +1005,7 @@ async function databaseProof(): Promise<number> {
     "2026-08-18T12:00:00.000Z",
     rows,
   );
-  assert(response && response.caseCount === 4, "authorized_case_count_invalid");
+  assert(response && response.caseCount === 6, "authorized_case_count_invalid");
   const refs = response.cases.map((item) => item.caseRef);
   const sourceQueueRows = allowed.queue_rows as JsonObject[];
   const overallStatus = (caseRef: string) =>
@@ -961,15 +1017,14 @@ async function databaseProof(): Promise<number> {
       overallStatus(CASE_REFS.correction) === "CORRECTION_REQUIRED" &&
       overallStatus(CASE_REFS.acceptedThenNew) === "TO_REVIEW" &&
       overallStatus(CASE_REFS.multiple) === "REVIEW_MODEL_UNAVAILABLE" &&
-      !refs.includes(CASE_REFS.accepted) &&
-      !refs.includes(CASE_REFS.correction) &&
+      refs.includes(CASE_REFS.accepted) &&
+      refs.includes(CASE_REFS.correction) &&
       !refs.includes(CASE_REFS.terminal) &&
       !refs.includes(CASE_REFS.wrongScope),
     "fact_queue_projection_invalid",
   );
   console.log("NO_CURRENT_ROUND_ACTIVE=PASS");
-  console.log("ALL_ACCEPTED_EXCLUDED=PASS");
-  console.log("CORRECTIONS_REQUIRED_EXCLUDED=PASS");
+  console.log("ALL_AUTHORIZED_DOSSIER_STATES_PROJECTED=PASS");
   console.log("NEW_EVIDENCE_REENTERS_ACTIVE=PASS");
   console.log("REVIEW_MODEL_UNAVAILABLE_FAIL_CLOSED=PASS");
   console.log("LEGACY_DECISIONS_NOT_WORKLIST_AUTHORITY=PASS");
@@ -1166,7 +1221,9 @@ async function databaseProof(): Promise<number> {
   console.log("PILOT_ROUND_OUTCOME=CORRECTIONS_REQUIRED");
   console.log("PILOT_LEGACY_DECISION_COUNT=0");
   console.log("PILOT_CORRECTION_HANDOFF_COUNT=1");
-  console.log("PILOT_IN_ACTIVE_WORKLIST=NO");
+  console.log("WAITING_CUSTOMER_BLOCKING_ACTOR=AUTHORITATIVE");
+  console.log("OPEN_INTERNAL_REVIEW_EXCLUDED_FROM_WAITING=PASS");
+  console.log("PILOT_IN_AUTHORIZED_DOSSIER_LIST=YES");
   console.log("PILOT_LIFECYCLE_UNCHANGED=PASS");
   console.log("PILOT_DIRECT_DETAIL_ACCESS=PASS");
   console.log("EVIDENCE_REVIEW_WORKLIST_READ_Q01_Q14=PASS");

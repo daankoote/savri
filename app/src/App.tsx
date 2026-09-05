@@ -18,6 +18,9 @@ const DashboardPage = lazy(() =>
 const ComplianceWorklistPage = lazy(() =>
   import("./pages/ComplianceWorklistPage").then((module) => ({ default: module.ComplianceWorklistPage })),
 );
+const OperatorOverviewPage = lazy(() =>
+  import("./pages/OperatorOverviewPage").then((module) => ({ default: module.OperatorOverviewPage })),
+);
 const EvidenceReviewWorklistPage = lazy(() =>
   import("./pages/EvidenceReviewWorklistPage").then((module) => ({
     default: module.EvidenceReviewWorklistPage,
@@ -119,7 +122,17 @@ export function App() {
     );
   }
 
-  if (path === "/beheer" || path === "/intern/compliance") {
+  if (path === "/beheer") {
+    return (
+      <Suspense fallback={<RouteLoading />}>
+        <AuthProvider audience="operator">
+          <OperatorOverviewPage navigate={navigate} currentPath={path} />
+        </AuthProvider>
+      </Suspense>
+    );
+  }
+
+  if (path === "/intern/compliance") {
     return (
       <Suspense fallback={<RouteLoading />}>
         <AuthProvider audience="operator">

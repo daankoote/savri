@@ -1,6 +1,6 @@
 import type {
   EvidenceReviewAttentionReason,
-  EvidenceReviewWorklistCaseV3,
+  EvidenceReviewWorklistCaseV4,
 } from "../../../../supabase/functions/_shared/app_evidence_review_worklist.ts";
 import { useAuth } from "../auth/AuthProvider.tsx";
 import type { EvidenceReviewWorklistSafeError } from "./evidenceReviewWorklistClient.ts";
@@ -10,6 +10,7 @@ import {
 } from "./useEvidenceReviewWorklist.ts";
 import type { AppNavigate } from "../../routes/types.ts";
 import { buildEvidenceReviewDetailRoute } from "./evidenceReviewRoutes.ts";
+import { EVIDENCE_REVIEW_STATUS_PRESENTATION } from "./evidenceReviewStatusPresentation.ts";
 
 type EvidenceReviewWorklistContentProps = Readonly<{
   state: EvidenceReviewWorklistReadState;
@@ -40,31 +41,38 @@ function formatServerDateTime(value: string): string {
   }).format(parsed);
 }
 
-function unresolvedFactLabel(item: EvidenceReviewWorklistCaseV3): string {
+function unresolvedFactLabel(item: EvidenceReviewWorklistCaseV4): string | null {
   if (item.overallReviewStatus === "REVIEW_MODEL_UNAVAILABLE") {
     return "Aantal te beoordelen gegevens niet beschikbaar";
   }
+  if (item.overallReviewStatus !== "TO_REVIEW") return null;
   return `${item.unresolvedFactCount} ${
     item.unresolvedFactCount === 1 ? "gegeven vraagt" : "gegevens vragen"
   } beoordeling`;
 }
 
-function EvidenceReviewCaseRow({
+export function EvidenceReviewCaseRow({
   item,
   onOpenCase,
 }: Readonly<{
-  item: EvidenceReviewWorklistCaseV3;
+  item: EvidenceReviewWorklistCaseV4;
   onOpenCase: (caseRef: string) => void;
 }>) {
   const detailRoute = buildEvidenceReviewDetailRoute(item.caseRef);
+  const unresolvedLabel = unresolvedFactLabel(item);
+  const status = EVIDENCE_REVIEW_STATUS_PRESENTATION[item.overallReviewStatus];
   return (
     <li className="portal-row">
       <div>
         <h3>{item.caseRef}</h3>
-        <p>Dossierstatus: ingediend voor beoordeling</p>
-        <p>
-          <strong>{unresolvedFactLabel(item)}</strong>
-        </p>
+        <p>Dossierfase: ingediend voor beoordeling</p>
+        {unresolvedLabel
+          ? (
+            <p>
+              <strong>{unresolvedLabel}</strong>
+            </p>
+          )
+          : null}
         <p>
           Laatst bijgewerkt: {formatServerDateTime(item.latestReviewActivityAt)}
         </p>
@@ -73,17 +81,11 @@ function EvidenceReviewCaseRow({
         className="portal-row-actions"
         aria-label="Dossieracties en redenen voor aandacht"
       >
-        {item.reviewAttentionReasons.map((reason) => {
-          const presentation = REASON_PRESENTATION[reason];
-          return (
-            <span
-              className={`status-pill ${presentation.className}`}
-              key={reason}
-            >
-              {presentation.label}
-            </span>
-          );
-        })}
+        <span className={`status-pill ${status.className}`}>
+          {item.reviewAttentionReasons.length === 1
+            ? REASON_PRESENTATION[item.reviewAttentionReasons[0]].label
+            : status.label}
+        </span>
         {detailRoute
           ? (
             <a
@@ -119,8 +121,8 @@ export function EvidenceReviewWorklistContent({
       <div className="portal-content-stack">
         <header className="portal-content-header">
           <div>
-            <h1>Dossiers voor bewijsbeoordeling</h1>
-            <p>Interne, alleen-lezen werklijst</p>
+            <h1>Dossiers</h1>
+            <p>Interne, alleen-lezen dossierlijst</p>
           </div>
         </header>
         <div className="review-panel" role="status" aria-live="polite">
@@ -138,8 +140,8 @@ export function EvidenceReviewWorklistContent({
       <div className="portal-content-stack">
         <header className="portal-content-header">
           <div>
-            <h1>Dossiers voor bewijsbeoordeling</h1>
-            <p>Interne, alleen-lezen werklijst</p>
+            <h1>Dossiers</h1>
+            <p>Interne, alleen-lezen dossierlijst</p>
           </div>
         </header>
         <div className="review-panel" role="alert">
@@ -168,7 +170,7 @@ export function EvidenceReviewWorklistContent({
     <div className="portal-content-stack">
       <header className="portal-content-header">
         <div>
-          <h1>Dossiers voor bewijsbeoordeling</h1>
+          <h1>Dossiers</h1>
           <p>Bijgewerkt op {formatServerDateTime(value.asOf)}</p>
         </div>
         <button
@@ -185,16 +187,16 @@ export function EvidenceReviewWorklistContent({
         aria-labelledby="review-cases-title"
       >
         <div>
-          <h2 id="review-cases-title">Toegewezen dossiers</h2>
+          <h2 id="review-cases-title">Alle dossiers</h2>
           <p>
-            Factbeoordeling afgeleid door de server voor uw exacte dossierscope.
+            Dossiers uit uw server-bepaalde dossierscope.
           </p>
         </div>
         {value.cases.length > 0
           ? (
             <ul
               className="portal-row-list"
-              aria-label="Dossiers met factbeoordeling"
+              aria-label="Dossiers"
             >
               {value.cases.map((item) => (
                 <EvidenceReviewCaseRow
@@ -207,10 +209,9 @@ export function EvidenceReviewWorklistContent({
           )
           : (
             <div className="review-panel review-panel-ok" role="status">
-              <h3>Geen toegewezen dossiers</h3>
+              <h3>Geen dossiers</h3>
               <p>
-                Geen dossiers die op dit moment aan u zijn toegewezen voor
-                bewijsbeoordeling.
+                Er zijn geen dossiers in uw dossierscope.
               </p>
             </div>
           )}

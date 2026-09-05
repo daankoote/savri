@@ -274,7 +274,8 @@ assert(
 q(12);
 
 assert(
-  appSource.includes('path === "/beheer" || path === "/intern/compliance"') &&
+  appSource.includes('path === "/beheer"') &&
+    appSource.includes('path === "/intern/compliance"') &&
     appSource.includes(
       'path === "/beheer/dossiers" || path === "/intern/dossiers"',
     ) &&

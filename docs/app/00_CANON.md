@@ -112,7 +112,17 @@ receives the normal `Geen toegang` state, and authorized tenant workforce is
 admitted. Tenant and effective capabilities are server-derived by reusing the
 existing compliance and evidence-review application boundaries;
 `app_workforce_authorize_v1` remains private. The current active operator
-navigation is exactly `Overzicht` and `Dossiers`; `Klanten`, `Organisatie`,
+navigation is exactly `Overzicht` and `Dossiers`. `/beheer` is the dedicated
+work-oriented overview with previews of at most three server-proven
+`TO_REVIEW` dossiers and three server-proven `WAITING_CUSTOMER` dossiers. It
+presents no totals or second route to all dossiers; the existing `Dossiers`
+navigation item remains canonical. `/beheer/dossiers` remains the complete
+authorized current-tenant dossier list, and every overview dossier uses the
+existing safe detail route. `WAITING_CUSTOMER` requires an exact finalized
+review round covering every current manifest subject plus its current published,
+unanswered correction handoff. A finalized subject decision owns its visible
+review status; the earlier source truth class is not presented as still awaiting
+review. `Klanten`, `Organisatie`,
 tenant workforce administration, ENVAL Control Console and Verifier Console
 remain TARGET/unimplemented. `/intern/compliance` and `/intern/dossiers` are
 temporarily retained compatibility paths under the same operator authority;
@@ -120,10 +130,11 @@ their later redirect/removal is separately bounded. Ordinary workforce gains
 no implicit `platform_support.request`. The shared operator shell renders the
 exact attribution `Powered by ENVAL` once.
 
-The local status is backed by focused operator-context Q01-Q14, unchanged
-compliance/evidence authorization regressions, served allow/deny evidence,
-human browser acceptance including refresh before disposable-fixture cleanup,
-and cleanup with zero synthetic rows and unchanged real pilot. It proves no
+The local status is backed by focused operator-context Q01-Q14, overview Q01-Q10,
+evidence worklist Q01-Q19, unchanged compliance/evidence authorization
+regressions, served allow/deny evidence, a green production build, guarded
+desktop/tablet browser artifacts with zero console/runtime errors or product
+writes, and a fresh independent reviewer PASS. It proves no
 remote or production deployment, tenant #2, multi-tenant switching, complete
 operator console, general workforce platform support, ENVAL Control Console or
 Verifier Console.

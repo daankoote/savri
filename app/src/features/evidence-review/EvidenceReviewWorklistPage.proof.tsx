@@ -1,8 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import type {
   EvidenceReviewAttentionReason,
-  EvidenceReviewWorklistCaseV3,
-  EvidenceReviewWorklistResponseV3,
+  EvidenceReviewWorklistCaseV4,
+  EvidenceReviewWorklistResponseV4,
 } from "../../../../supabase/functions/_shared/app_evidence_review_worklist.ts";
 import { EvidenceReviewWorklistContent } from "./EvidenceReviewWorklistPage.tsx";
 import {
@@ -32,8 +32,8 @@ async function source(path: string): Promise<string> {
 function caseItem(
   caseRef: string,
   reasons: readonly EvidenceReviewAttentionReason[],
-  overrides: Partial<EvidenceReviewWorklistCaseV3> = {},
-): EvidenceReviewWorklistCaseV3 {
+  overrides: Partial<EvidenceReviewWorklistCaseV4> = {},
+): EvidenceReviewWorklistCaseV4 {
   return {
     caseRef,
     lifecycleState: "submitted_for_review",
@@ -48,17 +48,17 @@ function caseItem(
 }
 
 function response(
-  cases: readonly EvidenceReviewWorklistCaseV3[],
-): EvidenceReviewWorklistResponseV3 {
+  cases: readonly EvidenceReviewWorklistCaseV4[],
+): EvidenceReviewWorklistResponseV4 {
   return {
-    schemaVersion: "evidence-review-worklist-v3",
+    schemaVersion: "evidence-review-worklist-v4",
     asOf: "2026-08-18T12:00:00.000Z",
     caseCount: cases.length,
     cases,
   };
 }
 
-function readyHtml(value: EvidenceReviewWorklistResponseV3): string {
+function readyHtml(value: EvidenceReviewWorklistResponseV4): string {
   return renderToStaticMarkup(
     <EvidenceReviewWorklistContent
       onOpenCase={noop}
@@ -117,13 +117,15 @@ const terminalQueueState = decodeEvidenceReviewWorklistResponse({
   ...response([]),
   caseCount: 1,
   cases: [{
-    ...caseItem("CASE-PROOF-WAITING", ["FACT_REVIEW_REQUIRED"]),
+    ...caseItem("CASE-PROOF-WAITING", [], {
+      unresolvedFactCount: 0,
+    }),
     overallReviewStatus: "CORRECTION_REQUIRED",
   }],
 });
 assert(
-  !terminalQueueState.ok,
-  "Q04_non_active_queue_state_reached_browser",
+  terminalQueueState.ok,
+  "Q04_authoritative_dossier_state_rejected",
 );
 
 const oneCaseHtml = readyHtml(response([
@@ -166,10 +168,8 @@ assert(
 
 const emptyHtml = readyHtml(response([]));
 assert(
-  emptyHtml.includes(
-    "Geen dossiers die op dit moment aan u zijn toegewezen voor bewijsbeoordeling.",
-  ) &&
-    !/(alle dossiers zijn beoordeeld|alles is goedgekeurd|er zijn geen dossiers|alles is compliant)/i
+  emptyHtml.includes("Er zijn geen dossiers in uw dossierscope.") &&
+    !/(alle dossiers zijn beoordeeld|alles is goedgekeurd|alles is compliant)/i
       .test(emptyHtml),
   "Q08_empty_state_overclaims",
 );

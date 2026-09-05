@@ -244,7 +244,7 @@ const [appSource, clientSource, hookSource, pageSource, routeSource, headerSourc
   source("supabase/functions/api-app-compliance-worklist/index.ts"),
 ]);
 assert(
-  appSource.includes('path === "/beheer" || path === "/intern/compliance"') &&
+  appSource.includes('path === "/intern/compliance"') &&
     routeSource.includes("OperatorRouteGuard") &&
     routeSource.includes('surface="tenant_operator"') &&
     routeSource.includes("AppHeader") &&

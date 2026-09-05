@@ -298,7 +298,8 @@ assert(
   "Q16_portal_attribution_grid_placement_invalid",
 );
 assert(
-  appSource.includes('path === "/beheer" || path === "/intern/compliance"') &&
+  appSource.includes('path === "/beheer"') &&
+    appSource.includes('path === "/intern/compliance"') &&
     appSource.includes(
       'path === "/beheer/dossiers" || path === "/intern/dossiers"',
     ) &&

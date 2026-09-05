@@ -6,7 +6,7 @@ export function buildOperatorNavigation(
 ): readonly SurfaceNavigationItem[] {
   const items: SurfaceNavigationItem[] = [];
   if (
-    context.effectiveCapabilities.includes("compliance.delivery_year.view")
+    context.effectiveCapabilities.includes("evidence.review.view")
   ) {
     items.push({ label: "Overzicht", href: "/beheer" });
   }

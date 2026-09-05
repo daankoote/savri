@@ -43,6 +43,7 @@ import {
   buildEvidenceReviewDetailRoute,
   parseEvidenceReviewDetailRoute,
 } from "./evidenceReviewRoutes.ts";
+import { evidenceReviewFactStatusPresentation } from "./evidenceReviewStatusPresentation.ts";
 
 class ProofFailure extends Error {}
 
@@ -318,6 +319,15 @@ const waitingHtml = detailHtml({
   value: { ...publishEligibleFixture, overallReviewStatus: "WAITING_CUSTOMER" },
   error: null,
 });
+const acceptedReviewRequiredPresentation = evidenceReviewFactStatusPresentation(
+  { truthClass: "REVIEW_REQUIRED" },
+  { disposition: "ACCEPTED" },
+);
+const correctedReviewRequiredPresentation =
+  evidenceReviewFactStatusPresentation(
+    { truthClass: "REVIEW_REQUIRED" },
+    { disposition: "CORRECTION_REQUIRED" },
+  );
 const completeHtml = detailHtml({
   status: "ready",
   value: {
@@ -349,6 +359,13 @@ assert(
     finalizedHtml.includes("Correctie nodig") &&
     !finalizedHtml.includes("Correcties nodig"),
   "Q06a_view_only_or_finalized_rendering_invalid",
+);
+assert(
+  acceptedReviewRequiredPresentation.label === "Geaccepteerd" &&
+    acceptedReviewRequiredPresentation.className === "status-pill-ok" &&
+    correctedReviewRequiredPresentation.label === "Correctie nodig" &&
+    correctedReviewRequiredPresentation.className === "status-pill-danger",
+  "Q06aa_finalized_decision_did_not_override_pending_source_presentation",
 );
 assert(
   publishEligibleHtml.includes(">Naar klant sturen<") &&
@@ -1177,6 +1194,7 @@ const [
   factDraftSource,
   correctionPublishHookSource,
   detailSource,
+  statusSource,
   previewPaneSource,
   pageSource,
   downloadSource,
@@ -1198,6 +1216,9 @@ const [
   source("app/src/features/evidence-review/useEvidenceFactReviewDraft.ts"),
   source("app/src/features/evidence-review/useEvidenceCorrectionPublish.ts"),
   source("app/src/features/evidence-review/EvidenceReviewCaseDetailPage.tsx"),
+  source(
+    "app/src/features/evidence-review/evidenceReviewStatusPresentation.ts",
+  ),
   source("app/src/features/evidence-review/EvidenceReviewPreviewPane.tsx"),
   source("app/src/pages/EvidenceReviewCaseDetailPage.tsx"),
   source("app/src/features/documents/documentDownloadClient.ts"),
@@ -1353,10 +1374,14 @@ assert(
     detailSource.includes("Annuleren") &&
     detailSource.includes("currentReviewRound") &&
     detailSource.includes("overallReviewStatus") &&
-    detailSource.includes("ENVAL beoordelen") &&
-    detailSource.includes("Correctie nodig") &&
-    detailSource.includes("Wacht op klant") &&
-    detailSource.includes("Afgerond") &&
+    detailSource.includes(
+      "evidenceReviewFactStatusPresentation(row, finalized)",
+    ) &&
+    detailSource.includes("Dossierfase:") &&
+    statusSource.includes("ENVAL beoordelen") &&
+    statusSource.includes("Correctie nodig") &&
+    statusSource.includes("Wacht op klant") &&
+    statusSource.includes("Afgerond") &&
     detailSource.includes("Naar klant sturen") &&
     detailSource.includes("Correcties naar klant sturen?") &&
     detailSource.includes("Ja, sturen") &&

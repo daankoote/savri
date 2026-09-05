@@ -1,5 +1,5 @@
 export const EVIDENCE_REVIEW_WORKLIST_SCHEMA_VERSION =
-  "evidence-review-worklist-v3" as const;
+  "evidence-review-worklist-v4" as const;
 
 import {
   type EvidenceReviewOperationalStatus,
@@ -27,20 +27,20 @@ export type AuthorizedEvidenceReviewSourceRowV3 = Readonly<{
   latestReviewActivityAt: string;
 }>;
 
-export type EvidenceReviewWorklistCaseV3 = Readonly<{
+export type EvidenceReviewWorklistCaseV4 = Readonly<{
   caseRef: string;
   lifecycleState: "submitted_for_review";
-  overallReviewStatus: "TO_REVIEW" | "REVIEW_MODEL_UNAVAILABLE";
+  overallReviewStatus: EvidenceReviewOperationalStatus;
   unresolvedFactCount: number;
   reviewAttentionReasons: readonly EvidenceReviewAttentionReason[];
   latestReviewActivityAt: string;
 }>;
 
-export type EvidenceReviewWorklistResponseV3 = Readonly<{
+export type EvidenceReviewWorklistResponseV4 = Readonly<{
   schemaVersion: typeof EVIDENCE_REVIEW_WORKLIST_SCHEMA_VERSION;
   asOf: string;
   caseCount: number;
-  cases: readonly EvidenceReviewWorklistCaseV3[];
+  cases: readonly EvidenceReviewWorklistCaseV4[];
 }>;
 
 const SOURCE_KEYS = [
@@ -139,17 +139,10 @@ export function parseAuthorizedEvidenceReviewSourceRows(
 export function buildEvidenceReviewWorklistResponse(
   asOf: string,
   sourceRows: readonly AuthorizedEvidenceReviewSourceRowV3[],
-): EvidenceReviewWorklistResponseV3 | null {
+): EvidenceReviewWorklistResponseV4 | null {
   if (!isIsoTimestamp(asOf)) return null;
 
-  const cases = sourceRows.filter((row): row is
-    & AuthorizedEvidenceReviewSourceRowV3
-    & Readonly<{
-      overallReviewStatus: "TO_REVIEW" | "REVIEW_MODEL_UNAVAILABLE";
-    }> =>
-    row.overallReviewStatus === "TO_REVIEW" ||
-    row.overallReviewStatus === "REVIEW_MODEL_UNAVAILABLE"
-  ).map((row) =>
+  const cases = sourceRows.map((row) =>
     Object.freeze({
       caseRef: row.caseRef,
       lifecycleState: row.lifecycleState,
