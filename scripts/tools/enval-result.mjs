@@ -397,7 +397,7 @@ function hookTasklabel(prompt) {
 
 export function handleResultHook(event, options = {}) {
   const workspace = options.workspace ?? workspaceForCwd(event?.cwd);
-  if (!workspace) return null;
+  if (!workspace) fail("result_workspace_unresolved");
   const shared = {
     resultRoot: options.resultRoot,
     mirrorProjectLatest: options.mirrorProjectLatest === true,
@@ -446,4 +446,98 @@ export function handleResultHook(event, options = {}) {
     });
   }
   return null;
+}
+
+function notificationPrompt(inputMessages) {
+  if (!Array.isArray(inputMessages)) return "";
+  return inputMessages
+    .filter((value) => typeof value === "string")
+    .join("\n")
+    .slice(0, 32 * 1024);
+}
+
+function republishExistingNotification(workspace, runId, resultRoot) {
+  const paths = workspaceResultPaths(workspace, runId, resultRoot);
+  const existing = readJson(paths.history);
+  if (!existing) return null;
+  const active = readJson(paths.active);
+  const latest = readJson(paths.latest);
+  const latestBelongsToRun = latest?.runId === runId;
+  if (
+    active?.runId === runId ||
+    (!active && (latestBelongsToRun || latest === null))
+  ) atomicWrite(paths.latest, serialized(existing));
+  return Object.freeze({
+    envelope: existing,
+    paths,
+    alreadyFinalized: true,
+    latestPreserved: !latestBelongsToRun && latest !== null,
+  });
+}
+
+export function handleResultNotification(payload, options = {}) {
+  if (payload?.type !== "agent-turn-complete") {
+    fail("result_notification_invalid");
+  }
+  if (
+    typeof payload["thread-id"] !== "string" ||
+    payload["thread-id"] === "" ||
+    typeof payload["turn-id"] !== "string" ||
+    payload["turn-id"] === ""
+  ) fail("result_notification_invalid");
+  const workspace = options.workspace ?? workspaceForCwd(payload.cwd);
+  if (!workspace) fail("result_workspace_unresolved");
+  const event = {
+    session_id: payload["thread-id"],
+    turn_id: payload["turn-id"],
+  };
+  const runId = hookRunId(event);
+  const resultRoot = options.resultRoot ?? DEFAULT_RESULT_ROOT;
+  const existing = republishExistingNotification(
+    workspace,
+    runId,
+    resultRoot,
+  );
+  if (existing) return existing;
+
+  const workspaceRoot = join(resultRoot, workspace);
+  const active = readJson(join(workspaceRoot, "active.json"));
+  if (active?.runId !== runId) {
+    try {
+      beginResultRun({
+        workspace,
+        runId,
+        tasklabel: options.tasklabel ?? hookTasklabel(
+          notificationPrompt(payload["input-messages"]),
+        ),
+        startedAt: options.startedAt,
+        cwd: payload.cwd,
+      }, {
+        resultRoot,
+        mirrorProjectLatest: options.mirrorProjectLatest === true,
+      });
+    } catch (error) {
+      if (error?.code !== "result_run_already_finalized") throw error;
+      const published = republishExistingNotification(
+        workspace,
+        runId,
+        resultRoot,
+      );
+      if (!published) throw error;
+      return published;
+    }
+  }
+
+  const finalReturn = typeof payload["last-assistant-message"] === "string"
+    ? payload["last-assistant-message"]
+    : "";
+  const terminalStatus = terminalStatusFromReturn(finalReturn);
+  return finalizeActiveRun(workspace, terminalStatus ?? "BLOCKED", {
+    resultRoot,
+    mirrorProjectLatest: options.mirrorProjectLatest === true,
+    finalReturn: terminalStatus ? finalReturn : null,
+    stopDescription: terminalStatus
+      ? null
+      : "Codex completed without a recognized terminal RETURN status.",
+  });
 }

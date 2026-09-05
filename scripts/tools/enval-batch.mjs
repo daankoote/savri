@@ -39,6 +39,8 @@ export const APPROVED_BATCH_BINDINGS = Object.freeze({
   }),
 });
 export const CODEX_UPDATE_OVERRIDE = "check_for_update_on_startup=false";
+export const CODEX_NOTIFY_OVERRIDE =
+  'notify=["node",".codex/hooks/enval-permission-router.mjs","--notify"]';
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const HERDR_AGENT_PATTERN = /^[a-z][a-z0-9_-]{0,31}$/;
 const GOVERNANCE_FILES = Object.freeze([
@@ -380,6 +382,8 @@ export function codexLaunchArgv(worktree) {
     'approvals_reviewer="auto_review"',
     "--config",
     'web_search="disabled"',
+    "--config",
+    CODEX_NOTIFY_OVERRIDE,
     "--enable",
     "hooks",
     "--strict-config",

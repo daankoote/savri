@@ -7,7 +7,11 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { CLASSIFICATION, classifyScript } from "./command-classifier.mjs";
-import { handleResultHook } from "../../scripts/tools/enval-result.mjs";
+import {
+  handleResultHook,
+  handleResultNotification,
+  ResultPublicationError,
+} from "../../scripts/tools/enval-result.mjs";
 
 export const HUMAN_GATE_MESSAGE = [
   "HUMAN_GATE",
@@ -148,15 +152,51 @@ export function routeEvent(event, options = {}) {
   };
 }
 
-export async function main() {
+function publicationFailure(error) {
+  const code = error instanceof ResultPublicationError
+    ? error.code
+    : "unexpected_failure";
   try {
+    const directory = join(tmpdir(), "enval-codex-hooks");
+    mkdirSync(directory, { recursive: true, mode: 0o700 });
+    appendFileSync(
+      join(directory, "result-publication-errors.jsonl"),
+      `${JSON.stringify({ at: new Date().toISOString(), code })}\n`,
+      { encoding: "utf8", mode: 0o600 },
+    );
+  } catch {
+    // Stderr and the non-zero exit remain the primary failure signal.
+  }
+  process.stderr.write(
+    `ENVAL_RESULT_PUBLICATION=FAIL\nFAILURE=${code}\n`,
+  );
+}
+
+export async function main(argv = process.argv.slice(2)) {
+  try {
+    if (argv[0] === "--notify") {
+      if (argv.length !== 2) {
+        throw new ResultPublicationError("result_notification_invalid");
+      }
+      let payload;
+      try {
+        payload = JSON.parse(argv[1]);
+      } catch {
+        throw new ResultPublicationError("result_notification_invalid");
+      }
+      handleResultNotification(payload);
+      return 0;
+    }
+    if (argv.length !== 0) {
+      throw new ResultPublicationError("result_router_arguments_invalid");
+    }
     const routed = routeEvent(await readEvent());
     if (routed.output !== null) {
       process.stdout.write(`${JSON.stringify(routed.output)}\n`);
     }
     return 0;
-  } catch {
-    process.stderr.write("ENVAL_RESULT_PUBLICATION=FAIL\n");
+  } catch (error) {
+    publicationFailure(error);
     return 2;
   }
 }

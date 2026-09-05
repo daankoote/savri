@@ -340,11 +340,25 @@ details. The launcher/orchestrator, not Daan, owns every mapping between the
 human workspace name and those technical identities.
 
 The orchestrator/runtime finalizer publishes every autonomous Codex run without
-depending on agent cooperation. `UserPromptSubmit` opens a workspace-bound run,
-`Stop` publishes its final `RETURN`, and `PreToolUse`, `PermissionRequest`,
+depending on agent cooperation. `UserPromptSubmit` opens a workspace-bound run;
+`Stop` publishes its final `RETURN`; and Codex's configured
+`agent-turn-complete` notifier is the mandatory idempotent fallback for a normal
+terminal return when `Stop` is unavailable. `PreToolUse`, `PermissionRequest`,
 `Interrupt`, and `SessionEnd` publish a runtime-generated terminal result when
 the normal return path cannot complete. Terminal statuses are `PASS`, `PARTIAL`,
-`FAIL`, `HUMAN_GATE`, `BLOCKED`, `INTERRUPTED`, and `TIMEOUT`.
+`FAIL`, `HUMAN_GATE`, `BLOCKED`, `INTERRUPTED`, and `TIMEOUT`. An unresolved
+workspace or publication error is a non-zero hook/notifier failure recorded at
+`$TMPDIR/enval-codex-hooks/result-publication-errors.jsonl`; it is never a
+successful no-op.
+
+Codex loads the effective project hook and notifier configuration when a
+session starts. After either configuration or its command source changes, an
+already-open Codex process is stale and must be closed and started again. The
+fresh session must complete Codex's hook review and trust the exact reviewed
+ENVAL hooks; `Continue without trusting (hooks won't run)` is not a valid batch
+start. Neither stored Herdr state nor a prior hook trust entry proves that the
+running process loaded the current configuration. This restart/trust gate must
+not be bypassed with `--dangerously-bypass-hook-trust`.
 
 The canonical human result entrypoint is
 `~/.herdr-results/ENVAL/<human-workspace>/latest.txt`. Every envelope names the

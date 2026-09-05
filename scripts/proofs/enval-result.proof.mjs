@@ -18,6 +18,7 @@ import {
   beginResultRun,
   finalizeActiveRun,
   handleResultHook,
+  handleResultNotification,
   terminalStatusFromReturn,
   workspaceResultPaths,
 } from "../tools/enval-result.mjs";
@@ -239,6 +240,96 @@ test("Stop uses the final RETURN status and missing RETURN fails closed", () => 
   }
 });
 
+test("agent-turn-complete fallback publishes terminal output without Stop", () => {
+  for (const terminalStatus of ["PASS", "PARTIAL", "FAIL"]) {
+    const resultRoot = root();
+    const published = handleResultNotification({
+      type: "agent-turn-complete",
+      "thread-id": `notify-${terminalStatus.toLowerCase()}`,
+      "turn-id": "turn-1",
+      cwd: "/Users/daankoote/dev/enval",
+      "input-messages": [
+        `TASKLABEL: notify-${terminalStatus.toLowerCase()}-proof`,
+      ],
+      "last-assistant-message": `NOTIFY_STATUS=${terminalStatus}`,
+    }, { resultRoot, startedAt: "2026-09-05T10:00:00Z" });
+    assert.equal(published.envelope.workspace, "Main");
+    assert.equal(published.envelope.terminalStatus, terminalStatus);
+    assert.equal(
+      readJson(published.paths.latest).finalReturn,
+      `NOTIFY_STATUS=${terminalStatus}\n`,
+    );
+    assert.deepEqual(
+      readJson(published.paths.latest),
+      readJson(published.paths.history),
+    );
+  }
+});
+
+test("notify after Stop reuses immutable history instead of duplicating a run", () => {
+  const resultRoot = root();
+  const payload = {
+    type: "agent-turn-complete",
+    "thread-id": "notify-idempotent",
+    "turn-id": "turn-1",
+    cwd: "/Users/daankoote/dev/enval-worktrees/setup",
+    "input-messages": ["TASKLABEL: notify-idempotent-proof"],
+    "last-assistant-message": "IDEMPOTENT_STATUS=FAIL",
+  };
+  handleResultHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: payload.cwd,
+    session_id: payload["thread-id"],
+    turn_id: payload["turn-id"],
+    prompt: payload["input-messages"][0],
+  }, { resultRoot, startedAt: "2026-09-05T10:00:00Z" });
+  handleResultHook({
+    hook_event_name: "Stop",
+    cwd: payload.cwd,
+    last_assistant_message: payload["last-assistant-message"],
+  }, { resultRoot });
+  const published = handleResultNotification(payload, { resultRoot });
+  assert.equal(published.alreadyFinalized, true);
+  assert.equal(published.envelope.terminalStatus, "FAIL");
+  assert.deepEqual(
+    readdirSync(published.paths.runRoot).sort(),
+    ["active-finalized.json", "context.json", "result.txt"],
+  );
+});
+
+test("a delayed old notifier cannot replace a newer pending latest", () => {
+  const resultRoot = root();
+  const oldPayload = {
+    type: "agent-turn-complete",
+    "thread-id": "delayed-notify",
+    "turn-id": "old-turn",
+    cwd: "/Users/daankoote/dev/enval",
+    "input-messages": ["TASKLABEL: delayed-old-proof"],
+    "last-assistant-message": "DELAYED_OLD_STATUS=PASS",
+  };
+  const old = handleResultNotification(oldPayload, {
+    resultRoot,
+    startedAt: "2026-09-05T10:00:00Z",
+  });
+  beginResultRun({
+    workspace: "Main",
+    runId: "new-pending-run",
+    tasklabel: "new-pending-proof",
+    startedAt: "2026-09-05T10:01:00Z",
+  }, { resultRoot });
+
+  const delayed = handleResultNotification(oldPayload, { resultRoot });
+  const latest = readJson(join(resultRoot, "Main", "latest.txt"));
+  assert.equal(delayed.alreadyFinalized, true);
+  assert.equal(delayed.latestPreserved, true);
+  assert.equal(latest.runId, "new-pending-run");
+  assert.equal(latest.resultState, "PENDING");
+  assert.equal(
+    readJson(old.paths.history).terminalStatus,
+    "PASS",
+  );
+});
+
 test("PreToolUse HUMAN_GATE finalizes the active workspace before denying", () => {
   const resultRoot = root();
   beginResultRun({
@@ -297,6 +388,58 @@ test("real hook stdin protocol opens and finalizes the _Setup route", () => {
   assert.equal(latest.runId, "protocol-session-protocol-turn");
   assert.equal(latest.tasklabel, "Prove lifecycle publication");
   assert.equal(latest.terminalStatus, "PASS");
+});
+
+test("real notify argv protocol publishes when project Stop is not trusted", () => {
+  const isolatedHome = root();
+  const router = fileURLToPath(
+    new URL("../../.codex/hooks/enval-permission-router.mjs", import.meta.url),
+  );
+  const payload = {
+    type: "agent-turn-complete",
+    "thread-id": "notify-protocol-session",
+    "turn-id": "notify-protocol-turn",
+    cwd: "/Users/daankoote/dev/enval-worktrees/setup",
+    "input-messages": ["TASKLABEL: notify-protocol-proof"],
+    "last-assistant-message": "NOTIFY_PROTOCOL_STATUS=FAIL",
+  };
+  const result = spawnSync(
+    process.execPath,
+    [router, "--notify", JSON.stringify(payload)],
+    {
+      cwd: "/Users/daankoote/dev/enval-worktrees/setup",
+      encoding: "utf8",
+      env: { ...process.env, HOME: isolatedHome },
+    },
+  );
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, "");
+  const latest = readJson(
+    join(isolatedHome, ".herdr-results", "ENVAL", "_Setup", "latest.txt"),
+  );
+  assert.equal(latest.runId, "notify-protocol-session-notify-protocol-turn");
+  assert.equal(latest.tasklabel, "notify-protocol-proof");
+  assert.equal(latest.terminalStatus, "FAIL");
+  assert.equal(latest.finalReturn, "NOTIFY_PROTOCOL_STATUS=FAIL\n");
+});
+
+test("unresolved lifecycle workspace fails visibly instead of completing", () => {
+  const router = fileURLToPath(
+    new URL("../../.codex/hooks/enval-permission-router.mjs", import.meta.url),
+  );
+  const result = spawnSync(process.execPath, [router], {
+    cwd: "/Users/daankoote/dev/enval-worktrees/setup",
+    encoding: "utf8",
+    input: JSON.stringify({
+      hook_event_name: "Stop",
+      cwd: "/private/tmp/not-an-enval-worktree",
+      last_assistant_message: "UNRESOLVED_STATUS=FAIL",
+    }),
+  });
+  assert.equal(result.status, 2);
+  assert.equal(result.stdout, "");
+  assert.match(result.stderr, /ENVAL_RESULT_PUBLICATION=FAIL/);
+  assert.match(result.stderr, /FAILURE=result_workspace_unresolved/);
 });
 
 test("Main and Beheer concurrent smoke runs never share latest or history", async () => {
