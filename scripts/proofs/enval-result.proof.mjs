@@ -13,6 +13,7 @@ import { after, test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { routeEvent } from "../../.codex/hooks/enval-permission-router.mjs";
+import { CLASSIFICATION, ROOT } from "../../.codex/hooks/command-classifier.mjs";
 import {
   beginResultRun,
   finalizeActiveRun,
@@ -247,11 +248,16 @@ test("PreToolUse HUMAN_GATE finalizes the active workspace before denying", () =
     startedAt: "2026-09-05T10:00:00Z",
   }, { resultRoot });
   const routed = routeEvent({
-    cwd: "/Users/daankoote/dev/enval-worktrees/setup",
+    cwd: ROOT,
     hook_event_name: "PreToolUse",
     tool_name: "Bash",
     tool_input: { command: "git branch new-topic" },
   }, { resultRoot, workspace: "_Setup" });
+  assert.equal(routed.classification, CLASSIFICATION.DENY);
+  assert.ok(
+    routed.output?.hookSpecificOutput,
+    `expected PreToolUse deny output, received ${JSON.stringify(routed)}`,
+  );
   assert.equal(routed.output.hookSpecificOutput.permissionDecision, "deny");
   const latest = readJson(join(resultRoot, "_Setup", "latest.txt"));
   assert.equal(latest.terminalStatus, "HUMAN_GATE");
