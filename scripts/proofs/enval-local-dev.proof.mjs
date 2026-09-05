@@ -77,6 +77,8 @@ assert.match(source, /configFile: false/);
 assert.match(source, /envDir: dirname\(runtime\.appEnvironmentFile\)/);
 assert.match(source, /"LOCAL_FRONTEND_RUNTIME=OWNED"/);
 assert.match(source, /"LOCAL_FUNCTIONS_RUNTIME=OWNED"/);
+assert.match(source, /TEMPORARY_DEPENDENCY_BRIDGE/);
+assert.match(source, /cleanupDependencyBridge/);
 assert.match(source, /"TRACKED_RUNTIME_LINKS_CREATED=NO"/);
 assert.doesNotMatch(source, /npm\s+(?:install|update)|ln\s+-s/);
 

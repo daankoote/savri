@@ -36,6 +36,11 @@ import {
   ENVAL_WORKTREES_ROOT,
   HERDR_PROJECT,
 } from "./enval-batch.mjs";
+import {
+  cleanupDependencyBridge,
+  DependencyBridgeError,
+  inspectDependencyBridge,
+} from "./enval-preview-dependency-bridge.mjs";
 
 export const PREVIEW_BASE = join(
   homedir(),
@@ -627,6 +632,15 @@ export async function startPreview(workspaceName, options = {}) {
     }
     fail("preview_already_running");
   }
+  const priorBridgeLocation = join(runtimeRoot, "source/app/node_modules");
+  if (pathExists(priorBridgeLocation)) {
+    if (!priorState?.dependencyRoot) fail("dependency_bridge_unowned");
+    cleanupDependencyBridge({
+      runtimeRoot,
+      sourceRoot: join(runtimeRoot, "source"),
+      dependencyRoot: priorState.dependencyRoot,
+    });
+  }
 
   const before = fingerprintSource(spec.sourceRoot, run);
   const stagingRoot = join(runtimeRoot, `.source-${randomUUID()}`);
@@ -721,16 +735,28 @@ export async function startPreview(workspaceName, options = {}) {
     if (!/^LOCAL_READY=PASS$/m.test(String(ready.stdout ?? ""))) {
       fail("guarded_healthcheck_invalid");
     }
+    const bridge = inspectDependencyBridge({
+      runtimeRoot,
+      sourceRoot,
+      dependencyRoot: dependency.root,
+    });
+    if (!bridge.exists) fail("dependency_bridge_missing");
     const after = fingerprintSource(spec.sourceRoot, run);
     if (after.digest !== before.digest) fail("source_changed_during_start");
     state.status = "running";
     state.health = "PASS";
     state.sourceUnchanged = true;
+    state.dependencyBridge = bridge.location;
     state.readyAt = new Date().toISOString();
     writeJsonAtomic(join(runtimeRoot, "state.json"), state);
     return Object.freeze(state);
   } catch (error) {
     await stopOwnedProcess(state, run).catch(() => {});
+    cleanupDependencyBridge({
+      runtimeRoot,
+      sourceRoot,
+      dependencyRoot: dependency.root,
+    });
     state.status = "failed";
     state.health = "FAIL";
     writeJsonAtomic(join(runtimeRoot, "state.json"), state);
@@ -751,6 +777,14 @@ export async function previewStatus(workspaceName, options = {}) {
   if (running && !ownedProcess(state, run)) {
     fail("preview_process_identity_mismatch");
   }
+  if (running) {
+    const bridge = inspectDependencyBridge({
+      runtimeRoot,
+      sourceRoot: state.sourceRoot,
+      dependencyRoot: state.dependencyRoot,
+    });
+    if (!bridge.exists) fail("dependency_bridge_missing");
+  }
   const health = running ? (await viteHealthy() ? "PASS" : "FAIL") : "STOPPED";
   return Object.freeze({
     ...state,
@@ -769,6 +803,11 @@ export async function stopPreview(workspaceName, options = {}) {
     return Object.freeze({ status: "stopped", workspace: workspaceName });
   }
   await stopOwnedProcess(state, run);
+  const bridge = cleanupDependencyBridge({
+    runtimeRoot,
+    sourceRoot: state.sourceRoot,
+    dependencyRoot: state.dependencyRoot,
+  });
   const after = fingerprintSource(spec.sourceRoot, run);
   const sourceUnchanged = after.digest === state.sourceFingerprint;
   const stoppedState = {
@@ -776,6 +815,7 @@ export async function stopPreview(workspaceName, options = {}) {
     status: "stopped",
     health: "STOPPED",
     orphanProcesses: "NO",
+    dependencyBridgeCleaned: !bridge.exists,
     sourceUnchanged,
     stoppedAt: new Date().toISOString(),
   };
@@ -808,6 +848,10 @@ function outputState(state) {
       state.orphanProcesses
         ? `ORPHAN_PROCESSES=${state.orphanProcesses}`
         : null,
+      state.dependencyBridge
+        ? `DEPENDENCY_BRIDGE=${state.dependencyBridge}`
+        : null,
+      state.dependencyBridgeCleaned ? "DEPENDENCY_BRIDGE_CLEANED=YES" : null,
       state.dependencyRoot ? `DEPENDENCY_ROOT=${state.dependencyRoot}` : null,
       state.sourceRoot ? `SNAPSHOT_ROOT=${state.sourceRoot}` : null,
       `STATUS_COMMAND=${process.argv[0]} ${
@@ -839,7 +883,8 @@ export async function main(argv = process.argv.slice(2)) {
     outputState(state);
     return 0;
   } catch (error) {
-    const code = error instanceof PreviewError
+    const code = error instanceof PreviewError ||
+        error instanceof DependencyBridgeError
       ? error.message
       : `unexpected_failure:${error?.name ?? "Error"}`;
     process.stderr.write(`PREVIEW_STATUS=FAIL\nREASON=${safeDetail(code)}\n`);

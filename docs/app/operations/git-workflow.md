@@ -120,6 +120,14 @@ external runtime; no package or lockfile update is performed. Existing private
 environment files remain referenced in place by the guarded local runtime and
 are never copied.
 
+While that guarded runtime is running, it owns one temporary validated link at
+the external snapshot's `app/node_modules` path to the matching lockfile-pinned
+external dependency tree. Both ends and the link location must resolve below
+`~/.herdr-runtime/ENVAL/`; occupied paths, traversal and unexpected symlink
+targets fail closed. Runtime failure, stop and interrupt remove the link. The
+registered worktree and snapshot contents remain unchanged, and no dependency
+artifact is created in a Git worktree.
+
 Successful `start` prints the loopback URL, owned process ID, health result,
 effective Node version, snapshot root and external dependency root. `status`
 rechecks process ownership and Vite reachability. `stop` terminates the owned

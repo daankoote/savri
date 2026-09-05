@@ -1,11 +1,16 @@
 import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
+import { once } from "node:events";
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readlinkSync,
   realpathSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -13,6 +18,13 @@ import { dirname, join } from "node:path";
 import { after, test } from "node:test";
 
 import { resolvePrimaryRuntime } from "../tools/enval-primary-runtime.mjs";
+import {
+  cleanupDependencyBridge,
+  ensureDependencyBridge,
+  ENVAL_RUNTIME_ROOT,
+  inspectDependencyBridge,
+  installDependencyBridgeSignalCleanup,
+} from "../tools/enval-preview-dependency-bridge.mjs";
 import {
   copySourceSnapshot,
   dependencyKey,
@@ -98,6 +110,24 @@ function dependencyDirectories(root) {
       "app/node_modules/@supabase/supabase-js",
     ]
   ) mkdirSync(join(root, relativePath), { recursive: true });
+}
+
+function dependencyBridgeFixture() {
+  mkdirSync(join(ENVAL_RUNTIME_ROOT, "preview"), {
+    recursive: true,
+    mode: 0o700,
+  });
+  const runtimeRoot = mkdtempSync(
+    join(ENVAL_RUNTIME_ROOT, "preview", ".bridge-proof-"),
+  );
+  temporaryRoots.push(runtimeRoot);
+  const sourceRoot = join(runtimeRoot, "source");
+  const dependencyRoot = join(runtimeRoot, "dependencies", "fixture-key");
+  mkdirSync(join(sourceRoot, "app"), { recursive: true });
+  mkdirSync(join(dependencyRoot, "app", "node_modules"), {
+    recursive: true,
+  });
+  return { runtimeRoot, sourceRoot, dependencyRoot };
 }
 
 test("Node runtime and approved Beheer worktree are explicit", () => {
@@ -235,4 +265,152 @@ test("guarded runtime resolves external dependencies and references secrets in p
   assert.ok(runtime.appNodeModules.includes("enval-preview-proof-"));
   assert.ok(runtime.appEnvironmentFile.includes("enval-preview-proof-"));
   assert.equal(existsSync(join(fixture.root, ".env.local")), false);
+});
+
+test("temporary dependency bridge is canonical, exact and lifecycle-clean", () => {
+  for (const outcome of ["PASS", "FAIL"]) {
+    const fixture = dependencyBridgeFixture();
+    const bridge = ensureDependencyBridge(fixture);
+    assert.equal(bridge.created, true, outcome);
+    assert.equal(lstatSync(bridge.location).isSymbolicLink(), true, outcome);
+    assert.equal(readlinkSync(bridge.location), bridge.target, outcome);
+    assert.equal(realpathSync(bridge.location), bridge.target, outcome);
+    assert.ok(bridge.location.startsWith(`${ENVAL_RUNTIME_ROOT}/`), outcome);
+    assert.ok(bridge.target.startsWith(`${ENVAL_RUNTIME_ROOT}/`), outcome);
+    assert.ok(
+      realpathSync(fixture.sourceRoot).startsWith(`${ENVAL_RUNTIME_ROOT}/`),
+      outcome,
+    );
+    const cleaned = cleanupDependencyBridge(fixture);
+    assert.equal(cleaned.cleaned, true, outcome);
+    assert.equal(existsSync(bridge.location), false, outcome);
+  }
+});
+
+test("SIGINT and SIGTERM clean the bridge before the runtime exits", async () => {
+  const moduleUrl = new URL(
+    "../tools/enval-preview-dependency-bridge.mjs",
+    import.meta.url,
+  ).href;
+  for (const signal of ["SIGINT", "SIGTERM"]) {
+    const fixture = dependencyBridgeFixture();
+    const worker = `
+      import {
+        ensureDependencyBridge,
+        installDependencyBridgeSignalCleanup,
+      } from ${JSON.stringify(moduleUrl)};
+      const options = JSON.parse(process.env.ENVAL_BRIDGE_PROOF_OPTIONS);
+      installDependencyBridgeSignalCleanup(options, (signal) => {
+        process.stdout.write(\`BRIDGE_SIGNAL=\${signal}\\n\`);
+        process.exit(signal === "SIGINT" ? 130 : 143);
+      });
+      ensureDependencyBridge(options);
+      process.stdout.write("BRIDGE_READY=YES\\n");
+      setInterval(() => {}, 1_000);
+    `;
+    const child = spawn(
+      process.execPath,
+      ["--input-type=module", "--eval", worker],
+      {
+        env: {
+          ...process.env,
+          ENVAL_BRIDGE_PROOF_OPTIONS: JSON.stringify(fixture),
+        },
+        stdio: ["ignore", "pipe", "pipe"],
+      },
+    );
+    let output = "";
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => output += chunk);
+    child.stderr.on("data", (chunk) => output += chunk);
+    try {
+      const ready = Promise.withResolvers();
+      const timeout = setTimeout(
+        () => ready.reject(new Error(`${signal}_bridge_ready_timeout`)),
+        5_000,
+      );
+      const observeReady = (chunk) => {
+        if (String(chunk).includes("BRIDGE_READY=YES")) ready.resolve();
+      };
+      child.stdout.on("data", observeReady);
+      await ready.promise.finally(() => {
+        clearTimeout(timeout);
+        child.stdout.off("data", observeReady);
+      });
+      assert.equal(
+        existsSync(join(fixture.sourceRoot, "app", "node_modules")),
+        true,
+      );
+      child.kill(signal);
+      const [code, exitSignal] = await once(child, "exit");
+      assert.equal(code, signal === "SIGINT" ? 130 : 143, output);
+      assert.equal(exitSignal, null, output);
+      assert.match(output, new RegExp(`BRIDGE_SIGNAL=${signal}`));
+      assert.equal(
+        existsSync(join(fixture.sourceRoot, "app", "node_modules")),
+        false,
+      );
+    } finally {
+      if (child.exitCode === null && child.signalCode === null) {
+        child.kill("SIGKILL");
+        await once(child, "exit");
+      }
+    }
+  }
+});
+
+test("temporary dependency bridge refuses occupied, mismatched and unsafe paths", () => {
+  const occupied = dependencyBridgeFixture();
+  mkdirSync(join(occupied.sourceRoot, "app", "node_modules"));
+  assert.throws(() => ensureDependencyBridge(occupied), {
+    name: "DependencyBridgeError",
+    code: "dependency_bridge_location_occupied",
+  });
+
+  const mismatched = dependencyBridgeFixture();
+  const wrongTarget = join(
+    mismatched.runtimeRoot,
+    "dependencies",
+    "wrong-key",
+    "app",
+    "node_modules",
+  );
+  mkdirSync(wrongTarget, { recursive: true });
+  symlinkSync(
+    wrongTarget,
+    join(mismatched.sourceRoot, "app", "node_modules"),
+    "dir",
+  );
+  assert.throws(() => inspectDependencyBridge(mismatched), {
+    name: "DependencyBridgeError",
+    code: "dependency_bridge_target_mismatch",
+  });
+
+  const traversal = dependencyBridgeFixture();
+  assert.throws(
+    () =>
+      ensureDependencyBridge({
+        ...traversal,
+        sourceRoot: `${traversal.sourceRoot}/../source`,
+      }),
+    {
+      name: "DependencyBridgeError",
+      code: "dependency_bridge_snapshot_invalid",
+    },
+  );
+
+  const outside = sourceFixture();
+  assert.throws(
+    () =>
+      ensureDependencyBridge({
+        runtimeRoot: outside.root,
+        sourceRoot: join(outside.root, "source"),
+        dependencyRoot: join(outside.root, "dependencies", "fixture-key"),
+      }),
+    {
+      name: "DependencyBridgeError",
+      code: "dependency_bridge_runtime_root_invalid",
+    },
+  );
 });

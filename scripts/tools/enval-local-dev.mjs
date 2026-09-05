@@ -17,6 +17,11 @@ import {
   PrimaryRuntimeError,
   resolvePrimaryRuntime,
 } from "./enval-primary-runtime.mjs";
+import {
+  cleanupDependencyBridge,
+  ensureDependencyBridge,
+  installDependencyBridgeSignalCleanup,
+} from "./enval-preview-dependency-bridge.mjs";
 import { resolveSupabaseTarget } from "./enval-supabase-target.mjs";
 
 const TOOL_ROOT = resolve(fileURLToPath(new URL("../../", import.meta.url)));
@@ -547,13 +552,37 @@ async function serve(sourceRoot) {
     runtimeEnvironment,
   );
   let frontend = null;
+  let functionsRuntime = null;
+  let dependencyBridge = null;
+  let dependencyBridgeOptions = null;
+  let dependencyBridgeSignals = null;
+  const directSignalHandlers = new Map();
+  const stopFunctionsRuntime = (signal) => functionsRuntime?.kill(signal);
   try {
     frontend = await startFrontend(
       primaryRuntime,
       temporaryEnvironment.directory,
       sourceRoot,
     );
-    const child = spawn(
+    if (primaryRuntime.dependencySource === "external_preview_runtime") {
+      dependencyBridgeOptions = {
+        runtimeRoot: resolve(sourceRoot, ".."),
+        sourceRoot,
+        dependencyRoot: process.env.ENVAL_PREVIEW_DEPENDENCY_ROOT,
+      };
+      dependencyBridgeSignals = installDependencyBridgeSignalCleanup(
+        dependencyBridgeOptions,
+        stopFunctionsRuntime,
+      );
+      dependencyBridge = ensureDependencyBridge(dependencyBridgeOptions);
+    } else {
+      for (const signal of ["SIGINT", "SIGTERM"]) {
+        const handler = () => stopFunctionsRuntime(signal);
+        directSignalHandlers.set(signal, handler);
+        process.on(signal, handler);
+      }
+    }
+    functionsRuntime = spawn(
       "supabase",
       [
         "--workdir",
@@ -581,22 +610,38 @@ async function serve(sourceRoot) {
         "PRESENTATION_SOURCE=platform_control_plane_presentation_v1",
         "TENANT_RESOLVER=static_single_tenant_v1",
         `DEPENDENCY_SOURCE=${primaryRuntime.dependencySource}`,
+        `TEMPORARY_DEPENDENCY_BRIDGE=${
+          dependencyBridge ? "OWNED" : "NOT_REQUIRED"
+        }`,
         "PRIVATE_ENV_REFERENCED_IN_PLACE=YES",
         "TRACKED_RUNTIME_LINKS_CREATED=NO",
         "SECRETS_PRINTED=NO",
       ].join("\n") + "\n",
     );
-    for (const signal of ["SIGINT", "SIGTERM"]) {
-      process.once(signal, () => child.kill(signal));
-    }
     const exitCode = await new Promise((resolveExit, rejectExit) => {
-      child.once("error", (error) => rejectExit(error));
-      child.once("exit", (code) => resolveExit(code ?? 1));
+      functionsRuntime.once("error", (error) => rejectExit(error));
+      functionsRuntime.once("exit", (code) => resolveExit(code ?? 1));
     }).catch((error) => fail("functions_serve_failed", error));
     process.exitCode = exitCode;
   } finally {
-    if (frontend) await frontend.close();
-    rmSync(temporaryEnvironment.directory, { recursive: true, force: true });
+    try {
+      if (frontend) await frontend.close();
+    } finally {
+      try {
+        if (dependencyBridgeOptions) {
+          cleanupDependencyBridge(dependencyBridgeOptions);
+        }
+      } finally {
+        dependencyBridgeSignals?.dispose();
+        for (const [signal, handler] of directSignalHandlers) {
+          process.off(signal, handler);
+        }
+        rmSync(temporaryEnvironment.directory, {
+          recursive: true,
+          force: true,
+        });
+      }
+    }
   }
 }
 
