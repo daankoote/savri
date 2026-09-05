@@ -52,6 +52,21 @@ const fixtures = Object.freeze([
     CLASSIFICATION.ALLOW,
   ],
   [
+    "safe branch ancestry inspection",
+    "git branch --contains d9f5096",
+    CLASSIFICATION.ALLOW,
+  ],
+  [
+    "safe merge-base ancestry inspection",
+    "git merge-base --is-ancestor d9f5096 HEAD",
+    CLASSIFICATION.ALLOW,
+  ],
+  [
+    "safe object existence inspection",
+    "git cat-file -e d9f5096",
+    CLASSIFICATION.ALLOW,
+  ],
+  [
     "safe current-base inspection",
     "git rev-parse --verify HEAD; git show --quiet --format=%H HEAD",
     CLASSIFICATION.ALLOW,
@@ -164,6 +179,31 @@ const fixtures = Object.freeze([
     "git branch --list --delete old-topic",
     CLASSIFICATION.DENY,
   ],
+  [
+    "deny branch rename",
+    "git branch --move old-topic new-topic",
+    CLASSIFICATION.DENY,
+  ],
+  [
+    "deny branch force creation",
+    "git branch --force new-topic HEAD",
+    CLASSIFICATION.DENY,
+  ],
+  [
+    "deny branch deletion disguised after contains",
+    "git branch --contains HEAD --delete old-topic",
+    CLASSIFICATION.DENY,
+  ],
+  [
+    "defer non-ancestry merge-base",
+    "git merge-base HEAD main",
+    CLASSIFICATION.DEFER,
+  ],
+  [
+    "defer non-existence cat-file mode",
+    "git cat-file -p HEAD",
+    CLASSIFICATION.DEFER,
+  ],
   ...[
     "add ../enval-gov-batch01 gov-batch01",
     "remove ../enval-gov-batch01",
@@ -268,6 +308,21 @@ const launcherGitPreflightAudit = Object.freeze([
   ["base object", "git show --quiet --format=%H HEAD", CLASSIFICATION.ALLOW],
   ["current branch", "git branch --show-current", CLASSIFICATION.ALLOW],
   ["target branch", "git branch --list gov-batch01", CLASSIFICATION.ALLOW],
+  [
+    "containing branch",
+    "git branch --contains d9f5096",
+    CLASSIFICATION.ALLOW,
+  ],
+  [
+    "commit ancestry",
+    "git merge-base --is-ancestor d9f5096 HEAD",
+    CLASSIFICATION.ALLOW,
+  ],
+  [
+    "commit object",
+    "git cat-file -e d9f5096",
+    CLASSIFICATION.ALLOW,
+  ],
   [
     "linked worktrees",
     "git worktree list --porcelain -z",

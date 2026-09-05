@@ -720,6 +720,10 @@ function classifyRg(words, cwd) {
 
 function classifyGitBranch(args) {
   if (args.length === 1 && args[0] === "--show-current") return true;
+  if (
+    args.length === 2 && args[0] === "--contains" &&
+    args[1] !== "" && !args[1].startsWith("-")
+  ) return true;
   if (args[0] !== "--list") return false;
 
   let afterOptions = false;
@@ -809,6 +813,16 @@ function classifyGit(words) {
     return true;
   }
   if (operation === "branch") return classifyGitBranch(args);
+  if (operation === "merge-base") {
+    return args.length === 3 && args[0] === "--is-ancestor" &&
+      args.slice(1).every((argument) =>
+        argument !== "" && !argument.startsWith("-")
+      );
+  }
+  if (operation === "cat-file") {
+    return args.length === 2 && args[0] === "-e" &&
+      args[1] !== "" && !args[1].startsWith("-");
+  }
   if (operation === "config") return classifyGitConfig(args);
   if (operation === "worktree") return classifyGitWorktree(args);
   return false;

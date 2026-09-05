@@ -3,18 +3,20 @@
 import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import {
-  chmodSync,
   lstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
   realpathSync,
-  renameSync,
-  writeFileSync,
 } from "node:fs";
-import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+
+import {
+  beginResultRun,
+  finalizeActiveRun,
+  terminalStatusFromReturn,
+} from "./enval-result.mjs";
 
 export const ENVAL_ROOT = "/Users/daankoote/dev/enval";
 export const ENVAL_WORKTREES_ROOT = "/Users/daankoote/dev/enval-worktrees";
@@ -36,12 +38,6 @@ export const APPROVED_BATCH_BINDINGS = Object.freeze({
     agentName: "enval-beheer",
   }),
 });
-export const PROJECT_RESULT_FILE = join(
-  homedir(),
-  ".herdr-results",
-  HERDR_PROJECT,
-  "latest.txt",
-);
 export const CODEX_UPDATE_OVERRIDE = "check_for_update_on_startup=false";
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const HERDR_AGENT_PATTERN = /^[a-z][a-z0-9_-]{0,31}$/;
@@ -105,7 +101,16 @@ export function validateGovernance(root) {
   } catch {
     fail("codex_hooks_json_invalid");
   }
-  for (const event of ["PreToolUse", "PermissionRequest"]) {
+  for (
+    const event of [
+      "PreToolUse",
+      "PermissionRequest",
+      "UserPromptSubmit",
+      "Stop",
+      "Interrupt",
+      "SessionEnd",
+    ]
+  ) {
     if (
       !Array.isArray(hooks?.hooks?.[event]) || hooks.hooks[event].length === 0
     ) {
@@ -922,41 +927,56 @@ export function formatBatchHandoff(result) {
   ].join("\n");
 }
 
-export function writeProjectResult(
-  contents,
-  resultFile = PROJECT_RESULT_FILE,
-) {
-  if (
-    typeof contents !== "string" || contents.length === 0 ||
-    contents.length > 32 * 1024 || contents.includes("\0") ||
-    !/^[A-Z][A-Z0-9_]*_STATUS=(?:PASS|PARTIAL|FAIL)$/m.test(contents)
-  ) fail("project_result_invalid");
-  const normalized = contents.endsWith("\n") ? contents : `${contents}\n`;
-  const directory = dirname(resultFile);
-  mkdirSync(directory, { recursive: true, mode: 0o700 });
-  const temporaryFile = join(directory, `.latest-${randomUUID()}.tmp`);
-  writeFileSync(temporaryFile, normalized, { flag: "wx", mode: 0o600 });
-  renameSync(temporaryFile, resultFile);
-  chmodSync(resultFile, 0o600);
-  return resultFile;
-}
-
 async function main(argv) {
   if (argv.length === 2 && argv[0] === "start") {
-    const result = await startBatch(argv[1]);
-    process.stdout.write(formatBatchHandoff(result));
+    const identity = deriveBatchIdentity(argv[1]);
+    const publication = beginResultRun({
+      workspace: argv[1],
+      runId: `launcher-${randomUUID()}`,
+      tasklabel: "batch-launch",
+      branch: identity.branch,
+      cwd: ENVAL_ROOT,
+    });
+    try {
+      const result = await startBatch(argv[1]);
+      const handoff = formatBatchHandoff(result);
+      finalizeActiveRun(argv[1], "PASS", { finalReturn: handoff });
+      process.stdout.write(handoff + `RUN_ID=${publication.context.runId}\n`);
+    } catch (error) {
+      const code = error instanceof BatchLaunchError
+        ? error.code
+        : "unexpected_failure";
+      const failure = `ENVAL_BATCH_START_STATUS=FAIL\nFAILURE=${code}\n`;
+      finalizeActiveRun(argv[1], "FAIL", { finalReturn: failure });
+      process.stderr.write(failure);
+      process.exitCode = 1;
+    }
     return;
   }
-  if (argv.length === 1 && argv[0] === "result") {
-    writeProjectResult(readFileSync(0, "utf8"));
+  if (argv.length === 2 && argv[0] === "result") {
+    const contents = readFileSync(0, "utf8");
+    const status = terminalStatusFromReturn(contents);
+    if (!status) fail("project_result_invalid");
+    const run = beginResultRun({
+      workspace: argv[1],
+      runId: randomUUID(),
+      tasklabel: "manual-result-publication",
+      cwd: process.cwd(),
+    }, { mirrorProjectLatest: true });
+    finalizeActiveRun(argv[1], status, {
+      finalReturn: contents,
+      mirrorProjectLatest: true,
+    });
     process.stdout.write(
       "ENVAL_BATCH_RESULT=PASS\n" +
         "PROJECT=ENVAL\n" +
-        "RESULT_FILE=~/.herdr-results/ENVAL/latest.txt\n",
+        `WORKSPACE=${argv[1]}\n` +
+        `RUN_ID=${run.context.runId}\n` +
+        `RESULT_FILE=~/.herdr-results/ENVAL/${argv[1]}/latest.txt\n`,
     );
     return;
   }
-  fail("usage:start_<approved-workspace>|result");
+  fail("usage:start_<approved-workspace>|result_<workspace>");
 }
 
 const invoked = process.argv[1]

@@ -11,7 +11,6 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, test } from "node:test";
-import { fileURLToPath } from "node:url";
 
 import {
   APPROVED_BATCH_BINDINGS,
@@ -29,7 +28,6 @@ import {
   startBatch,
   verifyCodexCli,
   verifyHerdrCli,
-  writeProjectResult,
 } from "../tools/enval-batch.mjs";
 
 const temporaryRoots = [];
@@ -66,6 +64,18 @@ function writeGovernance(root, { omit = null } = {}) {
             hooks: [{ command: "node .codex/hooks/router.mjs" }],
           }],
           PermissionRequest: [{
+            hooks: [{ command: "node .codex/hooks/router.mjs" }],
+          }],
+          UserPromptSubmit: [{
+            hooks: [{ command: "node .codex/hooks/router.mjs" }],
+          }],
+          Stop: [{
+            hooks: [{ command: "node .codex/hooks/router.mjs" }],
+          }],
+          Interrupt: [{
+            hooks: [{ command: "node .codex/hooks/router.mjs" }],
+          }],
+          SessionEnd: [{
             hooks: [{ command: "node .codex/hooks/router.mjs" }],
           }],
         },
@@ -702,47 +712,6 @@ test("agent startup failure preserves the approved workspace and worktree", asyn
   );
 });
 
-test("project result writer atomically updates only the stable entrypoint", () => {
-  const { parent } = fixture();
-  const resultFile = join(parent, ".herdr-results", "ENVAL", "latest.txt");
-  const first = "HERDR_TOPOLOGY01_STATUS=PASS\nFILES_CHANGED=proof\n";
-  const second = "NEXT_BATCH_STATUS=PARTIAL\nREASON=proof\n";
-  assert.equal(writeProjectResult(first, resultFile), resultFile);
-  assert.equal(readFileSync(resultFile, "utf8"), first);
-  writeProjectResult(second, resultFile);
-  assert.equal(readFileSync(resultFile, "utf8"), second);
-  assert.throws(() => writeProjectResult("not a return block\n", resultFile), {
-    code: "project_result_invalid",
-  });
-
-  const isolatedHome = join(parent, "home");
-  mkdirSync(isolatedHome);
-  const cliResult = spawnSync(
-    process.execPath,
-    [
-      fileURLToPath(new URL("../tools/enval-batch.mjs", import.meta.url)),
-      "result",
-    ],
-    {
-      encoding: "utf8",
-      env: { ...process.env, HOME: isolatedHome },
-      input: first,
-    },
-  );
-  assert.equal(cliResult.status, 0, cliResult.stderr);
-  assert.equal(
-    readFileSync(
-      join(isolatedHome, ".herdr-results", "ENVAL", "latest.txt"),
-      "utf8",
-    ),
-    first,
-  );
-  assert.match(
-    cliResult.stdout,
-    /RESULT_FILE=~\/\.herdr-results\/ENVAL\/latest\.txt/,
-  );
-});
-
 test("permanent authorities document topology, Git, lean handoffs, and results", () => {
   const governance = readFileSync(
     new URL("../../AGENTS.md", import.meta.url),
@@ -757,17 +726,20 @@ test("permanent authorities document topology, Git, lean handoffs, and results",
       "The current exact orchestrator-owned ENVAL topology",
       "No other human workspace name",
       "Main -> Terminal",
-      "Every autonomous Codex run",
-      "node scripts/tools/enval-batch.mjs result",
-      "~/.herdr-results/ENVAL/latest.txt",
+      "orchestrator/runtime finalizer publishes every autonomous Codex run",
+      "~/.herdr-results/ENVAL/<human-workspace>/latest.txt",
+      "~/.herdr-results/ENVAL/<human-workspace>/runs/<run-id>/result.txt",
+      "UserPromptSubmit",
+      "HUMAN_GATE",
+      "TIMEOUT",
       "printf '\\033]52;c;%s\\a'",
-      "2>&1 | tee ~/.herdr-results/ENVAL/commit-sequence-precheck.txt",
+      "2>&1 | tee ~/.herdr-results/ENVAL/Main/runs/<run-id>/commit-sequence-precheck.txt",
       "setup-commit-result.txt",
       "main-integration-check.txt",
       "must not use `terminal-latest.txt`",
       "do not use `cat` as the primary transport method",
-      "~/.herdr-results/ENVAL/<human-workspace>/<run-name>/<semantic-process-step>.txt",
-      "parallel workers never write one another's path",
+      "~/.herdr-results/ENVAL/<human-workspace>/runs/<run-id>/<semantic-process-step>.txt",
+      "parallel workers never overwrite one another's",
       "never requires Daan to shuttle messages",
       "Lean handoffs remain task-delta-only",
     ]

@@ -7,6 +7,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { CLASSIFICATION, classifyScript } from "./command-classifier.mjs";
+import { handleResultHook } from "../../scripts/tools/enval-result.mjs";
 
 export const HUMAN_GATE_MESSAGE = [
   "HUMAN_GATE",
@@ -61,8 +62,20 @@ function record(eventName, classified, command) {
   }
 }
 
-export function routeEvent(event) {
+export function routeEvent(event, options = {}) {
   const eventName = event?.hook_event_name;
+  if (
+    ["UserPromptSubmit", "Stop", "Interrupt", "SessionEnd"].includes(
+      eventName,
+    )
+  ) {
+    handleResultHook(event, options);
+    return {
+      output: null,
+      classification: CLASSIFICATION.DEFER,
+      reason: "RESULT_LIFECYCLE",
+    };
+  }
   const command = event?.tool_input?.command;
   if (event?.tool_name !== "Bash" || typeof command !== "string") {
     return {
@@ -78,6 +91,10 @@ export function routeEvent(event) {
     eventName === "PreToolUse" &&
     classified.classification === CLASSIFICATION.DENY
   ) {
+    handleResultHook(
+      { ...event, hook_event_name: "Interrupt" },
+      { ...options, terminalStatus: "HUMAN_GATE" },
+    );
     return {
       classification: classified.classification,
       reason: classified.reason,
@@ -109,6 +126,10 @@ export function routeEvent(event) {
     eventName === "PermissionRequest" &&
     classified.classification === CLASSIFICATION.DENY
   ) {
+    handleResultHook(
+      { ...event, hook_event_name: "Interrupt" },
+      { ...options, terminalStatus: "HUMAN_GATE" },
+    );
     return {
       classification: classified.classification,
       reason: classified.reason,
@@ -135,7 +156,8 @@ export async function main() {
     }
     return 0;
   } catch {
-    return 0;
+    process.stderr.write("ENVAL_RESULT_PUBLICATION=FAIL\n");
+    return 2;
   }
 }
 

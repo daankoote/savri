@@ -126,10 +126,11 @@ rechecks process ownership and Vite reachability. `stop` terminates the owned
 process group, verifies termination, and compares the source worktree with the
 fingerprint captured before the snapshot.
 
-Final result publication and Terminal-output transport follow the single
-canonical contract in the root `AGENTS.md` section `Human Herdr navigation and
-action location`. This operations document does not duplicate its retrieval,
-semantic filename, or future parallel-run rules.
+Final result publication, workspace-bound immutable run history, lifecycle
+finalization, and Terminal-output transport follow the single canonical
+contract in the root `AGENTS.md` section `Human Herdr navigation and action
+location`. This operations document does not duplicate its retrieval, envelope,
+semantic filename, or concurrency rules.
 
 ## Worker Startup And Recovery
 
