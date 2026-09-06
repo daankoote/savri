@@ -1,4 +1,5 @@
 import { payloadHash } from "../../supabase/functions/_shared/app_foundation.ts";
+import { createSignupSigningPresentationReceiptV1 } from "../../supabase/functions/_shared/app_signup_signing_presentation.ts";
 import {
   tenantConfigurationManifestCanonicalSha256,
   type TenantConfigurationManifestHashInputV1,
@@ -17,6 +18,10 @@ import {
   resolveSigningLegalDocumentBundle,
   SIGNING_LEGAL_RUNTIME_DOCUMENTS,
 } from "../../supabase/functions/_shared/signing_legal_runtime.ts";
+import {
+  createReceiptBoundLegalDocuments,
+  legalDocumentIsSigningReady,
+} from "../../app/src/features/signup/signing/legalDocumentRegistry.ts";
 
 export const LOCAL_SIGNING_CONFIGURATION_WRITE_TABLES = Object.freeze(
   [
@@ -730,20 +735,46 @@ async function signingReadiness(
   if (!configuration.ok) {
     fail(`local_signing_configuration_${configuration.code}`);
   }
+  const evaluationTime = new Date().toISOString();
   const materials = await resolveTenantSigningMaterialBundleV1(
     client,
     gate.executionContext,
     configuration.value,
-    new Date().toISOString(),
+    evaluationTime,
   );
   if (!materials.ok) fail(`local_signing_${materials.code}`);
   const documents = await resolveSigningLegalDocumentBundle(
     materials.value.legal.content.documents,
-    { supabaseUrl: environment.SUPABASE_URL },
+    {
+      supabaseUrl: environment.SUPABASE_URL,
+      evaluationTime,
+      localActivationEffectiveFrom: configuration.value.manifest.effectiveFrom,
+    },
   );
   if (documents?.length !== 4) {
     fail("local_signing_legal_documents_unavailable");
   }
+  const receipt = await createSignupSigningPresentationReceiptV1({
+    intakeId: crypto.randomUUID(),
+    authenticatedAuthUserId: crypto.randomUUID(),
+    tenantExecution: gate.executionContext,
+    configuration: configuration.value,
+    materials: materials.value,
+    legalDocuments: documents,
+    presentedAt: evaluationTime,
+    requestId: "canonical-local-signing-readiness",
+  });
+  const browserDocuments = receipt
+    ? createReceiptBoundLegalDocuments(
+      receipt.response.receipt_reference,
+      receipt.response.legal_documents,
+    )
+    : null;
+  if (
+    !browserDocuments || browserDocuments.length !== 4 ||
+    browserDocuments.some((document) => !legalDocumentIsSigningReady(document))
+  ) fail("local_signing_legal_document_delivery_unavailable");
+  console.log("LOCAL_SIGNING_LEGAL_DOCUMENT_DELIVERY=PASS");
 }
 
 async function runPsql(databaseUrl: string, sql: string): Promise<void> {

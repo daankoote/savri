@@ -187,6 +187,8 @@ export type ResolvedSigningLegalDocument = Readonly<{
 
 export type SigningLegalRuntimeEnvironment = {
   supabaseUrl: string;
+  evaluationTime?: string;
+  localActivationEffectiveFrom?: string;
 };
 
 export function isExplicitLocalSigningEnvironment(
@@ -245,6 +247,18 @@ export async function resolveSigningLegalDocumentBundle(
     : SIGNING_LEGAL_RUNTIME_DOCUMENTS;
   const resolved: ResolvedSigningLegalDocument[] = [];
   const seen = new Set<SigningLegalDocumentType>();
+  const evaluationTime = Date.parse(
+    environment.evaluationTime ?? new Date().toISOString(),
+  );
+  const localActivationEffectiveFrom =
+    isExplicitLocalSigningEnvironment(environment) &&
+      environment.localActivationEffectiveFrom
+      ? environment.localActivationEffectiveFrom
+      : null;
+  const localActivationTime = localActivationEffectiveFrom
+    ? Date.parse(localActivationEffectiveFrom)
+    : Number.NaN;
+  if (!Number.isFinite(evaluationTime)) return null;
   for (const binding of bindings) {
     if (seen.has(binding.documentType)) return null;
     const document = source.find((candidate) =>
@@ -256,6 +270,19 @@ export async function resolveSigningLegalDocumentBundle(
     if (!document) return null;
     const contentSha256 = await signingSha256Hex(document.canonicalContent);
     if (contentSha256 !== binding.contentSha256) return null;
+    const sourceEffectiveTime = document.effectiveFrom
+      ? Date.parse(document.effectiveFrom)
+      : Number.NaN;
+    const effectiveFrom = document.status === "CURRENT" &&
+        Number.isFinite(sourceEffectiveTime) &&
+        sourceEffectiveTime <= evaluationTime
+      ? document.effectiveFrom
+      : document.status === "VALIDATION_CANDIDATE" &&
+          Number.isFinite(localActivationTime) &&
+          localActivationTime <= evaluationTime
+      ? localActivationEffectiveFrom
+      : null;
+    if (!effectiveFrom) return null;
     seen.add(binding.documentType);
     resolved.push(Object.freeze({
       documentReference: document.documentReference,
@@ -265,7 +292,7 @@ export async function resolveSigningLegalDocumentBundle(
       title: document.title,
       canonicalContent: document.canonicalContent,
       contentSha256,
-      effectiveFrom: document.effectiveFrom,
+      effectiveFrom,
     }));
   }
   const ordered = ([

@@ -95,7 +95,11 @@ assert.match(
 );
 assert.match(signingSource, /resolveTenantSigningMaterialBundleV1\(/);
 assert.match(signingSource, /resolveSigningLegalDocumentBundle\(/);
-assert.doesNotMatch(signingSource, /auth\.|app_signup_|storage\./i);
+assert.match(signingSource, /LOCAL_SIGNING_LEGAL_DOCUMENT_DELIVERY=PASS/);
+assert.doesNotMatch(
+  signingSource,
+  /\bauth\.|\bstorage\.|\bpublic\.app_signup_|\b(?:from|into|update|join)\s+(?:public\.)?app_signup_/i,
+);
 assert.doesNotMatch(source, /npm\s+(?:install|update)|ln\s+-s/);
 
 process.stdout.write("LOCAL_RUNTIME06_REGRESSION=PASS\n");

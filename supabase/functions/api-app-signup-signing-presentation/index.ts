@@ -124,7 +124,11 @@ serve(async (req) => {
   }
   const legalDocuments = await resolveSigningLegalDocumentBundle(
     materials.value.legal.content.documents,
-    { supabaseUrl: Deno.env.get("SUPABASE_URL") || "" },
+    {
+      supabaseUrl: Deno.env.get("SUPABASE_URL") || "",
+      evaluationTime,
+      localActivationEffectiveFrom: configuration.value.manifest.effectiveFrom,
+    },
   );
   if (!legalDocuments) {
     return appErrorResponse(

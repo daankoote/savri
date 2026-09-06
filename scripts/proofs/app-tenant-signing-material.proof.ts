@@ -685,14 +685,25 @@ const hashBindingResult = await databaseFixture(`
    and component.component_kind = material.material_kind
    and component.content_sha256 = material.canonical_content_sha256
   where material.binding_authority =
-    'server_canonical_signing_material_v1';
+    'server_canonical_signing_material_v1'
+    and material.tenant_id = '${TENANT_ID}'
+    and material.id in (
+      '${MATERIAL_IDS.operational}',
+      '${MATERIAL_IDS.legal}',
+      '${MATERIAL_IDS.fee}'
+    );
 `);
 assert(hashBindingResult === "3", "Q23_component_content_hash_not_bound");
 q(23);
 
 const persistedCount = await psql(`
   select count(*)::text
-  from public.app_tenant_signing_material_revisions;
+  from public.app_tenant_signing_material_revisions
+  where id in (
+    '${MATERIAL_IDS.operational}',
+    '${MATERIAL_IDS.legal}',
+    '${MATERIAL_IDS.fee}'
+  );
 `);
 assert(
   persistedCount === "0" &&

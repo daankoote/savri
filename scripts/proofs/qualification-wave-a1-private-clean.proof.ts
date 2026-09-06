@@ -307,6 +307,26 @@ async function cleanup(
     const split = locator.indexOf("/");
     if (split > 0) await service.storage.from(locator.slice(0, split)).remove([locator.slice(split + 1)]);
   }
+  const fixtureUuidIds = [...ids].filter((id) => /^[0-9a-f-]{36}$/i.test(id));
+  const promotionScopes = fixtureUuidIds.map((id) =>
+    quote(`app_promote_signed_signup_v1:${id}`)
+  ).join(",") || "null";
+  const proofOwnedRecordIds = (await psql(config, `
+    select id::text from public.app_intake_audit_events
+    where request_id like ${quote(`${prefix}%`)}
+       or idempotency_key like ${quote(`${prefix}%`)}
+       or actor_ref like ${quote(`%${prefix}%`)}
+       or event_data::text like ${quote(`%${prefix}%`)}
+    union
+    select id::text from public.app_idempotency_keys
+    where key like ${quote(`${prefix}%`)}
+       or scope like ${quote(`%${prefix}%`)}
+       or scope in (${promotionScopes});
+  `)).split(/\s+/).filter(Boolean);
+  for (const id of proofOwnedRecordIds) {
+    assert(/^[0-9a-f-]{36}$/i.test(id), "proof_owned_record_id_invalid");
+    ids.add(id);
+  }
   const uuidIds = [...ids].filter((id) => /^[0-9a-f-]{36}$/i.test(id));
   if (uuidIds.length > 0) {
     const values = uuidIds.map((id) => `(${quote(id)}::uuid)`).join(",");
@@ -343,9 +363,13 @@ async function cleanup(
           having bool_or(a.atttypid='uuid'::regtype)
         loop execute format('delete from %I.%I where %s',item.schema_name,item.table_name,item.expression); end loop;
       end $cleanup$;
-      delete from public.app_audit_events where request_id like ${quote(`${prefix}%`)} or actor_ref like ${quote(`%${prefix}%`)};
-      delete from public.app_idempotency_keys where key like ${quote(`${prefix}%`)} or scope like ${quote(`%${prefix}%`)};
       commit;`);
+    if (proofOwnedRecordIds.length > 0) {
+      const residue = await psql(config, `select
+        (select count(*) from public.app_intake_audit_events where id in (${proofOwnedRecordIds.map(quote).join(",")})) +
+        (select count(*) from public.app_idempotency_keys where id in (${proofOwnedRecordIds.map(quote).join(",")}));`);
+      assert(residue === "0", `proof_owned_cleanup_incomplete:${residue}`);
+    }
   }
   for (const userId of authUsers) await service.auth.admin.deleteUser(userId);
   if (mailpitMessageId) {

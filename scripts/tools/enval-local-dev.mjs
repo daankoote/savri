@@ -325,6 +325,12 @@ function localSigningConfiguration(
   if (!output.split(/\r?\n/).includes(marker)) {
     fail(`local_signing_configuration_${operation}_invalid`);
   }
+  if (
+    operation === "ready" &&
+    !output.split(/\r?\n/).includes(
+      "LOCAL_SIGNING_LEGAL_DOCUMENT_DELIVERY=PASS",
+    )
+  ) fail("local_signing_legal_document_delivery_invalid");
 }
 
 function edgeRuntimePreflight(sourceRoot) {
@@ -613,6 +619,7 @@ async function ready(viteUrl, sourceRoot) {
       "PRESENTATION_BOOTSTRAP=PASS",
       "AUTH_BOOTSTRAP=PASS",
       "SIGNING_CONFIGURATION=PASS",
+      "LEGAL_DOCUMENT_DELIVERY=PASS",
       "EVIDENCE_REVIEW_FINALIZER=PASS",
       "EVIDENCE_REVIEW_CORRECTION_HANDOFF=PASS",
       "DOSSIERS_ROUTE=PASS",

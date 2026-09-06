@@ -4,6 +4,12 @@ import {
 } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 import { buildLocalSigningConfigurationGraph } from "../tools/enval-local-signing-configuration.ts";
+import {
+  createReceiptBoundLegalDocuments,
+  legalDocumentIsSigningReady,
+  type ReceiptBoundLegalDocumentInput,
+} from "../../app/src/features/signup/signing/legalDocumentRegistry.ts";
+import { signingSha256Hex } from "../../supabase/functions/_shared/signing_legal_runtime.ts";
 
 type Json = Record<string, unknown>;
 type LocalRuntime = Readonly<{
@@ -570,6 +576,27 @@ async function setup() {
         presentation.body.legal_documents.length === 4,
       "fixture_presentation_sanity_failed",
     );
+    const responseDocuments = presentation.body
+      .legal_documents as ReceiptBoundLegalDocumentInput[];
+    assert(
+      (await Promise.all(
+        responseDocuments.map(async (document) =>
+          Boolean(document.canonical_content) &&
+          await signingSha256Hex(document.canonical_content) ===
+            document.content_sha256
+        ),
+      )).every(Boolean),
+      "fixture_legal_document_content_hash_failed",
+    );
+    const browserDocuments = createReceiptBoundLegalDocuments(
+      String(presentation.body.receipt_reference ?? ""),
+      responseDocuments,
+    );
+    assert(
+      browserDocuments?.length === 4 &&
+        browserDocuments.every(legalDocumentIsSigningReady),
+      "fixture_browser_legal_document_contract_failed",
+    );
     const challenge = await post(
       config,
       "api-app-signup-signing-challenge",
@@ -640,6 +667,8 @@ async function setup() {
       ]),
     );
     console.log("SL01C_BROWSER_FIXTURE_SETUP=PASS");
+    console.log("LEGAL_DOCUMENT_DELIVERY=PASS");
+    console.log("LEGAL_DOCUMENT_CONTENT_HASH=PASS");
     console.log(`FIXTURE_ID=${fixtureId}`);
     console.log(
       `FIXTURE_TENANT=SL01-C Test Operator / local / ${tenantReference}`,

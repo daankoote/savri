@@ -296,7 +296,7 @@ assert(
 for (
   const [path, expected] of Object.entries({
     "app/src/features/invoice-analysis/invoicePdfParserAdapter.ts":
-      "703a31e9aabf72d64d0f5c01e0ed239a9c29077c164e16fecff2234b379f4850",
+      "5c724902875a2365f70686acd40d09f20b76a4af81249908666d747f66cc0c57",
     "app/src/features/invoice-analysis/documentObservationEnvelope.ts":
       "d3efb3e7e28e1d666727fe020cd68178843cb0a68f21cdfe9f3d6b92fd9a9718",
     "app/src/features/invoice-analysis/documentTypeClassifier.ts":
@@ -304,9 +304,9 @@ for (
     "app/src/features/invoice-analysis/energyEanCandidateExtractor.ts":
       "de06da71bf03185227ed563e5bfb652f804f08c739c9623851d0cf71a644577e",
     "app/src/features/invoice-analysis/energyDocumentObservation.ts":
-      "6d591c0d392ef408239c0220615dbc5a5c5e1f92c09a26233e244e04b47f3565",
+      "43dd608d6009c9b348d5946fb6e56876ac58790db43f87afb9202d50b7b72e03",
     "app/src/features/signup/documentSemanticProjector.ts":
-      "39ba67165aa0bd969498e3d400d5b7c871177821c21bec096fcdef300ecbb9b8",
+      "e34f195df8e7f44f716f88d919dbefcc5bf6f2c8a78d9ff8e9c1e0825fad3f4b",
     "app/src/features/signup/signupSubmitMapper.ts":
       "d348960a22701e5baec962fdb8e8964d8025b3afa6d8f7d3b30ba5ede147ad06",
     [resolveTenantEnvalArchivedMigrationPath(

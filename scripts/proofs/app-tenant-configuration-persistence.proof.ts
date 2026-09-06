@@ -833,8 +833,14 @@ q(36);
 
 assert(
   await psql(`
-    select (select count(*) from public.${COMPONENT_TABLE})::text || '|' ||
-      (select count(*) from public.${MANIFEST_TABLE})::text;
+    select (
+      select count(*) from public.${COMPONENT_TABLE}
+      where tenant_id in ('${TENANT_ID}', '${OTHER_TENANT_ID}')
+    )::text || '|' || (
+      select count(*) from public.${MANIFEST_TABLE}
+      where id = '${MANIFEST_ID}'
+         or tenant_id in ('${TENANT_ID}', '${OTHER_TENANT_ID}')
+    )::text;
   `) === "0|0",
   "synthetic_configuration_rows_remain",
 );
