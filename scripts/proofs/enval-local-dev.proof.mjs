@@ -12,6 +12,10 @@ const source = readFileSync(
   new URL("../tools/enval-local-dev.mjs", import.meta.url),
   "utf8",
 );
+const signingSource = readFileSync(
+  new URL("../tools/enval-local-signing-configuration.ts", import.meta.url),
+  "utf8",
+);
 const migrationReadiness = source.match(
   /function parseMigrationState\(sourceRoot\) \{[\s\S]*?\n\}(?=\n\nfunction parseViteUrl)/,
 )?.[0];
@@ -80,6 +84,18 @@ assert.match(source, /"LOCAL_FUNCTIONS_RUNTIME=OWNED"/);
 assert.match(source, /TEMPORARY_DEPENDENCY_BRIDGE/);
 assert.match(source, /cleanupDependencyBridge/);
 assert.match(source, /"TRACKED_RUNTIME_LINKS_CREATED=NO"/);
+assert.match(source, /localSigningConfiguration\(\s*"bootstrap"/);
+assert.match(source, /localSigningConfiguration\(\s*"ready"/);
+assert.match(source, /"SIGNING_CONFIGURATION=PASS"/);
+assert.match(source, /async function waitForPresentationBootstrap\(/);
+assert.match(source, /The owned Edge Functions runtime may still be starting/);
+assert.match(
+  signingSource,
+  /new DataPlaneTenantConfigurationV1Adapter\(client\)/,
+);
+assert.match(signingSource, /resolveTenantSigningMaterialBundleV1\(/);
+assert.match(signingSource, /resolveSigningLegalDocumentBundle\(/);
+assert.doesNotMatch(signingSource, /auth\.|app_signup_|storage\./i);
 assert.doesNotMatch(source, /npm\s+(?:install|update)|ln\s+-s/);
 
 process.stdout.write("LOCAL_RUNTIME06_REGRESSION=PASS\n");

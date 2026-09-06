@@ -258,6 +258,75 @@ function managedLocalConfiguration(controlPlaneStatus, sourceRoot) {
   });
 }
 
+function localSigningConfiguration(
+  operation,
+  tenantStatus,
+  runtimeEnvironment,
+  sourceRoot,
+) {
+  if (!["bootstrap", "ready"].includes(operation)) {
+    fail("local_signing_operation_invalid");
+  }
+  assertLocalUrl(tenantStatus.environment.API_URL, 54321);
+  assertLocalUrl(
+    tenantStatus.environment.DB_URL.replace(/^postgresql:/, "http:"),
+    54322,
+  );
+  const environmentNames = [
+    "DATABASE_URL",
+    "ENVIRONMENT",
+    "SUPABASE_URL",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "ENVAL_TENANT_RESOLUTION_AUTHORITY_MODE",
+    "ENVAL_TENANT_RESOLUTION_SHADOW_MODE",
+    "ENVAL_TENANT_REFERENCE",
+    "ENVAL_TRUSTED_TENANT_ROUTING_KEY",
+    "ENVAL_DATA_PLANE_LOCATOR_ID",
+    "ENVAL_DATA_PLANE_DEPLOYMENT_OWNERSHIP",
+    "ENVAL_DATA_PLANE_PROVIDER_TYPE",
+    "ENVAL_DATA_PLANE_REFERENCE",
+    "ENVAL_FIXED_DATA_PLANE_REFERENCE",
+    "ENVAL_APPLICATION_ROUTE_REFERENCE",
+    "ENVAL_DATA_PLANE_SECRET_REFERENCE_ID",
+  ];
+  const environment = {
+    DATABASE_URL: tenantStatus.environment.DB_URL,
+    SUPABASE_URL: tenantStatus.environment.API_URL,
+    SUPABASE_SERVICE_ROLE_KEY:
+      tenantStatus.environment.SERVICE_ROLE_KEY ?? "",
+    ...runtimeEnvironment,
+  };
+  const capability = operation === "bootstrap"
+    ? "--allow-run=psql"
+    : "--allow-net=127.0.0.1:54321,localhost:54321";
+  const output = command(
+    "deno",
+    [
+      "run",
+      "--cached-only",
+      "--no-lock",
+      "--config",
+      "supabase/functions/deno.json",
+      `--allow-env=${environmentNames.join(",")}`,
+      capability,
+      resolve(TOOL_ROOT, "scripts/tools/enval-local-signing-configuration.ts"),
+      operation,
+    ],
+    {
+      cwd: sourceRoot,
+      timeout: 60_000,
+      env: environment,
+      failureCode: `local_signing_configuration_${operation}_failed`,
+    },
+  );
+  const marker = operation === "bootstrap"
+    ? "LOCAL_SIGNING_BOOTSTRAP=PASS"
+    : "LOCAL_SIGNING_READINESS=PASS";
+  if (!output.split(/\r?\n/).includes(marker)) {
+    fail(`local_signing_configuration_${operation}_invalid`);
+  }
+}
+
 function edgeRuntimePreflight(sourceRoot) {
   command(
     "deno",
@@ -340,6 +409,27 @@ async function fetchBounded(url, init = {}) {
   }
 }
 
+async function waitForPresentationBootstrap(apiBase, headers) {
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(`${apiBase}/api-app-presentation-bootstrap`, {
+        headers,
+        signal: AbortSignal.timeout(2_000),
+      });
+      const body = await response.json().catch(() => null);
+      if (
+        response.status === 200 && body?.ok === true &&
+        body?.mode === "presentation_bootstrap_browser"
+      ) return;
+    } catch {
+      // The owned Edge Functions runtime may still be starting.
+    }
+    await new Promise((resolveWait) => setTimeout(resolveWait, 250));
+  }
+  fail("presentation_bootstrap_not_ready");
+}
+
 function parseMigrationState(sourceRoot) {
   const raw = command(
     "supabase",
@@ -376,7 +466,11 @@ function parseViteUrl(raw) {
 
 async function ready(viteUrl, sourceRoot) {
   const tenant = localStatusEnvironment("TENANT_ENVAL", sourceRoot);
-  localStatusEnvironment("CONTROL_PLANE", sourceRoot);
+  const controlPlane = localStatusEnvironment("CONTROL_PLANE", sourceRoot);
+  const runtimeEnvironment = managedLocalConfiguration(
+    controlPlane,
+    sourceRoot,
+  );
   assertLocalUrl(tenant.environment.API_URL, 54321);
   const anonKey = tenant.environment.ANON_KEY;
   if (!anonKey) fail("tenant_anon_key_missing");
@@ -391,20 +485,7 @@ async function ready(viteUrl, sourceRoot) {
     apikey: anonKey,
     Origin: viteUrl,
   };
-  const presentation = await fetchBounded(
-    `${apiBase}/api-app-presentation-bootstrap`,
-    { headers },
-  );
-  let presentationBody;
-  try {
-    presentationBody = await presentation.json();
-  } catch {
-    fail("presentation_bootstrap_invalid");
-  }
-  if (
-    presentation.status !== 200 || presentationBody?.ok !== true ||
-    presentationBody?.mode !== "presentation_bootstrap_browser"
-  ) fail("presentation_bootstrap_not_ready");
+  await waitForPresentationBootstrap(apiBase, headers);
 
   const authHealth = await fetchBounded(
     `${tenant.environment.API_URL}/auth/v1/health`,
@@ -515,6 +596,13 @@ async function ready(viteUrl, sourceRoot) {
     ) fail("customer_correction_signing_runtime_not_ready");
   }
 
+  localSigningConfiguration(
+    "ready",
+    tenant,
+    runtimeEnvironment,
+    sourceRoot,
+  );
+
   const pending = parseMigrationState(sourceRoot);
   if (pending !== 0) fail("tenant_migrations_pending", String(pending));
   process.stdout.write(
@@ -524,6 +612,7 @@ async function ready(viteUrl, sourceRoot) {
       "SUPABASE=PASS",
       "PRESENTATION_BOOTSTRAP=PASS",
       "AUTH_BOOTSTRAP=PASS",
+      "SIGNING_CONFIGURATION=PASS",
       "EVIDENCE_REVIEW_FINALIZER=PASS",
       "EVIDENCE_REVIEW_CORRECTION_HANDOFF=PASS",
       "DOSSIERS_ROUTE=PASS",
@@ -540,10 +629,16 @@ async function serve(sourceRoot) {
     if (error instanceof PrimaryRuntimeError) fail(error.code);
     throw error;
   }
-  localStatusEnvironment("TENANT_ENVAL", sourceRoot);
+  const tenant = localStatusEnvironment("TENANT_ENVAL", sourceRoot);
   const controlPlane = localStatusEnvironment("CONTROL_PLANE", sourceRoot);
   const runtimeEnvironment = managedLocalConfiguration(
     controlPlane,
+    sourceRoot,
+  );
+  localSigningConfiguration(
+    "bootstrap",
+    tenant,
+    runtimeEnvironment,
     sourceRoot,
   );
   edgeRuntimePreflight(sourceRoot);
@@ -609,6 +704,7 @@ async function serve(sourceRoot) {
         "TENANT_TARGET=TENANT_ENVAL",
         "PRESENTATION_SOURCE=platform_control_plane_presentation_v1",
         "TENANT_RESOLVER=static_single_tenant_v1",
+        "LOCAL_SIGNING_BOOTSTRAP=PASS",
         `DEPENDENCY_SOURCE=${primaryRuntime.dependencySource}`,
         `TEMPORARY_DEPENDENCY_BRIDGE=${
           dependencyBridge ? "OWNED" : "NOT_REQUIRED"
