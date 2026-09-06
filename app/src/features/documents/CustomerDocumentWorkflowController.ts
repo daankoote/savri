@@ -48,6 +48,7 @@ export type CustomerDocumentWorkflowSourceInput = Readonly<{
 
 export type CustomerDocumentWorkflowFactInput = Readonly<{
   factKey: DocumentFactKey;
+  given?: ReactNode;
   hidden?: boolean;
   sources: readonly CustomerDocumentWorkflowSourceInput[];
   editable: boolean;
@@ -313,7 +314,7 @@ export function createCustomerDocumentWorkflowGroup(
       const row = Object.freeze({
         id: rowId,
         hidden: fact.hidden,
-        given: definition.label,
+        given: fact.given ?? definition.label,
         sources: Object.freeze(matrixSources),
         customer: Object.freeze(interaction),
         enval: policy.projectedEnvalRoute,

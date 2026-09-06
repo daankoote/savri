@@ -27,8 +27,10 @@ import {
 } from "./useCustomerCorrectionHandoff.ts";
 import {
   createCustomerCorrectionReplacementUploadCardModel,
+  customerCorrectionInteractionLocked,
   customerCorrectionReasonLabel,
   customerCorrectionRowStatusLabel,
+  submitCustomerCorrectionFinalization,
 } from "./CustomerCorrectionHandoffPanel.tsx";
 import { DocumentEvidenceUploadCard } from "../documents/DocumentEvidenceUploadCard.tsx";
 import { SignerPanel } from "../signup/signing/SignerPanel.tsx";
@@ -414,13 +416,13 @@ assert(
     publishedHtml.includes("Upload en controle") &&
     publishedHtml.includes("Locatie 1") &&
     publishedHtml.includes("Laadpaal 1") &&
-    publishedHtml.includes("Energieleverancier") &&
+  publishedHtml.includes("Energieleverancier") &&
+    publishedHtml.includes("Reden: Gegeven onjuist") &&
+    publishedHtml.includes("Toelichting: foute invoer") &&
     publishedHtml.includes('title="Bevestigen niet beschikbaar"') &&
     publishedHtml.includes('title="Corrigeren"') &&
     !publishedHtml.includes("Energieleverancier nieuwe waarde") &&
     publishedHtml.includes("Wacht op klant") &&
-    !publishedHtml.includes("Gegeven onjuist") &&
-    !publishedHtml.includes("foute invoer") &&
     !publishedHtml.includes('aria-label="Dossier"') &&
     !publishedHtml.includes('aria-label="Locaties"') &&
     !publishedHtml.includes('aria-label="Documenten"') &&
@@ -444,9 +446,10 @@ const multipleHtml = renderDashboard(readyState(multiple.model));
 assert(
   (multipleHtml.match(/class="fact-table__row"/g) || []).length === 8 &&
     !multipleHtml.includes("portal-evidence-card") &&
-    !multipleHtml.includes("Gegeven ontbreekt") &&
-    !multipleHtml.includes("Gegevens komen niet overeen") &&
-    !multipleHtml.includes(">Anders<") &&
+    multipleHtml.includes("Reden: Gegeven ontbreekt") &&
+    multipleHtml.includes("Reden: Gegevens komen niet overeen") &&
+    multipleHtml.includes("Reden: Anders") &&
+    (multipleHtml.match(/Toelichting: foute invoer/g) || []).length === 3 &&
     customerCorrectionReasonLabel("INCORRECT_INFORMATION") ===
       "Gegeven onjuist",
   "Q10_multiple_items_or_reason_mapping_invalid",
@@ -626,6 +629,8 @@ const crossHtml = renderDashboard(readyState(crossDecoded.model));
 assert(
   crossHtml.includes("Locatie 1") &&
     crossHtml.includes("Laadpaal 1") &&
+    crossHtml.includes("Energieleverancier · Energiedocument") &&
+    crossHtml.includes("Serienummer · Installatiefactuur") &&
     (crossHtml.match(/Wijzigingen indienen/g) || []).length === 1,
   "Q17_cross_document_single_action_invalid",
 );
@@ -779,6 +784,144 @@ assert(
   "Q21_finalize_request_invalid",
 );
 
+let releaseSessionFinalize: (
+  result: Readonly<{
+    ok: true;
+    value: Readonly<{ finalized: true }>;
+  }>,
+) => void = () => undefined;
+let sessionFinalizeCalls = 0;
+let sessionPendingTransitions = 0;
+let sessionRefreshes = 0;
+let releaseSessionRefresh: (refreshed: boolean) => void = () => undefined;
+const sessionRuntime = {
+  attempt: { current: null },
+  submitting: { current: false },
+  finalize: (_idempotencyKey: string) => {
+    sessionFinalizeCalls += 1;
+    return new Promise<Readonly<{
+      ok: true;
+      value: Readonly<{ finalized: true }>;
+    }>>((resolve) => {
+      releaseSessionFinalize = resolve;
+    });
+  },
+  onPending: () => sessionPendingTransitions += 1,
+  onFailure: () => undefined,
+  onStale: () => undefined,
+  onSuccessRefresh: () => {
+    sessionRefreshes += 1;
+    return new Promise<boolean>((resolve) => {
+      releaseSessionRefresh = resolve;
+    });
+  },
+};
+const firstSessionFinalize = submitCustomerCorrectionFinalization(
+  "challenge:responses",
+  sessionRuntime,
+);
+await Promise.resolve();
+const concurrentSessionFinalize = submitCustomerCorrectionFinalization(
+  "challenge:responses",
+  sessionRuntime,
+);
+assert(
+  sessionFinalizeCalls === 1 && sessionPendingTransitions === 1 &&
+    sessionRuntime.submitting.current,
+  "Q42_concurrent_finalize_or_pending_lock_invalid",
+);
+releaseSessionFinalize({ ok: true, value: { finalized: true } });
+await Promise.resolve();
+await Promise.resolve();
+const refreshConcurrentFinalize = submitCustomerCorrectionFinalization(
+  "challenge:responses",
+  sessionRuntime,
+);
+assert(
+  sessionRefreshes === 1 && sessionRuntime.submitting.current &&
+    customerCorrectionInteractionLocked(
+      sessionRuntime.submitting.current,
+      "finalizing",
+    ) && sessionFinalizeCalls === 1,
+  "Q42_refresh_pending_lock_invalid",
+);
+releaseSessionRefresh(true);
+await Promise.all([
+  firstSessionFinalize,
+  concurrentSessionFinalize,
+  refreshConcurrentFinalize,
+]);
+assert(
+  sessionFinalizeCalls === 1 && sessionRefreshes === 1 &&
+    !sessionRuntime.submitting.current,
+  "Q42_success_refresh_count_invalid",
+);
+
+const retryKeys: string[] = [];
+let retryFailures = 0;
+let retryRefreshes = 0;
+const retryRuntime = {
+  attempt: { current: null },
+  submitting: { current: false },
+  finalize: async (idempotencyKey: string) => {
+    retryKeys.push(idempotencyKey);
+    return retryKeys.length === 1
+      ? {
+        ok: false as const,
+        error: {
+          code: "service_unavailable" as const,
+          message: "Ondertekenen is tijdelijk niet beschikbaar. Probeer het opnieuw.",
+        },
+      }
+      : { ok: true as const, value: { finalized: true as const } };
+  },
+  onPending: () => undefined,
+  onFailure: () => retryFailures += 1,
+  onStale: () => undefined,
+  onSuccessRefresh: async () => {
+    retryRefreshes += 1;
+    return true;
+  },
+};
+await submitCustomerCorrectionFinalization("retry-binding", retryRuntime);
+await submitCustomerCorrectionFinalization("retry-binding", retryRuntime);
+assert(
+  retryKeys.length === 2 && retryKeys[0] === retryKeys[1] &&
+    retryFailures === 1 && retryRefreshes === 1,
+  "Q42_ordinary_error_retry_or_idempotency_invalid",
+);
+
+let staleRecoveries = 0;
+let staleRefreshes = 0;
+const staleSessionRuntime = {
+  attempt: { current: null },
+  submitting: { current: false },
+  finalize: async () => ({
+    ok: false as const,
+    error: {
+      code: "stale_handoff" as const,
+      message: "Aanpassing is gewijzigd. Controleer opnieuw.",
+    },
+  }),
+  onPending: () => undefined,
+  onFailure: () => undefined,
+  onStale: () => staleRecoveries += 1,
+  onSuccessRefresh: async () => {
+    staleRefreshes += 1;
+    return true;
+  },
+};
+await submitCustomerCorrectionFinalization(
+  "stale-binding",
+  staleSessionRuntime,
+);
+assert(
+  staleRecoveries === 1 && staleRefreshes === 0 &&
+    staleSessionRuntime.attempt.current === null &&
+    !staleSessionRuntime.submitting.current,
+  "Q42_stale_refresh_handling_invalid",
+);
+
 const staleResult = await requestCustomerCorrectionChallenge({
   accessToken: "proof-token",
   caseRef: CASE_A,
@@ -838,7 +981,11 @@ assert(
     panelSource.includes("invalidateChallenge()") &&
     panelSource.includes("state.retryStale()") &&
     panelSource.includes("state.retry();") &&
-    !panelSource.includes("onRefreshSelectedDossier") &&
+    panelSource.includes("onRefreshSelectedDossier") &&
+    panelSource.includes("finalizeAttemptRef") &&
+    panelSource.includes("submitCustomerCorrectionFinalization") &&
+    panelSource.includes("customerCorrectionInteractionLocked") &&
+    panelSource.includes("inert={customerCorrectionInteractionLocked(") &&
     !panelSource.match(/localStorage|sessionStorage|indexedDB/i) &&
     !workspaceSource.match(/localStorage|sessionStorage|indexedDB/i),
   "Q23_single_flight_binding_refresh_or_ephemeral_draft_invalid",
@@ -1698,4 +1845,5 @@ console.log("CUSTOMER_CORRECTION_HANDOFF_UI_Q01_Q40=PASS");
 console.log("CUSTOMER04C3C5_CORRECTION_STATUS=PASS");
 console.log("CUSTOMER04C3C5_PARSER_RESOLUTION_DISTINCTION=PASS");
 console.log("CUSTOMER04C3C9H_CORRECTION_UI=PASS");
+console.log("CUSTOMER_CORRECTION_RESUBMISSION_SESSION=PASS");
 Deno.exit(0);

@@ -215,6 +215,7 @@ export function ActivePrivateDashboard({
               accessToken={accessToken}
               accountType={model.selected_dossier.account_type}
               dashboardModel={model}
+              onRefreshSelectedDossier={onRefreshSelectedDossier}
               state={correctionHandoff}
             />
 

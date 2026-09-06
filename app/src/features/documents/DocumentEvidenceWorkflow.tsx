@@ -47,6 +47,7 @@ export type DocumentEvidenceWorkflowModel = Readonly<{
   uploadPrelude?: ReactNode;
   uploadActions?: ReactNode;
   primaryAction?: DocumentEvidenceWorkflowAction;
+  interactionLocked?: boolean;
   eyebrow?: string;
   title?: string;
   reviewTitle?: string;
@@ -61,6 +62,7 @@ export function DocumentEvidenceWorkflow({
   eyebrow = "Stap 2",
   groups,
   id,
+  interactionLocked = false,
   primaryAction,
   reviewTitle = "Controleer de documentgegevens",
   title = "Upload en controle",
@@ -74,9 +76,11 @@ export function DocumentEvidenceWorkflow({
 
   return (
     <section
+      aria-busy={interactionLocked || undefined}
       aria-labelledby={titleId}
       className="signup-section document-evidence-workflow"
       id={id}
+      inert={interactionLocked || undefined}
     >
       <div className="signup-section-header">
         <p className="eyebrow">{eyebrow}</p>

@@ -37,6 +37,7 @@ import {
   type CustomerCorrectionFactResolution,
   type CustomerCorrectionHandoffItem,
   type CustomerCorrectionReason,
+  type CustomerCorrectionSigningError,
   finalizeCustomerCorrection,
   requestCustomerCorrectionChallenge,
 } from "./customerCorrectionHandoffClient.ts";
@@ -86,6 +87,86 @@ export function customerCorrectionRowStatusLabel(
   workspaceItem: CustomerCorrectionWorkspaceItem,
 ): "Handmatig aangepast" | "Nog invullen" {
   return workspaceItem.valid ? "Handmatig aangepast" : "Nog invullen";
+}
+
+type CustomerCorrectionFinalizeAttempt = Readonly<{
+  bindingKey: string;
+  idempotencyKey: string;
+}>;
+
+type CustomerCorrectionFinalizeRuntime = Readonly<{
+  attempt: { current: CustomerCorrectionFinalizeAttempt | null };
+  submitting: { current: boolean };
+  finalize: (
+    idempotencyKey: string,
+  ) => ReturnType<typeof finalizeCustomerCorrection>;
+  onPending: () => void;
+  onFailure: (error: CustomerCorrectionSigningError) => void;
+  onStale: () => void;
+  onSuccessRefresh: () => Promise<boolean>;
+}>;
+
+type CustomerCorrectionRuntimeStatus =
+  | "idle"
+  | "requesting"
+  | "awaiting_otp"
+  | "finalizing"
+  | "error";
+
+export function customerCorrectionInteractionLocked(
+  submitting: boolean,
+  runtimeStatus: CustomerCorrectionRuntimeStatus,
+): boolean {
+  return submitting || runtimeStatus === "finalizing";
+}
+
+export function selectCustomerCorrectionFinalizeAttempt(
+  previous: CustomerCorrectionFinalizeAttempt | null,
+  bindingKey: string,
+  createIdempotencyKey: () => string = () => crypto.randomUUID(),
+): CustomerCorrectionFinalizeAttempt {
+  if (previous?.bindingKey === bindingKey) return previous;
+  return Object.freeze({ bindingKey, idempotencyKey: createIdempotencyKey() });
+}
+
+export async function submitCustomerCorrectionFinalization(
+  bindingKey: string,
+  runtime: CustomerCorrectionFinalizeRuntime,
+): Promise<void> {
+  if (runtime.submitting.current) return;
+  const attempt = selectCustomerCorrectionFinalizeAttempt(
+    runtime.attempt.current,
+    bindingKey,
+  );
+  runtime.attempt.current = attempt;
+  runtime.submitting.current = true;
+  runtime.onPending();
+  const result = await runtime.finalize(attempt.idempotencyKey).catch(() => ({
+    ok: false as const,
+    error: Object.freeze({
+      code: "service_unavailable" as const,
+      message: "Ondertekenen is tijdelijk niet beschikbaar. Probeer het opnieuw.",
+    }),
+  }));
+  if (result.ok) {
+    const refreshed = await runtime.onSuccessRefresh().catch(() => false);
+    runtime.submitting.current = false;
+    if (!refreshed) {
+      runtime.onFailure(Object.freeze({
+        code: "service_unavailable",
+        message:
+          "De dossiergegevens konden tijdelijk niet worden geladen. Probeer het opnieuw.",
+      }));
+    }
+    return;
+  }
+  runtime.submitting.current = false;
+  if (result.error.code === "stale_handoff") {
+    runtime.attempt.current = null;
+    runtime.onStale();
+    return;
+  }
+  runtime.onFailure(result.error);
 }
 
 export type ReplacementUploadUiState =
@@ -423,6 +504,28 @@ function createCorrectionCustomerWorkflowGroup({
     const itemRefs = valueItems.map((item) => item.item.itemRef);
     return Object.freeze({
       factKey: definition.factKey,
+      given: (
+        <span className="fact-review-assessment">
+          {workspaceItems.map((workspaceItem) => (
+            <span
+              className="fact-review-assessment"
+              key={workspaceItem.item.itemRef}
+            >
+              <span>
+                {workspaceItem.item.factLabel} · {workspaceItem.item.documentLabel}
+              </span>
+              <span>
+                Reden: {customerCorrectionReasonLabel(
+                  workspaceItem.item.correctionReason,
+                )}
+              </span>
+              <span>
+                Toelichting: {workspaceItem.item.correctionInstruction}
+              </span>
+            </span>
+          ))}
+        </span>
+      ),
       sources,
       editable: valueItems.length > 0,
       browserResolution,
@@ -517,11 +620,13 @@ function ReadyCustomerCorrectionHandoffPanel({
   accessToken,
   accountType,
   dashboardModel,
+  onRefreshSelectedDossier,
   state,
 }: {
   accessToken: string;
   accountType: DashboardAccountType;
   dashboardModel: DashboardReadModel;
+  onRefreshSelectedDossier: () => Promise<boolean>;
   state: Extract<CustomerCorrectionHandoffState, { status: "ready" }>;
 }) {
   const handoff = state.model.handoff;
@@ -569,11 +674,14 @@ function ReadyCustomerCorrectionHandoffPanel({
   >(null);
   const [otp, setOtp] = useState("");
   const [runtimeStatus, setRuntimeStatus] = useState<
-    "idle" | "requesting" | "awaiting_otp" | "finalizing" | "error"
+    CustomerCorrectionRuntimeStatus
   >("idle");
   const [runtimeMessage, setRuntimeMessage] = useState(state.notice ?? "");
   const challengeRequestInFlightRef = useRef(false);
   const finalizeRequestInFlightRef = useRef(false);
+  const finalizeAttemptRef = useRef<CustomerCorrectionFinalizeAttempt | null>(
+    null,
+  );
   const uploadInFlightRefs = useRef(new Set<string>());
   const staleRecoveryHandledRef = useRef(false);
   const candidateSelections = useMemo<CustomerCorrectionCandidateSelections>(
@@ -603,7 +711,14 @@ function ReadyCustomerCorrectionHandoffPanel({
     [candidateSelections, draft, handoffItems, unconfirmedParserPrefills],
   );
   function invalidateChallenge(message = "Vraag een nieuwe code aan.") {
+    if (
+      customerCorrectionInteractionLocked(
+        finalizeRequestInFlightRef.current,
+        runtimeStatus,
+      )
+    ) return;
     if (!challenge) return;
+    finalizeAttemptRef.current = null;
     setChallenge(null);
     setOtp("");
     setRuntimeStatus("idle");
@@ -615,6 +730,12 @@ function ReadyCustomerCorrectionHandoffPanel({
     value: string,
     resolution: "source" | "manual",
   ) {
+    if (
+      customerCorrectionInteractionLocked(
+        finalizeRequestInFlightRef.current,
+        runtimeStatus,
+      )
+    ) return;
     staleRecoveryHandledRef.current = false;
     invalidateChallenge();
     setRuntimeMessage("");
@@ -648,6 +769,12 @@ function ReadyCustomerCorrectionHandoffPanel({
     itemRefs: readonly string[],
     sourceValue: string,
   ) {
+    if (
+      customerCorrectionInteractionLocked(
+        finalizeRequestInFlightRef.current,
+        runtimeStatus,
+      )
+    ) return;
     staleRecoveryHandledRef.current = false;
     invalidateChallenge();
     setRuntimeMessage("");
@@ -680,6 +807,12 @@ function ReadyCustomerCorrectionHandoffPanel({
     sourceId: string,
     value: string,
   ) {
+    if (
+      customerCorrectionInteractionLocked(
+        finalizeRequestInFlightRef.current,
+        runtimeStatus,
+      )
+    ) return;
     staleRecoveryHandledRef.current = false;
     invalidateChallenge();
     setRuntimeMessage("");
@@ -712,6 +845,12 @@ function ReadyCustomerCorrectionHandoffPanel({
   }
 
   function updateSignerInput(value: SignerInput) {
+    if (
+      customerCorrectionInteractionLocked(
+        finalizeRequestInFlightRef.current,
+        runtimeStatus,
+      )
+    ) return;
     staleRecoveryHandledRef.current = false;
     invalidateChallenge();
     setRuntimeMessage("");
@@ -739,6 +878,12 @@ function ReadyCustomerCorrectionHandoffPanel({
     file: File,
     attempt: CustomerCorrectionReplacementUploadAttempt,
   ) {
+    if (
+      customerCorrectionInteractionLocked(
+        finalizeRequestInFlightRef.current,
+        runtimeStatus,
+      )
+    ) return;
     const targetRef = target.replacementTargetRef;
     if (uploadInFlightRefs.current.has(targetRef)) return;
     uploadInFlightRefs.current.add(targetRef);
@@ -841,6 +986,12 @@ function ReadyCustomerCorrectionHandoffPanel({
     target: CustomerCorrectionReplacementTarget,
     file: File | null,
   ) {
+    if (
+      customerCorrectionInteractionLocked(
+        finalizeRequestInFlightRef.current,
+        runtimeStatus,
+      )
+    ) return;
     if (!file) return;
     staleRecoveryHandledRef.current = false;
     const attempt = createCustomerCorrectionReplacementUploadAttempt();
@@ -886,6 +1037,12 @@ function ReadyCustomerCorrectionHandoffPanel({
   }
 
   function retryReplacementUpload(target: CustomerCorrectionReplacementTarget) {
+    if (
+      customerCorrectionInteractionLocked(
+        finalizeRequestInFlightRef.current,
+        runtimeStatus,
+      )
+    ) return;
     const current = replacementUploads[target.replacementTargetRef];
     if (current?.status !== "ERROR") return;
     void runReplacementUpload(
@@ -898,6 +1055,12 @@ function ReadyCustomerCorrectionHandoffPanel({
   async function removeReplacementCandidate(
     target: CustomerCorrectionReplacementTarget,
   ) {
+    if (
+      customerCorrectionInteractionLocked(
+        finalizeRequestInFlightRef.current,
+        runtimeStatus,
+      )
+    ) return;
     const targetRef = target.replacementTargetRef;
     const current = replacementUploads[targetRef];
     if (
@@ -979,7 +1142,11 @@ function ReadyCustomerCorrectionHandoffPanel({
   async function requestChallenge() {
     if (
       !signingReady || challengeRequestInFlightRef.current ||
-      runtimeStatus === "requesting"
+      runtimeStatus === "requesting" ||
+      customerCorrectionInteractionLocked(
+        finalizeRequestInFlightRef.current,
+        runtimeStatus,
+      )
     ) return;
     challengeRequestInFlightRef.current = true;
     const issuedBindingKey = bindingKey;
@@ -1027,35 +1194,40 @@ function ReadyCustomerCorrectionHandoffPanel({
       !/^\d{6}$/.test(otp) || finalizeRequestInFlightRef.current ||
       runtimeStatus === "finalizing"
     ) return;
-    finalizeRequestInFlightRef.current = true;
-    setRuntimeStatus("finalizing");
-    setRuntimeMessage("");
-    try {
-      const result = await finalizeCustomerCorrection({
-        accessToken,
-        caseRef: state.model.caseRef,
-        challengeReference: challenge.receipt.challengeReference,
-        idempotencyKey: crypto.randomUUID(),
-        otp,
-        typedFullName: normalizedFullName,
-      });
-      if (!result.ok) {
-        if (result.error.code === "stale_handoff") {
-          recoverStaleHandoff();
-          return;
-        }
-        if (result.error.code === "challenge_unavailable") {
+    const finalizeBindingKey =
+      `${challenge.receipt.challengeReference}:${challenge.bindingKey}`;
+    await submitCustomerCorrectionFinalization(finalizeBindingKey, {
+      attempt: finalizeAttemptRef,
+      submitting: finalizeRequestInFlightRef,
+      finalize: (idempotencyKey) =>
+        finalizeCustomerCorrection({
+          accessToken,
+          caseRef: state.model.caseRef,
+          challengeReference: challenge.receipt.challengeReference,
+          idempotencyKey,
+          otp,
+          typedFullName: normalizedFullName,
+        }),
+      onPending: () => {
+        setRuntimeStatus("finalizing");
+        setRuntimeMessage("");
+      },
+      onFailure: (error) => {
+        if (error.code === "challenge_unavailable") {
+          finalizeAttemptRef.current = null;
           setChallenge(null);
           setOtp("");
         }
         setRuntimeStatus("error");
-        setRuntimeMessage(result.error.message);
-        return;
-      }
-      state.retry();
-    } finally {
-      finalizeRequestInFlightRef.current = false;
-    }
+        setRuntimeMessage(error.message);
+      },
+      onStale: recoverStaleHandoff,
+      onSuccessRefresh: async () => {
+        const refreshed = await onRefreshSelectedDossier();
+        state.retry();
+        return refreshed;
+      },
+    });
   }
 
   const observedValuesByItemRef: Record<string, string | null> = {};
@@ -1346,11 +1518,21 @@ function ReadyCustomerCorrectionHandoffPanel({
     evidenceSlots,
     groups: workflowGroups,
     id: "customer-correction-document-workflow",
+    interactionLocked: customerCorrectionInteractionLocked(
+      finalizeRequestInFlightRef.current,
+      runtimeStatus,
+    ),
     primaryAction: !signingOpen
       ? {
         disabled: !workspace.ready || signerAuthority.status !== "available",
         label: "Wijzigingen indienen",
         onClick: () => {
+          if (
+            customerCorrectionInteractionLocked(
+              finalizeRequestInFlightRef.current,
+              runtimeStatus,
+            )
+          ) return;
           setSigningOpen(true);
           setRuntimeMessage("");
         },
@@ -1381,7 +1563,18 @@ function ReadyCustomerCorrectionHandoffPanel({
 
       {signingOpen
         ? (
-          <div className="signing-primary-action-boundary" aria-live="polite">
+          <div
+            aria-busy={customerCorrectionInteractionLocked(
+              finalizeRequestInFlightRef.current,
+              runtimeStatus,
+            ) || undefined}
+            aria-live="polite"
+            className="signing-primary-action-boundary"
+            inert={customerCorrectionInteractionLocked(
+              finalizeRequestInFlightRef.current,
+              runtimeStatus,
+            ) || undefined}
+          >
             <p>
               <strong>{CUSTOMER_CORRECTION_LEGAL_BUNDLE.title}</strong>
             </p>
@@ -1419,6 +1612,10 @@ function ReadyCustomerCorrectionHandoffPanel({
                     <span>Eenmalige code</span>
                     <input
                       autoComplete="one-time-code"
+                      disabled={customerCorrectionInteractionLocked(
+                        finalizeRequestInFlightRef.current,
+                        runtimeStatus,
+                      )}
                       inputMode="numeric"
                       maxLength={6}
                       onChange={(event) =>
@@ -1458,11 +1655,13 @@ export function CustomerCorrectionHandoffPanel(
     accessToken,
     accountType,
     dashboardModel,
+    onRefreshSelectedDossier,
     state,
   }: {
     accessToken: string | null;
     accountType: DashboardAccountType;
     dashboardModel: DashboardReadModel;
+    onRefreshSelectedDossier: () => Promise<boolean>;
     state: CustomerCorrectionHandoffState;
   },
 ) {
@@ -1498,6 +1697,7 @@ export function CustomerCorrectionHandoffPanel(
       key={`${state.model.caseRef}:${
         state.model.handoff.items.map((item) => item.itemRef).join(":")
       }`}
+      onRefreshSelectedDossier={onRefreshSelectedDossier}
       state={state}
     />
   );

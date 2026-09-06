@@ -545,6 +545,7 @@ assert(
     !workflowSource.includes("interactionAvailable") &&
     workflowSource.includes("<DocumentEvidenceUploadCard") &&
     workflowSource.includes("<DocumentFactMatrix") &&
+    workflowSource.includes("inert={interactionLocked || undefined}") &&
     workflowSource.includes("primaryAction") &&
     matrixSource.includes("CUSTOMER_DOCUMENT_FACT_MATRIX_COLUMNS") &&
     matrixSource.includes('given: "Gegeven"') &&
@@ -569,15 +570,17 @@ assert(
 assert(
   !correctionSource.includes('"Bestaand dossier"') &&
     !correctionSource.includes('"Nieuw bewijsstuk"') &&
-    !correctionSource.includes("correctionInstruction") &&
+    correctionSource.includes("correctionInstruction") &&
+    correctionSource.includes("customerCorrectionReasonLabel") &&
     !correctionSource.includes('"Controle nodig"') &&
     !correctionSource.includes('"Ingevuld"'),
-  "Q08_correction_labels_or_repeated_instruction_remain",
+  "Q08_correction_request_context_or_labels_invalid",
 );
 assert(
     signupSource.includes("const evidenceSlots") &&
     signupSource.includes("isDocumentUploadReady(document)") &&
     correctionSource.includes("createCustomerDocumentWorkflowModel") &&
+    correctionSource.includes("interactionLocked:") &&
     correctionSource.includes("evidenceSlots,") &&
     correctionSource.includes(
       "<DocumentEvidenceWorkflow {...workflowModel} />",
