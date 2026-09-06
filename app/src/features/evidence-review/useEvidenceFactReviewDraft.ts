@@ -16,6 +16,7 @@ export type EvidenceFactReviewDraftDisposition =
 
 export type EvidenceFactReviewDraftDecision = Readonly<{
   subjectRef: string;
+  actionable: boolean;
   disposition: EvidenceFactReviewDraftDisposition;
   correctionReason: EvidenceFactReviewCorrectionReason | "";
   correctionInstruction: string;
@@ -54,6 +55,12 @@ export type EvidenceFactReviewFinalizeAttempt = Readonly<{
   idempotencyKey: string;
 }>;
 
+export function isEvidenceFactReviewSubjectActionable(
+  subject: Pick<EvidenceFactReviewSubjectV1, "truthClass">,
+): boolean {
+  return subject.truthClass === "REVIEW_REQUIRED";
+}
+
 const EMPTY_DRAFT: EvidenceFactReviewDraftState = Object.freeze({
   decisions: Object.freeze({}),
   confirmationOpen: false,
@@ -71,6 +78,7 @@ export function initializeEvidenceFactReviewDraft(
   for (const subject of subjects) {
     decisions[subject.subjectRef] = Object.freeze({
       subjectRef: subject.subjectRef,
+      actionable: isEvidenceFactReviewSubjectActionable(subject),
       disposition: subject.reviewerSuggestion === "ACCEPT"
         ? "ACCEPTED"
         : "UNANSWERED",
@@ -92,7 +100,7 @@ function replaceDecision(
   ) => EvidenceFactReviewDraftDecision,
 ): EvidenceFactReviewDraftState {
   const current = state.decisions[subjectRef];
-  if (!current || state.submitting) return state;
+  if (!current || !current.actionable || state.submitting) return state;
   return Object.freeze({
     ...state,
     decisions: Object.freeze({
@@ -118,7 +126,10 @@ export function isEvidenceFactReviewDraftComplete(
   subjects: readonly EvidenceFactReviewSubjectV1[],
   state: EvidenceFactReviewDraftState,
 ): boolean {
-  if (subjects.length === 0 || Object.keys(state.decisions).length !== subjects.length) {
+  if (
+    subjects.length === 0 ||
+    Object.keys(state.decisions).length !== subjects.length
+  ) {
     return false;
   }
   const expected = new Set(subjects.map((subject) => subject.subjectRef));
@@ -148,17 +159,23 @@ export function reduceEvidenceFactReviewDraft(
     }));
   }
   if (action.type === "reason") {
-    return replaceDecision(state, action.subjectRef, (current) =>
-      current.disposition === "CORRECTION_REQUIRED"
-        ? { ...current, correctionReason: action.value }
-        : current
+    return replaceDecision(
+      state,
+      action.subjectRef,
+      (current) =>
+        current.disposition === "CORRECTION_REQUIRED"
+          ? { ...current, correctionReason: action.value }
+          : current,
     );
   }
   if (action.type === "instruction") {
-    return replaceDecision(state, action.subjectRef, (current) =>
-      current.disposition === "CORRECTION_REQUIRED"
-        ? { ...current, correctionInstruction: action.value }
-        : current
+    return replaceDecision(
+      state,
+      action.subjectRef,
+      (current) =>
+        current.disposition === "CORRECTION_REQUIRED"
+          ? { ...current, correctionInstruction: action.value }
+          : current,
     );
   }
   if (action.type === "open_confirmation") {
@@ -213,7 +230,8 @@ export function buildEvidenceFactReviewFinalizeRequest(
       : Object.freeze({
         subjectRef: subject.subjectRef,
         disposition: "CORRECTION_REQUIRED" as const,
-        correctionReason: decision.correctionReason as EvidenceFactReviewCorrectionReason,
+        correctionReason: decision
+          .correctionReason as EvidenceFactReviewCorrectionReason,
         correctionInstruction: decision.correctionInstruction.trim(),
       });
   });
@@ -235,7 +253,58 @@ export function selectEvidenceFactReviewFinalizeAttempt(
   return Object.freeze({ fingerprint, idempotencyKey: createIdempotencyKey() });
 }
 
-function detailIdentity(detail: EvidenceReviewCaseDetailResponseV1 | null): string {
+type EvidenceFactReviewFinalizeRuntime = Readonly<{
+  attempt: { current: EvidenceFactReviewFinalizeAttempt | null };
+  submitting: { current: boolean };
+  dispatch: (action: DraftAction) => void;
+  finalizeReview: EvidenceFactReviewRoundFinalizeCall;
+  invalidateIdentity: () => void;
+  onRefresh: () => void;
+}>;
+
+export async function submitEvidenceFactReviewRound(
+  detail: EvidenceReviewCaseDetailResponseV1 | null,
+  editable: boolean,
+  state: EvidenceFactReviewDraftState,
+  runtime: EvidenceFactReviewFinalizeRuntime,
+): Promise<void> {
+  if (!detail || !editable || runtime.submitting.current) return;
+  const request = buildEvidenceFactReviewFinalizeRequest(detail, state);
+  if (!request || !state.confirmationOpen) return;
+  const selectedAttempt = selectEvidenceFactReviewFinalizeAttempt(
+    runtime.attempt.current,
+    request,
+  );
+  runtime.attempt.current = selectedAttempt;
+  runtime.submitting.current = true;
+  runtime.dispatch({ type: "submitting" });
+
+  const result = await runtime.finalizeReview({
+    request,
+    idempotencyKey: selectedAttempt.idempotencyKey,
+  }).catch(() => ({ ok: false as const, kind: "ordinary" as const }));
+  if (result.ok) {
+    runtime.invalidateIdentity();
+    runtime.onRefresh();
+    return;
+  }
+  runtime.submitting.current = false;
+  if (result.kind === "stale") {
+    runtime.attempt.current = null;
+    runtime.invalidateIdentity();
+    runtime.dispatch({ type: "discard_stale" });
+    runtime.onRefresh();
+    return;
+  }
+  runtime.dispatch({
+    type: "ordinary_failure",
+    message: "Review afronden is niet gelukt. Probeer het opnieuw.",
+  });
+}
+
+function detailIdentity(
+  detail: EvidenceReviewCaseDetailResponseV1 | null,
+): string {
   if (!detail) return "";
   return [
     detail.case.caseRef,
@@ -290,36 +359,15 @@ export function useEvidenceFactReviewDraft(
   }, [currentIdentity, detail, editable]);
 
   const confirm = useCallback(async () => {
-    if (!detail || !editable || submitting.current) return;
-    const request = buildEvidenceFactReviewFinalizeRequest(detail, state);
-    if (!request || !state.confirmationOpen) return;
-    const selectedAttempt = selectEvidenceFactReviewFinalizeAttempt(
-      attempt.current,
-      request,
-    );
-    attempt.current = selectedAttempt;
-    submitting.current = true;
-    dispatch({ type: "submitting" });
-    const result = await finalizeReview({
-      request,
-      idempotencyKey: selectedAttempt.idempotencyKey,
-    });
-    if (result.ok) {
-      appliedIdentity.current = "";
-      onRefresh();
-      return;
-    }
-    submitting.current = false;
-    if (result.kind === "stale") {
-      attempt.current = null;
-      appliedIdentity.current = "";
-      dispatch({ type: "discard_stale" });
-      onRefresh();
-      return;
-    }
-    dispatch({
-      type: "ordinary_failure",
-      message: "Review afronden is niet gelukt. Probeer het opnieuw.",
+    await submitEvidenceFactReviewRound(detail, editable, state, {
+      attempt,
+      submitting,
+      dispatch,
+      finalizeReview,
+      invalidateIdentity: () => {
+        appliedIdentity.current = "";
+      },
+      onRefresh,
     });
   }, [detail, editable, finalizeReview, onRefresh, state]);
 
@@ -335,7 +383,8 @@ export function useEvidenceFactReviewDraft(
       decision.disposition === "CORRECTION_REQUIRED"
     ).length,
     finalizedDecisions,
-    accept: (subjectRef: string) => dispatch({ type: "accept", subjectRef }),
+    accept: (subjectRef: string) =>
+      dispatch({ type: "accept", subjectRef }),
     correct: (subjectRef: string) => dispatch({ type: "correct", subjectRef }),
     setReason: (
       subjectRef: string,

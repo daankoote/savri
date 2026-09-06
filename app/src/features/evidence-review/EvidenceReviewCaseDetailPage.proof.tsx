@@ -14,6 +14,7 @@ import {
   decodeEvidenceReviewCaseDetailResponse,
   type EvidenceFactReviewRoundFinalizeCall,
   type EvidenceFactReviewRoundFinalizeRequest,
+  type EvidenceFactReviewRoundFinalizeResult,
   type EvidenceReviewCorrectionPublishCall,
   type EvidenceReviewDetailSafeError,
   finalizeEvidenceFactReviewRound,
@@ -31,8 +32,10 @@ import {
   initializeEvidenceFactReviewDraft,
   isEvidenceFactCorrectionValid,
   isEvidenceFactReviewDraftComplete,
+  isEvidenceFactReviewSubjectActionable,
   reduceEvidenceFactReviewDraft,
   selectEvidenceFactReviewFinalizeAttempt,
+  submitEvidenceFactReviewRound,
 } from "./useEvidenceFactReviewDraft.ts";
 import {
   canPublishEvidenceCorrection,
@@ -204,6 +207,20 @@ function detailHtml(
   );
 }
 
+function factRowHtml(html: string, label: string): string {
+  const marker = `<span data-label="Gegeven" role="cell">${label}</span>`;
+  const markerIndex = html.indexOf(marker);
+  if (markerIndex < 0) return "";
+  const rowStart = html.lastIndexOf(
+    '<div class="fact-table__row" role="row">',
+    markerIndex,
+  );
+  const rowEnd = html.indexOf("</div>", markerIndex);
+  return rowStart < 0 || rowEnd < 0
+    ? ""
+    : html.slice(rowStart, rowEnd + "</div>".length);
+}
+
 const detailRoute = buildEvidenceReviewDetailRoute(CASE_REF);
 assert(
   detailRoute === `/beheer/dossiers/${CASE_REF}` &&
@@ -264,9 +281,9 @@ assert(
   "Q05_fact_truth_presentation_invalid",
 );
 assert(
-  readyHtml.split(">Accepteren<").length - 1 === 2 &&
-    readyHtml.split(">Correctie<").length - 1 === 2 &&
-    readyHtml.includes('aria-pressed="true"') &&
+  readyHtml.split(">Accepteren<").length - 1 === 1 &&
+    readyHtml.split(">Correctie nodig<").length - 1 === 1 &&
+    !readyHtml.includes('aria-pressed="true"') &&
     readyHtml.includes("Review afronden") && readyHtml.includes("disabled") &&
     !/(Beoordeling opslaan|Check uitvoeren)/i.test(readyHtml),
   "Q06_fact_review_defaults_or_controls_invalid",
@@ -346,12 +363,14 @@ const completeHtml = detailHtml({
   },
   error: null,
 });
+const finalizedAcceptedEanRowHtml = factRowHtml(completeHtml, "EAN");
+const unmatchedLegacyMidRowHtml = factRowHtml(completeHtml, "MID");
 assert(
   !viewOnlyHtml.includes(">Accepteren<") &&
-    !viewOnlyHtml.includes(">Correctie<") &&
+    !viewOnlyHtml.includes(">Correctie nodig<") &&
     !viewOnlyHtml.includes("Review afronden") &&
     !finalizedHtml.includes(">Accepteren<") &&
-    !finalizedHtml.includes(">Correctie<") &&
+    !finalizedHtml.includes('aria-pressed="') &&
     finalizedHtml.includes("Geaccepteerd") &&
     finalizedHtml.includes("Correctie nodig") &&
     finalizedHtml.includes("Gegeven onjuist") &&
@@ -359,6 +378,17 @@ assert(
     finalizedHtml.includes("Correctie nodig") &&
     !finalizedHtml.includes("Correcties nodig"),
   "Q06a_view_only_or_finalized_rendering_invalid",
+);
+assert(
+  finalizedAcceptedEanRowHtml.includes(">--<") &&
+    finalizedAcceptedEanRowHtml.includes("Geaccepteerd") &&
+    !finalizedAcceptedEanRowHtml.includes("Historisch niet vastgelegd"),
+  "Q06ab_accepted_decision_reason_not_neutral",
+);
+assert(
+  unmatchedLegacyMidRowHtml.includes("Historisch niet vastgelegd") &&
+    !unmatchedLegacyMidRowHtml.includes(">--<"),
+  "Q06ac_unmatched_legacy_reason_not_preserved",
 );
 assert(
   acceptedReviewRequiredPresentation.label === "Geaccepteerd" &&
@@ -722,9 +752,18 @@ const initialDraft = initializeEvidenceFactReviewDraft(
 );
 const eanSubjectRef = FIXTURE.reviewSubjects[0].subjectRef;
 const brandSubjectRef = FIXTURE.reviewSubjects[1].subjectRef;
+const unchangedCustomerConfirmedDraft = reduceEvidenceFactReviewDraft(
+  initialDraft,
+  { type: "correct", subjectRef: brandSubjectRef },
+);
 assert(
   initialDraft.decisions[eanSubjectRef].disposition === "UNANSWERED" &&
     initialDraft.decisions[brandSubjectRef].disposition === "ACCEPTED" &&
+    initialDraft.decisions[eanSubjectRef].actionable &&
+    !initialDraft.decisions[brandSubjectRef].actionable &&
+    isEvidenceFactReviewSubjectActionable(FIXTURE.reviewSubjects[0]) &&
+    !isEvidenceFactReviewSubjectActionable(FIXTURE.reviewSubjects[1]) &&
+    unchangedCustomerConfirmedDraft === initialDraft &&
     !isEvidenceFactReviewDraftComplete(FIXTURE.reviewSubjects, initialDraft) &&
     buildEvidenceFactReviewFinalizeRequest(FIXTURE, initialDraft) === null,
   "Q08f_draft_defaults_or_unanswered_completeness_invalid",
@@ -918,6 +957,114 @@ assert(
     Object.keys(staleDraft.decisions).length === 0 &&
     staleDraft.notice === "Dossier is gewijzigd. Controleer opnieuw.",
   "Q08p_stale_or_ordinary_failure_recovery_invalid",
+);
+
+let releaseFinalize: (
+  value: EvidenceFactReviewRoundFinalizeResult,
+) => void = () => undefined;
+let concurrentFinalizeCalls = 0;
+let successfulRefreshes = 0;
+let successfulInvalidations = 0;
+const successfulActions: unknown[] = [];
+const successfulRuntime = {
+  attempt: { current: null },
+  submitting: { current: false },
+  dispatch: (action: unknown) => successfulActions.push(action),
+  finalizeReview: () => {
+    concurrentFinalizeCalls += 1;
+    return new Promise<EvidenceFactReviewRoundFinalizeResult>((resolve) => {
+      releaseFinalize = resolve;
+    });
+  },
+  invalidateIdentity: () => {
+    successfulInvalidations += 1;
+  },
+  onRefresh: () => {
+    successfulRefreshes += 1;
+  },
+};
+const firstConcurrentSubmit = submitEvidenceFactReviewRound(
+  FIXTURE,
+  true,
+  confirmationDraft,
+  successfulRuntime,
+);
+await Promise.resolve();
+const duplicateConcurrentSubmit = submitEvidenceFactReviewRound(
+  FIXTURE,
+  true,
+  confirmationDraft,
+  successfulRuntime,
+);
+assert(
+  concurrentFinalizeCalls === 1 && successfulRuntime.submitting.current &&
+    successfulActions.some((action) =>
+      (action as { type?: string }).type === "submitting"
+    ),
+  "Q08q_concurrent_submit_not_locked",
+);
+releaseFinalize({
+  ok: true,
+  result: "FINALIZED",
+  outcome: "CORRECTIONS_REQUIRED",
+});
+await Promise.all([firstConcurrentSubmit, duplicateConcurrentSubmit]);
+assert(
+  concurrentFinalizeCalls === 1 && successfulRefreshes === 1 &&
+    successfulInvalidations === 1,
+  "Q08r_success_did_not_refresh_authoritative_readmodel_once",
+);
+
+const failureActions: unknown[] = [];
+let failureRefreshes = 0;
+const failureRuntime = {
+  attempt: { current: null },
+  submitting: { current: false },
+  dispatch: (action: unknown) => failureActions.push(action),
+  finalizeReview: () => Promise.reject(new Error("proof failure")),
+  invalidateIdentity: noop,
+  onRefresh: () => {
+    failureRefreshes += 1;
+  },
+};
+await submitEvidenceFactReviewRound(
+  FIXTURE,
+  true,
+  confirmationDraft,
+  failureRuntime,
+);
+assert(
+  !failureRuntime.submitting.current && failureRefreshes === 0 &&
+    failureActions.some((action) =>
+      (action as { type?: string }).type === "ordinary_failure"
+    ),
+  "Q08s_thrown_failure_not_recoverable",
+);
+
+const staleActions: unknown[] = [];
+let staleSubmitRefreshes = 0;
+const staleRuntime = {
+  attempt: { current: null },
+  submitting: { current: false },
+  dispatch: (action: unknown) => staleActions.push(action),
+  finalizeReview: async () => ({ ok: false as const, kind: "stale" as const }),
+  invalidateIdentity: noop,
+  onRefresh: () => {
+    staleSubmitRefreshes += 1;
+  },
+};
+await submitEvidenceFactReviewRound(
+  FIXTURE,
+  true,
+  confirmationDraft,
+  staleRuntime,
+);
+assert(
+  !staleRuntime.submitting.current && staleSubmitRefreshes === 1 &&
+    staleActions.some((action) =>
+      (action as { type?: string }).type === "discard_stale"
+    ),
+  "Q08t_stale_submit_did_not_discard_and_refresh",
 );
 
 const previewRequests: Array<{ url: string; init?: RequestInit }> = [];
@@ -1391,6 +1538,7 @@ assert(
     factDraftSource.includes("Dossier is gewijzigd. Controleer opnieuw.") &&
     factDraftSource.includes("attempt.current") &&
     factDraftSource.includes("onRefresh()") &&
+    detailSource.includes('review.state.submitting ? "Bezig…"') &&
     !factDraftSource.includes("fetch(") &&
     !factDraftSource.includes("setInterval") &&
     !factDraftSource.includes("setTimeout") &&

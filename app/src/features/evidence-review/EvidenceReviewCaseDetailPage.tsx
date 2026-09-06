@@ -11,8 +11,8 @@ import { useAuth } from "../auth/AuthProvider.tsx";
 import {
   type EvidenceFactReviewRoundFinalizeCall,
   type EvidenceReviewCorrectionPublishCall,
-  finalizeEvidenceFactReviewRound,
   type EvidenceReviewDetailSafeError,
+  finalizeEvidenceFactReviewRound,
   loadEvidenceReviewPreview,
   publishEvidenceReviewCorrection,
 } from "./evidenceReviewDetailClient.ts";
@@ -26,6 +26,7 @@ import type { EvidenceReviewCaseDetailReadState } from "./useEvidenceReviewCaseD
 import { useEvidenceReviewCaseDetail } from "./useEvidenceReviewCaseDetail.ts";
 import {
   type EvidenceFactReviewDraftDecision,
+  isEvidenceFactReviewSubjectActionable,
   useEvidenceFactReviewDraft,
 } from "./useEvidenceFactReviewDraft.ts";
 import { useEvidenceCorrectionPublish } from "./useEvidenceCorrectionPublish.ts";
@@ -84,10 +85,11 @@ export const EVIDENCE_FACT_CORRECTION_REASON_LABELS: Readonly<
 
 export const EVIDENCE_FACT_CORRECTION_REASON_OPTIONS = Object.freeze(
   Object.entries(EVIDENCE_FACT_CORRECTION_REASON_LABELS).map(
-    ([value, label]) => Object.freeze({
-      value: value as EvidenceFactReviewCorrectionReason,
-      label,
-    }),
+    ([value, label]) =>
+      Object.freeze({
+        value: value as EvidenceFactReviewCorrectionReason,
+        label,
+      }),
   ),
 );
 
@@ -185,7 +187,11 @@ type EvidenceFactsProps = Readonly<{
   subjects: readonly EvidenceFactReviewSubjectV1[];
   draft: Readonly<Record<string, EvidenceFactReviewDraftDecision>>;
   editable: boolean;
-  finalizedDecisions: ReadonlyMap<string, EvidenceFactReviewFinalizedDecisionV1>;
+  submitting: boolean;
+  finalizedDecisions: ReadonlyMap<
+    string,
+    EvidenceFactReviewFinalizedDecisionV1
+  >;
   onAccept: (subjectRef: string) => void;
   onCorrect: (subjectRef: string) => void;
   onReason: (
@@ -217,6 +223,9 @@ function EvidenceFacts(props: EvidenceFactsProps) {
           ? props.finalizedDecisions.get(subjectRef)
           : undefined;
         const state = evidenceReviewFactStatusPresentation(row, finalized);
+        const actionable = Boolean(
+          row.subject && isEvidenceFactReviewSubjectActionable(row.subject),
+        );
         return (
           <Fragment key={row.key}>
             <div className="fact-table__row" role="row">
@@ -240,7 +249,9 @@ function EvidenceFacts(props: EvidenceFactsProps) {
                 data-label="Reden"
                 role="cell"
               >
-                {row.truthClass === "REVIEW_REQUIRED"
+                {finalized?.disposition === "ACCEPTED"
+                  ? "--"
+                  : row.truthClass === "REVIEW_REQUIRED"
                   ? reviewReasonLabel(row.reviewReason)
                   : null}
               </span>
@@ -263,7 +274,7 @@ function EvidenceFacts(props: EvidenceFactsProps) {
                         <span>{finalized.correctionInstruction}</span>
                       </span>
                     )
-                  : props.editable && draft && subjectRef
+                  : props.editable && actionable && draft && subjectRef
                   ? (
                     <span className="fact-review-choices">
                       <button
@@ -273,31 +284,32 @@ function EvidenceFacts(props: EvidenceFactsProps) {
                             ? " fact-review-choice--selected"
                             : ""
                         }`}
+                        disabled={props.submitting}
                         onClick={() => props.onAccept(subjectRef)}
                         type="button"
                       >
                         Accepteren
                       </button>
                       <button
-                        aria-pressed={
-                          draft.disposition === "CORRECTION_REQUIRED"
-                        }
+                        aria-pressed={draft.disposition ===
+                          "CORRECTION_REQUIRED"}
                         className={`button button-secondary button-compact fact-review-choice${
                           draft.disposition === "CORRECTION_REQUIRED"
                             ? " fact-review-choice--selected"
                             : ""
                         }`}
+                        disabled={props.submitting}
                         onClick={() => props.onCorrect(subjectRef)}
                         type="button"
                       >
-                        Correctie
+                        Correctie nodig
                       </button>
                     </span>
                   )
                   : <span aria-hidden="true">—</span>}
               </span>
             </div>
-            {props.editable && subjectRef &&
+            {props.editable && actionable && subjectRef &&
                 draft?.disposition === "CORRECTION_REQUIRED"
               ? (
                 <div className="fact-review-correction-row" role="row">
@@ -306,6 +318,7 @@ function EvidenceFacts(props: EvidenceFactsProps) {
                       <span>Reden</span>
                       <select
                         aria-label={`Reden correctie voor ${row.label}`}
+                        disabled={props.submitting}
                         onChange={(event) =>
                           props.onReason(
                             subjectRef,
@@ -316,7 +329,9 @@ function EvidenceFacts(props: EvidenceFactsProps) {
                         value={draft.correctionReason}
                       >
                         <option disabled value="">Kies een reden</option>
-                        {EVIDENCE_FACT_CORRECTION_REASON_OPTIONS.map((option) => (
+                        {EVIDENCE_FACT_CORRECTION_REASON_OPTIONS.map((
+                          option,
+                        ) => (
                           <option key={option.value} value={option.value}>
                             {option.label}
                           </option>
@@ -327,6 +342,7 @@ function EvidenceFacts(props: EvidenceFactsProps) {
                       <span>Wat ontbreekt of moet worden aangepast?</span>
                       <textarea
                         aria-label={`Correctie voor ${row.label}`}
+                        disabled={props.submitting}
                         maxLength={1000}
                         onChange={(event) =>
                           props.onInstruction(
@@ -404,6 +420,7 @@ function EvidenceReviewSection({
           onCorrect={review.correct}
           onInstruction={review.setInstruction}
           onReason={review.setReason}
+          submitting={review.state.submitting}
           subjects={subjects}
         />
         {open
@@ -545,7 +562,11 @@ export function EvidenceReviewCaseDetailContent({
               ? <p role="status">{review.state.notice}</p>
               : null}
             {review.state.error
-              ? <p className="field-message" role="alert">{review.state.error}</p>
+              ? (
+                <p className="field-message" role="alert">
+                  {review.state.error}
+                </p>
+              )
               : null}
             {review.state.confirmationOpen
               ? (
@@ -562,7 +583,7 @@ export function EvidenceReviewCaseDetailContent({
                       onClick={() => void review.confirm()}
                       type="button"
                     >
-                      Ja, afronden
+                      {review.state.submitting ? "Bezig…" : "Ja, afronden"}
                     </button>
                     <button
                       className="button button-secondary button-compact"
@@ -613,7 +634,9 @@ export function EvidenceReviewCaseDetailContent({
                         onClick={() => void correctionPublish.confirm()}
                         type="button"
                       >
-                        Ja, sturen
+                        {correctionPublish.state.submitting
+                          ? "Bezig…"
+                          : "Ja, sturen"}
                       </button>
                       <button
                         className="button button-secondary button-compact"
