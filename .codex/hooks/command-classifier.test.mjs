@@ -9,6 +9,10 @@ import { fileURLToPath } from "node:url";
 import { CLASSIFICATION, classifyScript, ROOT } from "./command-classifier.mjs";
 import { HUMAN_GATE_MESSAGE, routeEvent } from "./enval-permission-router.mjs";
 
+const TEST_RESULT_ROOT = join(tmpdir(), "enval-command-classifier-results");
+const routeForTest = (event) =>
+  routeEvent(event, { resultRoot: TEST_RESULT_ROOT });
+
 const fixtures = Object.freeze([
   ["safe direct git status", "git status", CLASSIFICATION.ALLOW],
   [
@@ -119,6 +123,13 @@ const fixtures = Object.freeze([
     "node scripts/tools/enval-supabase-target.mjs --target TENANT_ENVAL --operation status",
     CLASSIFICATION.ALLOW,
   ],
+  ...["db-identity", "db-baseline", "api-health", "mailpit-health"].map(
+    (probe) => [
+      `safe canonical local ${probe} probe`,
+      `node scripts/tools/enval-supabase-target.mjs --target TENANT_ENVAL --probe ${probe}`,
+      CLASSIFICATION.ALLOW,
+    ],
+  ),
   ["deny wrapped git add", "/bin/zsh -c 'git add .'", CLASSIFICATION.DENY],
   [
     "deny wrapped git add with shell argument",
@@ -268,6 +279,57 @@ const fixtures = Object.freeze([
     "psql -c 'delete from dossiers'",
     CLASSIFICATION.DENY,
   ],
+  ...[
+    "psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -c 'BEGIN TRANSACTION READ ONLY; SELECT 1; ROLLBACK;'",
+    "psql postgresql://postgres:postgres@remote.invalid:54322/postgres -c 'BEGIN TRANSACTION READ ONLY; SELECT 1; ROLLBACK;'",
+    "psql postgresql://postgres:postgres@127.0.0.1:54323/postgres -c 'BEGIN TRANSACTION READ ONLY; SELECT 1; ROLLBACK;'",
+    "psql postgresql://postgres:postgres@127.0.0.1:54322/other -c 'BEGIN TRANSACTION READ ONLY; SELECT 1; ROLLBACK;'",
+    "psql $DATABASE_URL -c 'BEGIN TRANSACTION READ ONLY; SELECT 1; ROLLBACK;'",
+    "psql $(printf local-target) -c 'BEGIN TRANSACTION READ ONLY; SELECT 1; ROLLBACK;'",
+    "psql -f /tmp/read.sql",
+    "psql -c '\\copy public.items to program true'",
+    "psql -c '\\! whoami'",
+  ].map((command, index) => [
+    `deny direct database probe ${index + 1}`,
+    command,
+    CLASSIFICATION.DENY,
+  ]),
+  ...[
+    "curl http://127.0.0.1:54321/auth/v1/health",
+    "curl -X POST http://127.0.0.1:54321/auth/v1/health",
+    "curl -X PUT http://127.0.0.1:54321/auth/v1/health",
+    "curl -X PATCH http://127.0.0.1:54321/auth/v1/health",
+    "curl -X DELETE http://127.0.0.1:54321/auth/v1/health",
+    "curl http://localhost:54321/auth/v1/health",
+    "curl http://127.0.0.1:54325/health",
+    "curl https://example.invalid/health",
+    "curl -H 'Authorization: Bearer value' http://127.0.0.1:54321/auth/v1/health",
+    "curl -H 'Cookie: session=value' http://127.0.0.1:54321/auth/v1/health",
+    "curl -L http://127.0.0.1:54321/auth/v1/health",
+  ].map((command, index) => [
+    `deny direct HTTP probe ${index + 1}`,
+    command,
+    CLASSIFICATION.DENY,
+  ]),
+  ...[
+    "db-identity --execute",
+    "db-identity --target TENANT_ENVAL",
+    "unknown",
+  ].map((suffix) => [
+    `do not allow malformed canonical probe ${suffix.split(" ")[0]}`,
+    `node scripts/tools/enval-supabase-target.mjs --target TENANT_ENVAL --probe ${suffix}`,
+    CLASSIFICATION.DEFER,
+  ]),
+  [
+    "deny canonical read chained to database write",
+    "node scripts/tools/enval-supabase-target.mjs --target TENANT_ENVAL --probe db-identity && psql -c 'DELETE FROM public.items'",
+    CLASSIFICATION.DENY,
+  ],
+  [
+    "deny canonical read chained to exact-key cleanup",
+    "node scripts/tools/enval-supabase-target.mjs --target TENANT_ENVAL --probe db-baseline; psql -c 'DELETE FROM public.items WHERE id = 1'",
+    CLASSIFICATION.DENY,
+  ],
   ["deny dependency install", "npm install", CLASSIFICATION.DENY],
   ["deny sudo", "sudo whoami", CLASSIFICATION.DENY],
   ["deny deploy script", "npm run deploy", CLASSIFICATION.DENY],
@@ -382,7 +444,7 @@ function event(hookEventName, command) {
 }
 
 test("PreToolUse denies a human gate with the required stop instruction", () => {
-  const routed = routeEvent(event("PreToolUse", "git commit -m nope"));
+  const routed = routeForTest(event("PreToolUse", "git commit -m nope"));
   assert.equal(routed.output.hookSpecificOutput.permissionDecision, "deny");
   assert.equal(
     routed.output.hookSpecificOutput.permissionDecisionReason,
@@ -391,12 +453,12 @@ test("PreToolUse denies a human gate with the required stop instruction", () => 
 });
 
 test("PreToolUse does not pre-approve a safe command", () => {
-  assert.equal(routeEvent(event("PreToolUse", "git status")).output, null);
+  assert.equal(routeForTest(event("PreToolUse", "git status")).output, null);
 });
 
 test("PermissionRequest allows worktree inventory", () => {
   assert.deepEqual(
-    routeEvent(event("PermissionRequest", "git worktree list --porcelain"))
+    routeForTest(event("PermissionRequest", "git worktree list --porcelain"))
       .output,
     {
       hookSpecificOutput: {
@@ -409,7 +471,7 @@ test("PermissionRequest allows worktree inventory", () => {
 
 test("PermissionRequest allows local Git config inspection", () => {
   assert.deepEqual(
-    routeEvent(
+    routeForTest(
       event("PermissionRequest", "git config --local --get core.hooksPath"),
     ).output,
     {
@@ -421,8 +483,34 @@ test("PermissionRequest allows local Git config inspection", () => {
   );
 });
 
+test("PermissionRequest allows only the fixed canonical local probes", () => {
+  for (
+    const probe of [
+      "db-identity",
+      "db-baseline",
+      "api-health",
+      "mailpit-health",
+    ]
+  ) {
+    assert.deepEqual(
+      routeForTest(
+        event(
+          "PermissionRequest",
+          `node scripts/tools/enval-supabase-target.mjs --target TENANT_ENVAL --probe ${probe}`,
+        ),
+      ).output,
+      {
+        hookSpecificOutput: {
+          hookEventName: "PermissionRequest",
+          decision: { behavior: "allow" },
+        },
+      },
+    );
+  }
+});
+
 test("PreToolUse denies local Git config mutation", () => {
-  const routed = routeEvent(
+  const routed = routeForTest(
     event("PreToolUse", "git config --local core.hooksPath /tmp/x"),
   );
   assert.equal(routed.output.hookSpecificOutput.permissionDecision, "deny");
@@ -433,7 +521,7 @@ test("PreToolUse denies local Git config mutation", () => {
 });
 
 test("PermissionRequest denies a human gate", () => {
-  const routed = routeEvent(event("PermissionRequest", "git push"));
+  const routed = routeForTest(event("PermissionRequest", "git push"));
   assert.deepEqual(routed.output.hookSpecificOutput.decision, {
     behavior: "deny",
     message: HUMAN_GATE_MESSAGE,
@@ -442,12 +530,12 @@ test("PermissionRequest denies a human gate", () => {
 
 test("PermissionRequest defers an unknown command with no hook decision", () => {
   assert.equal(
-    routeEvent(event("PermissionRequest", "frobnicate")).output,
+    routeForTest(event("PermissionRequest", "frobnicate")).output,
     null,
   );
 });
 
-test("command hook stdin/stdout protocol emits allow, deny, and no decision", () => {
+test("command hook stdin/stdout protocol emits allow and no decision", () => {
   const router = fileURLToPath(
     new URL("./enval-permission-router.mjs", import.meta.url),
   );
@@ -461,17 +549,11 @@ test("command hook stdin/stdout protocol emits allow, deny, and no decision", ()
     "PermissionRequest",
     "git config --local --get core.hooksPath",
   );
-  const denied = invoke("PreToolUse", "git add .");
   const deferred = invoke("PermissionRequest", "frobnicate");
   assert.equal(allowed.status, 0);
   assert.equal(
     JSON.parse(allowed.stdout).hookSpecificOutput.decision.behavior,
     "allow",
-  );
-  assert.equal(denied.status, 0);
-  assert.equal(
-    JSON.parse(denied.stdout).hookSpecificOutput.permissionDecision,
-    "deny",
   );
   assert.equal(deferred.status, 0);
   assert.equal(deferred.stdout, "");
@@ -479,7 +561,7 @@ test("command hook stdin/stdout protocol emits allow, deny, and no decision", ()
 
 test("observability records only bounded metadata and a command hash", () => {
   const command = "git status --short";
-  routeEvent(event("PermissionRequest", command));
+  routeForTest(event("PermissionRequest", command));
   const log = readFileSync(
     join(tmpdir(), "enval-codex-hooks/permission-router.jsonl"),
     "utf8",
@@ -532,5 +614,17 @@ test("exec policy leaves semantic Git metadata decisions to the hooks", () => {
   assert.doesNotMatch(
     rules,
     /prefix_rule\(pattern = \["git", "config"\], decision = "forbidden"\)/,
+  );
+  assert.match(
+    rules,
+    /prefix_rule\(pattern = \["node", "scripts\/tools\/enval-supabase-target\.mjs"\], decision = "prompt"\)/,
+  );
+  assert.match(
+    rules,
+    /prefix_rule\(pattern = \["psql"\], decision = "forbidden"\)/,
+  );
+  assert.match(
+    rules,
+    /prefix_rule\(pattern = \["curl"\], decision = "prompt"\)/,
   );
 });

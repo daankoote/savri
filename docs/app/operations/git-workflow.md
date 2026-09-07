@@ -86,6 +86,28 @@ web-search tool by default. Governance or research tasks may use cached search
 only when explicitly required, and live search requires explicit task need.
 Shell/network permission remains a separate boundary.
 
+### Canonical local read-only inspection
+
+Individual local identity and privacy-safe baseline checks use the existing
+target authority with one fixed probe identifier:
+
+```bash
+node scripts/tools/enval-supabase-target.mjs --target TENANT_ENVAL --probe db-identity
+node scripts/tools/enval-supabase-target.mjs --target TENANT_ENVAL --probe db-baseline
+node scripts/tools/enval-supabase-target.mjs --target TENANT_ENVAL --probe api-health
+node scripts/tools/enval-supabase-target.mjs --target TENANT_ENVAL --probe mailpit-health
+```
+
+The database probes pin `127.0.0.1:54322/postgres`, run fixed SQL inside
+`BEGIN TRANSACTION READ ONLY` and `ROLLBACK`, enforce session read-only mode,
+and emit only identity or count metadata. The HTTP probes make fixed GETs to
+the exact loopback API or Mailpit origin, reject redirects, send no credentials
+or body, discard response content, and emit only origin/status metadata.
+
+Arbitrary SQL, direct `psql` or `curl`, extra/repeated arguments, remote or
+unknown targets, other ports/databases, credentials, response content, and all
+cleanup or other writes remain fail-closed behind the existing human gate.
+
 The launcher does not commit, merge, push, deploy, clean up, or launch Codex
 Desktop. Detaching a Herdr client does not stop the batch agent. The shared named
 session topology permits a later remote client attachment without changing batch

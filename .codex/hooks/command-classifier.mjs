@@ -920,6 +920,17 @@ function classifyGuarded(words, cwd) {
     }
   }
   if (sameScript(words, cwd, "scripts/tools/enval-supabase-target.mjs")) {
+    const canonicalReadOnlyProbes = new Set([
+      "db-identity",
+      "db-baseline",
+      "api-health",
+      "mailpit-health",
+    ]);
+    if (
+      words.length === 6 && words[2] === "--target" &&
+      words[3] === "TENANT_ENVAL" && words[4] === "--probe" &&
+      canonicalReadOnlyProbes.has(words[5])
+    ) return true;
     const args = words.slice(2);
     let target = null;
     let operation = "inspect";
@@ -1059,6 +1070,13 @@ export function classifyScript(script, { cwd = ROOT, depth = 0 } = {}) {
   try {
     commands = lex(script);
   } catch (error) {
+    if (
+      error.message === "shell_expansion" &&
+      /(?:^|[;&\n]\s*)(?:psql|curl)\b|scripts\/tools\/enval-supabase-target\.mjs/
+        .test(
+          script,
+        )
+    ) return result(CLASSIFICATION.DENY, "HUMAN_GATE");
     return result(CLASSIFICATION.DEFER, error.message.toUpperCase());
   }
   return classifyCommands(commands, cwd, depth);

@@ -12,6 +12,35 @@ const LOCAL_USER = "postgres";
 const LOCAL_DATABASE = "postgres";
 const LOCAL_PASSWORD = "postgres";
 
+const READ_ONLY_SQL_FUNCTIONS = new Set([
+  "acldefault",
+  "aclexplode",
+  "array_agg",
+  "bool_and",
+  "bool_or",
+  "btrim",
+  "coalesce",
+  "count",
+  "current_database",
+  "current_setting",
+  "gen_random_uuid",
+  "jsonb_build_object",
+  "left",
+  "lower",
+  "md5",
+  "now",
+  "obj_description",
+  "oidvectortypes",
+  "pg_get_constraintdef",
+  "pg_get_expr",
+  "pg_get_indexdef",
+  "position",
+  "replace",
+  "right",
+  "string_agg",
+  "unnest",
+]);
+
 export const PROOF_DEFINITIONS = Object.freeze({
   "enval-local-readonly-catalog": Object.freeze({
     path: "scripts/proofs/enval-local-readonly-catalog.proof.sql",
@@ -107,14 +136,55 @@ export function validateReadOnlySql(sql) {
   if (!/rollback\s*;\s*$/i.test(structural)) {
     throw new Error("sql_missing_terminal_rollback");
   }
-  if (/^\s*\\/m.test(structural)) {
+  if (/\\/.test(structural)) {
     throw new Error("sql_psql_meta_command_rejected");
   }
-  const forbidden = /\b(insert|update|delete|merge|alter|create|drop|truncate|grant|revoke|comment|copy|call|do|vacuum|analyze|cluster|reindex|refresh|listen|notify|lock|checkpoint|discard|nextval|setval|lo_import|lo_export|pg_advisory_lock)\b/i;
+  const forbidden =
+    /\b(insert|update|delete|upsert|merge|alter|create|drop|truncate|grant|revoke|comment|copy|call|do|execute|prepare|deallocate|perform|set|reset|vacuum|analyze|cluster|reindex|refresh|listen|notify|lock|checkpoint|discard|nextval|setval|lo_import|lo_export|pg_advisory_lock)\b/i;
   const match = structural.match(forbidden);
   if (match) throw new Error(`sql_mutation_keyword_rejected:${match[1]}`);
   if (/\bselect\b[\s\S]*\binto\b/i.test(structural)) {
     throw new Error("sql_select_into_rejected");
+  }
+  const statements = structural.split(";").map((value) => value.trim()).filter(
+    Boolean,
+  );
+  if (
+    statements.length < 3 ||
+    !/^begin\s+transaction\s+read\s+only$/i.test(statements[0]) ||
+    !/^rollback$/i.test(statements.at(-1))
+  ) throw new Error("sql_statement_envelope_invalid");
+  const queries = statements.slice(1, -1);
+  if (
+    queries.length === 0 ||
+    queries.some((statement) => !/^(select|show|with)\b/i.test(statement))
+  ) throw new Error("sql_statement_type_rejected");
+  const queryText = queries.join("\n");
+  const cteAliases = new Set(
+    [...queryText.matchAll(
+      /\b([a-z_][a-z0-9_]*)\s*(?:\([^()]*\))?\s+as\s*\(/gi,
+    )].map((match) => match[1].toLowerCase()),
+  );
+  const syntacticCalls = new Set([
+    "and",
+    "any",
+    "as",
+    "exists",
+    "filter",
+    "in",
+    "not",
+    "or",
+    "over",
+    "values",
+  ]);
+  for (const match of queryText.matchAll(/\b([a-z_][a-z0-9_]*)\s*\(/gi)) {
+    const name = match[1].toLowerCase();
+    const before = queryText.slice(Math.max(0, match.index - 12), match.index);
+    if (
+      syntacticCalls.has(name) || READ_ONLY_SQL_FUNCTIONS.has(name) ||
+      cteAliases.has(name) || /\bas\s*$/i.test(before)
+    ) continue;
+    throw new Error(`sql_function_not_allowlisted:${name}`);
   }
   return true;
 }
@@ -127,6 +197,7 @@ export function resolveLocalConnection(configText) {
   if (!Number.isInteger(port) || port < 1024 || port > 65535) {
     throw new Error("local_db_port_invalid");
   }
+  if (port !== 54322) throw new Error("local_db_port_not_canonical");
   return Object.freeze({
     projectId,
     host: LOCAL_HOST,
@@ -139,7 +210,10 @@ export function resolveLocalConnection(configText) {
 export function redactSecrets(value, secrets = []) {
   let redacted = String(value ?? "")
     .replace(/postgres(?:ql)?:\/\/[^\s'"<>]+/gi, "[REDACTED_DATABASE_URL]")
-    .replace(/\b(PGPASSWORD|DATABASE_URL|SUPABASE_SERVICE_ROLE_KEY|JWT|TOKEN)\s*=\s*[^\s]+/gi, "$1=[REDACTED]")
+    .replace(
+      /\b(PGPASSWORD|DATABASE_URL|SUPABASE_SERVICE_ROLE_KEY|JWT|TOKEN)\s*=\s*[^\s]+/gi,
+      "$1=[REDACTED]",
+    )
     .replace(/password\s+(?:for\s+user\s+)?[^:\s]+/gi, "password [REDACTED]");
   for (const secret of secrets.filter(Boolean)) {
     redacted = redacted.replaceAll(secret, "[REDACTED]");
@@ -164,7 +238,9 @@ export function validateStructuredOutput(definition, stdout) {
   const lines = rawOutput.split("\n")
     .map((line) => line.trim())
     .filter((line) => line !== "" && !["BEGIN", "ROLLBACK"].includes(line));
-  if (lines.length !== 1) throw new Error("sql_proof_output_line_count_invalid");
+  if (lines.length !== 1) {
+    throw new Error("sql_proof_output_line_count_invalid");
+  }
   const output = lines[0];
   let payload;
   try {
@@ -249,26 +325,53 @@ export function runReadOnlySqlProof({
     }
   }
   validateReadOnlySql(sql);
+  const executed = executeValidatedReadOnlySql({
+    sql,
+    marker: definition.marker,
+    cwd,
+    executor,
+    readFile,
+  });
+  const structured = definition.outputFormat
+    ? validateStructuredOutput(definition, executed.stdout)
+    : null;
+  return {
+    marker: definition.marker,
+    markerCount: executed.markerCount,
+    connection: executed.connection,
+    output: structured?.output ?? null,
+    payload: structured?.payload ?? null,
+  };
+}
 
+export function executeValidatedReadOnlySql({
+  sql,
+  marker,
+  cwd = ROOT,
+  executor = spawnSync,
+  readFile = readFileSync,
+} = {}) {
+  if (typeof marker !== "string" || !/^[A-Z0-9_]{8,96}$/.test(marker)) {
+    throw new Error("sql_marker_invalid");
+  }
+  validateReadOnlySql(sql);
   const config = readFile(resolve(cwd, "supabase/config.toml"), "utf8");
   const connection = resolveLocalConnection(config);
   const childEnv = { ...process.env };
-  for (const name of [
-    "DATABASE_URL",
-    "PGHOST",
-    "PGHOSTADDR",
-    "PGPORT",
-    "PGUSER",
-    "PGDATABASE",
-    "PGSERVICE",
-    "PGSERVICEFILE",
-    "SUPABASE_DB_URL",
-  ]) delete childEnv[name];
+  for (
+    const name of [
+      "DATABASE_URL",
+      "PGHOST",
+      "PGHOSTADDR",
+      "PGPORT",
+      "PGUSER",
+      "PGDATABASE",
+      "PGSERVICE",
+      "PGSERVICEFILE",
+      "SUPABASE_DB_URL",
+    ]
+  ) delete childEnv[name];
   Object.assign(childEnv, {
-    PGHOST: connection.host,
-    PGPORT: String(connection.port),
-    PGUSER: connection.user,
-    PGDATABASE: connection.database,
     PGPASSWORD: LOCAL_PASSWORD,
     PGCONNECT_TIMEOUT: "3",
     PGOPTIONS:
@@ -280,11 +383,15 @@ export function runReadOnlySqlProof({
     "--set=ON_ERROR_STOP=1",
     "--tuples-only",
     "--no-align",
-    `--file=${proofPath}`,
+    `--host=${connection.host}`,
+    `--port=${connection.port}`,
+    `--username=${connection.user}`,
+    `--dbname=${connection.database}`,
   ];
   const result = executor("psql", args, {
     cwd,
     encoding: "utf8",
+    input: sql,
     maxBuffer: 256 * 1024,
     env: childEnv,
   });
@@ -295,20 +402,16 @@ export function runReadOnlySqlProof({
     );
     throw new Error(`local_readonly_sql_execution_failed:${detail}`);
   }
-  const markerCount = String(result.stdout ?? "").split(definition.marker)
+  const markerCount = String(result.stdout ?? "").split(marker)
     .length - 1;
   if (markerCount !== 1) {
     throw new Error(`local_readonly_sql_marker_count:${markerCount}`);
   }
-  const structured = definition.outputFormat
-    ? validateStructuredOutput(definition, result.stdout)
-    : null;
   return {
-    marker: definition.marker,
+    marker,
     markerCount,
     connection,
-    output: structured?.output ?? null,
-    payload: structured?.payload ?? null,
+    stdout: String(result.stdout ?? ""),
   };
 }
 
