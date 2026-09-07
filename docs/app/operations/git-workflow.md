@@ -1,324 +1,200 @@
-# Git Workflow
+# Git, Worktree, Runner, Result, And Terminal Workflow
 
-Status: CURRENT app workflow.
+Status: CURRENT operations contract.
 
-## Branch
+This document owns Git authority, worktree/workspace routing, canonical runner
+and preview operation, result publication, and human Terminal handoffs. Product
+canon and proof interpretation live elsewhere.
 
-Active development branch: `main`.
+## Git authority
 
-Codex may inspect Git read-only with `status`, `diff`, `diff --stat`,
-`diff --check`, `log`, `show`, `branch`, and `rev-parse`.
+The active integration branch is main. Main is the protected integration
+worktree.
 
-Codex does not autonomously stage, commit, push, merge, rebase, cherry-pick,
-revert, reset, clean, stash, amend, deploy, or otherwise mutate Git history.
-Daan owns staging decisions, commits, pushes, and consequential history changes.
+Codex may use only the read-only Git operations permitted by the effective
+policy: status, diff, diff --stat, diff --check, log, show, branch, and
+rev-parse. It preserves unrelated dirty and untracked files.
 
-## Canonical Batch Launch
+Daan owns staging, commits, cherry-picks, merges, pushes, history changes, and
+deployments. Codex never autonomously runs add, commit, push, merge, rebase,
+cherry-pick, revert, reset, restore, checkout, switch, clean, stash, rm, mv,
+apply, or am.
 
-For normal batches, the orchestrator supplies an exact already-approved human
-workspace name to the canonical launcher:
+Before edits, establish the expected branch, HEAD, index, tracked changes, and
+untracked inventory. Stop before mutation when they differ from the task.
+Before a human commit, report at least git diff --check, the exact changed file
+list, diffstat, staged state, and worktree status.
 
-```bash
-node scripts/tools/enval-batch.mjs start Beheer
-```
+Ignored migrations are not made visible by changing .gitignore. When Daan
+chooses to stage one intended ignored migration, Daan may use
+git add -f <exact-path>; Codex does not run it.
 
-Do not manually compose branch, worktree, and Codex launch commands except for
-explicit recovery or debugging. The launcher owns the fixed human-to-technical
-binding, keeps `main` as the protected integration worktree, and refuses stale,
-ambiguous, or conflicting state. Daan does not invent, type, select, or interpret
-technical identifiers in normal use. On retry or resume the launcher reconciles
-and reuses the exact assigned workspace, branch, worktree, tabs, and agent; it
-does not create another workspace. One human workspace has at most one active
-batch/worktree binding. Only an exact approved binding that is absent may be
-provisioned. All workspaces live in the visible Herdr project/session `ENVAL`.
-The launcher discovers the existing Codex pane and does not predict pane IDs or
-delegate Git-worktree creation to Herdr.
+## Worktree and workspace responsibilities
 
-The exact approved topology is:
+The orchestrator owns the human name, branch, worktree, tabs, panes, and agent
+binding. No prompt, agent, or launcher invents or repairs an alternate binding.
 
-```text
+~~~text
 ENVAL
-- Main
-  - Codex
-  - Terminal
-- _Setup
-  - Codex
-  - Terminal
-  - Reviewer
-- Beheer
-  - Codex
-  - Terminal
-  - Reviewer
-```
+- Main: protected integration/admin; tabs Codex, Terminal
+- _Setup: governance/runner/hooks/rules/operations; tabs Codex, Terminal, Reviewer
+- Beheer: product implementation/proofs/review; tabs Codex, Terminal, Reviewer
+~~~
 
-Topology and human names are orchestrator-owned. A new workspace requires
-Daan's prior explicit agreement and a bounded registry/governance update.
-Agents and the launcher never derive or invent names such as `Previous Beheer`,
-`Beheer 2`, or `Autonomy Beheer`. Technical slugs, hashes, generated agent IDs,
-branches, and worktree paths are not human-facing names. The launcher reconciles
-the exact `Codex`, `Terminal`, and `Reviewer` batch tabs.
-`Reviewer` is visibility/inspection-only: project tooling routes evidence and
-findings without Daan manually relaying messages. Its normal success output is
-limited to the human navigation contract:
+No other human workspace name is approved. A new workspace requires Daan's
+explicit agreement and a bounded registry/governance change. Names such as
+Previous Beheer, Beheer 2, or Autonomy Beheer are forbidden. One human
+workspace has at most one active batch/worktree binding.
 
-```text
-PROJECT=ENVAL
-WORKSPACE=<human product name>
-TABS=Codex,Terminal,Reviewer
-```
+Product implementation belongs in Beheer, not _Setup. Setup governance does
+not ride with a Beheer product change. Main is used for controlled integration
+and project administration. Worktree synchronization and history mutation
+remain human actions.
 
-For a UI-bearing batch, the same implementation Codex emits bounded temporary
-JSON state after deterministic and browser evidence is green, then advances the
-project-local `enval-ui-review-loop.mjs` state machine within the same turn. Each
-review uses a fresh ephemeral, read-only Codex invocation in `Reviewer`. A
-`FAIL` returns structured findings directly to the same implementation context;
-the next review requires refreshed deterministic and browser evidence. `PASS`
-stops immediately browser-ready. The default allows four fixes and one final
-review; an explicitly authorized batch may allow five fixes, never more. A final
-failure or an earlier human/material/Loop-Guard stop returns `PARTIAL`.
+## Canonical batch runner
 
-Before Git branch/worktree creation, the launcher verifies installed Herdr 0.8.2,
-the required session/workspace/agent CLI semantics, Codex availability, and the
-project-local governance baseline. It then starts Codex through Herdr's supported
-agent mechanism with on-request approval, Auto-review, hooks, strict config, and
-`web_search="disabled"`; ordinary product batches therefore have no hosted
-web-search tool by default. Governance or research tasks may use cached search
-only when explicitly required, and live search requires explicit task need.
-Shell/network permission remains a separate boundary.
+Normal batches start from Main with one exact approved workspace:
 
-### Canonical local read-only inspection
+~~~text
+node scripts/tools/enval-batch.mjs start Beheer
+~~~
 
-Individual local identity and privacy-safe baseline checks use the existing
-target authority with one fixed probe identifier:
+The launcher validates the canonical repository, clean tracked governance
+baseline, supported Codex and Herdr interfaces, and the registered binding. It
+reuses the exact workspace/worktree/tabs/agent on retry or resume; only an
+approved absent binding may be provisioned. It refuses duplicates, conflicts,
+stale bindings, alternate names, or multiple active agents.
 
-```bash
+The launcher keeps technical IDs internal, uses the supported Herdr agent
+mechanism, and launches Codex with on-request approval, Auto-review, trusted
+hooks, strict config, and ordinary product web search disabled. It never
+commits, merges, pushes, deploys, performs product work, or cleans data.
+
+After project hook/configuration source changes, an already-open Codex process
+is stale. Start a fresh session and trust the exact reviewed hooks;
+`Continue without trusting (hooks won't run)` is invalid and
+`--dangerously-bypass-hook-trust` is forbidden.
+
+For UI work, the implementation run produces bounded evidence before the
+project review loop starts a fresh read-only reviewer. Findings return through
+the runner; Daan does not shuttle reviewer messages. PASS stops immediately.
+Review cycle limits and evidence rules live in the root AGENTS.md.
+
+Stored Herdr/worktree state does not prove a Codex process survived interruption
+or reboot. Resume/relaunch only after the canonical runner has reconciled the
+registered binding and live state; ambiguous recovery preserves state and stops.
+Parallel product implementation remains disabled unless a separately approved
+pilot provides isolated worktrees, services, fixtures, and human integration.
+
+## Canonical local read-only probes
+
+Individual identity and privacy-safe baseline reads use only these guarded
+forms:
+
+~~~text
 node scripts/tools/enval-supabase-target.mjs --target TENANT_ENVAL --probe db-identity
 node scripts/tools/enval-supabase-target.mjs --target TENANT_ENVAL --probe db-baseline
 node scripts/tools/enval-supabase-target.mjs --target TENANT_ENVAL --probe api-health
 node scripts/tools/enval-supabase-target.mjs --target TENANT_ENVAL --probe mailpit-health
-```
+~~~
 
-The database probes pin `127.0.0.1:54322/postgres`, run fixed SQL inside
-`BEGIN TRANSACTION READ ONLY` and `ROLLBACK`, enforce session read-only mode,
-and emit only identity or count metadata. The HTTP probes make fixed GETs to
-the exact loopback API or Mailpit origin, reject redirects, send no credentials
-or body, discard response content, and emit only origin/status metadata.
+Database probes pin 127.0.0.1:54322/postgres, use fixed SQL inside
+BEGIN TRANSACTION READ ONLY and ROLLBACK, enforce read-only session state, and
+emit privacy-safe identity/count metadata. HTTP probes make fixed GETs to the
+exact loopback origin, reject redirects, send no credentials/body, discard
+content, and emit only origin/status metadata.
 
-Arbitrary SQL, direct `psql` or `curl`, extra/repeated arguments, remote or
-unknown targets, other ports/databases, credentials, response content, and all
-cleanup or other writes remain fail-closed behind the existing human gate.
+Direct or arbitrary psql/curl, extra arguments, other targets, remote or unknown
+hosts, other ports/databases, credentials, response content, cleanup, and all
+writes remain fail closed.
 
-The launcher does not commit, merge, push, deploy, clean up, or launch Codex
-Desktop. Detaching a Herdr client does not stop the batch agent. The shared named
-session topology permits a later remote client attachment without changing batch
-architecture.
+## External worktree preview
 
-`Main -> Terminal` is the default human location for project-wide shell, Git,
-and administration work. A batch `Terminal` is only for genuinely batch-local
-work. Daan performs commits, cherry-picks, and pushes there; Codex performs none
-of them. Product prompts contain only their task-specific delta because stable
-topology, Git, result, and review-loop governance lives here, in `AGENTS.md`, and
-in canonical tooling.
+Persistent previews are controlled from Main -> Terminal with the canonical
+Setup-owned tool and one approved workspace:
 
-### External worktree preview
-
-The persistent preview launcher is operated only from `Main -> Terminal` and
-accepts an existing approved human workspace name. For the current Beheer
-worktree, use:
-
-```text
+~~~text
 /usr/local/bin/node ../enval-worktrees/setup/scripts/tools/enval-preview.mjs start Beheer
 /usr/local/bin/node ../enval-worktrees/setup/scripts/tools/enval-preview.mjs status Beheer
 /usr/local/bin/node ../enval-worktrees/setup/scripts/tools/enval-preview.mjs stop Beheer
-```
+~~~
 
-The launcher pins the effective runtime to that explicit Node binary and refuses
-Node below 22. It snapshots tracked files plus non-ignored untracked files from
-the registered worktree into `~/.herdr-runtime/ENVAL/preview/beheer/source`.
-Git metadata, dependency trees, private environment files, logs, generated
-output and temporary artifacts are excluded. Root and app dependencies are
-installed with `npm ci` from the unchanged repository lockfiles into the same
-external runtime; no package or lockfile update is performed. Existing private
-environment files remain referenced in place by the guarded local runtime and
-are never copied.
+The tool requires Node 22+, snapshots the registered worktree into
+~/.herdr-runtime/ENVAL/preview/beheer/source, and installs root/app dependencies
+from unchanged lockfiles into the external runtime. Git metadata, dependencies,
+private env files, logs, and generated artifacts are excluded. No node_modules,
+lockfile change, or runtime artifact is created in a worktree.
 
-Before preview readiness, the guarded runtime materializes the deterministic
-local-only tenant signing configuration through the existing manifest, signing
-material, and legal-document authorities. The transaction can insert only the
-approved tenant configuration/signing material tables, never Auth, signup,
-Storage, or customer data. Exact existing rows are reused; partial, conflicting,
-invalidated, non-local, or remote state fails closed. Readiness then resolves
-the configuration, all four approved component revisions, signing materials,
-and legal documents through the same data-plane authorities used by the signing
-presentation. For the exact loopback local runtime, the selected local
-manifest's effective date activates only its hash-matched validation-candidate
-document revisions; this never promotes those revisions for remote or
-production use. Readiness also builds the production presentation receipt and
-runs the same receipt-bound legal-document projection as the browser before
-reporting `LEGAL_DOCUMENT_DELIVERY=PASS`. No signing secret is stored in Git or
-generated by this bootstrap.
+The guarded runtime may materialize only the approved deterministic local tenant
+signing configuration. It never writes Auth, signup, Storage, or customer data.
+Partial/conflicting/invalidated/non-local state fails closed. Readiness uses the
+same tenant configuration, signing-material, legal-document, receipt, and
+browser projection authorities as the application. Remote/production never
+receives local fallback behavior.
 
-While that guarded runtime is running, it owns one temporary validated link at
-the external snapshot's `app/node_modules` path to the matching lockfile-pinned
-external dependency tree. Both ends and the link location must resolve below
-`~/.herdr-runtime/ENVAL/`; occupied paths, traversal and unexpected symlink
-targets fail closed. Runtime failure, stop and interrupt remove the link. The
-registered worktree and snapshot contents remain unchanged, and no dependency
-artifact is created in a Git worktree.
+While running, the preview owns one validated temporary source/app/node_modules
+link to the matching external dependency tree. Source, link, and target must
+resolve below ~/.herdr-runtime/ENVAL/. Occupied paths, traversal, wrong targets,
+failure, stop, and interrupt fail closed and clean the link. Stop terminates
+only the owned process group, verifies termination, and compares the source
+worktree with its start fingerprint.
 
-Successful `start` prints the loopback URL, owned process ID, health result,
-effective Node version, snapshot root and external dependency root. `status`
-rechecks process ownership and Vite reachability. `stop` terminates the owned
-process group, verifies termination, and compares the source worktree with the
-fingerprint captured before the snapshot.
+## Result publication
 
-Final result publication, workspace-bound immutable run history, lifecycle
-finalization, and Terminal-output transport follow the single canonical
-contract in the root `AGENTS.md` section `Human Herdr navigation and action
-location`. This operations document does not duplicate its retrieval, envelope,
-semantic filename, or concurrency rules.
+scripts/tools/enval-result.mjs is the single ENVAL result authority.
+UserPromptSubmit opens a workspace run; Stop publishes the recognized terminal
+return; Interrupt and SessionEnd publish bounded fallback status. The configured
+agent-turn-complete notifier is an idempotent fallback when Stop is unavailable.
+Current hard permission denials publish HUMAN_GATE through the same authority.
 
-## Worker Startup And Recovery
+Terminal statuses are PASS, PARTIAL, FAIL, HUMAN_GATE, BLOCKED, INTERRUPTED, and
+TIMEOUT. Publication failure is non-zero and recorded without secrets.
 
-Status: CURRENT PROVEN on the temporary MacBook Worker. The M6 replacement is
-TARGET and must preserve this architecture.
+The canonical human entrypoint is:
 
-After reboot and user login, the expected worker dependency order is:
+~/.herdr-results/ENVAL/<human-workspace>/latest.txt
 
-1. Tailscale starts and restores private device reachability.
-2. macOS Remote Login remains enabled so SSH is available over Tailscale.
-3. the `moshi-hook` LaunchAgent starts from
-   `~/Library/LaunchAgents/app.getmoshi.moshi-hook.plist`.
-4. Docker Desktop starts and its engine becomes available.
-5. Herdr is available on demand; its stored `ENVAL` project/session may be
-   stopped.
-6. Moshi may reopen `ENVAL -> Main`, while the
-   canonical batch launcher remains the normal path for creating a new batch
-   workspace and Codex agent.
+Immutable history is:
 
-Docker availability is a worker dependency for batches that use the local ENVAL
-stack. Stored Herdr state, repository state, or remote shell access does not
-prove that the Docker engine is ready.
+~/.herdr-results/ENVAL/<human-workspace>/runs/<run-id>/result.txt
 
-A reboot or power loss never proves that an active Codex process survived. Do
-not claim that a batch continued through reboot merely because its Herdr
-session, workspace, branch, or worktree is still stored. Before any recovery,
-reconcile the stored Herdr workspace and agent, the leaf branch and worktree,
-and the live Codex process. Resume or relaunch only when that state is safe and
-the action is explicit. Otherwise surface the interrupted batch to Daan without
-creating, deleting, cleaning, or replacing state. Automatic reboot-resume is not
-enabled.
+Each run atomically replaces its workspace latest with PENDING and later its
+terminal envelope. Parallel workspaces never share active state, latest, or
+history. The project-level latest is transitional and non-canonical.
 
-Daan does not manually compose normal Git, Herdr, and Codex recovery commands.
-For normal control Daan either reopens the human-named workspace in Moshi or
-supplies its human product name to the canonical launcher. Until canonical
-tooling provides a safe explicit recovery action for any further case, that
-case stops with the stored state intact for Daan.
+## Human Terminal handoffs
 
-## Private Remote Control
+Main -> Terminal is the default location for project-wide Git and
+administration. A batch Terminal is used only for batch-local work.
 
-No public router ports or port forwarding are required or permitted for this
-worker path. Tailscale provides private reachability, Remote Login provides SSH,
-the `moshi-hook` makes the host available to Moshi, and Moshi is the remote
-control client for the persistent Herdr workspace.
+Every human action identifies:
 
-The proven iPhone control path is:
+~~~text
+WHERE
+Project: <project>
+Workspace: <workspace>
+Tab: Terminal
 
-```text
-ExpressVPN off -> Tailscale on -> Moshi -> Herdr
-```
+DO
+<one exact command or bounded command block>
+~~~
 
-Moshi uses the private Tailscale/SSH path; it does not make Herdr, Codex,
-Docker, or repository services public.
+Manual evidence uses set -o pipefail, captures complete stdout/stderr with
+2>&1 | tee to a semantic file inside the workspace-bound run directory, and
+then transports that file. Never use terminal-latest.txt; use a step name such
+as commit-sequence-precheck.txt, setup-commit-result.txt, or
+main-integration-check.txt. Do not make Daan select scrollback and do not use
+cat as the primary transport.
 
-## M6 Worker Migration
+Human Terminal blocks must never run shell exit or replace the interactive
+shell with exec. A check reports a non-zero status without closing the tab.
+Do not close, rename, remove, or reconcile tabs/panes/workspaces as a side
+effect of a handoff.
 
-Moving from the temporary MacBook Worker to the M6 changes the host, not the
-architecture or security boundary. Before autonomous ENVAL work on the M6,
-install, migrate where appropriate, and verify the following machine-local
-assets and settings without assuming that copied files prove active services:
+Prompts contain only task-specific delta. Permanent Git, runner, result, and
+Terminal rules are linked, not copied into every task.
 
-- `~/.codex/AGENTS.md`;
-- `~/.agents/skills/independent-ui-review/`;
-- `~/.config/moshi/`;
-- `~/Library/LaunchAgents/app.getmoshi.moshi-hook.plist`;
-- Tailscale device and account setup;
-- macOS Remote Login configuration;
-- Docker startup configuration and engine readiness;
-- Herdr installation and the `ENVAL -> Main` naming conventions; and
-- Codex CLI installation and configuration.
+## Push and deploy
 
-The M6 must retain the same private Tailscale -> SSH/Moshi -> Herdr -> Codex
-control path, Docker dependency, canonical batch launcher, and no-public-router-
-ports boundary. Migration and verification are separate future work; this
-contract does not copy assets, configure the M6, or resume an interrupted batch.
-
-## Before Edits
-
-Run:
-
-```bash
-git branch --show-current
-git log -1 --oneline
-git status --short --untracked-files=all
-```
-
-Confirm:
-
-- branch is expected
-- HEAD is expected
-- worktree state is understood
-
-## During Edits
-
-- Keep scope exactly as requested.
-- Do not revert user changes.
-- Do not modify root/static production files unless explicitly requested.
-- Do not modify Supabase functions or migrations unless explicitly requested.
-- Do not print secrets, tokens, JWTs, signed URLs, or runtime config values.
-
-## Migrations
-
-`supabase/migrations/` may be ignored locally.
-
-When Daan chooses to stage one migration under an ignored path, Daan may use:
-
-```bash
-git add -f path/to/intended_migration.sql
-```
-
-Only Daan stages the intended migration. Codex does not run this command and does
-not change `.gitignore` for that reason.
-
-## Commits
-
-Daan commits only after requested validation passes. Codex leaves the worktree
-unstaged and reports the validation and diff evidence.
-
-A normal small local commit does not automatically require a full/release gate.
-Validation follows the active Tier A/B/C policy in `AGENTS.md` and
-`docs/app/operations/run-debug.md`: targeted checks for small steps, relevant
-broader checks at a logical batch boundary, and full gates only for release,
-major cross-cutting milestones, explicit instruction or evidence of broader
-risk. Valid green expensive checks are reused until their dependency/risk cone
-changes.
-
-Before commit:
-
-```bash
-git diff --check
-git status --short --untracked-files=all
-```
-
-After commit:
-
-```bash
-git log -1 --oneline
-git show --name-only --format=oneline --stat HEAD
-git status --short --untracked-files=all
-```
-
-## Push And Deploy
-
-Daan owns push. Deploy remains consequential and human-controlled; Codex does not
-push or deploy autonomously.
+Push and deploy are explicit human actions. Local validation, a commit, or an
+integration does not imply remote mutation or production acceptance.

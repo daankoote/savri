@@ -1,6 +1,10 @@
-# App Run And Debug Notes
+# Diagnosis, Test, And Proof Method
 
-Status: CURRENT operational notes for app backend debugging.
+Status: CURRENT operational methodology.
+
+This document owns diagnosis, test selection, proof labels, and evidence
+interpretation. Git, worktrees, runners, results, and human Terminal handoffs
+are owned by `docs/app/operations/git-workflow.md`.
 
 ## Boundaries
 
@@ -9,34 +13,26 @@ Status: CURRENT operational notes for app backend debugging.
 - Do not treat local proof as production proof.
 - Do not run remote deploy/apply unless explicitly requested.
 - Prefer terminal-first proof for non-visible backend, SQL, recovery, and inventory checks.
-- Apply the Tier A/B/C policy below; browser scope follows the changed
-  interaction/risk cone rather than visibility alone.
+- Select evidence from the changed interaction and risk cone rather than from
+  visibility alone.
 
 ## Test Orchestration
 
-- **Tier A — targeted:** default for each small step. Identify changed layers,
-  affected shared dependencies/callers and realistic regression risks, then run
-  the minimum relevant proof/static/type/browser/SQL check.
-- **Tier B — logical batch:** when one coherent signing, tenant-boundary,
-  correction or UI-flow batch completes, run only its relevant broader
-  regression, build, browser, security/SQL and integration gates.
-- **Tier C — full/release-grade:** only for release/deploy readiness, major
-  cross-cutting architecture milestones, explicit Daan/ChatGPT instruction or
-  lower-tier evidence of broader risk. A normal local commit is not Tier C.
-
-Within one logical batch, reuse green expensive evidence while its relevant
-code, shared dependencies, test/proof, schema/migration and configuration/
-environment are unchanged. Re-run when that risk cone changes. Cheap
-`git diff --check` and narrow formatting checks may run frequently.
-
-High-risk RLS, authorization, capabilities, tenant, signing/OTP/finalization,
-schema, immutable-history, corrections, parser-authority and platform-support
-changes justify heavier Tier A or earlier Tier B coverage, not unrelated suites.
-
-Do not repeat an identical failing command more than twice without a new
-hypothesis or changed condition. After bounded attempts report the exact
-failure, hypotheses, attempted changes, likely cause and next action before
-expanding scope.
+- Apply the Tier A/B/C and loop-guard invariants in root `AGENTS.md`.
+- Map each changed layer to affected callers, shared dependencies, contracts,
+  realistic regressions, and the smallest evidence that exercises them.
+- Use pure/static checks first where they prove the contract. Add local service,
+  browser, database/security, build, or integration evidence only when the
+  changed risk cone needs it.
+- Reuse an expensive green result only while its relevant code, dependencies,
+  proof, schema, and configuration remain unchanged.
+- Keep browser and Deno/Node/compiler lanes separate when the repository gives
+  them different runtime authority.
+- Distinguish product assertions, fixture setup, cleanup, and residue. A cleanup
+  failure is proof-hygiene failure; do not relabel it as a product regression.
+- Mutating proofs own exact disposable identifiers from creation through a
+  `finally` cleanup and prove zero run-owned residue. Never use broad cleanup
+  or global mutable digests as a substitute for ownership.
 
 Every implementation report states:
 
@@ -53,14 +49,6 @@ TIER_C_REQUIRED_NOW=<YES|NO + reason>
 
 An intentionally excluded broader check is not a defect when the changed risk
 cone does not require it.
-
-## First Checks
-
-```bash
-git branch --show-current
-git log -1 --oneline
-git status --short --untracked-files=all
-```
 
 ## Function Call Discipline
 
@@ -206,16 +194,9 @@ Allowed classifications:
 
 Do not classify dashboard `Unhealthy` as closed from terminal route proof alone. Terminal route proof can downgrade impact, but dashboard/platform health remains open until directly resolved or explicitly accepted as a risk.
 
-Current ENVAL remote gate result:
-
-- managed scheduled backups are unavailable;
-- PITR is unavailable;
-- restore-to-new-project is unavailable;
-- Daan accepted the no-Pro/no-managed-backup operational risk;
-- no further browser or Support confirmation is required for this backup subscription decision;
-- encrypted logical backup plus local restore dry-run is mandatory before every remote mutation.
-
-Before running any production dump, prove a recoverable encryption recipient first. If `age` is unavailable and no GPG recipient key exists, stop before the dump. Do not create a plaintext backup while deciding how to encrypt it.
+Before any authorized production dump, prove a recoverable encryption
+recipient. If none exists, stop before the dump; never create a plaintext
+backup while selecting encryption.
 
 ## Browsercheck Policy
 
@@ -227,11 +208,8 @@ cannot be covered safely through a terminal interface.
 
 Browserchecks are not required for documentation-only batches, read-only schema inventory, SQL proposal review, shadow apply, collision proof, migration lint, remote function inventory, PostgREST functional request-path checks when authorized terminal evidence is available, backup manifests, restore dry-runs, or non-visible backend proposal batches.
 
-A dashboard-only fact requires at most a targeted manual confirmation. It does not require a full browser regression batch. The backup subscription decision is closed and should not be rechecked unless Daan explicitly changes the owner decision.
-
-Documentation/architecture reconciliation is triggered only by a material
-canon/invariant, ownership, dependency, security/Auth boundary or CURRENT/TARGET
-status change. Small implementation details do not create a docs gate.
+A dashboard-only fact requires at most targeted confirmation; it does not
+create a full browser regression batch.
 
 ## Idempotency
 

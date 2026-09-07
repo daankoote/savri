@@ -619,24 +619,6 @@ When sources conflict, use this order:
 - Internal capabilities are built only in separately approved bounded work packages. External APIs and registers are researched in parallel and connected later through provider-independent ports and adapters.
 - External provider data is observed/external provenance, not automatic core truth.
 
-## Codex Execution Batch Discipline
-
-Every execution batch must have one explicit bounded scope and must:
-
-- verify repository, branch, and HEAD; then read the applicable official NEa source, this canon, the target architecture, and requirements;
-- inspect existing frontend, backend, database, module, service, helper, component, CSS, token, and layout patterns, and compare CURRENT with TARGET before proposing change;
-- maximize reuse and build modularly with one responsibility per module; resolve small differences through props, configuration, composition, tokens, and modifier classes instead of duplicate or near-duplicate logic, modules, or CSS;
-- never use inline CSS;
-- remove nothing without dependency, caller, data, migration, rollback, and audit evidence;
-- make database, Auth, RLS, UI, runtime, remote, or deployment changes only in their own explicitly approved batches; and
-- never commit, push, merge, or deploy without explicit permission.
-
-Verification follows `AGENTS.md` Tier A/B/C orchestration. A commit is not a
-release gate. Previously green expensive evidence remains reusable within one
-logical batch until its code/dependency/proof/schema/configuration risk cone
-changes. Architecture/docs reconciliation is required only for a material canon,
-ownership, boundary, dependency, security/Auth or CURRENT/TARGET status change.
-
 ## Removed Legacy Documentation Rule
 
 The former in-repo legacy documentation tree has been removed after external copy by Daan.
