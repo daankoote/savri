@@ -1,5 +1,5 @@
 import { payloadHash } from "../../supabase/functions/_shared/app_foundation.ts";
-import { createSignupSigningPresentationReceiptV1 } from "../../supabase/functions/_shared/app_signup_signing_presentation.ts";
+import { createSignupSigningPresentationReceiptV2 } from "../../supabase/functions/_shared/app_signup_signing_presentation.ts";
 import {
   tenantConfigurationManifestCanonicalSha256,
   type TenantConfigurationManifestHashInputV1,
@@ -754,7 +754,7 @@ async function signingReadiness(
   if (documents?.length !== 4) {
     fail("local_signing_legal_documents_unavailable");
   }
-  const receipt = await createSignupSigningPresentationReceiptV1({
+  const receipt = await createSignupSigningPresentationReceiptV2({
     intakeId: crypto.randomUUID(),
     authenticatedAuthUserId: crypto.randomUUID(),
     tenantExecution: gate.executionContext,

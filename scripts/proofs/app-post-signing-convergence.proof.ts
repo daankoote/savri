@@ -241,7 +241,7 @@ const checks: Array<[string, () => void]> = [
     )],
   ["Q26", () =>
     assert(
-      signingEndpoint.includes("app_signup_signing_finalize_v2") &&
+      signingEndpoint.includes("app_signup_signing_finalize_v3") &&
         signingEndpoint.includes("app_signup_signing_status_v2"),
       "signing_regression_hook",
     )],

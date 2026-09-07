@@ -6,13 +6,13 @@ import type { ResolvedSigningLegalDocument } from "./signing_legal_runtime.ts";
 
 export const SIGNING_PRESENTATION_RECEIPT_TTL_MILLISECONDS = 60 * 60 * 1_000;
 export const SIGNING_PRESENTATION_RECEIPT_SCHEMA_VERSION =
-  "signup-signing-presentation-receipt-v1" as const;
+  "signup-signing-presentation-receipt-v2" as const;
 
-export type SignupSigningPresentationReceiptV1 = Readonly<{
+export type SignupSigningPresentationReceiptV2 = Readonly<{
   databaseRow: Readonly<Record<string, string>>;
   response: Readonly<{
     ok: true;
-    mode: "signup_signing_presentation_v1";
+    mode: "signup_signing_presentation_v2";
     receipt_reference: string;
     receipt_sha256: string;
     presented_at: string;
@@ -29,7 +29,7 @@ export type SignupSigningPresentationReceiptV1 = Readonly<{
   }>;
 }>;
 
-export async function createSignupSigningPresentationReceiptV1(input: {
+export async function createSignupSigningPresentationReceiptV2(input: {
   intakeId: string;
   authenticatedAuthUserId: string;
   tenantExecution: AppTenantExecutionContext;
@@ -38,12 +38,17 @@ export async function createSignupSigningPresentationReceiptV1(input: {
   legalDocuments: readonly ResolvedSigningLegalDocument[];
   presentedAt: string;
   requestId: string;
-}): Promise<SignupSigningPresentationReceiptV1 | null> {
+}): Promise<SignupSigningPresentationReceiptV2 | null> {
   const presentedTime = Date.parse(input.presentedAt);
   if (
     !Number.isFinite(presentedTime) || input.legalDocuments.length !== 4 ||
     new Set(input.legalDocuments.map((document) => document.documentType))
-        .size !== 4
+        .size !== 4 ||
+    input.legalDocuments.some((document) =>
+      !document.effectiveFrom ||
+      !Number.isFinite(Date.parse(document.effectiveFrom)) ||
+      Date.parse(document.effectiveFrom) > presentedTime
+    )
   ) return null;
   const expiresAt = new Date(
     presentedTime + SIGNING_PRESENTATION_RECEIPT_TTL_MILLISECONDS,
@@ -56,6 +61,7 @@ export async function createSignupSigningPresentationReceiptV1(input: {
       language: document.language,
       title: document.title,
       content_sha256: document.contentSha256,
+      effective_from: document.effectiveFrom,
     })
   );
   const hashInput = Object.freeze({
@@ -127,18 +133,22 @@ export async function createSignupSigningPresentationReceiptV1(input: {
     privacy_notice_version: privacy.version,
     privacy_notice_language: privacy.language,
     privacy_notice_content_sha256: privacy.contentSha256,
+    privacy_notice_effective_from: privacy.effectiveFrom!,
     service_terms_document_reference: service.documentReference,
     service_terms_version: service.version,
     service_terms_language: service.language,
     service_terms_content_sha256: service.contentSha256,
+    service_terms_effective_from: service.effectiveFrom!,
     fee_terms_document_reference: fee.documentReference,
     fee_terms_version: fee.version,
     fee_terms_language: fee.language,
     fee_terms_content_sha256: fee.contentSha256,
+    fee_terms_effective_from: fee.effectiveFrom!,
     mandate_document_reference: mandate.documentReference,
     mandate_version: mandate.version,
     mandate_language: mandate.language,
     mandate_content_sha256: mandate.contentSha256,
+    mandate_effective_from: mandate.effectiveFrom!,
     presented_at: input.presentedAt,
     expires_at: expiresAt,
     request_id: input.requestId,
@@ -147,7 +157,7 @@ export async function createSignupSigningPresentationReceiptV1(input: {
     databaseRow,
     response: Object.freeze({
       ok: true,
-      mode: "signup_signing_presentation_v1",
+      mode: "signup_signing_presentation_v2",
       receipt_reference: receiptReference,
       receipt_sha256: receiptSha256,
       presented_at: input.presentedAt,

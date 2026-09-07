@@ -284,15 +284,17 @@ signing source serialization excludes `not_found` and blank non-observations
 while preserving valid `found` nonblank observations and the remaining fact
 structure.
 
-Receipt-bound finalize currently passes ordinary request and canonical-fact
-prevalidation and then fails closed with HTTP 409
-`signing_presentation_finalize_cutover_required`. It creates no finalization or
-signing snapshot through that path. SL01-D remains TARGET: immutable signing
-snapshot v2 must persist M1 plus tenant/config/material provenance; finalize
-fingerprint/provenance v2 must replay exact M1 without M2 re-resolution.
-Successful history is never rewritten and replay never silently adopts newer
-configuration. The temporary compatibility guard may be removed only after
-that authority is implemented and proven.
+SL01-D is CURRENT PROVEN LOCAL. Receipt-bound finalize persists immutable
+signing snapshot v2 from accepted receipt M1 and binds tenant, Auth actor,
+configuration/material revisions and hashes, the exact four legal-document
+revisions, content hashes and effective dates, durable legal acceptance,
+challenge and verified OTP. `app_signup_signing_finalize_v3` owns the atomic
+transition, evidence, mandate, audit, replay and finalization fingerprint.
+Equivalent concurrent calls create exactly one submission; exact replay returns
+that same immutable result without M2 re-resolution. Expired, stale,
+mismatching, cross-owner and legacy/unbound requests fail closed and can start
+again from a fresh presentation. Successful history is never rewritten and
+replay never silently adopts newer configuration.
 
 This status is local technical proof, not production deployment or legal or
 regulatory approval. `typed_name_otp_v1` is not claimed advanced or qualified.

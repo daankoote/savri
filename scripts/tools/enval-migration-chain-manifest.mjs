@@ -273,6 +273,13 @@ export const TENANT_ENVAL_MIGRATION_CHAIN = Object.freeze({
       sha256:
         "c105c4808ff078623b3d5de8484ba7fabcf5efb81a8f384f5c2aa7ba316655e9",
     }),
+    Object.freeze({
+      version: "20260907120000",
+      path:
+        "supabase/migrations/20260907120000_app_signup_signing_finalize_receipt_bound.sql",
+      sha256:
+        "28d12b0e47e59bc185b41c129c3ed8cb2e480d808a7a8d350b54271f99514215",
+    }),
   ]),
   currentPresentAppMigrations: Object.freeze([
     [

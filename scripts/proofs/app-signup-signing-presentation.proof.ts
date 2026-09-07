@@ -14,7 +14,7 @@ import {
 import type { ResolvedTenantSigningMaterialBundleV1 } from "../../supabase/functions/_shared/app_tenant_signing_material_data_plane_v1.ts";
 import type { AppTenantExecutionContext } from "../../supabase/functions/_shared/app_tenant_resolution_shadow.ts";
 import {
-  createSignupSigningPresentationReceiptV1,
+  createSignupSigningPresentationReceiptV2,
   SIGNING_PRESENTATION_RECEIPT_TTL_MILLISECONDS,
 } from "../../supabase/functions/_shared/app_signup_signing_presentation.ts";
 import {
@@ -22,6 +22,13 @@ import {
   signingSha256Hex,
 } from "../../supabase/functions/_shared/signing_legal_runtime.ts";
 
+const REPOSITORY_ROOT = new URL("../../", import.meta.url);
+const SIGNING_MATERIAL_PROOF = decodeURIComponent(
+  new URL(
+    "scripts/proofs/app-tenant-signing-material.proof.ts",
+    REPOSITORY_ROOT,
+  ).pathname,
+);
 const DATABASE_URL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 const TENANT_ID = "c1000000-0000-4000-8000-000000000001";
 const INTAKE_ID = "c1000000-0000-4000-8000-000000000002";
@@ -63,9 +70,11 @@ async function command(
   args: string[],
   stdin?: string,
   env?: Record<string, string>,
+  cwd?: string | URL,
 ) {
   const child = new Deno.Command(name, {
     args,
+    cwd,
     env,
     stdin: stdin === undefined ? "null" : "piped",
     stdout: "piped",
@@ -105,6 +114,7 @@ const [
   frontend,
   clientSource,
   migrationSource,
+  finalizationMigrationSource,
 ] = await Promise.all([
   source("supabase/functions/api-app-signup-signing-presentation/index.ts"),
   source("supabase/functions/api-app-signup-signing-challenge/index.ts"),
@@ -113,6 +123,9 @@ const [
   source("app/src/features/signup/signupSigningClient.ts"),
   source(
     "supabase/migrations/20260901230000_app_signup_signing_presentation_receipt.sql",
+  ),
+  source(
+    "supabase/migrations/20260907120000_app_signup_signing_finalize_receipt_bound.sql",
   ),
 ]);
 
@@ -357,7 +370,7 @@ const configuration = Object.freeze({
   componentRevisions: Object.freeze(componentRevisions),
 });
 const presentedAt = new Date().toISOString();
-const receipt = await createSignupSigningPresentationReceiptV1({
+const receipt = await createSignupSigningPresentationReceiptV2({
   intakeId: INTAKE_ID,
   authenticatedAuthUserId: AUTH_USER_ID,
   tenantExecution: execution,
@@ -375,7 +388,7 @@ assert(
   "Q09_provenance_missing",
 );
 q(9);
-const secondReceipt = await createSignupSigningPresentationReceiptV1({
+const secondReceipt = await createSignupSigningPresentationReceiptV2({
   intakeId: INTAKE_ID,
   authenticatedAuthUserId: AUTH_USER_ID,
   tenantExecution: execution,
@@ -696,6 +709,7 @@ const waveA1 = await command(
   "deno",
   [
     "run",
+    "--no-lock",
     "--allow-all",
     "scripts/proofs/qualification-wave-a1-private-clean.proof.ts",
   ],
@@ -709,21 +723,32 @@ assert(
   `Q32_wave_a1:${scrub(waveA1.stderr || waveA1.stdout)}`,
 );
 q(32);
-const tf02 = await command("deno", [
-  "run",
-  "--allow-all",
-  "scripts/proofs/app-tenant-configuration-persistence.proof.ts",
-]);
+const tf02 = await command(
+  "deno",
+  [
+    "run",
+    "--no-lock",
+    "--allow-all",
+    "scripts/proofs/app-tenant-configuration-persistence.proof.ts",
+  ],
+  undefined,
+  undefined,
+  REPOSITORY_ROOT,
+);
 assert(
   tf02.code === 0 && tf02.stdout.includes("TF02C_PERSISTENCE_READ_PROOF=PASS"),
   `Q33_tf02:${scrub(tf02.stderr || tf02.stdout)}`,
 );
 q(33);
-const sl01b = await command("deno", [
-  "run",
-  "--allow-all",
-  "scripts/proofs/app-tenant-signing-material.proof.ts",
-]);
+const sl01b = await command(
+  "deno",
+  [
+    "run",
+    "--no-lock",
+    "--allow-all",
+    SIGNING_MATERIAL_PROOF,
+  ],
+);
 assert(
   sl01b.code === 0 &&
     sl01b.stdout.includes("SL01B_SIGNING_MATERIAL_PROOF=PASS"),
@@ -731,21 +756,25 @@ assert(
 );
 q(34);
 assert(
-  !migrationSource.includes("signup-signing-snapshot-v2") &&
-    !finalizeEndpoint.includes("signup-signing-snapshot-v2"),
-  "Q35_snapshot_v2_added",
+  finalizationMigrationSource.includes("signup-signing-runtime-snapshot-v2") &&
+    finalizeEndpoint.includes("signup-signing-runtime-snapshot-v2"),
+  "Q35_snapshot_v2_missing",
 );
 q(35);
 assert(
-  !migrationSource.includes("app_signup_signing_finalize_v3") &&
-    !migrationSource.includes("finalize_fingerprint_v2"),
-  "Q36_finalize_cutover_added",
+  finalizationMigrationSource.includes("app_signup_signing_finalize_v3") &&
+    finalizationMigrationSource.includes("finalization_fingerprint_sha256") &&
+    finalizeEndpoint.includes('SB.rpc("app_signup_signing_finalize_v3"'),
+  "Q36_finalize_cutover_missing",
 );
 q(36);
 assert(
-  finalizeEndpoint.includes("signing_presentation_finalize_cutover_required") &&
-    finalizeEndpoint.includes("same-document/different-config"),
-  "Q37_silent_finalize_possible",
+  !finalizeEndpoint.includes(
+    "signing_presentation_finalize_cutover_required",
+  ) &&
+    finalizeEndpoint.includes("signing_presentation_required") &&
+    finalizationMigrationSource.includes("legal_bundle_mismatch"),
+  "Q37_unsafe_finalize_cutover",
 );
 q(37);
 assert(residue === "0", "Q38_real_pilot_touched");

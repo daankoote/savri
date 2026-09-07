@@ -1,10 +1,10 @@
 # Signup Intake Architecture
 
 Status: MIXED. The active document-first journey, pre-auth quarantine, the
-SL01-C server-resolved presentation/acceptance/OTP boundary, legacy
-`typed_name_otp_v1` finalization, receipt v2, server-owned promotion, verified
-Auth binding and case-owned customer dashboard are CURRENT PROVEN locally.
-SL01-D receipt-provenance finalization remains TARGET. The older direct
+SL01-C server-resolved presentation/acceptance/OTP boundary, SL01-D
+receipt-provenance `typed_name_otp_v1` finalization, receipt v2, server-owned
+promotion, verified Auth binding and case-owned customer dashboard are CURRENT
+PROVEN locally. The older direct
 `api-app-signup-submit` path remains proven source but is not the active
 signed-intake owner. Production deployment, legal/OTP/Auth acceptance and
 review/verifier workflow remain TARGET / NOT IMPLEMENTED.
@@ -32,13 +32,12 @@ the browser neither selects provenance nor falls back to static/global legal
 material. Canonical signing sources omit `not_found` and blank parser
 observations while retaining valid `found` nonblank observations.
 
-The receipt-bound path does not yet finalize. After ordinary request and
-canonical-fact prevalidation it intentionally returns HTTP 409
-`signing_presentation_finalize_cutover_required`, with no finalization or
-signing snapshot. SL01-D must persist receipt M1 into immutable snapshot v2,
-bind tenant/config/material and finalize fingerprint/provenance v2, and replay
-exact M1 without M2 re-resolution before this compatibility guard may be
-removed.
+The receipt-bound path finalizes through the transactional v3 database
+authority. It persists receipt M1 in immutable snapshot v2 with tenant, Auth
+actor, configuration/material, legal-document revision/hash/effective-date,
+acceptance, challenge and OTP provenance. Equivalent concurrent requests create
+one submission, exact replay returns the same immutable result without M2
+re-resolution, and stale, mismatching or legacy/unbound requests fail closed.
 
 Signup quarantine and authenticated correction keep separate lifecycle-specific
 transport/authorization lanes, but their customer document presentation and

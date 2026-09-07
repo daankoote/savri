@@ -13,6 +13,7 @@ import {
   validateTenantSigningConfigurationInvalidationV1,
 } from "../../supabase/functions/_shared/app_tenant_signing_material.ts";
 
+const REPOSITORY_ROOT = new URL("../../", import.meta.url);
 const DATABASE_URL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 const TENANT_ID = "a1000000-0000-4000-8000-000000000001";
 const OTHER_TENANT_ID = "a1000000-0000-4000-8000-000000000002";
@@ -62,9 +63,11 @@ async function command(
   args: string[],
   stdin?: string,
   env?: Record<string, string>,
+  cwd?: string | URL,
 ): Promise<CommandResult> {
   const child = new Deno.Command(name, {
     args,
+    cwd,
     env,
     stdin: stdin === undefined ? "null" : "piped",
     stdout: "piped",
@@ -740,6 +743,7 @@ const waveA1 = await command(
   "deno",
   [
     "run",
+    "--no-lock",
     "--allow-all",
     "scripts/proofs/qualification-wave-a1-private-clean.proof.ts",
   ],
@@ -755,11 +759,18 @@ assert(
 );
 q(26);
 
-const tf02 = await command("deno", [
-  "run",
-  "--allow-all",
-  "scripts/proofs/app-tenant-configuration-persistence.proof.ts",
-]);
+const tf02 = await command(
+  "deno",
+  [
+    "run",
+    "--no-lock",
+    "--allow-all",
+    "scripts/proofs/app-tenant-configuration-persistence.proof.ts",
+  ],
+  undefined,
+  undefined,
+  REPOSITORY_ROOT,
+);
 assert(
   tf02.code === 0 &&
     tf02.stdout.includes("TF02C_PERSISTENCE_READ_PROOF=PASS") &&
@@ -768,7 +779,13 @@ assert(
 );
 q(27);
 
-const status = await command("git", ["status", "--short"]);
+const status = await command(
+  "git",
+  ["status", "--short"],
+  undefined,
+  undefined,
+  REPOSITORY_ROOT,
+);
 assert(
   status.code === 0 &&
     !moduleSource.match(/tenant.?2|dynamic.?switch|admin.?ui/i) &&

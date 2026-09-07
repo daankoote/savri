@@ -7,7 +7,7 @@ import {
   getAppRequestMeta,
 } from "../_shared/app_foundation.ts";
 import { authorizeSignupSigningIntakeV1 } from "../_shared/app_signup_signing_authorization.ts";
-import { createSignupSigningPresentationReceiptV1 } from "../_shared/app_signup_signing_presentation.ts";
+import { createSignupSigningPresentationReceiptV2 } from "../_shared/app_signup_signing_presentation.ts";
 import { DataPlaneTenantConfigurationV1Adapter } from "../_shared/app_tenant_configuration_data_plane_v1.ts";
 import {
   resolveTenantSigningMaterialBundleV1,
@@ -138,7 +138,7 @@ serve(async (req) => {
       "legal_bundle_unavailable",
     );
   }
-  const receipt = await createSignupSigningPresentationReceiptV1({
+  const receipt = await createSignupSigningPresentationReceiptV2({
     intakeId,
     authenticatedAuthUserId: authorization.value.authUserId,
     tenantExecution: meta.tenant_execution,

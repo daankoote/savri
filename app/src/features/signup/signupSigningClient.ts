@@ -64,7 +64,23 @@ export type SignupSigningStatus =
 
 export type SigningClientResult<T> =
   | { ok: true; value: T }
-  | { ok: false; message: string };
+  | { ok: false; message: string; code?: string };
+
+export function signupSigningFailureRequiresFreshPresentation(
+  code: string | undefined,
+): boolean {
+  return [
+    "challenge_unavailable",
+    "otp_expired",
+    "attempts_exhausted",
+    "presentation_receipt_expired",
+    "presentation_receipt_unavailable",
+    "presentation_binding_invalid",
+    "presentation_configuration_superseded",
+    "signing_configuration_invalidated",
+    "signing_presentation_required",
+  ].includes(code || "");
+}
 
 function runtimeConfig(): SigningRuntimeConfig | null {
   const auth = resolveAuthRuntimeConfig();
@@ -113,6 +129,12 @@ function message(body: Record<string, unknown>, fallback: string): string {
   return typeof body.error === "string" && body.error.trim()
     ? body.error.trim()
     : fallback;
+}
+
+function errorCode(body: Record<string, unknown>): string | undefined {
+  return typeof body.code === "string" && body.code.trim()
+    ? body.code.trim()
+    : undefined;
 }
 
 export async function readSignupSigningStatus(): Promise<
@@ -183,6 +205,7 @@ export async function readSignupSigningStatus(): Promise<
       response.body,
       "Deze aanmelding kan niet veilig worden hersteld.",
     ),
+    code: errorCode(response.body),
   };
 }
 
@@ -226,6 +249,7 @@ export async function requestSignupSigningPresentation(): Promise<
         response.body,
         "De juridische documenten konden niet veilig worden geladen.",
       ),
+      code: errorCode(response.body),
     };
   }
   return {
@@ -277,6 +301,7 @@ export async function requestSignupSigningChallenge(input: {
     return {
       ok: false,
       message: message(response.body, "De code kon niet worden verzonden."),
+      code: errorCode(response.body),
     };
   }
   return {
@@ -348,6 +373,7 @@ export async function finalizeSignupSigning(input: {
         response.body,
         "De ondertekening kon niet worden afgerond.",
       ),
+      code: errorCode(response.body),
     };
   }
   return {

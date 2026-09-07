@@ -32,6 +32,7 @@ import {
   requestSignupSigningPresentation,
   type SigningChallengeReceipt,
   type SigningPresentationReceipt,
+  signupSigningFailureRequiresFreshPresentation,
 } from "./signupSigningClient";
 import {
   type SignupSubmissionReceipt,
@@ -102,6 +103,7 @@ export function DocumentFirstSigningSummary(
   >("idle");
   const [runtimeMessage, setRuntimeMessage] = useState("");
   const challengeRequestInFlightRef = useRef(false);
+  const finalizeInFlightRef = useRef(false);
   useEffect(() => {
     let active = true;
     if (!intakeSessionAvailable) {
@@ -223,6 +225,11 @@ export function DocumentFirstSigningSummary(
         legalActions: effectiveLegalActions,
       });
       if (!result.ok) {
+        if (signupSigningFailureRequiresFreshPresentation(result.code)) {
+          setChallenge(null);
+          setOtpCode("");
+          setPresentationAttempt((attempt) => attempt + 1);
+        }
         setRuntimeStatus("error");
         setRuntimeMessage(result.message);
         return;
@@ -238,30 +245,43 @@ export function DocumentFirstSigningSummary(
   };
 
   const finalizeSigning = async () => {
-    if (!challenge || !mandateYear || !/^\d{6}$/.test(otpCode)) return;
+    if (
+      finalizeInFlightRef.current || !challenge || !mandateYear ||
+      !/^\d{6}$/.test(otpCode)
+    ) return;
+    finalizeInFlightRef.current = true;
     setRuntimeStatus("finalizing");
     setRuntimeMessage("");
-    const result = await finalizeSignupSigning({
-      challengeReference: challenge.challengeReference,
-      otpCode,
-      accountType: draft.accountBasis.accountType,
-      typedFullName: signerInput.fullName,
-      signerRole: signerInput.role,
-      mandateYear,
-      canonicalFacts: signingIntent.canonicalFacts.facts,
-      requiredFileReferences,
-    });
-    if (!result.ok) {
-      setRuntimeStatus("error");
-      setRuntimeMessage(result.message);
-      return;
+    try {
+      const result = await finalizeSignupSigning({
+        challengeReference: challenge.challengeReference,
+        otpCode,
+        accountType: draft.accountBasis.accountType,
+        typedFullName: signerInput.fullName,
+        signerRole: signerInput.role,
+        mandateYear,
+        canonicalFacts: signingIntent.canonicalFacts.facts,
+        requiredFileReferences,
+      });
+      if (!result.ok) {
+        if (signupSigningFailureRequiresFreshPresentation(result.code)) {
+          setChallenge(null);
+          setOtpCode("");
+          setPresentationAttempt((attempt) => attempt + 1);
+        }
+        setRuntimeStatus("error");
+        setRuntimeMessage(result.message);
+        return;
+      }
+      setRuntimeStatus("success");
+      setRuntimeMessage(
+        `Je dossier is ondertekend en ingediend. Referentie: ${result.value.safeReference}`,
+      );
+      const receipt = writeSignupSubmissionReceipt(result.value);
+      if (receipt) onFinalized(receipt);
+    } finally {
+      finalizeInFlightRef.current = false;
     }
-    setRuntimeStatus("success");
-    setRuntimeMessage(
-      `Je dossier is ondertekend en ingediend. Referentie: ${result.value.safeReference}`,
-    );
-    const receipt = writeSignupSubmissionReceipt(result.value);
-    if (receipt) onFinalized(receipt);
   };
 
   return (

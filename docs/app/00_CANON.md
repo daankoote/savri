@@ -521,15 +521,13 @@ Signed-intake and promotion lifecycle:
   acceptance and OTP.
 - SL01-C also proves that canonical signing sources omit `not_found` and blank
   parser observations while retaining valid `found` nonblank observations.
-  Receipt-bound finalize passes ordinary request/provenance prevalidation but
-  intentionally returns HTTP 409
-  `signing_presentation_finalize_cutover_required`; it creates no finalization
-  or signing snapshot through that compatibility path.
-- SL01-D remains `TARGET`: accepted receipt M1 must be persisted into immutable
-  signing snapshot v2 with tenant/config/material provenance, finalize
-  fingerprint/provenance v2 and exact M1 replay without M2 re-resolution. Only
-  after that authority is built and proven may the temporary compatibility
-  guard be removed.
+- SL01-D is `CURRENT PROVEN — LOCAL ONLY`: receipt-bound finalize persists the
+  accepted receipt M1 into immutable signing snapshot v2 with exact tenant,
+  Auth actor, configuration, material, legal-document revision/hash/effective
+  date, acceptance, challenge and OTP provenance. The v3 database authority is
+  transactional and idempotent, concurrent equivalent finalization creates one
+  submission, and replay uses the persisted M1 fingerprint without M2
+  re-resolution. Legacy or incomplete unbound requests remain fail-closed.
 - `typed_name_otp_v1` proves signing intent plus control of the used email channel; the former separate email-verification promotion trigger is `SUPERSEDED` and must not be rebuilt without a new hard requirement.
 - 09C1A/09C1B/09C1C signed-intake convergence is CURRENT PROVEN — LOCAL ONLY: atomic/idempotent `app_cases` promotion, server-owned finalize/status orchestration, receipt v2 with safe presentation state, verified Supabase Auth binding to the existing promoted customer/case, and a customer-safe case-owned dashboard projection. This flow creates no `app_customer_dossiers` row.
 - 09C1C-R2 adds on-demand compatibility convergence for one uniquely Auth-bound

@@ -144,12 +144,19 @@ const challengeHandler = summary.slice(
   summary.indexOf("const requestChallenge = async () =>"),
   summary.indexOf("const finalizeSigning = async () =>"),
 );
+const finalizeHandler = summary.slice(
+  summary.indexOf("const finalizeSigning = async () =>"),
+  summary.indexOf(
+    "\n  return (",
+    summary.indexOf("const finalizeSigning = async () =>"),
+  ),
+);
 
 await run("Q05_enabled_click_issues_one_challenge", () => {
   assert(
     summary.includes("onClick={() => void requestChallenge()}") &&
       challengeHandler.includes("challengeRequestInFlightRef.current") &&
-      (challengeHandler.match(/requestSignupSigningChallenge\(\)/g) || [])
+      (challengeHandler.match(/requestSignupSigningChallenge\(\{/g) || [])
           .length === 1,
     "challenge_click_not_single_flight",
   );
@@ -178,6 +185,12 @@ await run("Q08_challenge_error_is_retryable", () => {
   assert(
     challengeHandler.includes('setRuntimeStatus("error")') &&
       challengeHandler.includes("setRuntimeMessage(result.message)") &&
+      challengeHandler.includes(
+        "signupSigningFailureRequiresFreshPresentation(result.code)",
+      ) &&
+      challengeHandler.includes(
+        "setPresentationAttempt((attempt) => attempt + 1)",
+      ) &&
       summary.includes('runtimeStatus === "requesting"') &&
       !summary.includes('runtimeStatus === "error"}'),
     "challenge_error_not_retryable",
@@ -240,6 +253,22 @@ await run("Q12_no_secret_or_otp_url_projection", () => {
       !challengeHandler.includes("otpCode") &&
       !challengeHandler.includes("challengeReference"),
     "secret_or_otp_url_projection_detected",
+  );
+});
+
+await run("Q13_stale_finalize_recovers_with_fresh_server_presentation", () => {
+  assert(
+    client.includes("signupSigningFailureRequiresFreshPresentation") &&
+      client.includes('"presentation_receipt_expired"') &&
+      client.includes('"presentation_configuration_superseded"') &&
+      client.includes('"signing_presentation_required"') &&
+      finalizeHandler.includes("finalizeInFlightRef.current") &&
+      finalizeHandler.includes("setChallenge(null)") &&
+      finalizeHandler.includes('setOtpCode("")') &&
+      finalizeHandler.includes(
+        "setPresentationAttempt((attempt) => attempt + 1)",
+      ),
+    "stale_finalize_recovery_missing",
   );
 });
 

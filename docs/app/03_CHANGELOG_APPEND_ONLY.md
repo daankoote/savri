@@ -1900,3 +1900,20 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   permission policy or global/project rule.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-09-07 — Complete receipt-bound signing finalization locally
+
+- Completed the browser-used presentation → durable acceptance → challenge →
+  OTP → authoritative finalize path through
+  `app_signup_signing_finalize_v3`.
+- Bound immutable snapshot v2, legal acceptances, mandate, signature evidence
+  and audit to the accepted presentation receipt, exact four document
+  revisions/content hashes/effective dates, tenant, Auth actor and finalization
+  fingerprint.
+- Proved local fail-closed expiry, mismatch, ownership, legacy and replay cases;
+  two concurrent equivalent finalize calls create one submission and promote
+  one case to `TO_REVIEW` without a UI-owned status transition.
+- This remains local technical proof. Production deployment, qualified-signature
+  status, legal/verifier acceptance and live tenant activation remain unproven.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

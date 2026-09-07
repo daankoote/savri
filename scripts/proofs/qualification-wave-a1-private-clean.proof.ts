@@ -301,7 +301,7 @@ async function cleanup(
   ids: Set<string>,
   storage: Set<string>,
   authUsers: Set<string>,
-  mailpitMessageId: string | null,
+  mailpitMessageIds: Set<string>,
 ) {
   for (const locator of storage) {
     const split = locator.indexOf("/");
@@ -372,8 +372,8 @@ async function cleanup(
     }
   }
   for (const userId of authUsers) await service.auth.admin.deleteUser(userId);
-  if (mailpitMessageId) {
-    await fetch(`${config.mailpitUrl}/api/v1/messages/${mailpitMessageId}`, { method: "DELETE" }).catch(() => undefined);
+  for (const messageId of mailpitMessageIds) {
+    await fetch(`${config.mailpitUrl}/api/v1/messages/${messageId}`, { method: "DELETE" }).catch(() => undefined);
   }
 }
 
@@ -385,7 +385,7 @@ const prefix = `wave-a1-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 const ids = new Set<string>();
 const storage = new Set<string>();
 const authUsers = new Set<string>();
-let mailpitMessageId: string | null = null;
+const mailpitMessageIds = new Set<string>();
 let pilotBefore = "";
 let pilotAfter = "";
 let summary: Json = {};
@@ -549,23 +549,50 @@ try {
     };
   });
 
+  const presentation = await post(config, "api-app-signup-signing-presentation", customer.token, `${prefix}-signing-presentation`, {
+    intake_reference: intakeReference,
+    management_capability: managementCapability,
+  });
+  const presentedDocuments = Array.isArray(presentation.body.legal_documents)
+    ? presentation.body.legal_documents as Json[]
+    : [];
+  assert(
+    presentation.status === 201 && presentation.body.ok === true &&
+      /^SPR-/.test(String(presentation.body.receipt_reference || "")) &&
+      /^[0-9a-f]{64}$/.test(String(presentation.body.receipt_sha256 || "")) &&
+      presentedDocuments.length === 4 &&
+      new Set(presentedDocuments.map((document) => document.document_type)).size === 4 &&
+      presentedDocuments.every((document) =>
+        String(document.canonical_content || "").length > 0 &&
+        /^[0-9a-f]{64}$/.test(String(document.content_sha256 || "")) &&
+        Number.isFinite(Date.parse(String(document.effective_from || "")))
+      ),
+    `signing_presentation_failed:${presentation.status}`,
+  );
+  const legalActions = { privacy_notice_read: true, service_terms_accepted: true, fee_terms_accepted: true, mandate_signed: true };
+  const challengeBody = {
+    intake_reference: intakeReference,
+    management_capability: managementCapability,
+    presentation_receipt_reference: presentation.body.receipt_reference,
+    presentation_receipt_sha256: presentation.body.receipt_sha256,
+    legal_actions: legalActions,
+  };
   const challengeKey = `${prefix}-signing-challenge`;
-  const challenge = await post(config, "api-app-signup-signing-challenge", customer.token, challengeKey, {
-    intake_reference: intakeReference,
-    management_capability: managementCapability,
-  });
+  const challenge = await post(config, "api-app-signup-signing-challenge", customer.token, challengeKey, challengeBody);
   assert(challenge.status === 201 && challenge.body.ok === true && challenge.body.challenge_reference, `signing_challenge_failed:${challenge.status}`);
-  const challengeReplay = await post(config, "api-app-signup-signing-challenge", customer.token, challengeKey, {
-    intake_reference: intakeReference,
-    management_capability: managementCapability,
-  });
+  const challengeReplay = await post(config, "api-app-signup-signing-challenge", customer.token, challengeKey, challengeBody);
   assert(challengeReplay.status === 201 && challengeReplay.body.replayed === true && challengeReplay.body.challenge_reference === challenge.body.challenge_reference, "signing_challenge_not_idempotent");
   const challengeReference = String(challenge.body.challenge_reference);
   ids.add(challengeReference);
+  const challengeBinding = await service.from("app_signup_signing_challenges")
+    .select("presentation_receipt_id,presentation_acceptance_id")
+    .eq("id", challengeReference).single();
+  assert(!challengeBinding.error, "signing_challenge_binding_missing");
+  ids.add(String(challengeBinding.data.presentation_receipt_id));
+  ids.add(String(challengeBinding.data.presentation_acceptance_id));
   const delivered = await otp(config, customer.email, challengeReference);
-  mailpitMessageId = delivered.messageId;
-  const finalizeKey = `${prefix}-signing-finalize`;
-  const finalizeBody = {
+  mailpitMessageIds.add(delivered.messageId);
+  const initialFinalizeBody = {
     intake_reference: intakeReference,
     management_capability: managementCapability,
     challenge_reference: challengeReference,
@@ -576,10 +603,97 @@ try {
     mandate_year: new Date().getUTCFullYear(),
     canonical_facts: canonicalFacts,
     required_file_references: [energy.fileReference, installation.fileReference],
-    legal_actions: { privacy_notice_read: true, service_terms_accepted: true, fee_terms_accepted: true, mandate_signed: true },
+    legal_actions: legalActions,
   };
-  const finalized = await post(config, "api-app-signup-signing-finalize", customer.token, finalizeKey, finalizeBody);
-  assert(finalized.status === 201 && finalized.body.ok === true && finalized.body.promotion_state === "promoted" && finalized.body.account_handoff === "already_authenticated", `signing_finalize_failed:${finalized.status}:${String(finalized.body.promotion_state)}`);
+  const wrongOtp = await post(config, "api-app-signup-signing-finalize", customer.token, `${prefix}-signing-finalize-wrong-otp`, {
+    ...initialFinalizeBody,
+    otp_code: delivered.code === "000000" ? "111111" : "000000",
+  });
+  assert(wrongOtp.status === 422 && wrongOtp.body.code === "otp_invalid", `wrong_otp_not_denied:${wrongOtp.status}`);
+  const expiredAt = new Date(Date.now() - 60_000).toISOString();
+  const expiredCreatedAt = new Date(Date.now() - 11 * 60_000).toISOString();
+  const expired = await service.from("app_signup_signing_challenges").update({
+    created_at: expiredCreatedAt,
+    expires_at: expiredAt,
+  }).eq("id", challengeReference);
+  assert(!expired.error, "challenge_expiry_fixture_failed");
+  const expiredOtp = await post(config, "api-app-signup-signing-finalize", customer.token, `${prefix}-signing-finalize-expired-otp`, initialFinalizeBody);
+  assert(expiredOtp.status === 422 && expiredOtp.body.code === "otp_expired", `expired_otp_not_denied:${expiredOtp.status}`);
+  const partialMutationCount = await psql(config, `select
+    (select count(*) from public.app_signup_signing_snapshots where intake_id=${quote(intakeReference)}) +
+    (select count(*) from public.app_signup_signature_evidence where intake_id=${quote(intakeReference)});`);
+  assert(partialMutationCount === "0", "stale_challenge_created_partial_submission");
+
+  const legacyChallenge = await post(config, "api-app-signup-signing-challenge", customer.token, `${prefix}-signing-challenge-legacy`, {
+    intake_reference: intakeReference,
+    management_capability: managementCapability,
+  });
+  assert(legacyChallenge.status === 201 && legacyChallenge.body.ok === true, `legacy_challenge_fixture_failed:${legacyChallenge.status}`);
+  const legacyChallengeReference = String(legacyChallenge.body.challenge_reference);
+  ids.add(legacyChallengeReference);
+  const legacyDelivered = await otp(config, customer.email, legacyChallengeReference);
+  mailpitMessageIds.add(legacyDelivered.messageId);
+  const legacyFinalize = await post(config, "api-app-signup-signing-finalize", customer.token, `${prefix}-signing-finalize-legacy`, {
+    ...initialFinalizeBody,
+    challenge_reference: legacyChallengeReference,
+    otp_code: legacyDelivered.code,
+  });
+  assert(
+    legacyFinalize.status === 409 && legacyFinalize.body.code === "signing_presentation_required",
+    `legacy_finalize_not_closed:${legacyFinalize.status}:${String(legacyFinalize.body.code || "NONE")}`,
+  );
+
+  const freshPresentation = await post(config, "api-app-signup-signing-presentation", customer.token, `${prefix}-signing-presentation-fresh`, {
+    intake_reference: intakeReference,
+    management_capability: managementCapability,
+  });
+  assert(freshPresentation.status === 201 && freshPresentation.body.ok === true, `fresh_presentation_failed:${freshPresentation.status}`);
+  const incompleteAcceptance = await post(config, "api-app-signup-signing-challenge", customer.token, `${prefix}-signing-challenge-incomplete`, {
+    intake_reference: intakeReference,
+    management_capability: managementCapability,
+    presentation_receipt_reference: freshPresentation.body.receipt_reference,
+    presentation_receipt_sha256: freshPresentation.body.receipt_sha256,
+    legal_actions: { ...legalActions, fee_terms_accepted: false },
+  });
+  assert(incompleteAcceptance.status === 400, `incomplete_legal_acceptance_allowed:${incompleteAcceptance.status}`);
+  const freshChallenge = await post(config, "api-app-signup-signing-challenge", customer.token, `${prefix}-signing-challenge-fresh`, {
+    intake_reference: intakeReference,
+    management_capability: managementCapability,
+    presentation_receipt_reference: freshPresentation.body.receipt_reference,
+    presentation_receipt_sha256: freshPresentation.body.receipt_sha256,
+    legal_actions: legalActions,
+  });
+  assert(freshChallenge.status === 201 && freshChallenge.body.ok === true, `fresh_challenge_failed:${freshChallenge.status}`);
+  const freshChallengeReference = String(freshChallenge.body.challenge_reference);
+  ids.add(freshChallengeReference);
+  const freshBinding = await service.from("app_signup_signing_challenges")
+    .select("presentation_receipt_id,presentation_acceptance_id")
+    .eq("id", freshChallengeReference).single();
+  assert(!freshBinding.error, "fresh_challenge_binding_missing");
+  ids.add(String(freshBinding.data.presentation_receipt_id));
+  ids.add(String(freshBinding.data.presentation_acceptance_id));
+  const freshDelivered = await otp(config, customer.email, freshChallengeReference);
+  mailpitMessageIds.add(freshDelivered.messageId);
+  const finalizeBody = {
+    ...initialFinalizeBody,
+    challenge_reference: freshChallengeReference,
+    otp_code: freshDelivered.code,
+  };
+  const finalizeKey = `${prefix}-signing-finalize-a`;
+  const [finalizeA, finalizeB] = await Promise.all([
+    post(config, "api-app-signup-signing-finalize", customer.token, finalizeKey, finalizeBody),
+    post(config, "api-app-signup-signing-finalize", customer.token, `${prefix}-signing-finalize-b`, finalizeBody),
+  ]);
+  const finalizeStatuses = [finalizeA.status, finalizeB.status].sort((left, right) => left - right);
+  assert(finalizeStatuses.join(",") === "200,201", `concurrent_finalize_statuses_invalid:${finalizeStatuses.join(",")}`);
+  assert(
+    finalizeA.body.ok === true && finalizeB.body.ok === true &&
+      finalizeA.body.safe_reference === finalizeB.body.safe_reference &&
+      ![finalizeA.body.code, finalizeB.body.code].includes("signing_presentation_finalize_cutover_required"),
+    "concurrent_finalize_result_invalid",
+  );
+  const finalized = finalizeA.status === 201 ? finalizeA : finalizeB;
+  assert(finalized.body.promotion_state === "promoted" && finalized.body.account_handoff === "already_authenticated", `signing_finalize_failed:${finalized.status}:${String(finalized.body.promotion_state)}`);
   const signingStateBeforeReplay = await psql(config, `select jsonb_build_object(
     'snapshot_count',(select count(*) from public.app_signup_signing_snapshots where intake_id=${quote(intakeReference)}),
     'snapshot',(select jsonb_build_object('id',id,'hash',canonical_snapshot_sha256,'body',canonical_snapshot,'created_at',created_at) from public.app_signup_signing_snapshots where intake_id=${quote(intakeReference)}),
@@ -587,7 +701,7 @@ try {
     'signature',(select jsonb_build_object('id',id,'snapshot_id',snapshot_id,'mandate_id',mandate_id,'challenge_id',challenge_id,'envelope',evidence_envelope,'finalized_at',finalized_at) from public.app_signup_signature_evidence where intake_id=${quote(intakeReference)}),
     'mandate_count',(select count(*) from public.app_signup_mandates where intake_id=${quote(intakeReference)}),
     'acceptance_count',(select count(*) from public.app_signup_legal_acceptances where intake_id=${quote(intakeReference)}),
-    'otp_consumed_at',(select consumed_at from public.app_signup_signing_challenges where id=${quote(challengeReference)}),
+    'otp_consumed_at',(select consumed_at from public.app_signup_signing_challenges where id=${quote(freshChallengeReference)}),
     'intake_finalized_at',(select finalized_at from public.app_signup_intakes where id=${quote(intakeReference)}),
     'finalization_audit_count',(select count(*) from public.app_intake_audit_events where event_type='signup_signing_finalized' and event_data->>'intake_reference'=${quote(intakeReference)}),
     'promotion_count',(select count(*) from public.app_signup_promotions where intake_id=${quote(intakeReference)}),
@@ -611,7 +725,7 @@ try {
     'signature',(select jsonb_build_object('id',id,'snapshot_id',snapshot_id,'mandate_id',mandate_id,'challenge_id',challenge_id,'envelope',evidence_envelope,'finalized_at',finalized_at) from public.app_signup_signature_evidence where intake_id=${quote(intakeReference)}),
     'mandate_count',(select count(*) from public.app_signup_mandates where intake_id=${quote(intakeReference)}),
     'acceptance_count',(select count(*) from public.app_signup_legal_acceptances where intake_id=${quote(intakeReference)}),
-    'otp_consumed_at',(select consumed_at from public.app_signup_signing_challenges where id=${quote(challengeReference)}),
+    'otp_consumed_at',(select consumed_at from public.app_signup_signing_challenges where id=${quote(freshChallengeReference)}),
     'intake_finalized_at',(select finalized_at from public.app_signup_intakes where id=${quote(intakeReference)}),
     'finalization_audit_count',(select count(*) from public.app_intake_audit_events where event_type='signup_signing_finalized' and event_data->>'intake_reference'=${quote(intakeReference)}),
     'promotion_count',(select count(*) from public.app_signup_promotions where intake_id=${quote(intakeReference)}),
@@ -672,6 +786,22 @@ try {
   authUsers.add(reviewer.userId);
   const workforceId = await grantReviewer(config, prefix, reviewer.userId, caseId);
   ids.add(workforceId);
+  const worklist = await request(
+    config,
+    "/functions/v1/api-app-evidence-review-worklist",
+    { method: "GET", headers: apiHeaders(config, reviewer.token) },
+  );
+  const worklistCases = Array.isArray(worklist.body.cases)
+    ? worklist.body.cases as Json[]
+    : [];
+  assert(
+    worklist.status === 200 && worklistCases.some((candidate) =>
+      candidate.caseRef === caseRef &&
+      candidate.overallReviewStatus === "TO_REVIEW"
+    ),
+    `promoted_case_missing_from_review_worklist:${worklist.status}`,
+  );
+  marker("WAVE_A1_TO_REVIEW_WORKLIST_PROJECTION");
   const detail = await reviewDetail(config, reviewer.token, caseRef);
   const expectedReviewFactKeys = new Set(
     canonicalFacts.map((fact) => String(fact.factKey)),
@@ -749,7 +879,7 @@ try {
   marker("WAVE_A1_Q08_REFRESH_NO_CORRECTION_NO_DUPLICATES");
   marker("WAVE_A1_Q09_NO_EXTERNAL_VERIFICATION_FABRICATION");
 } finally {
-  await cleanup(config, service, prefix, ids, storage, authUsers, mailpitMessageId);
+  await cleanup(config, service, prefix, ids, storage, authUsers, mailpitMessageIds);
   pilotAfter = await pilotState(config);
   assert(pilotAfter === pilotBefore, "real_pilot_changed");
   const residue = await psql(config, `select

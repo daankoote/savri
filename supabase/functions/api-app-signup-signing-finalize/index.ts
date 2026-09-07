@@ -17,7 +17,6 @@ import {
 } from "../_shared/signup_quarantine.ts";
 import {
   signingLegalBundleAllowed,
-  signingLegalRuntimeProjection,
   signingSha256Hex,
   stableSigningJson,
 } from "../_shared/signing_legal_runtime.ts";
@@ -385,6 +384,50 @@ function connectionScope(facts: SafeFact[]) {
   })).filter((scope) => scope.eans.length > 0);
 }
 
+type ReceiptLegalDocument = {
+  document_type: "privacy_notice" | "service_terms" | "fee_terms" | "mandate";
+  version: string;
+  language: "nl";
+  status: "effective";
+  effective_from: string;
+  content_sha256: string;
+};
+
+function receiptLegalDocuments(
+  receipt: Record<string, unknown>,
+): ReceiptLegalDocument[] | null {
+  const specifications = [
+    ["privacy_notice", "privacy_notice"],
+    ["service_terms", "service_terms"],
+    ["fee_terms", "fee_terms"],
+    ["mandate", "mandate"],
+  ] as const;
+  const documents: ReceiptLegalDocument[] = [];
+  for (const [documentType, prefix] of specifications) {
+    const version = safeString(receipt[`${prefix}_version`], 100);
+    const language = safeString(receipt[`${prefix}_language`], 10);
+    const contentSha256 = safeString(
+      receipt[`${prefix}_content_sha256`],
+      64,
+    ).toLowerCase();
+    const effectiveFrom = safeString(receipt[`${prefix}_effective_from`], 100);
+    if (
+      !version || language !== "nl" ||
+      !/^[0-9a-f]{64}$/.test(contentSha256) ||
+      !Number.isFinite(Date.parse(effectiveFrom))
+    ) return null;
+    documents.push({
+      document_type: documentType,
+      version,
+      language: "nl",
+      status: "effective",
+      effective_from: effectiveFrom,
+      content_sha256: contentSha256,
+    });
+  }
+  return documents;
+}
+
 async function postSigningProjection(
   req: Request,
   intakeId: string,
@@ -575,10 +618,8 @@ serve(async (req) => {
     );
   }
 
-  const environment = {
-    supabaseUrl: Deno.env.get("SUPABASE_URL") || "",
-  };
-  if (!signingLegalBundleAllowed(environment)) {
+  const environment = { supabaseUrl: Deno.env.get("SUPABASE_URL") || "" };
+  if (!signingLegalBundleAllowed(environment) || !meta.tenant_execution) {
     return appErrorResponse(
       req,
       503,
@@ -668,6 +709,87 @@ serve(async (req) => {
     );
   }
 
+  const challengeBinding = await SB.from("app_signup_signing_challenges")
+    .select(
+      "presentation_receipt_id,presentation_receipt_reference,presentation_receipt_sha256,presentation_acceptance_id,presentation_acceptance_sha256",
+    )
+    .eq("id", challengeId).eq("intake_id", intakeId).maybeSingle();
+  if (challengeBinding.error || !challengeBinding.data) {
+    return appErrorResponse(
+      req,
+      422,
+      "Vraag een nieuwe code aan.",
+      "challenge_unavailable",
+    );
+  }
+  if (
+    !challengeBinding.data.presentation_receipt_id ||
+    !challengeBinding.data.presentation_receipt_reference ||
+    !challengeBinding.data.presentation_receipt_sha256 ||
+    !challengeBinding.data.presentation_acceptance_id ||
+    !challengeBinding.data.presentation_acceptance_sha256
+  ) {
+    return appErrorResponse(
+      req,
+      409,
+      "Vraag de documenten en een nieuwe code aan.",
+      "signing_presentation_required",
+    );
+  }
+  const receipt = await SB.from("app_signup_signing_presentation_receipts")
+    .select(
+      "id,receipt_reference,receipt_sha256,receipt_schema_version,intake_id,authenticated_auth_user_id,tenant_id,environment,data_plane_locator_id,resolved_data_plane_reference,manifest_revision_id,manifest_canonical_sha256,operational_component_revision_id,legal_component_revision_id,fee_component_revision_id,operational_signing_material_revision_id,operational_signing_material_sha256,legal_signing_material_revision_id,legal_signing_material_sha256,fee_signing_material_revision_id,fee_signing_material_sha256,legal_bundle_revision,legal_bundle_sha256,privacy_notice_version,privacy_notice_language,privacy_notice_content_sha256,privacy_notice_effective_from,service_terms_version,service_terms_language,service_terms_content_sha256,service_terms_effective_from,fee_terms_version,fee_terms_language,fee_terms_content_sha256,fee_terms_effective_from,mandate_version,mandate_language,mandate_content_sha256,mandate_effective_from,presented_at,expires_at",
+    )
+    .eq("id", challengeBinding.data.presentation_receipt_id)
+    .eq("intake_id", intakeId)
+    .eq("authenticated_auth_user_id", verifiedAuth.context.authUserId)
+    .eq("tenant_id", meta.tenant_execution.tenantId)
+    .eq("environment", meta.tenant_execution.environment)
+    .maybeSingle();
+  const acceptance = await SB.from(
+    "app_signup_signing_presentation_acceptances",
+  ).select(
+    "id,presentation_receipt_id,intake_id,authenticated_actor_user_id,privacy_notice_read,service_terms_accepted,fee_terms_accepted,mandate_signed,accepted_at,acceptance_sha256",
+  ).eq("id", challengeBinding.data.presentation_acceptance_id)
+    .eq("intake_id", intakeId)
+    .eq("authenticated_actor_user_id", verifiedAuth.context.authUserId)
+    .maybeSingle();
+  if (receipt.error || !receipt.data || acceptance.error || !acceptance.data) {
+    return appErrorResponse(
+      req,
+      422,
+      "Vraag de documenten en een nieuwe code aan.",
+      "presentation_binding_invalid",
+    );
+  }
+  const receiptData = receipt.data;
+  const acceptanceData = acceptance.data;
+  const legalDocuments = receiptData.receipt_schema_version ===
+      "signup-signing-presentation-receipt-v2"
+    ? receiptLegalDocuments(receiptData)
+    : null;
+  if (
+    !legalDocuments ||
+    receiptData.receipt_reference !==
+      challengeBinding.data.presentation_receipt_reference ||
+    receiptData.receipt_sha256 !==
+      challengeBinding.data.presentation_receipt_sha256 ||
+    acceptanceData.presentation_receipt_id !== receiptData.id ||
+    acceptanceData.acceptance_sha256 !==
+      challengeBinding.data.presentation_acceptance_sha256 ||
+    acceptanceData.privacy_notice_read !== true ||
+    acceptanceData.service_terms_accepted !== true ||
+    acceptanceData.fee_terms_accepted !== true ||
+    acceptanceData.mandate_signed !== true
+  ) {
+    return appErrorResponse(
+      req,
+      422,
+      "Vraag de documenten en een nieuwe code aan.",
+      "presentation_binding_invalid",
+    );
+  }
+
   const verifier = await otpVerifier(secret, otpCode);
   const channelHash = await channelReference(
     secret,
@@ -676,6 +798,10 @@ serve(async (req) => {
   const normalizedPayloadHash = await payloadHash({
     intake_reference: intakeId,
     challenge_reference: challengeId,
+    presentation_receipt_reference: receiptData.receipt_reference,
+    presentation_receipt_sha256: receiptData.receipt_sha256,
+    presentation_acceptance_reference: acceptanceData.id,
+    presentation_acceptance_sha256: acceptanceData.acceptance_sha256,
     otp_verifier_sha256: verifier,
     account_type: accountType,
     typed_full_name: typedFullName,
@@ -690,36 +816,6 @@ serve(async (req) => {
       mandate_signed: true,
     },
   });
-
-  const legalProjection = await signingLegalRuntimeProjection();
-  const legalDocuments = legalProjection.map((
-    { canonical_content: _content, ...document },
-  ) => document);
-  const challengeBinding = await SB.from("app_signup_signing_challenges")
-    .select(
-      "presentation_receipt_id,presentation_receipt_sha256,presentation_acceptance_id",
-    )
-    .eq("id", challengeId).eq("intake_id", intakeId).maybeSingle();
-  if (challengeBinding.error || !challengeBinding.data) {
-    return appErrorResponse(
-      req,
-      422,
-      "Vraag een nieuwe code aan.",
-      "challenge_unavailable",
-    );
-  }
-  if (challengeBinding.data.presentation_receipt_id) {
-    // SL01-D must persist the receipt/config provenance in snapshot v2 before
-    // any receipt-bound challenge can finalize. Until then, failing every v2
-    // challenge is the only way to prevent a same-document/different-config
-    // bundle from being silently finalized under the legacy global snapshot.
-    return appErrorResponse(
-      req,
-      409,
-      "Deze documentgebonden ondertekening kan nog niet veilig worden afgerond.",
-      "signing_presentation_finalize_cutover_required",
-    );
-  }
   const issuedAt = new Date().toISOString();
   const scopes = connectionScope(facts);
   if (
@@ -757,7 +853,7 @@ serve(async (req) => {
       : "required_not_completed",
   };
   const snapshot = {
-    schema_version: "signup-signing-runtime-snapshot-v1",
+    schema_version: "signup-signing-runtime-snapshot-v2",
     intake_reference: intakeId,
     account_type: accountType,
     canonical_facts: { schema_version: "canonical-signing-facts-v2", facts },
@@ -776,22 +872,54 @@ serve(async (req) => {
       fee_terms_accepted: true,
       mandate_signed: true,
     },
+    presentation: {
+      receipt_reference: receiptData.receipt_reference,
+      receipt_sha256: receiptData.receipt_sha256,
+      acceptance_reference: acceptanceData.id,
+      acceptance_sha256: acceptanceData.acceptance_sha256,
+      authenticated_auth_user_id: verifiedAuth.context.authUserId,
+      tenant_id: meta.tenant_execution.tenantId,
+      environment: meta.tenant_execution.environment,
+      data_plane_locator_id: receiptData.data_plane_locator_id,
+      resolved_data_plane_reference: receiptData.resolved_data_plane_reference,
+      manifest_revision_id: receiptData.manifest_revision_id,
+      manifest_canonical_sha256: receiptData.manifest_canonical_sha256,
+      operational_component_revision_id:
+        receiptData.operational_component_revision_id,
+      legal_component_revision_id: receiptData.legal_component_revision_id,
+      fee_component_revision_id: receiptData.fee_component_revision_id,
+      operational_signing_material_revision_id:
+        receiptData.operational_signing_material_revision_id,
+      operational_signing_material_sha256:
+        receiptData.operational_signing_material_sha256,
+      legal_signing_material_revision_id:
+        receiptData.legal_signing_material_revision_id,
+      legal_signing_material_sha256: receiptData.legal_signing_material_sha256,
+      fee_signing_material_revision_id:
+        receiptData.fee_signing_material_revision_id,
+      fee_signing_material_sha256: receiptData.fee_signing_material_sha256,
+      legal_bundle_revision: receiptData.legal_bundle_revision,
+      legal_bundle_sha256: receiptData.legal_bundle_sha256,
+      presented_at: receiptData.presented_at,
+      expires_at: receiptData.expires_at,
+    },
     mandate,
     signature_method: { method_id: "typed_name_otp_v1", method_version: "1" },
     signer: { typed_full_name: typedFullName, signer_role: signerRole },
     server_issue_date: issuedAt,
   };
   const snapshotSha256 = await signingSha256Hex(stableSigningJson(snapshot));
-  const result = await SB.rpc("app_signup_signing_finalize_v2", {
+  const result = await SB.rpc("app_signup_signing_finalize_v3", {
     p_intake_id: intakeId,
     p_manage_token_sha256: manageHash,
+    p_authenticated_auth_user_id: verifiedAuth.context.authUserId,
+    p_tenant_id: meta.tenant_execution.tenantId,
     p_challenge_id: challengeId,
     p_channel_reference_sha256: channelHash,
     p_otp_verifier_sha256: verifier,
     p_payload_hash: normalizedPayloadHash,
     p_canonical_snapshot: snapshot,
     p_snapshot_sha256: snapshotSha256,
-    p_legal_documents: legalDocuments,
     p_required_file_ids: requiredFileIds,
     p_account_type: accountType,
     p_mandate_year: mandateYear,
@@ -804,7 +932,7 @@ serve(async (req) => {
     p_idempotency_key: meta.idempotency_key,
     p_ip_hash: meta.ip_hash,
     p_user_agent_hash: meta.user_agent_hash,
-    p_environment: meta.environment,
+    p_environment: meta.tenant_execution.environment,
   });
   if (result.error) {
     return appErrorResponse(
