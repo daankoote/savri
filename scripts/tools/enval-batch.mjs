@@ -14,8 +14,10 @@ import { pathToFileURL } from "node:url";
 
 import {
   beginResultRun,
+  ENVAL_WORKSPACE_REGISTRY,
   finalizeActiveRun,
-  terminalStatusFromReturn,
+  ResultPublicationError,
+  validateWorkspaceState,
 } from "./enval-result.mjs";
 
 export const ENVAL_ROOT = "/Users/daankoote/dev/enval";
@@ -26,17 +28,10 @@ export const HERDR_VERSION = "0.8.2";
 export const PERSISTENT_WORKSPACE = "Main";
 export const MAIN_TABS = Object.freeze(["Codex", "Terminal"]);
 export const BATCH_TABS = Object.freeze(["Codex", "Terminal", "Reviewer"]);
+export const APPROVED_WORKSPACE_BINDINGS = ENVAL_WORKSPACE_REGISTRY;
 export const APPROVED_BATCH_BINDINGS = Object.freeze({
-  _Setup: Object.freeze({
-    slug: "setup",
-    branch: "setup",
-    agentName: "enval-setup",
-  }),
-  Beheer: Object.freeze({
-    slug: "beheer",
-    branch: "beheer",
-    agentName: "enval-beheer",
-  }),
+  _Setup: APPROVED_WORKSPACE_BINDINGS._Setup,
+  Beheer: APPROVED_WORKSPACE_BINDINGS.Beheer,
 });
 export const CODEX_UPDATE_OVERRIDE = "check_for_update_on_startup=false";
 export const CODEX_NOTIFY_OVERRIDE =
@@ -60,6 +55,13 @@ export class BatchLaunchError extends Error {
 
 function fail(code) {
   throw new BatchLaunchError(code);
+}
+
+function failureCode(error) {
+  return error instanceof BatchLaunchError ||
+      error instanceof ResultPublicationError
+    ? error.code
+    : "unexpected_failure";
 }
 
 function regularFile(path, code) {
@@ -825,14 +827,7 @@ export async function startBatch(workspaceName, options = {}) {
     ).trim() !== root
   ) fail("repository_identity_mismatch");
 
-  if (
-    git(
-      run,
-      root,
-      ["branch", "--show-current"],
-      "integration_branch_inspection_failed",
-    ).trim() !== "main"
-  ) fail("integration_branch_not_main");
+  validateWorkspaceState(run, root, PERSISTENT_WORKSPACE);
   governanceTrackedAndClean(run, root);
   validateGovernance(root);
   verifyCodexCli(run, root);
@@ -856,7 +851,7 @@ export async function startBatch(workspaceName, options = {}) {
   if (worktree.created) {
     trackedClean(run, spec.worktree, "created_worktree_tracked_dirty");
   }
-  governanceTrackedAndClean(run, spec.worktree);
+  validateWorkspaceState(run, spec.worktree, workspaceName);
   validateGovernance(spec.worktree);
 
   const createdWorkspace = existingWorkspace
@@ -947,9 +942,7 @@ async function main(argv) {
       finalizeActiveRun(argv[1], "PASS", { finalReturn: handoff });
       process.stdout.write(handoff + `RUN_ID=${publication.context.runId}\n`);
     } catch (error) {
-      const code = error instanceof BatchLaunchError
-        ? error.code
-        : "unexpected_failure";
+      const code = failureCode(error);
       const failure = `ENVAL_BATCH_START_STATUS=FAIL\nFAILURE=${code}\n`;
       finalizeActiveRun(argv[1], "FAIL", { finalReturn: failure });
       process.stderr.write(failure);
@@ -957,30 +950,7 @@ async function main(argv) {
     }
     return;
   }
-  if (argv.length === 2 && argv[0] === "result") {
-    const contents = readFileSync(0, "utf8");
-    const status = terminalStatusFromReturn(contents);
-    if (!status) fail("project_result_invalid");
-    const run = beginResultRun({
-      workspace: argv[1],
-      runId: randomUUID(),
-      tasklabel: "manual-result-publication",
-      cwd: process.cwd(),
-    }, { mirrorProjectLatest: true });
-    finalizeActiveRun(argv[1], status, {
-      finalReturn: contents,
-      mirrorProjectLatest: true,
-    });
-    process.stdout.write(
-      "ENVAL_BATCH_RESULT=PASS\n" +
-        "PROJECT=ENVAL\n" +
-        `WORKSPACE=${argv[1]}\n` +
-        `RUN_ID=${run.context.runId}\n` +
-        `RESULT_FILE=~/.herdr-results/ENVAL/${argv[1]}/latest.txt\n`,
-    );
-    return;
-  }
-  fail("usage:start_<approved-workspace>|result_<workspace>");
+  fail("usage:start_<approved-workspace>");
 }
 
 const invoked = process.argv[1]
@@ -988,9 +958,7 @@ const invoked = process.argv[1]
   : null;
 if (invoked === import.meta.url) {
   main(process.argv.slice(2)).catch((error) => {
-    const code = error instanceof BatchLaunchError
-      ? error.code
-      : "unexpected_failure";
+    const code = failureCode(error);
     process.stderr.write(`ENVAL_BATCH_START=FAIL\nFAILURE=${code}\n`);
     process.exitCode = 1;
   });

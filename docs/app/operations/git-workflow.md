@@ -35,11 +35,17 @@ The orchestrator owns the human name, branch, worktree, tabs, panes, and agent
 binding. No prompt, agent, or launcher invents or repairs an alternate binding.
 
 ~~~text
-ENVAL
-- Main: protected integration/admin; tabs Codex, Terminal
-- _Setup: governance/runner/hooks/rules/operations; tabs Codex, Terminal, Reviewer
-- Beheer: product implementation/proofs/review; tabs Codex, Terminal, Reviewer
+Role               Workspace  Owned paths
+MAIN_INTEGRATION   Main       integration/admin; no implementation paths
+SETUP_GOVERNANCE  _Setup     AGENTS, .codex, operations, approved runners/proofs
+BEHEER_PRODUCT     Beheer     app, Supabase, product docs and product proofs
 ~~~
+
+Main has tabs Codex and Terminal. _Setup and Beheer have tabs Codex, Terminal,
+and Reviewer. Beheer cannot change AGENTS.md, .codex, Setup runners, or
+operations governance. _Setup cannot change app code, Edge Functions,
+migrations, product contracts, or product proofs. A path without an explicit
+owner is refused rather than inferred.
 
 No other human workspace name is approved. A new workspace requires Daan's
 explicit agreement and a bounded registry/governance change. Names such as
@@ -59,8 +65,15 @@ Normal batches start from Main with one exact approved workspace:
 node scripts/tools/enval-batch.mjs start Beheer
 ~~~
 
-The launcher validates the canonical repository, clean tracked governance
-baseline, supported Codex and Herdr interfaces, and the registered binding. It
+The launcher validates the canonical repository, Main's clean tracked/index
+state, supported Codex and Herdr interfaces, and the registered role and
+binding. Before launch or resume it rejects tracked/index paths outside the
+assigned role. At run start the result authority records a trusted baseline of
+tracked, index, and untracked paths. Every canonical Stop, Interrupt, SessionEnd,
+and notifier publication repeats the branch and role check inside its
+finalization lock, immediately before the immutable write. Scope drift publishes
+a concrete FAIL. Existing Main untracked artifacts additionally retain a path
+and content-hash baseline and remain allowed only while byte-identical. The launcher
 reuses the exact workspace/worktree/tabs/agent on retry or resume; only an
 approved absent binding may be provisioned. It refuses duplicates, conflicts,
 stale bindings, alternate names, or multiple active agents.
@@ -145,6 +158,7 @@ scripts/tools/enval-result.mjs is the single ENVAL result authority.
 UserPromptSubmit opens a workspace run; Stop publishes the recognized terminal
 return; Interrupt and SessionEnd publish bounded fallback status. The configured
 agent-turn-complete notifier is an idempotent fallback when Stop is unavailable.
+All terminal paths share the locked workspace-role and baseline validation.
 Current hard permission denials publish HUMAN_GATE through the same authority.
 
 Terminal statuses are PASS, PARTIAL, FAIL, HUMAN_GATE, BLOCKED, INTERRUPTED, and

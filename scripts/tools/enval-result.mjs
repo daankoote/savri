@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   chmodSync,
   lstatSync,
   mkdirSync,
   readFileSync,
+  readlinkSync,
+  realpathSync,
   renameSync,
   unlinkSync,
   writeFileSync,
@@ -15,7 +17,35 @@ import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
 export const RESULT_PROJECT = "ENVAL";
-export const RESULT_WORKSPACES = Object.freeze(["Main", "_Setup", "Beheer"]);
+export const WORKSPACE_ROLES = Object.freeze({
+  MAIN_INTEGRATION: "MAIN_INTEGRATION",
+  BEHEER_PRODUCT: "BEHEER_PRODUCT",
+  SETUP_GOVERNANCE: "SETUP_GOVERNANCE",
+});
+export const ENVAL_WORKSPACE_REGISTRY = Object.freeze({
+  Main: Object.freeze({
+    root: "/Users/daankoote/dev/enval",
+    branch: "main",
+    role: WORKSPACE_ROLES.MAIN_INTEGRATION,
+  }),
+  _Setup: Object.freeze({
+    root: "/Users/daankoote/dev/enval-worktrees/setup",
+    slug: "setup",
+    branch: "setup",
+    agentName: "enval-setup",
+    role: WORKSPACE_ROLES.SETUP_GOVERNANCE,
+  }),
+  Beheer: Object.freeze({
+    root: "/Users/daankoote/dev/enval-worktrees/beheer",
+    slug: "beheer",
+    branch: "beheer",
+    agentName: "enval-beheer",
+    role: WORKSPACE_ROLES.BEHEER_PRODUCT,
+  }),
+});
+export const RESULT_WORKSPACES = Object.freeze(
+  Object.keys(ENVAL_WORKSPACE_REGISTRY),
+);
 export const TERMINAL_STATUSES = Object.freeze([
   "PASS",
   "PARTIAL",
@@ -30,13 +60,48 @@ export const DEFAULT_RESULT_ROOT = join(
   ".herdr-results",
   RESULT_PROJECT,
 );
-const WORKSPACE_BY_ROOT = Object.freeze({
-  "/Users/daankoote/dev/enval": "Main",
-  "/Users/daankoote/dev/enval-worktrees/setup": "_Setup",
-  "/Users/daankoote/dev/enval-worktrees/beheer": "Beheer",
-});
+const WORKSPACE_BY_ROOT = Object.freeze(Object.fromEntries(
+  Object.entries(ENVAL_WORKSPACE_REGISTRY).map(([workspace, binding]) => [
+    binding.root,
+    workspace,
+  ]),
+));
 const RUN_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$/;
 const SHA_PATTERN = /^[a-f0-9]{40,64}$/;
+const SETUP_TOOL_PATHS = Object.freeze([
+  "scripts/tools/deno-app-proof.json",
+  "scripts/tools/deno-browser-proof.json",
+  "scripts/tools/enval-batch.mjs",
+  "scripts/tools/enval-local-dev.mjs",
+  "scripts/tools/enval-migration-chain-manifest.mjs",
+  "scripts/tools/enval-preview-dependency-bridge.mjs",
+  "scripts/tools/enval-preview.mjs",
+  "scripts/tools/enval-primary-runtime.mjs",
+  "scripts/tools/enval-readonly-sql.mjs",
+  "scripts/tools/enval-result.mjs",
+  "scripts/tools/enval-supabase-target.mjs",
+  "scripts/tools/enval-ui-review-collect.mjs",
+  "scripts/tools/enval-ui-review-loop.mjs",
+  "scripts/tools/enval-ui-review-result.schema.json",
+  "scripts/tools/enval-ui-review.mjs",
+  "scripts/tools/enval-verify-manifest.mjs",
+  "scripts/tools/enval-verify-ownership.mjs",
+  "scripts/tools/enval-verify.mjs",
+]);
+const SETUP_PROOF_PATHS = Object.freeze([
+  "scripts/proofs/enval-archived-migration-reference.proof.mjs",
+  "scripts/proofs/enval-batch.proof.mjs",
+  "scripts/proofs/enval-local-dev.proof.mjs",
+  "scripts/proofs/enval-local-readonly-catalog.proof.sql",
+  "scripts/proofs/enval-local-readonly-inspection.proof.mjs",
+  "scripts/proofs/enval-migration-chain.proof.mjs",
+  "scripts/proofs/enval-preview.proof.mjs",
+  "scripts/proofs/enval-readonly-sql.proof.mjs",
+  "scripts/proofs/enval-result.proof.mjs",
+  "scripts/proofs/enval-ui-review.proof.mjs",
+  "scripts/proofs/enval-verify-ownership.proof.mjs",
+  "scripts/proofs/enval-verify-runner.proof.mjs",
+]);
 
 export class ResultPublicationError extends Error {
   constructor(code) {
@@ -48,6 +113,127 @@ export class ResultPublicationError extends Error {
 
 function fail(code) {
   throw new ResultPublicationError(code);
+}
+
+function repositoryPath(relativePath) {
+  if (
+    typeof relativePath !== "string" || relativePath.length === 0 ||
+    relativePath.startsWith("/") || relativePath.includes("\\") ||
+    relativePath.split("/").some((part) =>
+      part === "" || part === "." || part === ".."
+    )
+  ) fail("workspace_path_invalid");
+  return relativePath;
+}
+
+function within(relativePath, directory) {
+  return relativePath.startsWith(`${directory}/`);
+}
+
+export function roleOwnsPath(role, candidatePath) {
+  const relativePath = repositoryPath(candidatePath);
+  if (role === WORKSPACE_ROLES.MAIN_INTEGRATION) return false;
+  if (role === WORKSPACE_ROLES.SETUP_GOVERNANCE) {
+    return relativePath === "AGENTS.md" || within(relativePath, ".codex") ||
+      within(relativePath, "docs/app/operations") ||
+      SETUP_TOOL_PATHS.includes(relativePath) ||
+      SETUP_PROOF_PATHS.includes(relativePath);
+  }
+  if (role === WORKSPACE_ROLES.BEHEER_PRODUCT) {
+    return within(relativePath, "app") || within(relativePath, "supabase") ||
+      (within(relativePath, "docs/app") &&
+        !within(relativePath, "docs/app/operations")) ||
+      (within(relativePath, "scripts/proofs") &&
+        !SETUP_PROOF_PATHS.includes(relativePath));
+  }
+  fail("workspace_role_invalid");
+}
+
+export function validateWorkspacePaths(role, paths) {
+  if (!Object.values(WORKSPACE_ROLES).includes(role)) {
+    fail("workspace_role_invalid");
+  }
+  const checkedPaths = [...new Set(paths)].sort();
+  for (const relativePath of checkedPaths) {
+    if (!roleOwnsPath(role, relativePath)) {
+      fail(`workspace_role_path_refused:${role}:${relativePath}`);
+    }
+  }
+  return Object.freeze(checkedPaths);
+}
+
+function defaultRun(command, args, options) {
+  return spawnSync(command, args, {
+    ...options,
+    encoding: "utf8",
+    maxBuffer: 16 * 1024 * 1024,
+    shell: false,
+    timeout: 10_000,
+  });
+}
+
+function gitText(run, root, args, code) {
+  const result = run("git", ["-C", root, ...args], { cwd: root });
+  if (result.error || result.status !== 0) fail(code);
+  return String(result.stdout ?? "");
+}
+
+function nulPaths(output) {
+  if (output === "") return [];
+  if (!output.endsWith("\0")) fail("workspace_git_state_invalid");
+  return output.slice(0, -1).split("\0").map(repositoryPath);
+}
+
+function workspacePathSets(run, root, options = {}) {
+  const unstaged = nulPaths(gitText(
+    run,
+    root,
+    ["diff", "--no-renames", "--name-only", "-z"],
+    "workspace_unstaged_inspection_failed",
+  ));
+  const staged = nulPaths(gitText(
+    run,
+    root,
+    ["diff", "--cached", "--no-renames", "--name-only", "-z"],
+    "workspace_index_inspection_failed",
+  ));
+  const untracked = options.includeUntracked
+    ? nulPaths(gitText(
+      run,
+      root,
+      ["ls-files", "--others", "--exclude-standard", "-z"],
+      "workspace_untracked_inspection_failed",
+    ))
+    : [];
+  return Object.freeze({
+    tracked: Object.freeze([...new Set(unstaged)].sort()),
+    index: Object.freeze([...new Set(staged)].sort()),
+    untracked: Object.freeze([...new Set(untracked)].sort()),
+  });
+}
+
+function changedPaths(run, root, options = {}) {
+  const sets = workspacePathSets(run, root, options);
+  return Object.freeze([
+    ...new Set([...sets.tracked, ...sets.index, ...sets.untracked]),
+  ].sort());
+}
+
+export function validateWorkspaceState(run, root, workspaceName, options = {}) {
+  const binding = ENVAL_WORKSPACE_REGISTRY[workspaceName];
+  if (!binding) fail("workspace_not_approved");
+  const branch = gitText(
+    run,
+    root,
+    ["branch", "--show-current"],
+    "workspace_branch_inspection_failed",
+  ).trim();
+  if (branch !== binding.branch) {
+    fail(`workspace_branch_mismatch:${workspaceName}`);
+  }
+  const paths = changedPaths(run, root, options);
+  validateWorkspacePaths(binding.role, paths);
+  return Object.freeze({ role: binding.role, branch, paths });
 }
 
 function validateWorkspace(workspace) {
@@ -148,6 +334,99 @@ export function workspaceForCwd(cwd) {
   return WORKSPACE_BY_ROOT[resolve(cwd)] ?? null;
 }
 
+function sha256(...values) {
+  const hash = createHash("sha256");
+  for (const value of values) hash.update(value);
+  return hash.digest("hex");
+}
+
+function worktreePathHash(root, relativePath) {
+  const path = join(root, repositoryPath(relativePath));
+  let status;
+  try {
+    status = lstatSync(path);
+  } catch (error) {
+    if (error?.code === "ENOENT") return sha256("missing\0");
+    throw error;
+  }
+  if (status.isSymbolicLink()) {
+    return sha256("symlink\0", readlinkSync(path));
+  }
+  if (!status.isFile()) fail("workspace_scope_path_type_invalid");
+  return sha256("file\0", readFileSync(path));
+}
+
+export function captureWorkspaceBaseline(workspace, root) {
+  const binding = ENVAL_WORKSPACE_REGISTRY[workspace];
+  if (!binding) fail("workspace_not_approved");
+  let canonicalRoot;
+  try {
+    canonicalRoot = realpathSync(resolve(root));
+  } catch {
+    fail("workspace_scope_root_invalid");
+  }
+  const branch = gitText(
+    defaultRun,
+    canonicalRoot,
+    ["branch", "--show-current"],
+    "workspace_branch_inspection_failed",
+  ).trim();
+  if (branch !== binding.branch) fail(`workspace_branch_mismatch:${workspace}`);
+  const head = gitText(
+    defaultRun,
+    canonicalRoot,
+    ["rev-parse", "--verify", "HEAD^{commit}"],
+    "workspace_head_inspection_failed",
+  ).trim();
+  if (!SHA_PATTERN.test(head)) fail("workspace_head_invalid");
+  const paths = workspacePathSets(defaultRun, canonicalRoot, {
+    includeUntracked: true,
+  });
+  validateWorkspacePaths(binding.role, [...paths.tracked, ...paths.index]);
+  if (workspace !== "Main") {
+    validateWorkspacePaths(binding.role, paths.untracked);
+  }
+  return Object.freeze({
+    schemaVersion: 1,
+    workspace,
+    root: canonicalRoot,
+    branch,
+    head,
+    untracked: Object.freeze(
+      workspace === "Main"
+        ? paths.untracked.map((path) =>
+          Object.freeze({ path, sha256: worktreePathHash(canonicalRoot, path) })
+        )
+        : [],
+    ),
+  });
+}
+
+function validatePublicationScope(baseline, workspace) {
+  if (
+    baseline?.schemaVersion !== 1 ||
+    baseline.workspace !== workspace ||
+    !ENVAL_WORKSPACE_REGISTRY[baseline.workspace] ||
+    typeof baseline.root !== "string"
+  ) fail("workspace_scope_baseline_invalid");
+  const current = captureWorkspaceBaseline(baseline.workspace, baseline.root);
+  if (baseline.workspace === "Main") {
+    const before = new Map(baseline.untracked.map((entry) => [
+      entry.path,
+      entry.sha256,
+    ]));
+    const after = new Map(current.untracked.map((entry) => [
+      entry.path,
+      entry.sha256,
+    ]));
+    const drift = [...new Set([...before.keys(), ...after.keys()])]
+      .sort()
+      .find((path) => before.get(path) !== after.get(path));
+    if (drift) fail(`workspace_untracked_baseline_drift:Main:${drift}`);
+  }
+  return current;
+}
+
 function gitMetadata(cwd) {
   const read = (args) => {
     const result = spawnSync("git", ["-C", cwd, ...args], {
@@ -174,18 +453,12 @@ function readJson(path) {
   }
 }
 
+function publicContext({ scopeBaseline: _scopeBaseline, ...context }) {
+  return context;
+}
+
 function pendingEnvelope(context) {
-  return Object.freeze({
-    schemaVersion: 1,
-    project: RESULT_PROJECT,
-    workspace: context.workspace,
-    runId: context.runId,
-    tasklabel: context.tasklabel,
-    startedAt: context.startedAt,
-    resultState: "PENDING",
-    branch: context.branch,
-    startHead: context.startHead,
-  });
+  return Object.freeze({ ...publicContext(context), resultState: "PENDING" });
 }
 
 export function beginResultRun(input, options = {}) {
@@ -196,7 +469,23 @@ export function beginResultRun(input, options = {}) {
     input.startedAt ?? new Date().toISOString(),
     "result_started_at_invalid",
   );
-  const metadata = input.cwd ? gitMetadata(input.cwd) : {};
+  const inferredScopeRoot = workspaceForCwd(input.cwd) === workspace
+    ? input.cwd
+    : null;
+  const scopeRoot = options.captureScopeBaseline === false
+    ? null
+    : options.scopeRoot ?? inferredScopeRoot;
+  if (options.requireScopeBaseline === true && scopeRoot === null) {
+    fail("workspace_scope_baseline_required");
+  }
+  const scopeBaseline = scopeRoot === null
+    ? null
+    : captureWorkspaceBaseline(workspace, scopeRoot);
+  const metadata = scopeBaseline
+    ? { branch: scopeBaseline.branch, startHead: scopeBaseline.head }
+    : input.cwd
+    ? gitMetadata(input.cwd)
+    : {};
   const context = Object.freeze({
     schemaVersion: 1,
     project: RESULT_PROJECT,
@@ -204,8 +493,14 @@ export function beginResultRun(input, options = {}) {
     runId,
     tasklabel: normalizeTasklabel(input.tasklabel),
     startedAt,
-    branch: safeOptional(input.branch ?? metadata.branch),
-    startHead: safeOptional(input.startHead ?? metadata.startHead, SHA_PATTERN),
+    branch: safeOptional(
+      scopeBaseline?.branch ?? input.branch ?? metadata.branch,
+    ),
+    startHead: safeOptional(
+      scopeBaseline?.head ?? input.startHead ?? metadata.startHead,
+      SHA_PATTERN,
+    ),
+    scopeBaseline,
   });
   const paths = workspaceResultPaths(workspace, runId, resultRoot);
   mkdirSync(join(paths.workspaceRoot, "runs"), {
@@ -320,23 +615,15 @@ export function finalizeActiveRun(workspace, terminalStatus, options = {}) {
     fail("result_final_payload_invalid");
   }
   const envelope = Object.freeze({
-    schemaVersion: 1,
-    project: RESULT_PROJECT,
-    workspace,
-    runId: context.runId,
-    tasklabel: context.tasklabel,
-    startedAt: context.startedAt,
+    ...publicContext(context),
     finishedAt: validateTimestamp(
       options.finishedAt ?? new Date().toISOString(),
       "result_finished_at_invalid",
     ),
     terminalStatus,
-    branch: context.branch ?? null,
-    startHead: context.startHead ?? null,
     finalReturn,
     stopDescription,
   });
-  const contents = serialized(envelope);
   const finish = (finalEnvelope, finalContents) => {
     atomicWrite(paths.latest, finalContents);
     if (options.mirrorProjectLatest === true) {
@@ -348,18 +635,33 @@ export function finalizeActiveRun(workspace, terminalStatus, options = {}) {
     }
     return Object.freeze({ envelope: finalEnvelope, paths });
   };
-  if (exists(paths.history)) {
-    const existing = readJson(paths.history);
-    return finish(existing, serialized(existing));
-  }
   if (!acquireFinalizerLock(paths.finalizing)) return null;
   try {
     if (exists(paths.history)) {
       const existing = readJson(paths.history);
       return finish(existing, serialized(existing));
     }
-    atomicWrite(paths.history, contents);
-    return finish(envelope, contents);
+    let finalEnvelope = envelope;
+    try {
+      if (context.scopeBaseline) {
+        validatePublicationScope(context.scopeBaseline, workspace);
+      } else if (options.requireScopeBaseline === true) {
+        fail("workspace_scope_baseline_required");
+      }
+    } catch (error) {
+      const code = error instanceof ResultPublicationError
+        ? error.code
+        : "workspace_scope_validation_failed";
+      finalEnvelope = Object.freeze({
+        ...envelope,
+        terminalStatus: "FAIL",
+        finalReturn: null,
+        stopDescription: `Workspace role validation failed: ${code}`,
+      });
+    }
+    const finalContents = serialized(finalEnvelope);
+    atomicWrite(paths.history, finalContents);
+    return finish(finalEnvelope, finalContents);
   } finally {
     releaseFinalizerLock(paths.finalizing);
   }
@@ -368,7 +670,7 @@ export function finalizeActiveRun(workspace, terminalStatus, options = {}) {
 export function terminalStatusFromReturn(value) {
   if (typeof value !== "string") return null;
   const leading = value.trimStart().match(
-    /^(PASS|PARTIAL|FAIL|HUMAN_GATE|BLOCKED|INTERRUPTED|TIMEOUT)(?:\b|\s*[:—-])/
+    /^(PASS|PARTIAL|FAIL|HUMAN_GATE|BLOCKED|INTERRUPTED|TIMEOUT)(?:\b|\s*[:—-])/,
   );
   if (leading) return leading[1];
   const matches = [...value.matchAll(
@@ -381,7 +683,9 @@ function hookRunId(event) {
   const components = [event?.session_id, event?.turn_id]
     .filter((value) => typeof value === "string" && value !== "")
     .map((value) => value.replace(/[^A-Za-z0-9_.-]/g, "-").slice(0, 72));
-  return components.length > 0 ? components.join("-").slice(0, 160) : randomUUID();
+  return components.length > 0
+    ? components.join("-").slice(0, 160)
+    : randomUUID();
 }
 
 function hookTasklabel(prompt) {
@@ -401,6 +705,8 @@ export function handleResultHook(event, options = {}) {
   const shared = {
     resultRoot: options.resultRoot,
     mirrorProjectLatest: options.mirrorProjectLatest === true,
+    requireScopeBaseline: true,
+    scopeRoot: options.scopeRoot,
   };
   if (event?.hook_event_name === "UserPromptSubmit") {
     return beginResultRun({
@@ -442,7 +748,9 @@ export function handleResultHook(event, options = {}) {
       : "FAIL";
     return finalizeActiveRun(workspace, status, {
       ...shared,
-      stopDescription: `Codex session ended before a terminal RETURN (${reason || "unknown reason"}).`,
+      stopDescription: `Codex session ended before a terminal RETURN (${
+        reason || "unknown reason"
+      }).`,
     });
   }
   return null;
@@ -463,15 +771,26 @@ function republishExistingNotification(workspace, runId, resultRoot) {
   const active = readJson(paths.active);
   const latest = readJson(paths.latest);
   const latestBelongsToRun = latest?.runId === runId;
-  if (
-    active?.runId === runId ||
-    (!active && (latestBelongsToRun || latest === null))
-  ) atomicWrite(paths.latest, serialized(existing));
+  if (active?.runId === runId) {
+    const recovered = finalizeActiveRun(workspace, existing.terminalStatus, {
+      resultRoot,
+      requireScopeBaseline: true,
+      finalReturn: existing.finalReturn,
+      stopDescription: existing.stopDescription,
+    });
+    if (recovered) {
+      return Object.freeze({
+        ...recovered,
+        alreadyFinalized: true,
+        latestPreserved: false,
+      });
+    }
+  }
   return Object.freeze({
     envelope: existing,
     paths,
     alreadyFinalized: true,
-    latestPreserved: !latestBelongsToRun && latest !== null,
+    latestPreserved: !latestBelongsToRun,
   });
 }
 
@@ -515,6 +834,7 @@ export function handleResultNotification(payload, options = {}) {
       }, {
         resultRoot,
         mirrorProjectLatest: options.mirrorProjectLatest === true,
+        captureScopeBaseline: false,
       });
     } catch (error) {
       if (error?.code !== "result_run_already_finalized") throw error;
@@ -535,6 +855,7 @@ export function handleResultNotification(payload, options = {}) {
   return finalizeActiveRun(workspace, terminalStatus ?? "BLOCKED", {
     resultRoot,
     mirrorProjectLatest: options.mirrorProjectLatest === true,
+    requireScopeBaseline: true,
     finalReturn: terminalStatus ? finalReturn : null,
     stopDescription: terminalStatus
       ? null

@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import {
+  mkdirSync,
   mkdtempSync,
-  readFileSync,
   readdirSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -13,7 +14,10 @@ import { after, test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { routeEvent } from "../../.codex/hooks/enval-permission-router.mjs";
-import { CLASSIFICATION, ROOT } from "../../.codex/hooks/command-classifier.mjs";
+import {
+  CLASSIFICATION,
+  ROOT,
+} from "../../.codex/hooks/command-classifier.mjs";
 import {
   beginResultRun,
   finalizeActiveRun,
@@ -33,6 +37,68 @@ function root() {
   const value = mkdtempSync(join(tmpdir(), "enval-result-proof-"));
   roots.push(value);
   return value;
+}
+
+function git(repository, args) {
+  const result = spawnSync("git", ["-C", repository, ...args], {
+    cwd: repository,
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  return String(result.stdout ?? "").trim();
+}
+
+function scopeFixture(workspace) {
+  const repository = root();
+  const branch = workspace === "Main"
+    ? "main"
+    : workspace === "Beheer"
+    ? "beheer"
+    : "setup";
+  git(repository, ["init", "-b", branch]);
+  mkdirSync(join(repository, "app"), { recursive: true });
+  mkdirSync(join(repository, "scripts/tools"), { recursive: true });
+  writeFileSync(join(repository, "app/fixture.txt"), "product\n");
+  writeFileSync(
+    join(repository, "scripts/tools/enval-result.mjs"),
+    "export {};\n",
+  );
+  git(repository, ["add", "."]);
+  git(repository, [
+    "-c",
+    "user.name=ENVAL Proof",
+    "-c",
+    "user.email=proof@invalid.local",
+    "commit",
+    "-m",
+    "scope fixture",
+  ]);
+  return repository;
+}
+
+function beginScopedHook(
+  resultRoot,
+  workspace,
+  repository,
+  runId,
+  turnId = "turn-1",
+) {
+  return handleResultHook({
+    hook_event_name: "UserPromptSubmit",
+    cwd: repository,
+    session_id: runId,
+    turn_id: turnId,
+    prompt: `TASKLABEL=${runId}`,
+  }, {
+    resultRoot,
+    workspace,
+    scopeRoot: repository,
+    startedAt: "2026-09-07T10:00:00Z",
+  });
+}
+
+function scopedLatest(resultRoot, workspace) {
+  return readJson(join(resultRoot, workspace, "latest.txt"));
 }
 
 function readJson(path) {
@@ -92,6 +158,122 @@ test("status parsing prefers a leading verdict and otherwise the final marker", 
   );
 });
 
+test("canonical Stop accepts role-owned tracked, index, and untracked work", () => {
+  const resultRoot = root();
+  const repository = scopeFixture("_Setup");
+  beginScopedHook(resultRoot, "_Setup", repository, "owned-stop");
+  const tool = join(repository, "scripts/tools/enval-result.mjs");
+  writeFileSync(tool, "export const staged = true;\n");
+  git(repository, ["add", "scripts/tools/enval-result.mjs"]);
+  writeFileSync(tool, "export const unstaged = true;\n");
+  mkdirSync(join(repository, "docs/app/operations"), { recursive: true });
+  writeFileSync(join(repository, "docs/app/operations/note.md"), "note\n");
+  handleResultHook({
+    hook_event_name: "Stop",
+    last_assistant_message: "OWNED_STATUS=PASS\n",
+  }, { resultRoot, workspace: "_Setup", scopeRoot: repository });
+  assert.equal(scopedLatest(resultRoot, "_Setup").terminalStatus, "PASS");
+});
+
+test("all canonical terminal lifecycle paths publish concrete FAIL on scope drift", () => {
+  for (const lifecycle of ["Stop", "Interrupt", "SessionEnd", "notify"]) {
+    const resultRoot = root();
+    const repository = scopeFixture("_Setup");
+    const runId = `drift-${lifecycle.toLowerCase()}`;
+    beginScopedHook(resultRoot, "_Setup", repository, runId);
+    writeFileSync(join(repository, "app/fixture.txt"), `${lifecycle}\n`);
+    if (lifecycle === "notify") {
+      handleResultNotification({
+        type: "agent-turn-complete",
+        "thread-id": runId,
+        "turn-id": "turn-1",
+        cwd: repository,
+        "input-messages": [`TASKLABEL=${runId}`],
+        "last-assistant-message": "DRIFT_STATUS=PASS\n",
+      }, { resultRoot, workspace: "_Setup", scopeRoot: repository });
+    } else {
+      handleResultHook({
+        hook_event_name: lifecycle,
+        reason: lifecycle === "SessionEnd" ? "process exited" : undefined,
+        last_assistant_message: "DRIFT_STATUS=PASS\n",
+      }, { resultRoot, workspace: "_Setup", scopeRoot: repository });
+    }
+    const latest = scopedLatest(resultRoot, "_Setup");
+    assert.equal(latest.terminalStatus, "FAIL");
+    assert.equal(latest.finalReturn, null);
+    assert.match(
+      latest.stopDescription,
+      /workspace_role_path_refused:SETUP_GOVERNANCE:app\/fixture\.txt/,
+    );
+  }
+});
+
+test("publication denies forbidden tracked, index, and untracked paths", () => {
+  for (const state of ["tracked", "index", "untracked"]) {
+    const resultRoot = root();
+    const repository = scopeFixture("_Setup");
+    beginScopedHook(resultRoot, "_Setup", repository, `state-${state}`);
+    const path = state === "untracked"
+      ? "app/new-product-file.txt"
+      : "app/fixture.txt";
+    writeFileSync(join(repository, path), `${state}\n`);
+    if (state === "index") git(repository, ["add", path]);
+    handleResultHook({
+      hook_event_name: "Stop",
+      last_assistant_message: "STATE_STATUS=PASS\n",
+    }, { resultRoot, workspace: "_Setup", scopeRoot: repository });
+    const latest = scopedLatest(resultRoot, "_Setup");
+    assert.equal(latest.terminalStatus, "FAIL");
+    assert.match(
+      latest.stopDescription,
+      new RegExp(
+        `workspace_role_path_refused:SETUP_GOVERNANCE:${
+          path.replaceAll(".", "\\.")
+        }`,
+      ),
+    );
+  }
+});
+
+test("Main preserves twelve baseline artifacts only while byte-identical", () => {
+  for (const drift of ["none", "added", "modified", "removed"]) {
+    const resultRoot = root();
+    const repository = scopeFixture("Main");
+    for (let index = 1; index <= 12; index += 1) {
+      writeFileSync(
+        join(repository, `artifact-${index}.txt`),
+        `value-${index}\n`,
+      );
+    }
+    const started = beginScopedHook(
+      resultRoot,
+      "Main",
+      repository,
+      `main-${drift}`,
+    );
+    assert.equal(started.context.scopeBaseline.untracked.length, 12);
+    if (drift === "added") {
+      writeFileSync(join(repository, "artifact-13.txt"), "new\n");
+    }
+    if (drift === "modified") {
+      writeFileSync(join(repository, "artifact-1.txt"), "changed\n");
+    }
+    if (drift === "removed") rmSync(join(repository, "artifact-1.txt"));
+    handleResultHook({
+      hook_event_name: "Stop",
+      last_assistant_message: "MAIN_STATUS=PASS\n",
+    }, { resultRoot, workspace: "Main", scopeRoot: repository });
+    const latest = scopedLatest(resultRoot, "Main");
+    assert.equal(latest.terminalStatus, drift === "none" ? "PASS" : "FAIL");
+    if (drift !== "none") {
+      assert.match(
+        latest.stopDescription,
+        /workspace_untracked_baseline_drift:Main:artifact-/,
+      );
+    }
+  }
+});
+
 test("invalid final payload cannot strand the run lock", () => {
   const resultRoot = root();
   beginResultRun({
@@ -105,10 +287,11 @@ test("invalid final payload cannot strand the run lock", () => {
     "validation-recovery",
     resultRoot,
   );
-  assert.throws(() => finalizeActiveRun("_Setup", "PASS", {
-    resultRoot,
-    finalReturn: "x".repeat(33 * 1024),
-  }), { code: "result_return_invalid" });
+  assert.throws(() =>
+    finalizeActiveRun("_Setup", "PASS", {
+      resultRoot,
+      finalReturn: "x".repeat(33 * 1024),
+    }), { code: "result_return_invalid" });
   assert.equal(readdirSync(paths.runRoot).includes(".finalizing"), false);
   const recovered = finalizeActiveRun("_Setup", "FAIL", {
     resultRoot,
@@ -165,17 +348,22 @@ test("PARTIAL, HUMAN_GATE, and FAIL each replace their workspace latest", () => 
       terminalStatus.toLowerCase(),
       terminalStatus,
     );
-    assert.equal(readJson(published.paths.latest).terminalStatus, terminalStatus);
+    assert.equal(
+      readJson(published.paths.latest).terminalStatus,
+      terminalStatus,
+    );
     assert.equal(readJson(published.paths.history).workspace, workspace);
   }
 });
 
 test("TIMEOUT and interrupt hooks publish useful runtime descriptions", () => {
-  for (const [eventName, reason, expected] of [
-    ["SessionEnd", "timeout", "TIMEOUT"],
-    ["Interrupt", "", "INTERRUPTED"],
-    ["SessionEnd", "process exited with code 1", "FAIL"],
-  ]) {
+  for (
+    const [eventName, reason, expected] of [
+      ["SessionEnd", "timeout", "TIMEOUT"],
+      ["Interrupt", "", "INTERRUPTED"],
+      ["SessionEnd", "process exited with code 1", "FAIL"],
+    ]
+  ) {
     const resultRoot = root();
     handleResultHook({
       hook_event_name: "UserPromptSubmit",
@@ -216,24 +404,33 @@ test("a new run immediately replaces stale latest with its own pending marker", 
 
 test("Stop uses the final RETURN status and missing RETURN fails closed", () => {
   const resultRoot = root();
-  for (const [runId, message, expected] of [
-    ["partial-stop", "BATCH_STATUS=PARTIAL\nREASON=review exhaustion\n", "PARTIAL"],
-    ["missing-stop", "Implementation ended without the RETURN marker.", "BLOCKED"],
-  ]) {
-    beginResultRun({
-      workspace: "Beheer",
-      runId,
-      tasklabel: "stop-proof",
-      startedAt: "2026-09-05T10:00:00Z",
-    }, { resultRoot });
+  const repository = scopeFixture("Beheer");
+  for (
+    const [runId, message, expected] of [
+      [
+        "partial-stop",
+        "BATCH_STATUS=PARTIAL\nREASON=review exhaustion\n",
+        "PARTIAL",
+      ],
+      [
+        "missing-stop",
+        "Implementation ended without the RETURN marker.",
+        "BLOCKED",
+      ],
+    ]
+  ) {
+    beginScopedHook(resultRoot, "Beheer", repository, runId);
     handleResultHook({
       hook_event_name: "Stop",
       last_assistant_message: message,
-    }, { resultRoot, workspace: "Beheer" });
+    }, { resultRoot, workspace: "Beheer", scopeRoot: repository });
     const latest = readJson(join(resultRoot, "Beheer", "latest.txt"));
     assert.equal(latest.terminalStatus, expected);
     if (expected === "BLOCKED") {
-      assert.match(latest.stopDescription, /without a recognized terminal RETURN/);
+      assert.match(
+        latest.stopDescription,
+        /without a recognized terminal RETURN/,
+      );
     } else {
       assert.equal(latest.finalReturn, message);
     }
@@ -243,16 +440,28 @@ test("Stop uses the final RETURN status and missing RETURN fails closed", () => 
 test("agent-turn-complete fallback publishes terminal output without Stop", () => {
   for (const terminalStatus of ["PASS", "PARTIAL", "FAIL"]) {
     const resultRoot = root();
-    const published = handleResultNotification({
+    const repository = scopeFixture("Main");
+    const payload = {
       type: "agent-turn-complete",
       "thread-id": `notify-${terminalStatus.toLowerCase()}`,
       "turn-id": "turn-1",
-      cwd: "/Users/daankoote/dev/enval",
+      cwd: repository,
       "input-messages": [
         `TASKLABEL: notify-${terminalStatus.toLowerCase()}-proof`,
       ],
       "last-assistant-message": `NOTIFY_STATUS=${terminalStatus}`,
-    }, { resultRoot, startedAt: "2026-09-05T10:00:00Z" });
+    };
+    beginScopedHook(
+      resultRoot,
+      "Main",
+      repository,
+      payload["thread-id"],
+    );
+    const published = handleResultNotification(payload, {
+      resultRoot,
+      workspace: "Main",
+      scopeRoot: repository,
+    });
     assert.equal(published.envelope.workspace, "Main");
     assert.equal(published.envelope.terminalStatus, terminalStatus);
     assert.equal(
@@ -264,6 +473,25 @@ test("agent-turn-complete fallback publishes terminal output without Stop", () =
       readJson(published.paths.history),
     );
   }
+});
+
+test("notifier without a trusted start baseline publishes concrete FAIL", () => {
+  const resultRoot = root();
+  const repository = scopeFixture("Main");
+  const published = handleResultNotification({
+    type: "agent-turn-complete",
+    "thread-id": "notify-without-start",
+    "turn-id": "turn-1",
+    cwd: repository,
+    "input-messages": ["TASKLABEL: notify-without-start-proof"],
+    "last-assistant-message": "UNTRUSTED_STATUS=PASS",
+  }, { resultRoot, workspace: "Main", scopeRoot: repository });
+  assert.equal(published.envelope.terminalStatus, "FAIL");
+  assert.equal(published.envelope.finalReturn, null);
+  assert.match(
+    published.envelope.stopDescription,
+    /workspace_scope_baseline_required/,
+  );
 });
 
 test("notify after Stop reuses immutable history instead of duplicating a run", () => {
@@ -299,17 +527,26 @@ test("notify after Stop reuses immutable history instead of duplicating a run", 
 
 test("a delayed old notifier cannot replace a newer pending latest", () => {
   const resultRoot = root();
+  const repository = scopeFixture("Main");
   const oldPayload = {
     type: "agent-turn-complete",
     "thread-id": "delayed-notify",
     "turn-id": "old-turn",
-    cwd: "/Users/daankoote/dev/enval",
+    cwd: repository,
     "input-messages": ["TASKLABEL: delayed-old-proof"],
     "last-assistant-message": "DELAYED_OLD_STATUS=PASS",
   };
+  beginScopedHook(
+    resultRoot,
+    "Main",
+    repository,
+    oldPayload["thread-id"],
+    oldPayload["turn-id"],
+  );
   const old = handleResultNotification(oldPayload, {
     resultRoot,
-    startedAt: "2026-09-05T10:00:00Z",
+    workspace: "Main",
+    scopeRoot: repository,
   });
   beginResultRun({
     workspace: "Main",
@@ -318,7 +555,11 @@ test("a delayed old notifier cannot replace a newer pending latest", () => {
     startedAt: "2026-09-05T10:01:00Z",
   }, { resultRoot });
 
-  const delayed = handleResultNotification(oldPayload, { resultRoot });
+  const delayed = handleResultNotification(oldPayload, {
+    resultRoot,
+    workspace: "Main",
+    scopeRoot: repository,
+  });
   const latest = readJson(join(resultRoot, "Main", "latest.txt"));
   assert.equal(delayed.alreadyFinalized, true);
   assert.equal(delayed.latestPreserved, true);
@@ -332,18 +573,14 @@ test("a delayed old notifier cannot replace a newer pending latest", () => {
 
 test("PreToolUse HUMAN_GATE finalizes the active workspace before denying", () => {
   const resultRoot = root();
-  beginResultRun({
-    workspace: "_Setup",
-    runId: "human-gate",
-    tasklabel: "hook-proof",
-    startedAt: "2026-09-05T10:00:00Z",
-  }, { resultRoot });
+  const repository = scopeFixture("_Setup");
+  beginScopedHook(resultRoot, "_Setup", repository, "human-gate");
   const routed = routeEvent({
     cwd: ROOT,
     hook_event_name: "PreToolUse",
     tool_name: "Bash",
     tool_input: { command: "git branch new-topic" },
-  }, { resultRoot, workspace: "_Setup" });
+  }, { resultRoot, workspace: "_Setup", scopeRoot: repository });
   assert.equal(routed.classification, CLASSIFICATION.DENY);
   assert.ok(
     routed.output?.hookSpecificOutput,
@@ -403,6 +640,19 @@ test("real notify argv protocol publishes when project Stop is not trusted", () 
     "input-messages": ["TASKLABEL: notify-protocol-proof"],
     "last-assistant-message": "NOTIFY_PROTOCOL_STATUS=FAIL",
   };
+  const opened = spawnSync(process.execPath, [router], {
+    cwd: payload.cwd,
+    encoding: "utf8",
+    env: { ...process.env, HOME: isolatedHome },
+    input: JSON.stringify({
+      hook_event_name: "UserPromptSubmit",
+      cwd: payload.cwd,
+      session_id: payload["thread-id"],
+      turn_id: payload["turn-id"],
+      prompt: payload["input-messages"][0],
+    }),
+  });
+  assert.equal(opened.status, 0, opened.stderr);
   const result = spawnSync(
     process.execPath,
     [router, "--notify", JSON.stringify(payload)],
@@ -446,22 +696,33 @@ test("Main and Beheer concurrent smoke runs never share latest or history", asyn
   const resultRoot = root();
   const moduleUrl = new URL("../tools/enval-result.mjs", import.meta.url).href;
   const script = [
-    `import { beginResultRun, finalizeActiveRun } from ${JSON.stringify(moduleUrl)};`,
+    `import { beginResultRun, finalizeActiveRun } from ${
+      JSON.stringify(moduleUrl)
+    };`,
     "const [resultRoot, workspace, runId] = process.argv.slice(1);",
     "beginResultRun({workspace,runId,tasklabel:`${workspace}-smoke`,startedAt:'2026-09-05T10:00:00Z'}, {resultRoot});",
     "finalizeActiveRun(workspace,'PASS',{resultRoot,finishedAt:'2026-09-05T10:01:00Z',finalReturn:`${workspace}_STATUS=PASS\\n`});",
   ].join("");
-  const child = (workspace, runId) => new Promise((resolvePromise, reject) => {
-    const processChild = spawn(process.execPath, ["--input-type=module", "-e", script, resultRoot, workspace, runId], {
-      stdio: ["ignore", "pipe", "pipe"],
+  const child = (workspace, runId) =>
+    new Promise((resolvePromise, reject) => {
+      const processChild = spawn(process.execPath, [
+        "--input-type=module",
+        "-e",
+        script,
+        resultRoot,
+        workspace,
+        runId,
+      ], {
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      let stderr = "";
+      processChild.stderr.on("data", (chunk) => stderr += chunk);
+      processChild.on("error", reject);
+      processChild.on("exit", (code) =>
+        code === 0 ? resolvePromise() : reject(
+          new Error(`child ${workspace} failed (${code}): ${stderr}`),
+        ));
     });
-    let stderr = "";
-    processChild.stderr.on("data", (chunk) => stderr += chunk);
-    processChild.on("error", reject);
-    processChild.on("exit", (code) => code === 0
-      ? resolvePromise()
-      : reject(new Error(`child ${workspace} failed (${code}): ${stderr}`)));
-  });
   await Promise.all([
     child("Main", "main-concurrent"),
     child("Beheer", "beheer-concurrent"),
@@ -472,18 +733,28 @@ test("Main and Beheer concurrent smoke runs never share latest or history", asyn
   assert.equal(beheer.runId, "beheer-concurrent");
   assert.notEqual(main.workspace, beheer.workspace);
   assert.equal(
-    readJson(workspaceResultPaths("Main", main.runId, resultRoot).history).workspace,
+    readJson(workspaceResultPaths("Main", main.runId, resultRoot).history)
+      .workspace,
     "Main",
   );
   assert.equal(
-    readJson(workspaceResultPaths("Beheer", beheer.runId, resultRoot).history).workspace,
+    readJson(workspaceResultPaths("Beheer", beheer.runId, resultRoot).history)
+      .workspace,
     "Beheer",
   );
 });
 
 test("terminal status parser accepts all canonical outcomes only", () => {
-  for (const status of [
-    "PASS", "PARTIAL", "FAIL", "HUMAN_GATE", "BLOCKED", "INTERRUPTED", "TIMEOUT",
-  ]) assert.equal(terminalStatusFromReturn(`TASK_STATUS=${status}\n`), status);
+  for (
+    const status of [
+      "PASS",
+      "PARTIAL",
+      "FAIL",
+      "HUMAN_GATE",
+      "BLOCKED",
+      "INTERRUPTED",
+      "TIMEOUT",
+    ]
+  ) assert.equal(terminalStatusFromReturn(`TASK_STATUS=${status}\n`), status);
   assert.equal(terminalStatusFromReturn("TASK_STATUS=RUNNING\n"), null);
 });
