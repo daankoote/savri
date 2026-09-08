@@ -3,8 +3,8 @@
 Status: CURRENT operational methodology.
 
 This document owns diagnosis, test selection, proof labels, and evidence
-interpretation. Git, worktrees, runners, results, and human Terminal handoffs
-are owned by `docs/app/operations/git-workflow.md`.
+interpretation. Git, worktrees, the bounded batch entrypoint, and human Terminal
+handoffs are owned by `docs/app/operations/git-workflow.md`.
 
 ## Boundaries
 

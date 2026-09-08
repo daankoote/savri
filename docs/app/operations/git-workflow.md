@@ -1,8 +1,8 @@
-# Git, Worktree, Runner, Preview, And Terminal Workflow
+# Git, Worktree, Batch, Preview, And Terminal Workflow
 
 Status: CURRENT operations contract.
 
-This document owns Git authority, worktree routing, canonical runner and preview
+This document owns Git authority, worktree routing, canonical batch and preview
 operation, and human Terminal handoffs. Product canon and proof interpretation
 live elsewhere.
 
@@ -29,7 +29,7 @@ Ignored migrations are not made visible by changing .gitignore. When Daan
 chooses to stage one intended ignored migration, Daan may use
 git add -f <exact-path>; Codex does not run it.
 
-## Canonical batch runner
+## Canonical batch entrypoint
 
 Normal batches start from Main with a human-supplied workspace label:
 
@@ -47,17 +47,18 @@ conflicting bindings, or multiple active agents. Task scope comes from
 integration remain human-controlled.
 
 The launcher keeps technical IDs internal, uses the supported Herdr agent
-mechanism, and launches Codex with on-request approval, Auto-review, strict
-config, and ordinary product web search disabled. It never
+mechanism, and launches Codex with on-request user approval, strict config, and
+ordinary product web search disabled. It never
 commits, merges, pushes, deploys, performs product work, or cleans data.
 
-For UI work, the implementation run produces bounded evidence before the
-project review loop starts a fresh read-only reviewer. Findings return through
-the runner; Daan does not shuttle reviewer messages. PASS stops immediately.
-Review cycle limits and evidence rules live in the root AGENTS.md.
+For UI work, `scripts/tools/enval-ui-review-collect.mjs` only collects bounded
+browser evidence. The primary task routes that evidence and the explicit
+acceptance to a fresh, standalone read-only `ui_reviewer`; there is no central
+review loop or result publisher. Daan and the main chat determine scope and
+acceptance. Reviewer results return to the primary conversation.
 
 Stored Herdr/worktree state does not prove a Codex process survived interruption
-or reboot. Resume/relaunch only after the canonical runner has reconciled the
+or reboot. Resume/relaunch only after the batch entrypoint has reconciled the
 registered binding and live state; ambiguous recovery preserves state and stops.
 Parallel product implementation remains disabled unless a separately approved
 pilot provides isolated worktrees, services, fixtures, and human integration.
@@ -144,7 +145,7 @@ shell with exec. A check reports a non-zero status without closing the tab.
 Do not close, rename, remove, or reconcile tabs/panes/workspaces as a side
 effect of a handoff.
 
-Prompts contain only task-specific delta. Permanent Git, runner, and Terminal
+Prompts contain only task-specific delta. Permanent Git, batch, and Terminal
 rules are linked, not copied into every task.
 
 ## Push and deploy

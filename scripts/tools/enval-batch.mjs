@@ -3,10 +3,11 @@
 import { spawnSync } from "node:child_process";
 import { lstatSync, mkdirSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-export const ENVAL_ROOT = "/Users/daankoote/dev/enval";
-export const ENVAL_WORKTREES_ROOT = "/Users/daankoote/dev/enval-worktrees";
+const SETUP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+export const ENVAL_WORKTREES_ROOT = dirname(SETUP_ROOT);
+export const ENVAL_ROOT = resolve(ENVAL_WORKTREES_ROOT, "../enval");
 export const HERDR_PROJECT = "ENVAL";
 export const HERDR_SESSION = HERDR_PROJECT;
 export const HERDR_VERSION = "0.8.2";
@@ -60,7 +61,7 @@ export function validateGovernance(root) {
   for (
     const setting of [
       /^approval_policy = "on-request"$/m,
-      /^approvals_reviewer = "auto_review"$/m,
+      /^approvals_reviewer = "user"$/m,
       /^default_permissions = "enval-dev"$/m,
     ]
   ) {
@@ -310,8 +311,6 @@ export function codexLaunchArgv(worktree) {
     "on-request",
     "--config",
     CODEX_UPDATE_OVERRIDE,
-    "--config",
-    'approvals_reviewer="auto_review"',
     "--config",
     'web_search="disabled"',
     "--strict-config",

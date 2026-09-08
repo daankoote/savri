@@ -34,6 +34,13 @@ The full workflow is in `docs/app/operations/agent-operating-model.md`.
 
 Current product truth is in `docs/app/00_CANON.md`.
 
+## Source hierarchy
+
+Explicit task acceptance and current repository and product canon outrank
+derived review heuristics or visual assumptions. `TARGET`, `DRAFT`, `UNKNOWN`,
+`LEGACY`, and `PROOF ONLY` are not implemented acceptance unless the explicit
+task contract says otherwise.
+
 ## Change discipline
 
 Before editing, establish Goal, Context, Constraints, Done and Authority.
@@ -72,9 +79,9 @@ Codex may inspect and edit the isolated task workspace, run relevant local
 checks and use explicitly authorized exact local fixtures. Hosted reads use
 scoped read-only capabilities.
 
-Daan authorizes hosted writes, broad or historical cleanup, task commits during
-the architecture cutover, integration into protected `main`, pushes, deployments
-and destructive Git operations.
+Daan performs staging, all commits, integration into protected `main`, pushes
+and deployments. Hosted writes, broad or historical cleanup and destructive Git
+operations require Daan's explicit authorization.
 
 A denied optional action is skipped. Use `BLOCKED` only when missing authority
 prevents the required outcome, with one exact `NEEDS` action.

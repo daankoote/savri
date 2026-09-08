@@ -11,7 +11,6 @@ enabled = true
 max_concurrent_threads_per_session = 2
 
 [features]
-hooks = true
 network_proxy = true
 
 [permissions.enval-dev]
@@ -43,7 +42,7 @@ enabled = false
 
 [mcp_servers.supabase_enval_readonly]
 url = "https://mcp.supabase.com/mcp?project_ref=yzngrurkpfuqgexbhzgl&read_only=true&features=database%2Cdebugging%2Cdocs"
-scopes = ["database:read", "database:write", "analytics:read"]
+scopes = ["database:read", "analytics:read"]
 enabled = true
 enabled_tools = [
   "execute_sql",

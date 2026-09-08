@@ -9,7 +9,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { after, test } from "node:test";
 
 import {
@@ -19,6 +20,8 @@ import {
   codexLaunchArgv,
   deriveBatchIdentity,
   deriveBatchSpec,
+  ENVAL_ROOT,
+  ENVAL_WORKTREES_ROOT,
   formatBatchHandoff,
   HERDR_PROJECT,
   HERDR_SESSION,
@@ -59,7 +62,7 @@ function writeGovernance(root, { omit = null } = {}) {
       ".codex/config.toml",
       [
         'approval_policy = "on-request"',
-        'approvals_reviewer = "auto_review"',
+        'approvals_reviewer = "user"',
         'default_permissions = "enval-dev"',
         "",
       ].join("\n"),
@@ -312,6 +315,15 @@ async function captureFailure(action) {
 }
 
 test("batch identity is derived without the legacy workspace registry", () => {
+  const setupRoot = realpathSync(
+    fileURLToPath(new URL("../..", import.meta.url)),
+  );
+  assert.equal(ENVAL_WORKTREES_ROOT, dirname(setupRoot));
+  assert.equal(ENVAL_ROOT, resolve(ENVAL_WORKTREES_ROOT, "../enval"));
+  assert.equal(
+    deriveBatchSpec("beheer").worktree,
+    join(ENVAL_WORKTREES_ROOT, "beheer"),
+  );
   assert.equal(HERDR_PROJECT, "ENVAL");
   assert.equal(HERDR_SESSION, "ENVAL");
   assert.equal(PERSISTENT_WORKSPACE, "Main");
@@ -411,8 +423,6 @@ test("exact supplied workspace is provisioned without name leakage", async () =>
     "on-request",
     "--config",
     CODEX_UPDATE_OVERRIDE,
-    "--config",
-    'approvals_reviewer="auto_review"',
     "--config",
     'web_search="disabled"',
     "--strict-config",
@@ -708,4 +718,5 @@ test("launcher source has no shell, cleanup, commit, or push authority", () => {
     source,
     /enval-(?:permission-router|result)\.mjs|CODEX_NOTIFY_OVERRIDE|notify=/,
   );
+  assert.doesNotMatch(source, /\/Users\/daankoote/);
 });

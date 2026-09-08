@@ -8,9 +8,10 @@ remain in `git-workflow.md`; diagnosis mechanics remain in `run-debug.md`.
 
 ## Topology
 
-Each task uses one primary Codex thread in an isolated task branch/worktree. The
-primary inspects, implements, verifies, updates documentation and produces the
-handoff. It is the only writer.
+Daan and the main chat determine scope and acceptance. Each task uses one
+primary Codex thread in an isolated task branch/worktree. The primary
+implements, verifies, updates documentation and produces the handoff within the
+bounded batch. It is the only writer.
 
 Conditional read-only agents:
 
@@ -21,10 +22,11 @@ Conditional read-only agents:
 | `ui_reviewer`       | Rendered visible behaviour and accessibility basics   |
 | `docs_reviewer`     | Documentation ownership and semantic consistency      |
 
-These names describe logical review responsibilities. Custom TOML profiles are
-used only after the installed Codex surface proves they load correctly. Until
-then, the primary uses the built-in review path or a generic read-only subagent
-with the same compact contract. Agent-loading failure is not a product blocker.
+The `reviewer`, `ui_reviewer` and `docs_reviewer` profiles are standalone and
+read-only. Custom TOML profiles are used only after the installed Codex surface
+proves they load correctly. Until then, the primary uses the built-in review
+path or a generic read-only subagent with the same compact contract.
+Agent-loading failure is not a product blocker.
 
 There are no permanent Main, Beheer, Setup, tester, Supabase, Netlify, Git or
 deployment agents. `main` is a protected branch. External systems are tools.
@@ -59,7 +61,7 @@ reports into the task. Durable rules are loaded from the repository.
 7. Resolve evidence-backed findings.
 8. Re-run checks invalidated by the correction.
 9. Update owning documentation.
-10. Commit only when currently authorized and hand off compactly.
+10. Hand off compactly; Git commit, push and deployment remain human actions.
 
 Use a plan for ambiguous, high-risk or materially cross-layer work. Do not
 require a plan for an obvious low-risk edit.
@@ -78,6 +80,8 @@ require a plan for an obvious low-risk edit.
 If three dimensions apply, run the two highest-risk reviewers first. Add the
 third only when material risk remains. Reviewers report evidence-backed defects;
 they do not edit or control acceptance independently.
+`scripts/tools/enval-ui-review-collect.mjs` only collects browser evidence for a
+targeted UI review.
 `sandbox_mode = "read-only"` in a reviewer profile is a default, not the sole
 security boundary: the parent review turn must itself use read-only permissions,
 or the reviewer must receive only proven non-mutating tools.
@@ -130,16 +134,16 @@ The primary remains the documentation writer and uses `$update-enval-docs`.
 | Local Supabase  | Read; exact authorized current-run fixtures | Migration apply, reset, broad/historical cleanup        |
 | Hosted Supabase | Exact-project read-only MCP                 | Database/Auth/Storage/config writes and deployments     |
 | Netlify         | Repository-local configuration and build results | Git push and every Netlify deployment              |
-| Git             | Task-worktree edits and checks              | Cutover commits, integration, push, destructive history |
+| Git             | Task-worktree edits and checks              | Staging, all commits, integration, push, destructive history |
 | Moshi           | Optional terminal-primary notification      | Any custom notification infrastructure                  |
 
 Netlify deployment acceptance remains with Daan and uses the Netlify dashboard
 and Firefox. Netlify MCP, PAT, OAuth and agent-driven deployment are not required
 procedures.
 
-Hosted Supabase capabilities are unavailable until their project binding, tool
-allowlist and credential handling pass migration evaluation. Missing optional
-hosted access does not block local work.
+Hosted Supabase access is limited to the exact configured project, read-only
+mode, read-only scopes and the project tool allowlist. Missing optional hosted
+access does not block local work.
 
 ## Models and credits
 
@@ -165,12 +169,11 @@ authority yields `BLOCKED` plus one precise `NEEDS` action.
 
 ## Communication and results
 
-Operational work remains in the primary Codex conversation. Subagent results
-return to it automatically. ChatGPT may help Daan with architecture or product
-decisions but is not a mandatory transcript relay.
+Operational work remains in the primary Codex conversation. Standalone reviewer
+results return to it automatically. There is no central hook, router, result
+publisher or review loop.
 
-Statuses: `PASS`, `BLOCKED`, `FAIL`, `CANCELLED`. `HUMAN_GATE` is not a generic
-result.
+Statuses: `PASS`, `BLOCKED`, `FAIL`, `CANCELLED`.
 
 Required final result fields:
 
