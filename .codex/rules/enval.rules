@@ -83,9 +83,8 @@ prefix_rule(pattern = ["node", "scripts/tools/enval-readonly-sql.mjs", "--proof-
 prefix_rule(pattern = ["node", "scripts/tools/enval-local-dev.mjs", "--operation", "ready"], decision = "allow")
 prefix_rule(pattern = ["node", "scripts/tools/enval-local-dev.mjs", "--operation", "serve"], decision = "allow")
 
-# The target tool remains prompt-routed because prefix policy cannot prove end
-# of argv. The argument-aware permission classifier auto-allows only the four
-# exact canonical read-only probes and rejects every extra/repeated argument.
+# The target tool remains natively prompt-routed because prefix policy cannot
+# prove the end of argv.
 prefix_rule(pattern = ["node", "scripts/tools/enval-supabase-target.mjs"], decision = "prompt")
 prefix_rule(pattern = ["node", "scripts/tools/enval-supabase-target.mjs", "--target", "CONTROL_PLANE", "--operation", "start"], decision = "forbidden")
 prefix_rule(pattern = ["node", "scripts/tools/enval-supabase-target.mjs", "--target", "CONTROL_PLANE", "--operation", "stop"], decision = "forbidden")

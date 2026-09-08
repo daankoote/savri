@@ -1,10 +1,10 @@
-# Git, Worktree, Runner, Result, And Terminal Workflow
+# Git, Worktree, Runner, Preview, And Terminal Workflow
 
 Status: CURRENT operations contract.
 
-This document owns Git authority, worktree/workspace routing, canonical runner
-and preview operation, result publication, and human Terminal handoffs. Product
-canon and proof interpretation live elsewhere.
+This document owns Git authority, worktree routing, canonical runner and preview
+operation, and human Terminal handoffs. Product canon and proof interpretation
+live elsewhere.
 
 ## Git authority
 
@@ -29,34 +29,6 @@ Ignored migrations are not made visible by changing .gitignore. When Daan
 chooses to stage one intended ignored migration, Daan may use
 git add -f <exact-path>; Codex does not run it.
 
-## Worktree and workspace responsibilities
-
-The orchestrator owns the human name, branch, worktree, tabs, panes, and agent
-binding. No prompt, agent, or launcher invents or repairs an alternate binding.
-
-~~~text
-Role               Workspace  Owned paths
-MAIN_INTEGRATION   Main       integration/admin; no implementation paths
-SETUP_GOVERNANCE  _Setup     AGENTS, .codex, operations, approved runners/proofs
-BEHEER_PRODUCT     Beheer     app, Supabase, product docs and product proofs
-~~~
-
-Main has tabs Codex and Terminal. _Setup and Beheer have tabs Codex, Terminal,
-and Reviewer. Beheer cannot change AGENTS.md, .codex, Setup runners, or
-operations governance. _Setup cannot change app code, Edge Functions,
-migrations, product contracts, or product proofs. A path without an explicit
-owner is refused rather than inferred.
-
-No other human workspace name is approved. A new workspace requires Daan's
-explicit agreement and a bounded registry/governance change. Names such as
-Previous Beheer, Beheer 2, or Autonomy Beheer are forbidden. One human
-workspace has at most one active batch/worktree binding.
-
-Product implementation belongs in Beheer, not _Setup. Setup governance does
-not ride with a Beheer product change. Main is used for controlled integration
-and project administration. Worktree synchronization and history mutation
-remain human actions.
-
 ## Canonical batch runner
 
 Normal batches start from Main with a human-supplied workspace label:
@@ -78,11 +50,6 @@ The launcher keeps technical IDs internal, uses the supported Herdr agent
 mechanism, and launches Codex with on-request approval, Auto-review, strict
 config, and ordinary product web search disabled. It never
 commits, merges, pushes, deploys, performs product work, or cleans data.
-
-After project hook/configuration source changes, an already-open Codex process
-is stale. Start a fresh session and trust the exact reviewed hooks;
-`Continue without trusting (hooks won't run)` is invalid and
-`--dangerously-bypass-hook-trust` is forbidden.
 
 For UI work, the implementation run produces bounded evidence before the
 project review loop starts a fresh read-only reviewer. Findings return through
@@ -148,30 +115,6 @@ failure, stop, and interrupt fail closed and clean the link. Stop terminates
 only the owned process group, verifies termination, and compares the source
 worktree with its start fingerprint.
 
-## Result publication
-
-scripts/tools/enval-result.mjs is the single ENVAL result authority.
-UserPromptSubmit opens a workspace run; Stop publishes the recognized terminal
-return; Interrupt and SessionEnd publish bounded fallback status. The configured
-agent-turn-complete notifier is an idempotent fallback when Stop is unavailable.
-All terminal paths share the locked workspace-role and baseline validation.
-Current hard permission denials publish HUMAN_GATE through the same authority.
-
-Terminal statuses are PASS, PARTIAL, FAIL, HUMAN_GATE, BLOCKED, INTERRUPTED, and
-TIMEOUT. Publication failure is non-zero and recorded without secrets.
-
-The canonical human entrypoint is:
-
-~/.herdr-results/ENVAL/<human-workspace>/latest.txt
-
-Immutable history is:
-
-~/.herdr-results/ENVAL/<human-workspace>/runs/<run-id>/result.txt
-
-Each run atomically replaces its workspace latest with PENDING and later its
-terminal envelope. Parallel workspaces never share active state, latest, or
-history. The project-level latest is transitional and non-canonical.
-
 ## Human Terminal handoffs
 
 Main -> Terminal is the default location for project-wide Git and
@@ -201,8 +144,8 @@ shell with exec. A check reports a non-zero status without closing the tab.
 Do not close, rename, remove, or reconcile tabs/panes/workspaces as a side
 effect of a handoff.
 
-Prompts contain only task-specific delta. Permanent Git, runner, result, and
-Terminal rules are linked, not copied into every task.
+Prompts contain only task-specific delta. Permanent Git, runner, and Terminal
+rules are linked, not copied into every task.
 
 ## Push and deploy
 
