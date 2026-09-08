@@ -7,7 +7,6 @@ import { homedir, tmpdir } from "node:os";
 import { dirname, extname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { CODEX_UPDATE_OVERRIDE } from "./enval-batch.mjs";
 import { EVIDENCE_SCHEMA_VERSION } from "./enval-ui-review-collect.mjs";
 
 export const ENVAL_ROOT = resolve(
@@ -23,6 +22,7 @@ export const REVIEW_RESULT_SCHEMA =
   "scripts/tools/enval-ui-review-result.schema.json";
 export const DEFAULT_MAX_REVIEW_FIX_CYCLES = 4;
 export const HARD_MAX_REVIEW_FIX_CYCLES = 5;
+export const CODEX_UPDATE_OVERRIDE = "check_for_update_on_startup=false";
 
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1"]);
 const TEXT_VALUE_PATTERN = /^[^\r\n]{1,500}$/;

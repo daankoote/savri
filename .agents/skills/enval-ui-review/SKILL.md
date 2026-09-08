@@ -62,17 +62,13 @@ adds ENVAL-specific truth only.
   authorization, product correctness, deployment or production state.
 - The generic reviewer remains unaware of ENVAL ports and startup commands.
 
-## ENVAL stop boundary
+## ENVAL review boundary
 
-Daan retains final browser and product acceptance. For ENVAL, the explicit
-project-local batch state controls the review number and supersedes only the
-generic two-cycle lifecycle cap and legacy text result shape. The default is
-four fix cycles followed by one final review; five fix cycles are permitted only
-when the batch state records explicit hard-max authorization. All generic
-evidence, independence, and read-only rules remain active. The reviewer returns
-only structured `PASS` or `FAIL`; the orchestrator owns `PARTIAL` after the final
-failed review or an earlier human/material/Loop-Guard stop. The reviewer never
-fixes findings or starts another review.
+Daan retains final browser and product acceptance. The primary task owns review
+routing and any iteration under the repository agent operating model. Each
+`ui_reviewer` invocation is fresh and read-only, reviews only the supplied flow
+and acceptance, and returns `VERDICT`, `FINDINGS`, `COVERAGE`, and
+`RESIDUAL_RISK`. The reviewer never fixes findings or starts another review.
 
 Use stable `UIR-NNN` IDs for unresolved prior findings. Each finding includes
 severity, affected route, state, viewport, evidence reference, and concise

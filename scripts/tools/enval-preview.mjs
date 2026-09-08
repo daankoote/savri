@@ -31,16 +31,18 @@ import {
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import {
-  APPROVED_BATCH_BINDINGS,
-  ENVAL_ROOT,
-  ENVAL_WORKTREES_ROOT,
-  HERDR_PROJECT,
-} from "./enval-batch.mjs";
-import {
   cleanupDependencyBridge,
   DependencyBridgeError,
   inspectDependencyBridge,
 } from "./enval-preview-dependency-bridge.mjs";
+
+const SETUP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+const ENVAL_WORKTREES_ROOT = dirname(SETUP_ROOT);
+const ENVAL_ROOT = resolve(ENVAL_WORKTREES_ROOT, "../enval");
+const HERDR_PROJECT = "ENVAL";
+const APPROVED_PREVIEW_BINDINGS = Object.freeze({
+  Beheer: Object.freeze({ slug: "beheer", branch: "beheer" }),
+});
 
 export const PREVIEW_BASE = join(
   homedir(),
@@ -161,7 +163,7 @@ function parseWorktrees(output) {
 }
 
 export function resolvePreviewSpec(workspaceName, run = defaultRun) {
-  const binding = APPROVED_BATCH_BINDINGS[workspaceName];
+  const binding = APPROVED_PREVIEW_BINDINGS[workspaceName];
   if (!binding) fail("workspace_not_approved");
   const expectedSource = resolve(ENVAL_WORKTREES_ROOT, binding.slug);
   const result = checked(

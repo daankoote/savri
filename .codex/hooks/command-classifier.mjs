@@ -1,6 +1,5 @@
 import { existsSync, realpathSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { basename, relative, resolve, sep } from "node:path";
+import { basename, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const CLASSIFICATION = Object.freeze({
@@ -14,7 +13,6 @@ export const MAX_WRAPPER_DEPTH = 3;
 const ROOT = realpathSync(
   resolve(fileURLToPath(new URL("../../", import.meta.url))),
 );
-const TEMP_ROOTS = Object.freeze([resolve(tmpdir()), realpathSync(tmpdir())]);
 const SHELLS = new Set(["zsh", "bash", "sh"]);
 const GIT_MUTATIONS = new Set([
   "add",
@@ -854,37 +852,8 @@ function classifyVerifier(words, cwd) {
   return ["QUICK", "TARGETED"].includes(mode);
 }
 
-function temporaryCandidate(path) {
-  if (typeof path !== "string" || path === "") return false;
-  return TEMP_ROOTS.some((root) => {
-    const child = relative(root, resolve(path));
-    return child !== "" && child !== ".." &&
-      !child.startsWith(`..${sep}`) && !child.startsWith(sep);
-  });
-}
-
-function classifyUiReviewLoop(words, cwd) {
-  if (!sameScript(words, cwd, "scripts/tools/enval-ui-review-loop.mjs")) {
-    return false;
-  }
-  const args = words.slice(2);
-  if (args.length === 5 && args[0] === "init") {
-    return args[1] === "--request" && temporaryCandidate(args[2]) &&
-      args[3] === "--state" && temporaryCandidate(args[4]);
-  }
-  if (args.length === 3 && ["advance", "outcome"].includes(args[0])) {
-    return args[1] === "--state" && temporaryCandidate(args[2]);
-  }
-  if (args.length === 5 && args[0] === "record-fix") {
-    return args[1] === "--state" && temporaryCandidate(args[2]) &&
-      args[3] === "--fix" && temporaryCandidate(args[4]);
-  }
-  return false;
-}
-
 function classifyGuarded(words, cwd) {
   if (classifyVerifier(words, cwd)) return true;
-  if (classifyUiReviewLoop(words, cwd)) return true;
   if (sameScript(words, cwd, "scripts/proofs/enval-verify-runner.proof.mjs")) {
     return words.length === 2;
   }

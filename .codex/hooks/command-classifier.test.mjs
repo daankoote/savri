@@ -110,13 +110,6 @@ const fixtures = Object.freeze([
     "node scripts/tools/enval-local-dev.mjs --operation ready",
     CLASSIFICATION.ALLOW,
   ],
-  [
-    "safe UI review advance",
-    `node scripts/tools/enval-ui-review-loop.mjs advance --state ${
-      join(tmpdir(), "enval-ui-review/state.json")
-    }`,
-    CLASSIFICATION.ALLOW,
-  ],
   ["safe Docker inspection", "docker ps", CLASSIFICATION.ALLOW],
   [
     "safe target inspection",
@@ -135,13 +128,6 @@ const fixtures = Object.freeze([
     "deny wrapped git add with shell argument",
     "/bin/zsh -c 'git add .' ignored",
     CLASSIFICATION.DENY,
-  ],
-  [
-    "defer malformed UI review loop",
-    `node scripts/tools/enval-ui-review-loop.mjs advance --state ${
-      join(tmpdir(), "state.json")
-    } --state ${join(tmpdir(), "other.json")}`,
-    CLASSIFICATION.DEFER,
   ],
   ["deny Git global-option mutation", "git -C . add .", CLASSIFICATION.DENY],
   [

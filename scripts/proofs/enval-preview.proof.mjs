@@ -148,13 +148,12 @@ test("Node runtime and approved Beheer worktree are explicit", () => {
   assert.equal(spec.workspaceName, "Beheer");
   assert.equal(spec.branch, "beheer");
   assert.equal(spec.sourceRoot, "/Users/daankoote/dev/enval-worktrees/beheer");
-  assert.match(
-    readFileSync(
-      new URL("../tools/enval-preview.mjs", import.meta.url),
-      "utf8",
-    ),
-    /\$\{delimiter\}\$\{process\.env\.PATH/,
+  const source = readFileSync(
+    new URL("../tools/enval-preview.mjs", import.meta.url),
+    "utf8",
   );
+  assert.match(source, /\$\{delimiter\}\$\{process\.env\.PATH/);
+  assert.doesNotMatch(source, /enval-(?:batch|result)\.mjs/);
   assert.throws(() => resolvePreviewSpec("Beheer 2"), {
     name: "PreviewError",
     code: "workspace_not_approved",

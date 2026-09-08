@@ -13,7 +13,6 @@ import { homedir, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { after, test } from "node:test";
 
-import { CODEX_UPDATE_OVERRIDE } from "../tools/enval-batch.mjs";
 import {
   BrowserEvidenceError,
   collectBrowserEvidence,
@@ -23,6 +22,7 @@ import {
 import {
   buildReviewerArgv,
   buildReviewRequest,
+  CODEX_UPDATE_OVERRIDE,
   DEFAULT_MAX_REVIEW_FIX_CYCLES,
   ENVAL_REVIEW_ADAPTER,
   GENERIC_REVIEWER_CORE,
@@ -30,16 +30,6 @@ import {
   startUiReview,
   UiReviewLaunchError,
 } from "../tools/enval-ui-review.mjs";
-import {
-  applyFixResult,
-  applyReviewResult,
-  createBatchState,
-  formatFinalOutcome,
-  HERDR_TABS,
-  launchReviewerInHerdr,
-  runAutonomousReviewLoop,
-  UiReviewLoopError,
-} from "../tools/enval-ui-review-loop.mjs";
 
 const REPOSITORY_ROOT = new URL("../..", import.meta.url).pathname.replace(
   /\/$/,
@@ -118,15 +108,19 @@ function implementationResult(summary = "implementation green") {
 }
 
 function batchState(root, overrides = {}) {
-  return createBatchState({
+  return {
+    phase: "READY_FOR_REVIEW",
     batchId: "ui-review04-proof",
     acceptance: "acceptance.md",
     implementationContextId: "implementation-proof-context",
     changedFiles: ["apps/web/src/proof.tsx"],
     implementationResult: implementationResult(),
     browserEvidenceManifest: manifestFixture(root),
+    priorFindings: [],
+    reviewNumber: 1,
+    maxFixCycles: DEFAULT_MAX_REVIEW_FIX_CYCLES,
     ...overrides,
-  });
+  };
 }
 
 function finding(id = "UIR-001") {
@@ -288,6 +282,15 @@ test("user-global generic core is project-agnostic and repo adapter stays local"
 });
 
 test("collector request accepts only explicit loopback routes and viewports", () => {
+  for (const relativePath of [
+    "../tools/enval-ui-review-collect.mjs",
+    "../tools/enval-ui-review.mjs",
+  ]) {
+    assert.doesNotMatch(
+      readFileSync(new URL(relativePath, import.meta.url), "utf8"),
+      /enval-(?:batch|result)\.mjs/,
+    );
+  }
   const request = parseCollectorRequest(collectorArgs());
   assert.equal(request.baseUrl, "http://127.0.0.1:5175");
   assert.equal(request.route, "/beheer");
@@ -432,94 +435,6 @@ test("launcher creates a fresh structured read-only reviewer invocation", () => 
   assert.equal(HARD_MAX_REVIEW_FIX_CYCLES, 5);
 });
 
-test("Herdr launch routes each ephemeral reviewer into the Reviewer tab", async () => {
-  const calls = [];
-  const invocation = "00000000-0000-4000-8000-000000000004";
-  const run = (command, args) => {
-    calls.push({ command, args });
-    const operation = args.slice(2, 4).join(" ");
-    if (operation === "tab list") {
-      return {
-        status: 0,
-        stdout: JSON.stringify({
-          result: {
-            type: "tab_list",
-            tabs: [
-              { tab_id: "w4:t1", label: "Codex" },
-              { tab_id: "w4:t2", label: "Terminal" },
-              { tab_id: "w4:t3", label: "Reviewer" },
-            ],
-          },
-        }),
-      };
-    }
-    if (operation === "pane list") {
-      return {
-        status: 0,
-        stdout: JSON.stringify({
-          result: {
-            type: "pane_list",
-            panes: [
-              { pane_id: "w4:p1", tab_id: "w4:t1" },
-              { pane_id: "w4:p2", tab_id: "w4:t2" },
-              { pane_id: "w4:p3", tab_id: "w4:t3" },
-            ],
-          },
-        }),
-      };
-    }
-    if (operation === "pane run") {
-      assert.equal(args[4], "w4:p3");
-      assert.match(args[5], /'codex' '--ephemeral'/);
-      assert.match(
-        args[5],
-        /ENVAL_REVIEW_DONE_00000000-0000-4000-8000-000000000004/,
-      );
-      return { status: 0, stdout: "" };
-    }
-    if (operation === "pane wait-output") {
-      return {
-        status: 0,
-        stdout: JSON.stringify({
-          result: {
-            type: "output_matched",
-            matched_line: `ENVAL_REVIEW_DONE_${invocation}=0`,
-          },
-        }),
-      };
-    }
-    assert.fail(`unexpected command: ${command} ${args.join(" ")}`);
-  };
-  try {
-    const status = await launchReviewerInHerdr(
-      { args: ["--ephemeral"], cwd: REPOSITORY_ROOT, prompt: "review proof" },
-      {
-        env: {
-          HERDR_ENV: "1",
-          HERDR_SESSION: "ENVAL",
-          HERDR_WORKSPACE_ID: "w4",
-        },
-        run,
-        uuid: () => invocation,
-      },
-    );
-    assert.equal(status, 0);
-    assert.equal(calls.filter((call) => call.args.includes("w4:p3")).length, 2);
-    const waitCall = calls.find((call) =>
-      call.args.slice(2, 4).join(" ") === "pane wait-output"
-    );
-    assert.equal(waitCall.args.includes("--match"), false);
-    assert.match(
-      waitCall.args[waitCall.args.indexOf("--regex") + 1],
-      /=\[0-9\]\+\$$/,
-    );
-  } finally {
-    rmSync(join(tmpdir(), `enval-ui-review-prompt-${invocation}.txt`), {
-      force: true,
-    });
-  }
-});
-
 test("installed Codex CLI parses the structured reviewer option order", () => {
   const root = projectFixture();
   mkdirSync(join(root, "scripts/tools"), { recursive: true });
@@ -591,198 +506,4 @@ test("real launch validates the structured reviewer result", async () => {
       error instanceof UiReviewLaunchError &&
       error.code === "review_result_contract_invalid",
   );
-});
-
-function loopReview(state, verdict = "PASS") {
-  return {
-    verdict,
-    reviewNumber: state.reviewNumber,
-    reviewContextId: `fresh-review-${state.reviewNumber}`,
-    findings: verdict === "PASS"
-      ? []
-      : [finding(`UIR-00${state.reviewNumber}`)],
-  };
-}
-
-function loopFix(state, overrides = {}) {
-  return {
-    implementationContextId: state.implementationContextId,
-    strategy: `strategy-${state.completedFixCycles + 1}`,
-    hypothesis: `hypothesis-${state.completedFixCycles + 1}`,
-    changedFiles: state.changedFiles,
-    implementationResult: implementationResult("fix green"),
-    browserEvidenceManifest: state.browserEvidenceManifest,
-    ...overrides,
-  };
-}
-
-test("PASS stops immediately with no fix or later review", async () => {
-  const root = projectFixture();
-  let reviews = 0;
-  let fixes = 0;
-  const result = await runAutonomousReviewLoop(batchState(root), {
-    review: async (state) => {
-      reviews += 1;
-      return loopReview(state, "PASS");
-    },
-    fix: async () => {
-      fixes += 1;
-      assert.fail("fix must not run after PASS");
-    },
-  });
-  assert.equal(result.outcome, "PASS");
-  assert.equal(reviews, 1);
-  assert.equal(fixes, 0);
-  const outcome = formatFinalOutcome(result);
-  for (
-    const expected of [
-      "AUTOMATIC_IMPLEMENTATION_REVIEW_HANDOFF=YES",
-      "MANUAL_DAAN_RELAY_REQUIRED=NO",
-      "INDEPENDENT_REVIEW_EACH_PASS=YES",
-      "PASS_STOPS_IMMEDIATELY=YES",
-      "HERDR_TABS=Codex,Terminal,Reviewer",
-      "REVIEWER_TAB_MANUAL_ROUTING_REQUIRED=NO",
-    ]
-  ) assert.match(outcome, new RegExp(expected));
-  assert.throws(() => applyReviewResult(result, loopReview(result)), {
-    name: "UiReviewLoopError",
-    code: "review_not_allowed_in_phase",
-  });
-});
-
-test("FAIL routes to the same implementation context then PASS stops", async () => {
-  const root = projectFixture();
-  const contexts = [];
-  const result = await runAutonomousReviewLoop(batchState(root), {
-    review: async (state) =>
-      loopReview(
-        state,
-        state.reviewNumber === 1 ? "FAIL" : "PASS",
-      ),
-    fix: async (state) => {
-      contexts.push(state.implementationContextId);
-      assert.deepEqual(state.activeFindings.map((item) => item.id), [
-        "UIR-001",
-      ]);
-      return loopFix(state);
-    },
-  });
-  assert.equal(result.outcome, "PASS");
-  assert.equal(result.reviewInvocations.length, 2);
-  assert.equal(result.completedFixCycles, 1);
-  assert.deepEqual(contexts, ["implementation-proof-context"]);
-});
-
-test("four fixes receive one final review and unresolved FAIL becomes PARTIAL", async () => {
-  const root = projectFixture();
-  const result = await runAutonomousReviewLoop(batchState(root), {
-    review: async (state) => loopReview(state, "FAIL"),
-    fix: async (state) => loopFix(state),
-  });
-  assert.equal(result.outcome, "PARTIAL");
-  assert.equal(result.completedFixCycles, 4);
-  assert.equal(result.reviewInvocations.length, 5);
-  assert.equal(result.stopReason.type, "MAX_REVIEW_FIX_CYCLES");
-  assert.match(formatFinalOutcome(result), /FINAL_REVIEW_AFTER_FIX4=YES/);
-});
-
-test("human/material stops and Loop Guard stop before another review", async () => {
-  const root = projectFixture();
-  for (const type of ["HUMAN_GATE", "MATERIAL_DECISION"]) {
-    let reviews = 0;
-    const result = await runAutonomousReviewLoop(
-      batchState(root, {
-        stopCondition: { type, detail: "proof stop" },
-      }),
-      {
-        review: async () => {
-          reviews += 1;
-          assert.fail("review must not run after early stop");
-        },
-        fix: async () => assert.fail("fix must not run after early stop"),
-      },
-    );
-    assert.equal(result.outcome, "PARTIAL");
-    assert.equal(result.stopReason.type, type);
-    assert.equal(reviews, 0);
-  }
-
-  const failed = applyReviewResult(
-    batchState(root),
-    loopReview(batchState(root), "FAIL"),
-  );
-  const stoppedDuringFix = applyFixResult(failed, {
-    implementationContextId: failed.implementationContextId,
-    stopCondition: { type: "HUMAN_GATE", detail: "approval required" },
-  });
-  assert.equal(stoppedDuringFix.outcome, "PARTIAL");
-  assert.equal(stoppedDuringFix.reviewInvocations.length, 1);
-  assert.equal(stoppedDuringFix.completedFixCycles, 0);
-
-  let state = applyReviewResult(
-    batchState(root),
-    loopReview(batchState(root), "FAIL"),
-  );
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    state = applyFixResult(
-      state,
-      loopFix(state, {
-        strategy: "same strategy",
-        hypothesis: "same hypothesis",
-      }),
-    );
-    if (attempt < 2) {
-      state = applyReviewResult(state, loopReview(state, "FAIL"));
-    }
-  }
-  assert.equal(state.outcome, "PARTIAL");
-  assert.equal(state.stopReason.type, "LOOP_GUARD");
-  assert.equal(state.reviewInvocations.length, 3);
-});
-
-test("CLI init reports a COMPLETE stop without READY_FOR_REVIEW", () => {
-  const root = projectFixture();
-  const requestPath = join(root, "request.json");
-  const statePath = join(root, "state.json");
-  writeFileSync(
-    requestPath,
-    `${
-      JSON.stringify({
-        batchId: "complete-init-proof",
-        acceptance: "acceptance.md",
-        implementationContextId: "implementation-proof-context",
-        changedFiles: ["scripts/tools/enval-ui-review-loop.mjs"],
-        implementationResult: implementationResult(),
-        browserEvidenceManifest: manifestFixture(root),
-        stopCondition: { type: "HUMAN_GATE", detail: "proof stop" },
-      })
-    }\n`,
-  );
-  const result = spawnSync(
-    "node",
-    [
-      "scripts/tools/enval-ui-review-loop.mjs",
-      "init",
-      "--request",
-      requestPath,
-      "--state",
-      statePath,
-    ],
-    { cwd: REPOSITORY_ROOT, encoding: "utf8" },
-  );
-  assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /UI_REVIEW04_STATUS=PARTIAL/);
-  assert.doesNotMatch(result.stdout, /READY_FOR_REVIEW/);
-  assert.equal(JSON.parse(readFileSync(statePath, "utf8")).phase, "COMPLETE");
-});
-
-test("hard maximum five requires explicit authorization", () => {
-  const root = projectFixture();
-  assert.throws(() => batchState(root, { maxFixCycles: 5 }), {
-    name: "UiReviewLoopError",
-    code: "review_fix_cycle_limit_invalid",
-  });
-  const state = batchState(root, { maxFixCycles: 5, hardMaxExplicit: true });
-  assert.equal(state.maxFixCycles, 5);
-  assert.deepEqual(HERDR_TABS, ["Codex", "Terminal", "Reviewer"]);
 });
