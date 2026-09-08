@@ -1,52 +1,11 @@
 prefix_rule(pattern = ["git", "status"], decision = "allow")
 
-# Deterministic read-only Git evidence. `git branch` stays prompt-gated because
-# prefix matching cannot exclude trailing mutation flags.
+# Deterministic read-only Git evidence.
 prefix_rule(pattern = ["git", "diff"], decision = "allow")
 prefix_rule(pattern = ["git", "log"], decision = "allow")
 prefix_rule(pattern = ["git", "show"], decision = "allow")
 prefix_rule(pattern = ["git", "rev-parse"], decision = "allow")
-prefix_rule(pattern = ["git", "branch"], decision = "prompt")
-
-# Exact read-only Git evidence transported by Codex Desktop. The complete inner
-# script is one literal argv token; altered, compound, and login-shell forms do
-# not match these lanes.
-prefix_rule(
-    pattern = ["/bin/zsh", "-c", "git rev-parse HEAD"],
-    decision = "allow",
-    justification = "Exact read-only HEAD evidence via Codex Desktop transport",
-    match = [["/bin/zsh", "-c", "git rev-parse HEAD"]],
-    not_match = [
-        ["/bin/zsh", "-c", "git add ."],
-        ["/bin/zsh", "-c", "git rev-parse HEAD; git add ."],
-        ["/bin/zsh", "-c", "git rev-parse HEAD && git add ."],
-        ["/bin/zsh", "-lc", "git rev-parse HEAD"],
-    ],
-)
-prefix_rule(
-    pattern = ["/bin/zsh", "-c", "git status --short"],
-    decision = "allow",
-    justification = "Exact read-only worktree evidence via Codex Desktop transport",
-    match = [["/bin/zsh", "-c", "git status --short"]],
-    not_match = [
-        ["/bin/zsh", "-c", "git status --porcelain"],
-        ["/bin/zsh", "-c", "git status --short; git add ."],
-        ["/bin/zsh", "-c", "git status --short && git add ."],
-        ["/bin/zsh", "-lc", "git status --short"],
-    ],
-)
-prefix_rule(
-    pattern = ["/bin/zsh", "-c", "git branch --show-current"],
-    decision = "allow",
-    justification = "Exact read-only branch evidence via Codex Desktop transport",
-    match = [["/bin/zsh", "-c", "git branch --show-current"]],
-    not_match = [
-        ["/bin/zsh", "-c", "git branch --list"],
-        ["/bin/zsh", "-c", "git branch --show-current; git add ."],
-        ["/bin/zsh", "-c", "git branch --show-current && git add ."],
-        ["/bin/zsh", "-lc", "git branch --show-current"],
-    ],
-)
+prefix_rule(pattern = ["git", "branch", "--show-current"], decision = "allow")
 
 # Git history, index, branch, and worktree mutations remain human-controlled.
 prefix_rule(pattern = ["git", "add"], decision = "forbidden")
@@ -68,9 +27,6 @@ prefix_rule(pattern = ["git", "mv"], decision = "forbidden")
 prefix_rule(pattern = ["git", "apply"], decision = "forbidden")
 prefix_rule(pattern = ["git", "am"], decision = "forbidden")
 
-# The verifier accepts repeated mode flags and higher modes can execute bounded
-# local writes. Prefix matching cannot safely auto-allow only pure modes.
-prefix_rule(pattern = ["node", "scripts/tools/enval-verify.mjs"], decision = "prompt")
 prefix_rule(pattern = ["node", "scripts/tools/enval-verify.mjs", "--mode", "RELEASE"], decision = "forbidden")
 
 # Self-cleaning behavioral proof for the verifier and its guarded wrappers.
@@ -105,15 +61,6 @@ prefix_rule(pattern = ["docker", "volume"], decision = "forbidden")
 prefix_rule(pattern = ["docker", "network"], decision = "forbidden")
 prefix_rule(pattern = ["docker", "system"], decision = "forbidden")
 
-# Shell evaluators and environment wrappers other than the exact Desktop lanes
-# above remain gated so wrapper approvals cannot bypass the direct command policy.
-prefix_rule(pattern = ["zsh"], decision = "prompt")
-prefix_rule(pattern = ["/bin/bash"], decision = "prompt")
-prefix_rule(pattern = ["bash"], decision = "prompt")
-prefix_rule(pattern = ["/bin/sh"], decision = "prompt")
-prefix_rule(pattern = ["sh"], decision = "prompt")
-prefix_rule(pattern = ["env"], decision = "prompt")
-
 # Generic database/provider CLIs, dependency changes, deployment tools, elevated
 # system commands, and arbitrary network clients remain gated or forbidden.
 prefix_rule(pattern = ["psql"], decision = "forbidden")
@@ -123,7 +70,6 @@ prefix_rule(pattern = ["supabase", "db", "push"], decision = "forbidden")
 prefix_rule(pattern = ["supabase", "migration", "up"], decision = "forbidden")
 prefix_rule(pattern = ["supabase", "functions", "deploy"], decision = "forbidden")
 prefix_rule(pattern = ["supabase", "link"], decision = "forbidden")
-prefix_rule(pattern = ["npm"], decision = "prompt")
 prefix_rule(pattern = ["npm", "install"], decision = "forbidden")
 prefix_rule(pattern = ["npm", "i"], decision = "forbidden")
 prefix_rule(pattern = ["npm", "ci"], decision = "forbidden")
@@ -131,7 +77,6 @@ prefix_rule(pattern = ["npm", "update"], decision = "forbidden")
 prefix_rule(pattern = ["npm", "uninstall"], decision = "forbidden")
 prefix_rule(pattern = ["npm", "remove"], decision = "forbidden")
 prefix_rule(pattern = ["npx"], decision = "forbidden")
-prefix_rule(pattern = ["deno"], decision = "prompt")
 prefix_rule(pattern = ["deno", "add"], decision = "forbidden")
 prefix_rule(pattern = ["deno", "install"], decision = "forbidden")
 prefix_rule(pattern = ["deno", "uninstall"], decision = "forbidden")
