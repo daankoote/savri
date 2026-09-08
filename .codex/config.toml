@@ -1,7 +1,13 @@
+#:schema https://developers.openai.com/codex/config-schema.json
+
 # ENVAL project-local defaults. Effective loading requires a fresh trusted session.
 approval_policy = "on-request"
 approvals_reviewer = "auto_review"
 default_permissions = "enval-dev"
+
+[agents]
+enabled = true
+max_concurrent_threads_per_session = 2
 
 [features]
 hooks = true
