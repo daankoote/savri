@@ -37,6 +37,20 @@ inherit = "core"
 experimental_use_profile = false
 ignore_default_excludes = false
 
+[mcp_servers.supabase]
+enabled = false
+
 [mcp_servers.supabase_enval_readonly]
 url = "https://mcp.supabase.com/mcp?project_ref=yzngrurkpfuqgexbhzgl&read_only=true&features=database%2Cdebugging%2Cdocs"
 scopes = ["database:read", "database:write", "analytics:read"]
+enabled = true
+enabled_tools = [
+  "execute_sql",
+  "get_advisors",
+  "list_extensions",
+  "list_migrations",
+  "list_tables",
+  "query_logs",
+  "search_docs",
+]
+default_tools_approval_mode = "prompt"
