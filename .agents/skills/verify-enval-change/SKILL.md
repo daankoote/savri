@@ -75,10 +75,13 @@ alone does not prove an interaction.
 
 ## External evidence
 
-Use hosted Supabase or Netlify only through accepted read-only
-project/site-bound capabilities. Query the minimum rows, columns or logs needed.
-If optional access is unavailable, skip it. If hosted evidence is explicit
-acceptance, return one precise `BLOCKED/NEEDS` action.
+Use hosted Supabase only through accepted read-only project-bound capabilities.
+Query the minimum rows, columns or logs needed. For Netlify, agents inspect only
+repository-local configuration and build results. Deployment acceptance remains
+with Daan through the Netlify dashboard and Firefox; Netlify MCP, PAT, OAuth and
+agent-driven deployment are not required procedures. If optional hosted access
+is unavailable, skip it. If hosted evidence is explicit acceptance, return one
+precise `BLOCKED/NEEDS` action.
 
 ## Failure handling
 

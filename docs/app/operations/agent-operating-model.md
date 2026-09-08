@@ -129,11 +129,15 @@ The primary remains the documentation writer and uses `$update-enval-docs`.
 | --------------- | ------------------------------------------- | ------------------------------------------------------- |
 | Local Supabase  | Read; exact authorized current-run fixtures | Migration apply, reset, broad/historical cleanup        |
 | Hosted Supabase | Exact-project read-only MCP                 | Database/Auth/Storage/config writes and deployments     |
-| Netlify         | Exact-site reader tools only                | Every mutation or deployment                            |
+| Netlify         | Repository-local configuration and build results | Git push and every Netlify deployment              |
 | Git             | Task-worktree edits and checks              | Cutover commits, integration, push, destructive history |
 | Moshi           | Optional terminal-primary notification      | Any custom notification infrastructure                  |
 
-Hosted capabilities are unavailable until their project/site binding, tool
+Netlify deployment acceptance remains with Daan and uses the Netlify dashboard
+and Firefox. Netlify MCP, PAT, OAuth and agent-driven deployment are not required
+procedures.
+
+Hosted Supabase capabilities are unavailable until their project binding, tool
 allowlist and credential handling pass migration evaluation. Missing optional
 hosted access does not block local work.
 
