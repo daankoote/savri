@@ -13,10 +13,8 @@ import { join } from "node:path";
 import { after, test } from "node:test";
 
 import {
-  APPROVED_BATCH_BINDINGS,
   BATCH_TABS,
   BatchLaunchError,
-  CODEX_NOTIFY_OVERRIDE,
   CODEX_UPDATE_OVERRIDE,
   codexLaunchArgv,
   deriveBatchIdentity,
@@ -30,13 +28,6 @@ import {
   verifyCodexCli,
   verifyHerdrCli,
 } from "../tools/enval-batch.mjs";
-import {
-  ENVAL_WORKSPACE_REGISTRY,
-  ResultPublicationError,
-  roleOwnsPath,
-  validateWorkspacePaths,
-  WORKSPACE_ROLES,
-} from "../tools/enval-result.mjs";
 
 const temporaryRoots = [];
 
@@ -65,39 +56,11 @@ function writeGovernance(root, { omit = null } = {}) {
   const files = new Map([
     ["AGENTS.md", "# Fixture governance\n"],
     [
-      ".codex/hooks.json",
-      JSON.stringify({
-        hooks: {
-          PreToolUse: [{
-            hooks: [{ command: "node .codex/hooks/router.mjs" }],
-          }],
-          PermissionRequest: [{
-            hooks: [{ command: "node .codex/hooks/router.mjs" }],
-          }],
-          UserPromptSubmit: [{
-            hooks: [{ command: "node .codex/hooks/router.mjs" }],
-          }],
-          Stop: [{
-            hooks: [{ command: "node .codex/hooks/router.mjs" }],
-          }],
-          Interrupt: [{
-            hooks: [{ command: "node .codex/hooks/router.mjs" }],
-          }],
-          SessionEnd: [{
-            hooks: [{ command: "node .codex/hooks/router.mjs" }],
-          }],
-        },
-      }),
-    ],
-    [".codex/hooks/router.mjs", "export {};\n"],
-    [
       ".codex/config.toml",
       [
         'approval_policy = "on-request"',
         'approvals_reviewer = "auto_review"',
         'default_permissions = "enval-dev"',
-        "[features]",
-        "hooks = true",
         "",
       ].join("\n"),
     ],
@@ -342,54 +305,29 @@ async function captureFailure(action) {
   try {
     await action();
   } catch (error) {
-    assert.ok(
-      error instanceof BatchLaunchError ||
-        error instanceof ResultPublicationError,
-    );
+    assert.ok(error instanceof BatchLaunchError);
     return error.code;
   }
   assert.fail("expected ENVAL error");
 }
 
-test("orchestrator registry owns the exact approved topology", () => {
+test("batch identity is derived without the legacy workspace registry", () => {
   assert.equal(HERDR_PROJECT, "ENVAL");
   assert.equal(HERDR_SESSION, "ENVAL");
   assert.equal(PERSISTENT_WORKSPACE, "Main");
   assert.deepEqual(MAIN_TABS, ["Codex", "Terminal"]);
   assert.deepEqual(BATCH_TABS, ["Codex", "Terminal", "Reviewer"]);
-  assert.deepEqual(WORKSPACE_ROLES, {
-    MAIN_INTEGRATION: "MAIN_INTEGRATION",
-    BEHEER_PRODUCT: "BEHEER_PRODUCT",
-    SETUP_GOVERNANCE: "SETUP_GOVERNANCE",
-  });
-  assert.deepEqual(ENVAL_WORKSPACE_REGISTRY, {
-    Main: {
-      root: "/Users/daankoote/dev/enval",
-      branch: "main",
-      role: "MAIN_INTEGRATION",
-    },
-    Beheer: {
-      root: "/Users/daankoote/dev/enval-worktrees/beheer",
-      slug: "beheer",
-      branch: "beheer",
-      agentName: "enval-beheer",
-      role: "BEHEER_PRODUCT",
-    },
-    _Setup: {
-      root: "/Users/daankoote/dev/enval-worktrees/setup",
-      slug: "setup",
-      branch: "setup",
-      agentName: "enval-setup",
-      role: "SETUP_GOVERNANCE",
-    },
-  });
-  assert.deepEqual(APPROVED_BATCH_BINDINGS, {
-    _Setup: ENVAL_WORKSPACE_REGISTRY._Setup,
-    Beheer: ENVAL_WORKSPACE_REGISTRY.Beheer,
-  });
   assert.deepEqual(deriveBatchIdentity("_Setup"), {
     workspaceName: "_Setup",
-    ...APPROVED_BATCH_BINDINGS._Setup,
+    slug: "setup",
+    branch: "setup",
+    agentName: "enval-setup",
+  });
+  assert.deepEqual(deriveBatchIdentity("Beheer"), {
+    workspaceName: "Beheer",
+    slug: "beheer",
+    branch: "beheer",
+    agentName: "enval-beheer",
   });
   assert.deepEqual(deriveBatchSpec("beheer", "/tmp/worktrees", "beheer"), {
     slug: "beheer",
@@ -398,94 +336,36 @@ test("orchestrator registry owns the exact approved topology", () => {
   });
 });
 
-test("unapproved and alternate workspace names fail before commands", async () => {
-  for (
-    const workspace of [
-      "Previous Beheer",
-      "Beheer 2",
-      "Autonomy Beheer",
-      "beheer",
-      "Dossiers",
-      "Main",
-    ]
-  ) {
+test("invalid or reserved workspace labels fail before commands", async () => {
+  for (const workspace of ["", "Previous Beheer", "Beheer/2", "Main"]) {
+    const { root, worktreesRoot } = fixture();
     const calls = [];
     assert.equal(
       await captureFailure(() =>
-        startBatch(workspace, { run: recordingRun(calls) })
+        startBatch(workspace, { root, worktreesRoot, run: recordingRun(calls) })
       ),
-      "workspace_not_approved",
+      "workspace_name_invalid",
     );
     assert.equal(calls.length, 0);
   }
 });
 
-test("workspace roles own only their declared repository paths", async () => {
-  for (
-    const path of [
-      "AGENTS.md",
-      ".codex/hooks/router.mjs",
-      "docs/app/operations/git-workflow.md",
-      "scripts/tools/enval-batch.mjs",
-      "scripts/proofs/enval-batch.proof.mjs",
-    ]
-  ) {
-    assert.equal(roleOwnsPath(WORKSPACE_ROLES.SETUP_GOVERNANCE, path), true);
-    assert.equal(roleOwnsPath(WORKSPACE_ROLES.BEHEER_PRODUCT, path), false);
-  }
-  for (
-    const path of [
-      "app/src/App.tsx",
-      "supabase/functions/example/index.ts",
-      "supabase/migrations/20260907000000_example.sql",
-      "docs/app/contracts/auth.md",
-      "scripts/proofs/app-signup-journey.proof.ts",
-    ]
-  ) {
-    assert.equal(roleOwnsPath(WORKSPACE_ROLES.BEHEER_PRODUCT, path), true);
-    assert.equal(roleOwnsPath(WORKSPACE_ROLES.SETUP_GOVERNANCE, path), false);
-  }
-  assert.equal(
-    roleOwnsPath(WORKSPACE_ROLES.MAIN_INTEGRATION, "app/src/App.tsx"),
-    false,
+test("CLI failures use ordinary stderr and a non-zero exit code", () => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      new URL("../tools/enval-batch.mjs", import.meta.url).pathname,
+      "start",
+      "bad label",
+    ],
+    { encoding: "utf8", shell: false },
   );
+  assert.equal(result.status, 1);
+  assert.equal(result.stdout, "");
   assert.equal(
-    await captureFailure(() =>
-      validateWorkspacePaths(WORKSPACE_ROLES.SETUP_GOVERNANCE, [
-        "../app/src/App.tsx",
-      ])
-    ),
-    "workspace_path_invalid",
+    result.stderr,
+    "ENVAL_BATCH_START_STATUS=FAIL\nFAILURE=workspace_name_invalid\n",
   );
-});
-
-test("role-incompatible paths fail with the role and concrete path", async () => {
-  const cases = [
-    [WORKSPACE_ROLES.MAIN_INTEGRATION, "docs/app/00_CANON.md"],
-    [WORKSPACE_ROLES.BEHEER_PRODUCT, ".codex/config.toml"],
-    [WORKSPACE_ROLES.BEHEER_PRODUCT, "AGENTS.md"],
-    [WORKSPACE_ROLES.BEHEER_PRODUCT, "scripts/tools/enval-batch.mjs"],
-    [WORKSPACE_ROLES.SETUP_GOVERNANCE, "app/src/App.tsx"],
-    [
-      WORKSPACE_ROLES.SETUP_GOVERNANCE,
-      "supabase/functions/example/index.ts",
-    ],
-    [
-      WORKSPACE_ROLES.SETUP_GOVERNANCE,
-      "supabase/migrations/20260907000000_example.sql",
-    ],
-    [WORKSPACE_ROLES.SETUP_GOVERNANCE, "docs/app/contracts/auth.md"],
-    [
-      WORKSPACE_ROLES.SETUP_GOVERNANCE,
-      "scripts/proofs/app-signup-journey.proof.ts",
-    ],
-  ];
-  for (const [role, path] of cases) {
-    assert.equal(
-      await captureFailure(() => validateWorkspacePaths(role, [path])),
-      `workspace_role_path_refused:${role}:${path}`,
-    );
-  }
 });
 
 test("installed CLIs expose the required deterministic semantics", () => {
@@ -535,10 +415,6 @@ test("exact supplied workspace is provisioned without name leakage", async () =>
     'approvals_reviewer="auto_review"',
     "--config",
     'web_search="disabled"',
-    "--config",
-    CODEX_NOTIFY_OVERRIDE,
-    "--enable",
-    "hooks",
     "--strict-config",
   ]);
   const workspaceCreates = calls.filter((call) =>
@@ -549,7 +425,7 @@ test("exact supplied workspace is provisioned without name leakage", async () =>
   assert.equal(workspaceCreates[0].args.includes("Beheer"), true);
 });
 
-test("role-compatible dirty resume reuses workspace, tabs, and agent", async () => {
+test("dirty resume reuses workspace, tabs, and agent", async () => {
   const { root, worktreesRoot } = fixture();
   const calls = [];
   const batchRun = recordingRun(calls);
@@ -592,61 +468,6 @@ test("role-compatible dirty resume reuses workspace, tabs, and agent", async () 
   );
 });
 
-test("start refuses an existing tracked path outside the workspace role", async () => {
-  const { root, worktreesRoot } = fixture();
-  const calls = [];
-  const batchRun = recordingRun(calls);
-  const first = await startBatch("Beheer", {
-    root,
-    worktreesRoot,
-    run: batchRun,
-  });
-  writeFileSync(join(first.worktree, "AGENTS.md"), "# Product override\n");
-  assert.equal(
-    await captureFailure(() =>
-      startBatch("Beheer", { root, worktreesRoot, run: batchRun })
-    ),
-    "workspace_role_path_refused:BEHEER_PRODUCT:AGENTS.md",
-  );
-});
-
-test("start applies the same role check to the index", async () => {
-  const { root, worktreesRoot } = fixture();
-  const batchRun = recordingRun([]);
-  const first = await startBatch("Beheer", {
-    root,
-    worktreesRoot,
-    run: batchRun,
-  });
-  writeFileSync(join(first.worktree, "AGENTS.md"), "# Staged override\n");
-  git(first.worktree, ["add", "AGENTS.md"]);
-  assert.equal(
-    await captureFailure(() =>
-      startBatch("Beheer", { root, worktreesRoot, run: batchRun })
-    ),
-    "workspace_role_path_refused:BEHEER_PRODUCT:AGENTS.md",
-  );
-});
-
-test("Setup can resume with tracked governance work but not product work", async () => {
-  const { root, worktreesRoot } = fixture();
-  const batchRun = recordingRun([]);
-  const first = await startBatch("_Setup", {
-    root,
-    worktreesRoot,
-    run: batchRun,
-  });
-  writeFileSync(join(first.worktree, "AGENTS.md"), "# Updated governance\n");
-  await startBatch("_Setup", { root, worktreesRoot, run: batchRun });
-  writeFileSync(join(first.worktree, "app/fixture.txt"), "product drift\n");
-  assert.equal(
-    await captureFailure(() =>
-      startBatch("_Setup", { root, worktreesRoot, run: batchRun })
-    ),
-    "workspace_role_path_refused:SETUP_GOVERNANCE:app/fixture.txt",
-  );
-});
-
 test("a workspace cannot share another workspace worktree binding", async () => {
   const { root, worktreesRoot } = fixture();
   const beheerPath = join(worktreesRoot, "beheer");
@@ -676,8 +497,8 @@ test("a workspace cannot share another workspace worktree binding", async () => 
   );
 });
 
-test("duplicate or unapproved Herdr workspaces fail closed", async (t) => {
-  await t.test("duplicate approved label", async () => {
+test("duplicate labels fail while unrelated Herdr workspaces remain untouched", async (t) => {
+  await t.test("duplicate supplied label", async () => {
     const { root, worktreesRoot } = fixture();
     const batchRun = recordingRun([], {
       workspaces: [
@@ -692,21 +513,20 @@ test("duplicate or unapproved Herdr workspaces fail closed", async (t) => {
       "herdr_workspace_conflict",
     );
   });
-  await t.test("unapproved human label", async () => {
+  await t.test("unrelated human label", async () => {
     const { root, worktreesRoot } = fixture();
     const batchRun = recordingRun([], {
       workspaces: [{ workspace_id: "w-x", label: "Previous Beheer" }],
     });
-    assert.equal(
-      await captureFailure(() =>
-        startBatch("Beheer", { root, worktreesRoot, run: batchRun })
-      ),
-      "herdr_unapproved_workspace",
+    await startBatch("Beheer", { root, worktreesRoot, run: batchRun });
+    assert.deepEqual(
+      batchRun.herdrState.workspaces.map((workspace) => workspace.label),
+      ["Main", "Previous Beheer", "Beheer"],
     );
   });
 });
 
-test("both approved batch workspaces remain separate in one ENVAL project", async () => {
+test("two supplied batch workspaces remain separate in one ENVAL project", async () => {
   const { root, worktreesRoot } = fixture();
   const batchRun = recordingRun([]);
   const beheer = await startBatch("Beheer", {
@@ -751,7 +571,7 @@ test("the default root workspace is reconciled to Main without an alternate", as
   );
 });
 
-test("tracked-dirty main is refused when an approved binding must be created", async () => {
+test("tracked-dirty main is refused when a binding must be created", async () => {
   const { root, worktreesRoot } = fixture();
   writeFileSync(join(root, "fixture.txt"), "dirty\n");
   const calls = [];
@@ -763,7 +583,7 @@ test("tracked-dirty main is refused when an approved binding must be created", a
         run: recordingRun(calls),
       })
     ),
-    "workspace_role_path_refused:MAIN_INTEGRATION:fixture.txt",
+    "main_tracked_dirty",
   );
   assert.equal(
     calls.some((call) =>
@@ -843,7 +663,7 @@ test("missing Codex governance baseline is refused before creation", async () =>
   );
 });
 
-test("agent startup failure preserves the approved workspace and worktree", async () => {
+test("agent startup failure preserves the supplied workspace and worktree", async () => {
   const { root, worktreesRoot } = fixture();
   const calls = [];
   const batchRun = recordingRun(calls, { agentStartError: "agent_not_ready" });
@@ -884,4 +704,8 @@ test("launcher source has no shell, cleanup, commit, or push authority", () => {
   assert.doesNotMatch(source, /shell:\s*true/);
   assert.doesNotMatch(source, /\b(?:rmSync|unlinkSync|rmdirSync)\b/);
   assert.doesNotMatch(source, /\["(?:commit|push|deploy|remove|prune|clean)"/);
+  assert.doesNotMatch(
+    source,
+    /enval-(?:permission-router|result)\.mjs|CODEX_NOTIFY_OVERRIDE|notify=/,
+  );
 });

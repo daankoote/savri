@@ -59,28 +59,24 @@ remain human actions.
 
 ## Canonical batch runner
 
-Normal batches start from Main with one exact approved workspace:
+Normal batches start from Main with a human-supplied workspace label:
 
 ~~~text
 node scripts/tools/enval-batch.mjs start Beheer
 ~~~
 
 The launcher validates the canonical repository, Main's clean tracked/index
-state, supported Codex and Herdr interfaces, and the registered role and
-binding. Before launch or resume it rejects tracked/index paths outside the
-assigned role. At run start the result authority records a trusted baseline of
-tracked, index, and untracked paths. Every canonical Stop, Interrupt, SessionEnd,
-and notifier publication repeats the branch and role check inside its
-finalization lock, immediately before the immutable write. Scope drift publishes
-a concrete FAIL. Existing Main untracked artifacts additionally retain a path
-and content-hash baseline and remain allowed only while byte-identical. The launcher
-reuses the exact workspace/worktree/tabs/agent on retry or resume; only an
-approved absent binding may be provisioned. It refuses duplicates, conflicts,
-stale bindings, alternate names, or multiple active agents.
+state, supported Codex and Herdr interfaces, and concrete worktree, workspace,
+tab, pane, and agent conflicts. The supplied label deterministically defines the
+leaf worktree, branch, and agent name. The launcher reuses that exact
+workspace/worktree/tabs/agent on retry or resume and refuses duplicates,
+conflicting bindings, or multiple active agents. Task scope comes from
+`AGENTS.md`, the task contract, and risk-selected verification; Git history and
+integration remain human-controlled.
 
 The launcher keeps technical IDs internal, uses the supported Herdr agent
-mechanism, and launches Codex with on-request approval, Auto-review, trusted
-hooks, strict config, and ordinary product web search disabled. It never
+mechanism, and launches Codex with on-request approval, Auto-review, strict
+config, and ordinary product web search disabled. It never
 commits, merges, pushes, deploys, performs product work, or cleans data.
 
 After project hook/configuration source changes, an already-open Codex process

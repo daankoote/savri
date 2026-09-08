@@ -1,24 +1,9 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { randomUUID } from "node:crypto";
-import {
-  lstatSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  realpathSync,
-} from "node:fs";
+import { lstatSync, mkdirSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-
-import {
-  beginResultRun,
-  ENVAL_WORKSPACE_REGISTRY,
-  finalizeActiveRun,
-  ResultPublicationError,
-  validateWorkspaceState,
-} from "./enval-result.mjs";
 
 export const ENVAL_ROOT = "/Users/daankoote/dev/enval";
 export const ENVAL_WORKTREES_ROOT = "/Users/daankoote/dev/enval-worktrees";
@@ -28,19 +13,12 @@ export const HERDR_VERSION = "0.8.2";
 export const PERSISTENT_WORKSPACE = "Main";
 export const MAIN_TABS = Object.freeze(["Codex", "Terminal"]);
 export const BATCH_TABS = Object.freeze(["Codex", "Terminal", "Reviewer"]);
-export const APPROVED_WORKSPACE_BINDINGS = ENVAL_WORKSPACE_REGISTRY;
-export const APPROVED_BATCH_BINDINGS = Object.freeze({
-  _Setup: APPROVED_WORKSPACE_BINDINGS._Setup,
-  Beheer: APPROVED_WORKSPACE_BINDINGS.Beheer,
-});
 export const CODEX_UPDATE_OVERRIDE = "check_for_update_on_startup=false";
-export const CODEX_NOTIFY_OVERRIDE =
-  'notify=["node",".codex/hooks/enval-permission-router.mjs","--notify"]';
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const WORKSPACE_NAME_PATTERN = /^_?[A-Za-z][A-Za-z0-9_-]{0,62}$/;
 const HERDR_AGENT_PATTERN = /^[a-z][a-z0-9_-]{0,31}$/;
 const GOVERNANCE_FILES = Object.freeze([
   "AGENTS.md",
-  ".codex/hooks.json",
   ".codex/config.toml",
   ".codex/rules/enval.rules",
 ]);
@@ -58,10 +36,7 @@ function fail(code) {
 }
 
 function failureCode(error) {
-  return error instanceof BatchLaunchError ||
-      error instanceof ResultPublicationError
-    ? error.code
-    : "unexpected_failure";
+  return error instanceof BatchLaunchError ? error.code : "unexpected_failure";
 }
 
 function regularFile(path, code) {
@@ -81,66 +56,17 @@ export function validateGovernance(root) {
     regularFile(join(root, file), `governance_file_missing_or_invalid:${file}`);
   }
 
-  const hooksRoot = join(root, ".codex/hooks");
-  let hookFiles = 0;
-  try {
-    for (const entry of readdirSync(hooksRoot, { recursive: true })) {
-      const path = join(hooksRoot, entry);
-      const status = lstatSync(path);
-      if (status.isSymbolicLink()) fail("codex_hooks_symlink_refused");
-      if (status.isFile()) {
-        regularFile(path, "codex_hook_file_invalid");
-        hookFiles += 1;
-      }
-    }
-  } catch (error) {
-    if (error?.code === "ENOENT") fail("codex_hooks_directory_missing");
-    throw error;
-  }
-  if (hookFiles === 0) fail("codex_hooks_empty");
-
-  let hooks;
-  try {
-    hooks = JSON.parse(readFileSync(join(root, ".codex/hooks.json"), "utf8"));
-  } catch {
-    fail("codex_hooks_json_invalid");
-  }
-  for (
-    const event of [
-      "PreToolUse",
-      "PermissionRequest",
-      "UserPromptSubmit",
-      "Stop",
-      "Interrupt",
-      "SessionEnd",
-    ]
-  ) {
-    if (
-      !Array.isArray(hooks?.hooks?.[event]) || hooks.hooks[event].length === 0
-    ) {
-      fail(`codex_hook_event_missing:${event}`);
-    }
-  }
-  const hookTargets =
-    JSON.stringify(hooks).match(/\.codex\/hooks\/[a-zA-Z0-9._/-]+/g) ?? [];
-  if (hookTargets.length === 0) fail("codex_hook_command_missing");
-  for (const target of new Set(hookTargets)) {
-    if (target.includes("..")) fail("codex_hook_path_invalid");
-    regularFile(join(root, target), `codex_hook_target_missing:${target}`);
-  }
-
   const config = readFileSync(join(root, ".codex/config.toml"), "utf8");
   for (
     const setting of [
       /^approval_policy = "on-request"$/m,
       /^approvals_reviewer = "auto_review"$/m,
       /^default_permissions = "enval-dev"$/m,
-      /^hooks = true$/m,
     ]
   ) {
     if (!setting.test(config)) fail("codex_config_baseline_invalid");
   }
-  return Object.freeze({ hookFileCount: hookFiles });
+  return Object.freeze({ files: GOVERNANCE_FILES });
 }
 
 export function deriveBatchSpec(
@@ -162,15 +88,19 @@ export function deriveBatchSpec(
 }
 
 export function deriveBatchIdentity(workspaceName) {
-  const binding = typeof workspaceName === "string"
-    ? APPROVED_BATCH_BINDINGS[workspaceName]
-    : null;
-  if (!binding) fail("workspace_not_approved");
-  if (!HERDR_AGENT_PATTERN.test(binding.agentName)) {
+  if (
+    typeof workspaceName !== "string" ||
+    !WORKSPACE_NAME_PATTERN.test(workspaceName) ||
+    workspaceName === PERSISTENT_WORKSPACE
+  ) fail("workspace_name_invalid");
+  const slug = workspaceName.replace(/^_/, "").replaceAll("_", "-")
+    .toLowerCase();
+  deriveBatchSpec(slug, ENVAL_WORKTREES_ROOT, slug);
+  const agentName = `enval-${slug}`;
+  if (!HERDR_AGENT_PATTERN.test(agentName)) {
     fail("herdr_agent_name_invalid");
   }
-  deriveBatchSpec(binding.slug, ENVAL_WORKTREES_ROOT, binding.branch);
-  return Object.freeze({ workspaceName, ...binding });
+  return Object.freeze({ workspaceName, slug, branch: slug, agentName });
 }
 
 function defaultRun(command, args, options) {
@@ -384,10 +314,6 @@ export function codexLaunchArgv(worktree) {
     'approvals_reviewer="auto_review"',
     "--config",
     'web_search="disabled"',
-    "--config",
-    CODEX_NOTIFY_OVERRIDE,
-    "--enable",
-    "hooks",
     "--strict-config",
   ]);
 }
@@ -690,13 +616,6 @@ function ensurePersistentWorkspace(run, root) {
 
 function findAssignedWorkspace(run, root, spec) {
   const workspaces = listHerdrWorkspaces(run, root);
-  const approved = new Set([
-    PERSISTENT_WORKSPACE,
-    ...Object.keys(APPROVED_BATCH_BINDINGS),
-  ]);
-  if (workspaces.some((workspace) => !approved.has(workspace?.label))) {
-    fail("herdr_unapproved_workspace");
-  }
   const assigned = workspaces.filter(
     (workspace) => workspace?.label === spec.workspaceName,
   );
@@ -827,7 +746,6 @@ export async function startBatch(workspaceName, options = {}) {
     ).trim() !== root
   ) fail("repository_identity_mismatch");
 
-  validateWorkspaceState(run, root, PERSISTENT_WORKSPACE);
   governanceTrackedAndClean(run, root);
   validateGovernance(root);
   verifyCodexCli(run, root);
@@ -851,7 +769,6 @@ export async function startBatch(workspaceName, options = {}) {
   if (worktree.created) {
     trackedClean(run, spec.worktree, "created_worktree_tracked_dirty");
   }
-  validateWorkspaceState(run, spec.worktree, workspaceName);
   validateGovernance(spec.worktree);
 
   const createdWorkspace = existingWorkspace
@@ -928,29 +845,18 @@ export function formatBatchHandoff(result) {
 
 async function main(argv) {
   if (argv.length === 2 && argv[0] === "start") {
-    const identity = deriveBatchIdentity(argv[1]);
-    const publication = beginResultRun({
-      workspace: argv[1],
-      runId: `launcher-${randomUUID()}`,
-      tasklabel: "batch-launch",
-      branch: identity.branch,
-      cwd: ENVAL_ROOT,
-    });
     try {
       const result = await startBatch(argv[1]);
-      const handoff = formatBatchHandoff(result);
-      finalizeActiveRun(argv[1], "PASS", { finalReturn: handoff });
-      process.stdout.write(handoff + `RUN_ID=${publication.context.runId}\n`);
+      process.stdout.write(formatBatchHandoff(result));
     } catch (error) {
       const code = failureCode(error);
       const failure = `ENVAL_BATCH_START_STATUS=FAIL\nFAILURE=${code}\n`;
-      finalizeActiveRun(argv[1], "FAIL", { finalReturn: failure });
       process.stderr.write(failure);
       process.exitCode = 1;
     }
     return;
   }
-  fail("usage:start_<approved-workspace>");
+  fail("usage:start_<workspace>");
 }
 
 const invoked = process.argv[1]
