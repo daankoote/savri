@@ -36,3 +36,7 @@ dangerously_allow_all_unix_sockets = false
 inherit = "core"
 experimental_use_profile = false
 ignore_default_excludes = false
+
+[mcp_servers.supabase_enval_readonly]
+url = "https://mcp.supabase.com/mcp?project_ref=yzngrurkpfuqgexbhzgl&read_only=true&features=database%2Cdebugging%2Cdocs"
+scopes = ["database:read", "database:write", "analytics:read"]
