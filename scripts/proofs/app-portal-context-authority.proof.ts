@@ -29,6 +29,7 @@ const [
   bootstrapProof,
   currentBaseline,
   fixture,
+  browserCollector,
   dashboard,
   canon,
 ] = await Promise.all([
@@ -45,6 +46,7 @@ const [
   source("scripts/proofs/api-app-auth-bootstrap.proof.ts"),
   source("supabase/migrations/20260816150000_app_current_baseline.sql"),
   source("scripts/proofs/ui01b-operator-browser-fixture.ts"),
+  source("scripts/tools/enval-ui-review-collect.mjs"),
   source("app/src/features/dashboard/ActivePrivateDashboard.tsx"),
   source("docs/app/00_CANON.md"),
 ]);
@@ -206,5 +208,24 @@ assert(
   "fixture_or_test_matrix_missing",
 );
 marker(12);
+
+assert(
+  fixture.includes("customerSecondDossierId") &&
+    fixture.includes("ACTIVATION_LOGIN_FILE") &&
+    fixture.includes("CUSTOMER_CASE_SWITCH=AVAILABLE") &&
+    browserCollector.includes("collectPortalAuthorityBrowserEvidence") &&
+    browserCollector.includes("proveCustomerJourney") &&
+    browserCollector.includes("proveBusinessJourney") &&
+    browserCollector.includes("proveAuthOnlyJourney") &&
+    browserCollector.includes("proveActivationJourney") &&
+    browserCollector.includes("proveWorkforceJourney") &&
+    browserCollector.includes("customer_case_scope_leak") &&
+    browserCollector.includes("operator_scope_leak") &&
+    browserCollector.includes("CONSOLE_ERROR_COUNT") &&
+    browserCollector.includes("EXPECTED_SECURITY_DENIAL_COUNT") &&
+    browserCollector.includes("UNEXPECTED_REQUEST_COUNT"),
+  "portal_browser_regression_lock_missing",
+);
+marker(13);
 
 console.log("APP_PORTAL_CONTEXT_AUTHORITY_PROOF=PASS");

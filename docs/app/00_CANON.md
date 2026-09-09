@@ -540,7 +540,7 @@ Signed-intake and promotion lifecycle:
   immutable signed intake inside the promotion transaction. This is never an
   e-mail-only merge, never overwrites current profile truth, and never marks
   identity, organization or representation authority verified.
-- 09C1C-R7 is IMPLEMENTED — LOCAL RUNTIME PROVEN and supersedes the R5 browser boundary with
+- 09C1C-R7 is CURRENT PROVEN — LOCAL BROWSER and supersedes the R5 browser boundary with
   `auth_bootstrap_browser_v3`. Verified Supabase Auth proves authentication but
   grants no portal access. The database returns only explicitly granted
   `customer` and `business` contexts through `app_customer_access_grants` and
@@ -565,7 +565,7 @@ Signed-intake and promotion lifecycle:
   promotion, the current principal's dashboard/bootstrap cache is invalidated
   before navigation so the first dashboard read uses current server truth.
 
-Portal authority matrix (DECIDED/IMPLEMENTED — LOCAL RUNTIME PROVEN):
+Portal authority matrix (CURRENT PROVEN — LOCAL BROWSER):
 
 | Identity/context | Customer portal | Business portal | `/beheer` |
 | --- | --- | --- | --- |
@@ -578,6 +578,12 @@ Portal authority matrix (DECIDED/IMPLEMENTED — LOCAL RUNTIME PROVEN):
 Direct authenticated table/RPC access remains denied by RLS and grants.
 Customer and case endpoints additionally enforce the Auth principal's explicit
 customer grants and return not-found/forbidden for another customer or context.
+Canonical desktop (1440x900) and mobile (375x812) browser evidence proves the
+full allow/deny matrix, login, activation, authenticated handoff, history
+restoration and isolated switching between two customer cases. It records no
+unexpected console/runtime error or product-write request and cleans every
+exact R7 fixture while leaving real pilot data unchanged. This is local proof,
+not remote, deployment or production acceptance.
 - 09C1C-R4 preserves signed customer-declared charger fields, exact signed
   charger/location linkage and document classification in immutable case-owned
   review-input records. Dashboard titles use source-authored document

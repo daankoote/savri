@@ -1073,7 +1073,7 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
 ## 09C1C-R7 Portal Context Authority
 
-DECIDED/IMPLEMENTED — LOCAL RUNTIME PROVEN.
+CURRENT PROVEN — LOCAL BROWSER.
 
 Auth account, customer identity, customer context, workforce identity and case
 remain separate roots. Authentication alone grants no customer, business or
@@ -1104,6 +1104,11 @@ Local authority proof covers Auth-only denial, customer and business positive
 contexts, customer/business denial in `/beheer`, reviewer/admin capability
 access in `/beheer`, workforce denial in the customer portal, cross-customer
 and cross-context API denial, and direct authenticated RLS/RPC denial.
+Canonical desktop (1440x900) and mobile (375x812) browser evidence additionally
+covers login, activation, authenticated handoff, history restoration, isolated
+switching between two customer cases, zero unexpected console/runtime errors or
+product-write requests and exact R7 fixture cleanup. Remote, deployment and
+production acceptance remain unproven.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 

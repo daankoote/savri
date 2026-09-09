@@ -16,6 +16,13 @@ type FixtureState = {
   authOnlyUserId: string;
   authOnlyEmail: string;
   authOnlyPassword: string;
+  activationUserId: string;
+  activationEmail: string;
+  activationPassword: string;
+  activationCustomerId: string;
+  activationIdentityId: string;
+  activationDossierId: string;
+  activationCaseId: string;
   workforceUserId: string;
   workforceEmail: string;
   workforcePassword: string;
@@ -39,6 +46,8 @@ type PortalAuthorityState = {
   customerIdentityId: string;
   customerDossierId: string;
   customerCaseId: string;
+  customerSecondDossierId: string;
+  customerSecondCaseId: string;
   businessAuthUserId: string;
   businessCustomerId: string;
   businessIdentityId: string;
@@ -334,6 +343,84 @@ async function createAuthUser(
   });
 }
 
+async function createActivationCustomerContext(
+  config: LocalRuntime,
+  state: FixtureState,
+) {
+  await proveDedicatedAdminWriteTarget(config);
+  await psql(
+    config.dbUrl,
+    `begin;
+    insert into public.app_customers (
+      id,customer_type,display_name,primary_email_normalized,status
+    ) values (
+      ${quote(state.activationCustomerId)},'particulier',
+      'Local activation fixture',${quote(state.activationEmail)},'active'
+    );
+    insert into public.app_customer_identities (
+      id,customer_id,auth_user_id,email_normalized,email_verified_at,
+      identity_provider,status
+    ) values (
+      ${quote(state.activationIdentityId)},${quote(state.activationCustomerId)},
+      null,${quote(state.activationEmail)},clock_timestamp(),'supabase','active'
+    );
+    insert into public.app_customer_dossiers (
+      id,customer_id,dossier_number,account_type,status,submitted_at
+    ) values (
+      ${quote(state.activationDossierId)},${quote(state.activationCustomerId)},
+      'LOCAL-ACTIVATION','particulier','submitted',clock_timestamp()
+    );
+    insert into public.app_cases (
+      id,customer_id,case_reference,created_at,created_by_actor_type,
+      created_by_actor_ref,source_class,source_ref,request_id
+    ) values (
+      ${quote(state.activationCaseId)},${quote(state.activationCustomerId)},
+      ${quote(`CASE-${state.activationDossierId}`)},clock_timestamp(),'system',
+      ${quote(`fixture:${state.fixtureId}`)},'app_customer_dossier',
+      ${quote(state.activationDossierId)},
+      ${quote(`${state.fixtureId}-activation`)}
+    );
+    commit;`,
+  );
+}
+
+async function cleanupActivationCustomerContext(
+  config: LocalRuntime,
+  state: FixtureState,
+) {
+  if (
+    ![
+      state.activationCustomerId,
+      state.activationIdentityId,
+      state.activationDossierId,
+      state.activationCaseId,
+    ].every((value) => UUID_PATTERN.test(value))
+  ) return;
+  await proveDedicatedAdminWriteTarget(config);
+  await psql(
+    config.dbUrl,
+    `begin;
+    set local session_replication_role=replica;
+    delete from public.app_audit_events
+     where actor_ref=${quote(`supabase_auth_user:${state.activationUserId}`)};
+    delete from public.app_idempotency_keys
+     where scope=${
+      quote(`api-app-auth-bootstrap:v4:auth_user:${state.activationUserId}`)
+    };
+    delete from public.app_customer_access_grants
+     where customer_id=${quote(state.activationCustomerId)};
+    delete from public.app_cases
+     where id=${quote(state.activationCaseId)};
+    delete from public.app_customer_dossiers
+     where id=${quote(state.activationDossierId)};
+    delete from public.app_customer_identities
+     where id=${quote(state.activationIdentityId)};
+    delete from public.app_customers
+     where id=${quote(state.activationCustomerId)};
+    commit;`,
+  );
+}
+
 async function accessToken(
   config: LocalRuntime,
   email: string,
@@ -541,7 +628,11 @@ async function fixtureResidue(
   config: LocalRuntime,
   state: FixtureState,
 ): Promise<number> {
-  const authUserIds = [state.authOnlyUserId, state.workforceUserId]
+  const authUserIds = [
+    state.authOnlyUserId,
+    state.activationUserId,
+    state.workforceUserId,
+  ]
     .filter((value) => UUID_PATTERN.test(value))
     .map(quote);
   const authUserIdsSql = authUserIds.length > 0
@@ -550,12 +641,25 @@ async function fixtureResidue(
   const workforceIdentitySql = UUID_PATTERN.test(state.workforceIdentityId)
     ? quote(state.workforceIdentityId)
     : "null::uuid";
+  const activationCustomerSql = UUID_PATTERN.test(state.activationCustomerId)
+    ? quote(state.activationCustomerId)
+    : "null::uuid";
+  const activationIdentitySql = UUID_PATTERN.test(state.activationIdentityId)
+    ? quote(state.activationIdentityId)
+    : "null::uuid";
+  const activationDossierSql = UUID_PATTERN.test(state.activationDossierId)
+    ? quote(state.activationDossierId)
+    : "null::uuid";
+  const activationCaseSql = UUID_PATTERN.test(state.activationCaseId)
+    ? quote(state.activationCaseId)
+    : "null::uuid";
   const result = await psql(
     config.dbUrl,
     `begin read only;
     select concat_ws('|',
       (select count(*) from auth.users
-       where id in (${authUserIdsSql})),
+       where id in (${authUserIdsSql})
+          or lower(email)=${quote(state.activationEmail)}),
       (select count(*) from public.app_workforce_identities
        where id=${workforceIdentitySql}
           or auth_user_id in (${authUserIdsSql})),
@@ -572,13 +676,31 @@ async function fixtureResidue(
       (select count(*) from public.app_audit_events
        where request_id like ${quote(`${state.prefix}%`)}),
       (select count(*) from public.app_idempotency_keys
-       where key like ${quote(`${state.prefix}%`)})
+       where key like ${quote(`${state.prefix}%`)}),
+      (select count(*) from public.app_customer_access_grants
+       where customer_id=${activationCustomerSql}),
+      (select count(*) from public.app_cases
+       where id=${activationCaseSql}),
+      (select count(*) from public.app_customer_dossiers
+       where id=${activationDossierSql}),
+      (select count(*) from public.app_customer_identities
+       where id=${activationIdentitySql}),
+      (select count(*) from public.app_customers
+       where id=${activationCustomerSql}),
+      (select count(*) from public.app_audit_events
+       where actor_ref=${
+      quote(`supabase_auth_user:${state.activationUserId}`)
+    }),
+      (select count(*) from public.app_idempotency_keys
+       where scope=${
+      quote(`api-app-auth-bootstrap:v4:auth_user:${state.activationUserId}`)
+    })
     );
     rollback;`,
   );
   const counts = result.split("|").map(Number);
   assert(
-    counts.length === 9 && counts.every(Number.isFinite),
+    counts.length === 16 && counts.every(Number.isFinite),
     "residue_query_invalid",
   );
   return counts.reduce((sum, count) => sum + count, 0);
@@ -617,12 +739,22 @@ async function cleanupState(
       commit;`,
     );
   }
-  for (const userId of [state.authOnlyUserId, state.workforceUserId]) {
+  for (
+    const userId of [
+      state.authOnlyUserId,
+      state.activationUserId,
+      state.workforceUserId,
+    ]
+  ) {
     if (UUID_PATTERN.test(userId)) {
       await beforeWrite?.();
       const deleted = await service.auth.admin.deleteUser(userId);
-      if (strictAuthDelete) {
-        assert(!deleted.error, "fixture_auth_cleanup_failed");
+      if (strictAuthDelete && deleted.error) {
+        const remaining = await service.auth.admin.getUserById(userId);
+        assert(
+          Boolean(remaining.error) || !remaining.data.user,
+          "fixture_auth_cleanup_failed",
+        );
       }
     }
   }
@@ -927,6 +1059,13 @@ async function setup() {
     authOnlyUserId: "",
     authOnlyEmail: `${fixtureId}-auth-only@example.invalid`,
     authOnlyPassword: "",
+    activationUserId: "",
+    activationEmail: `${fixtureId}-activation@example.invalid`,
+    activationPassword: `LocalOnly!${crypto.randomUUID()}Aa1`,
+    activationCustomerId: crypto.randomUUID(),
+    activationIdentityId: crypto.randomUUID(),
+    activationDossierId: crypto.randomUUID(),
+    activationCaseId: crypto.randomUUID(),
     workforceUserId: "",
     workforceEmail: `${fixtureId}-workforce@example.invalid`,
     workforcePassword: "",
@@ -941,6 +1080,11 @@ async function setup() {
     auth: { persistSession: false },
   });
   try {
+    assert(
+      (await findPortalAuthUsers(service, state.activationEmail)).length === 0,
+      "activation_fixture_auth_already_exists",
+    );
+    await createActivationCustomerContext(config, state);
     const authOnly = await createAuthUser(service, fixtureId, "auth-only");
     state.authOnlyUserId = authOnly.userId;
     state.authOnlyEmail = authOnly.email;
@@ -962,6 +1106,7 @@ async function setup() {
     );
 
     const authOnlyLoginPath = `${directory}/auth-only-login.txt`;
+    const activationLoginPath = `${directory}/activation-login.txt`;
     const workforceLoginPath = `${directory}/workforce-login.txt`;
     await writePrivate(
       authOnlyLoginPath,
@@ -970,6 +1115,15 @@ async function setup() {
         `Email: ${state.authOnlyEmail}`,
         `Password: ${state.authOnlyPassword}`,
         "Do not paste these credentials into chat or commit them.",
+      ].join("\n") + "\n",
+    );
+    await writePrivate(
+      activationLoginPath,
+      [
+        "LOCAL DISPOSABLE UI-01B ACTIVATION LOGIN",
+        `Email: ${state.activationEmail}`,
+        `Password: ${state.activationPassword}`,
+        "Browser activation creates this Auth-only user for the current run.",
       ].join("\n") + "\n",
     );
     await writePrivate(
@@ -985,6 +1139,7 @@ async function setup() {
     console.log("UI01B_OPERATOR_BROWSER_FIXTURE_SETUP=PASS");
     console.log(`FIXTURE_ID=${fixtureId}`);
     console.log(`AUTH_ONLY_LOGIN_FILE=${authOnlyLoginPath}`);
+    console.log(`ACTIVATION_LOGIN_FILE=${activationLoginPath}`);
     console.log(`WORKFORCE_LOGIN_FILE=${workforceLoginPath}`);
     console.log("OPERATOR_START_URL=http://127.0.0.1:5175/beheer");
     console.log(
@@ -1007,6 +1162,7 @@ async function setup() {
     );
   } catch (error) {
     try {
+      await cleanupActivationCustomerContext(config, state);
       await cleanupState(config, service, state);
       const residue = await fixtureResidue(config, state);
       const pilotUnchanged = state.pilotBefore === await pilotState(config);
@@ -1029,17 +1185,35 @@ async function cleanup(fixtureId: string) {
   const service = createClient(config.apiUrl, config.serviceRoleKey, {
     auth: { persistSession: false },
   });
-  await cleanupState(config, service, state);
+  const activationUsers = await findPortalAuthUsers(
+    service,
+    state.activationEmail,
+  );
+  assert(
+    activationUsers.length <= 1 &&
+      (activationUsers.length === 0 ||
+        Date.parse(activationUsers[0].created_at) >=
+          Date.parse(state.createdAt)),
+    "activation_fixture_auth_ownership_invalid",
+  );
+  state.activationUserId = activationUsers[0]?.id ?? "";
+  await writePrivate(statePath, JSON.stringify(state, null, 2));
+  await cleanupActivationCustomerContext(config, state);
+  await cleanupState(config, service, state, undefined, true);
   const residue = await fixtureResidue(config, state);
   const pilotUnchanged = state.pilotBefore === await pilotState(config);
   if (residue === 0 && pilotUnchanged) {
     await Deno.remove(`${directory}/auth-only-login.txt`).catch(() =>
       undefined
     );
+    await Deno.remove(`${directory}/activation-login.txt`).catch(() =>
+      undefined
+    );
     await Deno.remove(`${directory}/workforce-login.txt`).catch(() =>
       undefined
     );
     state.authOnlyPassword = "";
+    state.activationPassword = "";
     state.workforcePassword = "";
     state.cleanedAt ??= new Date().toISOString();
     await writePrivate(statePath, JSON.stringify(state, null, 2));
@@ -1063,6 +1237,13 @@ function dedicatedAdminFixtureState(
     authOnlyUserId: "",
     authOnlyEmail: "",
     authOnlyPassword: "",
+    activationUserId: "",
+    activationEmail: "",
+    activationPassword: "",
+    activationCustomerId: "",
+    activationIdentityId: "",
+    activationDossierId: "",
+    activationCaseId: "",
     workforceUserId: state.authUserId,
     workforceEmail: DEDICATED_ADMIN_EMAIL,
     workforcePassword: "",
@@ -1385,6 +1566,41 @@ async function createPortalCustomerContext(
   );
 }
 
+async function createAdditionalPortalCase(
+  config: LocalRuntime,
+  input: Readonly<{
+    accountType: "particulier" | "zakelijk";
+    caseId: string;
+    customerId: string;
+    dossierId: string;
+    label: string;
+  }>,
+) {
+  await proveDedicatedAdminWriteTarget(config);
+  await psql(
+    config.dbUrl,
+    `begin;
+    insert into public.app_customer_dossiers (
+      id,customer_id,dossier_number,account_type,status,submitted_at
+    ) values (
+      ${quote(input.dossierId)},${quote(input.customerId)},
+      ${quote(`LOCAL-${input.label.toUpperCase()}`)},
+      ${quote(input.accountType)},'submitted',clock_timestamp()
+    );
+    insert into public.app_cases (
+      id,customer_id,case_reference,created_at,created_by_actor_type,
+      created_by_actor_ref,source_class,source_ref,request_id
+    ) values (
+      ${quote(input.caseId)},${quote(input.customerId)},
+      ${quote(`CASE-${input.dossierId}`)},clock_timestamp(),'system',
+      ${quote(`fixture:${PORTAL_AUTHORITY_FIXTURE_ID}`)},
+      'app_customer_dossier',${quote(input.dossierId)},
+      ${quote(`${PORTAL_AUTHORITY_FIXTURE_ID}-${input.label}`)}
+    );
+    commit;`,
+  );
+}
+
 async function customerBootstrap(config: LocalRuntime, token: string) {
   const response = await fetch(
     `${config.apiUrl}/functions/v1/api-app-auth-bootstrap`,
@@ -1444,6 +1660,8 @@ async function readPortalAuthorityState(): Promise<
           state.customerIdentityId,
           state.customerDossierId,
           state.customerCaseId,
+          state.customerSecondDossierId,
+          state.customerSecondCaseId,
           state.businessAuthUserId,
           state.businessCustomerId,
           state.businessIdentityId,
@@ -1468,6 +1686,8 @@ function portalStateComplete(state: PortalAuthorityState): boolean {
     state.customerIdentityId,
     state.customerDossierId,
     state.customerCaseId,
+    state.customerSecondDossierId,
+    state.customerSecondCaseId,
     state.businessAuthUserId,
     state.businessCustomerId,
     state.businessIdentityId,
@@ -1493,6 +1713,13 @@ function reviewerFixtureState(state: PortalAuthorityState): FixtureState {
     authOnlyUserId: "",
     authOnlyEmail: "",
     authOnlyPassword: "",
+    activationUserId: "",
+    activationEmail: "",
+    activationPassword: "",
+    activationCustomerId: "",
+    activationIdentityId: "",
+    activationDossierId: "",
+    activationCaseId: "",
     workforceUserId: state.reviewerAuthUserId,
     workforceEmail: PORTAL_REVIEWER_EMAIL,
     workforcePassword: PORTAL_REVIEWER_PASSWORD,
@@ -1564,7 +1791,13 @@ async function assertPortalAuthorityMatrix(
   assert(
     customerPortal.status === 200 &&
       JSON.stringify(customerPortal.body.portal_contexts) ===
-        JSON.stringify(["customer"]),
+        JSON.stringify(["customer"]) &&
+      Array.isArray(customerPortal.body.dossiers) &&
+      customerPortal.body.dossiers.length === 2 &&
+      customerPortal.body.dossiers.every((dossier) =>
+        typeof dossier === "object" && dossier !== null &&
+        (dossier as Json).portal_context === "customer"
+      ),
     "portal_customer_positive_failed",
   );
   assert(
@@ -1715,6 +1948,8 @@ async function setupPortalAuthority() {
       customerIdentityId: "",
       customerDossierId: "",
       customerCaseId: "",
+      customerSecondDossierId: "",
+      customerSecondCaseId: "",
       businessAuthUserId: "",
       businessCustomerId: "",
       businessIdentityId: "",
@@ -1754,6 +1989,8 @@ async function setupPortalAuthority() {
     state.customerIdentityId = crypto.randomUUID();
     state.customerDossierId = crypto.randomUUID();
     state.customerCaseId = crypto.randomUUID();
+    state.customerSecondDossierId = crypto.randomUUID();
+    state.customerSecondCaseId = crypto.randomUUID();
     await persistPortalAuthorityState(state);
     await createPortalCustomerContext(config, {
       authUserId: state.customerAuthUserId,
@@ -1764,6 +2001,13 @@ async function setupPortalAuthority() {
       identityId: state.customerIdentityId,
       dossierId: state.customerDossierId,
       caseId: state.customerCaseId,
+    });
+    await createAdditionalPortalCase(config, {
+      accountType: "particulier",
+      caseId: state.customerSecondCaseId,
+      customerId: state.customerCustomerId,
+      dossierId: state.customerSecondDossierId,
+      label: "customer-2",
     });
     state.businessCustomerId = crypto.randomUUID();
     state.businessIdentityId = crypto.randomUUID();
@@ -1786,6 +2030,13 @@ async function setupPortalAuthority() {
       authOnlyUserId: "",
       authOnlyEmail: "",
       authOnlyPassword: "",
+      activationUserId: "",
+      activationEmail: "",
+      activationPassword: "",
+      activationCustomerId: "",
+      activationIdentityId: "",
+      activationDossierId: "",
+      activationCaseId: "",
       workforceUserId: state.reviewerAuthUserId,
       workforceEmail: PORTAL_REVIEWER_EMAIL,
       workforcePassword: PORTAL_REVIEWER_PASSWORD,
@@ -1827,6 +2078,7 @@ async function setupPortalAuthority() {
     `REVIEWER_LOGIN_FILE=${PORTAL_AUTHORITY_DIRECTORY}/reviewer-login.txt`,
   );
   console.log("CUSTOMER_PORTAL=ALLOW");
+  console.log("CUSTOMER_CASE_SWITCH=AVAILABLE");
   console.log("BUSINESS_PORTAL=ALLOW");
   console.log("CUSTOMER_BEHEER=DENY");
   console.log("BUSINESS_BEHEER=DENY");
@@ -1926,11 +2178,14 @@ async function cleanupPortalAuthority() {
   ].filter((value) => UUID_PATTERN.test(value));
   const dossierIds = [
     state.customerDossierId,
+    state.customerSecondDossierId,
     state.businessDossierId,
   ].filter((value) => UUID_PATTERN.test(value));
-  const caseIds = [state.customerCaseId, state.businessCaseId].filter((value) =>
-    UUID_PATTERN.test(value)
-  );
+  const caseIds = [
+    state.customerCaseId,
+    state.customerSecondCaseId,
+    state.businessCaseId,
+  ].filter((value) => UUID_PATTERN.test(value));
   const uuidList = (values: string[]) =>
     values.length ? values.map(quote).join(",") : "null::uuid";
   await psql(

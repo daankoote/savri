@@ -1937,3 +1937,21 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   deployment claim.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-09-09 — Close 09C1C-R7 portal authority in the local browser
+
+- Proved the portal allow/deny matrix through the canonical Beheer runtime at
+  desktop (1440x900) and mobile (375x812): customer and business contexts reach
+  only their own portal, Auth-only reaches neither portal, workforce reaches
+  only capability-authorized `/beheer`, and customer/business cannot reach
+  `/beheer`.
+- Covered login, new-account activation, authenticated handoff, back/forward
+  restoration and switching between two customer cases without cross-customer
+  or cross-tenant disclosure.
+- Recorded zero unexpected console/runtime errors or product-write requests and
+  removed every exact browser fixture while leaving real pilot data unchanged.
+- This closes R7 as CURRENT PROVEN — LOCAL BROWSER. Receipt-bound finalized
+  signup recovery, remote delivery, deployment and production acceptance remain
+  open.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

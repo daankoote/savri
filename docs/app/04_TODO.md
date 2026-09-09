@@ -1596,18 +1596,21 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
       authority separate; add immutable server-owned multi-context access,
       preserve distinct Particulier/Zakelijk/VvE customers and keep account
       type context-scoped.
-- [x] 09C1C-R7 IMPLEMENTED — LOCAL RUNTIME PROVEN: require database-authorized customer/business or
+- [x] 09C1C-R7 CURRENT PROVEN — LOCAL BROWSER: require database-authorized customer/business or
       workforce/capability context for every portal; deny Auth-only and prove
-      the positive/negative local access matrix.
+      the positive/negative local access matrix on desktop and mobile,
+      including activation, authenticated handoff, history restoration,
+      isolated case switching and exact fixture cleanup.
 - [x] 09C1C-R6: aggregate all explicitly accessible legacy/signed cases and
       invalidate only the current principal's dashboard/bootstrap cache after
       authenticated promotion; keep Zakelijk/VvE authority review incomplete.
 - [ ] Post-MVP polish: visually integrate authenticated `Nieuwe aanvraag`
       inside the portal shell. Keep canonical `/aanmelden` as the single shared
       intake flow; do not build a second portal-native application flow.
-- [ ] 09C1C-R1 browser acceptance: manually verify existing-account login,
-      new-account activation, already-authenticated portal handoff,
-      back/forward receipt recovery and multi-case switching in a real browser.
+- [ ] 09C1C-R1 remaining browser acceptance: verify receipt-bound back/forward
+      recovery from the finalized signup handoff. R7 already proves login,
+      activation, authenticated portal handoff, general history restoration and
+      multi-case switching in a real browser.
 - [ ] 09C1C+: production legal/OTP/Auth configuration and browser acceptance,
       operations review, authority/evidence decisions, external verifier,
       remote apply and deploy require separate authority.
