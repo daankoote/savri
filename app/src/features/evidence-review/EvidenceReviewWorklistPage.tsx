@@ -2,6 +2,8 @@ import type {
   EvidenceReviewAttentionReason,
   EvidenceReviewWorklistCaseV4,
 } from "../../../../supabase/functions/_shared/app_evidence_review_worklist.ts";
+import type { EvidenceReviewOperationalStatus } from "../../../../supabase/functions/_shared/app_evidence_review_overall_status.ts";
+import { useEffect } from "react";
 import { useAuth } from "../auth/AuthProvider.tsx";
 import type { EvidenceReviewWorklistSafeError } from "./evidenceReviewWorklistClient.ts";
 import {
@@ -9,7 +11,11 @@ import {
   useEvidenceReviewWorklist,
 } from "./useEvidenceReviewWorklist.ts";
 import type { AppNavigate } from "../../routes/types.ts";
-import { buildEvidenceReviewDetailRoute } from "./evidenceReviewRoutes.ts";
+import {
+  buildEvidenceReviewDetailRoute,
+  EVIDENCE_REVIEW_WORKLIST_GROUP_ANCHORS,
+  type EvidenceReviewWorklistGroup,
+} from "./evidenceReviewRoutes.ts";
 import { EVIDENCE_REVIEW_STATUS_PRESENTATION } from "./evidenceReviewStatusPresentation.ts";
 
 type EvidenceReviewWorklistContentProps = Readonly<{
@@ -32,6 +38,25 @@ const REASON_PRESENTATION: Record<
   },
 };
 
+const STATUS_GROUP: Readonly<
+  Record<EvidenceReviewOperationalStatus, EvidenceReviewWorklistGroup>
+> = Object.freeze({
+  TO_REVIEW: "toReview",
+  CORRECTION_REQUIRED: "otherActive",
+  WAITING_CUSTOMER: "waitingCustomer",
+  REVIEW_COMPLETE: "complete",
+  REVIEW_MODEL_UNAVAILABLE: "otherActive",
+});
+
+const WORKLIST_GROUPS = Object.freeze(
+  [
+    { key: "toReview", title: "Interne beoordeling" },
+    { key: "waitingCustomer", title: "Wacht op klant" },
+    { key: "complete", title: "Afgerond" },
+    { key: "otherActive", title: "Overige actieve dossiers" },
+  ] as const,
+);
+
 function formatServerDateTime(value: string): string {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
@@ -41,7 +66,9 @@ function formatServerDateTime(value: string): string {
   }).format(parsed);
 }
 
-function unresolvedFactLabel(item: EvidenceReviewWorklistCaseV4): string | null {
+function unresolvedFactLabel(
+  item: EvidenceReviewWorklistCaseV4,
+): string | null {
   if (item.overallReviewStatus === "REVIEW_MODEL_UNAVAILABLE") {
     return "Aantal te beoordelen gegevens niet beschikbaar";
   }
@@ -65,7 +92,6 @@ export function EvidenceReviewCaseRow({
     <li className="portal-row">
       <div>
         <h3>{item.caseRef}</h3>
-        <p>Dossierfase: ingediend voor beoordeling</p>
         {unresolvedLabel
           ? (
             <p>
@@ -187,34 +213,52 @@ export function EvidenceReviewWorklistContent({
         aria-labelledby="review-cases-title"
       >
         <div>
-          <h2 id="review-cases-title">Alle dossiers</h2>
+          <h2 id="review-cases-title">Dossiergroepen</h2>
           <p>
             Dossiers uit uw server-bepaalde dossierscope.
           </p>
         </div>
-        {value.cases.length > 0
-          ? (
-            <ul
-              className="portal-row-list"
-              aria-label="Dossiers"
-            >
-              {value.cases.map((item) => (
-                <EvidenceReviewCaseRow
-                  item={item}
-                  key={item.caseRef}
-                  onOpenCase={onOpenCase}
-                />
-              ))}
-            </ul>
-          )
-          : (
-            <div className="review-panel review-panel-ok" role="status">
-              <h3>Geen dossiers</h3>
-              <p>
-                Er zijn geen dossiers in uw dossierscope.
-              </p>
-            </div>
-          )}
+        <div className="portal-content-stack">
+          {WORKLIST_GROUPS.map((group) => {
+            const cases = value.cases.filter((item) =>
+              STATUS_GROUP[item.overallReviewStatus] === group.key
+            );
+            const titleId = `${group.key}-group-title`;
+            return (
+              <section
+                aria-labelledby={titleId}
+                className="portal-section-stack"
+                id={EVIDENCE_REVIEW_WORKLIST_GROUP_ANCHORS[group.key]}
+                key={group.key}
+              >
+                <h3 id={titleId}>{group.title}</h3>
+                {cases.length > 0
+                  ? (
+                    <ul
+                      className="portal-row-list"
+                      aria-label={`${group.title} dossiers`}
+                    >
+                      {cases.map((item) => (
+                        <EvidenceReviewCaseRow
+                          item={item}
+                          key={item.caseRef}
+                          onOpenCase={onOpenCase}
+                        />
+                      ))}
+                    </ul>
+                  )
+                  : (
+                    <div
+                      className="review-panel review-panel-ok"
+                      role="status"
+                    >
+                      <p>Geen dossiers in deze groep.</p>
+                    </div>
+                  )}
+              </section>
+            );
+          })}
+        </div>
       </section>
     </div>
   );
@@ -227,6 +271,13 @@ export function EvidenceReviewWorklistPageContent({
   const worklist = useEvidenceReviewWorklist(
     auth.session?.access_token ?? null,
   );
+
+  useEffect(() => {
+    if (worklist.state.status !== "ready" || !window.location.hash) return;
+    const target = document.getElementById(window.location.hash.slice(1));
+    target?.scrollIntoView({ block: "start" });
+  }, [worklist.state.status]);
+
   return (
     <EvidenceReviewWorklistContent
       onOpenCase={(caseRef) => {

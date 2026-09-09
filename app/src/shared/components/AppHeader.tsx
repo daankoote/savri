@@ -73,7 +73,8 @@ export function AppHeader({
               ? [
                 (
                   <a
-                    aria-current={isActiveNavItem(item.href, currentPath)
+                    aria-current={(item.active ??
+                        isActiveNavItem(item.href, currentPath))
                       ? "page"
                       : undefined}
                     href={item.href}

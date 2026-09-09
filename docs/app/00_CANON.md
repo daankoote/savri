@@ -114,11 +114,16 @@ existing compliance and evidence-review application boundaries;
 `app_workforce_authorize_v1` remains private. The current active operator
 navigation is exactly `Overzicht` and `Dossiers`. `/beheer` is the dedicated
 work-oriented overview with previews of at most three server-proven
-`TO_REVIEW` dossiers and three server-proven `WAITING_CUSTOMER` dossiers. It
-presents no totals or second route to all dossiers; the existing `Dossiers`
-navigation item remains canonical. `/beheer/dossiers` remains the complete
-authorized current-tenant dossier list, and every overview dossier uses the
-existing safe detail route. `WAITING_CUSTOMER` requires an exact finalized
+`TO_REVIEW` dossiers, three server-proven `WAITING_CUSTOMER` dossiers and three
+recent server-proven `REVIEW_COMPLETE` dossiers. Each bounded group links to
+its group in the canonical complete dossier list; the overview presents no
+totals. `/beheer/dossiers` partitions every authorized current-tenant dossier
+exactly once into interne beoordeling, wachten op klant, afgerond or overige
+actieve dossiers, preserves the server order and uses the existing safe detail
+route. The shared navigation remains reachable on overview, list, detail and
+compatibility pages, maps `/intern/compliance` to active `Overzicht`, marks
+dossier compatibility routes as active `Dossiers` and stays usable at narrow
+viewport widths. `WAITING_CUSTOMER` requires an exact finalized
 review round covering every current manifest subject plus its current published,
 unanswered correction handoff. A finalized subject decision owns its visible
 review status; the earlier source truth class is not presented as still awaiting
@@ -133,11 +138,11 @@ exact attribution `Powered by ENVAL` once.
 The local status is backed by focused operator-context Q01-Q14, overview Q01-Q10,
 evidence worklist Q01-Q19, unchanged compliance/evidence authorization
 regressions, served allow/deny evidence, a green production build, guarded
-desktop/tablet browser artifacts with zero console/runtime errors or product
-writes, and a fresh independent reviewer PASS. It proves no
-remote or production deployment, tenant #2, multi-tenant switching, complete
-operator console, general workforce platform support, ENVAL Control Console or
-Verifier Console.
+Firefox artifacts at desktop `1440x900` and narrow mobile `375x812` with zero
+console/runtime errors or product writes, and a fresh independent reviewer
+PASS. It proves no remote or production deployment, tenant #2, multi-tenant
+switching, complete operator console, general workforce platform support, ENVAL
+Control Console or Verifier Console.
 
 Auth principal, tenant, workforce membership, customer party, representation
 authority and case authority remain distinct. Tenant workforce authorization is

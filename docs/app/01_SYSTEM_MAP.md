@@ -220,10 +220,15 @@ selects tenant/workforce authority.
 
 The current operator navigation is exactly `Overzicht` and `Dossiers`.
 `/beheer` is a dedicated operational overview. It limits each section to three
-items, uses only server-proven `TO_REVIEW` and `WAITING_CUSTOMER` projections,
-and shows no totals or duplicate all-dossiers action. `Dossiers` remains the
-canonical navigation route. `/beheer/dossiers` is the complete authorized
-current-tenant dossier list and reuses the existing safe detail route.
+items, uses only server-proven `TO_REVIEW`, `WAITING_CUSTOMER` and
+`REVIEW_COMPLETE` projections, and shows no totals. Each bounded overview group
+links to its section in `/beheer/dossiers`. That canonical complete authorized
+current-tenant list partitions each dossier once into interne beoordeling,
+wachten op klant, afgerond or overige actieve dossiers, preserves server order
+and reuses the existing safe detail route. The shared responsive navigation
+marks the canonical overview or dossier destination active, including dossier
+detail and `/intern/dossiers` compatibility routes; `/intern/compliance` maps
+to active `Overzicht`.
 `WAITING_CUSTOMER` is emitted only after an exact finalized review round covers
 all current manifest subjects and a current published, unanswered correction
 handoff proves the outgoing customer request. Finalized subject decisions take
@@ -236,8 +241,9 @@ once, and ordinary workforce gains no implicit
 
 Focused operator-context Q01-Q14, overview Q01-Q10, evidence worklist Q01-Q19,
 route/Auth, compliance/evidence and presentation proofs, served allow/deny
-evidence, app typecheck/build, guarded desktop/tablet artifacts and a fresh
-independent reviewer PASS are green. `Klanten`,
+evidence, app typecheck/build, guarded Firefox evidence at desktop `1440x900`
+and narrow mobile `375x812`, and a fresh independent reviewer PASS are green.
+`Klanten`,
 `Organisatie`, workforce management UI, ENVAL Control Console, Verifier
 Console, tenant #2, dynamic tenant switching and `/intern/*` cleanup remain
 TARGET/unimplemented.

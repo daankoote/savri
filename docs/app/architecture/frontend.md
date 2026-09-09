@@ -195,6 +195,14 @@ Rules:
 - Use the internal route map and History API for now.
 - `/beheer` is the CURRENT PROVEN LOCAL canonical Tenant Operator entry and
   `/beheer/dossiers` uses the existing evidence-review worklist/detail flow.
+  The overview shows bounded server-status previews for interne beoordeling,
+  wachten op klant and recent afgeronde dossiers. The complete list partitions
+  the same server projection once into those groups plus overige actieve
+  dossiers; overview group links target the corresponding list section.
+- The shared operator header marks `Overzicht` or `Dossiers` active on canonical
+  pages, keeps `Dossiers` active on canonical and compatibility detail/list
+  routes, maps `/intern/compliance` to active `Overzicht`, and remains usable
+  without horizontal overflow at narrow widths.
 - `/intern/compliance` and `/intern/dossiers` are CURRENT temporary
   compatibility paths using the same server-authorized operator surface and
   authority. Their later redirect/removal cleanup is separately bounded.

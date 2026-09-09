@@ -39,7 +39,7 @@ function GuardMessage({
               ? (
                 <div className="section-actions">
                   <button
-                    className="button button-secondary button-compact"
+                    className="button button-secondary"
                     onClick={onRetry}
                     type="button"
                   >

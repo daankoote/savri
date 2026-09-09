@@ -29,10 +29,13 @@ implementation.
   return route; authenticated non-workforce receives `Geen toegang`; tenant and
   effective capabilities are server-derived through the existing compliance
   and evidence-review application boundaries. Active navigation is exactly
-  `Overzicht` and `Dossiers`. `/beheer` now limits server-proven `TO_REVIEW`
-  and `WAITING_CUSTOMER` previews to three items each and shows no totals or
-  duplicate all-dossiers action; `Dossiers` remains the canonical route.
-  `/beheer/dossiers` remains the complete authorized current-tenant list.
+  `Overzicht` and `Dossiers`, marks the canonical active destination and stays
+  usable on narrow mobile. `/beheer` limits server-proven `TO_REVIEW`,
+  `WAITING_CUSTOMER` and recent `REVIEW_COMPLETE` previews to three items each,
+  shows no totals and links every group to the canonical complete list.
+  `/beheer/dossiers` partitions every authorized current-tenant dossier once
+  into interne beoordeling, wachten op klant, afgerond or overige actieve
+  dossiers without limiting that complete list.
   `WAITING_CUSTOMER` requires an exact finalized current review round plus its
   current published, unanswered correction handoff. Finalized decisions replace
   the earlier review-required source presentation on the same fact row.
@@ -40,9 +43,9 @@ implementation.
   paths under the same authority. Ordinary workforce
   gains no implicit `platform_support.request`, and the shared operator shell
   renders `Powered by ENVAL` once. Focused Q01-Q14, authorization regressions,
-  served allow/deny evidence, typecheck/build, guarded desktop/tablet artifacts
-  with zero console/runtime errors or product writes, and fresh independent
-  reviewer PASS are green.
+  served allow/deny evidence, typecheck/build, guarded Firefox evidence at
+  desktop `1440x900` and narrow mobile `375x812` with zero console/runtime
+  errors or product writes, and fresh independent reviewer PASS are green.
 - TARGET / NOT IMPLEMENTED after UI-01B: `Klanten`, `Organisatie`, tenant
   admin/workforce management UI, ENVAL Control Console, Verifier Console,
   tenant #2, multi-tenant switching, production deployment and later

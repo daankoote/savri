@@ -128,6 +128,41 @@ assert(
   "Q04_authoritative_dossier_state_rejected",
 );
 
+const groupedHtml = readyHtml(response([
+  caseItem("CASE-PROOF-REVIEW", ["FACT_REVIEW_REQUIRED"]),
+  caseItem("CASE-PROOF-WAITING", [], {
+    overallReviewStatus: "WAITING_CUSTOMER",
+    unresolvedFactCount: 0,
+  }),
+  caseItem("CASE-PROOF-COMPLETE", [], {
+    overallReviewStatus: "REVIEW_COMPLETE",
+    unresolvedFactCount: 0,
+  }),
+  caseItem("CASE-PROOF-CORRECTION", [], {
+    overallReviewStatus: "CORRECTION_REQUIRED",
+    unresolvedFactCount: 0,
+  }),
+  caseItem("CASE-PROOF-MODEL", ["REVIEW_MODEL_UNAVAILABLE"]),
+]));
+assert(
+  groupedHtml.includes('id="interne-beoordeling"') &&
+    groupedHtml.includes('id="wacht-op-klant"') &&
+    groupedHtml.includes('id="afgerond"') &&
+    groupedHtml.includes('id="overige-actieve-dossiers"') &&
+    groupedHtml.includes("Interne beoordeling") &&
+    groupedHtml.includes("Wacht op klant") &&
+    groupedHtml.includes("Afgerond") &&
+    groupedHtml.includes("Overige actieve dossiers") &&
+    [
+      "CASE-PROOF-REVIEW",
+      "CASE-PROOF-WAITING",
+      "CASE-PROOF-COMPLETE",
+      "CASE-PROOF-CORRECTION",
+      "CASE-PROOF-MODEL",
+    ].every((caseRef) => groupedHtml.split(caseRef).length - 1 === 1),
+  "Q04_status_groups_or_exclusive_partition_invalid",
+);
+
 const oneCaseHtml = readyHtml(response([
   caseItem("CASE-PROOF-ONE", ["FACT_REVIEW_REQUIRED"]),
 ]));
@@ -168,7 +203,11 @@ assert(
 
 const emptyHtml = readyHtml(response([]));
 assert(
-  emptyHtml.includes("Er zijn geen dossiers in uw dossierscope.") &&
+  emptyHtml.includes("Interne beoordeling") &&
+    emptyHtml.includes("Wacht op klant") &&
+    emptyHtml.includes("Afgerond") &&
+    emptyHtml.includes("Overige actieve dossiers") &&
+    emptyHtml.split("Geen dossiers in deze groep.").length - 1 === 4 &&
     !/(alle dossiers zijn beoordeeld|alles is goedgekeurd|alles is compliant)/i
       .test(emptyHtml),
   "Q08_empty_state_overclaims",
@@ -323,6 +362,7 @@ assert(
 assert(
   featureSource.includes("portal-content-stack") &&
     featureSource.includes("portal-card-compact") &&
+    featureSource.includes("portal-section-stack") &&
     featureSource.includes("portal-row-list") &&
     featureSource.includes("portal-row") &&
     featureSource.includes("status-pill") &&
@@ -330,7 +370,9 @@ assert(
     layoutCss.includes("@media (max-width: 900px)") &&
     layoutCss.includes("@media (max-width: 620px)") &&
     componentsCss.includes(".portal-card-compact") &&
-    componentsCss.includes(".status-pill"),
+    componentsCss.includes(".status-pill") &&
+    featureSource.includes("STATUS_GROUP") &&
+    featureSource.includes("EVIDENCE_REVIEW_WORKLIST_GROUP_ANCHORS"),
   "Q18_shared_css_or_responsive_boundary_missing",
 );
 assert(

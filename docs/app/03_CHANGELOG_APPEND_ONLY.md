@@ -1917,3 +1917,23 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   status, legal/verifier acceptance and live tenant activation remain unproven.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-09-08 — Complete operator navigation and dossier workflow presentation locally
+
+- Extended the existing responsive operator header so `Overzicht` and
+  `Dossiers` remain reachable and the canonical destination is active on
+  overview, list and dossier-detail routes, including dossier compatibility
+  paths.
+- Added a bounded recent `REVIEW_COMPLETE` preview beside the existing
+  server-proven `TO_REVIEW` and `WAITING_CUSTOMER` queues. Every overview group
+  links to its corresponding section in the canonical complete dossier list.
+- Partitioned the full list exactly once by the canonical server-projected
+  operational status into interne beoordeling, wachten op klant, afgerond and
+  overige actieve dossiers. No workflowstatus, database contract or authority
+  rule moved into the browser.
+- Targeted UI proofs, app typecheck/build and guarded Firefox checks passed at
+  desktop and narrow mobile with no horizontal overflow, console/runtime error
+  or product-write request. This remains local proof and is not a production or
+  deployment claim.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

@@ -282,6 +282,15 @@
     flex-direction: column;
   }
 
+  .app-header[data-app-surface-navigation="tenant_operator"] .header-nav {
+    width: 100%;
+  }
+
+  .app-header[data-app-surface-navigation="tenant_operator"] .header-nav a {
+    flex: 1 1 120px;
+    justify-content: center;
+  }
+
   .step-grid {
     grid-template-columns: 1fr;
   }

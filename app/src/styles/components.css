@@ -69,6 +69,24 @@
   background: var(--color-brand-soft);
 }
 
+.app-header[data-app-surface-navigation="tenant_operator"] .brand-mark,
+.app-header[data-app-surface-navigation="tenant_operator"] .header-nav a {
+  min-height: 44px;
+}
+
+.app-header[data-app-surface-navigation="tenant_operator"] .header-nav a {
+  display: inline-flex;
+  align-items: center;
+}
+
+[data-app-surface="tenant_operator"] .button-compact {
+  min-height: 44px;
+}
+
+[data-app-surface="tenant_operator"] .portal-section-stack[id] {
+  scroll-margin-top: calc(var(--space-20) + var(--space-16));
+}
+
 .hero-section {
   position: relative;
   overflow: hidden;

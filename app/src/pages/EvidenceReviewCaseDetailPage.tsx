@@ -28,7 +28,7 @@ export function EvidenceReviewCaseDetailPage({
             <AppHeader
               currentPath={currentPath}
               navigate={navigate}
-              navigation={buildOperatorNavigation(context)}
+              navigation={buildOperatorNavigation(context, currentPath)}
               surface="tenant_operator"
             />
           }
