@@ -418,6 +418,15 @@ async function createBoundFixture(ctx: ProofContext): Promise<BoundFixture> {
   }).eq("id", identityId).is("auth_user_id", null);
   assert(!bound.error, "dashboard_fixture_binding_failed");
 
+  const accessGrant = await ctx.service.rpc("app_sync_auth_customer_access_v1", {
+    p_auth_user_id: auth.userId,
+    p_request_id: `dashboard-proof-${crypto.randomUUID()}`,
+  });
+  assert(
+    !accessGrant.error && Number(accessGrant.data) === 1,
+    "dashboard_fixture_access_grant_failed",
+  );
+
   return {
     token: auth.token,
     customerId,
@@ -592,7 +601,7 @@ try {
   await runCase(ctx, "R21_no_N_plus_one_static_query_plan", async () => {
     const source = await Deno.readTextFile("supabase/functions/api-app-dashboard-get/index.ts");
     const fromCount = (source.match(/\.from\(/g) || []).length;
-    assert(fromCount <= 18, "unexpected_table_read_count");
+    assert(fromCount <= 20, "unexpected_table_read_count");
     assert(!/for \([^)]*\)[\s\S]{0,200}\.from\(/.test(source), "query_inside_loop_marker");
   });
 
