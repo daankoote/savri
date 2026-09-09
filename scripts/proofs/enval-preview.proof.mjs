@@ -32,7 +32,9 @@ import {
   excludedPreviewPath,
   fingerprintSource,
   MINIMUM_NODE_MAJOR,
+  PREVIEW_BASE,
   resolvePreviewSpec,
+  runtimeNamespace,
 } from "../tools/enval-preview.mjs";
 
 const temporaryRoots = [];
@@ -148,11 +150,40 @@ test("Node runtime and approved Beheer worktree are explicit", () => {
   assert.equal(spec.workspaceName, "Beheer");
   assert.equal(spec.branch, "beheer");
   assert.equal(spec.sourceRoot, "/Users/daankoote/dev/enval-worktrees/beheer");
+  assert.equal(ENVAL_RUNTIME_ROOT, "/private/tmp/enval-runtime/ENVAL");
+  assert.equal(
+    PREVIEW_BASE,
+    join(
+      ENVAL_RUNTIME_ROOT,
+      "repositories",
+      runtimeNamespace("/Users/daankoote/dev/enval"),
+      "worktrees",
+    ),
+  );
+  assert.equal(
+    spec.runtimeRoot,
+    join(
+      PREVIEW_BASE,
+      runtimeNamespace(spec.sourceRoot),
+      "preview",
+      "beheer",
+    ),
+  );
+  assert.notEqual(
+    spec.runtimeRoot,
+    join(
+      PREVIEW_BASE,
+      runtimeNamespace("/Users/daankoote/dev/enval-worktrees/setup"),
+      "preview",
+      "beheer",
+    ),
+  );
   const source = readFileSync(
     new URL("../tools/enval-preview.mjs", import.meta.url),
     "utf8",
   );
   assert.match(source, /\$\{delimiter\}\$\{process\.env\.PATH/);
+  assert.doesNotMatch(source, /\.herdr-runtime/);
   assert.doesNotMatch(source, /enval-(?:batch|result)\.mjs/);
   assert.throws(() => resolvePreviewSpec("Beheer 2"), {
     name: "PreviewError",

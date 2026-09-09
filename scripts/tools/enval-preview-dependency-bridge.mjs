@@ -5,14 +5,9 @@ import {
   symlinkSync,
   unlinkSync,
 } from "node:fs";
-import { homedir } from "node:os";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 
-export const ENVAL_RUNTIME_ROOT = join(
-  homedir(),
-  ".herdr-runtime",
-  "ENVAL",
-);
+export const ENVAL_RUNTIME_ROOT = "/private/tmp/enval-runtime/ENVAL";
 
 export class DependencyBridgeError extends Error {
   constructor(code) {

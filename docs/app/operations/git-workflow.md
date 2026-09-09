@@ -96,11 +96,14 @@ Setup-owned tool and one approved workspace:
 /usr/local/bin/node ../enval-worktrees/setup/scripts/tools/enval-preview.mjs stop Beheer
 ~~~
 
-The tool requires Node 22+, snapshots the registered worktree into
-~/.herdr-runtime/ENVAL/preview/beheer/source, and installs root/app dependencies
-from unchanged lockfiles into the external runtime. Git metadata, dependencies,
-private env files, logs, and generated artifacts are excluded. No node_modules,
-lockfile change, or runtime artifact is created in a worktree.
+The tool requires Node 22+ and snapshots the registered worktree below
+`/private/tmp/enval-runtime/ENVAL/repositories/<repository-id>/worktrees/<worktree-id>/preview/beheer`.
+The deterministic path IDs are the first 16 hexadecimal characters of the
+SHA-256 digest of each absolute path, so repositories and worktrees cannot
+collide. Root/app dependencies are installed from unchanged lockfiles into that
+external runtime. Git metadata, dependencies, private env files, logs, and
+generated artifacts are excluded. No node_modules, lockfile change, or runtime
+artifact is created in a worktree.
 
 The guarded runtime may materialize only the approved deterministic local tenant
 signing configuration. It never writes Auth, signup, Storage, or customer data.
@@ -111,10 +114,10 @@ receives local fallback behavior.
 
 While running, the preview owns one validated temporary source/app/node_modules
 link to the matching external dependency tree. Source, link, and target must
-resolve below ~/.herdr-runtime/ENVAL/. Occupied paths, traversal, wrong targets,
-failure, stop, and interrupt fail closed and clean the link. Stop terminates
-only the owned process group, verifies termination, and compares the source
-worktree with its start fingerprint.
+resolve below `/private/tmp/enval-runtime/ENVAL/`. Occupied paths, traversal,
+wrong targets, failure, stop, and interrupt fail closed and clean the link. Stop
+terminates only the owned process group, verifies termination, and compares the
+source worktree with its start fingerprint.
 
 ## Human Terminal handoffs
 

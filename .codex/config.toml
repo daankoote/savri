@@ -2,7 +2,7 @@
 
 # ENVAL project-local defaults. Effective loading requires a fresh trusted session.
 approval_policy = "on-request"
-approvals_reviewer = "user"
+approvals_reviewer = "auto_review"
 default_permissions = "enval-dev"
 
 [agents]
@@ -27,6 +27,9 @@ allow_upstream_proxy = false
 dangerously_allow_non_loopback_proxy = false
 dangerously_allow_all_unix_sockets = false
 
+[permissions.enval-dev.network.unix_sockets]
+"/Users/daankoote/.docker/run/docker.sock" = "allow"
+
 [permissions.enval-dev.network.domains]
 "localhost" = "allow"
 "127.0.0.1" = "allow"
@@ -35,6 +38,37 @@ dangerously_allow_all_unix_sockets = false
 inherit = "core"
 experimental_use_profile = false
 ignore_default_excludes = false
+
+[shell_environment_policy.set]
+SUPABASE_TELEMETRY_DISABLED = "1"
+DO_NOT_TRACK = "1"
+
+[browser_use]
+allow_history_access = false
+
+[browser_use.default_origin_policy]
+access = "deny"
+downloads = "deny"
+uploads = "deny"
+full_cdp_access = "deny"
+
+[browser_use.origins."http://127.0.0.1:5175"]
+access = "allow"
+downloads = "deny"
+uploads = "deny"
+full_cdp_access = "deny"
+
+[browser_use.origins."http://127.0.0.1:54321"]
+access = "allow"
+downloads = "deny"
+uploads = "deny"
+full_cdp_access = "deny"
+
+[browser_use.origins."http://127.0.0.1:54324"]
+access = "allow"
+downloads = "deny"
+uploads = "deny"
+full_cdp_access = "deny"
 
 [mcp_servers.supabase]
 enabled = false

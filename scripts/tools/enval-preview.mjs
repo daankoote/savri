@@ -18,7 +18,6 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { homedir } from "node:os";
 import {
   basename,
   delimiter,
@@ -33,6 +32,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   cleanupDependencyBridge,
   DependencyBridgeError,
+  ENVAL_RUNTIME_ROOT,
   inspectDependencyBridge,
 } from "./enval-preview-dependency-bridge.mjs";
 
@@ -44,11 +44,15 @@ const APPROVED_PREVIEW_BINDINGS = Object.freeze({
   Beheer: Object.freeze({ slug: "beheer", branch: "beheer" }),
 });
 
+export function runtimeNamespace(path) {
+  return createHash("sha256").update(resolve(path)).digest("hex").slice(0, 16);
+}
+
 export const PREVIEW_BASE = join(
-  homedir(),
-  ".herdr-runtime",
-  HERDR_PROJECT,
-  "preview",
+  ENVAL_RUNTIME_ROOT,
+  "repositories",
+  runtimeNamespace(ENVAL_ROOT),
+  "worktrees",
 );
 export const PREVIEW_URL = "http://127.0.0.1:5175";
 export const MINIMUM_NODE_MAJOR = 22;
@@ -189,7 +193,12 @@ export function resolvePreviewSpec(workspaceName, run = defaultRun) {
     slug: binding.slug,
     branch: binding.branch,
     sourceRoot: realpathSync(expectedSource),
-    runtimeRoot: join(PREVIEW_BASE, binding.slug),
+    runtimeRoot: join(
+      PREVIEW_BASE,
+      runtimeNamespace(expectedSource),
+      "preview",
+      binding.slug,
+    ),
   });
 }
 
@@ -545,6 +554,7 @@ function runtimeEnvironment(spec, dependencyRoot, sourceRoot) {
     ENVAL_PREVIEW_DEPENDENCY_ROOT: dependencyRoot,
     ENVAL_PREVIEW_SECRET_ROOT: ENVAL_ROOT,
     ENVAL_PREVIEW_SOURCE_ROOT: sourceRoot,
+    DO_NOT_TRACK: "1",
     SUPABASE_TELEMETRY_DISABLED: "1",
   };
 }
