@@ -32,6 +32,23 @@ type DedicatedAdminState = {
   createdAt: string;
   updatedAt: string;
 };
+type PortalAuthorityState = {
+  fixtureId: string;
+  customerAuthUserId: string;
+  customerCustomerId: string;
+  customerIdentityId: string;
+  customerDossierId: string;
+  customerCaseId: string;
+  businessAuthUserId: string;
+  businessCustomerId: string;
+  businessIdentityId: string;
+  businessDossierId: string;
+  businessCaseId: string;
+  reviewerAuthUserId: string;
+  reviewerWorkforceIdentityId: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
 const ROOT = new URL("../../", import.meta.url);
 const ROOT_PATH = decodeURIComponent(ROOT.pathname);
@@ -45,6 +62,16 @@ const DEDICATED_ADMIN_DIRECTORY =
 const DEDICATED_ADMIN_LOGIN_PATH =
   `${DEDICATED_ADMIN_DIRECTORY}/workforce-login.txt`;
 const DEDICATED_ADMIN_STATE_PATH = `${DEDICATED_ADMIN_DIRECTORY}/state.json`;
+export const PORTAL_AUTHORITY_FIXTURE_ID = "portal-authority-v1";
+export const PORTAL_CUSTOMER_EMAIL = "klant.portal@enval.test";
+export const PORTAL_CUSTOMER_PASSWORD = "Enval-Local-Customer-2026!";
+export const PORTAL_BUSINESS_EMAIL = "bedrijf.portal@enval.test";
+export const PORTAL_BUSINESS_PASSWORD = "Enval-Local-Business-2026!";
+export const PORTAL_REVIEWER_EMAIL = "beheer.reviewer@enval.test";
+export const PORTAL_REVIEWER_PASSWORD = "Enval-Local-Reviewer-2026!";
+const PORTAL_AUTHORITY_DIRECTORY =
+  `${FIXTURE_ROOT}/${PORTAL_AUTHORITY_FIXTURE_ID}`;
+const PORTAL_AUTHORITY_STATE_PATH = `${PORTAL_AUTHORITY_DIRECTORY}/state.json`;
 const REQUIRED_ADMIN_CAPABILITIES = Object.freeze([
   "compliance.delivery_year.view",
   "evidence.review.view",
@@ -71,6 +98,12 @@ function safeDiagnostic(value: unknown): string {
     .replaceAll(/LocalOnly![A-Za-z0-9-]+Aa1/g, "[password]")
     .replaceAll(DEDICATED_ADMIN_EMAIL, "[dedicated-admin-address]")
     .replaceAll(DEDICATED_ADMIN_PASSWORD, "[dedicated-admin-password]")
+    .replaceAll(PORTAL_CUSTOMER_EMAIL, "[portal-c-address]")
+    .replaceAll(PORTAL_CUSTOMER_PASSWORD, "[portal-customer-password]")
+    .replaceAll(PORTAL_BUSINESS_EMAIL, "[portal-business-address]")
+    .replaceAll(PORTAL_BUSINESS_PASSWORD, "[portal-business-password]")
+    .replaceAll(PORTAL_REVIEWER_EMAIL, "[portal-reviewer-address]")
+    .replaceAll(PORTAL_REVIEWER_PASSWORD, "[portal-reviewer-password]")
     .replaceAll(/\s+/g, " ")
     .slice(0, 400);
 }
@@ -323,9 +356,10 @@ async function accessToken(
 async function operatorContext(
   config: LocalRuntime,
   token: string,
+  search = "",
 ): Promise<Readonly<{ status: number; body: Json }>> {
   const response = await fetch(
-    `${config.apiUrl}/functions/v1/api-app-operator-context`,
+    `${config.apiUrl}/functions/v1/api-app-operator-context${search}`,
     {
       method: "GET",
       headers: {
@@ -555,6 +589,7 @@ async function cleanupState(
   service: SupabaseClient,
   state: FixtureState,
   beforeWrite?: () => Promise<unknown>,
+  strictAuthDelete = false,
 ) {
   if (UUID_PATTERN.test(state.workforceIdentityId)) {
     await beforeWrite?.();
@@ -585,7 +620,10 @@ async function cleanupState(
   for (const userId of [state.authOnlyUserId, state.workforceUserId]) {
     if (UUID_PATTERN.test(userId)) {
       await beforeWrite?.();
-      await service.auth.admin.deleteUser(userId).catch(() => null);
+      const deleted = await service.auth.admin.deleteUser(userId);
+      if (strictAuthDelete) {
+        assert(!deleted.error, "fixture_auth_cleanup_failed");
+      }
     }
   }
 }
@@ -1223,6 +1261,734 @@ async function cleanupDedicatedAdmin() {
   if (residue !== 0 || !pilotUnchanged) Deno.exitCode = 1;
 }
 
+async function findPortalAuthUsers(
+  service: SupabaseClient,
+  email: string,
+) {
+  const matches = [];
+  for (let page = 1; page <= 100; page += 1) {
+    const listed = await service.auth.admin.listUsers({ page, perPage: 100 });
+    assert(!listed.error, "portal_fixture_auth_list_failed");
+    const users = listed.data.users ?? [];
+    matches.push(
+      ...users.filter((user) => user.email?.toLowerCase() === email),
+    );
+    if (users.length < 100) break;
+    assert(page < 100, "portal_fixture_auth_list_unbounded");
+  }
+  assert(matches.length <= 1, "portal_fixture_auth_duplicate_detected");
+  return matches;
+}
+
+function assertPortalAuthOwnership(
+  user: { user_metadata?: Record<string, unknown> },
+  kind: "customer" | "business" | "reviewer",
+) {
+  assert(
+    user.user_metadata?.fixture_id === PORTAL_AUTHORITY_FIXTURE_ID &&
+      user.user_metadata?.fixture_kind === kind &&
+      user.user_metadata?.fixture_status === "SYNTHETIC_LOCAL_ONLY",
+    "portal_fixture_email_owned_by_non_fixture_user",
+  );
+}
+
+async function createPortalAuthUser(
+  config: LocalRuntime,
+  service: SupabaseClient,
+  email: string,
+  password: string,
+  kind: "customer" | "business" | "reviewer",
+): Promise<string> {
+  const matches = await findPortalAuthUsers(service, email);
+  assert(
+    matches.length === 0,
+    "portal_fixture_state_missing_for_existing_user",
+  );
+  await proveDedicatedAdminWriteTarget(config);
+  const created = await service.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: {
+      fixture_id: PORTAL_AUTHORITY_FIXTURE_ID,
+      fixture_kind: kind,
+      fixture_status: "SYNTHETIC_LOCAL_ONLY",
+    },
+  });
+  assert(
+    !created.error && created.data.user?.id,
+    `portal_${kind}_auth_create_failed`,
+  );
+  return created.data.user.id;
+}
+
+async function createPortalCustomerContext(
+  config: LocalRuntime,
+  input: Readonly<{
+    authUserId: string;
+    email: string;
+    accountType: "particulier" | "zakelijk";
+    label: "customer" | "business";
+    customerId: string;
+    identityId: string;
+    dossierId: string;
+    caseId: string;
+  }>,
+) {
+  const requestId = `${PORTAL_AUTHORITY_FIXTURE_ID}-${input.label}`;
+  await proveDedicatedAdminWriteTarget(config);
+  await psql(
+    config.dbUrl,
+    `begin;
+    insert into public.app_customers (
+      id,customer_type,display_name,primary_email_normalized,status
+    ) values (
+      ${quote(input.customerId)},${quote(input.accountType)},
+      ${quote(`Local ${input.label} fixture`)},${quote(input.email)},'active'
+    );
+    insert into public.app_customer_identities (
+      id,customer_id,auth_user_id,email_normalized,email_verified_at,
+      identity_provider,status
+    ) values (
+      ${quote(input.identityId)},${quote(input.customerId)},${
+      quote(input.authUserId)
+    },
+      ${quote(input.email)},clock_timestamp(),'supabase','active'
+    );
+    insert into public.app_customer_dossiers (
+      id,customer_id,dossier_number,account_type,status,submitted_at
+    ) values (
+      ${quote(input.dossierId)},${quote(input.customerId)},
+      ${quote(`LOCAL-${input.label.toUpperCase()}`)},
+      ${quote(input.accountType)},'submitted',clock_timestamp()
+    );
+    insert into public.app_cases (
+      id,customer_id,case_reference,created_at,created_by_actor_type,
+      created_by_actor_ref,source_class,source_ref,request_id
+    ) values (
+      ${quote(input.caseId)},${quote(input.customerId)},${
+      quote(`CASE-${input.dossierId}`)
+    },
+      clock_timestamp(),'system',
+      ${quote(`fixture:${PORTAL_AUTHORITY_FIXTURE_ID}`)},
+      'app_customer_dossier',${quote(input.dossierId)},${quote(requestId)}
+    );
+    insert into public.app_customer_access_grants (
+      auth_user_id,customer_id,granted_case_id,access_basis,source_class,
+      source_ref,request_id
+    ) values (
+      ${quote(input.authUserId)},${quote(input.customerId)},null,
+      'bound_customer_identity','app_customer_identity',
+      ${quote(input.identityId)},${quote(requestId)}
+    );
+    commit;`,
+  );
+}
+
+async function customerBootstrap(config: LocalRuntime, token: string) {
+  const response = await fetch(
+    `${config.apiUrl}/functions/v1/api-app-auth-bootstrap`,
+    {
+      method: "POST",
+      headers: {
+        apikey: config.anonKey,
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "Idempotency-Key": crypto.randomUUID(),
+        Origin: "http://127.0.0.1:5175",
+      },
+      body: "{}",
+      signal: AbortSignal.timeout(10_000),
+    },
+  );
+  return Object.freeze({
+    status: response.status,
+    body: await response.json().catch(() => ({})) as Json,
+  });
+}
+
+async function dashboardRead(
+  config: LocalRuntime,
+  token: string,
+  dossierId: string,
+) {
+  const response = await fetch(
+    `${config.apiUrl}/functions/v1/api-app-dashboard-get`,
+    {
+      method: "POST",
+      headers: {
+        apikey: config.anonKey,
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        Origin: "http://127.0.0.1:5175",
+      },
+      body: JSON.stringify({ dossier_id: dossierId }),
+      signal: AbortSignal.timeout(10_000),
+    },
+  );
+  return response.status;
+}
+
+async function readPortalAuthorityState(): Promise<
+  PortalAuthorityState | null
+> {
+  try {
+    const state = JSON.parse(
+      await Deno.readTextFile(PORTAL_AUTHORITY_STATE_PATH),
+    ) as PortalAuthorityState;
+    assert(
+      state.fixtureId === PORTAL_AUTHORITY_FIXTURE_ID &&
+        [
+          state.customerAuthUserId,
+          state.customerCustomerId,
+          state.customerIdentityId,
+          state.customerDossierId,
+          state.customerCaseId,
+          state.businessAuthUserId,
+          state.businessCustomerId,
+          state.businessIdentityId,
+          state.businessDossierId,
+          state.businessCaseId,
+          state.reviewerAuthUserId,
+          state.reviewerWorkforceIdentityId,
+        ].every((value) => value === "" || UUID_PATTERN.test(value)),
+      "portal_fixture_state_invalid",
+    );
+    return state;
+  } catch (error) {
+    if (error instanceof Deno.errors.NotFound) return null;
+    throw error;
+  }
+}
+
+function portalStateComplete(state: PortalAuthorityState): boolean {
+  return [
+    state.customerAuthUserId,
+    state.customerCustomerId,
+    state.customerIdentityId,
+    state.customerDossierId,
+    state.customerCaseId,
+    state.businessAuthUserId,
+    state.businessCustomerId,
+    state.businessIdentityId,
+    state.businessDossierId,
+    state.businessCaseId,
+    state.reviewerAuthUserId,
+    state.reviewerWorkforceIdentityId,
+  ].every((value) => UUID_PATTERN.test(value));
+}
+
+async function persistPortalAuthorityState(state: PortalAuthorityState) {
+  state.updatedAt = new Date().toISOString();
+  await writePrivate(
+    PORTAL_AUTHORITY_STATE_PATH,
+    JSON.stringify(state, null, 2),
+  );
+}
+
+function reviewerFixtureState(state: PortalAuthorityState): FixtureState {
+  return {
+    fixtureId: PORTAL_AUTHORITY_FIXTURE_ID,
+    prefix: PORTAL_AUTHORITY_FIXTURE_ID,
+    authOnlyUserId: "",
+    authOnlyEmail: "",
+    authOnlyPassword: "",
+    workforceUserId: state.reviewerAuthUserId,
+    workforceEmail: PORTAL_REVIEWER_EMAIL,
+    workforcePassword: PORTAL_REVIEWER_PASSWORD,
+    workforceIdentityId: state.reviewerWorkforceIdentityId,
+    pilotBefore: "",
+    createdAt: state.createdAt,
+    cleanedAt: null,
+  };
+}
+
+async function assertPortalAuthorityMatrix(
+  config: LocalRuntime,
+  service: SupabaseClient,
+  state: PortalAuthorityState,
+) {
+  const adminState = await readDedicatedAdminState();
+  assert(adminState, "dedicated_admin_fixture_required");
+  const customerToken = await accessToken(
+    config,
+    PORTAL_CUSTOMER_EMAIL,
+    PORTAL_CUSTOMER_PASSWORD,
+  );
+  const businessToken = await accessToken(
+    config,
+    PORTAL_BUSINESS_EMAIL,
+    PORTAL_BUSINESS_PASSWORD,
+  );
+  const reviewerToken = await accessToken(
+    config,
+    PORTAL_REVIEWER_EMAIL,
+    PORTAL_REVIEWER_PASSWORD,
+  );
+  const adminToken = await accessToken(
+    config,
+    DEDICATED_ADMIN_EMAIL,
+    DEDICATED_ADMIN_PASSWORD,
+  );
+  const [
+    customerPortal,
+    businessPortal,
+    reviewerPortal,
+    adminPortal,
+    customerOperator,
+    businessOperator,
+    reviewerOperator,
+    adminOperator,
+    customerCrossRead,
+    businessCrossRead,
+    reviewerCrossTenant,
+    reviewerCapabilityInjection,
+  ] = await Promise.all([
+    customerBootstrap(config, customerToken),
+    customerBootstrap(config, businessToken),
+    customerBootstrap(config, reviewerToken),
+    customerBootstrap(config, adminToken),
+    operatorContext(config, customerToken),
+    operatorContext(config, businessToken),
+    operatorContext(config, reviewerToken),
+    operatorContext(config, adminToken),
+    dashboardRead(config, customerToken, state.businessDossierId),
+    dashboardRead(config, businessToken, state.customerDossierId),
+    operatorContext(config, reviewerToken, "?tenant_id=other"),
+    operatorContext(
+      config,
+      reviewerToken,
+      "?capability=workforce.policy.manage",
+    ),
+  ]);
+  assert(
+    customerPortal.status === 200 &&
+      JSON.stringify(customerPortal.body.portal_contexts) ===
+        JSON.stringify(["customer"]),
+    "portal_customer_positive_failed",
+  );
+  assert(
+    businessPortal.status === 200 &&
+      JSON.stringify(businessPortal.body.portal_contexts) ===
+        JSON.stringify(["business"]),
+    "portal_business_positive_failed",
+  );
+  assert(
+    reviewerPortal.status === 403 &&
+      reviewerPortal.body.code === "portal_context_not_authorized" &&
+      adminPortal.status === 403 &&
+      adminPortal.body.code === "portal_context_not_authorized",
+    "portal_workforce_customer_denial_failed",
+  );
+  const reviewerCapabilities = Array.isArray(
+      reviewerOperator.body.effective_capabilities,
+    )
+    ? reviewerOperator.body.effective_capabilities.filter(
+      (value): value is string => typeof value === "string",
+    )
+    : [];
+  assert(
+    customerOperator.status === 403 && businessOperator.status === 403 &&
+      reviewerOperator.status === 200 &&
+      reviewerOperator.body.authorized === true &&
+      REQUIRED_ADMIN_CAPABILITIES.every((capability) =>
+        reviewerCapabilities.includes(capability)
+      ) &&
+      !reviewerCapabilities.includes("workforce.member.manage") &&
+      !reviewerCapabilities.includes("workforce.policy.manage") &&
+      adminOperator.status === 200 && adminOperator.body.authorized === true,
+    "portal_operator_matrix_failed",
+  );
+  assert(
+    reviewerCrossTenant.status === 400 &&
+      reviewerCapabilityInjection.status === 400,
+    "portal_operator_scope_injection_allowed",
+  );
+  assert(
+    customerCrossRead === 404 && businessCrossRead === 404,
+    "portal_cross_customer_read_allowed",
+  );
+  const directClient = createClient(config.apiUrl, config.anonKey, {
+    auth: { persistSession: false },
+    global: { headers: { Authorization: `Bearer ${customerToken}` } },
+  });
+  const [directGrantRead, directOrganizationRead, directCaseRoleRead] =
+    await Promise.all([
+      directClient.from("app_customer_access_grants").select("customer_id"),
+      directClient.from("app_party_organization_versions").select("party_id"),
+      directClient.from("app_case_party_roles").select("case_id"),
+    ]);
+  assert(
+    [directGrantRead, directOrganizationRead, directCaseRoleRead].every(
+      (result) => Boolean(result.error) || result.data?.length === 0,
+    ),
+    "portal_authenticated_direct_table_read_allowed",
+  );
+  await proveDedicatedAdminWriteTarget(config);
+  const databaseMatrix = await psql(
+    config.dbUrl,
+    `begin read only;
+    select concat_ws('|',
+      (select count(*) from public.app_customer_access_grants
+       where auth_user_id=${quote(state.customerAuthUserId)}
+         and customer_id=${quote(state.customerCustomerId)}),
+      (select count(*) from public.app_customer_access_grants
+       where auth_user_id=${quote(state.customerAuthUserId)}
+         and customer_id=${quote(state.businessCustomerId)}),
+      (select count(*) from public.app_customer_access_grants
+       where auth_user_id=${quote(state.businessAuthUserId)}
+         and customer_id=${quote(state.businessCustomerId)}),
+      (select count(*) from public.app_workforce_identities
+       where auth_user_id in (
+         ${quote(state.customerAuthUserId)},
+         ${quote(state.businessAuthUserId)}
+       )),
+      (select count(*) from public.app_customer_access_grants
+       where auth_user_id in (
+         ${quote(state.reviewerAuthUserId)},
+         ${quote(adminState.authUserId)}
+       ))
+    );
+    rollback;`,
+  );
+  assert(databaseMatrix === "1|0|1|0|0", "portal_database_matrix_invalid");
+  const directDatabasePrivileges = await psql(
+    config.dbUrl,
+    `begin read only;
+    select concat_ws('|',
+      has_table_privilege('authenticated','public.app_customer_access_grants','select'),
+      has_table_privilege('authenticated','public.app_party_organization_versions','select'),
+      has_table_privilege('authenticated','public.app_case_party_roles','select'),
+      has_function_privilege(
+        'authenticated',
+        'public.app_bootstrap_customer_auth_v7(uuid,text,text,text,text,text,text,text,text,text)',
+        'execute'
+      )
+    );
+    rollback;`,
+  );
+  assert(
+    directDatabasePrivileges === "f|f|f|f",
+    "portal_authenticated_direct_database_privilege_allowed",
+  );
+}
+
+async function setupPortalAuthority() {
+  const config = await runtime();
+  await proveDedicatedAdminWriteTarget(config);
+  const service = createClient(config.apiUrl, config.serviceRoleKey, {
+    auth: { persistSession: false },
+  });
+  const existing = await readPortalAuthorityState();
+  let state: PortalAuthorityState;
+  if (existing) {
+    assert(
+      portalStateComplete(existing),
+      "portal_fixture_partial_state_requires_cleanup",
+    );
+    for (
+      const [email, kind, userId] of [
+        [PORTAL_CUSTOMER_EMAIL, "customer", existing.customerAuthUserId],
+        [PORTAL_BUSINESS_EMAIL, "business", existing.businessAuthUserId],
+        [PORTAL_REVIEWER_EMAIL, "reviewer", existing.reviewerAuthUserId],
+      ] as const
+    ) {
+      const users = await findPortalAuthUsers(service, email);
+      assert(
+        users.length === 1 && users[0].id === userId,
+        "portal_fixture_auth_changed",
+      );
+      assertPortalAuthOwnership(users[0], kind);
+    }
+    state = { ...existing, updatedAt: new Date().toISOString() };
+  } else {
+    await Deno.mkdir(PORTAL_AUTHORITY_DIRECTORY, {
+      recursive: true,
+      mode: 0o700,
+    });
+    await Deno.chmod(PORTAL_AUTHORITY_DIRECTORY, 0o700);
+    const now = new Date().toISOString();
+    state = {
+      fixtureId: PORTAL_AUTHORITY_FIXTURE_ID,
+      customerAuthUserId: "",
+      customerCustomerId: "",
+      customerIdentityId: "",
+      customerDossierId: "",
+      customerCaseId: "",
+      businessAuthUserId: "",
+      businessCustomerId: "",
+      businessIdentityId: "",
+      businessDossierId: "",
+      businessCaseId: "",
+      reviewerAuthUserId: "",
+      reviewerWorkforceIdentityId: "",
+      createdAt: now,
+      updatedAt: now,
+    };
+    await persistPortalAuthorityState(state);
+    state.customerAuthUserId = await createPortalAuthUser(
+      config,
+      service,
+      PORTAL_CUSTOMER_EMAIL,
+      PORTAL_CUSTOMER_PASSWORD,
+      "customer",
+    );
+    await persistPortalAuthorityState(state);
+    state.businessAuthUserId = await createPortalAuthUser(
+      config,
+      service,
+      PORTAL_BUSINESS_EMAIL,
+      PORTAL_BUSINESS_PASSWORD,
+      "business",
+    );
+    await persistPortalAuthorityState(state);
+    state.reviewerAuthUserId = await createPortalAuthUser(
+      config,
+      service,
+      PORTAL_REVIEWER_EMAIL,
+      PORTAL_REVIEWER_PASSWORD,
+      "reviewer",
+    );
+    await persistPortalAuthorityState(state);
+    state.customerCustomerId = crypto.randomUUID();
+    state.customerIdentityId = crypto.randomUUID();
+    state.customerDossierId = crypto.randomUUID();
+    state.customerCaseId = crypto.randomUUID();
+    await persistPortalAuthorityState(state);
+    await createPortalCustomerContext(config, {
+      authUserId: state.customerAuthUserId,
+      email: PORTAL_CUSTOMER_EMAIL,
+      accountType: "particulier",
+      label: "customer",
+      customerId: state.customerCustomerId,
+      identityId: state.customerIdentityId,
+      dossierId: state.customerDossierId,
+      caseId: state.customerCaseId,
+    });
+    state.businessCustomerId = crypto.randomUUID();
+    state.businessIdentityId = crypto.randomUUID();
+    state.businessDossierId = crypto.randomUUID();
+    state.businessCaseId = crypto.randomUUID();
+    await persistPortalAuthorityState(state);
+    await createPortalCustomerContext(config, {
+      authUserId: state.businessAuthUserId,
+      email: PORTAL_BUSINESS_EMAIL,
+      accountType: "zakelijk",
+      label: "business",
+      customerId: state.businessCustomerId,
+      identityId: state.businessIdentityId,
+      dossierId: state.businessDossierId,
+      caseId: state.businessCaseId,
+    });
+    state.reviewerWorkforceIdentityId = await createWorkforce(config, {
+      fixtureId: PORTAL_AUTHORITY_FIXTURE_ID,
+      prefix: PORTAL_AUTHORITY_FIXTURE_ID,
+      authOnlyUserId: "",
+      authOnlyEmail: "",
+      authOnlyPassword: "",
+      workforceUserId: state.reviewerAuthUserId,
+      workforceEmail: PORTAL_REVIEWER_EMAIL,
+      workforcePassword: PORTAL_REVIEWER_PASSWORD,
+      workforceIdentityId: "",
+      pilotBefore: "",
+      createdAt: new Date().toISOString(),
+      cleanedAt: null,
+    });
+    await persistPortalAuthorityState(state);
+  }
+  await persistPortalAuthorityState(state);
+  for (
+    const [name, email, password] of [
+      ["customer", PORTAL_CUSTOMER_EMAIL, PORTAL_CUSTOMER_PASSWORD],
+      ["business", PORTAL_BUSINESS_EMAIL, PORTAL_BUSINESS_PASSWORD],
+      ["reviewer", PORTAL_REVIEWER_EMAIL, PORTAL_REVIEWER_PASSWORD],
+    ]
+  ) {
+    await writePrivate(
+      `${PORTAL_AUTHORITY_DIRECTORY}/${name}-login.txt`,
+      [
+        `LOCAL ENVAL ${name.toUpperCase()} LOGIN`,
+        `Email: ${email}`,
+        `Password: ${password}`,
+        "Local Supabase only. Do not commit or reuse outside this fixture.",
+      ].join("\n") + "\n",
+    );
+  }
+  await assertPortalAuthorityMatrix(config, service, state);
+  console.log("PORTAL_AUTHORITY_FIXTURE_SETUP=PASS");
+  console.log(`FIXTURE_ID=${PORTAL_AUTHORITY_FIXTURE_ID}`);
+  console.log(
+    `CUSTOMER_LOGIN_FILE=${PORTAL_AUTHORITY_DIRECTORY}/customer-login.txt`,
+  );
+  console.log(
+    `BUSINESS_LOGIN_FILE=${PORTAL_AUTHORITY_DIRECTORY}/business-login.txt`,
+  );
+  console.log(
+    `REVIEWER_LOGIN_FILE=${PORTAL_AUTHORITY_DIRECTORY}/reviewer-login.txt`,
+  );
+  console.log("CUSTOMER_PORTAL=ALLOW");
+  console.log("BUSINESS_PORTAL=ALLOW");
+  console.log("CUSTOMER_BEHEER=DENY");
+  console.log("BUSINESS_BEHEER=DENY");
+  console.log("REVIEWER_BEHEER=ALLOW");
+  console.log("ADMIN_BEHEER=ALLOW");
+  console.log("REVIEWER_ADMIN_CAPABILITIES=DENY");
+  console.log("REVIEWER_CUSTOMER_PORTAL=DENY");
+  console.log("ADMIN_CUSTOMER_PORTAL=DENY");
+  console.log("CROSS_CUSTOMER_READ=DENY");
+  console.log("CROSS_TENANT_INPUT=DENY");
+  console.log("DIRECT_AUTHENTICATED_DOMAIN_READ=DENY");
+  console.log("DIRECT_AUTHENTICATED_DATABASE_PRIVILEGES=DENY");
+}
+
+async function cleanupPortalAuthority() {
+  const config = await runtime();
+  await proveDedicatedAdminWriteTarget(config);
+  const service = createClient(config.apiUrl, config.serviceRoleKey, {
+    auth: { persistSession: false },
+  });
+  let state = await readPortalAuthorityState();
+  assert(state, "portal_fixture_state_missing");
+  const recoverPortalAuthUserId = async (
+    email: string,
+    kind: "customer" | "business" | "reviewer",
+    recordedId: string,
+  ) => {
+    const users = await findPortalAuthUsers(service, email);
+    if (users.length === 0) return recordedId;
+    assertPortalAuthOwnership(users[0], kind);
+    assert(
+      recordedId === "" || recordedId === users[0].id,
+      "portal_fixture_auth_changed",
+    );
+    return users[0].id;
+  };
+  state = {
+    ...state,
+    customerAuthUserId: await recoverPortalAuthUserId(
+      PORTAL_CUSTOMER_EMAIL,
+      "customer",
+      state.customerAuthUserId,
+    ),
+    businessAuthUserId: await recoverPortalAuthUserId(
+      PORTAL_BUSINESS_EMAIL,
+      "business",
+      state.businessAuthUserId,
+    ),
+    reviewerAuthUserId: await recoverPortalAuthUserId(
+      PORTAL_REVIEWER_EMAIL,
+      "reviewer",
+      state.reviewerAuthUserId,
+    ),
+  };
+  if (
+    UUID_PATTERN.test(state.reviewerAuthUserId) &&
+    !UUID_PATTERN.test(state.reviewerWorkforceIdentityId)
+  ) {
+    const discoveredIdentityId = await psql(
+      config.dbUrl,
+      `begin read only;
+      select coalesce((
+        select id::text from public.app_workforce_identities
+        where auth_user_id=${quote(state.reviewerAuthUserId)}
+        order by created_at,id limit 1
+      ),'');
+      rollback;`,
+    );
+    assert(
+      discoveredIdentityId === "" || UUID_PATTERN.test(discoveredIdentityId),
+      "portal_reviewer_identity_discovery_invalid",
+    );
+    state = {
+      ...state,
+      reviewerWorkforceIdentityId: discoveredIdentityId,
+    };
+  }
+  await cleanupState(
+    config,
+    service,
+    reviewerFixtureState(state),
+    () => proveDedicatedAdminWriteTarget(config),
+    true,
+  );
+  await proveDedicatedAdminWriteTarget(config);
+  const customerAuthIds = [
+    state.customerAuthUserId,
+    state.businessAuthUserId,
+  ].filter((value) => UUID_PATTERN.test(value));
+  const customerIds = [
+    state.customerCustomerId,
+    state.businessCustomerId,
+  ].filter((value) => UUID_PATTERN.test(value));
+  const identityIds = [
+    state.customerIdentityId,
+    state.businessIdentityId,
+  ].filter((value) => UUID_PATTERN.test(value));
+  const dossierIds = [
+    state.customerDossierId,
+    state.businessDossierId,
+  ].filter((value) => UUID_PATTERN.test(value));
+  const caseIds = [state.customerCaseId, state.businessCaseId].filter((value) =>
+    UUID_PATTERN.test(value)
+  );
+  const uuidList = (values: string[]) =>
+    values.length ? values.map(quote).join(",") : "null::uuid";
+  await psql(
+    config.dbUrl,
+    `begin;
+    set local session_replication_role=replica;
+    delete from public.app_customer_access_grants
+     where auth_user_id in (${uuidList(customerAuthIds)})
+        or customer_id in (${uuidList(customerIds)});
+    delete from public.app_cases
+     where id in (${uuidList(caseIds)});
+    delete from public.app_customer_dossiers
+     where id in (${uuidList(dossierIds)});
+    delete from public.app_customer_identities
+     where id in (${uuidList(identityIds)});
+    delete from public.app_customers
+     where id in (${uuidList(customerIds)});
+    commit;`,
+  );
+  for (const userId of customerAuthIds) {
+    await proveDedicatedAdminWriteTarget(config);
+    const deleted = await service.auth.admin.deleteUser(userId);
+    assert(!deleted.error, "portal_fixture_auth_cleanup_failed");
+  }
+  const portalResidue = Number(
+    await psql(
+      config.dbUrl,
+      `begin read only;
+      select
+        (select count(*) from auth.users
+         where id in (${uuidList(customerAuthIds)})) +
+        (select count(*) from public.app_customer_access_grants
+         where auth_user_id in (${uuidList(customerAuthIds)})
+            or customer_id in (${uuidList(customerIds)})) +
+        (select count(*) from public.app_cases
+         where id in (${uuidList(caseIds)})) +
+        (select count(*) from public.app_customer_dossiers
+         where id in (${uuidList(dossierIds)})) +
+        (select count(*) from public.app_customer_identities
+         where id in (${uuidList(identityIds)})) +
+        (select count(*) from public.app_customers
+         where id in (${uuidList(customerIds)}));
+      rollback;`,
+    ),
+  );
+  const workforceResidue = await fixtureResidue(
+    config,
+    reviewerFixtureState(state),
+  );
+  assert(
+    portalResidue === 0 && workforceResidue === 0,
+    "portal_fixture_cleanup_residue",
+  );
+  await Deno.remove(PORTAL_AUTHORITY_DIRECTORY, { recursive: true });
+  console.log("PORTAL_AUTHORITY_FIXTURE_CLEANUP=PASS");
+  console.log(`FIXTURE_ID=${PORTAL_AUTHORITY_FIXTURE_ID}`);
+}
+
 if (import.meta.main) {
   assert(
     Deno.env.get("ENVAL_ALLOW_LOCAL_UI01B_FIXTURE_WRITES") === "YES",
@@ -1238,9 +2004,13 @@ if (import.meta.main) {
       await setupDedicatedAdmin();
     } else if (operation === "admin-cleanup" && fixtureId === undefined) {
       await cleanupDedicatedAdmin();
+    } else if (operation === "portal-setup" && fixtureId === undefined) {
+      await setupPortalAuthority();
+    } else if (operation === "portal-cleanup" && fixtureId === undefined) {
+      await cleanupPortalAuthority();
     } else {
       throw new FixtureError(
-        "usage: setup | cleanup <fixture-id> | admin-setup | admin-cleanup",
+        "usage: setup | cleanup <fixture-id> | admin-setup | admin-cleanup | portal-setup | portal-cleanup",
       );
     }
   } catch (error) {

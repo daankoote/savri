@@ -222,22 +222,24 @@ const zeroBootstrap = await post(
   proofKey("zero-bootstrap"),
 );
 assert(
-  zeroBootstrap.status === 200 && zeroBootstrap.body?.ok === true &&
-    zeroBootstrap.body.binding_status === "unbound_no_cases" &&
+  zeroBootstrap.status === 403 && zeroBootstrap.body?.ok === false &&
+    zeroBootstrap.body.binding_status === "denied" &&
+    zeroBootstrap.body.code === "portal_context_not_authorized" &&
+    Array.isArray(zeroBootstrap.body.portal_contexts) &&
+    zeroBootstrap.body.portal_contexts.length === 0 &&
     Array.isArray(zeroBootstrap.body.dossiers) &&
     zeroBootstrap.body.dossiers.length === 0,
-  "zero_case_bootstrap_failed",
+  "auth_only_portal_denial_failed",
 );
-marker("Q115_ZERO_CASE_BOOTSTRAP_SUCCESS");
+marker("Q115_AUTH_ONLY_PORTAL_DENIED");
 
 const decodedZero = decodeAuthBootstrapResponse(zeroBootstrap.body);
 assert(
-  decodedZero.ok &&
-    decodedZero.summary.binding_status === "unbound_no_cases" &&
-    decodedZero.summary.dossiers.length === 0,
-  "production_decoder_rejected_zero_case",
+  !decodedZero.ok && decodedZero.bindingStatus === "denied" &&
+    decodedZero.error.code === "portal_context_not_authorized",
+  "production_decoder_rejected_portal_denial",
 );
-marker("Q116_ZERO_CASE_BROWSER_CONTRACT_ACCEPTED");
+marker("Q116_PORTAL_DENIAL_BROWSER_CONTRACT_ACCEPTED");
 
 const activeDashboardSource = await sourceText(
   "app/src/features/dashboard/ActivePrivateDashboard.tsx",
@@ -246,14 +248,14 @@ const sidebarSource = await sourceText(
   "app/src/features/dashboard/DashboardSidebar.tsx",
 );
 assert(
-  activeDashboardSource.includes("<p>0 dossiers</p>") &&
-    sidebarSource.includes("auth.summary.dossiers.length"),
-  "zero_case_count_ui_missing",
+  !activeDashboardSource.includes("<p>0 dossiers</p>") &&
+    sidebarSource.includes("auth.summary.dossiers.length") &&
+    activeDashboardSource.includes("portalContextLabel"),
+  "portal_authority_ui_projection_missing",
 );
-marker("Q117_ZERO_CASE_PORTAL_COUNT_ZERO");
+marker("Q117_PORTAL_AUTHORITY_UI_PROJECTED");
 assert(
-  activeDashboardSource.includes("Nieuwe aanvraag") &&
-    sidebarSource.includes('navigate("/aanmelden")'),
+  sidebarSource.includes('navigate("/aanmelden")'),
   "zero_case_new_application_missing",
 );
 marker("Q118_ZERO_CASE_NEW_APPLICATION_AVAILABLE");
@@ -653,15 +655,16 @@ const edgeSource = await sourceText(
 const blockedDecoded = decodeAuthBootstrapResponse({
   ok: false,
   mode: "auth_bootstrap_browser",
-  schema_version: "auth_bootstrap_browser_v2",
+  schema_version: "auth_bootstrap_browser_v3",
   authenticated: true,
   binding_status: "blocked",
+  portal_contexts: [],
   dossiers: [],
   code: "customer_identity_binding_ambiguous",
 });
 assert(
   !blockedDecoded.ok && blockedDecoded.bindingStatus === "blocked" &&
-    edgeSource.includes('code !== "customer_identity_not_found"') &&
+    edgeSource.includes('code !== "portal_context_not_authorized"') &&
     edgeSource.includes('"customer_identity_binding_ambiguous"'),
   "blocked_semantics_not_conflict_only",
 );
@@ -709,9 +712,9 @@ marker("Q142_NO_EMAIL_SPOOF_CLAIM");
 marker("Q149_EMAIL_SPOOF_DENIED");
 
 assert(
-  zeroBootstrap.body?.schema_version === "auth_bootstrap_browser_v2" &&
-    firstBootstrap.body?.schema_version === "auth_bootstrap_browser_v2" &&
-    decodedZero.ok && decodedFirst.ok && decodedSecond.ok,
+  zeroBootstrap.body?.schema_version === "auth_bootstrap_browser_v3" &&
+    firstBootstrap.body?.schema_version === "auth_bootstrap_browser_v3" &&
+    !decodedZero.ok && decodedFirst.ok && decodedSecond.ok,
   "live_edge_decoder_schema_parity_failed",
 );
 marker("Q143_STABLE_BOOTSTRAP_SCHEMA_PARITY");

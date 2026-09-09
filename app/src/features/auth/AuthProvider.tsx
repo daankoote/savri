@@ -111,7 +111,6 @@ export function AuthProvider({
       return readyResult(null);
     }
 
-    setStatus("authenticated_unbound");
     setStatus("bootstrapping");
 
     const idempotencyKey = createIdempotencyKey();

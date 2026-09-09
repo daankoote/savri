@@ -72,6 +72,7 @@ export async function runAuthSessionCleanupProof(): Promise<
     "invalid_credentials",
     "password_mismatch",
     "password_too_short",
+    "portal_context_not_authorized",
   ];
 
   for (const code of terminalCodes) {
@@ -85,10 +86,10 @@ export async function runAuthSessionCleanupProof(): Promise<
     );
   }
 
-  const returnedError = safeAuthError("customer_identity_not_found");
+  const returnedError = safeAuthError("portal_context_not_authorized");
   assert(
-    returnedError.message.includes("ENVAL-aanmelding"),
-    "current attempt must keep safe terminal message available",
+    returnedError.message.includes("geen toegang"),
+    "portal denial must keep a safe message available without ending the session",
   );
 
   let fetchCount = 0;

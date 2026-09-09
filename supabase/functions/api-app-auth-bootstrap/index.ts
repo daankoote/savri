@@ -32,15 +32,19 @@ type BootstrapRpcResponse = {
   identity_id?: unknown;
   identity_status?: unknown;
   binding_status?: unknown;
+  portal_contexts?: unknown;
   dossiers?: unknown;
   payload_hash?: unknown;
   replayed?: unknown;
 };
 
+type BrowserPortalContext = "customer" | "business";
+
 type BrowserDossierSummary = {
   dossier_id: string;
   dossier_number: string | null;
   account_type: "particulier" | "zakelijk" | "vve";
+  portal_context: BrowserPortalContext;
   status: string;
   case_id: string;
   case_reference: string;
@@ -49,34 +53,38 @@ type BrowserDossierSummary = {
 type BrowserBootstrapResponse = {
   ok: true;
   mode: "auth_bootstrap_browser";
-  schema_version: "auth_bootstrap_browser_v2";
+  schema_version: "auth_bootstrap_browser_v3";
   authenticated: true;
-  binding_status: "bound" | "unbound_no_cases";
+  binding_status: "bound";
+  portal_contexts: BrowserPortalContext[];
   dossiers: BrowserDossierSummary[];
 };
 
 type BrowserBlockedResponse = {
   ok: false;
   mode: "auth_bootstrap_browser";
-  schema_version: "auth_bootstrap_browser_v2";
+  schema_version: "auth_bootstrap_browser_v3";
   authenticated: true;
-  binding_status: "blocked";
+  binding_status: "denied" | "blocked";
+  portal_contexts: [];
   dossiers: [];
   code:
+    | "portal_context_not_authorized"
     | "customer_identity_already_bound"
     | "customer_identity_binding_ambiguous"
     | "customer_inactive";
 };
 
 const MODE = "auth_bootstrap_browser";
-const SCHEMA_VERSION = "auth_bootstrap_browser_v2";
-const IDEMPOTENCY_SCOPE_PREFIX = "api-app-auth-bootstrap:v3";
+const SCHEMA_VERSION = "auth_bootstrap_browser_v3";
+const IDEMPOTENCY_SCOPE_PREFIX = "api-app-auth-bootstrap:v4";
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CASE_REFERENCE_RE =
   /^CASE-(?:[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 const SHA256_RE = /^[0-9a-f]{64}$/i;
 const ACCOUNT_TYPES = new Set(["particulier", "zakelijk", "vve"]);
+const PORTAL_CONTEXTS = new Set(["customer", "business"]);
 
 function appSupabaseClient() {
   const url = Deno.env.get("SUPABASE_URL");
@@ -123,27 +131,33 @@ async function parseEmptyJsonBody(
 
 function normalizeDossierSummaries(
   value: unknown,
-  allowEmpty = false,
 ): BrowserDossierSummary[] | null {
-  if (!Array.isArray(value) || (!allowEmpty && value.length < 1)) return null;
+  if (!Array.isArray(value) || value.length < 1) return null;
   const dossiers = value.map((item): BrowserDossierSummary | null => {
     if (!isRecord(item)) return null;
     const dossierId = getString(item.dossier_id);
     const caseId = getString(item.case_id);
     const caseReference = getString(item.case_reference);
     const accountType = getString(item.account_type);
+    const portalContext = getString(item.portal_context);
     const status = getString(item.status);
     if (
       !isUuid(dossierId) || !isUuid(caseId) ||
       !ACCOUNT_TYPES.has(accountType) || !status ||
+      !PORTAL_CONTEXTS.has(portalContext) ||
+      (accountType === "particulier"
+        ? portalContext !== "customer"
+        : portalContext !== "business") ||
       !CASE_REFERENCE_RE.test(caseReference) ||
       (dossierId === getString(item.case_id) ||
           caseReference === `CASE-${dossierId}`) !== true
     ) return null;
     return {
       dossier_id: dossierId,
-      dossier_number: getString(item.dossier_number) || null,
+      dossier_number: getString(item.dossier_number) ||
+        `D-${dossierId.slice(0, 8)}`,
       account_type: accountType as BrowserDossierSummary["account_type"],
+      portal_context: portalContext as BrowserPortalContext,
       status,
       case_id: caseId,
       case_reference: caseReference,
@@ -153,17 +167,35 @@ function normalizeDossierSummaries(
   return dossiers as BrowserDossierSummary[];
 }
 
+function normalizePortalContexts(
+  value: unknown,
+): BrowserPortalContext[] | null {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 2) {
+    return null;
+  }
+  const contexts = value.map(getString);
+  if (
+    contexts.some((context) => !PORTAL_CONTEXTS.has(context)) ||
+    new Set(contexts).size !== contexts.length
+  ) return null;
+  return contexts as BrowserPortalContext[];
+}
+
 function adaptSuccessBody(
   body: BootstrapRpcResponse,
 ): BrowserBootstrapResponse | null {
   const dossiers = normalizeDossierSummaries(body.dossiers);
+  const portalContexts = normalizePortalContexts(body.portal_contexts);
   if (
     body.ok !== true ||
     getString(body.request_id).length === 0 ||
     !isUuid(body.customer_id) || !isUuid(body.identity_id) ||
     body.identity_status !== "active" || body.binding_status !== "bound" ||
     !isSha256(body.payload_hash) || typeof body.replayed !== "boolean" ||
-    dossiers === null
+    dossiers === null || portalContexts === null ||
+    portalContexts.length !==
+      new Set(dossiers.map((dossier) => dossier.portal_context)).size ||
+    dossiers.some((dossier) => !portalContexts.includes(dossier.portal_context))
   ) return null;
 
   return {
@@ -172,27 +204,29 @@ function adaptSuccessBody(
     schema_version: SCHEMA_VERSION,
     authenticated: true,
     binding_status: "bound",
+    portal_contexts: portalContexts,
     dossiers: dossiers as BrowserDossierSummary[],
   };
 }
 
-function adaptUnboundBody(
+function adaptDeniedBody(
   body: BootstrapRpcResponse,
-): BrowserBootstrapResponse | null {
+): BrowserBlockedResponse | null {
   const code = getString(body.code);
   if (
     body.ok !== false ||
-    (code !== "customer_identity_not_found" &&
-      code !== "customer_dossier_not_found")
+    code !== "portal_context_not_authorized"
   ) return null;
 
   return {
-    ok: true,
+    ok: false,
     mode: MODE,
     schema_version: SCHEMA_VERSION,
     authenticated: true,
-    binding_status: "unbound_no_cases",
+    binding_status: "denied",
+    portal_contexts: [],
     dossiers: [],
+    code: "portal_context_not_authorized",
   };
 }
 
@@ -215,6 +249,7 @@ function adaptBlockedBody(
     schema_version: SCHEMA_VERSION,
     authenticated: true,
     binding_status: "blocked",
+    portal_contexts: [],
     dossiers: [],
     code: code as BrowserBlockedResponse["code"],
   };
@@ -333,7 +368,7 @@ serve(async (req) => {
     );
   }
 
-  const { data, error } = await SB.rpc("app_bootstrap_customer_auth_v6", {
+  const { data, error } = await SB.rpc("app_bootstrap_customer_auth_v7", {
     p_auth_user_id: verifiedAuth.context.authUserId,
     p_email_normalized: verifiedAuth.context.emailNormalized,
     p_actor_ref: actorRef,
@@ -357,8 +392,10 @@ serve(async (req) => {
 
   const body = data as BootstrapRpcResponse;
   if (body.ok !== true) {
-    const unboundBody = adaptUnboundBody(body);
-    if (unboundBody) return appJsonResponse(req, 200, unboundBody);
+    const deniedBody = adaptDeniedBody(body);
+    if (deniedBody) {
+      return appJsonResponse(req, statusFromRpcBody(body), deniedBody);
+    }
 
     const blockedBody = adaptBlockedBody(body);
     if (blockedBody) {

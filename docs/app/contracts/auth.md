@@ -1051,10 +1051,11 @@ CURRENT PROVEN — LOCAL ONLY.
 `api-app-auth-bootstrap` is the adapter between internal customer-bootstrap
 RPCs and the browser. Internal v4, v5 or later implementation selection is not
 a browser contract. A successful request returns only the versioned
-`auth_bootstrap_browser_v1` schema: authenticated/bound state plus the existing
-customer-safe accessible dossier/case summaries required to open the unified
-dashboard. Internal RPC mode, Auth/customer/identity IDs, request and audit
-metadata, payload hashes and replay details are not returned.
+`auth_bootstrap_browser_v3` schema: authenticated/bound state, the exact
+database-authorized portal-context set and customer-safe accessible
+dossier/case summaries required to open the unified dashboard. Internal RPC
+mode, Auth/customer/identity IDs, request and audit metadata, payload hashes
+and replay details are not returned.
 
 The production browser uses one runtime decoder in `authBootstrapClient.ts`.
 It accepts nullable legacy dossier numbers and case-insensitive hexadecimal
@@ -1070,23 +1071,25 @@ dashboard without dropping either case.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## 09C1C-R5 Account-First And Zero-Case Auth Contract
+## 09C1C-R7 Portal Context Authority
 
-CURRENT PROVEN — LOCAL ONLY.
+DECIDED/IMPLEMENTED — LOCAL RUNTIME PROVEN.
 
-Auth account, customer identity, customer and case are separate roots. A
-verified Supabase Auth account with no compatible `app_customer_identities`
-row and no accessible case is a legitimate `unbound_no_cases` state, not a
-generic bootstrap failure. Account creation alone creates no customer,
-business identity binding, case, party, mandate, evidence or legal acceptance.
+Auth account, customer identity, customer context, workforce identity and case
+remain separate roots. Authentication alone grants no customer, business or
+operator portal access. `app_bootstrap_customer_auth_v7` reuses explicit
+`app_customer_access_grants` and database-owned customer/account type to return
+only allowed `customer` and `business` contexts. No compatible context returns
+HTTP 403 `portal_context_not_authorized`; explicit identity/customer conflicts
+remain `blocked`. Every returned case is revalidated against its active
+customer, the requesting Auth principal's customer-context grant and exact
+customer/account-type consistency before portal classification.
 
-Because extending the strict R3 enum would break v1 decoder semantics, the
-canonical browser boundary is versioned to `auth_bootstrap_browser_v2`.
-`bound` requires one or more safe case summaries; `unbound_no_cases` requires
-an empty collection and returns HTTP 200; `blocked` is reserved for explicit
-identity/customer conflict. Internal RPC mode and internal identifiers remain
-browser-hidden. Anonymous and unverified callers do not receive zero-case
-portal access.
+The strict browser boundary is `auth_bootstrap_browser_v3`. A `bound` response
+requires one or more safe case summaries, a database-derived `portal_context`
+per summary and the exact distinct `portal_contexts` set. Internal RPC mode,
+Auth/customer/identity IDs and authority mechanics remain browser-hidden. The
+frontend may present this decision but cannot supply or widen it.
 
 Account-first and signup-first converge only after signed promotion. The
 authenticated `/aanmelden` flow reuses the canonical form, derives its
@@ -1097,10 +1100,10 @@ compatible customer/identity and creates exactly one new case per application;
 the next bootstrap binds the exact Auth user. Existing-case correction remains
 a separate intent.
 
-Local Q113-Q145 proves zero-case success, no account-creation business truth,
-real Edge-to-production-decoder parity, zero-to-one-to-two cases, isolated
-evidence, anonymous/wrong-user denial, no e-mail spoof claim, no pre-OTP
-enumeration and browser secret absence.
+Local authority proof covers Auth-only denial, customer and business positive
+contexts, customer/business denial in `/beheer`, reviewer/admin capability
+access in `/beheer`, workforce denial in the customer portal, cross-customer
+and cross-context API denial, and direct authenticated RLS/RPC denial.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 

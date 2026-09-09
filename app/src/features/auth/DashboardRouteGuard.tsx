@@ -20,7 +20,7 @@ export function DashboardRouteGuard({ children, navigate, returnTo }: DashboardR
     }
   }, [auth.status, navigate, returnTo]);
 
-  if (auth.status === "initializing" || auth.status === "authenticated_unbound" || auth.status === "bootstrapping") {
+  if (auth.status === "initializing" || auth.status === "bootstrapping") {
     return (
       <main className="page-shell">
         <section className="section">

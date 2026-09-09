@@ -161,7 +161,7 @@ const checks: Array<[string, () => void]> = [
     )],
   ["Q13", () =>
     assert(
-      authEndpoint.includes('SB.rpc("app_bootstrap_customer_auth_v6"') &&
+      authEndpoint.includes('SB.rpc("app_bootstrap_customer_auth_v7"') &&
         r6Migration.includes("app_sync_auth_customer_access_v1") &&
         v5.includes("set auth_user_id = p_auth_user_id"),
       "verified_auth_binding",

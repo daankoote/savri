@@ -468,18 +468,18 @@ Phase 5: dashboard read-only MVP
 - A new application creates a new case. Updating documents or correcting an existing case remains a separate intent.
 - Server customer/case ownership remains authoritative; the receipt and account handoff are presentation only.
 
-09C1C-R5 account-first rule:
+09C1C-R7 portal-authority rule:
 
-- Verified Auth may open the portal with zero customers/cases through
-  `unbound_no_cases`; this state is HTTP success and never creates business
-  truth merely to satisfy authorization.
-- The empty portal shows zero dossiers and starts canonical `/aanmelden`.
+- Verified Auth alone opens no portal. Customer/business access requires an
+  explicit database-owned customer access grant and accessible case.
+- The database classifies Particulier as `customer` and Zakelijk/VvE as
+  `business`; the frontend presents but does not derive this decision.
 - Authenticated e-mail is verified-session/server context, not a freely
   claimable application field.
 - Signing and OTP remain required before promotion; only promotion may create
   or reuse the compatible customer and create one new case.
-- One account may access zero, one or multiple cases. `Nieuwe aanvraag` adds a
-  new case; existing-case correction remains separate.
+- One account may access one or multiple explicitly granted cases and contexts.
+  `Nieuwe aanvraag` adds a new case; existing-case correction remains separate.
 
 09C1C-R6 multi-context rule:
 

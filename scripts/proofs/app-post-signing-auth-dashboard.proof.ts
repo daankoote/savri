@@ -916,15 +916,17 @@ async function runR2Proof(
     "dossiers",
     "mode",
     "ok",
+    "portal_contexts",
     "schema_version",
   ];
   assert(
     JSON.stringify(Object.keys(bootstrap.body || {}).sort()) ===
         JSON.stringify(canonicalTopFields) &&
       bootstrap.body?.mode === "auth_bootstrap_browser" &&
-      bootstrap.body?.schema_version === "auth_bootstrap_browser_v2" &&
+      bootstrap.body?.schema_version === "auth_bootstrap_browser_v3" &&
       bootstrap.body?.authenticated === true &&
       bootstrap.body?.binding_status === "bound" &&
+      Array.isArray(bootstrap.body?.portal_contexts) &&
       Array.isArray(bootstrap.body?.dossiers),
     "live_response_not_canonical",
   );
@@ -1307,7 +1309,7 @@ try {
   assert(
     bootstrap.status === 200 && bootstrap.body?.ok === true &&
       bootstrap.body?.mode === "auth_bootstrap_browser" &&
-      bootstrap.body?.schema_version === "auth_bootstrap_browser_v2" &&
+      bootstrap.body?.schema_version === "auth_bootstrap_browser_v3" &&
       bootstrap.body?.authenticated === true &&
       bootstrap.body?.binding_status === "bound" &&
       Array.isArray(bootstrap.body?.dossiers) &&

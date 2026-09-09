@@ -1581,9 +1581,7 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 - [x] 09C1C-R1: route authenticated `Nieuwe aanvraag` to the existing
       `/aanmelden` flow; existing-case correction/document update remains a
       separate intent.
-- [x] 09C1C-R5: treat verified Auth with no compatible customer/case as
-      `unbound_no_cases`; open a customer-safe zero-case portal without
-      creating business truth.
+- [x] 09C1C-R5: legacy zero-case portal behavior; SUPERSEDED by 09C1C-R7.
 - [x] 09C1C-R5: reuse canonical `/aanmelden` for account-first applications,
       derive authenticated e-mail from verified server context, preserve
       signing/OTP, and prove zero→one→two isolated cases in Q113-Q145.
@@ -1598,6 +1596,9 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
       authority separate; add immutable server-owned multi-context access,
       preserve distinct Particulier/Zakelijk/VvE customers and keep account
       type context-scoped.
+- [x] 09C1C-R7 IMPLEMENTED — LOCAL RUNTIME PROVEN: require database-authorized customer/business or
+      workforce/capability context for every portal; deny Auth-only and prove
+      the positive/negative local access matrix.
 - [x] 09C1C-R6: aggregate all explicitly accessible legacy/signed cases and
       invalidate only the current principal's dashboard/bootstrap cache after
       authenticated promotion; keep Zakelijk/VvE authority review incomplete.

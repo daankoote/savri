@@ -54,6 +54,32 @@ function assert(condition: unknown, label: string): void {
   if (!condition) throw new Error(label);
 }
 
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record).sort().map((key) =>
+      `${JSON.stringify(key)}:${canonicalJson(record[key])}`
+    ).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function jsonDiffPaths(left: unknown, right: unknown, path = "root"): string[] {
+  if (canonicalJson(left) === canonicalJson(right)) return [];
+  if (
+    left && right && typeof left === "object" && typeof right === "object"
+  ) {
+    const leftRecord = left as Record<string, unknown>;
+    const rightRecord = right as Record<string, unknown>;
+    return [...new Set([...Object.keys(leftRecord), ...Object.keys(rightRecord)])]
+      .flatMap((key) =>
+        jsonDiffPaths(leftRecord[key], rightRecord[key], `${path}.${key}`)
+      );
+  }
+  return [path];
+}
+
 function proofId(): string {
   return `auth-bootstrap-proof-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 }
@@ -241,6 +267,7 @@ async function createPhoneAuthUser(ctx: ProofContext): Promise<{ userId: string;
 async function createUnboundSignupFixture(
   ctx: ProofContext,
   accountType: "particulier" | "zakelijk" | "vve",
+  dossierAccountType: "particulier" | "zakelijk" | "vve" = accountType,
 ): Promise<Fixture> {
   const email = `${proofId()}-${accountType}@example.test`;
   const auth = await createAuthUser(ctx, email, true);
@@ -270,7 +297,7 @@ async function createUnboundSignupFixture(
 
   const dossier = await ctx.service.from("app_customer_dossiers").insert([{
     customer_id: customerId,
-    account_type: accountType,
+    account_type: dossierAccountType,
     status: "submitted",
     submitted_at: new Date().toISOString(),
   }]).select("id").single();
@@ -285,7 +312,7 @@ async function createUnboundSignupFixture(
     customerId,
     identityId,
     dossierId,
-    accountType,
+    accountType: dossierAccountType,
   };
 }
 
@@ -348,7 +375,7 @@ async function bootstrapSuccess(ctx: ProofContext, fixture: Fixture, key = proof
     const { data } = await ctx.service
       .from("app_idempotency_keys")
       .select("response_status,response_body")
-      .eq("scope", `api-app-auth-bootstrap:v1:auth_user:${fixture.userId}`)
+      .eq("scope", `api-app-auth-bootstrap:v4:auth_user:${fixture.userId}`)
       .eq("key", key)
       .maybeSingle();
     const responseBody = data?.response_body && typeof data.response_body === "object"
@@ -382,13 +409,15 @@ async function bootstrapSuccess(ctx: ProofContext, fixture: Fixture, key = proof
   }
   assert(res.body?.ok === true, "bootstrap expected ok true");
   assert(res.body?.mode === "auth_bootstrap_browser", "bootstrap mode mismatch");
-  assert(res.body?.schema_version === "auth_bootstrap_browser_v2", "bootstrap schema mismatch");
+  assert(res.body?.schema_version === "auth_bootstrap_browser_v3", "bootstrap schema mismatch");
   assert(res.body?.authenticated === true, "bootstrap auth state missing");
   assert(res.body?.binding_status === "bound", "bootstrap binding missing");
+  assert(Array.isArray(res.body?.portal_contexts), "bootstrap portal contexts missing");
   assert(Array.isArray(res.body?.dossiers), "bootstrap dossiers missing");
   assert(
     res.body.dossiers.some((row: any) =>
-      row?.dossier_id === fixture.dossierId && row?.account_type === fixture.accountType
+      row?.dossier_id === fixture.dossierId && row?.account_type === fixture.accountType &&
+      row?.portal_context === (fixture.accountType === "particulier" ? "customer" : "business")
     ),
     "bootstrap dossier summary mismatch",
   );
@@ -408,12 +437,12 @@ async function callDirectRpc(
   const key = proofId();
   ctx.tracker.idempotencyKeys.add(key);
   const payloadHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
-  const { data, error } = await ctx.service.rpc("app_bootstrap_customer_auth_v1", {
+  const { data, error } = await ctx.service.rpc("app_bootstrap_customer_auth_v7", {
     p_auth_user_id: authUserId,
     p_email_normalized: emailNormalized,
     p_actor_ref: `supabase_auth_user:${authUserId}`,
     p_request_id: proofId(),
-    p_idempotency_scope: `api-app-auth-bootstrap:v1:auth_user:${authUserId}`,
+    p_idempotency_scope: `api-app-auth-bootstrap:v4:auth_user:${authUserId}`,
     p_idempotency_key: key,
     p_payload_hash: payloadHash,
     p_ip_hash: null,
@@ -619,7 +648,7 @@ async function main() {
       const auth = await createAuthUser(ctx, email, true);
       if (!auth.token) throw new Error("auth_token_missing");
       const res = await postBootstrap(ctx, auth.token, proofId());
-      expectCode(res, 404, "customer_identity_not_found");
+      expectCode(res, 403, "portal_context_not_authorized");
     });
 
     let primarySuccess: HttpResult | null = null;
@@ -642,20 +671,47 @@ async function main() {
     await runCase(ctx, "B12 Response returns customer and dossier summary", async () => {
       assert(primarySuccess?.body?.authenticated === true, "authenticated state missing");
       assert(primarySuccess?.body?.binding_status === "bound", "binding state missing");
+      assert(
+        JSON.stringify(primarySuccess?.body?.portal_contexts) === JSON.stringify(["customer"]),
+        "customer portal decision missing",
+      );
       assert(Array.isArray(primarySuccess?.body?.dossiers), "dossiers missing");
     });
 
     await runCase(ctx, "B13 Particulier dossier returns correct account type", async () => {
       const row = primarySuccess?.body?.dossiers?.find((item: any) => item.dossier_id === primary.dossierId);
       assert(row?.account_type === "particulier", "particulier account type missing");
+      assert(row?.portal_context === "customer", "customer portal context missing");
     });
 
     const business = await createUnboundSignupFixture(ctx, "zakelijk");
     fixtures.push(business);
-    await runCase(ctx, "B14 Zakelijk dossier returns correct account type", async () => {
+    const secondBusinessDossier = await ctx.service.from("app_customer_dossiers").insert([{
+      customer_id: business.customerId,
+      account_type: "zakelijk",
+      status: "submitted",
+      submitted_at: new Date().toISOString(),
+    }]).select("id").single();
+    if (secondBusinessDossier.error || !secondBusinessDossier.data?.id) {
+      throw new Error("second_business_dossier_insert_failed");
+    }
+    const secondBusinessDossierId = String(secondBusinessDossier.data.id);
+    ctx.tracker.dossierIds.add(secondBusinessDossierId);
+    await runCase(ctx, "B14 Zakelijk customer-wide grant returns both cases", async () => {
       const res = await bootstrapSuccess(ctx, business);
       const row = res.body.dossiers.find((item: any) => item.dossier_id === business.dossierId);
       assert(row?.account_type === "zakelijk", "zakelijk account type missing");
+      assert(row?.portal_context === "business", "business portal context missing");
+      assert(
+        res.body.dossiers.some((item: any) =>
+          item.dossier_id === secondBusinessDossierId && item.portal_context === "business"
+        ),
+        "second business case missing from customer-wide grant",
+      );
+      assert(
+        JSON.stringify(res.body.portal_contexts) === JSON.stringify(["business"]),
+        "business portal decision missing",
+      );
     });
 
     const vve = await createUnboundSignupFixture(ctx, "vve");
@@ -664,12 +720,27 @@ async function main() {
       const res = await bootstrapSuccess(ctx, vve);
       const row = res.body.dossiers.find((item: any) => item.dossier_id === vve.dossierId);
       assert(row?.account_type === "vve", "vve account type missing");
+      assert(row?.portal_context === "business", "vve business portal context missing");
+    });
+
+    const mismatchedAccountType = await createUnboundSignupFixture(
+      ctx,
+      "zakelijk",
+      "vve",
+    );
+    fixtures.push(mismatchedAccountType);
+    await runCase(ctx, "B15A Customer/dossier account type mismatch denies", async () => {
+      const res = await postBootstrap(ctx, mismatchedAccountType.token, proofId());
+      expectCode(res, 403, "portal_context_not_authorized");
     });
 
     await runCase(ctx, "B16 Same key/same payload replays", async () => {
       const replay = await postBootstrap(ctx, primary.token, primaryKey);
       assert(replay.status === 200, `expected 200 got ${replay.status}`);
-      assert(JSON.stringify(replay.body) === JSON.stringify(primarySuccess?.body), "replay browser contract mismatch");
+      assert(
+        canonicalJson(replay.body) === canonicalJson(primarySuccess?.body),
+        `replay browser contract mismatch:${jsonDiffPaths(replay.body, primarySuccess?.body).join(",")}`,
+      );
     });
 
     await runCase(ctx, "B17 Same key/different payload conflicts", async () => {
@@ -765,7 +836,7 @@ async function main() {
       ctx.tracker.identityIds.add(String(identity.data.id));
 
       const res = await postBootstrap(ctx, auth.token, proofId());
-      expectCode(res, 404, "customer_identity_not_found");
+      expectCode(res, 403, "portal_context_not_authorized");
     });
 
     await runCase(ctx, "B22 Inactive customer rejects", async () => {
@@ -826,7 +897,7 @@ async function main() {
 
     await runCase(ctx, "B25 Public/anon/authenticated cannot execute RPC", async () => {
       const anon = createClient(ctx.supabaseUrl, ctx.anonKey, { auth: { persistSession: false } });
-      const anonResult = await anon.rpc("app_bootstrap_customer_auth_v1", {
+      const anonResult = await anon.rpc("app_bootstrap_customer_auth_v7", {
         p_auth_user_id: primary.userId,
         p_email_normalized: primary.email,
         p_actor_ref: `supabase_auth_user:${primary.userId}`,
@@ -844,7 +915,7 @@ async function main() {
         auth: { persistSession: false },
         global: { headers: { Authorization: `Bearer ${primary.token}` } },
       });
-      const authedResult = await authed.rpc("app_bootstrap_customer_auth_v1", {
+      const authedResult = await authed.rpc("app_bootstrap_customer_auth_v7", {
         p_auth_user_id: primary.userId,
         p_email_normalized: primary.email,
         p_actor_ref: `supabase_auth_user:${primary.userId}`,

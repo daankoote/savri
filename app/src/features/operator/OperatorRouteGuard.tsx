@@ -74,7 +74,6 @@ export function OperatorRouteGuard({
 
   if (
     auth.status === "initializing" ||
-    auth.status === "authenticated_unbound" ||
     auth.status === "bootstrapping" ||
     (auth.status === "ready" && operator.state.status === "loading")
   ) {

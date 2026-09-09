@@ -12,6 +12,7 @@ const errorMessages: Record<AuthSafeErrorCode, string> = {
   customer_identity_binding_ambiguous: "Deze koppeling vraagt om handmatige controle. Neem contact op met ENVAL.",
   customer_inactive: "Dit account is niet beschikbaar. Neem contact op met ENVAL.",
   customer_dossier_not_found: "We konden geen gekoppeld ENVAL-dossier vinden. Neem contact op met ENVAL.",
+  portal_context_not_authorized: "Dit account heeft geen toegang tot dit portaal.",
   service_unavailable: "Inloggen is tijdelijk niet beschikbaar. Probeer het opnieuw.",
   invalid_response: "Inloggen is tijdelijk niet beschikbaar. Probeer het opnieuw.",
   unknown: "Inloggen is tijdelijk niet beschikbaar. Probeer het opnieuw.",
@@ -54,6 +55,7 @@ export function mapBootstrapErrorCode(code: string): AuthSafeError {
   if (code === "customer_identity_binding_ambiguous") return safeAuthError("customer_identity_binding_ambiguous");
   if (code === "customer_inactive") return safeAuthError("customer_inactive");
   if (code === "customer_dossier_not_found") return safeAuthError("customer_dossier_not_found");
+  if (code === "portal_context_not_authorized") return safeAuthError("portal_context_not_authorized");
   if (code === "service_unavailable") return safeAuthError("service_unavailable");
 
   return safeAuthError("invalid_response");

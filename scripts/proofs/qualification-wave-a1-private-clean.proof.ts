@@ -396,7 +396,12 @@ try {
   ids.add(customer.userId);
   authUsers.add(customer.userId);
   const zeroBootstrap = await post(config, "api-app-auth-bootstrap", customer.token, `${prefix}-zero-bootstrap`, {});
-  assert(zeroBootstrap.status === 200 && zeroBootstrap.body.binding_status === "unbound_no_cases", "private_account_zero_case_failed");
+  assert(
+    zeroBootstrap.status === 403 &&
+      zeroBootstrap.body.binding_status === "denied" &&
+      zeroBootstrap.body.code === "portal_context_not_authorized",
+    "private_account_without_portal_binding_not_denied",
+  );
 
   const start = await post(config, "api-app-signup-intake-start", customer.token, `${prefix}-start`, {
     account_type: "particulier",

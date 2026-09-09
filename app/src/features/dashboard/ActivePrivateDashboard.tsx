@@ -45,7 +45,6 @@ type ActivePrivateDashboardProps = {
   dossierOptions: AuthDossierSummary[];
   onSelectDossier: (dossierId: string) => void;
   onRefreshSelectedDossier: () => Promise<boolean>;
-  onStartNewApplication: () => void;
   selectedDossierId: string | null;
 };
 
@@ -56,7 +55,6 @@ export function ActivePrivateDashboard({
   dossierOptions,
   onSelectDossier,
   onRefreshSelectedDossier,
-  onStartNewApplication,
   selectedDossierId,
 }: ActivePrivateDashboardProps) {
   const [selectedChargerId, setSelectedChargerId] = useState<string | null>(
@@ -70,37 +68,14 @@ export function ActivePrivateDashboard({
     dossierOptions.find((dossier) =>
       dossier.dossier_id === selectedDossierId
     ) ?? null;
+  const selectedAuthorization = dossierOptions.find((dossier) =>
+    dossier.dossier_id === selectedDossierId
+  ) ?? null;
   const hasPublishedCorrection = correctionHandoff.status === "ready" &&
     correctionHandoff.model.handoff !== null;
   const chargerRows = useMemo(() => (model ? buildPortalChargers(model) : []), [
     model,
   ]);
-
-  if (dossierOptions.length === 0) {
-    return (
-      <div className="portal-content-stack">
-        <header className="portal-content-header">
-          <div>
-            <h1>Klantportaal</h1>
-            <p>0 dossiers</p>
-          </div>
-        </header>
-        <DashboardNotice
-          action={
-            <button
-              className="button button-primary"
-              onClick={onStartNewApplication}
-              type="button"
-            >
-              Nieuwe aanvraag
-            </button>
-          }
-          note="Je geverifieerde account is klaar. Start je eerste aanvraag wanneer het jou uitkomt."
-          title="Nog geen dossiers"
-        />
-      </div>
-    );
-  }
 
   function toggleCharger(chargerId: string) {
     setSelectedChargerId((
@@ -119,7 +94,7 @@ export function ActivePrivateDashboard({
     <div className="portal-content-stack">
       <header className="portal-content-header">
         <div>
-          <h1>Actief</h1>
+          <h1>{portalContextLabel(selectedAuthorization?.portal_context)}</h1>
           <p>
             {selectedDossier
               ? dossierLabel(selectedDossier, hasPublishedCorrection)
@@ -807,6 +782,14 @@ function accountTypeLabel(
   if (accountType === "zakelijk") return "Zakelijk";
   if (accountType === "vve") return "VVE";
   return "Particulier";
+}
+
+function portalContextLabel(
+  portalContext: AuthDossierSummary["portal_context"] | undefined,
+): string {
+  if (portalContext === "business") return "Bedrijfsportaal";
+  if (portalContext === "customer") return "Klantportaal";
+  return "Portaal";
 }
 
 function dossierLabel(

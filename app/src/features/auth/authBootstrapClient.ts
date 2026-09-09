@@ -14,7 +14,7 @@ export type AuthBootstrapResult =
     ok: false;
     error: AuthSafeError;
     status?: number;
-    bindingStatus?: "blocked";
+    bindingStatus?: "denied" | "blocked";
   };
 
 type UnknownJsonObject = Record<string, unknown>;
@@ -24,13 +24,14 @@ const UUID_RE =
 const CASE_REFERENCE_RE =
   /^CASE-(?:[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 const MODE = "auth_bootstrap_browser";
-const SCHEMA_VERSION = "auth_bootstrap_browser_v2";
+const SCHEMA_VERSION = "auth_bootstrap_browser_v3";
 const SUCCESS_FIELDS = [
   "authenticated",
   "binding_status",
   "dossiers",
   "mode",
   "ok",
+  "portal_contexts",
   "schema_version",
 ] as const;
 const DOSSIER_FIELDS = [
@@ -39,6 +40,7 @@ const DOSSIER_FIELDS = [
   "case_reference",
   "dossier_id",
   "dossier_number",
+  "portal_context",
   "status",
 ] as const;
 const BLOCKED_FIELDS = [
@@ -48,6 +50,7 @@ const BLOCKED_FIELDS = [
   "dossiers",
   "mode",
   "ok",
+  "portal_contexts",
   "schema_version",
 ] as const;
 
@@ -78,6 +81,12 @@ function isAccountType(
   return value === "particulier" || value === "zakelijk" || value === "vve";
 }
 
+function isPortalContext(
+  value: string,
+): value is AuthBootstrapSummary["portal_contexts"][number] {
+  return value === "customer" || value === "business";
+}
+
 function nullableStringField(
   body: UnknownJsonObject,
   key: string,
@@ -87,17 +96,21 @@ function nullableStringField(
   return body[key].trim() || null;
 }
 
-function parseDossiers(
-  value: unknown,
-  allowEmpty = false,
-): AuthBootstrapSummary["dossiers"] | null {
+function parseDossiers(value: unknown): AuthBootstrapSummary["dossiers"] | null {
   if (!Array.isArray(value)) return null;
 
   const dossiers = value.map((item) => {
     if (!isRecord(item) || !hasExactFields(item, DOSSIER_FIELDS)) return null;
 
     const accountType = stringField(item, "account_type");
+    const portalContext = stringField(item, "portal_context");
     if (!isAccountType(accountType)) return null;
+    if (
+      !isPortalContext(portalContext) ||
+      (accountType === "particulier"
+        ? portalContext !== "customer"
+        : portalContext !== "business")
+    ) return null;
 
     const dossierId = stringField(item, "dossier_id");
     const caseId = stringField(item, "case_id");
@@ -117,17 +130,28 @@ function parseDossiers(
       dossier_id: dossierId,
       dossier_number: dossierNumber,
       account_type: accountType,
+      portal_context: portalContext,
       status: stringField(item, "status"),
       case_id: caseId,
       case_reference: caseReference,
     };
   });
 
-  if ((!allowEmpty && !dossiers.length) || dossiers.some((item) => !item)) {
+  if (!dossiers.length || dossiers.some((item) => !item)) {
     return null;
   }
 
   return dossiers as AuthBootstrapSummary["dossiers"];
+}
+
+function parsePortalContexts(value: unknown): AuthBootstrapSummary["portal_contexts"] | null {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 2) return null;
+  const contexts = value.map((item) => typeof item === "string" ? item.trim() : "");
+  if (
+    contexts.some((context) => !isPortalContext(context)) ||
+    new Set(contexts).size !== contexts.length
+  ) return null;
+  return contexts as AuthBootstrapSummary["portal_contexts"];
 }
 
 export function decodeAuthBootstrapResponse(
@@ -137,13 +161,20 @@ export function decodeAuthBootstrapResponse(
     isRecord(body) && hasExactFields(body, BLOCKED_FIELDS) &&
     body.ok === false && body.mode === MODE &&
     body.schema_version === SCHEMA_VERSION && body.authenticated === true &&
-    body.binding_status === "blocked" && Array.isArray(body.dossiers) &&
-    body.dossiers.length === 0
+    ["denied", "blocked"].includes(stringField(body, "binding_status")) &&
+    Array.isArray(body.portal_contexts) && body.portal_contexts.length === 0 &&
+    Array.isArray(body.dossiers) && body.dossiers.length === 0 &&
+    ((body.binding_status === "denied" && stringField(body, "code") === "portal_context_not_authorized") ||
+      (body.binding_status === "blocked" && [
+        "customer_identity_already_bound",
+        "customer_identity_binding_ambiguous",
+        "customer_inactive",
+      ].includes(stringField(body, "code"))))
   ) {
     return {
       ok: false,
       error: mapBootstrapErrorCode(stringField(body, "code")),
-      bindingStatus: "blocked",
+      bindingStatus: stringField(body, "binding_status") as "denied" | "blocked",
     };
   }
 
@@ -151,17 +182,14 @@ export function decodeAuthBootstrapResponse(
     return { ok: false, error: safeAuthError("invalid_response") };
   }
   const bindingStatus = stringField(body, "binding_status");
-  const dossiers = parseDossiers(
-    body.dossiers,
-    bindingStatus === "unbound_no_cases",
-  );
+  const dossiers = parseDossiers(body.dossiers);
+  const portalContexts = parsePortalContexts(body.portal_contexts);
 
   const summary: AuthBootstrapSummary = {
     schema_version: SCHEMA_VERSION,
     authenticated: true,
-    binding_status: bindingStatus === "unbound_no_cases"
-      ? "unbound_no_cases"
-      : "bound",
+    binding_status: "bound",
+    portal_contexts: portalContexts ?? [],
     dossiers: dossiers ?? [],
   };
 
@@ -170,9 +198,9 @@ export function decodeAuthBootstrapResponse(
     body.mode !== MODE ||
     body.schema_version !== SCHEMA_VERSION ||
     body.authenticated !== true ||
-    !["bound", "unbound_no_cases"].includes(bindingStatus) || !dossiers ||
-    (bindingStatus === "bound" && dossiers.length === 0) ||
-    (bindingStatus === "unbound_no_cases" && dossiers.length !== 0)
+    bindingStatus !== "bound" || !dossiers || !portalContexts ||
+    portalContexts.length !== new Set(dossiers.map((dossier) => dossier.portal_context)).size ||
+    dossiers.some((dossier) => !portalContexts.includes(dossier.portal_context))
   ) {
     return { ok: false, error: safeAuthError("invalid_response") };
   }
@@ -235,7 +263,7 @@ export async function bootstrapAppCustomerAuth({
 
   const decoded = decodeAuthBootstrapResponse(parsed.body);
   if (!response.ok) {
-    if (!decoded.ok && decoded.bindingStatus === "blocked") {
+    if (!decoded.ok && decoded.bindingStatus) {
       return { ...decoded, status: response.status };
     }
     return {

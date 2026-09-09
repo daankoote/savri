@@ -540,16 +540,15 @@ Signed-intake and promotion lifecycle:
   immutable signed intake inside the promotion transaction. This is never an
   e-mail-only merge, never overwrites current profile truth, and never marks
   identity, organization or representation authority verified.
-- 09C1C-R3 introduced browser Auth boundary
-  `auth_bootstrap_browser_v1`; 09C1C-R5 supersedes that browser schema with
-  `auth_bootstrap_browser_v2`. Edge still hides internal v4/v5 selection, while
-  the strict browser contract now distinguishes `bound`,
-  `unbound_no_cases` and real-conflict `blocked` states.
-- A verified Supabase Auth account may exist without an ENVAL customer or case.
-  `unbound_no_cases` opens a zero-case portal and creates no customer,
-  identity binding, case, party, mandate, evidence or legal acceptance.
-  `Nieuwe aanvraag` reuses canonical `/aanmelden`; authenticated e-mail is
-  server-derived and signing plus `typed_name_otp_v1` remain mandatory.
+- 09C1C-R7 is IMPLEMENTED — LOCAL RUNTIME PROVEN and supersedes the R5 browser boundary with
+  `auth_bootstrap_browser_v3`. Verified Supabase Auth proves authentication but
+  grants no portal access. The database returns only explicitly granted
+  `customer` and `business` contexts through `app_customer_access_grants` and
+  database-owned account type; no compatible context returns
+  `portal_context_not_authorized`. The frontend strictly decodes and presents
+  this decision and never derives access from e-mail, route or account type.
+  Case/customer lineage, active customer, principal customer-context grant and
+  customer/account-type consistency are revalidated fail-closed.
 - 09C1C-R5-R1 stores one immutable intake-specific verified Auth anchor at
   authenticated intake start without persisting the bearer or raw e-mail.
   The first signed zero-case application creates/binds exactly one compatible
@@ -565,6 +564,20 @@ Signed-intake and promotion lifecycle:
   Zakelijk/VvE access does not complete authority review. After authenticated
   promotion, the current principal's dashboard/bootstrap cache is invalidated
   before navigation so the first dashboard read uses current server truth.
+
+Portal authority matrix (DECIDED/IMPLEMENTED — LOCAL RUNTIME PROVEN):
+
+| Identity/context | Customer portal | Business portal | `/beheer` |
+| --- | --- | --- | --- |
+| Auth only | deny | deny | deny |
+| Explicit Particulier customer grant | allow own context | deny | deny |
+| Explicit Zakelijk/VvE customer grant | deny | allow own context | deny |
+| Workforce reviewer | deny without customer grant | deny without customer grant | allow only effective capabilities and tenant scope |
+| Workforce admin | deny without customer grant | deny without customer grant | allow only effective capabilities and tenant scope |
+
+Direct authenticated table/RPC access remains denied by RLS and grants.
+Customer and case endpoints additionally enforce the Auth principal's explicit
+customer grants and return not-found/forbidden for another customer or context.
 - 09C1C-R4 preserves signed customer-declared charger fields, exact signed
   charger/location linkage and document classification in immutable case-owned
   review-input records. Dashboard titles use source-authored document

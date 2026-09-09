@@ -645,7 +645,7 @@ try {
   await runCase(ctx, "R28_auth_bootstrap_regression_green", async () => {
     const source = await Deno.readTextFile("supabase/functions/api-app-auth-bootstrap/index.ts");
     assert(
-      source.includes('SB.rpc("app_bootstrap_customer_auth_v6"') &&
+      source.includes('SB.rpc("app_bootstrap_customer_auth_v7"') &&
         (await Deno.stat("scripts/proofs/api-app-auth-bootstrap.proof.ts")).isFile,
       "bootstrap_regression_gate_missing",
     );

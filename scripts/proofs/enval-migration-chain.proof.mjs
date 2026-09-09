@@ -340,6 +340,9 @@ try {
         and grantee in ('anon','authenticated') and privilege_type in ('INSERT','UPDATE','DELETE','TRUNCATE'))
     and not has_table_privilege('service_role','public.app_customer_access_grants','INSERT')
     and has_table_privilege('service_role','public.app_customer_access_grants','SELECT')
+    and has_function_privilege('service_role','public.app_bootstrap_customer_auth_v7(uuid,text,text,text,text,text,text,text,text,text)','EXECUTE')
+    and not has_function_privilege('anon','public.app_bootstrap_customer_auth_v7(uuid,text,text,text,text,text,text,text,text,text)','EXECUTE')
+    and not has_function_privilege('authenticated','public.app_bootstrap_customer_auth_v7(uuid,text,text,text,text,text,text,text,text,text)','EXECUTE')
     and not has_table_privilege('service_role','public.app_workforce_identities','INSERT')
     and not has_table_privilege('service_role','public.app_evidence_review_decisions','INSERT')
     and has_table_privilege('service_role','public.app_evidence_review_decisions','SELECT')
@@ -386,6 +389,7 @@ try {
     to_regclass('public.app_customers') is not null
     and to_regclass('public.app_cases') is not null
     and to_regclass('public.app_customer_access_grants') is not null
+    and to_regprocedure('public.app_bootstrap_customer_auth_v7(uuid,text,text,text,text,text,text,text,text,text)') is not null
     and to_regclass('public.app_signup_signing_challenges') is not null
     and to_regclass('public.app_signup_signing_presentation_receipts') is not null
     and to_regclass('public.app_signup_signing_presentation_acceptances') is not null

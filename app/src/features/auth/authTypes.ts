@@ -6,7 +6,6 @@ export type AuthAudience = "customer" | "operator";
 export type AuthStatus =
   | "initializing"
   | "signed_out"
-  | "authenticated_unbound"
   | "bootstrapping"
   | "ready"
   | "error";
@@ -15,15 +14,17 @@ export type AuthDossierSummary = {
   dossier_id: string;
   dossier_number: string | null;
   account_type: "particulier" | "zakelijk" | "vve";
+  portal_context: "customer" | "business";
   status: string;
   case_id: string;
   case_reference: string;
 };
 
 export type AuthBootstrapSummary = {
-  schema_version: "auth_bootstrap_browser_v2";
+  schema_version: "auth_bootstrap_browser_v3";
   authenticated: true;
-  binding_status: "bound" | "unbound_no_cases";
+  binding_status: "bound";
+  portal_contexts: Array<"customer" | "business">;
   dossiers: AuthDossierSummary[];
 };
 
@@ -39,6 +40,7 @@ export type AuthSafeErrorCode =
   | "customer_identity_binding_ambiguous"
   | "customer_inactive"
   | "customer_dossier_not_found"
+  | "portal_context_not_authorized"
   | "service_unavailable"
   | "invalid_response"
   | "unknown";

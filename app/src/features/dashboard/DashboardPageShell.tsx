@@ -6,8 +6,6 @@ import { DashboardSidebar } from "./DashboardSidebar";
 import { useDashboardRead } from "./useDashboardRead";
 import { useCustomerCorrectionHandoff } from "./useCustomerCorrectionHandoff";
 import type { AppNavigate } from "../../routes/types";
-import { clearSignupIntakeSession } from "../signup/signupIntakeCapabilityStore";
-import { clearSignupSubmissionReceipt } from "../signup/signupSubmissionReceiptStore";
 import { SurfaceShell } from "../../shared/components/SurfaceShell";
 
 type PortalSection = "active" | "contact";
@@ -45,12 +43,6 @@ export function DashboardPageShell({ navigate }: { navigate: AppNavigate }) {
     correctionHandoff.model.handoff !== null;
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const previousActionableWorkflow = useRef(false);
-
-  function startNewApplication() {
-    clearSignupIntakeSession();
-    clearSignupSubmissionReceipt();
-    navigate("/aanmelden");
-  }
 
   useEffect(() => {
     if (!selectedDossierExists) {
@@ -103,7 +95,6 @@ export function DashboardPageShell({ navigate }: { navigate: AppNavigate }) {
               dossierOptions={dossierOptions}
               onSelectDossier={setSelectedDossierId}
               onRefreshSelectedDossier={dashboardRead.refreshSelectedDossier}
-              onStartNewApplication={startNewApplication}
               selectedDossierId={effectiveDossierId}
             />
           )

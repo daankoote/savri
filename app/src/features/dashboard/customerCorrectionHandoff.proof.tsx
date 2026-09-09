@@ -236,10 +236,9 @@ function renderDashboard(correctionHandoff: CustomerCorrectionHandoffState) {
       accessToken="proof-token"
       correctionHandoff={correctionHandoff}
       dashboardRead={dashboardRead}
-      dossierOptions={[dossier()]}
+      dossierOptions={[{ ...dossier(), portal_context: "customer" }]}
       onRefreshSelectedDossier={async () => true}
       onSelectDossier={() => undefined}
-      onStartNewApplication={() => undefined}
       selectedDossierId={DOSSIER_A}
     />,
   );
