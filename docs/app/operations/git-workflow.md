@@ -87,14 +87,18 @@ writes remain fail closed.
 
 ## External worktree preview
 
-Persistent previews are controlled from Main -> Terminal with the canonical
-Setup-owned tool and one approved workspace:
+Persistent previews are controlled from the approved Beheer worktree with its
+canonical checked-in tool and one approved workspace:
 
 ~~~text
-/usr/local/bin/node ../enval-worktrees/setup/scripts/tools/enval-preview.mjs start Beheer
-/usr/local/bin/node ../enval-worktrees/setup/scripts/tools/enval-preview.mjs status Beheer
-/usr/local/bin/node ../enval-worktrees/setup/scripts/tools/enval-preview.mjs stop Beheer
+/usr/local/bin/node scripts/tools/enval-preview.mjs start Beheer
+/usr/local/bin/node scripts/tools/enval-preview.mjs status Beheer
+/usr/local/bin/node scripts/tools/enval-preview.mjs stop Beheer
 ~~~
+
+Run these commands from the approved Beheer worktree root. A preview tool from
+another worktree is a different executable authority and must not inspect or
+control the Beheer preview process.
 
 The tool requires Node 22+ and snapshots the registered worktree below
 `/private/tmp/enval-runtime/ENVAL/repositories/<repository-id>/worktrees/<worktree-id>/preview/beheer`.
