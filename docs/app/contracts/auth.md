@@ -200,7 +200,12 @@ The CURRENT `typed_name_otp_v1` finalization:
 - does not approve documents, evidence, eligibility, ERE result, or fees;
 - does not replace backend validation, audit, idempotency, or server-side promotion checks.
 
-The former separate one-time email-verification promotion link is `SUPERSEDED`. No browser link, receipt, safe reference, OTP or consumed intake capability authorizes promotion. A later Supabase Auth verification/login email is an account-access step only and does not repeat signing or trigger promotion.
+The former separate one-time email-verification promotion link is `SUPERSEDED`.
+No browser link, receipt, safe reference, OTP or consumed intake capability
+authorizes promotion. Signing v3 instead requires a server-validated Auth actor
+before presentation, challenge and finalization. Password recovery and
+verification-email resend remain separate Auth UX and do not repeat or recover
+signing or trigger promotion.
 
 `api-app-signup-promote` is not a customer API. It requires a service-role bearer and a separately configured internal secret; the service-role local fallback is accepted only when the existing helper detects a loopback Supabase runtime. Production without the internal secret fails closed. Its body accepts only the internal intake reference, so browser-controlled Storage paths, buckets, hashes or evidence identifiers cannot cross the authorization boundary.
 
@@ -218,31 +223,45 @@ Current local customer identity after promotion:
 - `customers`: ENVAL customer record.
 - `customer_identities`: links a customer to Supabase Auth user ID, verified email, phone if later used, and identity metadata.
 - A customer can have multiple `app_cases` over time.
-- Promotion creates or safely reuses an active identity row with `auth_user_id=null`; verified Supabase Auth later binds that exact identity.
+- Current signing v3 requires a server-validated Supabase Auth actor before
+  presentation, challenge and finalization. Promotion creates or safely reuses
+  the active identity for that exact actor.
 - `app_cases` is the target service owner; promotion does not create a parallel `app_customer_dossiers` core.
 
 Identity rules:
 
 - Normalized email is not enough as auth truth.
-- Verified Supabase Auth user ID is the durable login identity after v5 binding.
+- Verified Supabase Auth user ID is the durable login identity and the current
+  signing-v3 actor before presentation.
 - Customer records must not be created repeatedly on duplicate/retried signup submit.
 
 ### Login And Recovery
 
 Recommended login flow:
 
-1. Customer completes `typed_name_otp_v1`; signing finalization proves bounded email control but creates no Auth session.
-2. Internal server promotion creates or matches customer/identity and creates the case atomically.
-3. A post-commit outbox sends the normal Supabase Auth dashboard-access route.
-4. Supabase Auth verifies/signs in the user; narrow ENVAL auth bootstrap binds the existing identity and reuses customer/party/case.
-5. Dashboard reads a case-owned projection through app-specific Edge Functions.
+1. Supabase Auth verifies/signs in the customer before the signing-v3
+   presentation is requested.
+2. The server validates the same Auth actor and matching immutable intake
+   provenance before presentation, challenge and finalization.
+3. `typed_name_otp_v1` separately proves the signing act and bounded control of
+   its e-mail channel; it creates no Auth session or portal authority.
+4. Internal server promotion creates or safely reuses the customer/identity and
+   case for that same Auth actor atomically.
+5. Narrow ENVAL Auth bootstrap reuses that promoted customer/party/case and the
+   dashboard reads its case-owned projection.
 
 Recovery:
 
-- Recovery starts with email.
-- Responses must avoid user/dossier enumeration.
-- Recovery may issue a new dashboard magic link.
-- Recovery must audit attempts without storing raw secrets.
+- 09C1C-R8 post-finalization account recovery is `CANCELLED / SUPERSEDED`.
+- After finalization, recovery is limited to idempotent status/promotion retry
+  for the same already-authenticated actor.
+- Legacy/unbound v2 must remain fail-closed and must not be attached
+  retrospectively to an account or access grant through e-mail or a safe
+  receipt reference. The retained post-signing Auth-claim/bind runtime route is
+  a known implementation residue, not canonical authority or accepted proof.
+- Password recovery and verification-email resend are separate Auth UX. They
+  must avoid account/dossier enumeration and grant no signing recovery,
+  customer binding or portal authority.
 
 ### Session Model
 
@@ -1008,13 +1027,16 @@ same customer. Legacy-only customers retain v4 activation; a mixed customer
 runs that activation idempotently before the union when lineage is still
 missing. No item is merged by e-mail, name or address.
 
-After consumed signing OTP and finalization, the service-role-only handoff
-projection returns `existing_account_login_required`,
-`account_activation_available`, `already_authenticated` or `blocked`. It is
-access guidance only, not ownership proof. No pre-OTP response exposes account
-existence. An authenticated session is accepted only after the server verifies
-the Auth user and exact controlled e-mail; wrong-user and ambiguity paths fail
-closed.
+Signing v3 accepts only the same server-validated Auth actor and matching intake
+provenance before presentation, challenge and finalization. After finalization,
+the service-role-only projection may perform only idempotent status/promotion
+retry for that already-authenticated actor. Retained
+`existing_account_login_required` and `account_activation_available`
+discriminators are legacy compatibility, not an active account-recovery or
+authority path. Legacy/unbound v2 cannot be bound retrospectively through
+e-mail or a safe receipt reference under the current canon. The retained
+post-signing Auth-claim/bind runtime route remains a separate implementation
+gap and cannot establish accepted authority.
 Signing OTP, safe reference and receipt are never account credentials or claim
 authority. Production Auth URLs, redirects, email delivery and browser
 acceptance remain OPEN.
@@ -1036,10 +1058,10 @@ e-mail-only ownership or legal-identity evidence.
 
 No Auth user, identity or customer is created for this convergence path. The
 existing binding remains unchanged. Before the missing profile converges,
-handoff fails closed. After successful promotion it returns
-`existing_account_login_required` without a session and
-`already_authenticated` only for the exact verified existing Auth user.
-Handoff remains UX/access guidance and grants no customer, case, party or
+handoff fails closed. Signing v3 requires the exact verified existing Auth user
+before presentation; after successful promotion its active handoff is only
+`already_authenticated`. The retained `existing_account_login_required`
+discriminator is legacy compatibility and grants no customer, case, party or
 representation authority.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

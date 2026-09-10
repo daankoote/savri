@@ -26,11 +26,13 @@ dossier or case.
 
 SL01-C adds a server-resolved immutable presentation receipt bound to the
 tenant, verified Auth actor, intake and exact selected signing-material/legal
-provenance. Merely presenting the documents is not acceptance. Explicit
-durable acceptance of the exact receipt precedes and binds the OTP challenge;
-the browser neither selects provenance nor falls back to static/global legal
-material. Canonical signing sources omit `not_found` and blank parser
-observations while retaining valid `found` nonblank observations.
+provenance. The server validates that same Auth actor and immutable intake
+provenance before presentation, challenge and finalization. Merely presenting
+the documents is not acceptance. Explicit durable acceptance of the exact
+receipt precedes and binds the OTP challenge; the browser neither selects
+provenance nor falls back to static/global legal material. Canonical signing
+sources omit `not_found` and blank parser observations while retaining valid
+`found` nonblank observations.
 
 The receipt-bound path finalizes through the transactional v3 database
 authority. It persists receipt M1 in immutable snapshot v2 with tenant, Auth
@@ -38,6 +40,10 @@ actor, configuration/material, legal-document revision/hash/effective-date,
 acceptance, challenge and OTP provenance. Equivalent concurrent requests create
 one submission, exact replay returns the same immutable result without M2
 re-resolution, and stale, mismatching or legacy/unbound requests fail closed.
+Canon forbids attaching a legacy/unbound v2 intake retrospectively to an
+account or access grant through e-mail or a safe receipt reference. The
+retained post-signing Auth-claim/bind runtime route is a known implementation
+residue, not accepted authority.
 
 Signup quarantine and authenticated correction keep separate lifecycle-specific
 transport/authorization lanes, but their customer document presentation and
@@ -566,28 +572,42 @@ Final submit must be idempotent and audit-worthy. It must not depend on hidden b
 
 Status: CURRENT PROVEN — LOCAL ONLY through the 09C1C customer boundary. Exact contract: `docs/app/contracts/intake-verification-promotion.md`.
 
-Future public intake should move toward:
+The current converged intake is:
 
-1. Customer completes public form, parser-assisted review, quarantine documents and legal/signing actions.
-2. `typed_name_otp_v1` proves signing intent and control of the used email channel and atomically finalizes the intake.
-3. The active status `submitted_for_review` means finalized/locked and awaiting the resolved tenant's authorized internal review; it has no external-verifier meaning.
-4. A server-only caller prepares durable private file copies and invokes one idempotent promotion transaction.
-5. Promotion safely creates/reuses customer, identity and parties, creates one `app_cases` root, asserted case roles, declared location observations/links, durable evidence versions and internal-review state. Anonymous intake leaves the identity unbound; verified Auth provenance binds the compatible identity to the already proven Auth subject inside that same transaction.
-6. Promotion never creates an `app_customer_dossiers` core, authority truth, accepted EAN/location/MID/evidence or external-verifier state.
-7. Supabase Auth remains separate from signing OTP. A verified account may
-   already exist and safely show a zero-case portal. Its server-validated
-   intake start stores immutable, intake-specific Auth provenance without a
-   raw token; successful promotion binds exactly one identity atomically and
-   the already-authenticated handoff routes directly to the existing portal.
-8. Later correctable issues expose only targeted server-authorized correction actions.
+1. Customer may complete the public form, parser-assisted review and quarantine
+   document transport before authentication.
+2. Before signing presentation, Supabase Auth verifies the customer; the server
+   binds immutable intake-specific provenance and revalidates the same actor for
+   presentation, challenge and finalization.
+3. `typed_name_otp_v1` separately proves signing intent and control of the used
+   e-mail channel and signing v3 atomically finalizes the intake.
+4. The active status `submitted_for_review` means finalized/locked and awaiting
+   the resolved tenant's authorized internal review; it has no external-verifier
+   meaning.
+5. A server-only caller prepares durable private file copies and invokes one
+   idempotent promotion transaction for the same Auth actor.
+6. Promotion safely creates/reuses customer, identity and parties, creates one
+   `app_cases` root, asserted case roles, declared location observations/links,
+   durable evidence versions and internal-review state.
+7. Promotion never creates an `app_customer_dossiers` core, authority truth,
+   accepted EAN/location/MID/evidence or external-verifier state.
+8. Later correctable issues expose only targeted server-authorized correction
+   actions.
 
 Account-first does not introduce a second intake. Authenticated
 `Nieuwe aanvraag` uses this same flow. The verified Auth e-mail is the
 authoritative account-contact e-mail, is not freely editable in the application
 form and is re-derived server-side at intake start. `app_signup_quarantine_start_v2`
 adds no customer/case truth; it records only the intake-specific Auth subject,
-verified-at timestamp and e-mail hash. Anonymous intake retains its existing
-pre-OTP anti-enumeration boundary.
+verified-at timestamp and e-mail hash. Anonymous collection retains its existing
+anti-enumeration boundary but cannot proceed to signing-v3 presentation.
+
+09C1C-R8 post-finalization account recovery is `CANCELLED / SUPERSEDED`.
+Post-finalization recovery is only idempotent status/promotion retry for the
+same already-authenticated actor. Password recovery and verification-email
+resend remain separate Auth UX and grant no signing or portal authority. The
+retained post-signing Auth-claim/bind runtime residue does not reopen R8 and
+must fail closed before that legacy path can be accepted.
 
 Parser/precheck may warn, block locally, or prefill. It may not approve evidence, lock lifecycle state, or replace backend validation.
 

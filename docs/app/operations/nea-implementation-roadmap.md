@@ -28,9 +28,9 @@ first tenant, willingness to pay, SaaS pricing, SLA, provider availability and
 controller/processor allocation remain UNKNOWN. The current ENVAL portal is
 the reference/default tenant journey only.
 
-Signup lane note: PILOT-SIGNUP-QUARANTINE-UPLOAD-09B1 is CURRENT PROVEN — LOCAL ONLY for collecting intake, capability-scoped private upload, server byte/hash confirmation, immutable replacement and document-first gating. It is transport proof, not regulatory/evidence acceptance. 09B2 signing finalization is now CURRENT PROVEN locally within its explicit legal/runtime gates; internal promotion/dashboard projection remains 09C. Remote, deploy and production remain open.
+Signup lane note: PILOT-SIGNUP-QUARANTINE-UPLOAD-09B1 is CURRENT PROVEN — LOCAL ONLY for collecting intake, capability-scoped private upload, server byte/hash confirmation, immutable replacement and document-first gating. It is transport proof, not regulatory/evidence acceptance. Signing v3, internal promotion/dashboard projection and the R7 portal-authority browser boundary are CURRENT PROVEN locally within their explicit gates. Remote, deploy and production remain open.
 
-Signup convergence note: 09B2 signing finalization, lock, receipt and status recovery are CURRENT PROVEN locally. `typed_name_otp_v1` already supplies bounded email control, so the former separate email-verification promotion trigger is `SUPERSEDED`. 09C1A service-only case-owned database/RPC promotion is CURRENT PROVEN locally and is never external inboekverificatie; Storage/Edge/Auth/dashboard integration remains TARGET.
+Signup convergence note: signing-v3 finalization, lock, receipt and status recovery are CURRENT PROVEN locally. The same server-validated Auth actor and immutable intake provenance are required before presentation, challenge and finalization. `typed_name_otp_v1` separately supplies bounded e-mail control, so the former separate email-verification promotion trigger is `SUPERSEDED`. 09C1A/B/C promotion, Auth/dashboard convergence and R7 are CURRENT PROVEN locally and are never external inboekverificatie. 09C1C-R8 post-finalization account recovery is `CANCELLED / SUPERSEDED`.
 
 Current bounded status: WP3N's caller/bridge proof remains green. WP3P commit
 `4a5d219` adds the database-authoritative nine-capability policy foundation,
@@ -1161,11 +1161,12 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
 09C1A DATABASE/RPC FOUNDATION, 09C1B SERVER-ONLY STORAGE/EDGE ORCHESTRATION AND 09C1C CUSTOMER HANDOFF CURRENT PROVEN — LOCAL ONLY.
 
-- CURRENT flow is mapped from intake start through quarantine, challenge,
-  OTP/email control, atomic signing finalization, locked refresh recovery and
-  the waiting intake state.
+- CURRENT flow is mapped from intake start through quarantine, server-validated
+  Auth binding, presentation, challenge, OTP/e-mail control, atomic signing-v3
+  finalization, locked refresh recovery and the waiting intake state.
 - Separate one-time email-verification as promotion trigger is `SUPERSEDED`;
-  later Supabase Auth email is login/account access only.
+  password recovery and verification-email resend are separate Auth UX, not
+  signing recovery or promotion authority.
 - `submitted_for_review` is the single active finalized/locked customer/runtime
   status with no verifier meaning; receipt v2 preserves immutable versioning.
 - 09C1A uses `app_cases` as the sole core owner and creates no new
@@ -1191,12 +1192,22 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 - Declared/parser EAN, charger, MID and document facts remain source material;
   promotion creates no accepted connection, `aangeslotene`, location, asset,
   conformity or evidence-decision truth.
-- Signing OTP creates no Supabase Auth session. 09C1C uses the existing account
-  route; verified Supabase Auth v5 binds the existing promoted identity and
-  dashboard-get safely projects its `app_cases` truth without a dossier row.
+- Signing OTP creates no Supabase Auth session. Signing v3 requires the same
+  server-validated Auth actor and intake provenance before presentation,
+  challenge and finalization. 09C1C binds or reuses that actor's compatible
+  promoted identity, and dashboard-get safely projects its `app_cases` truth
+  without a dossier row.
 - Finalize and bounded status hydration attempt promotion server-side with one
   deterministic idempotency key. Transient failure leaves signing valid and
-  requires no re-sign; the browser receives no promotion secret or authority.
+  requires no re-sign; retry is restricted to the same already-authenticated
+  actor and the browser receives no promotion secret or authority.
+- 09C1C-R8 post-finalization account recovery is `CANCELLED / SUPERSEDED`.
+  Canon requires legacy/unbound v2 to remain fail-closed and forbids
+  retrospective account/access binding through e-mail or a safe receipt
+  reference. The retained post-signing Auth-claim/bind runtime route is a known
+  implementation residue, not accepted CURRENT authority, and must be closed
+  separately. R7 and existing valid same-tab/status recovery retain their
+  current status.
 - External verifier risk analysis, sampling, location visits, mandate check,
   findings, statement, five-year verification dossier and REV result remain a
   separate external boundary.

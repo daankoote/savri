@@ -39,11 +39,11 @@ Only current source/schema/proof establishes this matrix.
 | 1. intake start | first required document upload causes the signup upload client to ensure an intake session | `api-app-signup-intake-start` / `app_signup_quarantine_start_v2` | one `app_signup_intakes` row, one hashed `intake_manage` capability and, only for verified Auth, one immutable `app_signup_authenticated_intake_provenance` row | raw management capability exists only in same-tab `sessionStorage`; verified Auth JWT is validated server-side, e-mail is derived server-side and no token is persisted | `signup_intake_collecting_started`; request/idempotency and hashed request metadata; typed Auth provenance contains subject, verified-at and e-mail hash only | intake `collecting`; no customer, identity or case |
 | 2. quarantine upload issue | customer selects a required PDF | `api-app-signup-upload-url` / `app_signup_quarantine_issue_v1` | immutable intake-file revision with server-chosen private bucket/path plus one hashed file-scoped upload capability | valid unconsumed `intake_manage`; returned upload capability is narrow and one-file scoped | `signup_quarantine_upload_issued` | file `upload_issued` |
 | 3. upload confirm | browser uploads to the signed private URL and asks the server to confirm | `api-app-signup-upload-confirm` / `app_signup_quarantine_confirm_v1` | server downloads bytes, validates MIME/size/hash, consumes upload capability and records `confirmed_quarantine` or rejection | file-scoped upload capability; no dossier or evidence authority | `signup_quarantine_upload_confirmed` or `signup_quarantine_upload_rejected` | confirmed quarantine transport only; not accepted evidence |
-| 4. signing challenge | customer requests the six-digit code after Step 3 readiness | `api-app-signup-signing-challenge` / `app_signup_signing_challenge_issue_v1` | one delivered, expiring `typed_name_otp_v1` challenge; older active challenge is replaced | valid `intake_manage`; server binds challenge to a hashed normalized-email channel | `signup_signing_challenge_issued` plus delivery audit | intake remains `collecting`; no signature yet |
-| 5. OTP/email-control proof | customer submits the delivered OTP together with typed signer input | no independent verification endpoint; proof is evaluated inside finalize | delivered challenge, channel hash, OTP verifier, expiry and attempts are checked atomically | OTP plus the matching intake/challenge/capability proves control of the used email channel for this signing act | failed attempts stay bounded; successful proof becomes part of signature evidence | no standalone account, Auth session, authority or external-verification state |
-| 6. signing finalization | customer confirms the canonical facts, legal actions, one mandate year and typed signature | `api-app-signup-signing-finalize` / `app_signup_signing_finalize_v2` followed by bounded server-owned promotion | exactly one immutable signing snapshot, three legal acceptances, one mandate and one signature-evidence row; challenge and management capability consumed; `finalized_at` set | capability ownership plus delivered OTP challenge; verified Auth is a separate optional account anchor | exactly one `signup_signing_finalized` event | database status `submitted_for_review`; signing remains valid if later promotion/binding must retry |
-| 7. finalized refresh/status | same-tab page bootstraps through the existing intake session; receipt is presentation cache only | `api-app-signup-signing-finalize` with `operation=status` / `app_signup_signing_status_v2` | server rechecks finalization; a verified matching bearer may append the narrowly labeled recovery provenance for an older signed intake; promotion retries are bounded and idempotent | hashed `intake_manage` proves scoped status ownership; verified Auth JWT is validated independently; wrong Auth subject fails closed | immutable Auth recovery provenance only when needed; no second intake or signing act | server returns `finalized`, `locked`, safe reference, `promotion_state` and `account_handoff` |
-| 8. post-signing handoff | customer sees the confirmation while promotion is pending | server prepares durable bytes and calls `app_promote_signed_signup_v3`, which runs context-scoped v1 promotion plus Auth access synchronization in one transaction | zero-case verified Auth creates exactly one compatible customer, one bound identity and one `app_cases` root; later account types create separate contexts and explicit access without customer merge | receipt, safe reference, OTP, e-mail equality and capability grant no promotion/access rights by themselves; the browser receives no internal secret | safe Edge stages plus immutable promotion/lifecycle/Auth-access provenance | pending stays temporary with bounded retry; activation/login paths remain; `promoted` + `already_authenticated` clears current-principal dashboard/bootstrap cache before `/dashboard` |
+| 4. signing presentation | authenticated customer requests the server-resolved legal/signing presentation | `api-app-signup-signing-presentation` / presentation-receipt authority | immutable receipt M1 binds tenant, verified Auth actor, intake and exact selected signing provenance | server validates the Auth bearer, matching verified e-mail and immutable intake-specific Auth provenance before resolving signing material | presentation issuance is request-correlated; presentation alone is not acceptance | intake remains `collecting`; no challenge or signature yet |
+| 5. signing challenge | the same authenticated customer accepts M1 and requests the six-digit code | `api-app-signup-signing-challenge` / `app_signup_signing_challenge_issue_v1` | one delivered, expiring `typed_name_otp_v1` challenge bound to accepted M1; older active challenge is replaced | server revalidates the same Auth actor and intake provenance; challenge is bound to the normalized-email channel | `signup_signing_challenge_issued` plus delivery audit | intake remains `collecting`; no signature yet |
+| 6. OTP/email-control proof and finalization | the same authenticated customer submits OTP and typed signer input | `api-app-signup-signing-finalize` / `app_signup_signing_finalize_v3` followed by bounded server-owned promotion | one immutable snapshot v2, legal acceptances, mandate and signature evidence; challenge and management capability consumed; `finalized_at` set | server revalidates the same Auth actor and provenance; OTP separately proves control of the signing e-mail channel | failed attempts stay bounded; exactly one successful `signup_signing_finalized` event | database status `submitted_for_review`; signing remains valid if promotion must retry |
+| 7. finalized refresh/status | same-tab page bootstraps through the existing intake session and verified Auth session | `api-app-signup-signing-finalize` with `operation=status` / `app_signup_signing_status_v2` | for active signing v3, server rechecks finalization and promotion retry is bounded/idempotent; retained runtime residue can still append `verified_auth_recovery_after_signing` for an older finalized intake | active signing v3 validates the same already-authenticated actor; the legacy claim/bind residue is not canonical authority and must fail closed before acceptance | active v3 creates no second intake, signing act or Auth provenance; retained legacy recovery provenance is an implementation gap | server still returns `account_handoff` legacy discriminators; they are non-authoritative compatibility fields |
+| 8. post-signing handoff | authenticated customer sees confirmation while promotion is pending | server prepares durable bytes and calls `app_promote_signed_signup_v3`, which runs context-scoped v1 promotion plus Auth access synchronization in one transaction | the verified Auth actor creates or reuses exactly one compatible customer, one bound identity and one `app_cases` root; later account types create separate contexts and explicit access without customer merge | receipt, safe reference, OTP, e-mail equality and capability grant no promotion/access rights by themselves; the browser receives no internal secret | safe Edge stages plus immutable promotion/lifecycle/Auth-access provenance | pending stays temporary with bounded retry; `promoted` + `already_authenticated` clears current-principal dashboard/bootstrap cache before `/dashboard` |
 
 CURRENT proof also establishes that signing itself creates no `app_customers`, `app_customer_identities`, `app_customer_dossiers` or `app_cases` row. Only the separate service-only 09C1A promotion transaction may create/reuse the first three target families, and it never creates `app_customer_dossiers`.
 
@@ -63,8 +63,12 @@ The consequences are exact:
 
 - successful `typed_name_otp_v1` finalization is sufficient email-control input for promotion;
 - promotion is server-driven and never authorized by a second browser link;
-- a later Supabase Auth access/verification email is an account-login step, not a promotion trigger and not a second signing/email-control proof;
-- signing email control is not a Supabase Auth session and grants no dashboard access by itself.
+- the server-validated Supabase Auth actor exists before signing-v3 presentation,
+  challenge and finalization;
+- signing e-mail control is not a Supabase Auth session and grants no dashboard
+  access by itself;
+- password recovery and verification-email resend remain separate Auth UX and
+  never recover signing or authorize promotion.
 
 Historical changelog evidence is retained. Active target text must not reintroduce the superseded link.
 
@@ -131,7 +135,15 @@ finalized signed intake (`submitted_for_review`)
 -> intake `promoted`
 ```
 
-`app_promote_signed_signup_v3` preserves the v1 promotion transaction, scopes customer compatibility to the signed account type and, when immutable verified Auth provenance exists, safely binds the first compatible identity or synchronizes explicit access to a later separate context. These operations share one database transaction: a later promotion, binding or access failure rolls back newly created business truth while leaving finalized signing valid. Anonymous promotion still requires the unchanged signing and promotion lineage.
+`app_promote_signed_signup_v3` preserves the v1 promotion transaction, scopes
+customer compatibility to the signed account type and requires immutable
+verified Auth provenance to bind the first compatible identity or synchronize
+explicit access to a later separate context. These operations share one
+database transaction: a later promotion, binding or access failure rolls back
+newly created business truth while leaving finalized signing valid. Anonymous
+or legacy/unbound promotion is canonically forbidden from creating account or
+access binding. Retained claim/bind runtime residue remains a separately bounded
+implementation gap and grants no accepted authority.
 
 The Edge/worker entry point is `api-app-signup-promote`. It is an internal server caller only. The browser, receipt, safe reference, signing OTP and consumed management capability cannot call or authorize promotion.
 
@@ -163,7 +175,12 @@ Required invariants:
 - all database writes and audit/idempotency completion are one transaction;
 - rollback is transaction failure, never deletion of signing or historical truth.
 
-Customer reuse uses the unique unambiguous active normalized-email identity under an advisory lock. Zero matches creates an unbound `app_customer_identity`; one safe match reuses its `app_customer`; ambiguity or conflicting bound identity fails closed. Email matching is account routing, not legal-party identity.
+Customer reuse is anchored to the exact server-validated Auth actor and
+immutable intake provenance under an advisory lock. Normalized e-mail is only a
+compatibility predicate. Zero compatible matches creates and binds one
+`app_customer_identity` for that actor; one safe match reuses its
+`app_customer`; ambiguity or conflicting binding fails closed. E-mail matching
+is account routing, not legal-party identity.
 
 Party reuse is narrower:
 
@@ -179,7 +196,7 @@ Party reuse is narrower:
 | signed intake | update `app_signup_intakes` from `submitted_for_review` to terminal `promoted` in the promotion transaction | submitted payload, signing rows and finalized file metadata remain immutable |
 | promotion provenance | create one immutable `app_signup_promotions` row linking intake, customer, identity, primary party, case, signing snapshot, mandate, signature evidence, promoted time and request/idempotency refs | contains references/provenance, no duplicated canonical snapshot or generic domain truth |
 | customer account | safely reuse or create `app_customers` | account shell, not legal identity or authority |
-| login identity | safely reuse or create one active `app_customer_identities` row with normalized email and `auth_user_id=null` until Supabase Auth bootstrap | signing email control may be recorded as channel evidence; it is not an Auth session |
+| login identity | safely reuse or create one active `app_customer_identities` row and bind only the exact pre-signing Auth actor inside the promotion transaction | signing e-mail control may be recorded as channel evidence; it is not an Auth session and cannot bind legacy/unbound v2 later |
 | party root/profile | reuse safe current customer party or create `app_parties`; create immutable declared person/organization profile version where required | profile facts are signed declarations, not verified register/identity truth |
 | customer-party relationship | create/reuse current `account_owner`; add `contact` only for the actual signed contact when applicable | service/account relationship is not representation authority |
 | case | create one `app_cases` root directly from `signed_signup_intake` | do not create a parallel `app_customer_dossiers` row; `app_cases` is owner |
@@ -202,7 +219,7 @@ The existing dossier-owned charger/document tables and `app_connection_declarati
 
 Safe automatic records:
 
-- customer and unbound login identity;
+- customer and login identity bound to the exact pre-signing Auth actor;
 - one natural-person party and signed declared person profile;
 - `account_owner` relationship;
 - one case;
@@ -215,7 +232,7 @@ A natural person acting for themself does not need a fictitious representation-a
 
 Safe automatic records:
 
-- customer and unbound login identity;
+- customer and login identity bound to the exact pre-signing Auth actor;
 - organization party plus signed declared organization profile;
 - separate natural-person signed-contact party/profile where not already safely linked;
 - organization as asserted `service_recipient` and signed person as asserted `case_contact`;
@@ -254,15 +271,26 @@ For Zakelijk/VvE:
 
 ## 12. Auth And Dashboard Boundary
 
-Promotion creates durable account/case state but no Supabase Auth session.
+Promotion creates durable account/case state but no new Supabase Auth session.
+The verified Auth actor already exists before signing-v3 presentation:
 
-After promotion:
-
-1. the signed receipt links to the existing Supabase Auth account/login route after server-owned promotion succeeds;
-2. verified Supabase Auth later binds to the unique existing `app_customer_identity`;
-3. Auth bootstrap must reuse the promoted customer, party and case and must not create a dossier or second case;
+1. presentation, challenge and finalization revalidate the same Auth actor and
+   immutable intake provenance;
+2. promotion binds or reuses only the compatible identity for that exact actor;
+3. Auth bootstrap must reuse the promoted customer, party and case and must not
+   create a dossier or second case;
 4. dashboard reads a case-owned customer-safe projection;
-5. signing OTP, safe reference, receipt and management capability never authorize dashboard reads or mutations.
+5. signing OTP, safe reference, receipt and management capability never
+   authorize dashboard reads or mutations.
+
+09C1C-R8 post-finalization account recovery is `CANCELLED / SUPERSEDED`.
+Post-finalization recovery means only idempotent status/promotion retry for the
+same already-authenticated actor. The canonical contract requires
+legacy/unbound v2 to remain fail-closed and forbids attaching it later to an
+account or access grant through e-mail or a safe receipt reference. The retained
+post-signing Auth-claim/bind runtime route is an implementation residue, not
+accepted CURRENT authority, and must be closed in a separately authorized code
+batch.
 
 09C1C implements that case-reusing bootstrap revision and the signed-case branch of `api-app-dashboard-get`. The response retains the existing safe dashboard summary shape for renderer/cache reuse, but its compatibility selector equals the case UUID for signed cases; no dossier row exists or is created. No custom login/session architecture is introduced.
 
@@ -336,7 +364,7 @@ There is no second generic full submit in the dashboard. Later corrections are t
 5. minimized internal response and safe stage logging with request ID only; the database completion event remains authoritative business audit;
 6. Q01-Q30 local runtime proof for authorization, integrity, replay, concurrency, cleanup, source retention, non-claims and secret-free output.
 
-09C1C CURRENT PROVEN — LOCAL ONLY adds the frontend/receipt `submitted_for_review` cutover, server-owned promotion attempt after finalize and on bounded status hydration, receipt/account CTA, verified Auth binding to the existing promoted identity/customer/case, and the case-owned customer-safe dashboard projection. Promotion failure never rolls back signing; safe retry is bounded and reuses the 09C1B idempotency owner. The browser never receives promotion authority or an internal secret.
+09C1C CURRENT PROVEN — LOCAL ONLY adds the frontend/receipt `submitted_for_review` cutover, server-owned promotion attempt after finalize and on bounded status hydration for the same already-authenticated actor, verified Auth binding to the existing promoted identity/customer/case, and the case-owned customer-safe dashboard projection. Promotion failure never rolls back signing; safe retry is bounded and reuses the 09C1B idempotency owner. The browser never receives promotion authority or an internal secret.
 
 Still TARGET: production Auth/redirect acceptance, production legal and OTP delivery, operations review UI, authority/evidence acceptance, EAN/aangeslotene/MID decisions, external verifier, REV/inboeking, remote apply and deploy.
 
@@ -373,16 +401,20 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
 ## 18. 09C1C-R1 Existing-Account Convergence
 
-Promotion may reuse exactly one compatible active customer identity after the
-same e-mail channel has been controlled, including when a Supabase Auth user
-already exists. It creates no Auth user and never merges cases on e-mail,
-address, name or document content. A new signed intake remains a new
-`app_cases` root; replay/refresh creates no second case.
+Promotion may reuse exactly one compatible active customer identity for the
+same server-validated Auth actor whose immutable intake provenance was checked
+before presentation, challenge and signing-v3 finalization. It creates no Auth
+user and never merges cases on e-mail, address, name or document content. A new
+signed intake remains a new `app_cases` root; replay/refresh creates no second
+case.
 
 Incompatible customer type, inactive/multiple identities, conflicting binding
 or customer-level party/profile mismatch fail closed. Signature and OTP do not
-prove representation authority. The post-finalization account handoff is safe
-guidance only and is never emitted by the pre-OTP collecting response.
+prove representation authority. R8 post-finalization account recovery is
+cancelled/superseded: retained legacy discriminators grant no authority, and a
+legacy/unbound v2 intake must not be bound retrospectively by e-mail or safe
+receipt reference. The retained post-signing Auth-claim/bind runtime route is a
+known implementation gap and does not reopen R8.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 

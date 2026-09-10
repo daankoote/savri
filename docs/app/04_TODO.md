@@ -57,10 +57,12 @@ implementation.
 - DONE / CURRENT PROVEN LOCAL — `SL01-C`: the server-resolved immutable signing
   presentation receipt binds tenant, Auth actor, intake and selected
   signing-material/legal provenance. Presentation is not acceptance; explicit
-  persisted acceptance binds the exact receipt and OTP challenge. Ordinary
-  supersession and explicit invalidation retain their proven policy, the
-  browser cannot choose provenance, and non-observations are excluded from
-  canonical signing source serialization. Proof is local only.
+  persisted acceptance binds the exact receipt and OTP challenge. Signing v3
+  requires the same server-validated Auth actor before presentation, challenge
+  and finalization. Ordinary supersession and explicit invalidation retain
+  their proven policy, the browser cannot choose provenance, and
+  non-observations are excluded from canonical signing source serialization.
+  Proof is local only.
 
 - DONE / CURRENT PROVEN LOCAL — `TF01`: commit `034691e` propagates immutable
   server-resolved tenant execution context only after exact fixed data-plane
@@ -95,7 +97,11 @@ implementation.
   OTP provenance. The v3 authority is transactional and idempotent; concurrent
   equivalent calls create one submission, exact replay returns the same
   immutable result, and stale, mismatching, cross-owner and legacy/unbound
-  requests fail closed. Promotion remains server-owned.
+  requests fail closed. Canon forbids attaching a legacy/unbound v2 intake
+  later to an account or access grant through e-mail or a safe receipt
+  reference. Retained post-signing Auth-claim/bind runtime residue is not
+  canonical authority and remains a separately bounded implementation gap.
+  Promotion remains server-owned.
 - No further standalone horizontal tenant-config foundation is currently
   planned. Tenant #2, dynamic switching, provisioning, billing, custom domains,
   theme management and a tenant administration portal remain need-driven future
@@ -256,12 +262,12 @@ controller/processor allocation requires legal review.
 - Browser-reachable local download origin correction is locally and browser-proven.
 - Shared dashboard document card UI is locally and browser-proven.
 - Pre-auth quarantine, `typed_name_otp_v1` finalization, immutable signing evidence, finalized mutation locks, safe receipt and server-authoritative recovery are CURRENT PROVEN locally within their explicit local/legal gates.
-- Post-signing 09C1A/09C1B/09C1C through R6 are CURRENT PROVEN LOCAL for
+- Post-signing 09C1A/09C1B/09C1C through R7 are CURRENT PROVEN LOCAL for
   atomic case-owned promotion, internal private Storage/Edge orchestration,
-  verified Auth/account handoff and customer-safe multi-case dashboard
-  convergence. Remote deployment, production Auth/OTP/legal configuration and
-  browser acceptance remain open. The former separate email-verification
-  promotion trigger is `SUPERSEDED`.
+  verified Auth/account handoff, customer-safe multi-case dashboard convergence
+  and the local browser portal-authority matrix. Remote deployment and
+  production Auth/OTP/legal configuration and acceptance remain open. The
+  former separate email-verification promotion trigger is `SUPERSEDED`.
 - Gate 1 EAN and electricity connection domain objects are observed locally, not CURRENT PROVEN:
   - `app_connections`
   - `app_connection_periods`
@@ -1553,8 +1559,10 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
       automatic evidence acceptance.
 - [x] Keep declared/parser EAN, location, charger and MID facts separate from
       accepted operational truth.
-- [x] Keep signing OTP separate from Supabase Auth and require later bootstrap
-      to reuse promoted customer/party/case state.
+- [x] Keep signing OTP separate from Supabase Auth; require the same
+      server-validated Auth actor and intake provenance before signing-v3
+      presentation, challenge and finalization, and require bootstrap to reuse
+      promoted customer/party/case state.
 - [x] Map the promotion boundary to TKV mandate, EAN, location-control,
       provenance, MID, retention, correction and later verifier-pack needs.
 - [x] 09C1A: migrate stored lifecycle truth to `submitted_for_review`; add one
@@ -1567,13 +1575,12 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
       creator-only cleanup and focused local Q01-Q30 proof without schema work.
 - [x] 09C1C: version receipt semantics and remove active frontend
       `pending_verification`; orchestrate bounded server-owned promotion after
-      finalize/status; reuse `/account` and verified Supabase Auth v5 to bind
+      finalize/status; reuse the already verified Supabase Auth actor to bind
       the existing promoted identity/customer/case; project the signed case in
       the existing customer dashboard without a new `app_customer_dossiers` row.
-- [x] 09C1C-R1: classify post-finalization account handoff server-side; use
-      login for an existing account, activation for a new account and direct
-      portal access only for an exactly matching verified session. No account
-      existence is exposed before consumed signing OTP/finalization.
+- [x] 09C1C-R1 historical account-handoff classification: login/activation
+      after finalization is SUPERSEDED by the signing-v3 Auth-first boundary.
+      Retained legacy discriminators grant no account or portal authority.
 - [x] 09C1C-R1: treat account and case as separate roots; reuse the existing
       compatible identity/customer for a new application, create one new case,
       and normalize lineage-backed legacy dossiers plus signed cases without
@@ -1589,9 +1596,9 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
       keep customer/case creation out of account creation and intake start,
       and atomically create/bind the first compatible customer, identity and
       signed case for a zero-case Auth user.
-- [x] 09C1C-R5-R1: recover the retained signed account-first fixture through
-      the normal verified bearer status route; preserve activation/login paths
-      and route `promoted` + `already_authenticated` directly to `/dashboard`.
+- [x] 09C1C-R5-R1: recover the retained already-authenticated signed
+      account-first fixture through the normal verified bearer status route and
+      route `promoted` + `already_authenticated` directly to `/dashboard`.
 - [x] 09C1C-R6: keep Auth principal, customer/service context, party, case and
       authority separate; add immutable server-owned multi-context access,
       preserve distinct Particulier/Zakelijk/VvE customers and keep account
@@ -1607,10 +1614,13 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 - [ ] Post-MVP polish: visually integrate authenticated `Nieuwe aanvraag`
       inside the portal shell. Keep canonical `/aanmelden` as the single shared
       intake flow; do not build a second portal-native application flow.
-- [ ] 09C1C-R1 remaining browser acceptance: verify receipt-bound back/forward
-      recovery from the finalized signup handoff. R7 already proves login,
-      activation, authenticated portal handoff, general history restoration and
-      multi-case switching in a real browser.
+- [x] 09C1C-R8 CANCELLED / SUPERSEDED: do not add post-finalization account
+      recovery or retrospective Auth/access binding. Receipt-bound back/forward
+      recovery after finalization means only idempotent status/promotion retry
+      for the same already-authenticated actor. Existing valid same-tab/status
+      recovery remains CURRENT PROVEN; R7 browser status is unchanged. The
+      retained post-signing Auth-claim/bind runtime residue does not reopen R8;
+      it must fail closed before that legacy path can be accepted.
 - [ ] 09C1C+: production legal/OTP/Auth configuration and browser acceptance,
       operations review, authority/evidence decisions, external verifier,
       remote apply and deploy require separate authority.
