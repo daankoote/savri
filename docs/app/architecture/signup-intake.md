@@ -2,7 +2,7 @@
 
 Status: MIXED. The active document-first journey, pre-auth quarantine, the
 SL01-C server-resolved presentation/acceptance/OTP boundary, SL01-D
-receipt-provenance `typed_name_otp_v1` finalization, receipt v2, server-owned
+receipt-provenance `typed_name_otp_v1` finalization, submission receipt v4, server-owned
 promotion, verified Auth binding and case-owned customer dashboard are CURRENT
 PROVEN locally. The older direct
 `api-app-signup-submit` path remains proven source but is not the active
@@ -41,9 +41,10 @@ acceptance, challenge and OTP provenance. Equivalent concurrent requests create
 one submission, exact replay returns the same immutable result without M2
 re-resolution, and stale, mismatching or legacy/unbound requests fail closed.
 Canon forbids attaching a legacy/unbound v2 intake retrospectively to an
-account or access grant through e-mail or a safe receipt reference. The
-retained post-signing Auth-claim/bind runtime route is a known implementation
-residue, not accepted authority.
+account or access grant through e-mail or a safe receipt reference. Active
+finalize/status runtime accepts only exact immutable
+`verified_auth_at_intake_start` provenance and has no post-signing claim/bind
+path.
 
 Signup quarantine and authenticated correction keep separate lifecycle-specific
 transport/authorization lanes, but their customer document presentation and
@@ -605,9 +606,9 @@ anti-enumeration boundary but cannot proceed to signing-v3 presentation.
 09C1C-R8 post-finalization account recovery is `CANCELLED / SUPERSEDED`.
 Post-finalization recovery is only idempotent status/promotion retry for the
 same already-authenticated actor. Password recovery and verification-email
-resend remain separate Auth UX and grant no signing or portal authority. The
-retained post-signing Auth-claim/bind runtime residue does not reopen R8 and
-must fail closed before that legacy path can be accepted.
+resend remain separate Auth UX and grant no signing or portal authority.
+Legacy/unbound, missing, recovery-only or mismatching provenance fails closed;
+no retrospective claim/bind path reopens R8.
 
 Parser/precheck may warn, block locally, or prefill. It may not approve evidence, lock lifecycle state, or replace backend validation.
 

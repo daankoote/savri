@@ -51,7 +51,6 @@ const written = writeSignupSubmissionReceipt({
   safeReference,
   status: "submitted_for_review",
   promotionState: "pending",
-  accountHandoff: "existing_account_login_required",
 });
 assert(written, "safe_receipt_not_written");
 assert(sessionStorage.length === 1, "receipt_not_session_scoped");
@@ -64,12 +63,11 @@ assert(raw, "receipt_storage_value_missing");
 const parsed = JSON.parse(raw) as Record<string, unknown>;
 assert(
   Object.keys(parsed).sort().join("|") ===
-      "accountHandoff|promotionState|safeReference|schemaVersion|status" &&
+      "promotionState|safeReference|schemaVersion|status" &&
     parsed.schemaVersion === SIGNUP_SUBMISSION_RECEIPT_SCHEMA_VERSION &&
     parsed.safeReference === safeReference &&
     parsed.status === "submitted_for_review" &&
-    parsed.promotionState === "pending" &&
-    parsed.accountHandoff === "existing_account_login_required",
+    parsed.promotionState === "pending",
   "receipt_shape_not_exact",
 );
 
@@ -107,8 +105,24 @@ writeSignupSubmissionReceipt({
   safeReference,
   status: "submitted_for_review",
   promotionState: "promoted",
-  accountHandoff: "already_authenticated",
 });
+
+const legacyV3StorageKey = "enval.signup.submission-receipt.v3";
+sessionStorage.setItem(
+  legacyV3StorageKey,
+  JSON.stringify({
+    schemaVersion: "signup-submission-receipt-v3",
+    safeReference,
+    status: "submitted_for_review",
+    promotionState: "promoted",
+    accountHandoff: "already_authenticated",
+  }),
+);
+assert(readSignupSubmissionReceipt(), "current_receipt_removed_with_legacy");
+assert(
+  sessionStorage.getItem(legacyV3StorageKey) === null,
+  "legacy_v3_receipt_not_removed",
+);
 
 sessionStorage.setItem(
   storageKey,
@@ -193,6 +207,28 @@ assert(
     endpointSource.indexOf('operation === "status"') <
       endpointSource.indexOf("signingLegalBundleAllowed(environment)"),
   "existing_owned_status_chain_missing",
+);
+assert(
+  endpointSource.includes('linkage_type !== "verified_auth_at_intake_start"') &&
+    endpointSource.indexOf(
+        "requireVerifiedSupabaseAuthUser(req, SB)",
+        endpointSource.indexOf('if (operation === "status")'),
+      ) > endpointSource.indexOf('if (operation === "status")') &&
+    !endpointSource.includes("app_signup_authenticated_intake_claim_v1") &&
+    !endpointSource.includes("app_signup_account_handoff_v2") &&
+    !endpointSource.includes("account_handoff"),
+  "legacy_binding_runtime_not_closed",
+);
+assert(
+  storeSource.includes("signup-submission-receipt-v4") &&
+    storeSource.includes("enval.signup.submission-receipt.v3") &&
+    !storeSource.includes("accountHandoff") &&
+    !clientSource.includes("account_handoff") &&
+    !shellSource.includes("accountHandoff") &&
+    !shellSource.includes("existing_account_login_required") &&
+    !shellSource.includes("account_activation_available") &&
+    shellSource.includes('navigate("/dashboard")'),
+  "auth_first_receipt_or_presentation_contract_missing",
 );
 assert(
   !storeSource.includes("fetch(") &&

@@ -874,9 +874,9 @@ async function runR2Proof(
   console.log("Q75_NO_HEURISTIC_CASE_MERGE=PASS");
 
   assert(
-    receiptStore.includes("signup-submission-receipt-v3") &&
+    receiptStore.includes("signup-submission-receipt-v4") &&
       receiptStore.includes("promotionState") &&
-      receiptStore.includes("accountHandoff") &&
+      !receiptStore.includes("accountHandoff") &&
       !receiptStore.includes("email_normalized") &&
       !receiptStore.includes("auth_user_id"),
     "unsafe_receipt_contract",

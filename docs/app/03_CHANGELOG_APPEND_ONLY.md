@@ -1977,3 +1977,29 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   and production remain unproven.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-09-10 — Close signing-v3 legacy account binding locally
+
+- Removed active finalize/status calls to the legacy authenticated-intake claim
+  and account-handoff RPCs. Both operations now require the same immutable
+  `verified_auth_at_intake_start` actor/intake provenance established before
+  signing; missing, mismatching, recovery-only and legacy/unbound provenance
+  fail closed without business writes.
+- Gated the shared internal promotion source before durable-file preparation and
+  RPC execution with that same linkage and immutable signing-actor comparison,
+  closing the direct internal-entrypoint bypass without schema work.
+- Removed account-handoff and legacy login/activation fields from the Edge,
+  frontend client, session receipt and signed-submission presentation. Submission
+  receipt v4 retains only safe reference, intake status and promotion state;
+  older or unknown versions are removed.
+- Successful promotion now exposes only navigation to `/dashboard`. The
+  current principal's dashboard-readcache is cleared and distinct signup and
+  dashboard route keys force a fresh dashboard Auth bootstrap; R7 database
+  authority remains the sole portal-access decision. Same-actor status/replay
+  and bounded promotion retry remain idempotent.
+- Local disposable signing/Auth acceptance, negative-write checks, receipt
+  recovery, browser viewports, focused proofs, typecheck and production build
+  passed. No migration, schema, RPC, hosted configuration or deployment changed;
+  production legal/OTP/Auth and remote acceptance remain open.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

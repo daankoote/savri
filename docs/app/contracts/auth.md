@@ -277,8 +277,9 @@ Recovery:
   for the same already-authenticated actor.
 - Legacy/unbound v2 must remain fail-closed and must not be attached
   retrospectively to an account or access grant through e-mail or a safe
-  receipt reference. The retained post-signing Auth-claim/bind runtime route is
-  a known implementation residue, not canonical authority or accepted proof.
+  receipt reference. Active finalize/status runtime contains no post-signing
+  Auth-claim/bind route and accepts only matching immutable
+  `verified_auth_at_intake_start` provenance.
 - Password recovery and verification-email resend are separate Auth UX. They
   must avoid account/dossier enumeration and grant no signing recovery,
   customer binding or portal authority.
@@ -1051,13 +1052,11 @@ missing. No item is merged by e-mail, name or address.
 Signing v3 accepts only the same server-validated Auth actor and matching intake
 provenance before presentation, challenge and finalization. After finalization,
 the service-role-only projection may perform only idempotent status/promotion
-retry for that already-authenticated actor. Retained
-`existing_account_login_required` and `account_activation_available`
-discriminators are legacy compatibility, not an active account-recovery or
-authority path. Legacy/unbound v2 cannot be bound retrospectively through
-e-mail or a safe receipt reference under the current canon. The retained
-post-signing Auth-claim/bind runtime route remains a separate implementation
-gap and cannot establish accepted authority.
+retry for that already-authenticated actor. Edge responses, browser receipt v4
+and signup presentation contain no account-handoff or legacy login/activation
+discriminators. Legacy/unbound v2 cannot be bound retrospectively through
+e-mail or a safe receipt reference under the current canon; missing,
+mismatching or non-start provenance fails closed.
 Signing OTP, safe reference and receipt are never account credentials or claim
 authority. Production Auth URLs, redirects, email delivery and browser
 acceptance remain OPEN.
@@ -1078,12 +1077,11 @@ projection. These predicates are server-side compatibility checks, not
 e-mail-only ownership or legal-identity evidence.
 
 No Auth user, identity or customer is created for this convergence path. The
-existing binding remains unchanged. Before the missing profile converges,
-handoff fails closed. Signing v3 requires the exact verified existing Auth user
-before presentation; after successful promotion its active handoff is only
-`already_authenticated`. The retained `existing_account_login_required`
-discriminator is legacy compatibility and grants no customer, case, party or
-representation authority.
+existing binding remains unchanged. Before the missing profile converges, the
+promotion transaction fails closed. Signing v3 requires the exact verified
+existing Auth user before presentation; after successful promotion the browser
+only navigates to `/dashboard`, where Auth bootstrap and R7 database authority
+determine actual portal access.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
@@ -1180,9 +1178,10 @@ For Zakelijk/VvE, the signed natural person may receive case-contact access to
 the separate organization context while
 `authority_review_status=required_not_completed` remains unchanged. Access is
 not representation authority. After authenticated promotion the existing
-dashboard cache for that principal and the Auth bootstrap summary are cleared
-before `/dashboard` navigation; the first read therefore uses current server
-truth without a reload workaround.
+dashboard-readcache for that principal is cleared before `/dashboard`
+navigation. Distinct route keys remount the dashboard AuthProvider, whose fresh
+bootstrap and first dashboard read therefore use current server truth without a
+reload workaround.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 

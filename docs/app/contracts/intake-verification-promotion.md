@@ -42,8 +42,8 @@ Only current source/schema/proof establishes this matrix.
 | 4. signing presentation | authenticated customer requests the server-resolved legal/signing presentation | `api-app-signup-signing-presentation` / presentation-receipt authority | immutable receipt M1 binds tenant, verified Auth actor, intake and exact selected signing provenance | server validates the Auth bearer, matching verified e-mail and immutable intake-specific Auth provenance before resolving signing material | presentation issuance is request-correlated; presentation alone is not acceptance | intake remains `collecting`; no challenge or signature yet |
 | 5. signing challenge | the same authenticated customer accepts M1 and requests the six-digit code | `api-app-signup-signing-challenge` / `app_signup_signing_challenge_issue_v1` | one delivered, expiring `typed_name_otp_v1` challenge bound to accepted M1; older active challenge is replaced | server revalidates the same Auth actor and intake provenance; challenge is bound to the normalized-email channel | `signup_signing_challenge_issued` plus delivery audit | intake remains `collecting`; no signature yet |
 | 6. OTP/email-control proof and finalization | the same authenticated customer submits OTP and typed signer input | `api-app-signup-signing-finalize` / `app_signup_signing_finalize_v3` followed by bounded server-owned promotion | one immutable snapshot v2, legal acceptances, mandate and signature evidence; challenge and management capability consumed; `finalized_at` set | server revalidates the same Auth actor and provenance; OTP separately proves control of the signing e-mail channel | failed attempts stay bounded; exactly one successful `signup_signing_finalized` event | database status `submitted_for_review`; signing remains valid if promotion must retry |
-| 7. finalized refresh/status | same-tab page bootstraps through the existing intake session and verified Auth session | `api-app-signup-signing-finalize` with `operation=status` / `app_signup_signing_status_v2` | for active signing v3, server rechecks finalization and promotion retry is bounded/idempotent; retained runtime residue can still append `verified_auth_recovery_after_signing` for an older finalized intake | active signing v3 validates the same already-authenticated actor; the legacy claim/bind residue is not canonical authority and must fail closed before acceptance | active v3 creates no second intake, signing act or Auth provenance; retained legacy recovery provenance is an implementation gap | server still returns `account_handoff` legacy discriminators; they are non-authoritative compatibility fields |
-| 8. post-signing handoff | authenticated customer sees confirmation while promotion is pending | server prepares durable bytes and calls `app_promote_signed_signup_v3`, which runs context-scoped v1 promotion plus Auth access synchronization in one transaction | the verified Auth actor creates or reuses exactly one compatible customer, one bound identity and one `app_cases` root; later account types create separate contexts and explicit access without customer merge | receipt, safe reference, OTP, e-mail equality and capability grant no promotion/access rights by themselves; the browser receives no internal secret | safe Edge stages plus immutable promotion/lifecycle/Auth-access provenance | pending stays temporary with bounded retry; `promoted` + `already_authenticated` clears current-principal dashboard/bootstrap cache before `/dashboard` |
+| 7. finalized refresh/status | same-tab page uses the separate scoped intake session/capability plus verified Auth; submission receipt v4 is presentation cache only | `api-app-signup-signing-finalize` with `operation=status` / `app_signup_signing_status_v2` | server rechecks the exact `verified_auth_at_intake_start` actor/intake provenance; finalization state and promotion retry remain bounded/idempotent | only the same already-authenticated actor with the valid intake capability is accepted; missing, mismatching, recovery-only and legacy/unbound provenance fail closed | no second intake, signing act, Auth provenance, customer, identity, case or access grant is written on rejected status/finalize paths | Edge status omits account-handoff and login/activation discriminators; receipt v4 persists only intake status, safe reference and promotion state |
+| 8. post-signing navigation | authenticated customer sees confirmation while promotion is pending | server prepares durable bytes and calls `app_promote_signed_signup_v3`, which runs context-scoped v1 promotion plus Auth access synchronization in one transaction | the verified Auth actor creates or reuses exactly one compatible customer, one bound identity and one `app_cases` root; later account types create separate contexts and explicit access without customer merge | receipt, safe reference, OTP, e-mail equality and capability grant no promotion/access rights by themselves; the browser receives no internal secret | safe Edge stages plus immutable promotion/lifecycle/Auth-access provenance | pending stays temporary with bounded retry; after `promoted` the UI only navigates to `/dashboard`, where Auth bootstrap and R7 database authority decide access |
 
 CURRENT proof also establishes that signing itself creates no `app_customers`, `app_customer_identities`, `app_customer_dossiers` or `app_cases` row. Only the separate service-only 09C1A promotion transaction may create/reuse the first three target families, and it never creates `app_customer_dossiers`.
 
@@ -119,7 +119,7 @@ The rename is semantic and explicit, not silent:
 - signing-runtime and quarantine schema expectations for stored database truth;
 - existing finalized local rows, without changing `finalized_at`, signing evidence or safe references.
 
-Still TARGET for a separately authorized frontend/Edge batch: `signupSigningClient.ts`, `signupSubmissionReceiptStore.ts`, `SignupPageShell.tsx`, receipt schema/copy and the public API projection. The compatibility response may not be interpreted as external verification or promotion authority.
+The active frontend/Edge contract uses submission receipt v4 and omits account-handoff and legacy login/activation compatibility fields. Older or unknown browser receipt versions are removed and grant no recovery or promotion authority.
 
 No compatibility layer may interpret either name as external verification. The forward migration transformed old stored rows transactionally; all new database writes use `submitted_for_review`.
 
@@ -142,8 +142,11 @@ explicit access to a later separate context. These operations share one
 database transaction: a later promotion, binding or access failure rolls back
 newly created business truth while leaving finalized signing valid. Anonymous
 or legacy/unbound promotion is canonically forbidden from creating account or
-access binding. Retained claim/bind runtime residue remains a separately bounded
-implementation gap and grants no accepted authority.
+access binding. Active finalize/status orchestration performs no retrospective
+claim or account-handoff call and accepts only the exact immutable pre-signing
+Auth provenance. The shared internal promotion entrypoint performs the same
+linkage/actor comparison against the immutable signing snapshot before
+durable-file preparation or the promotion RPC, so it cannot bypass that gate.
 
 The Edge/worker entry point is `api-app-signup-promote`. It is an internal server caller only. The browser, receipt, safe reference, signing OTP and consumed management capability cannot call or authorize promotion.
 
@@ -287,10 +290,9 @@ The verified Auth actor already exists before signing-v3 presentation:
 Post-finalization recovery means only idempotent status/promotion retry for the
 same already-authenticated actor. The canonical contract requires
 legacy/unbound v2 to remain fail-closed and forbids attaching it later to an
-account or access grant through e-mail or a safe receipt reference. The retained
-post-signing Auth-claim/bind runtime route is an implementation residue, not
-accepted CURRENT authority, and must be closed in a separately authorized code
-batch.
+account or access grant through e-mail or a safe receipt reference. Active
+finalize/status runtime has no post-signing Auth-claim/bind route; missing,
+mismatching or non-start provenance ends generically fail-closed.
 
 09C1C implements that case-reusing bootstrap revision and the signed-case branch of `api-app-dashboard-get`. The response retains the existing safe dashboard summary shape for renderer/cache reuse, but its compatibility selector equals the case UUID for signed cases; no dossier row exists or is created. No custom login/session architecture is introduced.
 
@@ -411,10 +413,10 @@ case.
 Incompatible customer type, inactive/multiple identities, conflicting binding
 or customer-level party/profile mismatch fail closed. Signature and OTP do not
 prove representation authority. R8 post-finalization account recovery is
-cancelled/superseded: retained legacy discriminators grant no authority, and a
-legacy/unbound v2 intake must not be bound retrospectively by e-mail or safe
-receipt reference. The retained post-signing Auth-claim/bind runtime route is a
-known implementation gap and does not reopen R8.
+cancelled/superseded: active Edge/frontend responses contain no legacy
+discriminators, and a legacy/unbound v2 intake cannot be bound retrospectively
+by e-mail or safe receipt reference. Finalize/status require the immutable
+pre-signing Auth actor and do not reopen R8.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 

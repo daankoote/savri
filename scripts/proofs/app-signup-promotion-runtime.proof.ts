@@ -21,6 +21,7 @@ export type Fixture = {
 };
 
 export type FixtureOptions = {
+  authUserId?: string;
   email?: string;
   fileHash?: string;
   fileSize?: number;
@@ -224,6 +225,13 @@ export async function createFixture(
     legal_documents: documents,
     mandate,
     signer: { typed_full_name: contactName },
+    ...(options.authUserId
+      ? {
+        presentation: {
+          authenticated_auth_user_id: options.authUserId,
+        },
+      }
+      : {}),
   };
   const snapshotHash = await sha256(JSON.stringify(snapshot));
 

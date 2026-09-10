@@ -135,7 +135,7 @@ export function App() {
   if (path === "/dashboard") {
     return (
       <Suspense fallback={<RouteLoading />}>
-        <AuthProvider>
+        <AuthProvider key="dashboard">
           <DashboardPage navigate={navigate} currentPath={path} />
         </AuthProvider>
       </Suspense>
@@ -189,7 +189,7 @@ export function App() {
   if (path === "/aanmelden") {
     return (
       <Suspense fallback={<RouteLoading />}>
-        <AuthProvider>
+        <AuthProvider key="signup">
           <SignupPage navigate={navigate} currentPath={path} />
         </AuthProvider>
       </Suspense>

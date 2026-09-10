@@ -108,7 +108,6 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
   const organizationAttemptsRef = useRef(0);
   const organizationAbortRef = useRef<AbortController | null>(null);
   const recoveryBootstrapStartedRef = useRef(false);
-  const dashboardHandoffStartedRef = useRef(false);
   const signingCustomerDraftRef = useRef(draft);
   const legacyDraft = useMemo(() => selectMapperCompatibleDraft(draft), [
     draft,
@@ -171,7 +170,6 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
       safeReference: result.value.safeReference,
       status: result.value.intakeStatus,
       promotionState: result.value.promotionState,
-      accountHandoff: result.value.accountHandoff,
     });
     if (!receipt) {
       setRecoveryMessage("Deze aanmelding kan niet veilig worden hersteld.");
@@ -188,33 +186,6 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
     recoveryBootstrapStartedRef.current = true;
     void hydrateSigningState();
   }, [hydrateSigningState]);
-
-  useEffect(() => {
-    if (
-      submissionReceipt?.promotionState !== "promoted" ||
-      submissionReceipt.accountHandoff !== "already_authenticated"
-    ) return;
-    const authUserId = auth.session?.user.id;
-    if (!authUserId || dashboardHandoffStartedRef.current) return;
-    dashboardHandoffStartedRef.current = true;
-    let active = true;
-    clearDashboardReadCache(authUserId);
-    void auth.retryBootstrap().then((result) => {
-      if (!active) return;
-      if (!result.ok || result.status !== "ready") {
-        dashboardHandoffStartedRef.current = false;
-        setRecoveryMessage("Het klantportaal kon niet worden vernieuwd.");
-        setRecoveryStatus("error");
-        return;
-      }
-      clearSignupIntakeSession();
-      clearSignupSubmissionReceipt();
-      navigate("/dashboard");
-    });
-    return () => {
-      active = false;
-    };
-  }, [auth.retryBootstrap, auth.session?.user.id, navigate, submissionReceipt]);
 
   useEffect(() => {
     if (!draft.locationOrder.includes(activeLocationId)) {
@@ -783,52 +754,22 @@ export function SignupPageShell({ currentPath, navigate }: RoutedPageProps) {
                       </p>
                     )
                     : null}
-                  {submissionReceipt.accountHandoff === "blocked"
-                    ? (
-                      <p role="alert">
-                        We kunnen de accountkoppeling niet automatisch afronden.
-                      </p>
-                    )
-                    : null}
                   <div className="section-actions">
-                    {submissionReceipt.promotionState === "promoted" &&
-                        submissionReceipt.accountHandoff ===
-                          "existing_account_login_required"
+                    {submissionReceipt.promotionState === "promoted"
                       ? (
                         <button
                           className="button button-primary"
-                          onClick={() => navigate("/account#inloggen")}
-                          type="button"
-                        >
-                          Inloggen naar klantportaal
-                        </button>
-                      )
-                      : submissionReceipt.promotionState === "promoted" &&
-                          submissionReceipt.accountHandoff ===
-                            "account_activation_available"
-                      ? (
-                        <button
-                          className="button button-primary"
-                          onClick={() => navigate("/account#activeren")}
-                          type="button"
-                        >
-                          Account aanmaken
-                        </button>
-                      )
-                      : submissionReceipt.promotionState === "promoted" &&
-                          submissionReceipt.accountHandoff ===
-                            "already_authenticated"
-                      ? (
-                        <button
-                          className="button button-primary"
-                          onClick={() => navigate("/dashboard")}
+                          onClick={() => {
+                            const authUserId = auth.session?.user.id;
+                            if (authUserId) clearDashboardReadCache(authUserId);
+                            navigate("/dashboard");
+                          }}
                           type="button"
                         >
                           Naar klantportaal
                         </button>
                       )
                       : submissionReceipt.promotionState === "pending" &&
-                          submissionReceipt.accountHandoff !== "blocked" &&
                           readSignupIntakeSession()
                       ? (
                         <button

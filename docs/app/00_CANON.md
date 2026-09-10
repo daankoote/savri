@@ -534,7 +534,7 @@ Signed-intake and promotion lifecycle:
   submission, and replay uses the persisted M1 fingerprint without M2
   re-resolution. Legacy or incomplete unbound requests remain fail-closed.
 - `typed_name_otp_v1` proves signing intent plus control of the used email channel; the former separate email-verification promotion trigger is `SUPERSEDED` and must not be rebuilt without a new hard requirement.
-- 09C1A/09C1B/09C1C signed-intake convergence is CURRENT PROVEN — LOCAL ONLY: atomic/idempotent `app_cases` promotion, server-owned finalize/status orchestration, receipt v2 with safe presentation state, verified Supabase Auth binding to the existing promoted customer/case, and a customer-safe case-owned dashboard projection. This flow creates no `app_customer_dossiers` row.
+- 09C1A/09C1B/09C1C signed-intake convergence is CURRENT PROVEN — LOCAL ONLY: atomic/idempotent `app_cases` promotion, server-owned finalize/status orchestration, submission receipt v4 with only safe reference/status/promotion state, and a customer-safe case-owned dashboard projection. Finalize and status require the same immutable `verified_auth_at_intake_start` actor/intake provenance; they cannot retrospectively claim or bind an account. Promotion is followed only by `/dashboard`, where normal Auth bootstrap and R7 database authority determine portal access. This flow creates no `app_customer_dossiers` row.
 - 09C1C-R2 adds on-demand compatibility convergence for one uniquely Auth-bound
   existing customer: a missing declared party profile is appended from the new
   immutable signed intake inside the promotion transaction. This is never an
@@ -554,7 +554,7 @@ Signed-intake and promotion lifecycle:
   The first signed zero-case application creates/binds exactly one compatible
   customer identity and one case inside the promotion transaction. A binding
   failure rolls those business writes back without invalidating signing;
-  `promoted` plus `already_authenticated` routes directly to `/dashboard`.
+  `promoted` exposes only navigation to `/dashboard`.
 - 09C1C-R6 keeps Auth principal, customer/service context, party, case and
   representation authority as separate roots. One verified Auth principal may
   have explicit server-owned access to multiple separate Particulier,
@@ -562,8 +562,10 @@ Signed-intake and promotion lifecycle:
   context-scoped. Access is backed only by a bound identity or immutable
   signed-promotion lineage, never by e-mail, address, MID or safe reference.
   Zakelijk/VvE access does not complete authority review. After authenticated
-  promotion, the current principal's dashboard/bootstrap cache is invalidated
-  before navigation so the first dashboard read uses current server truth.
+  promotion, the current principal's dashboard-readcache is invalidated before
+  navigation. The route-keyed dashboard AuthProvider then performs a fresh
+  bootstrap, so portal access and the first dashboard read use current server
+  truth.
 
 Portal authority matrix (CURRENT PROVEN — LOCAL BROWSER):
 

@@ -28,6 +28,7 @@ const [
   dashboardSidebar,
   dashboardClient,
   dashboardUi,
+  app,
   documentPresentation,
   promotionMigration,
   migration,
@@ -49,6 +50,7 @@ const [
   read("app/src/features/dashboard/DashboardSidebar.tsx"),
   read("app/src/features/dashboard/dashboardReadClient.ts"),
   read("app/src/features/dashboard/ActivePrivateDashboard.tsx"),
+  read("app/src/App.tsx"),
   read("app/src/features/documents/documentSlotPresentation.ts"),
   read(resolveTenantEnvalArchivedMigrationPath(
     "supabase/migrations/20260810190000_app_signed_signup_promotion_foundation.sql",
@@ -90,9 +92,9 @@ const checks: Array<[string, () => void]> = [
     )],
   ["Q03", () =>
     assert(
-      receiptStore.includes("signup-submission-receipt-v3") &&
+      receiptStore.includes("signup-submission-receipt-v4") &&
         receiptStore.includes("promotionState") &&
-        receiptStore.includes("accountHandoff") &&
+        !receiptStore.includes("accountHandoff") &&
         !/intakeId|customerId|caseId|capability|email|otp|hash/i.test(
           receiptStore.slice(
             0,
@@ -109,8 +111,8 @@ const checks: Array<[string, () => void]> = [
     )],
   ["Q05", () =>
     assert(
-      signingEndpoint.indexOf('SB.rpc("app_signup_signing_finalize_v2"') <
-          signingEndpoint.lastIndexOf("postSigningProjection(req, intakeId") &&
+      signingEndpoint.indexOf('SB.rpc("app_signup_signing_finalize_v3"') <
+          signingEndpoint.lastIndexOf("postSigningProjection(SB, intakeId") &&
         signingEndpoint.includes("promotion_state: attempt.state"),
       "signing_before_promotion",
     )],
@@ -153,8 +155,11 @@ const checks: Array<[string, () => void]> = [
     )],
   ["Q12", () =>
     assert(
-      signupShell.includes('navigate("/account#inloggen")') &&
-        signupShell.includes('navigate("/account#activeren")') &&
+      signupShell.includes('navigate("/dashboard")') &&
+        !signupShell.includes('navigate("/account#inloggen")') &&
+        !signupShell.includes('navigate("/account#activeren")') &&
+        accountPage.includes("signInWithPassword") &&
+        accountPage.includes("signUpWithPassword") &&
         authClient.includes("client.auth.signUp") &&
         authClient.includes("client.auth.signInWithPassword"),
       "existing_auth_reuse",
@@ -283,28 +288,44 @@ const checks: Array<[string, () => void]> = [
     )],
   ["Q33", () =>
     assert(
-      signupShell.includes("Inloggen naar klantportaal") &&
-        !signupShell.includes("Account maken of inloggen"),
-      "existing_account_handoff",
+      !signingEndpoint.includes("app_signup_authenticated_intake_claim_v1") &&
+        !signingEndpoint.includes("app_signup_account_handoff_v2") &&
+        !signingEndpoint.includes("account_handoff") &&
+        promotion.includes("app_signup_authenticated_intake_provenance") &&
+        promotion.includes('stringField(provenance, "linkage_type") !==') &&
+        promotion.includes('"verified_auth_at_intake_start"') &&
+        promotion.includes(
+          'stringField(presentation, "authenticated_auth_user_id")',
+        ) &&
+        promotion.indexOf("app_signup_authenticated_intake_provenance") <
+          promotion.indexOf("prepareDurableManifest"),
+      "legacy_binding_runtime_closed",
     )],
   ["Q34", () =>
     assert(
-      signupShell.includes("account_activation_available") &&
-        signupShell.includes("Account aanmaken"),
-      "new_user_handoff",
+      !signupShell.includes("account_activation_available") &&
+        !signupShell.includes("existing_account_login_required") &&
+        !signupShell.includes("already_authenticated"),
+      "legacy_handoff_presentation_removed",
     )],
   ["Q35", () =>
     assert(
-      signingEndpoint.indexOf('rpc.body.signing_state !== "finalized"') <
-          signingEndpoint.indexOf("postSigningProjection(req, intakeId") &&
+      signingEndpoint.indexOf(
+            'authorization.body.signing_state !== "finalized"',
+          ) <
+          signingEndpoint.indexOf("postSigningProjection(SB, intakeId") &&
         !signingClient.includes("listUsers"),
       "no_pre_otp_enumeration",
     )],
   ["Q36", () =>
     assert(
-      signupShell.includes("already_authenticated") &&
-        signupShell.includes('navigate("/dashboard")'),
-      "authenticated_handoff",
+      signupShell.includes('submissionReceipt.promotionState === "promoted"') &&
+        signupShell.includes("clearDashboardReadCache(authUserId)") &&
+        signupShell.includes('navigate("/dashboard")') &&
+        app.includes('<AuthProvider key="signup">') &&
+        app.includes('<AuthProvider key="dashboard">') &&
+        !signupShell.includes("retryBootstrap"),
+      "promoted_dashboard_navigation_and_fresh_bootstrap",
     )],
   ["Q37", () =>
     assert(
@@ -380,9 +401,10 @@ const checks: Array<[string, () => void]> = [
     )],
   ["Q48", () =>
     assert(
-      receiptStore.includes("accountHandoff") &&
+      !receiptStore.includes("accountHandoff") &&
+        receiptStore.includes("enval.signup.submission-receipt.v3") &&
         signupShell.includes("readSignupSubmissionReceipt()"),
-      "back_forward_preserves_handoff",
+      "back_forward_preserves_current_receipt",
     )],
   ["Q49", () =>
     assert(

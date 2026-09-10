@@ -7,6 +7,7 @@ import {
   type CustomerDocumentWorkflowSourceInput,
 } from "../../app/src/features/documents/CustomerDocumentWorkflowController.ts";
 import { isParserObservationEnvelopeV1 } from "../../platform/runtime/document-parsing/document_parser_contract.ts";
+import { createFixture } from "./app-signup-promotion-runtime.proof.ts";
 
 type Json = Record<string, unknown>;
 type Runtime = Readonly<{
@@ -123,6 +124,25 @@ async function post(
   });
 }
 
+async function promoteInternally(
+  config: Runtime,
+  intakeReference: string,
+  key: string,
+) {
+  return await request(config, "/functions/v1/api-app-signup-promote", {
+    method: "POST",
+    headers: {
+      apikey: config.serviceRoleKey,
+      Authorization: `Bearer ${config.serviceRoleKey}`,
+      "Content-Type": "application/json",
+      "Idempotency-Key": key,
+      "X-Request-Id": key,
+      "x-enval-signup-promotion-secret": config.serviceRoleKey,
+    },
+    body: JSON.stringify({ intake_reference: intakeReference }),
+  });
+}
+
 function pdf(lines: readonly string[]): Uint8Array {
   const hex = (value: string) => Array.from(new TextEncoder().encode(value))
     .map((byte) => byte.toString(16).padStart(2, "0")).join("").toUpperCase();
@@ -178,6 +198,43 @@ async function createAuth(
   }).auth.signInWithPassword({ email, password });
   assert(!signed.error && signed.data.session?.access_token, "auth_signin_failed");
   return { email, userId: created.data.user.id, token: signed.data.session.access_token };
+}
+
+async function createUnboundIntake(
+  service: SupabaseClient,
+  prefix: string,
+): Promise<{ intakeReference: string; managementCapability: string }> {
+  const managementCapability = `${prefix}-${crypto.randomUUID()}`;
+  const payloadHash = await sha256(new TextEncoder().encode(`${prefix}-payload`));
+  const capabilityHash = await sha256(new TextEncoder().encode(managementCapability));
+  const created = await service.rpc("app_signup_quarantine_start_v1", {
+    p_account_type: "particulier",
+    p_email_normalized: `${prefix}@example.test`,
+    p_payload_hash: payloadHash,
+    p_manage_token_sha256: capabilityHash,
+    p_intake_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    p_capability_expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    p_request_id: `${prefix}-request`,
+    p_idempotency_key: `${prefix}-start`,
+    p_ip_hash: "0".repeat(64),
+    p_user_agent_hash: "0".repeat(64),
+    p_environment: "local",
+  });
+  const body = created.data as Json | null;
+  const intakeReference = String(body?.intake_reference || "");
+  assert(!created.error && body?.ok === true && /^[0-9a-f-]{36}$/i.test(intakeReference), `unbound_intake_start_failed:${prefix}`);
+  return { intakeReference, managementCapability };
+}
+
+async function negativeWriteState(config: Runtime, intakeReference: string): Promise<string> {
+  return await psql(config, `select jsonb_build_object(
+    'provenance',(select count(*) from public.app_signup_authenticated_intake_provenance where intake_id=${quote(intakeReference)}),
+    'promotion',(select count(*) from public.app_signup_promotions where intake_id=${quote(intakeReference)}),
+    'customer',(select count(*) from public.app_customers where id in (select customer_id from public.app_signup_promotions where intake_id=${quote(intakeReference)})),
+    'identity',(select count(*) from public.app_customer_identities where id in (select identity_id from public.app_signup_promotions where intake_id=${quote(intakeReference)})),
+    'case',(select count(*) from public.app_cases where source_class='signed_signup_intake' and source_ref=${quote(intakeReference)}),
+    'access_grant',(select count(*) from public.app_customer_access_grants where source_class='app_signup_promotion' and source_ref in (select id::text from public.app_signup_promotions where intake_id=${quote(intakeReference)}))
+  )::text;`);
 }
 
 async function uploadDocument(
@@ -372,8 +429,13 @@ async function cleanup(
     }
   }
   for (const userId of authUsers) await service.auth.admin.deleteUser(userId);
-  for (const messageId of mailpitMessageIds) {
-    await fetch(`${config.mailpitUrl}/api/v1/messages/${messageId}`, { method: "DELETE" }).catch(() => undefined);
+  if (mailpitMessageIds.size > 0) {
+    const response = await fetch(`${config.mailpitUrl}/api/v1/messages`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ IDs: [...mailpitMessageIds] }),
+    });
+    assert(response.ok, `mailpit_cleanup_failed:${response.status}`);
   }
 }
 
@@ -684,6 +746,146 @@ try {
     challenge_reference: freshChallengeReference,
     otp_code: freshDelivered.code,
   };
+  const unauthorized = await createAuth(config, service, `${prefix}-unauthorized`);
+  ids.add(unauthorized.userId);
+  authUsers.add(unauthorized.userId);
+  const unbound = await createUnboundIntake(service, `${prefix}-unbound`);
+  const legacy = await createUnboundIntake(service, `${prefix}-legacy`);
+  ids.add(unbound.intakeReference);
+  ids.add(legacy.intakeReference);
+  const legacyEmailHash = await sha256(new TextEncoder().encode(customer.email));
+  await psql(config, `insert into public.app_signup_authenticated_intake_provenance(
+    intake_id,auth_user_id,auth_email_sha256,auth_email_verified_at,linkage_type,request_id
+  ) values (
+    ${quote(legacy.intakeReference)},${quote(customer.userId)},${quote(legacyEmailHash)},clock_timestamp(),
+    'verified_auth_recovery_after_signing',${quote(`${prefix}-legacy-provenance`)}
+  );`);
+  const directUnboundBytes = pdf(["Wave A1 unbound promotion closure"]);
+  const directUnbound = await createFixture(
+    service,
+    "particulier",
+    `${prefix}-direct-unbound`,
+    3,
+    {
+      fileHash: await sha256(directUnboundBytes),
+      fileSize: directUnboundBytes.byteLength,
+      storageBucket: "app-documents",
+      useCanonicalSourcePath: true,
+    },
+  );
+  const directLegacyBytes = pdf(["Wave A1 legacy promotion closure"]);
+  const directLegacy = await createFixture(
+    service,
+    "particulier",
+    `${prefix}-direct-legacy`,
+    3,
+    {
+      authUserId: customer.userId,
+      fileHash: await sha256(directLegacyBytes),
+      fileSize: directLegacyBytes.byteLength,
+      storageBucket: "app-documents",
+      useCanonicalSourcePath: true,
+    },
+  );
+  const directLegacyEmailHash = await sha256(
+    new TextEncoder().encode(directLegacy.email),
+  );
+  await psql(config, `insert into public.app_signup_authenticated_intake_provenance(
+    intake_id,auth_user_id,auth_email_sha256,auth_email_verified_at,linkage_type,request_id
+  ) values (
+    ${quote(directLegacy.intakeId)},${quote(customer.userId)},${quote(directLegacyEmailHash)},clock_timestamp(),
+    'verified_auth_recovery_after_signing',${quote(`${prefix}-direct-legacy-provenance`)}
+  );`);
+  for (const fixture of [directUnbound, directLegacy]) {
+    for (
+      const fixtureId of [
+        fixture.intakeId,
+        fixture.fileId,
+        fixture.snapshotId,
+        fixture.mandateId,
+        fixture.signatureId,
+      ]
+    ) ids.add(fixtureId);
+    storage.add(`${fixture.storageBucket}/${fixture.storagePath}`);
+  }
+  for (
+    const [fixture, bytes] of [
+      [directUnbound, directUnboundBytes],
+      [directLegacy, directLegacyBytes],
+    ] as const
+  ) {
+    const upload = await service.storage.from(fixture.storageBucket).upload(
+      fixture.storagePath,
+      new Blob([Uint8Array.from(bytes).buffer], {
+        type: "application/pdf",
+      }),
+      { contentType: "application/pdf", upsert: false },
+    );
+    assert(!upload.error, "direct_promotion_source_upload_failed");
+  }
+  const negativeBefore = {
+    positive: await negativeWriteState(config, intakeReference),
+    unbound: await negativeWriteState(config, unbound.intakeReference),
+    legacy: await negativeWriteState(config, legacy.intakeReference),
+    directUnbound: await negativeWriteState(config, directUnbound.intakeId),
+    directLegacy: await negativeWriteState(config, directLegacy.intakeId),
+  };
+  const statusBody = (intake: typeof unbound) => ({
+    operation: "status",
+    intake_reference: intake.intakeReference,
+    management_capability: intake.managementCapability,
+  });
+  const [unboundStatus, legacyStatus, missingActorStatus, mismatchActorStatus] = await Promise.all([
+    post(config, "api-app-signup-signing-finalize", customer.token, `${prefix}-unbound-status`, statusBody(unbound)),
+    post(config, "api-app-signup-signing-finalize", customer.token, `${prefix}-legacy-status`, statusBody(legacy)),
+    post(config, "api-app-signup-signing-finalize", config.anonKey, `${prefix}-missing-status`, statusBody({ intakeReference, managementCapability })),
+    post(config, "api-app-signup-signing-finalize", unauthorized.token, `${prefix}-mismatch-status`, statusBody({ intakeReference, managementCapability })),
+  ]);
+  for (const result of [unboundStatus, legacyStatus, missingActorStatus, mismatchActorStatus]) {
+    assert(result.status === 403 && result.body.code === "intake_unavailable", `signing_status_provenance_not_generic:${result.status}:${String(result.body.code || "NONE")}`);
+  }
+  const negativeFinalizeInput = (intake: typeof unbound) => ({
+    ...finalizeBody,
+    intake_reference: intake.intakeReference,
+    management_capability: intake.managementCapability,
+  });
+  const [unboundFinalize, legacyProvenanceFinalize, missingActorFinalize, mismatchActorFinalize] = await Promise.all([
+    post(config, "api-app-signup-signing-finalize", customer.token, `${prefix}-unbound-finalize`, negativeFinalizeInput(unbound)),
+    post(config, "api-app-signup-signing-finalize", customer.token, `${prefix}-legacy-finalize`, negativeFinalizeInput(legacy)),
+    post(config, "api-app-signup-signing-finalize", config.anonKey, `${prefix}-missing-finalize`, finalizeBody),
+    post(config, "api-app-signup-signing-finalize", unauthorized.token, `${prefix}-mismatch-finalize`, finalizeBody),
+  ]);
+  for (const result of [unboundFinalize, legacyProvenanceFinalize, missingActorFinalize, mismatchActorFinalize]) {
+    assert(result.status === 403 && result.body.code === "intake_unavailable", `signing_finalize_provenance_not_generic:${result.status}:${String(result.body.code || "NONE")}`);
+  }
+  const [directUnboundPromotion, directLegacyPromotion] = await Promise.all([
+    promoteInternally(
+      config,
+      directUnbound.intakeId,
+      `${prefix}-direct-unbound-promotion`,
+    ),
+    promoteInternally(
+      config,
+      directLegacy.intakeId,
+      `${prefix}-direct-legacy-promotion`,
+    ),
+  ]);
+  for (const result of [directUnboundPromotion, directLegacyPromotion]) {
+    assert(
+      result.status === 409 && result.body.code === "promotion_not_ready",
+      `internal_promotion_provenance_not_closed:${result.status}:${String(result.body.code || "NONE")}`,
+    );
+  }
+  const negativeAfter = {
+    positive: await negativeWriteState(config, intakeReference),
+    unbound: await negativeWriteState(config, unbound.intakeReference),
+    legacy: await negativeWriteState(config, legacy.intakeReference),
+    directUnbound: await negativeWriteState(config, directUnbound.intakeId),
+    directLegacy: await negativeWriteState(config, directLegacy.intakeId),
+  };
+  assert(JSON.stringify(negativeAfter) === JSON.stringify(negativeBefore), "negative_provenance_path_wrote_business_truth");
+  marker("WAVE_A1_FIX02_AUTH_FIRST_PROVENANCE_FAIL_CLOSED");
+  marker("WAVE_A1_FIX03_INTERNAL_PROMOTION_PROVENANCE_FAIL_CLOSED");
   const finalizeKey = `${prefix}-signing-finalize-a`;
   const [finalizeA, finalizeB] = await Promise.all([
     post(config, "api-app-signup-signing-finalize", customer.token, finalizeKey, finalizeBody),
@@ -698,7 +900,7 @@ try {
     "concurrent_finalize_result_invalid",
   );
   const finalized = finalizeA.status === 201 ? finalizeA : finalizeB;
-  assert(finalized.body.promotion_state === "promoted" && finalized.body.account_handoff === "already_authenticated", `signing_finalize_failed:${finalized.status}:${String(finalized.body.promotion_state)}`);
+  assert(finalized.body.promotion_state === "promoted" && !("account_handoff" in finalized.body), `signing_finalize_failed:${finalized.status}:${String(finalized.body.promotion_state)}`);
   const signingStateBeforeReplay = await psql(config, `select jsonb_build_object(
     'snapshot_count',(select count(*) from public.app_signup_signing_snapshots where intake_id=${quote(intakeReference)}),
     'snapshot',(select jsonb_build_object('id',id,'hash',canonical_snapshot_sha256,'body',canonical_snapshot,'created_at',created_at) from public.app_signup_signing_snapshots where intake_id=${quote(intakeReference)}),
@@ -723,6 +925,21 @@ try {
       `${String(finalizeReplay.body.replayed || false)}:` +
       `${finalizeReplay.body.safe_reference === finalized.body.safe_reference}`,
   );
+  const statusRequestBody = {
+    operation: "status",
+    intake_reference: intakeReference,
+    management_capability: managementCapability,
+  };
+  const statusA = await post(config, "api-app-signup-signing-finalize", customer.token, `${prefix}-status-a`, statusRequestBody);
+  const statusB = await post(config, "api-app-signup-signing-finalize", customer.token, `${prefix}-status-b`, statusRequestBody);
+  assert(
+    statusA.status === 200 && statusB.status === 200 &&
+      statusA.body.promotion_state === "promoted" && statusB.body.promotion_state === "promoted" &&
+      statusA.body.safe_reference === finalized.body.safe_reference &&
+      statusB.body.safe_reference === finalized.body.safe_reference &&
+      !("account_handoff" in statusA.body) && !("account_handoff" in statusB.body),
+    "same_actor_status_recovery_failed",
+  );
   const signingStateAfterReplay = await psql(config, `select jsonb_build_object(
     'snapshot_count',(select count(*) from public.app_signup_signing_snapshots where intake_id=${quote(intakeReference)}),
     'snapshot',(select jsonb_build_object('id',id,'hash',canonical_snapshot_sha256,'body',canonical_snapshot,'created_at',created_at) from public.app_signup_signing_snapshots where intake_id=${quote(intakeReference)}),
@@ -746,9 +963,6 @@ try {
     changedReplay.status === 409 && changedReplay.body.code === "idempotency_conflict",
     `changed_signing_payload_not_denied:${changedReplay.status}:${String(changedReplay.body.code || "NONE")}`,
   );
-  const unauthorized = await createAuth(config, service, `${prefix}-unauthorized`);
-  ids.add(unauthorized.userId);
-  authUsers.add(unauthorized.userId);
   const unauthorizedReplay = await post(
     config,
     "api-app-signup-signing-finalize",

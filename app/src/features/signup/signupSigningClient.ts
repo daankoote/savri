@@ -37,14 +37,7 @@ export type SigningFinalizeReceipt = {
   safeReference: string;
   status: "submitted_for_review";
   promotionState: "pending" | "promoted" | "blocked";
-  accountHandoff: SignupAccountHandoff;
 };
-
-export type SignupAccountHandoff =
-  | "existing_account_login_required"
-  | "account_activation_available"
-  | "already_authenticated"
-  | "blocked";
 
 export type SignupSigningStatus =
   | {
@@ -59,7 +52,6 @@ export type SignupSigningStatus =
     safeReference: string;
     finalizedAt: string;
     promotionState: "pending" | "promoted" | "blocked";
-    accountHandoff: SignupAccountHandoff;
   };
 
 export type SigningClientResult<T> =
@@ -172,17 +164,10 @@ export async function readSignupSigningStatus(): Promise<
   const safeReference = String(response.body.safe_reference || "");
   const finalizedAt = String(response.body.finalized_at || "");
   const promotionState = String(response.body.promotion_state || "");
-  const accountHandoff = String(response.body.account_handoff || "");
   if (
     response.ok && signingState === "finalized" && locked === true &&
     intakeStatus === "submitted_for_review" &&
     ["pending", "promoted", "blocked"].includes(promotionState) &&
-    [
-      "existing_account_login_required",
-      "account_activation_available",
-      "already_authenticated",
-      "blocked",
-    ].includes(accountHandoff) &&
     /^SIG-[A-F0-9]{12}$/.test(safeReference) &&
     Number.isFinite(new Date(finalizedAt).getTime())
   ) {
@@ -195,7 +180,6 @@ export async function readSignupSigningStatus(): Promise<
         safeReference,
         finalizedAt,
         promotionState: promotionState as "pending" | "promoted" | "blocked",
-        accountHandoff: accountHandoff as SignupAccountHandoff,
       },
     };
   }
@@ -355,17 +339,10 @@ export async function finalizeSignupSigning(input: {
   const safeReference = String(response.body.safe_reference || "");
   const status = String(response.body.intake_status || "");
   const promotionState = String(response.body.promotion_state || "");
-  const accountHandoff = String(response.body.account_handoff || "");
   if (
     !response.ok || !/^SIG-[A-F0-9]{12}$/.test(safeReference) ||
     status !== "submitted_for_review" ||
-    !["pending", "promoted", "blocked"].includes(promotionState) ||
-    ![
-      "existing_account_login_required",
-      "account_activation_available",
-      "already_authenticated",
-      "blocked",
-    ].includes(accountHandoff)
+    !["pending", "promoted", "blocked"].includes(promotionState)
   ) {
     return {
       ok: false,
@@ -382,7 +359,6 @@ export async function finalizeSignupSigning(input: {
       safeReference,
       status: "submitted_for_review",
       promotionState: promotionState as "pending" | "promoted" | "blocked",
-      accountHandoff: accountHandoff as SignupAccountHandoff,
     },
   };
 }

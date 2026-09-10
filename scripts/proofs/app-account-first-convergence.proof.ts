@@ -111,6 +111,7 @@ async function businessTotals(
 
 async function createSignedFixture(
   service: SupabaseClient,
+  authUserId: string,
   email: string,
   serviceName: string,
   label: string,
@@ -118,12 +119,34 @@ async function createSignedFixture(
   const bytes = proofPdf(label);
   const fixture = await createFixture(service, "particulier", label, 3, {
     email,
+    authUserId,
     serviceName,
     fileHash: await sha256Bytes(bytes),
     fileSize: bytes.byteLength,
     storageBucket: "app-documents",
     useCanonicalSourcePath: true,
   });
+  assert(/^[0-9a-f-]{36}$/i.test(authUserId), "fixture_auth_user_invalid");
+  const provenance = await new Deno.Command("psql", {
+    args: [
+      "postgresql://postgres:postgres@127.0.0.1:54322/postgres",
+      "-X",
+      "-v",
+      "ON_ERROR_STOP=1",
+      "-Atc",
+      `insert into public.app_signup_authenticated_intake_provenance(
+        intake_id,auth_user_id,auth_email_sha256,auth_email_verified_at,linkage_type,request_id
+      ) values (
+        '${fixture.intakeId}'::uuid,'${authUserId}'::uuid,'${await sha256(
+        email,
+      )}',clock_timestamp(),
+        'verified_auth_at_intake_start','${proofKey("fixture-provenance")}'
+      ) returning id;`,
+    ],
+    stdout: "piped",
+    stderr: "piped",
+  }).output();
+  assert(provenance.success, "fixture_auth_provenance_failed");
   const upload = await service.storage.from(fixture.storageBucket).upload(
     fixture.storagePath,
     pdfBlob(bytes),
@@ -289,12 +312,14 @@ assert(
 );
 marker("Q121_AUTHENTICATED_SIGNUP_REUSES_EXISTING_FORM");
 assert(
-  signupSource.includes('accountHandoff !== "already_authenticated"') &&
-    signupSource.includes("clearSignupIntakeSession();") &&
-    signupSource.includes('navigate("/dashboard")'),
-  "already_authenticated_direct_portal_missing",
+  signupSource.includes('submissionReceipt.promotionState === "promoted"') &&
+    signupSource.includes("clearDashboardReadCache(authUserId)") &&
+    signupSource.includes('navigate("/dashboard")') &&
+    !signupSource.includes("accountHandoff") &&
+    !signupSource.includes("retryBootstrap"),
+  "promoted_dashboard_navigation_missing",
 );
-marker("Q161_ALREADY_AUTHENTICATED_DIRECT_PORTAL");
+marker("Q161_PROMOTED_DASHBOARD_NAVIGATION_ONLY");
 
 const spoofEmail = `${proofKey("spoof-target")}@example.invalid`;
 const authenticatedStart = await post(
@@ -354,21 +379,10 @@ marker("Q123_NO_SECOND_AUTH_USER");
 
 const firstFixture = await createSignedFixture(
   service,
+  authUserId,
   accountEmail,
   serviceName,
   proofKey("first-application"),
-);
-const firstClaim = await service.rpc(
-  "app_signup_authenticated_intake_claim_v1",
-  {
-    p_intake_id: firstFixture.intakeId,
-    p_authenticated_auth_user_id: authUserId,
-    p_request_id: proofKey("first-auth-claim"),
-  },
-);
-assert(
-  !firstClaim.error && firstClaim.data?.ok === true,
-  "signed_fixture_auth_provenance_claim_failed",
 );
 const signingEvidence = await service.from("app_signup_signature_evidence")
   .select("method_id,typed_full_name,evidence_envelope")
@@ -496,6 +510,7 @@ marker("Q160_PORTAL_ZERO_TO_ONE");
 
 const secondFixture = await createSignedFixture(
   service,
+  authUserId,
   accountEmail,
   serviceName,
   proofKey("second-application"),

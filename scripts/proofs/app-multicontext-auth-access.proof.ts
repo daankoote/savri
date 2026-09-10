@@ -158,6 +158,7 @@ const [
   bootstrapSource,
   dashboardSource,
   signupSource,
+  appSource,
   authProviderSource,
   cacheSource,
 ] = await Promise.all([
@@ -172,6 +173,7 @@ const [
   source("supabase/functions/api-app-auth-bootstrap/index.ts"),
   source("supabase/functions/api-app-dashboard-get/index.ts"),
   source("app/src/features/signup/SignupPageShell.tsx"),
+  source("app/src/App.tsx"),
   source("app/src/features/auth/AuthProvider.tsx"),
   source("app/src/features/dashboard/dashboardReadCache.ts"),
 ]);
@@ -287,6 +289,7 @@ const vveFixture = await createFixture(
   proofKey("vve-context"),
   3,
   {
+    authUserId,
     email: accountEmail,
     serviceName: `R6 VvE ${proofKey("organization")}`,
     fileHash: await sha256Bytes(vveBytes),
@@ -295,6 +298,19 @@ const vveFixture = await createFixture(
     useCanonicalSourcePath: true,
   },
 );
+const vveProvenance = await psqlValue(
+  `insert into public.app_signup_authenticated_intake_provenance(
+  intake_id,auth_user_id,auth_email_sha256,auth_email_verified_at,linkage_type,request_id
+) values (
+  '${vveFixture.intakeId}'::uuid,'${authUserId}'::uuid,'${await sha256Bytes(
+    new TextEncoder().encode(accountEmail),
+  )}',
+  clock_timestamp(),'verified_auth_at_intake_start','${
+    proofKey("vve-provenance")
+  }'
+) returning id;`,
+);
+assert(/^[0-9a-f-]{36}$/i.test(vveProvenance), "vve_start_provenance_missing");
 const vveUpload = await service.storage.from(vveFixture.storageBucket).upload(
   vveFixture.storagePath,
   pdfBlob(vveBytes),
@@ -302,35 +318,16 @@ const vveUpload = await service.storage.from(vveFixture.storageBucket).upload(
 );
 assert(!vveUpload.error, "vve_source_upload_failed");
 
-const anonymousPromotion = await promoteQuietly(
+const vvePromotion = await promoteQuietly(
   vveFixture.intakeId,
-  "vve-anonymous-promotion",
-);
-assert(anonymousPromotion.ok, "vve_anonymous_promotion_failed");
-const anonymousHandoff = await service.rpc(
-  "app_signup_account_handoff_v2",
-  {
-    p_intake_id: vveFixture.intakeId,
-    p_authenticated_auth_user_id: null,
-  },
+  "vve-auth-first-promotion",
 );
 assert(
-  !anonymousHandoff.error &&
-    anonymousHandoff.data?.account_handoff ===
-      "existing_account_login_required",
-  "existing_account_login_handoff_failed",
+  vvePromotion.ok,
+  "vve_auth_first_promotion_failed",
 );
-marker("Q181_EXISTING_ACCOUNT_LOGIN_HANDOFF");
+marker("Q181_AUTH_FIRST_VVE_PROMOTION");
 
-const vveClaim = await service.rpc(
-  "app_signup_authenticated_intake_claim_v1",
-  {
-    p_intake_id: vveFixture.intakeId,
-    p_authenticated_auth_user_id: authUserId,
-    p_request_id: proofKey("vve-claim"),
-  },
-);
-assert(!vveClaim.error && vveClaim.data?.ok === true, "vve_claim_failed");
 const authenticatedPromotion = await promoteQuietly(
   vveFixture.intakeId,
   "vve-authenticated-replay",
@@ -527,8 +524,8 @@ marker("Q189_ACCESS_CONCURRENCY_IDEMPOTENT");
 
 assert(
   signupSource.includes("clearDashboardReadCache(authUserId)") &&
-    signupSource.includes("auth.retryBootstrap().then") &&
-    authProviderSource.includes("readyUserIdRef.current = null") &&
+    appSource.includes('<AuthProvider key="signup">') &&
+    appSource.includes('<AuthProvider key="dashboard">') &&
     cacheSource.includes("scopeGenerations.set"),
   "post_promotion_cache_invalidation_missing",
 );
@@ -537,8 +534,8 @@ assert(dashboard.status === 200, "direct_dashboard_read_not_fresh");
 marker("Q191_DIRECT_DASHBOARD_READ_IS_FRESH");
 assert(
   !signupSource.includes("window.location.reload") &&
-    signupSource.indexOf("auth.retryBootstrap().then") <
-      signupSource.indexOf('navigate("/dashboard")'),
+    !signupSource.includes("retryBootstrap") &&
+    signupSource.includes('navigate("/dashboard")'),
   "manual_refresh_workaround_detected",
 );
 marker("Q192_NO_MANUAL_REFRESH_REQUIRED");

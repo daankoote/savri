@@ -161,10 +161,7 @@ const statusResponse = await fetch(
   },
 );
 const statusBody = await statusResponse.json().catch(() => null);
-if (
-  !statusResponse.ok || statusBody?.promotion_state !== "promoted" ||
-  statusBody?.account_handoff !== "already_authenticated"
-) {
+if (!statusResponse.ok || statusBody?.promotion_state !== "promoted") {
   console.log(JSON.stringify({
     http_status: statusResponse.status,
     ok: statusBody?.ok === true,
@@ -172,14 +169,11 @@ if (
     promotion_state: typeof statusBody?.promotion_state === "string"
       ? statusBody.promotion_state
       : null,
-    account_handoff: typeof statusBody?.account_handoff === "string"
-      ? statusBody.account_handoff
-      : null,
   }));
 }
 assert(
   statusResponse.ok && statusBody?.promotion_state === "promoted" &&
-    statusBody?.account_handoff === "already_authenticated",
+    !("account_handoff" in statusBody),
   "current_fixture_status_recovery_failed",
 );
 

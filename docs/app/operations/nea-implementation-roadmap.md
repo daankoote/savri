@@ -1168,7 +1168,8 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   password recovery and verification-email resend are separate Auth UX, not
   signing recovery or promotion authority.
 - `submitted_for_review` is the single active finalized/locked customer/runtime
-  status with no verifier meaning; receipt v2 preserves immutable versioning.
+  status with no verifier meaning; submission receipt v4 contains only safe
+  reference, intake status and promotion state.
 - 09C1A uses `app_cases` as the sole core owner and creates no new
   `app_customer_dossiers` row.
 - 09C1A promotion is service-role-only, atomic and idempotent. It safely
@@ -1204,10 +1205,10 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 - 09C1C-R8 post-finalization account recovery is `CANCELLED / SUPERSEDED`.
   Canon requires legacy/unbound v2 to remain fail-closed and forbids
   retrospective account/access binding through e-mail or a safe receipt
-  reference. The retained post-signing Auth-claim/bind runtime route is a known
-  implementation residue, not accepted CURRENT authority, and must be closed
-  separately. R7 and existing valid same-tab/status recovery retain their
-  current status.
+  reference. Active finalize/status runtime requires exact immutable pre-signing
+  Auth provenance and has no claim/bind or legacy handoff path. After promotion
+  the browser only navigates to `/dashboard`; R7 and existing valid same-actor
+  status recovery retain their current status.
 - External verifier risk analysis, sampling, location visits, mandate check,
   findings, statement, five-year verification dossier and REV result remain a
   separate external boundary.

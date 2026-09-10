@@ -103,8 +103,9 @@ implementation.
   immutable result, and stale, mismatching, cross-owner and legacy/unbound
   requests fail closed. Canon forbids attaching a legacy/unbound v2 intake
   later to an account or access grant through e-mail or a safe receipt
-  reference. Retained post-signing Auth-claim/bind runtime residue is not
-  canonical authority and remains a separately bounded implementation gap.
+  reference. Active finalize/status runtime now accepts only exact immutable
+  `verified_auth_at_intake_start` provenance and contains no post-signing
+  Auth-claim/bind path or legacy handoff response.
   Promotion remains server-owned.
 - No further standalone horizontal tenant-config foundation is currently
   planned. Tenant #2, dynamic switching, provisioning, billing, custom domains,
@@ -268,7 +269,7 @@ controller/processor allocation requires legal review.
 - Pre-auth quarantine, `typed_name_otp_v1` finalization, immutable signing evidence, finalized mutation locks, safe receipt and server-authoritative recovery are CURRENT PROVEN locally within their explicit local/legal gates.
 - Post-signing 09C1A/09C1B/09C1C through R7 are CURRENT PROVEN LOCAL for
   atomic case-owned promotion, internal private Storage/Edge orchestration,
-  verified Auth/account handoff, customer-safe multi-case dashboard convergence
+  immutable Auth-first promotion, customer-safe multi-case dashboard convergence
   and the local browser portal-authority matrix. Remote deployment and
   production Auth/OTP/legal configuration and acceptance remain open. The
   former separate email-verification promotion trigger is `SUPERSEDED`.
@@ -1600,9 +1601,9 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
       keep customer/case creation out of account creation and intake start,
       and atomically create/bind the first compatible customer, identity and
       signed case for a zero-case Auth user.
-- [x] 09C1C-R5-R1: recover the retained already-authenticated signed
-      account-first fixture through the normal verified bearer status route and
-      route `promoted` + `already_authenticated` directly to `/dashboard`.
+- [x] 09C1C-R5-R1: recover the retained same-actor signed account-first fixture
+      through the normal verified bearer status route and expose only
+      `/dashboard` navigation after `promoted`.
 - [x] 09C1C-R6: keep Auth principal, customer/service context, party, case and
       authority separate; add immutable server-owned multi-context access,
       preserve distinct Particulier/Zakelijk/VvE customers and keep account
@@ -1612,9 +1613,10 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
       the positive/negative local access matrix on desktop and mobile,
       including activation, authenticated handoff, history restoration,
       isolated case switching and exact fixture cleanup.
-- [x] 09C1C-R6: aggregate all explicitly accessible legacy/signed cases and
-      invalidate only the current principal's dashboard/bootstrap cache after
-      authenticated promotion; keep Zakelijk/VvE authority review incomplete.
+- [x] 09C1C-R6: aggregate all explicitly accessible legacy/signed cases; after
+      authenticated promotion invalidate only the current principal's
+      dashboard-readcache and remount the route-keyed dashboard AuthProvider for
+      fresh bootstrap; keep Zakelijk/VvE authority review incomplete.
 - [ ] Post-MVP polish: visually integrate authenticated `Nieuwe aanvraag`
       inside the portal shell. Keep canonical `/aanmelden` as the single shared
       intake flow; do not build a second portal-native application flow.
@@ -1622,9 +1624,9 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
       recovery or retrospective Auth/access binding. Receipt-bound back/forward
       recovery after finalization means only idempotent status/promotion retry
       for the same already-authenticated actor. Existing valid same-tab/status
-      recovery remains CURRENT PROVEN; R7 browser status is unchanged. The
-      retained post-signing Auth-claim/bind runtime residue does not reopen R8;
-      it must fail closed before that legacy path can be accepted.
+      recovery remains CURRENT PROVEN; R7 browser status is unchanged. Active
+      finalize/status require exact pre-signing provenance, expose no legacy
+      handoff discriminator and cannot reopen R8.
 - [ ] 09C1C+: production legal/OTP/Auth configuration and browser acceptance,
       operations review, authority/evidence decisions, external verifier,
       remote apply and deploy require separate authority.

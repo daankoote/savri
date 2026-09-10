@@ -295,11 +295,29 @@ async function authorizeSigningContext(
   intakeId: string,
   authenticatedAuthUserId: string,
   manageHash: string,
-  meta: AppRequestMeta,
 ): Promise<
-  | { ok: true }
+  | { ok: true; status: number; body: Record<string, unknown> }
   | { ok: false; response: Response }
 > {
+  const provenance = await SB.from(
+    "app_signup_authenticated_intake_provenance",
+  ).select("auth_user_id,linkage_type").eq("intake_id", intakeId).maybeSingle();
+  if (
+    provenance.error || !provenance.data ||
+    provenance.data.auth_user_id !== authenticatedAuthUserId ||
+    provenance.data.linkage_type !== "verified_auth_at_intake_start"
+  ) {
+    return {
+      ok: false,
+      response: appErrorResponse(
+        req,
+        403,
+        "Deze aanmelding is niet beschikbaar.",
+        "intake_unavailable",
+      ),
+    };
+  }
+
   const statusResult = await SB.rpc("app_signup_signing_status_v2", {
     p_intake_id: intakeId,
     p_manage_token_sha256: manageHash,
@@ -318,46 +336,7 @@ async function authorizeSigningContext(
       ),
     };
   }
-
-  const provenance = await SB.from(
-    "app_signup_authenticated_intake_provenance",
-  ).select("auth_user_id").eq("intake_id", intakeId).maybeSingle();
-  if (
-    provenance.error ||
-    (provenance.data &&
-      provenance.data.auth_user_id !== authenticatedAuthUserId)
-  ) {
-    return {
-      ok: false,
-      response: appErrorResponse(
-        req,
-        403,
-        "Deze aanmelding is niet beschikbaar.",
-        "intake_unavailable",
-      ),
-    };
-  }
-
-  if (statusRpc.body.signing_state === "finalized") {
-    const claim = await SB.rpc("app_signup_authenticated_intake_claim_v1", {
-      p_intake_id: intakeId,
-      p_authenticated_auth_user_id: authenticatedAuthUserId,
-      p_request_id: meta.request_id,
-    });
-    if (claim.error || !isRecord(claim.data) || claim.data.ok !== true) {
-      return {
-        ok: false,
-        response: appErrorResponse(
-          req,
-          403,
-          "Deze aanmelding is niet beschikbaar.",
-          "intake_unavailable",
-        ),
-      };
-    }
-  }
-
-  return { ok: true };
+  return { ok: true, status: statusRpc.status, body: statusRpc.body };
 }
 
 function connectionScope(facts: SafeFact[]) {
@@ -429,49 +408,11 @@ function receiptLegalDocuments(
 }
 
 async function postSigningProjection(
-  req: Request,
+  SB: ReturnType<typeof signupServiceClient> & object,
   intakeId: string,
   meta: AppRequestMeta,
   body: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
-  const SB = signupServiceClient();
-  let authenticatedAuthUserId: string | null = null;
-  const bearer = req.headers.get("authorization")?.trim().match(
-    /^Bearer\s+([^\s]+)$/i,
-  )?.[1];
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")?.trim() || "";
-  if (SB && bearer && bearer !== anonKey) {
-    const verifiedAuth = await requireVerifiedSupabaseAuthUser(req, SB);
-    if (!verifiedAuth.ok) {
-      return {
-        ...body,
-        intake_status: "submitted_for_review",
-        promotion_state: "blocked",
-        account_handoff: "blocked",
-      };
-    }
-    authenticatedAuthUserId = verifiedAuth.context.authUserId;
-    const provenance = await SB.rpc(
-      "app_signup_authenticated_intake_claim_v1",
-      {
-        p_intake_id: intakeId,
-        p_authenticated_auth_user_id: authenticatedAuthUserId,
-        p_request_id: meta.request_id,
-      },
-    );
-    if (
-      provenance.error || !isRecord(provenance.data) ||
-      provenance.data.ok !== true
-    ) {
-      return {
-        ...body,
-        intake_status: "submitted_for_review",
-        promotion_state: "blocked",
-        account_handoff: "blocked",
-      };
-    }
-  }
-
   const promotionMeta = {
     ...meta,
     idempotency_key: `signup-promotion:${intakeId}`,
@@ -482,26 +423,10 @@ async function postSigningProjection(
     await new Promise((resolve) => setTimeout(resolve, delayMs));
     attempt = await attemptSignupPromotion(intakeId, promotionMeta);
   }
-  const handoffResult = SB
-    ? await SB.rpc("app_signup_account_handoff_v2", {
-      p_intake_id: intakeId,
-      p_authenticated_auth_user_id: authenticatedAuthUserId,
-    })
-    : { data: null, error: true };
-  const handoff = isRecord(handoffResult.data) &&
-      [
-        "existing_account_login_required",
-        "account_activation_available",
-        "already_authenticated",
-        "blocked",
-      ].includes(stringField(handoffResult.data, "account_handoff"))
-    ? stringField(handoffResult.data, "account_handoff")
-    : "blocked";
   return {
     ...body,
     intake_status: "submitted_for_review",
     promotion_state: attempt.state,
-    account_handoff: handoff,
   };
 }
 
@@ -548,34 +473,34 @@ serve(async (req) => {
         "service_unavailable",
       );
     }
-    const result = await SB.rpc("app_signup_signing_status_v2", {
-      p_intake_id: intakeId,
-      p_manage_token_sha256: await sha256Hex(capability),
-    });
-    if (result.error) {
+    const verifiedAuth = await requireVerifiedSupabaseAuthUser(req, SB);
+    if (!verifiedAuth.ok) {
       return appErrorResponse(
         req,
         403,
-        "Deze aanmelding kan niet veilig worden hersteld.",
-        "signing_status_unavailable",
+        "Deze aanmelding is niet beschikbaar.",
+        "intake_unavailable",
       );
     }
-    const rpc = publicRpcBody(result.data);
-    if (!rpc) {
-      return appErrorResponse(
+    const authorization = await authorizeSigningContext(
+      req,
+      SB,
+      intakeId,
+      verifiedAuth.context.authUserId,
+      await sha256Hex(capability),
+    );
+    if (!authorization.ok) return authorization.response;
+    if (authorization.body.signing_state !== "finalized") {
+      return appJsonResponse(
         req,
-        503,
-        "Ondertekenen is tijdelijk niet beschikbaar.",
-        "service_unavailable",
+        authorization.status,
+        authorization.body,
       );
-    }
-    if (rpc.body.signing_state !== "finalized") {
-      return appJsonResponse(req, rpc.status, rpc.body);
     }
     return appJsonResponse(
       req,
-      rpc.status,
-      await postSigningProjection(req, intakeId, meta, rpc.body),
+      authorization.status,
+      await postSigningProjection(SB, intakeId, meta, authorization.body),
     );
   }
 
@@ -642,11 +567,21 @@ serve(async (req) => {
   if (!verifiedAuth.ok) {
     return appErrorResponse(
       req,
-      verifiedAuth.status,
-      verifiedAuth.message,
-      verifiedAuth.code,
+      403,
+      "Deze aanmelding is niet beschikbaar.",
+      "intake_unavailable",
     );
   }
+
+  const manageHash = await sha256Hex(capability);
+  const authorization = await authorizeSigningContext(
+    req,
+    SB,
+    intakeId,
+    verifiedAuth.context.authUserId,
+    manageHash,
+  );
+  if (!authorization.ok) return authorization.response;
 
   const intake = await SB.from("app_signup_intakes").select(
     "email_normalized,status,submitted_payload",
@@ -682,17 +617,6 @@ serve(async (req) => {
       "account_type_mismatch",
     );
   }
-
-  const manageHash = await sha256Hex(capability);
-  const authorization = await authorizeSigningContext(
-    req,
-    SB,
-    intakeId,
-    verifiedAuth.context.authUserId,
-    manageHash,
-    meta,
-  );
-  if (!authorization.ok) return authorization.response;
 
   const intakeFiles = await SB.from("app_signup_intake_files").select(
     "id,client_slot_id,document_type,server_sha256",
@@ -957,6 +881,6 @@ serve(async (req) => {
   return appJsonResponse(
     req,
     rpc.status,
-    await postSigningProjection(req, intakeId, meta, rpc.body),
+    await postSigningProjection(SB, intakeId, meta, rpc.body),
   );
 });

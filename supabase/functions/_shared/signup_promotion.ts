@@ -246,6 +246,7 @@ async function loadPromotionSource(
 
   const [
     snapshotResult,
+    provenanceResult,
     mandateResult,
     signatureResult,
     acceptanceResult,
@@ -254,6 +255,9 @@ async function loadPromotionSource(
   ] = await Promise.all([
     SB.from("app_signup_signing_snapshots")
       .select("id,intake_id,canonical_snapshot")
+      .eq("intake_id", intakeId),
+    SB.from("app_signup_authenticated_intake_provenance")
+      .select("intake_id,auth_user_id,linkage_type")
       .eq("intake_id", intakeId),
     SB.from("app_signup_mandates")
       .select("id,intake_id,snapshot_id,authority_review_status")
@@ -275,20 +279,23 @@ async function loadPromotionSource(
       .eq("event_data->>intake_reference", intakeId),
   ]);
   if (
-    snapshotResult.error || mandateResult.error || signatureResult.error ||
-    acceptanceResult.error || manageResult.error || auditResult.error
+    snapshotResult.error || provenanceResult.error || mandateResult.error ||
+    signatureResult.error || acceptanceResult.error || manageResult.error ||
+    auditResult.error
   ) {
     throw new PromotionError(409, "promotion_not_ready");
   }
 
   const snapshots = rows(snapshotResult.data);
+  const provenances = rows(provenanceResult.data);
   const mandates = rows(mandateResult.data);
   const signatures = rows(signatureResult.data);
   const acceptances = rows(acceptanceResult.data);
   const manageCapabilities = rows(manageResult.data);
   const audits = rows(auditResult.data);
   if (
-    snapshots.length !== 1 || mandates.length !== 1 ||
+    snapshots.length !== 1 || provenances.length !== 1 ||
+    mandates.length !== 1 ||
     signatures.length !== 1 ||
     acceptances.length !== 3 || manageCapabilities.length !== 1 ||
     audits.length !== 1
@@ -296,6 +303,7 @@ async function loadPromotionSource(
     throw new PromotionError(409, "promotion_not_ready");
   }
   const snapshot = snapshots[0];
+  const provenance = provenances[0];
   const mandate = mandates[0];
   const signature = signatures[0];
   const manageCapability = manageCapabilities[0];
@@ -333,6 +341,18 @@ async function loadPromotionSource(
   const canonicalSnapshot = isRecord(snapshot.canonical_snapshot)
     ? snapshot.canonical_snapshot
     : null;
+  const presentation = isRecord(canonicalSnapshot?.presentation)
+    ? canonicalSnapshot.presentation
+    : null;
+  if (
+    stringField(provenance, "linkage_type") !==
+      "verified_auth_at_intake_start" ||
+    !presentation ||
+    stringField(provenance, "auth_user_id") !==
+      stringField(presentation, "authenticated_auth_user_id")
+  ) {
+    throw new PromotionError(409, "promotion_not_ready");
+  }
   const requiredReferences = canonicalSnapshot?.required_file_references;
   if (
     !Array.isArray(requiredReferences) || requiredReferences.length === 0 ||
