@@ -33,7 +33,14 @@ async function source(path: string): Promise<string> {
 
 Object.defineProperty(globalThis, "window", {
   configurable: true,
-  value: { location: { origin: "https://proof.invalid" } },
+  value: {
+    location: {
+      hash: "",
+      origin: "https://proof.invalid",
+      pathname: "/",
+      search: "",
+    },
+  },
 });
 
 const navigate = (_href: string) => undefined;
@@ -220,7 +227,8 @@ assert(
   "Q07_branding_became_security_or_business_authority",
 );
 assert(
-  appSource.includes('"/account"') && appSource.includes('"/dashboard"') &&
+  appSource.includes("AUTH_ACCOUNT_ROUTE") &&
+    appSource.includes('"/dashboard"') &&
     appSource.includes('"/aanmelden"') && appSource.includes('"/privacy"') &&
     appSource.includes('"/voorwaarden"') &&
     !appSource.includes("PresentationBrand"),

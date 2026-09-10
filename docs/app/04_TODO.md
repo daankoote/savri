@@ -50,10 +50,14 @@ implementation.
   admin/workforce management UI, ENVAL Control Console, Verifier Console,
   tenant #2, multi-tenant switching, production deployment and later
   `/intern/*` redirect/removal cleanup.
-- KNOWN PENDING UI EVIDENCE — `F01`: at `820x1180`, the existing ENVAL
-  login/navigation presentation wraps `Inloggen` onto a separate navigation row
-  and produces unnecessary vertical overflow. This governance audit records the
-  finding only; it does not fix it or make it generic reviewer policy.
+- DONE / CURRENT PROVEN LOCAL — `F01`: AUTH_SHELL_F01 gives all five Auth/account
+  routes one minimal server-resolved tenant-branded header without public,
+  customer-portal or operator navigation. `/inloggen` retains its validated
+  operator-return audience without exposing protected navigation before
+  authority. Focused composition proof and browser evidence at `1440x900`,
+  `820x1180` and `375x812` show no horizontal overflow, console/runtime errors
+  or product writes. Public and tenant-public signup navigation remain
+  unchanged; broader public/tenant IA and responsive navigation are separate.
 - DONE / CURRENT PROVEN LOCAL — `SL01-C`: the server-resolved immutable signing
   presentation receipt binds tenant, Auth actor, intake and selected
   signing-material/legal provenance. Presentation is not acceptance; explicit

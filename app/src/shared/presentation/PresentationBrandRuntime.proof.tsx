@@ -43,7 +43,14 @@ const OTHER_TENANT_ID = "51000000-0000-4000-8000-000000000002";
 
 Object.defineProperty(globalThis, "window", {
   configurable: true,
-  value: { location: { origin: "https://proof.invalid" } },
+  value: {
+    location: {
+      hash: "",
+      origin: "https://proof.invalid",
+      pathname: "/",
+      search: "",
+    },
+  },
 });
 
 const tenantExecution: AppPresentationTenantBinding = Object.freeze({
@@ -409,7 +416,8 @@ assert(
   "Q16_auth_dashboard_signing_or_legal_authority_changed",
 );
 assert(
-  appSource.includes('"/aanmelden"') && appSource.includes('"/account"') &&
+  appSource.includes('"/aanmelden"') &&
+    appSource.includes("AUTH_ACCOUNT_ROUTE") &&
     appSource.includes('"/dashboard"') &&
     authProviderSource.includes('setStatus("signed_out")') &&
     authProviderSource.includes('setStatus("ready")') &&

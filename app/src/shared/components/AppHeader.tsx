@@ -67,27 +67,31 @@ export function AppHeader({
           </span>
         </a>
 
-        <nav className="header-nav" aria-label="Hoofdnavigatie">
-          {navigation.flatMap((item) =>
-            item.href
-              ? [
-                (
-                  <a
-                    aria-current={(item.active ??
-                        isActiveNavItem(item.href, currentPath))
-                      ? "page"
-                      : undefined}
-                    href={item.href}
-                    key={item.label}
-                    onClick={handleClick(item.href)}
-                  >
-                    {item.label}
-                  </a>
-                ),
-              ]
-              : []
-          )}
-        </nav>
+        {navigation.length > 0
+          ? (
+            <nav className="header-nav" aria-label="Hoofdnavigatie">
+              {navigation.flatMap((item) =>
+                item.href
+                  ? [
+                    (
+                      <a
+                        aria-current={(item.active ??
+                            isActiveNavItem(item.href, currentPath))
+                          ? "page"
+                          : undefined}
+                        href={item.href}
+                        key={item.label}
+                        onClick={handleClick(item.href)}
+                      >
+                        {item.label}
+                      </a>
+                    ),
+                  ]
+                  : []
+              )}
+            </nav>
+          )
+          : null}
       </div>
     </header>
   );

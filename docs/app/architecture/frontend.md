@@ -177,6 +177,10 @@ Current routes:
 - `/`
 - `/aanmelden`
 - `/account`
+- `/inloggen`
+- `/account/wachtwoord-vergeten`
+- `/account/nieuw-wachtwoord`
+- `/account/verificatiemail-opnieuw`
 - `/upload`
 - `/ere`
 - `/contact`
@@ -206,6 +210,11 @@ Rules:
 - `/intern/compliance` and `/intern/dossiers` are CURRENT temporary
   compatibility paths using the same server-authorized operator surface and
   authority. Their later redirect/removal cleanup is separately bounded.
+- The five Auth/account routes use the shared server-resolved tenant brand in a
+  minimal Auth header without public, customer-portal or operator navigation.
+  `/inloggen` changes only to the operator Auth audience for a validated
+  internal operator return route; protected navigation remains unavailable
+  until server-derived authority admits the corresponding surface.
 - The operator route guard sends unauthenticated access through the operator
   login flow, denies authenticated non-workforce with the normal `Geen toegang`
   state, and admits only a server-derived active workforce context. Tenant and

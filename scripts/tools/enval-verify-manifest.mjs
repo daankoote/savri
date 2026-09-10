@@ -1641,6 +1641,33 @@ const CHECK_LIST = [
     expectedMarker: "AUTH_UX_RECOVERY_RESEND_Q01_Q12=PASS",
   }),
   check({
+    id: "auth-shell-f01-pure",
+    argv: [
+      "deno",
+      "run",
+      "--cached-only",
+      "--allow-read",
+      "--allow-env=NODE_ENV",
+      "--node-modules-dir=manual",
+      "--config",
+      "app/tsconfig.json",
+      "app/src/features/auth/authShell.proof.tsx",
+    ],
+    domain: "auth-shell-navigation-ownership",
+    applicablePaths: [
+      "app/src/App.tsx",
+      "app/src/pages/AccountPage.tsx",
+      "app/src/pages/HomePage.tsx",
+      "app/src/features/auth/authShell.proof.tsx",
+      "app/src/features/signup/SignupPageShell.tsx",
+      "app/src/shared/components/AppHeader.tsx",
+    ],
+    safety: SAFETY.SAFE_PURE,
+    minimumMode: "TARGETED",
+    expectedDurationMs: 1_500,
+    expectedMarker: "AUTH_SHELL_F01_Q01_Q08=PASS",
+  }),
+  check({
     id: "evidence-review-worklist-ui-pure",
     argv: [
       "deno",
@@ -1891,7 +1918,7 @@ const CHECK_LIST = [
     safety: SAFETY.SAFE_PURE,
     minimumMode: "TARGETED",
     expectedDurationMs: 1_500,
-    expectedMarker: "PRESENTATION_BRAND_CONSUMERS_Q01_Q12=PASS",
+    expectedMarker: "PRESENTATION_BRAND_CONSUMERS_Q01_Q17=PASS",
   }),
   check({
     id: "customer-correction-handoff-ui-pure",
@@ -3339,6 +3366,24 @@ export const PATH_RULES = Object.freeze([
     checks: Object.freeze([
       "deno-check-app-changed",
       "auth-ux-recovery-resend-pure",
+    ]),
+  }),
+  Object.freeze({
+    id: "auth-shell-f01",
+    match: Object.freeze({
+      type: "oneOf",
+      value: Object.freeze([
+        "app/src/App.tsx",
+        "app/src/pages/AccountPage.tsx",
+        "app/src/pages/HomePage.tsx",
+        "app/src/features/auth/authShell.proof.tsx",
+        "app/src/features/signup/SignupPageShell.tsx",
+        "app/src/shared/components/AppHeader.tsx",
+      ]),
+    }),
+    checks: Object.freeze([
+      "deno-check-app-changed",
+      "auth-shell-f01-pure",
     ]),
   }),
   Object.freeze({
