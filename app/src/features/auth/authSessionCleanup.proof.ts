@@ -72,6 +72,8 @@ export async function runAuthSessionCleanupProof(): Promise<
     "invalid_credentials",
     "password_mismatch",
     "password_too_short",
+    "recovery_link_invalid",
+    "password_update_failed",
     "portal_context_not_authorized",
   ];
 

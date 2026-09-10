@@ -284,21 +284,30 @@ Current frontend flow:
 - shared Supabase browser client
 - Auth state/session provider with session initialization and Auth state subscription
 - `/account` account creation and sign-in surface
+- `/account/wachtwoord-vergeten` neutral password-recovery request
+- `/account/nieuw-wachtwoord` recovery-event/session-gated password update
+- `/account/verificatiemail-opnieuw` neutral signup-verification resend
 - bootstrap API client for `api-app-auth-bootstrap`
 - logout
 - session restore
 - safe Auth error mapping
 - dashboard route guard
-- route-level lazy loading for Auth/Supabase code on `/account` and `/dashboard`
+- route-level lazy loading for Supabase Auth runtime on account, recovery and
+  protected portal routes
+- fixed canonical-origin Auth callbacks, recovery callback URL cleanup and one
+  shared recovery/resend event/redirect helper
+- `PASSWORD_RECOVERY` priority before ordinary session bootstrap; public request
+  routes and recovery sessions do not call portal bootstrap
+- local recovery-session termination and fresh login after password update
 
 Still OPEN:
 
-- password recovery UX
-- resend verification UX
 - unsupported future dashboard domains
 - document upload controls
 - dashboard write actions
 - production Auth configuration and production browser proof
+- Mailpit/SMTP delivery and interactive browser acceptance for password
+  recovery, invalid/expired/used links, resend and fresh login
 
 Rules:
 

@@ -10,6 +10,12 @@ import { UploadPage } from "./pages/UploadPage";
 import type { AppNavigate, RoutedPageProps } from "./routes/types";
 import { parseEvidenceReviewDetailRoute } from "./features/evidence-review/evidenceReviewRoutes";
 import { readSafePostLoginReturnRoute } from "./features/auth/postLoginNavigation";
+import {
+  AUTH_ACCOUNT_ROUTE,
+  AUTH_PASSWORD_REQUEST_ROUTE,
+  AUTH_PASSWORD_UPDATE_ROUTE,
+  AUTH_VERIFICATION_RESEND_ROUTE,
+} from "./features/auth/authUxFlow";
 
 const AccountPage = lazy(() => import("./pages/AccountPage").then((module) => ({ default: module.AccountPage })));
 const DashboardPage = lazy(() =>
@@ -98,13 +104,27 @@ export function App() {
     ? readSafePostLoginReturnRoute(window.location.search)
     : null;
 
-  if (path === "/account" || path === "/inloggen") {
+  if (
+    path === AUTH_ACCOUNT_ROUTE ||
+    path === "/inloggen" ||
+    path === AUTH_PASSWORD_REQUEST_ROUTE ||
+    path === AUTH_PASSWORD_UPDATE_ROUTE ||
+    path === AUTH_VERIFICATION_RESEND_ROUTE
+  ) {
+    const authIntent = path === AUTH_PASSWORD_UPDATE_ROUTE
+      ? "password_recovery"
+      : path === AUTH_PASSWORD_REQUEST_ROUTE ||
+          path === AUTH_VERIFICATION_RESEND_ROUTE
+      ? "public_request"
+      : "portal";
     return (
       <Suspense fallback={<RouteLoading />}>
         <AuthProvider
+          key={authIntent}
           audience={loginReturnTo && isOperatorRoute(loginReturnTo)
             ? "operator"
             : "customer"}
+          intent={authIntent}
         >
           <AccountPage navigate={navigate} currentPath={path} />
         </AuthProvider>

@@ -1,10 +1,20 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import type { AppNavigate } from "../../routes/types";
+import { AuthEmailRequestPage } from "./AuthEmailRequestPage";
+import { AuthFeedbackPanel, AuthPageLayout, type AuthFeedback } from "./AuthPageLayout";
 import { useAuth } from "./AuthProvider";
+import { safeAuthError } from "./authErrorMapping";
+import {
+  AUTH_PASSWORD_REQUEST_ROUTE,
+  AUTH_VERIFICATION_RESEND_ROUTE,
+  resolveAuthPageKind,
+} from "./authUxFlow";
 import type { AuthMode, AuthSafeError } from "./authTypes";
+import { PasswordRecoveryPage } from "./PasswordRecoveryPage";
 import { resolvePostLoginDestination } from "./postLoginNavigation";
 
 type AccountPageContentProps = {
+  currentPath: string;
   navigate: AppNavigate;
 };
 
@@ -28,7 +38,7 @@ function safeErrorText(error: AuthSafeError | null) {
   return error?.message || "Inloggen is tijdelijk niet beschikbaar. Probeer het opnieuw.";
 }
 
-export function AccountPageContent({ navigate }: AccountPageContentProps) {
+function AccountAccessPage({ navigate }: { navigate: AppNavigate }) {
   const auth = useAuth();
   const [mode, setMode] = useState<AuthMode>(() =>
     auth.audience === "customer" && window.location.hash === "#activeren"
@@ -38,7 +48,7 @@ export function AccountPageContent({ navigate }: AccountPageContentProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
-  const [feedback, setFeedback] = useState<{ kind: "info" | "error"; message: string } | null>(null);
+  const [feedback, setFeedback] = useState<AuthFeedback | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const hasNavigatedRef = useRef(false);
   const copy = modeCopy(mode);
@@ -50,41 +60,44 @@ export function AccountPageContent({ navigate }: AccountPageContentProps) {
   }, [navigate, postLoginDestination]);
 
   useEffect(() => {
-    if (auth.status === "ready") {
-      navigateAfterAuthentication();
-    }
+    if (auth.status === "ready") navigateAfterAuthentication();
   }, [auth.status, navigateAfterAuthentication]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFeedback(null);
+
+    if (auth.audience === "customer" && mode === "activate") {
+      if (password !== passwordConfirmation) {
+        setFeedback({ kind: "error", message: safeAuthError("password_mismatch").message });
+        return;
+      }
+      if (password.length < 8) {
+        setFeedback({ kind: "error", message: safeAuthError("password_too_short").message });
+        return;
+      }
+    }
+
     setSubmitting(true);
 
-    const result =
-      auth.audience === "customer" && mode === "activate"
-        ? await auth.signUpWithPassword(email, password, passwordConfirmation)
-        : await auth.signInWithPassword(email, password);
+    const result = auth.audience === "customer" && mode === "activate"
+      ? await auth.signUpWithPassword(email, password)
+      : await auth.signInWithPassword(email, password);
 
     setSubmitting(false);
-
     if (!result.ok) {
       if (mode === "activate" && result.error.code === "account_already_exists") {
         setMode("signin");
-        setFeedback({
-          kind: "info",
-          message: "Dit account bestaat al. Log in om verder te gaan.",
-        });
+        setFeedback({ kind: "info", message: "Dit account bestaat al. Log in om verder te gaan." });
         return;
       }
       setFeedback({ kind: "error", message: result.error.message });
       return;
     }
-
     if (result.status === "verification_required") {
-      setFeedback({ kind: "info", message: result.message });
+      setFeedback({ kind: "info", message: "Controleer uw e-mail om het account te bevestigen." });
       return;
     }
-
     navigateAfterAuthentication();
   }
 
@@ -104,99 +117,104 @@ export function AccountPageContent({ navigate }: AccountPageContentProps) {
   }
 
   return (
-    <main className="page-shell">
-      <section className="section">
-        <div className="container account-layout">
-          <div className="page-intro">
-            <p className="eyebrow">{auth.audience === "operator" ? "Beheer" : "Klantportaal"}</p>
-            <h1>{copy.action}</h1>
-            <p>{copy.helper}</p>
-          </div>
-
-          <section className="signup-section account-card" aria-label={copy.action}>
-            {auth.audience === "customer" ? (
-              <div className="mode-tabs" aria-label="Account modus">
-              <button
-                className={mode === "signin" ? "mode-tab mode-tab-active" : "mode-tab"}
-                onClick={() => {
-                  setMode("signin");
-                  setFeedback(null);
-                }}
-                type="button"
-              >
-                Inloggen
-              </button>
-              <button
-                className={mode === "activate" ? "mode-tab mode-tab-active" : "mode-tab"}
-                onClick={() => {
-                  setMode("activate");
-                  setFeedback(null);
-                }}
-                type="button"
-              >
-                Account aanmaken
-              </button>
-              </div>
-            ) : null}
-
-            <form className="account-form" onSubmit={handleSubmit}>
-              <label className="field">
-                <span>E-mailadres</span>
-                <input
-                  autoComplete="email"
-                  inputMode="email"
-                  onChange={(event) => setEmail(event.target.value)}
-                  required
-                  type="email"
-                  value={email}
-                />
-              </label>
-
-              <label className="field">
-                <span>Wachtwoord</span>
-                <input
-                  autoComplete={mode === "activate" ? "new-password" : "current-password"}
-                  minLength={8}
-                  onChange={(event) => setPassword(event.target.value)}
-                  required
-                  type="password"
-                  value={password}
-                />
-              </label>
-
-              {auth.audience === "customer" && mode === "activate" ? (
-                <label className="field">
-                  <span>Wachtwoord herhalen</span>
-                  <input
-                    autoComplete="new-password"
-                    minLength={8}
-                    onChange={(event) => setPasswordConfirmation(event.target.value)}
-                    required
-                    type="password"
-                    value={passwordConfirmation}
-                  />
-                </label>
-              ) : null}
-
-              <button className="button button-primary" disabled={submitting || auth.status === "bootstrapping"} type="submit">
-                {submitting || auth.status === "bootstrapping" ? "Even geduld..." : copy.submit}
-              </button>
-            </form>
-
-            {feedback ? (
-              <div className={feedback.kind === "error" ? "review-panel" : "review-panel review-panel-ok"} role="status">
-                <p>{feedback.message}</p>
-              </div>
-            ) : null}
-
-            {auth.status === "error" && !feedback ? (
-              <div className="review-panel" role="alert">
-                <p>{safeErrorText(auth.error)}</p>
-              </div>
-            ) : null}
-          </section>
+    <AuthPageLayout action={copy.action} audience={auth.audience} helper={copy.helper}>
+      {auth.audience === "customer" ? (
+        <div className="mode-tabs" aria-label="Account modus">
+          <button
+            className={mode === "signin" ? "mode-tab mode-tab-active" : "mode-tab"}
+            onClick={() => {
+              setMode("signin");
+              setFeedback(null);
+            }}
+            type="button"
+          >
+            Inloggen
+          </button>
+          <button
+            className={mode === "activate" ? "mode-tab mode-tab-active" : "mode-tab"}
+            onClick={() => {
+              setMode("activate");
+              setFeedback(null);
+            }}
+            type="button"
+          >
+            Account aanmaken
+          </button>
         </div>
-      </section>
-    </main>
+      ) : null}
+
+      <form className="account-form" onSubmit={handleSubmit}>
+        <label className="field">
+          <span>E-mailadres</span>
+          <input
+            autoComplete="email"
+            inputMode="email"
+            onChange={(event) => setEmail(event.target.value)}
+            required
+            type="email"
+            value={email}
+          />
+        </label>
+        <label className="field">
+          <span>Wachtwoord</span>
+          <input
+            autoComplete={mode === "activate" ? "new-password" : "current-password"}
+            minLength={8}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+            type="password"
+            value={password}
+          />
+        </label>
+        {auth.audience === "customer" && mode === "activate" ? (
+          <label className="field">
+            <span>Wachtwoord herhalen</span>
+            <input
+              autoComplete="new-password"
+              minLength={8}
+              onChange={(event) => setPasswordConfirmation(event.target.value)}
+              required
+              type="password"
+              value={passwordConfirmation}
+            />
+          </label>
+        ) : null}
+        <button
+          className="button button-primary"
+          disabled={submitting || auth.status === "bootstrapping"}
+          type="submit"
+        >
+          {submitting || auth.status === "bootstrapping" ? "Even geduld..." : copy.submit}
+        </button>
+      </form>
+
+      <AuthFeedbackPanel feedback={feedback} />
+
+      {auth.status === "error" && !feedback ? (
+        <div className="review-panel" role="alert">
+          <p>{safeErrorText(auth.error)}</p>
+        </div>
+      ) : null}
+
+      <div className="section-actions">
+        <button className="button button-secondary" onClick={() => navigate(AUTH_PASSWORD_REQUEST_ROUTE)} type="button">
+          Wachtwoord vergeten
+        </button>
+        {auth.audience === "customer" ? (
+          <button className="button button-secondary" onClick={() => navigate(AUTH_VERIFICATION_RESEND_ROUTE)} type="button">
+            Geen verificatiemail ontvangen?
+          </button>
+        ) : null}
+      </div>
+    </AuthPageLayout>
   );
+}
+
+export function AccountPageContent({ currentPath, navigate }: AccountPageContentProps) {
+  const pageKind = resolveAuthPageKind(currentPath);
+  if (pageKind === "password_request" || pageKind === "verification_resend") {
+    return <AuthEmailRequestPage kind={pageKind} navigate={navigate} />;
+  }
+  if (pageKind === "password_update") return <PasswordRecoveryPage navigate={navigate} />;
+  return <AccountAccessPage navigate={navigate} />;
 }

@@ -135,7 +135,8 @@ assert(
   "Q06_shared_guard_return_intent_not_reused",
 );
 assert(
-  accountSource.includes("resolvePostLoginDestination(window.location.search)") &&
+  accountSource.includes("resolvePostLoginDestination(") &&
+    accountSource.includes("window.location.search") &&
     accountSource.includes("navigate(postLoginDestination, { replace: true })") &&
     accountSource.includes("auth.signInWithPassword") &&
     authProviderSource.includes("signInWithSupabasePassword") &&
@@ -143,7 +144,8 @@ assert(
   "Q07_existing_auth_flow_not_reused",
 );
 assert(
-  appSource.includes('path === "/account" || path === "/inloggen"') &&
+  appSource.includes("path === AUTH_ACCOUNT_ROUTE") &&
+    appSource.includes('path === "/inloggen"') &&
     appSource.includes("parseEvidenceReviewDetailRoute(path)") &&
     appSource.includes("target.search") &&
     appSource.includes("window.history.replaceState") &&

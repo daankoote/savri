@@ -143,22 +143,42 @@ CURRENT / LOCAL PROOF:
 - Bootstrap does not create a customer, identity, dossier, or Auth session.
 - Bootstrap does not automatically merge customers or identities.
 - Ambiguous identity state and identities bound to another Auth user fail safely.
-- `/account` is implemented for customer account creation and sign-in.
+- `/account` is implemented for customer account creation and sign-in;
+  `/account/wachtwoord-vergeten`, `/account/nieuw-wachtwoord` and
+  `/account/verificatiemail-opnieuw` reuse the same account surface.
 - The frontend uses one shared Supabase browser client singleton.
 - Frontend session initialization, Auth state subscription, session restoration, and logout are implemented locally.
 - The frontend calls `api-app-auth-bootstrap` after a verified Auth session and deduplicates bootstrap calls for the same session.
 - `/dashboard` is protected by the frontend route guard.
 - Auth error mapping is customer-safe for the current local flow.
 - Auth code remains account-type neutral across particulier, zakelijk, and VVE.
-- Auth/Supabase frontend code is lazy-loaded only for `/account` and `/dashboard`.
+- Supabase Auth runtime code is lazy-loaded for the account, recovery and
+  protected portal routes.
 - Public pages do not need live Auth state and do not eagerly initialize Supabase Auth.
 - The frontend does not use polling, custom refresh loops, or manual access-token/refresh-token persistence.
+- Password recovery uses `resetPasswordForEmail` with one fixed callback on the
+  canonical app origin. Verification resend uses `resend` with type `signup`
+  and the fixed account-confirmation callback.
+- Recovery and resend requests return neutral anti-enumeration responses and do
+  not perform a customer, dossier or portal lookup.
+- `PASSWORD_RECOVERY` is handled before ordinary signed-in/bootstrap behavior.
+  Only that event together with its valid Supabase session enables the new
+  password form; ordinary restored sessions cannot enable it.
+- Recovery callback query/fragment data is removed from the browser URL. A
+  missing, expired, used or manipulated recovery callback receives only a safe
+  generic error.
+- Successful password update uses `updateUser`, ends the local recovery session
+  through Supabase Auth and requires a fresh login.
+- The resend cooldown is a frontend UX control only and is not an authorization
+  or rate-limit boundary.
+- Recovery and resend create no Auth bootstrap, signing action, dossier action,
+  access grant, customer binding or promotion.
 
 OPEN:
 
-- Password recovery.
-- Resend verification UX.
 - Production Auth configuration and proof.
+- Real Mailpit/SMTP delivery and interactive browser acceptance for recovery,
+  used/expired/manipulated links, resend and fresh-login behavior.
 - Support flow for:
   - identity not found
   - already bound to another user
@@ -752,8 +772,9 @@ Coexistence phases:
 
 1. Wire one authenticated PDF installation-invoice document slot to the shared upload client.
 2. Refresh only the selected dashboard dossier after upload confirm.
-3. Add password recovery and resend-verification UX.
-4. Prove production Auth URL/redirect configuration.
+3. Prove production Auth URL/redirect and e-mail delivery configuration.
+4. Accept the locally implemented password-recovery and resend-verification UX
+   with real e-mail and browser evidence.
 5. Implement support/messages/kWh/result/fee lifecycle.
 6. Plan production migration/cutover separately; keep old root/static production untouched until approved.
 

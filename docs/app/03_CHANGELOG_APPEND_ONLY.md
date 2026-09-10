@@ -1955,3 +1955,25 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   open.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-09-10 — Implement bounded Auth recovery and verification resend UX locally
+
+- Added the public Dutch password-recovery request, recovery-event/session-gated
+  new-password route and reload-safe verification-resend form through the
+  existing account shell and shared Supabase browser client. The client remains
+  on the existing implicit flow.
+- Recovery and resend use fixed canonical-origin callbacks and neutral outward
+  responses without customer, dossier or portal lookup. Recovery callback data
+  is removed from the URL; invalid, expired, used or manipulated links expose
+  only safe generic errors.
+- `PASSWORD_RECOVERY` now has priority over ordinary signed-in/bootstrap
+  handling. Recovery and public request routes perform no portal bootstrap,
+  signing, dossier, access-grant, customer-binding or promotion action.
+- Successful password update ends the local recovery session and requires a
+  fresh login. The resend cooldown remains UX-only, not a security boundary.
+- Focused recovery/resend, Auth-session, internal-navigation and portal-authority
+  proofs plus app typecheck/production build are green. Real Mailpit/SMTP and
+  hosted browser/e-mail acceptance, production Auth configuration, deployment
+  and production remain unproven.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

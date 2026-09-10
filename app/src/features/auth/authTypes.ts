@@ -7,6 +7,7 @@ export type AuthStatus =
   | "initializing"
   | "signed_out"
   | "bootstrapping"
+  | "recovery_ready"
   | "ready"
   | "error";
 
@@ -33,6 +34,8 @@ export type AuthSafeErrorCode =
   | "invalid_credentials"
   | "password_mismatch"
   | "password_too_short"
+  | "recovery_link_invalid"
+  | "password_update_failed"
   | "account_already_exists"
   | "auth_email_not_verified"
   | "customer_identity_not_found"
@@ -52,7 +55,11 @@ export type AuthSafeError = {
 
 export type AuthActionResult =
   | { ok: true; status: "ready"; summary: AuthBootstrapSummary | null }
-  | { ok: true; status: "verification_required"; message: string }
+  | { ok: true; status: "verification_required" }
+  | { ok: false; error: AuthSafeError };
+
+export type AuthOperationResult =
+  | { ok: true }
   | { ok: false; error: AuthSafeError };
 
 export type AuthContextValue = {
@@ -64,12 +71,12 @@ export type AuthContextValue = {
   signUpWithPassword: (
     email: string,
     password: string,
-    passwordConfirmation: string,
   ) => Promise<AuthActionResult>;
   signInWithPassword: (
     email: string,
     password: string,
   ) => Promise<AuthActionResult>;
+  updateRecoveredPassword: (password: string) => Promise<AuthOperationResult>;
   retryBootstrap: () => Promise<AuthActionResult>;
   signOut: () => Promise<void>;
 };

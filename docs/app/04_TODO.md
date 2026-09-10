@@ -733,8 +733,6 @@ Local proof is not production proof. Remote migration/function deploy, productio
   - payout approval roles and legal enforceability of correction, reversal and clawback remain open;
   - retention, legal basis, access, and privacy for payment data remain open;
   - pilot candidate after external validation: ledger, statements, own-account manual payout and manual reconciliation; bank/PSP automation later only after a separate decision and batch.
-- Password recovery UX.
-- Resend verification UX.
 - Production secrets, storage, function, and migration deployment proof.
 - Production Auth configuration and remote auth proof.
 - Account-specific document contracts:
@@ -784,7 +782,9 @@ customer confirmation, the green Integration gate or local database state.
 - Zakelijke/VvE document requirements.
 - Business and VVE upload slots.
 - Business and VVE dashboard detail pages.
-- Password recovery and resend verification.
+- Hosted Auth redirect/SMTP configuration plus real e-mail and browser
+  acceptance for the locally implemented password recovery and verification
+  resend UX.
 - Unsupported dashboard domains.
 - Result/inboeking lifecycle.
 - Fee/payout lifecycle.

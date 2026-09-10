@@ -5,6 +5,8 @@ const errorMessages: Record<AuthSafeErrorCode, string> = {
   invalid_credentials: "Controleer uw e-mailadres en wachtwoord.",
   password_mismatch: "De wachtwoorden komen niet overeen.",
   password_too_short: "Gebruik minimaal 8 tekens.",
+  recovery_link_invalid: "Deze herstel-link is niet geldig. Vraag een nieuwe link aan.",
+  password_update_failed: "Het wachtwoord kon niet worden gewijzigd. Vraag een nieuwe link aan.",
   account_already_exists: "Dit account bestaat al. Log in om verder te gaan.",
   auth_email_not_verified: "Controleer eerst uw e-mail om het account te bevestigen.",
   customer_identity_not_found: "We konden geen passende ENVAL-aanmelding koppelen. Neem contact op met ENVAL.",
@@ -20,6 +22,29 @@ const errorMessages: Record<AuthSafeErrorCode, string> = {
 
 export function safeAuthError(code: AuthSafeErrorCode): AuthSafeError {
   return { code, message: errorMessages[code] };
+}
+
+export function mapSupabaseRecoveryError(message: string, code = ""): AuthSafeError {
+  const normalized = message.toLowerCase();
+  const normalizedCode = code.toLowerCase();
+
+  if (
+    normalizedCode === "session_not_found" ||
+    normalizedCode === "refresh_token_not_found" ||
+    normalizedCode === "otp_expired" ||
+    normalizedCode === "otp_disabled" ||
+    normalized.includes("session missing") ||
+    normalized.includes("invalid refresh token") ||
+    normalized.includes("expired")
+  ) {
+    return safeAuthError("recovery_link_invalid");
+  }
+
+  if (normalized.includes("password") && normalized.includes("least")) {
+    return safeAuthError("password_too_short");
+  }
+
+  return safeAuthError("password_update_failed");
 }
 
 export function mapSupabaseAuthError(

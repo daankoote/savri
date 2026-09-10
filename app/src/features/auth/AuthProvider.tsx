@@ -1,15 +1,22 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import {
-  getCurrentAuthSession,
+  getCurrentAuthSessionResult,
   signInWithSupabasePassword,
   signOutLocalSupabaseSession,
   signOutWithSupabase,
   signUpWithSupabasePassword,
   subscribeToAuthState,
+  updateSupabaseRecoveryPassword,
 } from "./authClient";
 import { bootstrapAppCustomerAuth } from "./authBootstrapClient";
 import { isTerminalBootstrapBindingError, safeAuthError } from "./authErrorMapping";
+import {
+  clearAuthCallbackUrl,
+  hasPasswordRecoveryCallbackData,
+  resolveAuthEventDisposition,
+  type AuthProviderIntent,
+} from "./authUxFlow";
 import type { AuthActionResult, AuthAudience, AuthBootstrapSummary, AuthContextValue, AuthSafeError, AuthStatus } from "./authTypes";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -40,13 +47,19 @@ function readyResult(summary: AuthBootstrapSummary | null): AuthActionResult {
 export function AuthProvider({
   audience = "customer",
   children,
-}: Readonly<{ audience?: AuthAudience; children: ReactNode }>) {
+  intent = "portal",
+}: Readonly<{ audience?: AuthAudience; children: ReactNode; intent?: AuthProviderIntent }>) {
   const [status, setStatus] = useState<AuthStatus>("initializing");
   const [session, setSession] = useState<Session | null>(null);
   const [summary, setSummary] = useState<AuthBootstrapSummary | null>(null);
   const [error, setError] = useState<AuthSafeError | null>(null);
   const bootstrapAttemptRef = useRef<BootstrapAttempt | null>(null);
   const readyUserIdRef = useRef<string | null>(null);
+  const recoveryReadyRef = useRef(false);
+  const recoveryEventSeenRef = useRef(false);
+  const recoveryValidationStartedRef = useRef(false);
+  const rejectedRecoveryRef = useRef(false);
+  const recoveryCallbackPresentRef = useRef(hasPasswordRecoveryCallbackData(window.location.hash));
   const summaryRef = useRef<AuthBootstrapSummary | null>(null);
 
   const clearBoundState = useCallback(() => {
@@ -61,6 +74,25 @@ export function AuthProvider({
     setSession(null);
     clearBoundState();
     setStatus("signed_out");
+  }, [clearBoundState]);
+
+  const setRecoveryInvalid = useCallback(() => {
+    recoveryReadyRef.current = false;
+    setSession(null);
+    clearBoundState();
+    setError(safeAuthError("recovery_link_invalid"));
+    setStatus("error");
+    clearAuthCallbackUrl();
+  }, [clearBoundState]);
+
+  const setRecoveryReady = useCallback((nextSession: Session) => {
+    recoveryReadyRef.current = true;
+    rejectedRecoveryRef.current = false;
+    clearBoundState();
+    setSession(nextSession);
+    setError(null);
+    setStatus("recovery_ready");
+    clearAuthCallbackUrl();
   }, [clearBoundState]);
 
   const bootstrapSession = useCallback(async (nextSession: Session): Promise<AuthActionResult> => {
@@ -80,10 +112,7 @@ export function AuthProvider({
       return { ok: false, error: nextError };
     }
 
-    if (
-      readyUserIdRef.current === userId &&
-      (audience === "operator" || summaryRef.current)
-    ) {
+    if (readyUserIdRef.current === userId && (audience === "operator" || summaryRef.current)) {
       setStatus("ready");
       return readyResult(audience === "operator" ? null : summaryRef.current);
     }
@@ -143,73 +172,125 @@ export function AuthProvider({
       return readyResult(result.summary);
     });
 
-    bootstrapAttemptRef.current = {
-      audience,
-      idempotencyKey,
-      promise,
-      userId,
-    };
+    bootstrapAttemptRef.current = { audience, idempotencyKey, promise, userId };
     return promise;
   }, [audience]);
 
   useEffect(() => {
     let active = true;
 
-    const subscription = subscribeToAuthState((_event, nextSession) => {
+    const subscription = subscribeToAuthState((event, nextSession) => {
       if (!active) return;
+      if (recoveryCallbackPresentRef.current && event !== "PASSWORD_RECOVERY") return;
+      if (event === "PASSWORD_RECOVERY" && !recoveryCallbackPresentRef.current) return;
 
-      if (!nextSession) {
+      const disposition = resolveAuthEventDisposition(event, Boolean(nextSession), intent);
+      if (disposition === "password_recovery" && nextSession) {
+        recoveryEventSeenRef.current = true;
+        if (recoveryValidationStartedRef.current) return;
+        recoveryValidationStartedRef.current = true;
+
+        void getCurrentAuthSessionResult().then((result) => {
+          if (!active) return;
+          if (
+            !result.ok ||
+            !result.session ||
+            result.session.user.id !== nextSession.user.id ||
+            result.session.access_token !== nextSession.access_token
+          ) {
+            setRecoveryInvalid();
+            void signOutLocalSupabaseSession().catch(() => undefined);
+            return;
+          }
+
+          setRecoveryReady(result.session);
+        }).catch(() => {
+          if (!active) return;
+          setRecoveryInvalid();
+          void signOutLocalSupabaseSession().catch(() => undefined);
+        });
+        return;
+      }
+      if (disposition === "reject_password_recovery") {
+        rejectedRecoveryRef.current = true;
+        setRecoveryInvalid();
+        void signOutLocalSupabaseSession().catch(() => undefined);
+        return;
+      }
+      if (disposition === "signed_out") {
         setSignedOut();
         return;
       }
-
-      if (readyUserIdRef.current === nextSession.user.id) {
+      if (disposition === "ignore") return;
+      if (nextSession && readyUserIdRef.current === nextSession.user.id) {
         setSession(nextSession);
         return;
       }
-
-      void bootstrapSession(nextSession);
+      if (nextSession) void bootstrapSession(nextSession);
     });
 
-    getCurrentAuthSession().then((initialSession) => {
+    getCurrentAuthSessionResult().then((result) => {
       if (!active) return;
 
-      if (!initialSession) {
-        setSignedOut();
+      if (intent === "password_recovery") {
+        window.setTimeout(() => {
+          if (!active || recoveryEventSeenRef.current) return;
+          setRecoveryInvalid();
+          void signOutLocalSupabaseSession().catch(() => undefined);
+        }, 0);
         return;
       }
 
-      void bootstrapSession(initialSession);
+      if (!result.ok) {
+        setSession(null);
+        clearBoundState();
+        setError(result.error);
+        setStatus("error");
+        return;
+      }
+
+      if (intent === "public_request") {
+        setSignedOut();
+        return;
+      }
+      if (recoveryCallbackPresentRef.current) {
+        rejectedRecoveryRef.current = true;
+        setRecoveryInvalid();
+        void signOutLocalSupabaseSession().catch(() => undefined);
+        return;
+      }
+      if (rejectedRecoveryRef.current) return;
+      if (!result.session) {
+        setSignedOut();
+        return;
+      }
+      void bootstrapSession(result.session);
+    }).catch(() => {
+      if (!active) return;
+      if (intent === "password_recovery") {
+        setRecoveryInvalid();
+        return;
+      }
+      setSession(null);
+      clearBoundState();
+      setError(safeAuthError("service_unavailable"));
+      setStatus("error");
     });
 
     return () => {
       active = false;
       subscription.unsubscribe();
     };
-  }, [bootstrapSession, setSignedOut]);
+  }, [bootstrapSession, clearBoundState, intent, setRecoveryInvalid, setRecoveryReady, setSignedOut]);
 
   const signUpWithPassword = useCallback<AuthContextValue["signUpWithPassword"]>(
-    async (email, password, passwordConfirmation) => {
-      if (password !== passwordConfirmation) {
-        return { ok: false, error: safeAuthError("password_mismatch") };
-      }
-
-      if (password.length < 8) {
-        return { ok: false, error: safeAuthError("password_too_short") };
-      }
-
+    async (email, password) => {
       const result = await signUpWithSupabasePassword(email, password);
-      if (!result.ok) return result.result;
-
+      if (!result.ok) return result;
       if (!result.session) {
         setStatus("signed_out");
-        return {
-          ok: true,
-          status: "verification_required",
-          message: "Controleer uw e-mail om het account te bevestigen.",
-        };
+        return { ok: true, status: "verification_required" };
       }
-
       return bootstrapSession(result.session);
     },
     [bootstrapSession],
@@ -218,21 +299,46 @@ export function AuthProvider({
   const signInWithPassword = useCallback<AuthContextValue["signInWithPassword"]>(
     async (email, password) => {
       const result = await signInWithSupabasePassword(email, password);
-      if (!result.ok) return result.result;
-
+      if (!result.ok) return result;
       return bootstrapSession(result.session);
     },
     [bootstrapSession],
   );
 
+  const updateRecoveredPassword = useCallback<AuthContextValue["updateRecoveredPassword"]>(
+    async (password) => {
+      if (!recoveryReadyRef.current || status !== "recovery_ready" || !session) {
+        return { ok: false, error: safeAuthError("recovery_link_invalid") };
+      }
+
+      const result = await updateSupabaseRecoveryPassword(password);
+      if (!result.ok) return result;
+
+      const signedOut = await signOutLocalSupabaseSession().catch(() => false);
+      recoveryReadyRef.current = false;
+      clearAuthCallbackUrl();
+      if (!signedOut) {
+        setRecoveryInvalid();
+        return { ok: false, error: safeAuthError("password_update_failed") };
+      }
+
+      setSignedOut();
+      return { ok: true };
+    },
+    [session, setRecoveryInvalid, setSignedOut, status],
+  );
+
   const retryBootstrap = useCallback<AuthContextValue["retryBootstrap"]>(async () => {
+    if (intent === "password_recovery") {
+      return { ok: false, error: safeAuthError("recovery_link_invalid") };
+    }
     if (!session) return { ok: false, error: safeAuthError("invalid_response") };
     bootstrapAttemptRef.current = null;
     readyUserIdRef.current = null;
     summaryRef.current = null;
     setSummary(null);
     return bootstrapSession(session);
-  }, [bootstrapSession, session]);
+  }, [bootstrapSession, intent, session]);
 
   const signOut = useCallback(async () => {
     clearBoundState();
@@ -251,7 +357,8 @@ export function AuthProvider({
     signUpWithPassword,
     status,
     summary,
-  }), [audience, error, retryBootstrap, session, signInWithPassword, signOut, signUpWithPassword, status, summary]);
+    updateRecoveredPassword,
+  }), [audience, error, retryBootstrap, session, signInWithPassword, signOut, signUpWithPassword, status, summary, updateRecoveredPassword]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

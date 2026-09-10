@@ -15,7 +15,7 @@ export function AccountPage({ currentPath, navigate }: RoutedPageProps) {
       }
       surface="tenant_customer"
     >
-      <AccountPageContent navigate={navigate} />
+      <AccountPageContent currentPath={currentPath} navigate={navigate} />
     </SurfaceShell>
   );
 }
