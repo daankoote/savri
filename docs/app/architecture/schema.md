@@ -857,6 +857,17 @@ Old schema relationship: new.
 
 ### `app_customer_timeline_events`
 
+Status: TARGET alternative, not a CURRENT table. CUSTOMER_TIMELINE_V1 instead
+projects a bounded allowlist directly from existing immutable source records in
+one database snapshot through `app_customer_case_timeline_read_v1`; it creates
+no event rows. A materialized timeline table still requires a separate future
+contract and must not duplicate the current projection authority.
+
+The CURRENT allowlist excludes signing evidence from customer presentation.
+`Dossier ontvangen` represents completion of the Auth-first signing/submission
+boundary, while accepted review data is projected only as `Gegevens
+gecontroleerd` unless a separate authoritative terminal dossier status exists.
+
 Purpose: curated readable customer timeline.
 
 Important columns:
@@ -1146,7 +1157,11 @@ Customer-safe labels must avoid claiming verification, certification, or guarant
 - `reversed`
 - `disputed`
 
-### Customer timeline event types
+### Customer timeline event types (TARGET materialized-table taxonomy)
+
+This list applies only to the possible future `app_customer_timeline_events`
+table. It is not the CURRENT CUSTOMER_TIMELINE_V1 allowlist; that contract is
+owned by `app_customer_case_timeline_read_v1` and the dashboard Edge contract.
 
 - `dossier_started`
 - `details_received`

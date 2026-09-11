@@ -6,6 +6,7 @@ import {
   type DashboardReadSafeError,
   fetchDashboardReadModel,
 } from "./dashboardReadClient.ts";
+import { getDashboardStatusPresentation } from "./dashboardStatusPresentation.ts";
 import type {
   DashboardDossierSummary,
   DashboardReadModel,
@@ -27,6 +28,8 @@ export type DashboardReadClientProofResult = {
   scopedCacheVerified: true;
   failedPendingCleanupVerified: true;
   dashboardErrorCopyVerified: true;
+  timelineContractVerified: true;
+  statusMappingVerified: true;
 };
 
 type MockFetchCall = {
@@ -196,6 +199,22 @@ function dashboardBody(selectedDossierId = DOSSIER_A) {
         active: true,
       },
     ],
+    timeline: [
+      {
+        event_id: "tle_55555555555555555555555555555555",
+        event_type: "review_completed",
+        occurred_at: "2026-07-13T12:00:00.000Z",
+        title: "Gegevens gecontroleerd",
+        text: "De aangeleverde gegevens zijn gecontroleerd.",
+      },
+      {
+        event_id: "tle_22222222222222222222222222222222",
+        event_type: "dossier_submitted",
+        occurred_at: "2026-07-13T11:00:00.000Z",
+        title: "Dossier ontvangen",
+        text: "Uw dossier is ontvangen en in behandeling.",
+      },
+    ],
     storage_path: "ignored-by-client",
     signed_url: "ignored-by-client",
     server_sha256: "ignored-by-client",
@@ -219,10 +238,13 @@ function containsForbiddenKeys(value: unknown): boolean {
     "payload_hash",
     "event_data",
     "idempotency_key",
+    "source_id",
+    "actor_ref",
+    "manifest_hash",
+    "correction_bundle",
     "kwh",
     "fee",
     "payout",
-    "timeline",
     "support",
     "requests",
     "exports",
@@ -270,6 +292,47 @@ export async function runDashboardReadClientProof(): Promise<
       code: "dossier_not_found_or_forbidden",
       error: "Raw detail must not surface",
     }, 404),
+    jsonResponse({
+      ...dashboardBody(),
+      timeline: [{
+        event_id: "tle_99999999999999999999999999999999",
+        event_type: "correction_resolved",
+        occurred_at: "2026-07-13T13:00:00.000Z",
+        title: "Niet toegestaan",
+        text: "Niet toegestaan.",
+      }],
+    }),
+    jsonResponse({
+      ...dashboardBody(),
+      timeline: [{
+        event_id: "tle_99999999999999999999999999999999",
+        event_type: "review_completed",
+        occurred_at: "2026-07-13T13:00:00.000Z",
+        title: "Gegevens gecontroleerd",
+        text: "De aangeleverde gegevens zijn gecontroleerd.",
+        source_id: "raw-source-id",
+      }],
+    }),
+    jsonResponse({
+      ...dashboardBody(),
+      timeline: [{
+        event_id: "tle_99999999999999999999999999999999",
+        event_type: "toString",
+        occurred_at: "2026-07-13T13:00:00.000Z",
+        title: "Niet toegestaan",
+        text: "Niet toegestaan.",
+      }],
+    }),
+    jsonResponse({
+      ...dashboardBody(),
+      timeline: [{
+        event_id: "tle_99999999999999999999999999999999",
+        event_type: "constructor",
+        occurred_at: "2026-07-13T13:00:00.000Z",
+        title: "Niet toegestaan",
+        text: "Niet toegestaan.",
+      }],
+    }),
   ]);
 
   const success = await fetchDashboardReadModel({
@@ -322,6 +385,60 @@ export async function runDashboardReadClientProof(): Promise<
     "slot-charger link must be preserved",
   );
   assert(
+    success.model.timeline.length === 2 &&
+      success.model.timeline[0].event_type === "review_completed" &&
+      success.model.timeline[1].event_type === "dossier_submitted",
+    "allowlisted timeline must parse newest first",
+  );
+  const inTreatment = getDashboardStatusPresentation({
+    dossierStatus: "under_review",
+    timeline: success.model.timeline.slice(1),
+    hasPublishedCorrection: false,
+  });
+  const actionNeeded = getDashboardStatusPresentation({
+    dossierStatus: "under_review",
+    timeline: [],
+    hasPublishedCorrection: true,
+  });
+  const correctionReview = getDashboardStatusPresentation({
+    dossierStatus: "under_review",
+    timeline: [{
+      event_id: "tle_44444444444444444444444444444444",
+      event_type: "correction_submitted",
+      occurred_at: "2026-07-13T13:00:00.000Z",
+      title: "Aanvulling ontvangen",
+      text: "Uw aanvulling is ontvangen en wordt beoordeeld.",
+    }],
+    hasPublishedCorrection: false,
+  });
+  const dataChecked = getDashboardStatusPresentation({
+    dossierStatus: "under_review",
+    timeline: success.model.timeline,
+    hasPublishedCorrection: false,
+  });
+  const unavailable = getDashboardStatusPresentation({
+    dossierStatus: "INTERNAL_UNKNOWN_STATUS",
+    timeline: [],
+    hasPublishedCorrection: false,
+  });
+  assert(
+    inTreatment.label === "In behandeling" &&
+      inTreatment.currentStep === "ENVAL controleert uw dossier." &&
+      inTreatment.customerAction === "Nee" &&
+      actionNeeded.label === "Actie nodig" &&
+      actionNeeded.currentStep === "ENVAL wacht op uw aanvulling." &&
+      actionNeeded.customerAction === "Ja" &&
+      correctionReview.label === "Aanvulling wordt beoordeeld" &&
+      correctionReview.currentStep === "ENVAL controleert uw aanvulling." &&
+      correctionReview.customerAction === "Nee" &&
+      dataChecked.label === "In behandeling" &&
+      dataChecked.currentStep === "ENVAL verwerkt uw dossier." &&
+      dataChecked.customerAction === "Nee" &&
+      unavailable.label === "Status niet beschikbaar" &&
+      !JSON.stringify(unavailable).includes("INTERNAL_UNKNOWN_STATUS"),
+    "dashboard status mapping must stay Dutch, consistent and fail closed",
+  );
+  assert(
     !containsForbiddenKeys(success.model),
     "forbidden response fields must not enter model",
   );
@@ -345,6 +462,44 @@ export async function runDashboardReadClientProof(): Promise<
     !/Inloggen/i.test(notFound.error.message),
     "dashboard error copy must not use login copy",
   );
+
+  const unknownTimelineEvent = await fetchDashboardReadModel({
+    accessToken,
+    dossierId: DOSSIER_A,
+    fetchImpl,
+    runtimeConfig: { anonKey, dashboardEndpointUrl: endpointUrl },
+  });
+  assert(
+    unknownTimelineEvent.ok === false &&
+      unknownTimelineEvent.error.code === "invalid_response",
+    "unknown timeline event type must fail closed",
+  );
+
+  const rawTimelineField = await fetchDashboardReadModel({
+    accessToken,
+    dossierId: DOSSIER_A,
+    fetchImpl,
+    runtimeConfig: { anonKey, dashboardEndpointUrl: endpointUrl },
+  });
+  assert(
+    rawTimelineField.ok === false &&
+      rawTimelineField.error.code === "invalid_response",
+    "timeline source metadata must fail closed",
+  );
+
+  for (const prototypeName of ["toString", "constructor"]) {
+    const inheritedTimelineEvent = await fetchDashboardReadModel({
+      accessToken,
+      dossierId: DOSSIER_A,
+      fetchImpl,
+      runtimeConfig: { anonKey, dashboardEndpointUrl: endpointUrl },
+    });
+    assert(
+      inheritedTimelineEvent.ok === false &&
+        inheritedTimelineEvent.error.code === "invalid_response",
+      `${prototypeName} timeline event type must fail closed`,
+    );
+  }
 
   clearDashboardReadCache();
   let fetchCount = 0;
@@ -568,5 +723,7 @@ export async function runDashboardReadClientProof(): Promise<
     scopedCacheVerified: true,
     failedPendingCleanupVerified: true,
     dashboardErrorCopyVerified: true,
+    timelineContractVerified: true,
+    statusMappingVerified: true,
   };
 }

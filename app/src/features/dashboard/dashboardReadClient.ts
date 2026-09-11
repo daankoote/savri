@@ -7,6 +7,8 @@ import type {
   DashboardLegalAcceptance,
   DashboardLocation,
   DashboardReadModel,
+  DashboardTimelineEvent,
+  DashboardTimelineEventType,
 } from "./dashboardTypes.ts";
 
 export type DashboardReadErrorCode =
@@ -38,9 +40,23 @@ const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CASE_REFERENCE_RE =
   /^CASE-(?:[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+const TIMELINE_EVENT_ID_RE = /^tle_[0-9a-f]{32}$/;
+const TIMELINE_PHASE_PRIORITY: Record<DashboardTimelineEventType, number> = {
+  dossier_submitted: 20,
+  correction_requested: 30,
+  correction_submitted: 40,
+  review_completed: 50,
+};
 
 function isRecord(value: unknown): value is UnknownRecord {
   return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function hasExactKeys(value: UnknownRecord, keys: string[]): boolean {
+  const actual = Object.keys(value).sort();
+  const expected = [...keys].sort();
+  return actual.length === expected.length &&
+    actual.every((key, index) => key === expected[index]);
 }
 
 function stringField(record: UnknownRecord, key: string): string {
@@ -71,6 +87,18 @@ function isUuid(value: string): boolean {
 
 function isAccountType(value: string): value is DashboardAccountType {
   return value === "particulier" || value === "zakelijk" || value === "vve";
+}
+
+function isTimelineEventType(
+  value: string,
+): value is DashboardTimelineEventType {
+  return Object.prototype.hasOwnProperty.call(TIMELINE_PHASE_PRIORITY, value);
+}
+
+function isUtcTimestamp(value: string): boolean {
+  const timestamp = new Date(value);
+  return !Number.isNaN(timestamp.getTime()) &&
+    timestamp.toISOString() === value;
 }
 
 function safeDashboardError(
@@ -233,6 +261,57 @@ function parseLegalAcceptance(value: unknown): DashboardLegalAcceptance | null {
   };
 }
 
+function parseTimelineEvent(value: unknown): DashboardTimelineEvent | null {
+  if (
+    !isRecord(value) || !hasExactKeys(value, [
+      "event_id",
+      "event_type",
+      "occurred_at",
+      "title",
+      "text",
+    ])
+  ) return null;
+
+  const eventId = stringField(value, "event_id");
+  const eventType = stringField(value, "event_type");
+  const occurredAt = stringField(value, "occurred_at");
+  const title = stringField(value, "title");
+  const text = stringField(value, "text");
+  if (
+    !TIMELINE_EVENT_ID_RE.test(eventId) ||
+    !isTimelineEventType(eventType) ||
+    !isUtcTimestamp(occurredAt) || !title || !text
+  ) return null;
+
+  return {
+    event_id: eventId,
+    event_type: eventType,
+    occurred_at: occurredAt,
+    title,
+    text,
+  };
+}
+
+function timelineIsOrdered(events: DashboardTimelineEvent[]): boolean {
+  if (new Set(events.map((event) => event.event_id)).size !== events.length) {
+    return false;
+  }
+  for (let index = 1; index < events.length; index += 1) {
+    const previous = events[index - 1];
+    const current = events[index];
+    if (previous.occurred_at < current.occurred_at) return false;
+    if (previous.occurred_at !== current.occurred_at) continue;
+    const previousPriority = TIMELINE_PHASE_PRIORITY[previous.event_type];
+    const currentPriority = TIMELINE_PHASE_PRIORITY[current.event_type];
+    if (previousPriority < currentPriority) return false;
+    if (
+      previousPriority === currentPriority &&
+      previous.event_id > current.event_id
+    ) return false;
+  }
+  return true;
+}
+
 function parseArray<T>(
   value: unknown,
   parser: (item: unknown) => T | null,
@@ -259,11 +338,13 @@ function validateDashboardBody(body: unknown): DashboardReadResult {
     body.legal_acceptances,
     parseLegalAcceptance,
   );
+  const timeline = parseArray(body.timeline, parseTimelineEvent);
   const requestId = stringField(body, "request_id");
 
   if (
     !dossiers || !selectedDossier || !locations || !chargers ||
-    !documentSlots || !legalAcceptances || !requestId
+    !documentSlots || !legalAcceptances || !timeline || timeline.length > 50 ||
+    !timelineIsOrdered(timeline) || !requestId
   ) {
     return { ok: false, error: safeDashboardError("invalid_response") };
   }
@@ -278,6 +359,7 @@ function validateDashboardBody(body: unknown): DashboardReadResult {
       chargers,
       document_slots: documentSlots,
       legal_acceptances: legalAcceptances,
+      timeline,
     },
   };
 }

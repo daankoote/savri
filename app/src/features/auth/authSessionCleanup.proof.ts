@@ -40,6 +40,7 @@ function makeModel(dossierId: string): DashboardReadModel {
     }],
     legal_acceptances: [],
     locations: [],
+    timeline: [],
     request_id: "proof-request",
     selected_dossier: {
       account_type: "particulier",

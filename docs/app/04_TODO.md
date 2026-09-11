@@ -246,6 +246,11 @@ controller/processor allocation requires legal review.
 - `api-app-dashboard-get` is locally proven.
 - Dashboard read is account-neutral and supports multiple dossiers, locations, and chargers.
 - Dashboard read returns customer-safe dossier, document-slot/current-document, and legal-acceptance projections.
+- CUSTOMER_TIMELINE_V1 is CURRENT / LOCAL PROOF: the selected case receives a
+  server-curated, R7-authorized timeline from four immutable event sources,
+  newest-first and limited to 50 without raw payloads or identifiers. Signing
+  evidence stays internal; the dashboard presents one shared Dutch current
+  status and does not equate checked data with a completed dossier.
 - Successful dashboard reads perform zero database writes.
 - Real dashboard frontend projection is locally proven.
 - Selected dossier support is locally proven.
@@ -793,7 +798,6 @@ customer confirmation, the green Integration gate or local database state.
 - Unsupported dashboard domains.
 - Result/inboeking lifecycle.
 - Fee/payout lifecycle.
-- Customer-readable timeline projection.
 - Browser QA for signup submit, upload, dashboard, auth, and document state.
 - Legal text version/hash/language hardening.
 - Customer request/response model for missing information.

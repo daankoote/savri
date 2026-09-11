@@ -59,6 +59,20 @@ export type DashboardLegalAcceptance = {
   active: boolean;
 };
 
+export type DashboardTimelineEventType =
+  | "dossier_submitted"
+  | "correction_requested"
+  | "correction_submitted"
+  | "review_completed";
+
+export type DashboardTimelineEvent = {
+  event_id: string;
+  event_type: DashboardTimelineEventType;
+  occurred_at: string;
+  title: string;
+  text: string;
+};
+
 export type DashboardReadModel = {
   request_id: string;
   dossiers: DashboardDossierSummary[];
@@ -67,4 +81,5 @@ export type DashboardReadModel = {
   chargers: DashboardCharger[];
   document_slots: DashboardDocumentSlot[];
   legal_acceptances: DashboardLegalAcceptance[];
+  timeline: DashboardTimelineEvent[];
 };

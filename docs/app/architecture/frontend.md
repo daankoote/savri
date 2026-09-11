@@ -269,7 +269,7 @@ Rules:
 - kWh, consent, and backend-koppeling controls are mock/read-only placeholders.
 - Dashboard document cards are real and actionable for the current MID and installation/acquisition invoice PDF slots.
 - Backend koppeling is mock-only; exact provider connection flow still needs research.
-- Unsupported future domains such as kWh, results, fees, payouts, support, timeline, requests, reports, and exports remain unavailable/open rather than fabricated.
+- Unsupported future domains such as kWh, results, fees, payouts, support, requests, reports, and exports remain unavailable/open rather than fabricated.
 - Public navigation uses `Inloggen` as portal entry; protected portal navigation includes `Naar website`.
 - Shared global button interactions provide pointer cursor, disabled cursor, and restrained pressed-state feedback.
 - Shared document upload transport, download client, withdrawal client, slot presentation mapping, and `DocumentUploadCard` live under `app/src/features/documents/`.
@@ -432,6 +432,16 @@ The year overview is customer-facing output and later supports the audit-worthy 
 ## Dashboard Rule
 
 - The dashboard factual read projection is CURRENT / LOCAL PROOF and uses `api-app-dashboard-get`.
+- The dossier overview renders the additive `timeline` projection from that
+  endpoint, including while a correction handoff is active. Copy is mapped at
+  the Edge boundary; the frontend accepts only the strict four-type event
+  contract and does not derive authority or read event tables directly.
+- The page subtitle, dossier selector and integrated `Huidige status` block use
+  one dashboard status projection. It combines the curated timeline with the
+  active correction state and a bounded dossier-status fallback, never renders
+  raw enums and does not call checked data a completed dossier. The status block
+  is limited to status, ENVAL's current step and `Actie nodig? Ja/Nee`; past
+  milestones remain exclusively in the timeline.
 - Dashboard modules live under `app/src/features/dashboard/`.
 - Dashboard copy should be customer-readable: status, open actions, documents, support, timeline, consents, kWh/value, and downloads.
 - Do not expose raw audit rows or internal technical payloads in customer-facing views.

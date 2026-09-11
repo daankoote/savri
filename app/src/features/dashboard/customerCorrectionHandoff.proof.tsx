@@ -34,7 +34,6 @@ import {
 } from "./CustomerCorrectionHandoffPanel.tsx";
 import { DocumentEvidenceUploadCard } from "../documents/DocumentEvidenceUploadCard.tsx";
 import { SignerPanel } from "../signup/signing/SignerPanel.tsx";
-import type { DashboardReadState } from "./useDashboardRead.ts";
 import type {
   DashboardDossierSummary,
   DashboardReadModel,
@@ -219,27 +218,55 @@ function dashboardModel(): DashboardReadModel {
     }],
     document_slots: [],
     legal_acceptances: [],
+    timeline: [],
   };
 }
 
-const dashboardRead: DashboardReadState = {
-  status: "ready",
-  model: dashboardModel(),
-  error: null,
-  retry: () => undefined,
-  refreshSelectedDossier: async () => true,
-};
-
-function renderDashboard(correctionHandoff: CustomerCorrectionHandoffState) {
+function renderDashboard(
+  correctionHandoff: CustomerCorrectionHandoffState,
+  model = dashboardModel(),
+) {
   return renderToStaticMarkup(
     <ActivePrivateDashboard
       accessToken="proof-token"
       correctionHandoff={correctionHandoff}
-      dashboardRead={dashboardRead}
+      dashboardRead={{
+        status: "ready",
+        model,
+        error: null,
+        retry: () => undefined,
+        refreshSelectedDossier: async () => true,
+      }}
       dossierOptions={[{ ...dossier(), portal_context: "customer" }]}
       onRefreshSelectedDossier={async () => true}
       onSelectDossier={() => undefined}
       selectedDossierId={DOSSIER_A}
+    />,
+  );
+}
+
+function renderDossierSwitch(
+  correctionHandoff: CustomerCorrectionHandoffState,
+) {
+  const nextDossier = dossier(DOSSIER_B, CASE_B);
+  return renderToStaticMarkup(
+    <ActivePrivateDashboard
+      accessToken="proof-token"
+      correctionHandoff={correctionHandoff}
+      dashboardRead={{
+        status: "loading",
+        model: dashboardModel(),
+        error: null,
+        retry: () => undefined,
+        refreshSelectedDossier: async () => true,
+      }}
+      dossierOptions={[
+        { ...dossier(), portal_context: "customer" },
+        { ...nextDossier, portal_context: "customer" },
+      ]}
+      onRefreshSelectedDossier={async () => true}
+      onSelectDossier={() => undefined}
+      selectedDossierId={DOSSIER_B}
     />,
   );
 }
@@ -403,19 +430,32 @@ const noHandoffHtml = renderDashboard(readyState(
 ));
 assert(
   noHandoffHtml.includes("In behandeling") &&
-    !noHandoffHtml.includes("Aanpassing nodig") &&
-    noHandoffHtml.includes('aria-label="Dossier"') &&
+    noHandoffHtml.includes("ENVAL controleert uw dossier.") &&
+    noHandoffHtml.includes("Actie van u nodig?") &&
+    noHandoffHtml.includes(">Nee<") &&
+    !noHandoffHtml.includes('aria-label="Actie nodig"') &&
+    noHandoffHtml.includes("Huidige status") &&
+    noHandoffHtml.includes(">Nu<") &&
+    !noHandoffHtml.includes("Zaakreferentie") &&
+    !noHandoffHtml.includes(">Type<") &&
+    !noHandoffHtml.includes('aria-label="Dossier"') &&
     noHandoffHtml.includes('aria-label="Locaties"') &&
     noHandoffHtml.includes('aria-label="Actieve laadpalen"'),
   "Q08_no_handoff_changed_existing_status",
 );
 const publishedHtml = renderDashboard(readyState());
 assert(
-  publishedHtml.includes("Aanpassing nodig") &&
+  publishedHtml.includes("Actie nodig") &&
+    publishedHtml.includes("ENVAL wacht op uw aanvulling.") &&
+    publishedHtml.includes(">Ja<") &&
+    publishedHtml.includes("Huidige status") &&
+    publishedHtml.includes(
+      "Voor dit dossier is nog geen tijdlijn beschikbaar.",
+    ) &&
     publishedHtml.includes("Upload en controle") &&
     publishedHtml.includes("Locatie 1") &&
     publishedHtml.includes("Laadpaal 1") &&
-  publishedHtml.includes("Energieleverancier") &&
+    publishedHtml.includes("Energieleverancier") &&
     publishedHtml.includes("Reden: Gegeven onjuist") &&
     publishedHtml.includes("Toelichting: foute invoer") &&
     publishedHtml.includes('title="Bevestigen niet beschikbaar"') &&
@@ -430,6 +470,27 @@ assert(
     !publishedHtml.includes("Lokaal Piloot") &&
     !publishedHtml.includes("WAITING_CUSTOMER"),
   "Q09_published_handoff_not_rendered_safely",
+);
+const noChargersHtml = renderDashboard(
+  readyState(noHandoff.ok ? noHandoff.model : handoffModel()),
+  { ...dashboardModel(), chargers: [] },
+);
+assert(
+  !noChargersHtml.includes("Geen laadpalen gevonden") &&
+    !noChargersHtml.includes("Dit dossier bevat nog geen laadpaalgegevens.") &&
+    !noChargersHtml.includes('aria-label="Actieve laadpalen"'),
+  "KISS_empty_charger_notice_not_hidden",
+);
+const dossierSwitchHtml = renderDossierSwitch(readyState());
+assert(
+  dossierSwitchHtml.includes("Dashboard laden") &&
+    dossierSwitchHtml.includes(`value="${DOSSIER_B}" selected=""`) &&
+    !dossierSwitchHtml.includes("Huidige status") &&
+    !dossierSwitchHtml.includes("Tijdlijn") &&
+    !dossierSwitchHtml.includes("Actie nodig") &&
+    !dossierSwitchHtml.includes("Locatie 1") &&
+    !dossierSwitchHtml.includes("Laadpaal 1"),
+  "CASE_SWITCH_rendered_stale_case_model",
 );
 
 const multiple = decodeCustomerCorrectionHandoffResponse(
@@ -470,7 +531,7 @@ assert(
     errorHtml.includes("Opnieuw proberen") &&
     errorHtml.includes("In behandeling") &&
     !errorHtml.includes("Energieleverancier") &&
-    !errorHtml.includes("Aanpassing nodig"),
+    !errorHtml.includes('aria-label="Actie nodig"'),
   "Q11_error_not_isolated_or_safe",
 );
 
@@ -798,10 +859,12 @@ const sessionRuntime = {
   submitting: { current: false },
   finalize: (_idempotencyKey: string) => {
     sessionFinalizeCalls += 1;
-    return new Promise<Readonly<{
-      ok: true;
-      value: Readonly<{ finalized: true }>;
-    }>>((resolve) => {
+    return new Promise<
+      Readonly<{
+        ok: true;
+        value: Readonly<{ finalized: true }>;
+      }>
+    >((resolve) => {
       releaseSessionFinalize = resolve;
     });
   },
@@ -869,7 +932,8 @@ const retryRuntime = {
         ok: false as const,
         error: {
           code: "service_unavailable" as const,
-          message: "Ondertekenen is tijdelijk niet beschikbaar. Probeer het opnieuw.",
+          message:
+            "Ondertekenen is tijdelijk niet beschikbaar. Probeer het opnieuw.",
         },
       }
       : { ok: true as const, value: { finalized: true as const } };

@@ -177,6 +177,20 @@ type SafeLegalAcceptance = {
   active: boolean;
 };
 
+type TimelineEventType =
+  | "dossier_submitted"
+  | "correction_requested"
+  | "correction_submitted"
+  | "review_completed";
+
+type SafeTimelineEvent = {
+  event_id: string;
+  event_type: TimelineEventType;
+  occurred_at: string;
+  title: string;
+  text: string;
+};
+
 type DashboardResponse = {
   ok: true;
   mode: "dashboard_read_v1";
@@ -187,7 +201,13 @@ type DashboardResponse = {
   chargers: SafeCharger[];
   document_slots: SafeDocumentSlot[];
   legal_acceptances: SafeLegalAcceptance[];
+  timeline: SafeTimelineEvent[];
 };
+
+type DashboardCaseReadModel = Omit<
+  DashboardResponse,
+  "ok" | "mode" | "request_id" | "timeline"
+>;
 
 type NormalizedPayload = {
   dossier_id: string;
@@ -203,6 +223,32 @@ type NormalizationError = {
 const MODE = "dashboard_read_v1";
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const TIMELINE_EVENT_ID_RE = /^tle_[0-9a-f]{32}$/;
+const TIMELINE_COPY: Record<
+  TimelineEventType,
+  { title: string; text: string; phasePriority: number }
+> = {
+  dossier_submitted: {
+    title: "Dossier ontvangen",
+    text: "Uw dossier is ontvangen en in behandeling.",
+    phasePriority: 20,
+  },
+  correction_requested: {
+    title: "Aanvulling gevraagd",
+    text: "Voor dit dossier is aanvullende informatie nodig.",
+    phasePriority: 30,
+  },
+  correction_submitted: {
+    title: "Aanvulling ontvangen",
+    text: "Uw aanvulling is ontvangen en wordt beoordeeld.",
+    phasePriority: 40,
+  },
+  review_completed: {
+    title: "Gegevens gecontroleerd",
+    text: "De aangeleverde gegevens zijn gecontroleerd.",
+    phasePriority: 50,
+  },
+};
 const ACCOUNT_TYPES = new Set(["particulier", "zakelijk", "vve"]);
 const DOCUMENT_CHANGE_ALLOWED_DOSSIER_STATUSES = new Set([
   "draft",
@@ -235,6 +281,112 @@ function nullString(value: unknown): string | null {
 
 function isUuid(value: unknown): value is string {
   return typeof value === "string" && UUID_RE.test(value);
+}
+
+function hasExactKeys(value: Record<string, unknown>, keys: string[]): boolean {
+  const actual = Object.keys(value).sort();
+  const expected = [...keys].sort();
+  return actual.length === expected.length &&
+    actual.every((key, index) => key === expected[index]);
+}
+
+function isUtcTimestamp(value: string): boolean {
+  const timestamp = new Date(value);
+  return !Number.isNaN(timestamp.getTime()) &&
+    timestamp.toISOString() === value;
+}
+
+function mapTimelineEvent(value: unknown): SafeTimelineEvent | null {
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, ["event_id", "event_type", "occurred_at"])
+  ) return null;
+
+  const eventId = getString(value.event_id);
+  const eventType = getString(value.event_type);
+  const occurredAt = getString(value.occurred_at);
+  if (!TIMELINE_EVENT_ID_RE.test(eventId) || !isUtcTimestamp(occurredAt)) {
+    return null;
+  }
+
+  if (!Object.prototype.hasOwnProperty.call(TIMELINE_COPY, eventType)) {
+    return null;
+  }
+  const typedEvent = eventType as TimelineEventType;
+
+  return {
+    event_id: eventId,
+    event_type: typedEvent,
+    occurred_at: occurredAt,
+    title: TIMELINE_COPY[typedEvent].title,
+    text: TIMELINE_COPY[typedEvent].text,
+  };
+}
+
+function timelineIsOrdered(events: SafeTimelineEvent[]): boolean {
+  if (new Set(events.map((event) => event.event_id)).size !== events.length) {
+    return false;
+  }
+  for (let index = 1; index < events.length; index += 1) {
+    const previous = events[index - 1];
+    const current = events[index];
+    if (previous.occurred_at < current.occurred_at) return false;
+    if (previous.occurred_at !== current.occurred_at) continue;
+    const previousPriority = TIMELINE_COPY[previous.event_type].phasePriority;
+    const currentPriority = TIMELINE_COPY[current.event_type].phasePriority;
+    if (previousPriority < currentPriority) return false;
+    if (
+      previousPriority === currentPriority &&
+      previous.event_id > current.event_id
+    ) return false;
+  }
+  return true;
+}
+
+async function loadCustomerTimeline(
+  SB: any,
+  authUserId: string,
+  caseId: string,
+): Promise<SafeTimelineEvent[]> {
+  const result = await SB.rpc("app_customer_case_timeline_read_v1", {
+    p_auth_user_id: authUserId,
+    p_case_id: caseId,
+  });
+  if (result.error || !isRecord(result.data)) {
+    throw new Error("customer_timeline_read_failed");
+  }
+  if (result.data.ok !== true) {
+    if (
+      hasExactKeys(result.data, ["ok", "status", "code"]) &&
+      result.data.status === 404 &&
+      result.data.code === "customer_case_timeline_not_found_or_forbidden"
+    ) {
+      throw {
+        ok: false,
+        status: 404,
+        code: "dossier_not_found_or_forbidden",
+        message: "Dossier niet gevonden.",
+      };
+    }
+    throw new Error("customer_timeline_read_failed");
+  }
+  if (
+    !hasExactKeys(result.data, ["ok", "status", "code", "timeline"]) ||
+    result.data.status !== 200 || result.data.code !== "ok" ||
+    !Array.isArray(result.data.timeline) || result.data.timeline.length > 50
+  ) {
+    throw new Error("customer_timeline_projection_failed");
+  }
+
+  const timeline = (result.data.timeline as unknown[]).map(mapTimelineEvent);
+  if (timeline.some((event) => !event)) {
+    throw new Error("customer_timeline_projection_failed");
+  }
+  const safeTimeline = timeline as SafeTimelineEvent[];
+  if (!timelineIsOrdered(safeTimeline)) {
+    throw new Error("customer_timeline_projection_failed");
+  }
+  return safeTimeline;
 }
 
 function safeDossierNumber(value: unknown): string | null {
@@ -432,7 +584,7 @@ async function loadSignedCaseReadModel(
   customerIds: string[],
   customerId: string,
   caseId: string,
-): Promise<Omit<DashboardResponse, "ok" | "mode" | "request_id">> {
+): Promise<DashboardCaseReadModel> {
   const [summaries, promotionsResult] = await Promise.all([
     loadAccessibleCaseSummaries(SB, customerIds),
     SB.from("app_signup_promotions")
@@ -824,7 +976,7 @@ async function loadDashboardReadModel(
   customerIds: string[],
   customerId: string,
   dossierId: string,
-): Promise<Omit<DashboardResponse, "ok" | "mode" | "request_id">> {
+): Promise<DashboardCaseReadModel> {
   const dossierSelect =
     "id,dossier_number,account_type,status,locked_at,created_at";
 
@@ -1024,11 +1176,18 @@ serve(async (req) => {
         );
       })();
 
+    const timeline = await loadCustomerTimeline(
+      SB,
+      authResult.context.authUserId,
+      readModel.selected_dossier.case_id,
+    );
+
     const response: DashboardResponse = {
       ok: true,
       mode: MODE,
       request_id: meta.request_id,
       ...readModel,
+      timeline,
     };
 
     return appJsonResponse(req, 200, response);

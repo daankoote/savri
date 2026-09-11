@@ -106,6 +106,19 @@ Implementation sequence:
 - The route shell, Auth guard, backend read endpoint, and real factual frontend projection are CURRENT / LOCAL PROOF.
 - Backend `api-app-dashboard-get` now exists as a locally proven customer-safe read endpoint.
 - Frontend dashboard data now uses the read endpoint for factual app-backed fields.
+- CUSTOMER_TIMELINE_V1 is CURRENT / LOCAL PROOF as an additive selected-case
+  projection in `api-app-dashboard-get`. Its service-role-only read RPC
+  revalidates Auth, identity/customer lineage and the exact R7 case/customer
+  grant, then returns only opaque event IDs, four allowlisted types and UTC
+  timestamps. Edge owns the fixed Dutch title/text mapping. Customer-visible
+  signing is folded into `Dossier ontvangen`; `review_completed` is presented
+  only as the past timeline event `Gegevens gecontroleerd`.
+- One shared frontend status projection supplies the page subtitle, dossier
+  selector and `Huidige status` block from the dossier status, curated timeline
+  and active correction state. Unknown values use a fixed Dutch fallback and
+  raw status enums are never rendered. The compact block contains only current
+  status, ENVAL's current step and `Actie nodig? Ja/Nee`; completed timeline
+  events never become a terminal dossier claim.
 - The reusable document cards are CURRENT / LOCAL PROOF for authenticated MID and installation/acquisition invoice PDF upload, replacement, download, and audit-preserving withdrawal.
 - Document section status is centralized:
   - red when required evidence is missing
@@ -133,7 +146,7 @@ Optional later routes:
 
 Recommendation:
 
-- Keep request, document, timeline, consent, and kWh views as sections/tabs inside `/dashboard/dossiers/:dossierId` first.
+- Keep request, document, consent, and kWh views as sections/tabs inside `/dashboard/dossiers/:dossierId` first. The current timeline remains a section in the existing dossier overview.
 - Split into deeper routes only when the UI or state model needs it.
 
 ## 6. Target Backend Architecture
@@ -458,7 +471,7 @@ Phase 4: signup submit backend MVP
 Phase 5: dashboard read-only MVP
 
 - Customer can log in and see factual app-backed dossier, location, charger, document-slot, and legal-acceptance data. CURRENT / LOCAL PROOF.
-- Requests, support, timeline, kWh, results, fees, payouts, reports, and exports remain OPEN.
+- Requests, support, kWh, results, fees, payouts, reports, and exports remain OPEN.
 
 09C1C-R1 transition rule:
 

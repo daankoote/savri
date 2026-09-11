@@ -2,6 +2,8 @@ import { type ReactNode, useMemo, useState } from "react";
 import type { AuthDossierSummary } from "../auth/authTypes";
 import { DocumentUploadCard } from "../documents/DocumentUploadCard";
 import { CustomerCorrectionHandoffPanel } from "./CustomerCorrectionHandoffPanel";
+import { CustomerTimeline } from "./CustomerTimeline";
+import { getDashboardStatusPresentation } from "./dashboardStatusPresentation";
 import {
   getDocumentSectionStatusPresentation,
   getDocumentSlotCustomerTitle,
@@ -63,16 +65,27 @@ export function ActivePrivateDashboard({
   const [expandedSection, setExpandedSection] = useState<
     AccordionSection | null
   >(null);
-  const model = dashboardRead.model;
+  const model = dashboardRead.model?.selected_dossier.dossier_id ===
+      selectedDossierId
+    ? dashboardRead.model
+    : null;
   const selectedDossier = model?.selected_dossier ??
     dossierOptions.find((dossier) =>
       dossier.dossier_id === selectedDossierId
     ) ?? null;
-  const selectedAuthorization = dossierOptions.find((dossier) =>
-    dossier.dossier_id === selectedDossierId
-  ) ?? null;
-  const hasPublishedCorrection = correctionHandoff.status === "ready" &&
+  const selectedAuthorization =
+    dossierOptions.find((dossier) =>
+      dossier.dossier_id === selectedDossierId
+    ) ?? null;
+  const hasPublishedCorrection = model !== null &&
+    correctionHandoff.status === "ready" &&
+    correctionHandoff.model.caseRef === model.selected_dossier.case_reference &&
     correctionHandoff.model.handoff !== null;
+  const currentStatus = getDashboardStatusPresentation({
+    dossierStatus: selectedDossier?.status ?? "",
+    timeline: model?.timeline ?? [],
+    hasPublishedCorrection,
+  });
   const chargerRows = useMemo(() => (model ? buildPortalChargers(model) : []), [
     model,
   ]);
@@ -97,7 +110,7 @@ export function ActivePrivateDashboard({
           <h1>{portalContextLabel(selectedAuthorization?.portal_context)}</h1>
           <p>
             {selectedDossier
-              ? dossierLabel(selectedDossier, hasPublishedCorrection)
+              ? dossierLabel(selectedDossier, currentStatus.label)
               : "Geen dossier geselecteerd"}
           </p>
         </div>
@@ -118,8 +131,13 @@ export function ActivePrivateDashboard({
                   <option key={dossier.dossier_id} value={dossier.dossier_id}>
                     {dossierLabel(
                       dossier,
-                      dossier.dossier_id === selectedDossierId &&
-                        hasPublishedCorrection,
+                      dossier.dossier_id === selectedDossierId
+                        ? currentStatus.label
+                        : getDashboardStatusPresentation({
+                          dossierStatus: dossier.status,
+                          timeline: [],
+                          hasPublishedCorrection: false,
+                        }).label,
                     )}
                   </option>
                 ))}
@@ -194,49 +212,38 @@ export function ActivePrivateDashboard({
               state={correctionHandoff}
             />
 
+            <section
+              className="portal-card-compact"
+              aria-labelledby="current-status-title"
+            >
+              <h2 id="current-status-title">Huidige status</h2>
+              <ReadOnlyInfoRows
+                rows={[
+                  {
+                    identity: "current-status",
+                    label: "Status",
+                    value: currentStatus.label,
+                    status: currentStatus.label,
+                  },
+                  {
+                    identity: "current-step",
+                    label: "Nu",
+                    value: currentStatus.currentStep,
+                  },
+                  {
+                    identity: "customer-action",
+                    label: "Actie van u nodig?",
+                    value: currentStatus.customerAction,
+                  },
+                ]}
+              />
+            </section>
+
+            <CustomerTimeline events={model.timeline} />
+
             {!hasPublishedCorrection
               ? (
                 <>
-                  <section className="portal-card-compact" aria-label="Dossier">
-                    <h2>Dossier</h2>
-                    <ReadOnlyInfoRows
-                      rows={[
-                        {
-                          identity: "dossier-summary",
-                          label: "Dossier",
-                          value: dossierLabel(
-                            model.selected_dossier,
-                            hasPublishedCorrection,
-                          ),
-                        },
-                        {
-                          identity: "case-reference",
-                          label: "Zaakreferentie",
-                          value: model.selected_dossier.case_reference,
-                        },
-                        {
-                          identity: "account-type",
-                          label: "Type",
-                          value: accountTypeLabel(
-                            model.selected_dossier.account_type,
-                          ),
-                        },
-                        {
-                          identity: "case-status",
-                          label: "Status",
-                          value: selectedDossierStatusLabel(
-                            model.selected_dossier.status,
-                            hasPublishedCorrection,
-                          ),
-                          status: selectedDossierStatusLabel(
-                            model.selected_dossier.status,
-                            hasPublishedCorrection,
-                          ),
-                        },
-                      ]}
-                    />
-                  </section>
-
                   {model.locations.length
                     ? (
                       <section
@@ -333,12 +340,7 @@ export function ActivePrivateDashboard({
                         })}
                       </section>
                     )
-                    : (
-                      <DashboardNotice
-                        title="Geen laadpalen gevonden"
-                        note="Dit dossier bevat nog geen laadpaalgegevens."
-                      />
-                    )}
+                    : null}
                 </>
               )
               : null}
@@ -797,19 +799,12 @@ function dossierLabel(
     DashboardDossierSummary,
     "account_type" | "dossier_number" | "status"
   >,
-  hasPublishedCorrection = false,
+  statusPresentation: string,
 ): string {
   const number = dossier.dossier_number || "Dossier";
-  return `${number} · ${accountTypeLabel(dossier.account_type)} · ${
-    selectedDossierStatusLabel(dossier.status, hasPublishedCorrection)
-  }`;
-}
-
-function selectedDossierStatusLabel(
-  status: string,
-  hasPublishedCorrection: boolean,
-): string {
-  return hasPublishedCorrection ? "Aanpassing nodig" : statusLabel(status);
+  return `${number} · ${
+    accountTypeLabel(dossier.account_type)
+  } · ${statusPresentation}`;
 }
 
 function buildPortalChargers(model: DashboardReadModel): PortalCharger[] {

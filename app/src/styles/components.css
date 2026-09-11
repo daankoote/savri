@@ -2119,6 +2119,40 @@ button:not(:disabled):active {
   padding: var(--space-5);
 }
 
+.portal-timeline {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.portal-timeline li {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.4fr) minmax(0, 1fr);
+  gap: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-4);
+}
+
+.portal-timeline li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.portal-timeline time {
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+}
+
+.portal-timeline strong {
+  color: var(--color-heading);
+}
+
+.portal-timeline p {
+  margin-top: var(--space-1);
+}
+
 .active-charger-card h2,
 .portal-card-compact h2 {
   margin-bottom: var(--space-1);
@@ -2414,6 +2448,11 @@ button:not(:disabled):active {
 
   .portal-info-row dd {
     text-align: left;
+  }
+
+  .portal-timeline li {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
   }
 
   .portal-evidence-grid {

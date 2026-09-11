@@ -471,6 +471,15 @@ The recent app frontend Auth/session flow is retained as local proof:
 - `/dashboard` is protected by the current frontend session flow.
 - Auth/Supabase frontend code is route-lazy for `/account` and `/dashboard`.
 - `api-app-dashboard-get` provides an authenticated, customer-safe, account-type-neutral dashboard read projection.
+- That projection includes a case-scoped timeline of at most 50 allowlisted
+  immutable submission, correction and completed-review events. Signing remains
+  internal evidence and is represented customer-side by `Dossier ontvangen`.
+  The server maps event types to fixed customer copy; raw audit/review payloads
+  and source identifiers never enter the browser contract.
+- The dashboard shows one shared Dutch current-status presentation in its
+  subtitle, dossier selector and `Huidige status` block. `ALL_FACTS_ACCEPTED`
+  remains `In behandeling` without an authoritative terminal dossier status;
+  the completed data check belongs only in the timeline.
 - The real customer-safe dashboard frontend projection is CURRENT / LOCAL PROOF and uses `api-app-dashboard-get`.
 - The reusable customer document module is CURRENT / LOCAL PROOF.
 - MID evidence and installation/acquisition invoice PDF upload are supported from the authenticated dashboard.

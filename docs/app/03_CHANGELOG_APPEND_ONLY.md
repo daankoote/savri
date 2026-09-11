@@ -2003,3 +2003,27 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   production legal/OTP/Auth and remote acceptance remain open.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-09-10 — Add customer-safe dossier timeline locally
+
+- Added one service-role-only, case-scoped read projection over four existing
+  immutable event sources. It revalidates confirmed Auth, active identity and
+  customer lineage, and exact customer-wide or case-scoped R7 grants without
+  adding event writes, tables, RLS policies or broader table privileges.
+- `api-app-dashboard-get` now maps the allowlisted event types to fixed Dutch
+  customer copy and rejects unknown or malformed projection data. Signing stays
+  internal evidence and is represented by `Dossier ontvangen`; accepted review
+  data is presented as `Gegevens gecontroleerd`, not as dossier completion.
+- The dossier overview now uses one Dutch status projection for its subtitle,
+  selector and integrated `Huidige status` block. That block states what happens
+  now and whether customer action is required in three compact rows. Past
+  milestones stay in the timeline, and absent charger data adds no empty notice.
+  The timeline remains visible below it during normal and active-correction
+  states, including a neutral legacy/empty state.
+- Local disposable proofs cover clean signing, multiple correction loops,
+  supersession leaves, all three account types, cross-case denial, direct-role
+  ACL denial, privacy, deterministic ordering/limit and zero read-side writes.
+  Migration-chain, Edge/frontend and browser evidence remain local; no remote
+  migration, deployment or production acceptance is claimed.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
