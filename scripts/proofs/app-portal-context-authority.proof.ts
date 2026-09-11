@@ -139,7 +139,7 @@ marker(7);
 
 assert(
   dashboard.includes(
-    "portalContextLabel(selectedAuthorization?.portal_context)",
+    "portalContextLabel(application.portal_context)",
   ) &&
     dashboard.includes('return "Bedrijfsportaal"') &&
     dashboard.includes('return "Klantportaal"') &&

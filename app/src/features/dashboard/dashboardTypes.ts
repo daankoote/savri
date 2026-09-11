@@ -4,10 +4,17 @@ export type DashboardDossierSummary = {
   dossier_id: string;
   dossier_number: string | null;
   account_type: DashboardAccountType;
+  portal_context: "customer" | "business";
   status: string;
   document_changes_allowed: boolean;
   case_id: string;
   case_reference: string;
+  application_label: string;
+};
+
+export type DashboardApplicationIndex = {
+  request_id: string;
+  applications: DashboardDossierSummary[];
 };
 
 export type DashboardLocation = {

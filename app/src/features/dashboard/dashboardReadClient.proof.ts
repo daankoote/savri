@@ -1,9 +1,11 @@
 import {
   clearDashboardReadCache,
+  loadDashboardApplicationsOnce,
   loadDashboardReadOnce,
 } from "./dashboardReadCache.ts";
 import {
   type DashboardReadSafeError,
+  fetchDashboardApplications,
   fetchDashboardReadModel,
 } from "./dashboardReadClient.ts";
 import { getDashboardStatusPresentation } from "./dashboardStatusPresentation.ts";
@@ -30,6 +32,9 @@ export type DashboardReadClientProofResult = {
   dashboardErrorCopyVerified: true;
   timelineContractVerified: true;
   statusMappingVerified: true;
+  applicationIndexVerified: true;
+  applicationCacheVerified: true;
+  staleResponsesIgnored: true;
 };
 
 type MockFetchCall = {
@@ -88,38 +93,46 @@ function dashboardBody(selectedDossierId = DOSSIER_A) {
         dossier_id: DOSSIER_A,
         dossier_number: "D-001",
         account_type: "particulier",
+        portal_context: "customer",
         status: "submitted",
         document_changes_allowed: true,
         case_id: CASE_A,
         case_reference: `CASE-${DOSSIER_A}`,
+        application_label: "Kostverlorenstraat 65, 2042PC Zandvoort",
       },
       {
         dossier_id: DOSSIER_B,
         dossier_number: "D-002",
         account_type: "zakelijk",
+        portal_context: "business",
         status: "submitted",
         document_changes_allowed: true,
         case_id: CASE_B,
         case_reference: `CASE-${DOSSIER_B}`,
+        application_label: "D-002",
       },
       {
         dossier_id: DOSSIER_C,
         dossier_number: "D-003",
         account_type: "vve",
+        portal_context: "business",
         status: "submitted",
         document_changes_allowed: true,
         case_id: CASE_C,
         case_reference: `CASE-${DOSSIER_C}`,
+        application_label: "D-003",
       },
     ],
     selected_dossier: {
       dossier_id: selectedDossierId,
       dossier_number: "D-001",
       account_type: "particulier",
+      portal_context: "customer",
       status: "submitted",
       document_changes_allowed: true,
       case_id: CASE_A,
       case_reference: `CASE-${selectedDossierId}`,
+      application_label: "Kostverlorenstraat 65, 2042PC Zandvoort",
     },
     locations: [
       {
@@ -367,6 +380,28 @@ export async function runDashboardReadClientProof(): Promise<
     ).join(",") === "particulier,zakelijk,vve",
     "all account types must parse in order",
   );
+
+  const applicationFetch = createMockFetch([
+    jsonResponse({
+      ok: true,
+      mode: "dashboard_application_index_v1",
+      request_id: "application-index-proof",
+      applications: dashboardBody().dossiers,
+    }),
+  ]);
+  const applicationIndex = await fetchDashboardApplications({
+    accessToken,
+    fetchImpl: applicationFetch.fetchImpl,
+    runtimeConfig: { anonKey, dashboardEndpointUrl: endpointUrl },
+  });
+  assert(
+    applicationIndex.ok && applicationIndex.model.applications.length === 3 &&
+      JSON.stringify(
+          JSON.parse(String(applicationFetch.calls[0].init?.body)),
+        ) ===
+        JSON.stringify({ mode: "applications" }),
+    "application index request or response contract invalid",
+  );
   assert(
     success.model.selected_dossier.case_id === CASE_A &&
       success.model.selected_dossier.case_reference === `CASE-${DOSSIER_A}`,
@@ -510,10 +545,12 @@ export async function runDashboardReadClientProof(): Promise<
       dossier_id: dossierId,
       dossier_number: dossierId,
       account_type: dossierId.endsWith("b") ? "zakelijk" : "particulier",
+      portal_context: dossierId.endsWith("b") ? "business" : "customer",
       status: "submitted",
       document_changes_allowed: true,
       case_id: CASE_A,
       case_reference: `CASE-${DOSSIER_A}`,
+      application_label: dossierId,
     },
   });
   const cacheFetcher = async (
@@ -707,6 +744,144 @@ export async function runDashboardReadClientProof(): Promise<
     "scope clear must prevent old pending response from repopulating cache",
   );
 
+  let applicationFetchCount = 0;
+  const applicationCacheFetcher = async (): Promise<{
+    ok: true;
+    model: { request_id: string; applications: DashboardDossierSummary[] };
+  }> => {
+    applicationFetchCount += 1;
+    return {
+      ok: true,
+      model: {
+        request_id: `application-cache-${applicationFetchCount}`,
+        applications: (success.model as DashboardReadModel).dossiers,
+      },
+    };
+  };
+  const cachedApplications = await Promise.all([
+    loadDashboardApplicationsOnce({
+      accessToken,
+      cacheScope,
+      fetcher: applicationCacheFetcher,
+    }),
+    loadDashboardApplicationsOnce({
+      accessToken,
+      cacheScope,
+      fetcher: applicationCacheFetcher,
+    }),
+  ]);
+  await loadDashboardApplicationsOnce({
+    accessToken,
+    cacheScope: otherCacheScope,
+    fetcher: applicationCacheFetcher,
+  });
+  clearDashboardReadCache(cacheScope);
+  await loadDashboardApplicationsOnce({
+    accessToken,
+    cacheScope,
+    fetcher: applicationCacheFetcher,
+  });
+  assert(
+    cachedApplications[0] === cachedApplications[1] &&
+      applicationFetchCount === 3,
+    "application index cache must dedupe and remain actor scoped",
+  );
+
+  clearDashboardReadCache(cacheScope);
+  const staleDetail = deferred<{ ok: true; model: DashboardReadModel }>();
+  const freshDetail = deferred<{ ok: true; model: DashboardReadModel }>();
+  let detailRaceCalls = 0;
+  const detailRaceFetcher = async () => {
+    detailRaceCalls += 1;
+    return detailRaceCalls === 1 ? staleDetail.promise : freshDetail.promise;
+  };
+  const staleDetailRequest = loadDashboardReadOnce({
+    accessToken,
+    cacheScope,
+    dossierId: DOSSIER_A,
+    fetcher: detailRaceFetcher,
+  });
+  const freshDetailRequest = loadDashboardReadOnce({
+    accessToken,
+    cacheScope,
+    dossierId: DOSSIER_A,
+    fetcher: detailRaceFetcher,
+    forceRefresh: true,
+  });
+  const staleDetailModel = {
+    ...makeModel(DOSSIER_A),
+    request_id: "stale-detail",
+  };
+  const freshDetailModel = {
+    ...makeModel(DOSSIER_A),
+    request_id: "fresh-detail",
+  };
+  staleDetail.resolve({ ok: true, model: staleDetailModel });
+  await staleDetailRequest;
+  freshDetail.resolve({ ok: true, model: freshDetailModel });
+  await freshDetailRequest;
+  const cachedFreshDetail = await loadDashboardReadOnce({
+    accessToken,
+    cacheScope,
+    dossierId: DOSSIER_A,
+    fetcher: detailRaceFetcher,
+  });
+  assert(
+    detailRaceCalls === 2 && cachedFreshDetail.request_id === "fresh-detail",
+    "stale detail response must not replace a newer forced read",
+  );
+
+  clearDashboardReadCache(cacheScope);
+  const staleApplications = deferred<{
+    ok: true;
+    model: { request_id: string; applications: DashboardDossierSummary[] };
+  }>();
+  const freshApplications = deferred<{
+    ok: true;
+    model: { request_id: string; applications: DashboardDossierSummary[] };
+  }>();
+  let applicationRaceCalls = 0;
+  const applicationRaceFetcher = async () => {
+    applicationRaceCalls += 1;
+    return applicationRaceCalls === 1
+      ? staleApplications.promise
+      : freshApplications.promise;
+  };
+  const staleApplicationRequest = loadDashboardApplicationsOnce({
+    accessToken,
+    cacheScope,
+    fetcher: applicationRaceFetcher,
+  });
+  const freshApplicationRequest = loadDashboardApplicationsOnce({
+    accessToken,
+    cacheScope,
+    fetcher: applicationRaceFetcher,
+    forceRefresh: true,
+  });
+  staleApplications.resolve({
+    ok: true,
+    model: { request_id: "stale-index", applications: [] },
+  });
+  await staleApplicationRequest;
+  freshApplications.resolve({
+    ok: true,
+    model: {
+      request_id: "fresh-index",
+      applications: (success.model as DashboardReadModel).dossiers,
+    },
+  });
+  await freshApplicationRequest;
+  const cachedFreshApplications = await loadDashboardApplicationsOnce({
+    accessToken,
+    cacheScope,
+    fetcher: applicationRaceFetcher,
+  });
+  assert(
+    applicationRaceCalls === 2 &&
+      cachedFreshApplications.request_id === "fresh-index",
+    "stale application index must not replace a newer forced read",
+  );
+
   return {
     ok: true,
     requestHeadersVerified: true,
@@ -725,5 +900,8 @@ export async function runDashboardReadClientProof(): Promise<
     dashboardErrorCopyVerified: true,
     timelineContractVerified: true,
     statusMappingVerified: true,
+    applicationIndexVerified: true,
+    applicationCacheVerified: true,
+    staleResponsesIgnored: true,
   };
 }

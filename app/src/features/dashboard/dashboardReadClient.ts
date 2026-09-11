@@ -1,6 +1,7 @@
 import { resolveAuthRuntimeConfig } from "../auth/authRuntimeConfig.ts";
 import type {
   DashboardAccountType,
+  DashboardApplicationIndex,
   DashboardCharger,
   DashboardDocumentSlot,
   DashboardDossierSummary,
@@ -26,6 +27,10 @@ export type DashboardReadResult =
   | { ok: true; model: DashboardReadModel }
   | { ok: false; error: DashboardReadSafeError; status?: number };
 
+export type DashboardApplicationsResult =
+  | { ok: true; model: DashboardApplicationIndex }
+  | { ok: false; error: DashboardReadSafeError; status?: number };
+
 type DashboardReadConfig = {
   accessToken: string;
   dossierId: string;
@@ -33,6 +38,8 @@ type DashboardReadConfig = {
   runtimeConfig?: { dashboardEndpointUrl: string; anonKey: string };
   signal?: AbortSignal;
 };
+
+type DashboardApplicationsConfig = Omit<DashboardReadConfig, "dossierId">;
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -133,6 +140,8 @@ function mapDashboardErrorCode(code: string): DashboardReadSafeError {
 function parseDossier(value: unknown): DashboardDossierSummary | null {
   if (!isRecord(value)) return null;
   const accountType = stringField(value, "account_type");
+  const portalContext = stringField(value, "portal_context");
+  const applicationLabel = stringField(value, "application_label");
   if (!isAccountType(accountType)) return null;
 
   const dossierId = stringField(value, "dossier_id");
@@ -143,7 +152,11 @@ function parseDossier(value: unknown): DashboardDossierSummary | null {
     !isUuid(dossierId) ||
     !isUuid(caseId) ||
     !CASE_REFERENCE_RE.test(caseReference) ||
-    !status
+    !status || !applicationLabel || applicationLabel.length > 120 ||
+    (portalContext !== "customer" && portalContext !== "business") ||
+    (accountType === "particulier"
+      ? portalContext !== "customer"
+      : portalContext !== "business")
   ) {
     return null;
   }
@@ -152,10 +165,12 @@ function parseDossier(value: unknown): DashboardDossierSummary | null {
     dossier_id: dossierId,
     dossier_number: nullableStringField(value, "dossier_number"),
     account_type: accountType,
+    portal_context: portalContext,
     status,
     document_changes_allowed: booleanField(value, "document_changes_allowed"),
     case_id: caseId,
     case_reference: caseReference,
+    application_label: applicationLabel,
   };
 }
 
@@ -364,6 +379,31 @@ function validateDashboardBody(body: unknown): DashboardReadResult {
   };
 }
 
+function validateApplicationsBody(body: unknown): DashboardApplicationsResult {
+  if (
+    !isRecord(body) || body.ok !== true ||
+    body.mode !== "dashboard_application_index_v1"
+  ) {
+    return { ok: false, error: safeDashboardError("invalid_response") };
+  }
+
+  const applications = parseDossiers(body.applications);
+  const requestId = stringField(body, "request_id");
+  if (
+    !applications || !requestId ||
+    new Set(applications.map((application) => application.case_reference))
+        .size !==
+      applications.length
+  ) {
+    return { ok: false, error: safeDashboardError("invalid_response") };
+  }
+
+  return {
+    ok: true,
+    model: { request_id: requestId, applications },
+  };
+}
+
 async function parseJsonResponse(
   response: Response,
 ): Promise<
@@ -376,13 +416,22 @@ async function parseJsonResponse(
   }
 }
 
-export async function fetchDashboardReadModel({
+async function postDashboardRequest({
   accessToken,
-  dossierId,
-  fetchImpl = fetch,
+  body,
+  fetchImpl,
   runtimeConfig,
   signal,
-}: DashboardReadConfig): Promise<DashboardReadResult> {
+}: {
+  accessToken: string;
+  body: Record<string, string>;
+  fetchImpl: typeof fetch;
+  runtimeConfig?: { dashboardEndpointUrl: string; anonKey: string };
+  signal?: AbortSignal;
+}): Promise<
+  | { ok: true; body: unknown }
+  | { ok: false; error: DashboardReadSafeError; status?: number }
+> {
   const runtime = runtimeConfig
     ? {
       ok: true as const,
@@ -395,8 +444,7 @@ export async function fetchDashboardReadModel({
   }
 
   const bearerToken = accessToken.trim();
-  const selectedDossierId = dossierId.trim();
-  if (!bearerToken || !selectedDossierId) {
+  if (!bearerToken) {
     return { ok: false, error: safeDashboardError("invalid_response") };
   }
 
@@ -409,7 +457,7 @@ export async function fetchDashboardReadModel({
         apikey: runtime.anonKey,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ dossier_id: selectedDossierId }),
+      body: JSON.stringify(body),
       signal,
     });
   } catch (error) {
@@ -423,7 +471,6 @@ export async function fetchDashboardReadModel({
   if (!parsed.ok) {
     return { ok: false, error: parsed.error, status: response.status };
   }
-
   if (!response.ok) {
     const code = isRecord(parsed.body) ? stringField(parsed.body, "code") : "";
     return {
@@ -432,6 +479,42 @@ export async function fetchDashboardReadModel({
       status: response.status,
     };
   }
+  return { ok: true, body: parsed.body };
+}
 
-  return validateDashboardBody(parsed.body);
+export async function fetchDashboardReadModel({
+  accessToken,
+  dossierId,
+  fetchImpl = fetch,
+  runtimeConfig,
+  signal,
+}: DashboardReadConfig): Promise<DashboardReadResult> {
+  const selectedDossierId = dossierId.trim();
+  if (!selectedDossierId) {
+    return { ok: false, error: safeDashboardError("invalid_response") };
+  }
+  const response = await postDashboardRequest({
+    accessToken,
+    body: { dossier_id: selectedDossierId },
+    fetchImpl,
+    runtimeConfig,
+    signal,
+  });
+  return response.ok ? validateDashboardBody(response.body) : response;
+}
+
+export async function fetchDashboardApplications({
+  accessToken,
+  fetchImpl = fetch,
+  runtimeConfig,
+  signal,
+}: DashboardApplicationsConfig): Promise<DashboardApplicationsResult> {
+  const response = await postDashboardRequest({
+    accessToken,
+    body: { mode: "applications" },
+    fetchImpl,
+    runtimeConfig,
+    signal,
+  });
+  return response.ok ? validateApplicationsBody(response.body) : response;
 }

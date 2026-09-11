@@ -50,7 +50,7 @@ Do not use legacy `dossier_sessions` as app account auth.
 |---|---|---|---|
 | `api-app-signup-submit` | CURRENT / LOCAL PROOF | CORS / META / IDEM / AUD / SRV | Public pre-auth submit. Does not create Auth users or Auth sessions. |
 | `api-app-auth-bootstrap` | CURRENT / LOCAL PROOF | CORS / META / IDEM / AUD / AUTH / SRV | Authenticated CORE endpoint. Requires verified Supabase Auth user, derives verified email server-side, binds an existing app identity, and returns accessible dossier summaries. |
-| `api-app-dashboard-get` | CURRENT / LOCAL PROOF | CORS / META / AUTH / SRV | Pure authenticated read. After existing customer/case authority it calls the service-role-only `app_customer_case_timeline_read_v1` and maps its strict four-type allowlist to fixed customer copy. Signing is not customer-visible; accepted review data is `Gegevens gecontroleerd`, not dossier completion. No `Idempotency-Key`; successful reads do not create recurring audit writes. Scoped rejects may use safe fail-open audit according to current doctrine. |
+| `api-app-dashboard-get` | CURRENT / LOCAL PROOF | CORS / META / AUTH / SRV | Pure authenticated read. Application-index mode calls service-only `app_customer_application_index_read_v1` with the JWT actor and returns only exact R7-granted cases with bounded deterministic labels; detail mode requires membership in that same index before existing case/dossier authority and the service-only timeline projection. Signing is not customer-visible; accepted review data is `Gegevens gecontroleerd`, not dossier completion. No `Idempotency-Key`; successful reads do not create recurring audit writes. Scoped rejects may use safe fail-open audit according to current doctrine. |
 | `api-app-document-upload-url` | CURRENT / LOCAL PROOF | CORS / META / IDEM / AUD / AUTH / SRV | Issues server-generated upload target. Supports current PDF policies for invoice/ownership evidence and MID evidence. |
 | `api-app-document-upload-confirm` | CURRENT / LOCAL PROOF | CORS / META / IDEM / AUD / AUTH / SRV | Confirms stored object and creates immutable document version. Supports immutable replacement. |
 | `api-app-document-download-url` | CURRENT / LOCAL PROOF | CORS / META / AUTH / SRV | Pure authenticated read. Resolves current document server-side and returns a short-lived signed download URL. No `Idempotency-Key`; successful reads do not write recurring audit events. |
@@ -71,6 +71,13 @@ Do not generalize `SECURITY DEFINER` as the default for other functions. Use it 
 boundary because the immutable review source tables intentionally grant no
 direct `service_role` SELECT. Execute remains revoked from public, anon and
 authenticated; no source-table grants or RLS policies are widened.
+
+`app_customer_application_index_read_v1` is likewise service-role-only,
+`STABLE`, uses an empty search path and fully qualified relations, and widens
+neither table privileges nor RLS. It revalidates confirmed Auth, one active
+identity, active customer lineage and exact customer-wide/case-scoped R7 grants
+in one snapshot. Browser payloads contain only the fixed `applications` mode or
+an existing detail `dossier_id`; they never supply Auth, customer or tenant IDs.
 
 ## Tables
 

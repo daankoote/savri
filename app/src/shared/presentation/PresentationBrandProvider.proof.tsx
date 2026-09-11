@@ -69,6 +69,8 @@ function renderConsumerSet(
       <AuthProvider>
         <DashboardSidebar
           activeSection="active"
+          applications={[]}
+          currentCaseReference={null}
           navigate={navigate}
           onSelectSection={selectSection}
         />
@@ -100,7 +102,10 @@ function renderCustomerDashboardPath(
   return renderToStaticMarkup(
     <PresentationBrandProvider presentation={presentation}>
       <AuthProvider>
-        <DashboardPageShell navigate={navigate} />
+        <DashboardPageShell
+          currentPath="/dashboard/aanvragen"
+          navigate={navigate}
+        />
       </AuthProvider>
     </PresentationBrandProvider>,
   );
@@ -151,7 +156,7 @@ assert(
 assert(
   envalHtml.includes("Nieuwe aanvraag") &&
     syntheticHtml.includes("Nieuwe aanvraag") &&
-    envalHtml.includes("Overzicht") && syntheticHtml.includes("Overzicht") &&
+    envalHtml.includes("Aanvragen") && syntheticHtml.includes("Aanvragen") &&
     !envalHtml.includes("History") && !syntheticHtml.includes("Settings"),
   "Q04_auth_or_dashboard_behavior_changed_with_presentation",
 );
@@ -312,7 +317,7 @@ assert(
       'path === "/beheer/dossiers" || path === "/intern/dossiers"',
     ) &&
     appSource.includes('<AuthProvider audience="operator">') &&
-    sidebarSource.includes("Overzicht") &&
+    sidebarSource.includes("Aanvragen") &&
     (sidebarSource.match(/navigate\("\/account"\)/g) || []).length === 1 &&
     !sidebarSource.match(
       /onClick=\{\(\) => navigate\("\/account"\)\}[\s\S]{0,120}>\s*Account/,

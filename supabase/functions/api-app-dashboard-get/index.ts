@@ -25,23 +25,7 @@ import {
 
 type DashboardPayload = {
   dossier_id?: unknown;
-};
-
-type DossierRow = {
-  id?: string;
-  dossier_number?: string | null;
-  account_type?: string | null;
-  status?: string | null;
-  locked_at?: string | null;
-  created_at?: string | null;
-};
-
-type CaseRow = {
-  id?: string;
-  customer_id?: string | null;
-  case_reference?: string | null;
-  source_class?: string | null;
-  source_ref?: string | null;
+  mode?: unknown;
 };
 
 type LocationRow = {
@@ -120,10 +104,12 @@ type SafeDossier = {
   dossier_id: string;
   dossier_number: string | null;
   account_type: "particulier" | "zakelijk" | "vve";
+  portal_context: "customer" | "business";
   status: string;
   document_changes_allowed: boolean;
   case_id: string;
   case_reference: string;
+  application_label: string;
 };
 
 type SafeSelectedDossier = SafeDossier;
@@ -204,14 +190,21 @@ type DashboardResponse = {
   timeline: SafeTimelineEvent[];
 };
 
+type ApplicationIndexResponse = {
+  ok: true;
+  mode: "dashboard_application_index_v1";
+  request_id: string;
+  applications: SafeDossier[];
+};
+
 type DashboardCaseReadModel = Omit<
   DashboardResponse,
   "ok" | "mode" | "request_id" | "timeline"
 >;
 
-type NormalizedPayload = {
-  dossier_id: string;
-};
+type NormalizedPayload =
+  | { mode: "applications" }
+  | { mode: "detail"; dossier_id: string };
 
 type NormalizationError = {
   ok: false;
@@ -221,8 +214,11 @@ type NormalizationError = {
 };
 
 const MODE = "dashboard_read_v1";
+const APPLICATION_INDEX_MODE = "dashboard_application_index_v1";
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const CASE_REFERENCE_RE =
+  /^CASE-(?:[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 const TIMELINE_EVENT_ID_RE = /^tle_[0-9a-f]{32}$/;
 const TIMELINE_COPY: Record<
   TimelineEventType,
@@ -250,11 +246,6 @@ const TIMELINE_COPY: Record<
   },
 };
 const ACCOUNT_TYPES = new Set(["particulier", "zakelijk", "vve"]);
-const DOCUMENT_CHANGE_ALLOWED_DOSSIER_STATUSES = new Set([
-  "draft",
-  "submitted",
-  "needs_customer_action",
-]);
 
 function appSupabaseClient() {
   const url = Deno.env.get("SUPABASE_URL");
@@ -394,10 +385,84 @@ function safeDossierNumber(value: unknown): string | null {
   return dossierNumber || null;
 }
 
-function documentChangesAllowed(row: DossierRow): boolean {
-  const status = getString(row.status);
-  return !getString(row.locked_at) &&
-    DOCUMENT_CHANGE_ALLOWED_DOSSIER_STATUSES.has(status);
+function mapApplication(value: unknown): SafeDossier | null {
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, [
+      "account_type",
+      "application_label",
+      "case_id",
+      "case_reference",
+      "document_changes_allowed",
+      "dossier_id",
+      "dossier_number",
+      "portal_context",
+      "status",
+    ])
+  ) return null;
+
+  const dossierId = getString(value.dossier_id);
+  const caseId = getString(value.case_id);
+  const caseReference = getString(value.case_reference);
+  const accountType = getString(value.account_type);
+  const portalContext = getString(value.portal_context);
+  const status = getString(value.status);
+  const applicationLabel = getString(value.application_label);
+  if (
+    !isUuid(dossierId) || !isUuid(caseId) ||
+    !CASE_REFERENCE_RE.test(caseReference) ||
+    !ACCOUNT_TYPES.has(accountType) || !status ||
+    (portalContext !== "customer" && portalContext !== "business") ||
+    (accountType === "particulier"
+      ? portalContext !== "customer"
+      : portalContext !== "business") ||
+    typeof value.document_changes_allowed !== "boolean" ||
+    !applicationLabel || applicationLabel.length > 120
+  ) return null;
+
+  return {
+    dossier_id: dossierId,
+    dossier_number: safeDossierNumber(value.dossier_number),
+    account_type: accountType as SafeDossier["account_type"],
+    portal_context: portalContext as SafeDossier["portal_context"],
+    status,
+    document_changes_allowed: value.document_changes_allowed,
+    case_id: caseId,
+    case_reference: caseReference,
+    application_label: applicationLabel,
+  };
+}
+
+async function loadCustomerApplications(
+  SB: any,
+  authUserId: string,
+): Promise<SafeDossier[]> {
+  const result = await SB.rpc("app_customer_application_index_read_v1", {
+    p_auth_user_id: authUserId,
+  });
+  if (result.error || !isRecord(result.data)) {
+    throw new Error("customer_application_index_read_failed");
+  }
+  if (
+    !hasExactKeys(result.data, ["ok", "status", "code", "applications"]) ||
+    result.data.ok !== true || result.data.status !== 200 ||
+    result.data.code !== "ok" || !Array.isArray(result.data.applications)
+  ) {
+    throw new Error("customer_application_index_projection_failed");
+  }
+
+  const applications = (result.data.applications as unknown[]).map(
+    mapApplication,
+  );
+  if (
+    applications.some((application) => !application) ||
+    new Set(
+        applications.map((application) => application?.case_reference),
+      ).size !== applications.length
+  ) {
+    throw new Error("customer_application_index_projection_failed");
+  }
+  return applications as SafeDossier[];
 }
 
 async function parseJsonBody(
@@ -416,6 +481,13 @@ function normalizePayload(
   body: DashboardPayload,
 ): { ok: true; payload: NormalizedPayload } | NormalizationError {
   const keys = Object.keys(body);
+  if (
+    keys.length === 1 && keys[0] === "mode" &&
+    getString(body.mode) === "applications"
+  ) {
+    return { ok: true, payload: { mode: "applications" } };
+  }
+
   if (keys.length !== 1 || !keys.includes("dossier_id")) {
     return {
       ok: false,
@@ -435,164 +507,20 @@ function normalizePayload(
     };
   }
 
-  return { ok: true, payload: { dossier_id: dossierId } };
-}
-
-function mapDossier(
-  row: DossierRow,
-  casesByDossierId: Map<string, CaseRow[]>,
-): SafeDossier | null {
-  const id = getString(row.id);
-  const accountType = getString(row.account_type);
-  const status = getString(row.status);
-  if (!isUuid(id) || !ACCOUNT_TYPES.has(accountType) || !status) return null;
-
-  const caseRows = casesByDossierId.get(id) ?? [];
-  if (caseRows.length !== 1) return null;
-
-  const caseRow = caseRows[0];
-  const caseId = getString(caseRow.id);
-  const caseReference = getString(caseRow.case_reference);
-  if (
-    !isUuid(caseId) ||
-    getString(caseRow.source_class) !== "app_customer_dossier" ||
-    getString(caseRow.source_ref) !== id ||
-    caseReference !== `CASE-${id}`
-  ) {
-    return null;
-  }
-
-  return {
-    dossier_id: id,
-    dossier_number: safeDossierNumber(row.dossier_number),
-    account_type: accountType as SafeDossier["account_type"],
-    status,
-    document_changes_allowed: documentChangesAllowed(row),
-    case_id: caseId,
-    case_reference: caseReference,
-  };
-}
-
-async function loadAccessibleCaseSummaries(
-  SB: any,
-  customerIds: string[],
-): Promise<SafeDossier[]> {
-  const [dossiersResult, casesResult, promotionsResult] = await Promise.all([
-    SB.from("app_customer_dossiers")
-      .select("id,dossier_number,account_type,status,locked_at,created_at")
-      .in("customer_id", customerIds)
-      .is("minimized_at", null)
-      .neq("status", "expired_minimized")
-      .order("created_at", { ascending: true }),
-    SB.from("app_cases")
-      .select(
-        "id,customer_id,case_reference,source_class,source_ref,created_at",
-      )
-      .in("customer_id", customerIds)
-      .order("created_at", { ascending: true }),
-    SB.from("app_signup_promotions")
-      .select("case_id,intake_id,account_type")
-      .in("customer_id", customerIds),
-  ]);
-  if (dossiersResult.error || casesResult.error || promotionsResult.error) {
-    throw new Error("normalized_case_read_failed");
-  }
-
-  const caseRows = rows(casesResult.data);
-  const supportedCases = caseRows.filter((row) =>
-    ["app_customer_dossier", "signed_signup_intake"].includes(
-      getString(row.source_class),
-    )
-  );
-  const caseIds = supportedCases.map((row) => getString(row.id)).filter(isUuid);
-  const lifecycleResult = caseIds.length
-    ? await SB.from("app_case_lifecycle_events")
-      .select("id,case_id,lifecycle_state,event_at")
-      .in("case_id", caseIds)
-      .order("event_at", { ascending: false })
-    : { data: [], error: null };
-  if (lifecycleResult.error) {
-    throw new Error("normalized_lifecycle_read_failed");
-  }
-
-  const casesByDossierId = new Map<string, CaseRow[]>();
-  for (const row of supportedCases) {
-    if (getString(row.source_class) !== "app_customer_dossier") continue;
-    const sourceRef = getString(row.source_ref);
-    if (
-      !isUuid(sourceRef) ||
-      !customerIds.includes(getString(row.customer_id))
-    ) {
-      throw new Error("legacy_case_lineage_failed");
-    }
-    const matches = casesByDossierId.get(sourceRef) ?? [];
-    matches.push(row as CaseRow);
-    casesByDossierId.set(sourceRef, matches);
-  }
-
-  const dossierRows = rows(dossiersResult.data) as DossierRow[];
-  const legacy = dossierRows.map((row) => mapDossier(row, casesByDossierId));
-  if (legacy.some((row) => !row)) {
-    throw new Error("legacy_case_projection_failed");
-  }
-
-  const promotions = rows(promotionsResult.data);
-  const lifecycleRows = rows(lifecycleResult.data);
-  const signed = supportedCases.filter((row) =>
-    getString(row.source_class) === "signed_signup_intake"
-  ).map((row): SafeDossier => {
-    const caseId = getString(row.id);
-    const promotion = promotions.find((item) =>
-      getString(item.case_id) === caseId &&
-      getString(item.intake_id) === getString(row.source_ref)
-    );
-    const lifecycle = lifecycleRows.find((item) =>
-      getString(item.case_id) === caseId
-    );
-    const accountType = getString(promotion?.account_type);
-    const caseReference = getString(row.case_reference);
-    const status = getString(lifecycle?.lifecycle_state);
-    if (
-      !isUuid(caseId) || !promotion || !ACCOUNT_TYPES.has(accountType) ||
-      !caseReference || !status
-    ) throw new Error("signed_case_projection_failed");
-    return {
-      dossier_id: caseId,
-      dossier_number: caseReference,
-      account_type: accountType as SafeDossier["account_type"],
-      status,
-      document_changes_allowed: false,
-      case_id: caseId,
-      case_reference: caseReference,
-    };
-  });
-
-  const normalized = [
-    ...(legacy.filter(Boolean) as SafeDossier[]),
-    ...signed,
-  ];
-  if (
-    new Set(normalized.map((item) => item.case_id)).size !== normalized.length
-  ) {
-    throw new Error("normalized_case_duplicate_lineage");
-  }
-  return normalized;
+  return { ok: true, payload: { mode: "detail", dossier_id: dossierId } };
 }
 
 async function loadSignedCaseReadModel(
   SB: any,
-  customerIds: string[],
+  summaries: SafeDossier[],
   customerId: string,
   caseId: string,
 ): Promise<DashboardCaseReadModel> {
-  const [summaries, promotionsResult] = await Promise.all([
-    loadAccessibleCaseSummaries(SB, customerIds),
-    SB.from("app_signup_promotions")
-      .select("case_id,intake_id,account_type")
-      .eq("customer_id", customerId)
-      .eq("case_id", caseId)
-      .maybeSingle(),
-  ]);
+  const promotionsResult = await SB.from("app_signup_promotions")
+    .select("case_id,intake_id,account_type")
+    .eq("customer_id", customerId)
+    .eq("case_id", caseId)
+    .maybeSingle();
   if (promotionsResult.error) {
     throw new Error("signed_case_read_failed");
   }
@@ -973,7 +901,7 @@ async function loadCurrentFileNamesByVersionId(
 
 async function loadDashboardReadModel(
   SB: any,
-  customerIds: string[],
+  summaries: SafeDossier[],
   customerId: string,
   dossierId: string,
 ): Promise<DashboardCaseReadModel> {
@@ -1020,14 +948,12 @@ async function loadDashboardReadModel(
     .order("created_at", { ascending: true });
 
   const [
-    dossiers,
     selectedDossierResult,
     locationsResult,
     chargersResult,
     slotsResult,
     acceptancesResult,
   ] = await Promise.all([
-    loadAccessibleCaseSummaries(SB, customerIds),
     selectedDossierPromise,
     locationsPromise,
     chargersPromise,
@@ -1045,7 +971,7 @@ async function loadDashboardReadModel(
     throw new Error("dashboard_read_failed");
   }
 
-  const selectedDossier = dossiers.find((item) =>
+  const selectedDossier = summaries.find((item) =>
     item.dossier_id === dossierId &&
     getString(selectedDossierResult.data?.id) === dossierId
   );
@@ -1075,7 +1001,7 @@ async function loadDashboardReadModel(
   );
 
   return {
-    dossiers,
+    dossiers: summaries,
     selected_dossier: selectedDossier,
     locations: locationRows.map(mapLocation).filter((
       row,
@@ -1148,16 +1074,43 @@ serve(async (req) => {
   }
 
   try {
+    const applications = await loadCustomerApplications(
+      SB,
+      authResult.context.authUserId,
+    );
+    if (normalized.payload.mode === "applications") {
+      const response: ApplicationIndexResponse = {
+        ok: true,
+        mode: APPLICATION_INDEX_MODE,
+        request_id: meta.request_id,
+        applications,
+      };
+      return appJsonResponse(req, 200, response);
+    }
+    const dossierId = normalized.payload.dossier_id;
+
+    const selectedApplication = applications.find((application) =>
+      application.dossier_id === dossierId
+    );
+    if (!selectedApplication) {
+      throw {
+        ok: false,
+        status: 404,
+        code: "dossier_not_found_or_forbidden",
+        message: "Dossier niet gevonden.",
+      };
+    }
+
     const caseAccess = await requireAppCaseAccess(
       SB,
       authResult.context,
-      normalized.payload.dossier_id,
+      dossierId,
     );
     const readModel = caseAccess.ok &&
         caseAccess.appCase.sourceClass === "signed_signup_intake"
       ? await loadSignedCaseReadModel(
         SB,
-        authResult.context.customerIds,
+        applications,
         caseAccess.appCase.customerId,
         caseAccess.appCase.caseId,
       )
@@ -1165,12 +1118,12 @@ serve(async (req) => {
         const accessResult = await requireAppDossierAccess(
           SB,
           authResult.context,
-          normalized.payload.dossier_id,
+          dossierId,
         );
         if (!accessResult.ok) throw accessResult;
         return await loadDashboardReadModel(
           SB,
-          authResult.context.customerIds,
+          applications,
           accessResult.dossier.customerId,
           accessResult.dossier.dossierId,
         );

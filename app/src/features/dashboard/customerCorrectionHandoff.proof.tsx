@@ -175,10 +175,12 @@ function dossier(
     dossier_id: dossierId,
     dossier_number: null,
     account_type: "particulier",
+    portal_context: "customer",
     status: "submitted_for_review",
     document_changes_allowed: false,
     case_id: dossierId,
     case_reference: caseRef,
+    application_label: "Dichtestraat 10, 1234AB Proefstad",
   };
 }
 
@@ -229,6 +231,7 @@ function renderDashboard(
   return renderToStaticMarkup(
     <ActivePrivateDashboard
       accessToken="proof-token"
+      application={dossier()}
       correctionHandoff={correctionHandoff}
       dashboardRead={{
         status: "ready",
@@ -237,9 +240,7 @@ function renderDashboard(
         retry: () => undefined,
         refreshSelectedDossier: async () => true,
       }}
-      dossierOptions={[{ ...dossier(), portal_context: "customer" }]}
       onRefreshSelectedDossier={async () => true}
-      onSelectDossier={() => undefined}
       selectedDossierId={DOSSIER_A}
     />,
   );
@@ -248,10 +249,14 @@ function renderDashboard(
 function renderDossierSwitch(
   correctionHandoff: CustomerCorrectionHandoffState,
 ) {
-  const nextDossier = dossier(DOSSIER_B, CASE_B);
+  const nextDossier = {
+    ...dossier(DOSSIER_B, CASE_B),
+    application_label: "Nieuwe routeaanvraag",
+  };
   return renderToStaticMarkup(
     <ActivePrivateDashboard
       accessToken="proof-token"
+      application={nextDossier}
       correctionHandoff={correctionHandoff}
       dashboardRead={{
         status: "loading",
@@ -260,12 +265,7 @@ function renderDossierSwitch(
         retry: () => undefined,
         refreshSelectedDossier: async () => true,
       }}
-      dossierOptions={[
-        { ...dossier(), portal_context: "customer" },
-        { ...nextDossier, portal_context: "customer" },
-      ]}
       onRefreshSelectedDossier={async () => true}
-      onSelectDossier={() => undefined}
       selectedDossierId={DOSSIER_B}
     />,
   );
@@ -484,7 +484,8 @@ assert(
 const dossierSwitchHtml = renderDossierSwitch(readyState());
 assert(
   dossierSwitchHtml.includes("Dashboard laden") &&
-    dossierSwitchHtml.includes(`value="${DOSSIER_B}" selected=""`) &&
+    dossierSwitchHtml.includes("Nieuwe routeaanvraag") &&
+    !dossierSwitchHtml.includes(DOSSIER_A) &&
     !dossierSwitchHtml.includes("Huidige status") &&
     !dossierSwitchHtml.includes("Tijdlijn") &&
     !dossierSwitchHtml.includes("Actie nodig") &&

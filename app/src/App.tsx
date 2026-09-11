@@ -16,6 +16,10 @@ import {
   AUTH_PASSWORD_UPDATE_ROUTE,
   AUTH_VERIFICATION_RESEND_ROUTE,
 } from "./features/auth/authUxFlow";
+import {
+  DASHBOARD_APPLICATIONS_ROUTE,
+  parseDashboardApplicationsRoute,
+} from "./features/dashboard/dashboardRoutes";
 
 const AccountPage = lazy(() => import("./pages/AccountPage").then((module) => ({ default: module.AccountPage })));
 const DashboardPage = lazy(() =>
@@ -78,6 +82,12 @@ export function App() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
+  useEffect(() => {
+    if (path !== "/dashboard") return;
+    window.history.replaceState(null, "", DASHBOARD_APPLICATIONS_ROUTE);
+    setPath(DASHBOARD_APPLICATIONS_ROUTE);
+  }, [path]);
+
   const navigate: AppNavigate = (href, options = {}) => {
     const target = new URL(href, window.location.origin);
     const targetPath = normalizePath(target.pathname);
@@ -100,6 +110,7 @@ export function App() {
   };
 
   const evidenceReviewCaseRef = parseEvidenceReviewDetailRoute(path);
+  const dashboardApplicationsRoute = parseDashboardApplicationsRoute(path);
   const loginReturnTo = path === "/inloggen"
     ? readSafePostLoginReturnRoute(window.location.search)
     : null;
@@ -132,7 +143,9 @@ export function App() {
     );
   }
 
-  if (path === "/dashboard") {
+  if (path === "/dashboard") return <RouteLoading />;
+
+  if (dashboardApplicationsRoute) {
     return (
       <Suspense fallback={<RouteLoading />}>
         <AuthProvider key="dashboard">

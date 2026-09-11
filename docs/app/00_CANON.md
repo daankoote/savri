@@ -468,16 +468,27 @@ The recent app frontend Auth/session flow is retained as local proof:
 
 - `/account` supports customer account creation and sign-in.
 - Supabase Auth session restoration and logout are wired locally.
-- `/dashboard` is protected by the current frontend session flow.
-- Auth/Supabase frontend code is route-lazy for `/account` and `/dashboard`.
+- `/dashboard` is protected by the current frontend session flow and
+  replace-redirects to `/dashboard/aanvragen`.
+- `/dashboard/aanvragen` lists the current Auth actor's exact R7-authorized
+  applications once; `/dashboard/aanvragen/:caseReference` is the stable
+  application detail route. The browser Auth-bootstrap dossier summary is not
+  application-index authority.
+- Auth/Supabase frontend code is route-lazy for `/account` and the dashboard
+  route family.
 - `api-app-dashboard-get` provides an authenticated, customer-safe, account-type-neutral dashboard read projection.
+- Its application-index mode gets `p_auth_user_id` only from the validated JWT
+  actor and calls `app_customer_application_index_read_v1`. That service-only
+  projection applies exact customer-wide or case-scoped R7 grants before
+  returning deterministic bounded customer-safe labels. Unknown and
+  cross-customer cases share the same generic denial.
 - That projection includes a case-scoped timeline of at most 50 allowlisted
   immutable submission, correction and completed-review events. Signing remains
   internal evidence and is represented customer-side by `Dossier ontvangen`.
   The server maps event types to fixed customer copy; raw audit/review payloads
   and source identifiers never enter the browser contract.
-- The dashboard shows one shared Dutch current-status presentation in its
-  subtitle, dossier selector and `Huidige status` block. `ALL_FACTS_ACCEPTED`
+- The application detail shows one shared Dutch current-status presentation in
+  its subtitle and `Huidige status` block. `ALL_FACTS_ACCEPTED`
   remains `In behandeling` without an authoritative terminal dossier status;
   the completed data check belongs only in the timeline.
 - The real customer-safe dashboard frontend projection is CURRENT / LOCAL PROOF and uses `api-app-dashboard-get`.

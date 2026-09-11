@@ -1,7 +1,109 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { DashboardReadSafeError } from "./dashboardReadClient";
-import { clearDashboardReadCache, getCachedDashboardRead, loadDashboardReadOnce } from "./dashboardReadCache";
-import type { DashboardReadModel } from "./dashboardTypes";
+import {
+  clearDashboardReadCache,
+  getCachedDashboardApplications,
+  getCachedDashboardRead,
+  loadDashboardApplicationsOnce,
+  loadDashboardReadOnce,
+} from "./dashboardReadCache";
+import type {
+  DashboardApplicationIndex,
+  DashboardReadModel,
+} from "./dashboardTypes";
+
+export type DashboardApplicationsState =
+  | { status: "idle"; model: null; error: null; retry: () => void }
+  | {
+    status: "loading" | "retrying";
+    model: null;
+    error: null;
+    retry: () => void;
+  }
+  | {
+    status: "ready";
+    model: DashboardApplicationIndex;
+    error: null;
+    retry: () => void;
+  }
+  | {
+    status: "error";
+    model: null;
+    error: DashboardReadSafeError;
+    retry: () => void;
+  };
+
+export function useDashboardApplications(
+  accessToken: string | null,
+  cacheScope: string | null,
+): DashboardApplicationsState {
+  const [retryNonce, setRetryNonce] = useState(0);
+  const retry = useCallback(() => setRetryNonce((current) => current + 1), []);
+  const requestKeyRef = useRef("");
+  const previousCacheScopeRef = useRef<string | null>(null);
+  const [state, setState] = useState<DashboardApplicationsState>({
+    status: "idle",
+    model: null,
+    error: null,
+    retry,
+  });
+
+  useEffect(() => {
+    const previousCacheScope = previousCacheScopeRef.current;
+    if (previousCacheScope && previousCacheScope !== cacheScope) {
+      clearDashboardReadCache(previousCacheScope);
+    }
+    previousCacheScopeRef.current = cacheScope;
+
+    if (!accessToken || !cacheScope) {
+      requestKeyRef.current = "";
+      setState({ status: "idle", model: null, error: null, retry });
+      return undefined;
+    }
+
+    requestKeyRef.current = cacheScope;
+    let isActive = true;
+    const isRetry = retryNonce > 0;
+    const cached = isRetry ? null : getCachedDashboardApplications(cacheScope);
+    if (cached) {
+      setState({ status: "ready", model: cached, error: null, retry });
+      return undefined;
+    }
+
+    setState({
+      status: isRetry ? "retrying" : "loading",
+      model: null,
+      error: null,
+      retry,
+    });
+    loadDashboardApplicationsOnce({
+      accessToken,
+      cacheScope,
+      forceRefresh: isRetry,
+    }).then((model) => {
+      if (!isActive || requestKeyRef.current !== cacheScope) return;
+      setState({ status: "ready", model, error: null, retry });
+    }).catch((error) => {
+      if (!isActive || requestKeyRef.current !== cacheScope) return;
+      setState({
+        status: "error",
+        model: null,
+        error: isSafeError(error) ? error : {
+          code: "service_unavailable",
+          message:
+            "De aanvragen konden tijdelijk niet worden geladen. Probeer het opnieuw.",
+        },
+        retry,
+      });
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, [accessToken, cacheScope, retry, retryNonce]);
+
+  return state;
+}
 
 export type DashboardReadState =
   | { status: "idle"; model: null; error: null; retry: () => void; refreshSelectedDossier: () => Promise<boolean> }

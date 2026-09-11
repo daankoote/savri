@@ -34,6 +34,7 @@ const [
   migration,
   parityMigration,
   r6Migration,
+  applicationIndexMigration,
 ] = await Promise.all([
   read("supabase/functions/api-app-signup-signing-finalize/index.ts"),
   read("supabase/functions/_shared/signup_promotion.ts"),
@@ -64,6 +65,9 @@ const [
   read(resolveTenantEnvalArchivedMigrationPath(
     "supabase/migrations/20260814220000_app_auth_customer_context_access.sql",
   )),
+  read(
+    "supabase/migrations/20260911103144_app_customer_application_index_read_v1.sql",
+  ),
 ]);
 
 const activeFrontendRuntime = [
@@ -200,8 +204,12 @@ const checks: Array<[string, () => void]> = [
     )],
   ["Q19", () =>
     assert(
-      dashboardEndpoint.includes('.from("app_cases")') &&
-        dashboardEndpoint.includes('sourceClass === "signed_signup_intake"'),
+      dashboardEndpoint.includes(
+        'SB.rpc("app_customer_application_index_read_v1"',
+      ) &&
+        dashboardEndpoint.includes(
+          'caseAccess.appCase.sourceClass === "signed_signup_intake"',
+        ),
       "case_owned_truth",
     )],
   ["Q20", () =>
@@ -347,24 +355,27 @@ const checks: Array<[string, () => void]> = [
     )],
   ["Q40", () =>
     assert(
-      dashboardEndpoint.includes("loadAccessibleCaseSummaries") &&
-        dashboardEndpoint.includes(
-          '"app_customer_dossier", "signed_signup_intake"',
+      dashboardEndpoint.includes("loadCustomerApplications") &&
+        applicationIndexMigration.includes(
+          "source_class = 'app_customer_dossier'",
+        ) &&
+        applicationIndexMigration.includes(
+          "source_class = 'signed_signup_intake'",
         ),
       "unified_dashboard",
     )],
   ["Q41", () =>
     assert(
-      dashboardSidebar.includes("auth.summary.dossiers.length") &&
+      dashboardSidebar.includes("applications.length") &&
         v5.includes("normalized_cases"),
       "dashboard_count",
     )],
   ["Q42", () =>
     assert(
-      dashboardEndpoint.includes("getString(row.source_class)") &&
-        dashboardEndpoint.includes("getString(row.source_ref)") &&
-        !dashboardEndpoint.includes("dedupeByEmail") &&
-        !dashboardEndpoint.includes("dedupeByAddress"),
+      applicationIndexMigration.includes("case_row.source_class") &&
+        applicationIndexMigration.includes("case_row.source_ref") &&
+        !applicationIndexMigration.includes("dedupeByEmail") &&
+        !applicationIndexMigration.includes("dedupeByAddress"),
       "no_heuristic_dedupe",
     )],
   ["Q43", () =>
@@ -541,9 +552,12 @@ const parityChecks: Array<[string, string, () => void]> = [
     )],
   ["Q108", "MIXED_DASHBOARD_STILL_TWO_CASES", () =>
     assert(
-      dashboardEndpoint.includes("loadAccessibleCaseSummaries") &&
-        dashboardEndpoint.includes(
-          '"app_customer_dossier", "signed_signup_intake"',
+      dashboardEndpoint.includes("loadCustomerApplications") &&
+        applicationIndexMigration.includes(
+          "source_class = 'app_customer_dossier'",
+        ) &&
+        applicationIndexMigration.includes(
+          "source_class = 'signed_signup_intake'",
         ),
       "mixed_dashboard_collection_changed",
     )],

@@ -1,14 +1,21 @@
+import type { MouseEvent } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import type { AppNavigate } from "../../routes/types";
 import { clearDashboardReadCache } from "./dashboardReadCache";
 import { clearSignupIntakeSession } from "../signup/signupIntakeCapabilityStore";
 import { clearSignupSubmissionReceipt } from "../signup/signupSubmissionReceiptStore";
 import { usePresentationBrand } from "../../shared/presentation/PresentationBrandProvider";
-import type { SurfaceNavigationItem } from "../../shared/surfaces/surfaceModel";
+import type { DashboardDossierSummary } from "./dashboardTypes";
+import {
+  buildDashboardApplicationRoute,
+  DASHBOARD_APPLICATIONS_ROUTE,
+} from "./dashboardRoutes";
 
 type DashboardSidebarProps = {
   activeSection: "active" | "contact";
+  applications: DashboardDossierSummary[];
   collapsed?: boolean;
+  currentCaseReference: string | null;
   id?: string;
   navigate: AppNavigate;
   onToggle?: () => void;
@@ -18,7 +25,9 @@ type DashboardSidebarProps = {
 
 export function DashboardSidebar({
   activeSection,
+  applications,
   collapsed = false,
+  currentCaseReference,
   id,
   navigate,
   onToggle,
@@ -27,13 +36,6 @@ export function DashboardSidebar({
 }: DashboardSidebarProps) {
   const auth = useAuth();
   const presentation = usePresentationBrand();
-  const navigation = [
-    {
-      active: activeSection === "active",
-      label: "Overzicht",
-      onSelect: () => onSelectSection("active"),
-    },
-  ] satisfies readonly SurfaceNavigationItem[];
 
   function handleLogout() {
     clearDashboardReadCache();
@@ -93,9 +95,9 @@ export function DashboardSidebar({
             <div className="portal-user-block">
               <strong>{presentation.productLabel}</strong>
               <span>
-                {auth.summary
-                  ? `${auth.summary.dossiers.length} dossier${
-                    auth.summary.dossiers.length === 1 ? "" : "s"
+                {applications.length
+                  ? `${applications.length} aanvraag${
+                    applications.length === 1 ? "" : "en"
                   }`
                   : "Account"}
               </span>
@@ -109,17 +111,45 @@ export function DashboardSidebar({
               >
                 Nieuwe aanvraag
               </button>
-              {navigation.map((item) => (
-                <button
-                  className={item.active
-                    ? "portal-nav-item portal-nav-item-active"
-                    : "portal-nav-item"}
-                  key={item.label}
-                  onClick={item.onSelect}
-                  type="button"
+              <a
+                className={activeSection === "active"
+                  ? "portal-nav-item portal-nav-item-active"
+                  : "portal-nav-item"}
+                href={DASHBOARD_APPLICATIONS_ROUTE}
+                onClick={(event: MouseEvent<HTMLAnchorElement>) => {
+                  event.preventDefault();
+                  onSelectSection("active");
+                  navigate(DASHBOARD_APPLICATIONS_ROUTE);
+                }}
+              >
+                Aanvragen
+              </a>
+              {applications.map((application) => (
+                <a
+                  aria-current={currentCaseReference ===
+                      application.case_reference
+                    ? "page"
+                    : undefined}
+                  className={currentCaseReference ===
+                      application.case_reference
+                    ? "portal-nav-subitem portal-nav-item-active"
+                    : "portal-nav-subitem"}
+                  href={buildDashboardApplicationRoute(
+                    application.case_reference,
+                  )}
+                  key={application.case_reference}
+                  onClick={(event: MouseEvent<HTMLAnchorElement>) => {
+                    event.preventDefault();
+                    onSelectSection("active");
+                    navigate(
+                      buildDashboardApplicationRoute(
+                        application.case_reference,
+                      ),
+                    );
+                  }}
                 >
-                  {item.label}
-                </button>
+                  {application.application_label}
+                </a>
               ))}
             </nav>
 

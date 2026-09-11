@@ -244,6 +244,14 @@ controller/processor allocation requires legal review.
 - Dashboard route guard is locally proven.
 - Auth/Supabase frontend code is lazy-loaded for `/account` and `/dashboard`.
 - `api-app-dashboard-get` is locally proven.
+- CUSTOMER_PORTAL_IA_V1_CURRENT is CURRENT / LOCAL PROOF: `/dashboard`
+  replace-redirects to `/dashboard/aanvragen`; the list and stable
+  `/dashboard/aanvragen/:caseReference` detail routes use one service-only,
+  exact R7-authorized application index instead of the Auth-bootstrap dossier
+  summary or a browser dropdown. Customer-wide and case-scoped grants are
+  applied server-side; deterministic labels use exactly one safe location,
+  otherwise a real dossier number, otherwise received date plus a shortened
+  case reference. No Lopend/Afgerond classification is claimed.
 - Dashboard read is account-neutral and supports multiple dossiers, locations, and chargers.
 - Dashboard read returns customer-safe dossier, document-slot/current-document, and legal-acceptance projections.
 - CUSTOMER_TIMELINE_V1 is CURRENT / LOCAL PROOF: the selected case receives a
@@ -253,7 +261,7 @@ controller/processor allocation requires legal review.
   status and does not equate checked data with a completed dossier.
 - Successful dashboard reads perform zero database writes.
 - Real dashboard frontend projection is locally proven.
-- Selected dossier support is locally proven.
+- Route-selected application support is locally proven.
 - Scoped memory cache and shared request deduplication are locally proven.
 - First dashboard request race/abort behavior is fixed locally.
 - Terminal bootstrap cleanup is locally proven.

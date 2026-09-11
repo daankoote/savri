@@ -86,10 +86,16 @@ Do not carry these assumptions into the target dashboard model:
 
 ## 5. Target Frontend Architecture
 
-Future customer routes:
+Current customer routes:
 
 - `/dashboard`
-- `/dashboard/dossiers/:dossierId`
+- `/dashboard/aanvragen`
+- `/dashboard/aanvragen/:caseReference`
+
+`/dashboard` replace-redirects to the list. The list is projected server-side
+from exact R7 customer-wide or case-scoped grants. The detail route owns the
+selected application; refresh, direct navigation and browser history therefore
+resolve the same case without a browser dossier dropdown.
 
 Initial dossier page sections or tabs:
 
@@ -113,8 +119,8 @@ Implementation sequence:
   timestamps. Edge owns the fixed Dutch title/text mapping. Customer-visible
   signing is folded into `Dossier ontvangen`; `review_completed` is presented
   only as the past timeline event `Gegevens gecontroleerd`.
-- One shared frontend status projection supplies the page subtitle, dossier
-  selector and `Huidige status` block from the dossier status, curated timeline
+- One shared frontend status projection supplies the page subtitle and
+  `Huidige status` block from the dossier status, curated timeline
   and active correction state. Unknown values use a fixed Dutch fallback and
   raw status enums are never rendered. The compact block contains only current
   status, ENVAL's current step and `Actie nodig? Ja/Nee`; completed timeline
@@ -133,7 +139,7 @@ Implementation sequence:
 - Keep tenant-workforce review tooling out of the customer dashboard until
   roles and Auth boundaries are defined.
 
-Optional later routes:
+Optional later subroutes:
 
 - `/dashboard/dossiers`
 - `/dashboard/dossiers/:dossierId/requests`
@@ -146,7 +152,9 @@ Optional later routes:
 
 Recommendation:
 
-- Keep request, document, consent, and kWh views as sections/tabs inside `/dashboard/dossiers/:dossierId` first. The current timeline remains a section in the existing dossier overview.
+- Keep request, document, consent, and kWh views as sections/tabs inside the
+  current `/dashboard/aanvragen/:caseReference` detail first. The current
+  timeline remains a section in the existing application overview.
 - Split into deeper routes only when the UI or state model needs it.
 
 ## 6. Target Backend Architecture
@@ -493,6 +501,13 @@ Phase 5: dashboard read-only MVP
   or reuse the compatible customer and create one new case.
 - One account may access one or multiple explicitly granted cases and contexts.
   `Nieuwe aanvraag` adds a new case; existing-case correction remains separate.
+- The CURRENT application index is `app_customer_application_index_read_v1`.
+  Edge supplies its actor from the validated JWT, while the RPC revalidates the
+  confirmed Auth user, active identity/customer lineage and exact R7 grant.
+  Labels use one unambiguous customer-safe location, otherwise an existing
+  dossier number, otherwise received date and a shortened case reference. MID,
+  charger cardinality and browser-supplied identity/tenant fields are not index
+  or label authority.
 
 09C1C-R6 multi-context rule:
 

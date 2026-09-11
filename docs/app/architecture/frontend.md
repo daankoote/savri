@@ -187,6 +187,8 @@ Current routes:
 - `/privacy`
 - `/voorwaarden`
 - `/dashboard`
+- `/dashboard/aanvragen`
+- `/dashboard/aanvragen/:caseReference`
 - `/beheer`
 - `/beheer/dossiers`
 - `/beheer/dossiers/:caseRef`
@@ -238,18 +240,27 @@ Rules:
 - SL01-C server-resolved presentation, explicit acceptance and receipt-bound OTP
   are an active PARTIAL candidate pending browser/UI acceptance. Its temporary
   finalize guard remains until SL01-D provenance cutover.
-- `/dashboard` is a protected customer portal using the real customer-safe dashboard projection for factual app-backed fields.
+- `/dashboard` is a protected compatibility entry that replace-redirects to
+  `/dashboard/aanvragen`.
+- `/dashboard/aanvragen` is the R7-authorized application list and
+  `/dashboard/aanvragen/:caseReference` is the stable detail route using the
+  existing factual dashboard projection.
 - Dashboard is person-first: one customer can have multiple assets such as private home, business, VVE, or second home.
 - Dashboard currently has a frontend Auth/session guard, locally proven backend read endpoint, and real frontend read projection.
-- Dashboard selected dossier state and endpoint response cache are in memory only.
-- Dashboard cache is scoped by Auth user, customer, and dossier.
+- Dashboard selection is route-owned; there is no dossier dropdown.
+- The application-index cache is scoped by Auth user. Detail cache is scoped by
+  Auth user and dossier; stale list/detail responses cannot repopulate a newer
+  request or appear during actor/case switching.
 - Shared pending dashboard requests are deduplicated.
 - The first dashboard request is not aborted by React effect cleanup.
 - Dashboard has loading, empty, error, and retry states.
 - Dashboard now uses a left-sidebar customer portal layout.
 - One shared dashboard renderer is used across particulier, zakelijk, and VVE.
 - Business and VVE detail expansion remains deferred, but account-type-specific auth/dashboard clients are not created.
-- Current dashboard files are `DashboardPageShell`, `DashboardSidebar`, `ActivePrivateDashboard`, `ContactChoicePanel`, and `TodoPlaceholderPanel`.
+- Current dashboard composition reuses `DashboardPageShell`,
+  `DashboardSidebar` and `ActivePrivateDashboard`; `CustomerApplicationList`
+  owns only the small list surface and `dashboardRoutes` owns only strict route
+  parsing/building.
 - Older asset-overview dashboard components and mock-data files were removed during cleanup because they were not used by `/dashboard`.
 - The active private dashboard uses full-width charger rows/tabs that are collapsed by default.
 - Charger rows can be expanded/collapsed, with only one charger open at a time.
@@ -436,7 +447,7 @@ The year overview is customer-facing output and later supports the audit-worthy 
   endpoint, including while a correction handoff is active. Copy is mapped at
   the Edge boundary; the frontend accepts only the strict four-type event
   contract and does not derive authority or read event tables directly.
-- The page subtitle, dossier selector and integrated `Huidige status` block use
+- The page subtitle and integrated `Huidige status` block use
   one dashboard status projection. It combines the curated timeline with the
   active correction state and a bounded dossier-status fallback, never renders
   raw enums and does not call checked data a completed dossier. The status block
@@ -446,6 +457,8 @@ The year overview is customer-facing output and later supports the audit-worthy 
 - Dashboard copy should be customer-readable: status, open actions, documents, support, timeline, consents, kWh/value, and downloads.
 - Do not expose raw audit rows or internal technical payloads in customer-facing views.
 - The dashboard sidebar owns the current reference portal navigation. Its
+  `Aanvragen` item contains only exact server-projected accessible application
+  links; charger count/content never determines navigation. Its
   `Contact ENVAL` label is not a generic product rule; future customer support
   presentation is tenant-bound.
 - Verhuizing and Zakelijk rijden are dashboard Aanpassingen items because regulatory handling is still unclear.

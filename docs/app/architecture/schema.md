@@ -1488,6 +1488,11 @@ E. Implement auth bootstrap
 - CURRENT / LOCAL PROOF: bootstrap returns accessible dossier summaries and preserves account-type-neutral auth across particulier, zakelijk, and VVE.
 - CURRENT / LOCAL PROOF: customer-facing Auth UX, session restoration, logout, frontend bootstrap wiring, and dashboard route guard.
 - CURRENT / LOCAL PROOF: dashboard read endpoint and real dashboard projection.
+- CURRENT / LOCAL PROOF: `app_customer_application_index_read_v1` is the
+  service-role-only, write-free application navigation projection. It applies
+  exact customer-wide/case-scoped R7 grants and returns deterministic bounded
+  safe labels without adding an application-index table, RLS policy or table
+  grant.
 - OPEN: production deployment and production browser proof.
 - Continue to avoid old `dossier_sessions` as durable identity.
 

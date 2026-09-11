@@ -132,6 +132,8 @@ function renderConsumers(
       <AuthProvider>
         <DashboardSidebar
           activeSection="active"
+          applications={[]}
+          currentCaseReference={null}
           navigate={() => undefined}
           onSelectSection={() => undefined}
         />

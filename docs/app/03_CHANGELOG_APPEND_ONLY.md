@@ -2027,3 +2027,25 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   migration, deployment or production acceptance is claimed.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-09-11 — Add current customer application routes and R7 index locally
+
+- Replaced the customer dashboard dossier dropdown with
+  `/dashboard/aanvragen` and stable
+  `/dashboard/aanvragen/:caseReference` routes; `/dashboard` now
+  replace-redirects to the application list.
+- Added one service-role-only, write-free application-index RPC. It revalidates
+  confirmed Auth, active identity/customer lineage and exact customer-wide or
+  case-scoped R7 grants; the browser supplies no actor, customer or tenant ID.
+- Application labels are deterministic and bounded: exactly one usable safe
+  location, otherwise a real dossier number, otherwise received date plus a
+  shortened case reference. Charger count, MID and arbitrary first-location
+  selection are not navigation authority.
+- The existing sidebar, detail dashboard, status, timeline, correction,
+  documents and charger content are reused. Actor/case-scoped caches reject
+  stale list and detail responses. No Lopend/Afgerond status, new write flow,
+  Auth-bootstrap authority or terminal dossier state was introduced.
+- Local R7/API, ACL, migration-chain, frontend and browser proof remains local;
+  no remote migration, deployment or production acceptance is claimed.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

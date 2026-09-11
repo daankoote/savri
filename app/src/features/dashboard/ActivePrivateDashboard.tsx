@@ -1,5 +1,4 @@
 import { type ReactNode, useMemo, useState } from "react";
-import type { AuthDossierSummary } from "../auth/authTypes";
 import { DocumentUploadCard } from "../documents/DocumentUploadCard";
 import { CustomerCorrectionHandoffPanel } from "./CustomerCorrectionHandoffPanel";
 import { CustomerTimeline } from "./CustomerTimeline";
@@ -42,20 +41,18 @@ type PortalCharger = {
 
 type ActivePrivateDashboardProps = {
   accessToken: string | null;
+  application: DashboardDossierSummary;
   correctionHandoff: CustomerCorrectionHandoffState;
   dashboardRead: DashboardReadState;
-  dossierOptions: AuthDossierSummary[];
-  onSelectDossier: (dossierId: string) => void;
   onRefreshSelectedDossier: () => Promise<boolean>;
   selectedDossierId: string | null;
 };
 
 export function ActivePrivateDashboard({
   accessToken,
+  application,
   correctionHandoff,
   dashboardRead,
-  dossierOptions,
-  onSelectDossier,
   onRefreshSelectedDossier,
   selectedDossierId,
 }: ActivePrivateDashboardProps) {
@@ -69,14 +66,7 @@ export function ActivePrivateDashboard({
       selectedDossierId
     ? dashboardRead.model
     : null;
-  const selectedDossier = model?.selected_dossier ??
-    dossierOptions.find((dossier) =>
-      dossier.dossier_id === selectedDossierId
-    ) ?? null;
-  const selectedAuthorization =
-    dossierOptions.find((dossier) =>
-      dossier.dossier_id === selectedDossierId
-    ) ?? null;
+  const selectedDossier = model?.selected_dossier ?? application;
   const hasPublishedCorrection = model !== null &&
     correctionHandoff.status === "ready" &&
     correctionHandoff.model.caseRef === model.selected_dossier.case_reference &&
@@ -107,44 +97,9 @@ export function ActivePrivateDashboard({
     <div className="portal-content-stack">
       <header className="portal-content-header">
         <div>
-          <h1>{portalContextLabel(selectedAuthorization?.portal_context)}</h1>
-          <p>
-            {selectedDossier
-              ? dossierLabel(selectedDossier, currentStatus.label)
-              : "Geen dossier geselecteerd"}
-          </p>
+          <h1>{portalContextLabel(application.portal_context)}</h1>
+          <p>{application.application_label}</p>
         </div>
-        {dossierOptions.length > 1
-          ? (
-            <label className="field">
-              <span>Dossier</span>
-              <select
-                aria-label="Selecteer dossier"
-                onChange={(event) => {
-                  setSelectedChargerId(null);
-                  setExpandedSection(null);
-                  onSelectDossier(event.target.value);
-                }}
-                value={selectedDossierId ?? ""}
-              >
-                {dossierOptions.map((dossier) => (
-                  <option key={dossier.dossier_id} value={dossier.dossier_id}>
-                    {dossierLabel(
-                      dossier,
-                      dossier.dossier_id === selectedDossierId
-                        ? currentStatus.label
-                        : getDashboardStatusPresentation({
-                          dossierStatus: dossier.status,
-                          timeline: [],
-                          hasPublishedCorrection: false,
-                        }).label,
-                    )}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )
-          : null}
       </header>
 
       {dashboardRead.status === "loading" || dashboardRead.status === "retrying"
@@ -351,7 +306,7 @@ export function ActivePrivateDashboard({
   );
 }
 
-function DashboardNotice(
+export function DashboardNotice(
   { action, title, note }: { action?: ReactNode; title: string; note: string },
 ) {
   return (
@@ -778,33 +733,12 @@ function statusLabel(status: string): string {
   return labels[normalized] || status || "Onbekend";
 }
 
-function accountTypeLabel(
-  accountType: DashboardDossierSummary["account_type"],
-): string {
-  if (accountType === "zakelijk") return "Zakelijk";
-  if (accountType === "vve") return "VVE";
-  return "Particulier";
-}
-
 function portalContextLabel(
-  portalContext: AuthDossierSummary["portal_context"] | undefined,
+  portalContext: DashboardDossierSummary["portal_context"] | undefined,
 ): string {
   if (portalContext === "business") return "Bedrijfsportaal";
   if (portalContext === "customer") return "Klantportaal";
   return "Portaal";
-}
-
-function dossierLabel(
-  dossier: Pick<
-    DashboardDossierSummary,
-    "account_type" | "dossier_number" | "status"
-  >,
-  statusPresentation: string,
-): string {
-  const number = dossier.dossier_number || "Dossier";
-  return `${number} · ${
-    accountTypeLabel(dossier.account_type)
-  } · ${statusPresentation}`;
 }
 
 function buildPortalChargers(model: DashboardReadModel): PortalCharger[] {
