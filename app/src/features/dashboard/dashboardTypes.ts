@@ -89,4 +89,11 @@ export type DashboardReadModel = {
   document_slots: DashboardDocumentSlot[];
   legal_acceptances: DashboardLegalAcceptance[];
   timeline: DashboardTimelineEvent[];
+  information_request: CustomerInformationRequestV1 | null;
+  information_request_history:
+    readonly CustomerInformationRequestHistoryEntryV1[];
 };
+import type {
+  CustomerInformationRequestHistoryEntryV1,
+  CustomerInformationRequestV1,
+} from "../../../../supabase/functions/_shared/app_customer_information_request.ts";

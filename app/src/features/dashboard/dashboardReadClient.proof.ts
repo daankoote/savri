@@ -228,6 +228,21 @@ function dashboardBody(selectedDossierId = DOSSIER_A) {
         text: "Uw dossier is ontvangen en in behandeling.",
       },
     ],
+    information_request: null,
+    information_request_history: [
+      {
+        status: "Afgerond",
+        question: "Kunt u de tenaamstelling toelichten?",
+        answer: "De aansluiting staat op naam van de VvE.",
+        askedAt: "2026-07-13T10:00:00.000Z",
+        answeredAt: "2026-07-13T10:10:00.000Z",
+      },
+      {
+        status: "Ingetrokken",
+        question: "Is een extra toelichting beschikbaar?",
+        askedAt: "2026-07-12T10:00:00.000Z",
+      },
+    ],
     storage_path: "ignored-by-client",
     signed_url: "ignored-by-client",
     server_sha256: "ignored-by-client",
@@ -425,15 +440,24 @@ export async function runDashboardReadClientProof(): Promise<
       success.model.timeline[1].event_type === "dossier_submitted",
     "allowlisted timeline must parse newest first",
   );
+  assert(
+    success.model.information_request === null &&
+      success.model.information_request_history.length === 2 &&
+      success.model.information_request_history[0].status === "Afgerond" &&
+      success.model.information_request_history[1].status === "Ingetrokken",
+    "information request history must parse newest first without an active request",
+  );
   const inTreatment = getDashboardStatusPresentation({
     dossierStatus: "under_review",
     timeline: success.model.timeline.slice(1),
     hasPublishedCorrection: false,
+    informationRequestState: null,
   });
   const actionNeeded = getDashboardStatusPresentation({
     dossierStatus: "under_review",
     timeline: [],
     hasPublishedCorrection: true,
+    informationRequestState: null,
   });
   const correctionReview = getDashboardStatusPresentation({
     dossierStatus: "under_review",
@@ -445,16 +469,31 @@ export async function runDashboardReadClientProof(): Promise<
       text: "Uw aanvulling is ontvangen en wordt beoordeeld.",
     }],
     hasPublishedCorrection: false,
+    informationRequestState: null,
   });
   const dataChecked = getDashboardStatusPresentation({
     dossierStatus: "under_review",
     timeline: success.model.timeline,
     hasPublishedCorrection: false,
+    informationRequestState: null,
   });
   const unavailable = getDashboardStatusPresentation({
     dossierStatus: "INTERNAL_UNKNOWN_STATUS",
     timeline: [],
     hasPublishedCorrection: false,
+    informationRequestState: null,
+  });
+  const informationNeeded = getDashboardStatusPresentation({
+    dossierStatus: "under_review",
+    timeline: [],
+    hasPublishedCorrection: false,
+    informationRequestState: "OPEN",
+  });
+  const informationReview = getDashboardStatusPresentation({
+    dossierStatus: "under_review",
+    timeline: [],
+    hasPublishedCorrection: false,
+    informationRequestState: "ANSWERED",
   });
   assert(
     inTreatment.label === "In behandeling" &&
@@ -470,6 +509,12 @@ export async function runDashboardReadClientProof(): Promise<
       dataChecked.currentStep === "ENVAL verwerkt uw dossier." &&
       dataChecked.customerAction === "Nee" &&
       unavailable.label === "Status niet beschikbaar" &&
+      informationNeeded.label === "Actie van u nodig" &&
+      informationNeeded.currentStep === "ENVAL wacht op uw antwoord." &&
+      informationNeeded.customerAction === "Ja" &&
+      informationReview.label === "Antwoord wordt beoordeeld" &&
+      informationReview.currentStep === "ENVAL controleert uw antwoord." &&
+      informationReview.customerAction === "Nee" &&
       !JSON.stringify(unavailable).includes("INTERNAL_UNKNOWN_STATUS"),
     "dashboard status mapping must stay Dutch, consistent and fail closed",
   );

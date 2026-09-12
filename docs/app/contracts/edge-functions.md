@@ -51,6 +51,7 @@ Do not use legacy `dossier_sessions` as app account auth.
 | `api-app-signup-submit` | CURRENT / LOCAL PROOF | CORS / META / IDEM / AUD / SRV | Public pre-auth submit. Does not create Auth users or Auth sessions. |
 | `api-app-auth-bootstrap` | CURRENT / LOCAL PROOF | CORS / META / IDEM / AUD / AUTH / SRV | Authenticated CORE endpoint. Requires verified Supabase Auth user, derives verified email server-side, binds an existing app identity, and returns accessible dossier summaries. |
 | `api-app-dashboard-get` | CURRENT / LOCAL PROOF | CORS / META / AUTH / SRV | Pure authenticated read. Application-index mode calls service-only `app_customer_application_index_read_v1` with the JWT actor and returns only exact R7-granted cases with bounded deterministic labels; detail mode requires membership in that same index before existing case/dossier authority and the service-only timeline projection. Signing is not customer-visible; accepted review data is `Gegevens gecontroleerd`, not dossier completion. No `Idempotency-Key`; successful reads do not create recurring audit writes. Scoped rejects may use safe fail-open audit according to current doctrine. |
+| `api-app-customer-information-request` | IMPLEMENTED / LOCAL AUTOMATED PROOF; HUMAN FIREFOX OPEN | CORS / META / IDEM / AUD / AUTH / SRV | Exact `create`, `respond`, `withdraw` and `resolve` actions. Auth actor is derived from the verified bearer token. Database RPCs own R7/workforce authority, one-answer and one-active-request invariants, idempotency, case locking and correction-handoff exclusion. No browser actor/customer/tenant authority and no upload, timeline or lifecycle mutation. |
 | `api-app-document-upload-url` | CURRENT / LOCAL PROOF | CORS / META / IDEM / AUD / AUTH / SRV | Issues server-generated upload target. Supports current PDF policies for invoice/ownership evidence and MID evidence. |
 | `api-app-document-upload-confirm` | CURRENT / LOCAL PROOF | CORS / META / IDEM / AUD / AUTH / SRV | Confirms stored object and creates immutable document version. Supports immutable replacement. |
 | `api-app-document-download-url` | CURRENT / LOCAL PROOF | CORS / META / AUTH / SRV | Pure authenticated read. Resolves current document server-side and returns a short-lived signed download URL. No `Idempotency-Key`; successful reads do not write recurring audit events. |
@@ -78,6 +79,27 @@ neither table privileges nor RLS. It revalidates confirmed Auth, one active
 identity, active customer lineage and exact customer-wide/case-scoped R7 grants
 in one snapshot. Browser payloads contain only the fixed `applications` mode or
 an existing detail `dossier_id`; they never supply Auth, customer or tenant IDs.
+
+The CUSTOMER_INFORMATION_REQUEST_V1 read and mutation RPCs are service-role
+only, use empty search paths and fully qualified relations, and expose no table
+grants. Customer reads/responds revalidate confirmed Auth, one active identity,
+active customer lineage and exact customer-wide/case-scoped R7 access.
+Create/read/respond additionally require the same normalized legacy/signing-v3
+case lineage as the customer application index.
+Workforce create/withdraw/resolve uses the named
+`customer.information_request.manage` capability with its own exact active
+case-scope assignment. The eligible policy population matches correction
+publication, but correction authority is not an alias or fallback. The
+correction-publish endpoint maps the exact active-information-request database
+conflict to `information_request_active` and HTTP 409 without internal details.
+The two existing read RPCs add a closed `history` array. Edge validation accepts
+only resolved entries with question/answer timestamps or withdrawn entries
+without an answer, strips the opaque database ordering reference, maps status to
+`Afgerond` or `Ingetrokken`, and rejects malformed, oversized, unordered or
+extra-field results. Dashboard and workforce case-detail reads expose the same
+safe DTO; an empty array renders no history surface.
+Negative authority/conflict paths write no request, response, workflow or
+authority rows.
 
 ## Tables
 

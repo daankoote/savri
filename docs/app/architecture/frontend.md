@@ -449,10 +449,24 @@ The year overview is customer-facing output and later supports the audit-worthy 
   contract and does not derive authority or read event tables directly.
 - The page subtitle and integrated `Huidige status` block use
   one dashboard status projection. It combines the curated timeline with the
-  active correction state and a bounded dossier-status fallback, never renders
+  active correction and information-request state plus a bounded dossier-status
+  fallback, never renders
   raw enums and does not call checked data a completed dossier. The status block
-  is limited to status, ENVAL's current step and `Actie nodig? Ja/Nee`; past
+  is limited to status, ENVAL's current step and `Actie van u nodig? Ja/Nee`; past
   milestones remain exclusively in the timeline.
+- `CustomerInformationRequestPanel` owns the narrow customer question/one-answer
+  surface titled `Vraag over uw dossier` in the existing application detail.
+- `WorkforceInformationRequestPanel` owns the matching create/withdraw/resolve
+  controls under `Aanvullende vraag` in the existing workforce case detail. It
+  distinguishes short explanatory questions from missing/incorrect facts,
+  which remain correction decisions. An active request removes the normal
+  correction-publication affordance and shows the fixed conflict instruction.
+  Both reuse shared cards, fields, buttons and status layout; routes and
+  navigation are unchanged.
+- `CustomerInformationRequestHistory` is the shared customer/workforce
+  presentation for closed questions. It renders only non-empty safe history,
+  shows resolved answers and withdrawn questions under `Eerdere vragen en
+  antwoorden`, and receives no actor, policy, scope or payload metadata.
 - Dashboard modules live under `app/src/features/dashboard/`.
 - Dashboard copy should be customer-readable: status, open actions, documents, support, timeline, consents, kWh/value, and downloads.
 - Do not expose raw audit rows or internal technical payloads in customer-facing views.

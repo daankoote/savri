@@ -25,17 +25,23 @@ import {
 import type { EvidenceReviewCaseDetailReadState } from "./useEvidenceReviewCaseDetail.ts";
 import { useEvidenceReviewCaseDetail } from "./useEvidenceReviewCaseDetail.ts";
 import {
+  canAcceptEvidenceFactReviewSubject,
   type EvidenceFactReviewDraftDecision,
   isEvidenceFactReviewSubjectActionable,
   useEvidenceFactReviewDraft,
 } from "./useEvidenceFactReviewDraft.ts";
-import { useEvidenceCorrectionPublish } from "./useEvidenceCorrectionPublish.ts";
+import {
+  INFORMATION_REQUEST_CORRECTION_BLOCK_MESSAGE,
+  useEvidenceCorrectionPublish,
+} from "./useEvidenceCorrectionPublish.ts";
+import { WorkforceInformationRequestPanel } from "../customer-information-request/WorkforceInformationRequestPanel.tsx";
 import {
   EVIDENCE_REVIEW_STATUS_PRESENTATION,
   evidenceReviewFactStatusPresentation,
 } from "./evidenceReviewStatusPresentation.ts";
 
 type EvidenceReviewCaseDetailContentProps = Readonly<{
+  accessToken: string;
   caseRef: string;
   state: EvidenceReviewCaseDetailReadState;
   onBack: () => void;
@@ -226,6 +232,9 @@ function EvidenceFacts(props: EvidenceFactsProps) {
         const actionable = Boolean(
           row.subject && isEvidenceFactReviewSubjectActionable(row.subject),
         );
+        const acceptAllowed = Boolean(
+          row.subject && canAcceptEvidenceFactReviewSubject(row.subject),
+        );
         return (
           <Fragment key={row.key}>
             <div className="fact-table__row" role="row">
@@ -277,19 +286,23 @@ function EvidenceFacts(props: EvidenceFactsProps) {
                   : props.editable && actionable && draft && subjectRef
                   ? (
                     <span className="fact-review-choices">
-                      <button
-                        aria-pressed={draft.disposition === "ACCEPTED"}
-                        className={`button button-secondary button-compact fact-review-choice${
-                          draft.disposition === "ACCEPTED"
-                            ? " fact-review-choice--selected"
-                            : ""
-                        }`}
-                        disabled={props.submitting}
-                        onClick={() => props.onAccept(subjectRef)}
-                        type="button"
-                      >
-                        Accepteren
-                      </button>
+                      {acceptAllowed
+                        ? (
+                          <button
+                            aria-pressed={draft.disposition === "ACCEPTED"}
+                            className={`button button-secondary button-compact fact-review-choice${
+                              draft.disposition === "ACCEPTED"
+                                ? " fact-review-choice--selected"
+                                : ""
+                            }`}
+                            disabled={props.submitting}
+                            onClick={() => props.onAccept(subjectRef)}
+                            type="button"
+                          >
+                            Accepteren
+                          </button>
+                        )
+                        : null}
                       <button
                         aria-pressed={draft.disposition ===
                           "CORRECTION_REQUIRED"}
@@ -446,6 +459,7 @@ function errorTitle(error: EvidenceReviewDetailSafeError): string {
 }
 
 export function EvidenceReviewCaseDetailContent({
+  accessToken,
   caseRef,
   finalizeReview,
   loadPreview,
@@ -530,6 +544,13 @@ export function EvidenceReviewCaseDetailContent({
         <BackToWorklist onBack={onBack} />
       </header>
 
+      <WorkforceInformationRequestPanel
+        accessToken={accessToken}
+        caseRef={readyDetail.case.caseRef}
+        model={readyDetail.informationRequest}
+        onRefresh={onRefresh}
+      />
+
       {readyDetail.evidence.length > 0
         ? (
           <div
@@ -609,9 +630,18 @@ export function EvidenceReviewCaseDetailContent({
           </div>
         )
         : null}
-      {correctionPublish.eligible || correctionPublish.state.notice
+      {correctionPublish.eligible ||
+          correctionPublish.blockedByInformationRequest ||
+          correctionPublish.state.notice
         ? (
           <div className="evidence-review-final-action">
+            {correctionPublish.blockedByInformationRequest
+              ? (
+                <p role="status">
+                  {INFORMATION_REQUEST_CORRECTION_BLOCK_MESSAGE}
+                </p>
+              )
+              : null}
             {correctionPublish.state.notice
               ? <p role="status">{correctionPublish.state.notice}</p>
               : null}
@@ -703,6 +733,7 @@ export function EvidenceReviewCaseDetailPageContent({
   );
   return (
     <EvidenceReviewCaseDetailContent
+      accessToken={accessToken ?? ""}
       caseRef={caseRef}
       finalizeReview={finalizeReview}
       loadPreview={previewLoader}

@@ -121,9 +121,12 @@ Implementation sequence:
   only as the past timeline event `Gegevens gecontroleerd`.
 - One shared frontend status projection supplies the page subtitle and
   `Huidige status` block from the dossier status, curated timeline
-  and active correction state. Unknown values use a fixed Dutch fallback and
+  and active correction/information-request state. An open information request
+  shows `Actie van u nodig`; an answered request shows `Antwoord wordt
+  beoordeeld`. Withdrawn and resolved requests return to the existing status
+  authority. Unknown values use a fixed Dutch fallback and
   raw status enums are never rendered. The compact block contains only current
-  status, ENVAL's current step and `Actie nodig? Ja/Nee`; completed timeline
+  status, ENVAL's current step and `Actie van u nodig? Ja/Nee`; completed timeline
   events never become a terminal dossier claim.
 - The reusable document cards are CURRENT / LOCAL PROOF for authenticated MID and installation/acquisition invoice PDF upload, replacement, download, and audit-preserving withdrawal.
 - Document section status is centralized:
@@ -293,6 +296,24 @@ Status and editability are separate server-derived concepts:
 The frontend must use backend-derived capabilities for mutation. It must not infer lock/edit rights from stoplight labels, filenames, version numbers, titles, or hidden UI.
 
 ## 8. Customer Request/Response Model
+
+CUSTOMER_INFORMATION_REQUEST_V1 implements only the bounded text slice of this
+larger target. It uses separate immutable request/response tables, one active
+request per case, one response per request, and database-owned create, respond,
+withdraw and resolve transitions. Workforce create and customer read/respond
+are restricted to the same normalized legacy/signing-v3 lineages as the
+application index, and the customer read uses exact R7 grants. The new workforce
+capability requires its own exact active case-scope assignment for the same
+policy population as `evidence.review.correction.publish`; neither capability
+is an alias or fallback for the other. A shared advisory case lock prevents an
+active information request and an unanswered correction handoff from
+coexisting. The exact request-versus-correction race maps to HTTP 409 and normal
+publication is unavailable while a request is active. It adds no upload,
+notification, timeline event, chat, lifecycle or terminal dossier status.
+Resolved and withdrawn requests remain immutable and are read through one
+customer-safe history projection shared by customer and workforce detail. It
+excludes the active request, is ordered by question time and opaque request
+reference, and returns at most 50 entries without actor or authority metadata.
 
 Flow:
 

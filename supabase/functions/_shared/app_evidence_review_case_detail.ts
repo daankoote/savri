@@ -2,9 +2,12 @@ import {
   EVIDENCE_REVIEW_OVERALL_STATUSES,
   type EvidenceReviewOverallStatus,
 } from "./app_evidence_review_overall_status.ts";
+import type {
+  CustomerInformationRequestWorkforceReadV1,
+} from "./app_customer_information_request.ts";
 
 export const EVIDENCE_REVIEW_CASE_DETAIL_SCHEMA_VERSION =
-  "evidence-review-case-detail-v5" as const;
+  "evidence-review-case-detail-v6" as const;
 
 export const EVIDENCE_FACT_REVIEW_MANIFEST_VERSION =
   "fact-review-manifest-v1" as const;
@@ -168,6 +171,7 @@ export type EvidenceReviewCaseDetailResponseV1 = Readonly<{
   reviewSubjects: readonly EvidenceFactReviewSubjectV1[];
   currentReviewRound: EvidenceFactReviewCurrentRoundV1 | null;
   overallReviewStatus: EvidenceReviewOverallStatus;
+  informationRequest: CustomerInformationRequestWorkforceReadV1;
 }>;
 
 const CASE_SOURCE_KEYS = [
@@ -650,5 +654,10 @@ export function parseEvidenceReviewCaseDetailSource(
     currentReviewRound,
     overallReviewStatus:
       input.overall_review_status as EvidenceReviewOverallStatus,
+    informationRequest: Object.freeze({
+      canManage: false,
+      request: null,
+      history: Object.freeze([]),
+    }),
   });
 }

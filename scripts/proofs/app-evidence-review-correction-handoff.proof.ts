@@ -372,6 +372,42 @@ async function endpointProof(): Promise<void> {
   );
   assert(invalid.status === 400 && rpcCalls === 1, "client_items_not_rejected");
 
+  const informationRequestConflict = createPublishHandler({
+    createServiceClient: () =>
+      serviceClient(async () => ({
+        error: {
+          code: "23514",
+          message: "customer_information_request_active",
+          details: "internal detail must not leave Edge",
+        },
+      })),
+    idempotencyExpiresAt: () => EXPIRES,
+    requestMeta: async () => META,
+    hashPayload: async () => HASH,
+    verifyBearer: verified,
+  });
+  const conflictResponse = await informationRequestConflict(
+    new Request(META.url, {
+      method: "POST",
+      headers: {
+        authorization: "Bearer proof",
+        "content-type": "application/json",
+        "idempotency-key": META.idempotency_key!,
+      },
+      body: JSON.stringify({ caseRef: CASE_REF, roundRef: ROUND_REF }),
+    }),
+  );
+  const conflictBody = await body(conflictResponse);
+  assert(
+    conflictResponse.status === 409 &&
+      conflictBody.code === "information_request_active" &&
+      conflictBody.error ===
+        "Er staat een vraag aan de klant open. Rond deze af of trek deze in voordat u correcties verstuurt." &&
+      !JSON.stringify(conflictBody).includes("internal detail") &&
+      !JSON.stringify(conflictBody).includes("23514"),
+    "information_request_conflict_not_safely_mapped",
+  );
+
   let clientCreated = 0;
   const tenantDenied = createPublishHandler({
     createServiceClient: () => {

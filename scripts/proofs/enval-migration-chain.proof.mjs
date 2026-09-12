@@ -325,16 +325,90 @@ try {
   );`,
   );
   assert(
-    empty === "0|0|0|0|0|15|6|72|6|0|0|0|0|0|0",
+    empty === "0|0|0|0|0|16|7|88|7|0|0|0|0|0|0",
     "fresh_data_boundary_failed",
+  );
+  const informationRequestPolicySeed = psql(
+    DATABASE,
+    `select concat_ws('|',
+      (select count(*) from public.app_workforce_capability_catalog
+        where capability_code='customer.information_request.manage'
+          and catalogue_version='pilot_v1'
+          and floor_seniority='reviewer'
+          and default_seniority='reviewer'
+          and scope_kind='case'),
+      (select count(*) from public.app_workforce_policy_versions
+        where id='00000000-0000-4000-8000-000000003601'
+          and policy_ref='enval_default_v7'
+          and catalogue_version='pilot_v1'
+          and require_distinct_maker_checker
+          and canonical_sha256=pg_catalog.encode(extensions.digest(
+            'customer_information_request_v1|enval_default_v7|customer.information_request.manage=reviewer',
+            'sha256'
+          ), 'hex')
+          and created_by_workforce_identity_id is null
+          and created_by_actor_ref='system:customer_information_request_v1_migration'
+          and decision_ref='customer_information_request_v1_default_policy'
+          and request_id='customer-information-request-v1-default-policy-v7'),
+      (select count(*) from public.app_workforce_policy_requirements
+        where policy_version_id='00000000-0000-4000-8000-000000003601'),
+      (select count(*)
+        from public.app_workforce_policy_requirements requirement
+        join public.app_workforce_capability_catalog capability
+          on capability.capability_code=requirement.capability_code
+         and capability.catalogue_version='pilot_v1'
+         and capability.default_seniority=requirement.minimum_seniority
+        where requirement.policy_version_id='00000000-0000-4000-8000-000000003601'),
+      (select count(*) from public.app_workforce_policy_requirements
+        where policy_version_id='00000000-0000-4000-8000-000000003601'
+          and capability_code='customer.information_request.manage'
+          and minimum_seniority='reviewer'),
+      (select count(*) from public.app_workforce_policy_activations
+        where id='00000000-0000-4000-8000-000000003602'
+          and policy_version_id='00000000-0000-4000-8000-000000003601'
+          and effective_at=recorded_at
+          and activated_by_workforce_identity_id is null
+          and activated_by_actor_ref='system:customer_information_request_v1_migration'
+          and decision_ref='customer_information_request_v1_default_policy'
+          and request_id='customer-information-request-v1-default-policy-activation-v7'),
+      (select count(*) from public.app_workforce_policy_activations activation
+        where activation.id='00000000-0000-4000-8000-000000003602'
+          and not exists (
+            select 1 from public.app_workforce_policy_activations later
+            where later.effective_at > activation.effective_at
+               or (
+                 later.effective_at = activation.effective_at
+                 and later.recorded_at > activation.recorded_at
+               )
+          ))
+    );`,
+  ).split("|");
+  assert(
+    informationRequestPolicySeed[0] === "1",
+    "information_request_capability_not_exact",
+  );
+  assert(
+    informationRequestPolicySeed[1] === "1",
+    "information_request_policy_version_not_exact",
+  );
+  assert(
+    informationRequestPolicySeed[2] === "16" &&
+      informationRequestPolicySeed[3] === "16" &&
+      informationRequestPolicySeed[4] === "1",
+    "information_request_policy_requirements_not_exact",
+  );
+  assert(
+    informationRequestPolicySeed[5] === "1" &&
+      informationRequestPolicySeed[6] === "1",
+    "information_request_policy_activation_not_exact",
   );
   const security = psql(
     DATABASE,
     `select (
     (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%') = 83
+      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%') = 85
     and (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%' and c.relrowsecurity) = 83
+      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%' and c.relrowsecurity) = 85
     and not exists (select 1 from information_schema.role_table_grants
       where table_schema='public' and table_name like 'app\\_%'
         and grantee in ('anon','authenticated') and privilege_type in ('INSERT','UPDATE','DELETE','TRUNCATE'))
@@ -433,6 +507,20 @@ try {
     and to_regprocedure('public.app_customer_correction_finalize_v2(uuid,text,uuid,text,text,text,text,text,text,text)') is not null
     and to_regprocedure('public.app_customer_correction_finalize_v3(uuid,text,uuid,text,text,text,text,text,text,text)') is not null
     and to_regprocedure('public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)') is not null
+    and to_regprocedure('public.app_evidence_review_correction_publish_guarded_inner_v1(uuid,text,uuid,text,text,text,timestamptz)') is not null
+    and to_regprocedure('public.app_customer_information_request_history_projection_v1(uuid,uuid)') is not null
+    and to_regprocedure('public.app_customer_information_request_customer_read_v1(uuid,text)') is not null
+    and to_regprocedure('public.app_customer_information_request_workforce_read_v1(uuid,text)') is not null
+    and not has_function_privilege('service_role','public.app_customer_information_request_history_projection_v1(uuid,uuid)','EXECUTE')
+    and not has_function_privilege('anon','public.app_customer_information_request_customer_read_v1(uuid,text)','EXECUTE')
+    and not has_function_privilege('authenticated','public.app_customer_information_request_workforce_read_v1(uuid,text)','EXECUTE')
+    and has_function_privilege('service_role','public.app_customer_information_request_customer_read_v1(uuid,text)','EXECUTE')
+    and has_function_privilege('service_role','public.app_customer_information_request_workforce_read_v1(uuid,text)','EXECUTE')
+    and position('limit 50' in lower(pg_get_functiondef('public.app_customer_information_request_history_projection_v1(uuid,uuid)'::regprocedure))) > 0
+    and position('created_at desc' in lower(pg_get_functiondef('public.app_customer_information_request_history_projection_v1(uuid,uuid)'::regprocedure))) > 0
+    and position('request_reference desc' in lower(pg_get_functiondef('public.app_customer_information_request_history_projection_v1(uuid,uuid)'::regprocedure))) > 0
+    and position('app_customer_information_request_history_projection_v1' in pg_get_functiondef('public.app_customer_information_request_customer_read_v1(uuid,text)'::regprocedure)) > 0
+    and position('app_customer_information_request_history_projection_v1' in pg_get_functiondef('public.app_customer_information_request_workforce_read_v1(uuid,text)'::regprocedure)) > 0
     and to_regprocedure('public.app_evidence_review_current_correction_handoff_v1(uuid,text,text)') is not null
     and to_regprocedure('public.app_evidence_review_correction_supersede_v1(uuid,text,text,jsonb,text,text,text,text,text,timestamptz)') is not null
     and to_regprocedure('public.app_customer_correction_replacement_targets_v1(uuid)') is not null
@@ -443,8 +531,11 @@ try {
     and to_regprocedure('public.app_customer_correction_replacement_resolution_v1(uuid,text)') is not null
     and to_regprocedure('public.app_customer_correction_replacement_resolution_v2(uuid,text)') is not null
     and to_regprocedure('public.app_customer_correction_replacement_withdraw_v1(uuid,text,text,text,text,text,text,timestamptz,text)') is not null
-    and position('access_grant.customer_id <> v_case.customer_id' in pg_get_functiondef('public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)'::regprocedure)) > 0
-    and position('access_grant.customer_id = v_case.customer_id' in pg_get_functiondef('public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)'::regprocedure)) = 0
+    and position('access_grant.customer_id <> v_case.customer_id' in pg_get_functiondef('public.app_evidence_review_correction_publish_guarded_inner_v1(uuid,text,uuid,text,text,text,timestamptz)'::regprocedure)) > 0
+    and position('access_grant.customer_id = v_case.customer_id' in pg_get_functiondef('public.app_evidence_review_correction_publish_guarded_inner_v1(uuid,text,uuid,text,text,text,timestamptz)'::regprocedure)) = 0
+    and position('app_workforce_authorize_v1' in pg_get_functiondef('public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)'::regprocedure)) > 0
+    and position('app_customer_information_requests' in pg_get_functiondef('public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)'::regprocedure)) > 0
+    and position('app_evidence_review_correction_publish_guarded_inner_v1' in pg_get_functiondef('public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)'::regprocedure)) > 0
     and to_regprocedure('public.app_customer_correction_handoff_read_v1(uuid,text)') is not null
     and to_regprocedure('public.app_customer_correction_handoff_read_v2(uuid,text)') is not null
     and to_regprocedure('public.app_customer_correction_handoff_read_v3(uuid,text)') is not null
@@ -471,6 +562,7 @@ try {
     and not has_function_privilege('authenticated','public.app_evidence_review_round_finalize_v1(uuid,text,text,text,jsonb,text,text,text,timestamptz)','EXECUTE')
     and has_function_privilege('service_role','public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)','EXECUTE')
     and not has_function_privilege('authenticated','public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)','EXECUTE')
+    and not has_function_privilege('service_role','public.app_evidence_review_correction_publish_guarded_inner_v1(uuid,text,uuid,text,text,text,timestamptz)','EXECUTE')
     and has_function_privilege('service_role','public.app_evidence_review_correction_supersede_v1(uuid,text,text,jsonb,text,text,text,text,text,timestamptz)','EXECUTE')
     and not has_function_privilege('authenticated','public.app_evidence_review_correction_supersede_v1(uuid,text,text,jsonb,text,text,text,text,text,timestamptz)','EXECUTE')
     and not has_function_privilege('service_role','public.app_customer_correction_replacement_targets_v1(uuid)','EXECUTE')

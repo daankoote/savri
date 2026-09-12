@@ -13,6 +13,7 @@ type DashboardStatusInput = {
   dossierStatus: string;
   timeline: DashboardTimelineEvent[];
   hasPublishedCorrection: boolean;
+  informationRequestState: "OPEN" | "ANSWERED" | null;
 };
 
 const IN_TREATMENT_STATUSES = new Set([
@@ -30,6 +31,11 @@ const STATUS_PRESENTATIONS = Object.freeze({
   correctionReview: Object.freeze({
     label: "Aanvulling wordt beoordeeld",
     currentStep: "ENVAL controleert uw aanvulling.",
+    customerAction: "Nee",
+  }),
+  answerReview: Object.freeze({
+    label: "Antwoord wordt beoordeeld",
+    currentStep: "ENVAL controleert uw antwoord.",
     customerAction: "Nee",
   }),
   dataChecked: Object.freeze({
@@ -53,8 +59,19 @@ export function getDashboardStatusPresentation({
   dossierStatus,
   timeline,
   hasPublishedCorrection,
+  informationRequestState,
 }: DashboardStatusInput): DashboardStatusPresentation {
   if (hasPublishedCorrection) return STATUS_PRESENTATIONS.actionNeeded;
+  if (informationRequestState === "OPEN") {
+    return Object.freeze({
+      label: "Actie van u nodig",
+      currentStep: "ENVAL wacht op uw antwoord.",
+      customerAction: "Ja",
+    });
+  }
+  if (informationRequestState === "ANSWERED") {
+    return STATUS_PRESENTATIONS.answerReview;
+  }
 
   const latestEventType = timeline[0]?.event_type as
     | DashboardTimelineEventType

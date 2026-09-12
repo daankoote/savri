@@ -259,6 +259,20 @@ controller/processor allocation requires legal review.
   newest-first and limited to 50 without raw payloads or identifiers. Signing
   evidence stays internal; the dashboard presents one shared Dutch current
   status and does not equate checked data with a completed dossier.
+- CUSTOMER_INFORMATION_REQUEST_V1 is IMPLEMENTED / LOCAL STATIC AND ISOLATED
+  DATABASE PROOF: one active case-scoped text question, one customer answer,
+  workforce withdraw-before-answer and resolve-after-answer. R7 owns customer
+  access; the new capability requires its own exact active case-scope assignment
+  for the same policy population as correction publication. Request/correction
+  mutual exclusion is transactionally locked; the known correction race maps to
+  HTTP 409, and required-missing review subjects cannot be accepted in UI or by
+  a new database decision. Closed resolved/withdrawn requests are projected as
+  a customer-safe, case-authorized history of at most 50 entries; active
+  requests remain exclusively in the active block. Negative paths and history
+  reads create no workflow or authority writes.
+- [x] Apply the migrations locally and prove served operator/customer browser
+  automation, including the request/correction HTTP 409 conflict.
+- [ ] Complete Daan's Firefox history acceptance. No hosted rollout is claimed.
 - Successful dashboard reads perform zero database writes.
 - Real dashboard frontend projection is locally proven.
 - Route-selected application support is locally proven.

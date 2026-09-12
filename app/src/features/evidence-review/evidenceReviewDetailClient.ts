@@ -15,6 +15,9 @@ import {
   EVIDENCE_FACT_REVIEW_CORRECTION_REASONS,
   EVIDENCE_FACT_REVIEW_MANIFEST_VERSION,
 } from "../../../../supabase/functions/_shared/app_evidence_review_case_detail.ts";
+import {
+  parseCustomerInformationRequestWorkforceApi,
+} from "../../../../supabase/functions/_shared/app_customer_information_request.ts";
 import { normalizeSignedDownloadUrlForBrowser } from "../documents/documentDownloadClient.ts";
 import { resolvePublicApiRuntimeConfig } from "../auth/authRuntimeConfig.ts";
 import { isEvidenceReviewCaseRef } from "./evidenceReviewRoutes.ts";
@@ -92,7 +95,10 @@ export type EvidenceReviewCorrectionPublishResult =
     ok: true;
     result: "PUBLISHED" | "ALREADY_PUBLISHED";
   }>
-  | Readonly<{ ok: false; kind: "stale" | "ordinary" }>;
+  | Readonly<{
+    ok: false;
+    kind: "information_request_active" | "stale" | "ordinary";
+  }>;
 
 export type EvidenceReviewCorrectionPublishCall = (
   input: Readonly<{
@@ -465,13 +471,14 @@ export function decodeEvidenceReviewCaseDetailResponse(
       "case",
       "currentReviewRound",
       "evidence",
+      "informationRequest",
       "overallReviewStatus",
       "reviewManifestHash",
       "reviewManifestVersion",
       "reviewSubjects",
       "schemaVersion",
     ]) ||
-    body.schemaVersion !== "evidence-review-case-detail-v5" ||
+    body.schemaVersion !== "evidence-review-case-detail-v6" ||
     !isIsoTimestamp(body.asOf) || !isRecord(body.case) ||
     !Array.isArray(body.evidence) || body.evidence.length > 100 ||
     body.reviewManifestVersion !== EVIDENCE_FACT_REVIEW_MANIFEST_VERSION ||
@@ -542,6 +549,10 @@ export function decodeEvidenceReviewCaseDetailResponse(
     subjectRefs,
   );
   if (currentReviewRound === false) return invalidResponse();
+  const informationRequest = parseCustomerInformationRequestWorkforceApi(
+    body.informationRequest,
+  );
+  if (!informationRequest) return invalidResponse();
   if (
     (currentReviewRound === null && body.overallReviewStatus !== "TO_REVIEW") ||
     (currentReviewRound?.outcome === "CORRECTIONS_REQUIRED" &&
@@ -554,7 +565,7 @@ export function decodeEvidenceReviewCaseDetailResponse(
   return {
     ok: true,
     value: Object.freeze({
-      schemaVersion: "evidence-review-case-detail-v5",
+      schemaVersion: "evidence-review-case-detail-v6",
       asOf: body.asOf,
       case: Object.freeze({
         caseRef: body.case.caseRef,
@@ -582,6 +593,7 @@ export function decodeEvidenceReviewCaseDetailResponse(
         | "CORRECTION_REQUIRED"
         | "WAITING_CUSTOMER"
         | "REVIEW_COMPLETE",
+      informationRequest,
     }),
   };
 }
@@ -784,7 +796,10 @@ export async function publishEvidenceReviewCorrection(
     const errorBody = response.status === 409 ? await readJson(response) : null;
     return {
       ok: false,
-      kind: isRecord(errorBody) && errorBody.code === "stale_review_round"
+      kind: isRecord(errorBody) &&
+          errorBody.code === "information_request_active"
+        ? "information_request_active"
+        : isRecord(errorBody) && errorBody.code === "stale_review_round"
         ? "stale"
         : "ordinary",
     };

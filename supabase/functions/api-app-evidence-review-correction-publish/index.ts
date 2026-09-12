@@ -47,6 +47,11 @@ function isObject(value: unknown): value is JsonObject {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
+function isInformationRequestConflict(value: unknown): boolean {
+  return isObject(value) && value.code === "23514" &&
+    value.message === "customer_information_request_active";
+}
+
 export function normalizeCorrectionPublishRequest(
   value: unknown,
 ): PublishRequest | null {
@@ -90,6 +95,7 @@ function safeStatus(code: string): number {
     "idempotency_conflict",
     "case_not_reviewable",
     "review_manifest_unavailable",
+    "information_request_active",
   ].includes(code)) return 409;
   if (code === "invalid_input") return 400;
   return 500;
@@ -107,6 +113,8 @@ function safeFailure(req: Request, value: JsonObject): Response {
       ? "Authenticatie vereist."
       : status === 403 || status === 404
       ? "De correctiepublicatie is niet toegestaan."
+      : code === "information_request_active"
+      ? "Er staat een vraag aan de klant open. Rond deze af of trek deze in voordat u correcties verstuurt."
       : status === 409
       ? "De correctiepublicatie is niet beschikbaar voor deze beoordelingsronde."
       : "De correctiepublicatie is tijdelijk niet beschikbaar.",
@@ -197,6 +205,9 @@ export function createHandler(
       p_payload_sha256: canonicalHash,
       p_idempotency_expires_at: expiresAt,
     }) as RpcResult;
+    if (isInformationRequestConflict(result.error)) {
+      return safeFailure(req, { code: "information_request_active" });
+    }
     if (result.error || !isObject(result.data)) {
       return appErrorResponse(
         req,

@@ -17,6 +17,9 @@ import {
 import {
   parseEvidenceReviewCaseDetailSource,
 } from "../_shared/app_evidence_review_case_detail.ts";
+import {
+  parseCustomerInformationRequestWorkforceReadSource,
+} from "../_shared/app_customer_information_request.ts";
 
 const READ_RPC = "app_evidence_review_case_detail_read_v7";
 const CASE_REFERENCE_RE =
@@ -147,7 +150,34 @@ export function createHandler(
         "case_detail_reconstruction_failed",
       );
     }
-    return appJsonResponse(req, 200, response);
+    const informationRequestResult = await serviceClient.rpc(
+      "app_customer_information_request_workforce_read_v1",
+      {
+        p_auth_user_id: verified.context.authUserId,
+        p_case_ref: caseReference,
+      },
+    ) as RpcResult;
+    const informationRequest = informationRequestResult.error
+      ? null
+      : parseCustomerInformationRequestWorkforceReadSource(
+        informationRequestResult.data,
+      );
+    if (!informationRequest) {
+      return appErrorResponse(
+        req,
+        500,
+        "Het evidencedossier is tijdelijk niet beschikbaar.",
+        "case_detail_reconstruction_failed",
+      );
+    }
+    return appJsonResponse(
+      req,
+      200,
+      Object.freeze({
+        ...response,
+        informationRequest,
+      }),
+    );
   };
 }
 

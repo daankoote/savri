@@ -491,6 +491,28 @@ The recent app frontend Auth/session flow is retained as local proof:
   its subtitle and `Huidige status` block. `ALL_FACTS_ACCEPTED`
   remains `In behandeling` without an authoritative terminal dossier status;
   the completed data check belongs only in the timeline.
+- CUSTOMER_INFORMATION_REQUEST_V1 is implemented with isolated local database
+  and static frontend proof. Authorized workforce can create one active
+  case-scoped text question, withdraw it before an answer, or resolve it after
+  the exact R7-authorized customer answers once. Its named workforce capability
+  requires its own exact active case-scope assignment; the policy population
+  remains identical to correction publication without using correction
+  authority as an alias or fallback. An active request and an
+  unanswered correction handoff are serialized by one case lock and are
+  mutually exclusive. The correction endpoint maps that known race to a stable
+  HTTP 409, while the workforce UI prevents normal publication during an open
+  request. Authoritative required-missing review subjects expose only
+  `Correctie nodig` and new accepted decisions are database-rejected. Terminal
+  requests disappear from the active projection and are retained in a separate
+  customer-safe closed history shared by customer and workforce case detail.
+  That history contains only resolved questions with their answer or withdrawn
+  questions without an answer, newest-first with a deterministic tie-break and
+  a fixed limit of 50; active requests never appear twice. It resumes the
+  existing status authority. Create, read and respond accept only
+  the same normalized legacy/signing-v3 case lineages as the application index;
+  no lifecycle or timeline fact is created. Local served-browser and human
+  Firefox acceptance by Daan remains OPEN; local automated served-browser
+  coverage is proven.
 - The real customer-safe dashboard frontend projection is CURRENT / LOCAL PROOF and uses `api-app-dashboard-get`.
 - The reusable customer document module is CURRENT / LOCAL PROOF.
 - MID evidence and installation/acquisition invoice PDF upload are supported from the authenticated dashboard.

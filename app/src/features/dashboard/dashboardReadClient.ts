@@ -11,6 +11,10 @@ import type {
   DashboardTimelineEvent,
   DashboardTimelineEventType,
 } from "./dashboardTypes.ts";
+import {
+  parseCustomerInformationRequestApi,
+  parseCustomerInformationRequestHistoryApi,
+} from "../../../../supabase/functions/_shared/app_customer_information_request.ts";
 
 export type DashboardReadErrorCode =
   | "not_configured"
@@ -354,12 +358,19 @@ function validateDashboardBody(body: unknown): DashboardReadResult {
     parseLegalAcceptance,
   );
   const timeline = parseArray(body.timeline, parseTimelineEvent);
+  const informationRequest = body.information_request === null
+    ? null
+    : parseCustomerInformationRequestApi(body.information_request);
+  const informationRequestHistory = parseCustomerInformationRequestHistoryApi(
+    body.information_request_history,
+  );
   const requestId = stringField(body, "request_id");
 
   if (
     !dossiers || !selectedDossier || !locations || !chargers ||
     !documentSlots || !legalAcceptances || !timeline || timeline.length > 50 ||
-    !timelineIsOrdered(timeline) || !requestId
+    !timelineIsOrdered(timeline) || !requestId || !informationRequestHistory ||
+    (body.information_request !== null && !informationRequest)
   ) {
     return { ok: false, error: safeDashboardError("invalid_response") };
   }
@@ -375,6 +386,8 @@ function validateDashboardBody(body: unknown): DashboardReadResult {
       document_slots: documentSlots,
       legal_acceptances: legalAcceptances,
       timeline,
+      information_request: informationRequest,
+      information_request_history: informationRequestHistory,
     },
   };
 }

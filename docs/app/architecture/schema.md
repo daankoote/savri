@@ -535,6 +535,27 @@ Old schema relationship: new.
 
 ### `app_customer_requests`
 
+This remains the broader TARGET model. CUSTOMER_INFORMATION_REQUEST_V1 does not
+create this generic request table. Its bounded current slice uses
+`app_customer_information_requests` and `app_customer_information_responses`:
+one immutable case-scoped question, at most one active request per case, one
+immutable answer, and one terminal `WITHDRAWN` or `RESOLVED` transition. Direct
+table access is denied. Service-role-only RPCs revalidate R7 customer authority
+or the named workforce capability and accept only application-index-supported
+legacy/signing-v3 case lineages. The workforce capability uses its own exact
+active case-scope assignment for the same policy population as
+`evidence.review.correction.publish`; correction authority is not an alias or
+fallback. A shared advisory case lock makes active requests and unanswered
+correction handoffs mutually exclusive. Authoritative required-missing review
+subjects reject new `ACCEPTED` decisions through a database constraint;
+existing immutable historical decisions are not rewritten.
+The existing customer and workforce read RPCs additionally return one shared
+closed-history projection. It includes only valid `RESOLVED` request/response
+pairs or `WITHDRAWN` requests, excludes the active request, sorts by
+`created_at` and opaque request reference descending, and limits inside the
+database snapshot to 50. The opaque tie-breaker is stripped at the Edge
+boundary.
+
 Purpose: ENVAL requests information, correction, upload, consent, or kWh from a customer.
 
 Important columns:

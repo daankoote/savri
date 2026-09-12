@@ -242,6 +242,18 @@ function endpoint(
 ) {
   const client = mockClient(async (name, args) => {
     options.onRpc?.(name, args);
+    if (name === "app_customer_information_request_workforce_read_v1") {
+      return {
+        data: {
+          ok: true,
+          status: 200,
+          code: "ok",
+          can_manage: true,
+          request: null,
+          history: [],
+        },
+      };
+    }
     return { data };
   });
   return createHandler({
@@ -313,17 +325,21 @@ async function endpointProof(): Promise<void> {
     onRpc: (name, args) => {
       rpcCalls += 1;
       assert(
-        name === "app_evidence_review_case_detail_read_v7" &&
-          args.p_auth_user_id === AUTH_ADMIN && args.p_case_ref === CASE_REF_A &&
+        args.p_auth_user_id === AUTH_ADMIN && args.p_case_ref === CASE_REF_A &&
           Object.keys(args).sort().join("|") === "p_auth_user_id|p_case_ref",
         "rpc_contract_invalid",
+      );
+      assert(
+        name === "app_evidence_review_case_detail_read_v7" ||
+          name === "app_customer_information_request_workforce_read_v1",
+        "rpc_name_invalid",
       );
     },
   })(new Request(url));
   const body = await responseJson(success) as unknown as EvidenceReviewCaseDetailResponseV1;
   assert(
-    success.status === 200 && rpcCalls === 1 &&
-      body.schemaVersion === "evidence-review-case-detail-v5" &&
+    success.status === 200 && rpcCalls === 2 &&
+      body.schemaVersion === "evidence-review-case-detail-v6" &&
       body.case.caseRef === CASE_REF_A &&
       body.case.canPublishCorrection === true &&
       body.case.partyDisplayNameTruth === "DECLARED" &&
@@ -334,6 +350,8 @@ async function endpointProof(): Promise<void> {
       body.reviewSubjects.length === 2 &&
       body.currentReviewRound === null &&
       body.overallReviewStatus === "TO_REVIEW" &&
+      body.informationRequest.canManage === true &&
+      body.informationRequest.request === null &&
       body.evidence.every((item) => item.reviewStatus === "PENDING") &&
       body.evidence.flatMap((item) => item.canonicalFacts)
         .filter((fact) => fact.truthClass === "REVIEW_REQUIRED")
@@ -1121,7 +1139,7 @@ async function databaseProof(): Promise<void> {
 
   const manifest = projectedV2;
   const decisions = manifest.reviewSubjects.map((subject, index): JsonObject =>
-    index === 0
+    index === 0 || subject.valueStatus === "REQUIRED_MISSING"
       ? {
         subjectRef: subject.subjectRef,
         disposition: "CORRECTION_REQUIRED",
@@ -1129,6 +1147,24 @@ async function databaseProof(): Promise<void> {
         correctionInstruction: "Controleer en corrigeer dit gegeven.",
       }
       : { subjectRef: subject.subjectRef, disposition: "ACCEPTED" }
+  );
+  const acceptedRequiredMissing = await finalizeRpc(
+    DATABASE,
+    AUTH_VIEW_DECIDE,
+    CASE_REF_A,
+    manifest.reviewManifestVersion,
+    manifest.reviewManifestHash,
+    manifest.reviewSubjects.map((subject) => ({
+      subjectRef: subject.subjectRef,
+      disposition: "ACCEPTED",
+    })),
+    "review15-required-missing-accept",
+    "review15-required-missing-accept",
+  );
+  assert(
+    acceptedRequiredMissing.ok === false &&
+      acceptedRequiredMissing.code === "internal_error",
+    "required_missing_acceptance_not_rejected_by_database",
   );
   const missing = await finalizeRpc(
     DATABASE,
@@ -1262,6 +1298,9 @@ async function databaseProof(): Promise<void> {
     ),
   ]);
   const roundRefs = new Set(concurrent.map((result) => result.round_id));
+  const expectedCorrectionDecisions = decisions.filter((decision) =>
+    decision.disposition === "CORRECTION_REQUIRED"
+  ).length;
   const finalizedCounts = await psql(DATABASE, `select concat_ws('|',
     (select count(*) from public.app_evidence_review_rounds),
     (select count(*) from public.app_evidence_review_round_subject_decisions),
@@ -1318,7 +1357,7 @@ async function databaseProof(): Promise<void> {
   assert(
     concurrent.every((result) => result.ok === true) && roundRefs.size === 1 &&
       new Set(concurrent.map((result) => result.code)).has("finalized") &&
-      finalizedCounts === "1|10|1|1|1" &&
+      finalizedCounts === `1|10|1|${expectedCorrectionDecisions}|1` &&
       exactRetry.round_id === concurrent[0].round_id &&
       equivalentRetry.code === "already_finalized" &&
       equivalentRetry.round_id === concurrent[0].round_id &&
@@ -1379,10 +1418,19 @@ async function databaseProof(): Promise<void> {
     (select count(*) from public.app_evidence_review_rounds),
     (select count(*) from public.app_evidence_review_round_subject_decisions)
   );`);
-  const acceptedDecisions = manifestAfterEvidence.reviewSubjects.map((subject) => ({
-    subjectRef: subject.subjectRef,
-    disposition: "ACCEPTED",
-  }));
+  const acceptedDecisions = manifestAfterEvidence.reviewSubjects.map((subject) =>
+    subject.valueStatus === "REQUIRED_MISSING"
+      ? {
+        subjectRef: subject.subjectRef,
+        disposition: "CORRECTION_REQUIRED",
+        correctionReason: "MISSING_INFORMATION",
+        correctionInstruction: "Vul dit verplichte gegeven aan.",
+      }
+      : {
+        subjectRef: subject.subjectRef,
+        disposition: "ACCEPTED",
+      }
+  );
   const secondRound = await finalizeRpc(
     DATABASE,
     AUTH_VIEW_DECIDE,
@@ -1414,16 +1462,21 @@ async function databaseProof(): Promise<void> {
       newEnergySubjects.every((subject) => !oldEnergySubjects.has(subject.subjectRef)) &&
       stale.code === "stale_review_manifest" && preSecondRound === "1|10" &&
       secondRound.code === "finalized" &&
-      secondRound.outcome === "ALL_FACTS_ACCEPTED" &&
-      secondRoundCounts === "2|20|1|10" &&
+      secondRound.outcome === "CORRECTIONS_REQUIRED" &&
+      secondRoundCounts === "2|20|0|10" &&
       acceptedRound?.roundRef === secondRound.round_id &&
-      acceptedProjection?.overallReviewStatus === "REVIEW_COMPLETE" &&
-      acceptedRound?.outcome === "ALL_FACTS_ACCEPTED" &&
+      acceptedProjection?.overallReviewStatus === "CORRECTION_REQUIRED" &&
+      acceptedRound?.outcome === "CORRECTIONS_REQUIRED" &&
       acceptedRound?.decisions.length ===
         acceptedProjection?.reviewSubjects.length &&
-      acceptedRound?.decisions.every((decision) =>
-        decision.disposition === "ACCEPTED"
-      ),
+      acceptedRound?.decisions.every((decision) => {
+        const subject = acceptedProjection?.reviewSubjects.find((candidate) =>
+          candidate.subjectRef === decision.subjectRef
+        );
+        return subject?.valueStatus === "REQUIRED_MISSING"
+          ? decision.disposition === "CORRECTION_REQUIRED"
+          : decision.disposition === "ACCEPTED";
+      }),
     "new_evidence_history_or_no_carry_forward_invalid",
   );
   q(17);

@@ -17,6 +17,7 @@ export type EvidenceFactReviewDraftDisposition =
 export type EvidenceFactReviewDraftDecision = Readonly<{
   subjectRef: string;
   actionable: boolean;
+  acceptAllowed: boolean;
   disposition: EvidenceFactReviewDraftDisposition;
   correctionReason: EvidenceFactReviewCorrectionReason | "";
   correctionInstruction: string;
@@ -61,6 +62,18 @@ export function isEvidenceFactReviewSubjectActionable(
   return subject.truthClass === "REVIEW_REQUIRED";
 }
 
+export function canAcceptEvidenceFactReviewSubject(
+  subject: Pick<
+    EvidenceFactReviewSubjectV1,
+    "required" | "reviewReasonAuthority" | "valueStatus"
+  >,
+): boolean {
+  return !(
+    subject.required && subject.valueStatus === "REQUIRED_MISSING" &&
+    subject.reviewReasonAuthority === "SERVER_REQUIRED_SLOT"
+  );
+}
+
 const EMPTY_DRAFT: EvidenceFactReviewDraftState = Object.freeze({
   decisions: Object.freeze({}),
   confirmationOpen: false,
@@ -79,6 +92,7 @@ export function initializeEvidenceFactReviewDraft(
     decisions[subject.subjectRef] = Object.freeze({
       subjectRef: subject.subjectRef,
       actionable: isEvidenceFactReviewSubjectActionable(subject),
+      acceptAllowed: canAcceptEvidenceFactReviewSubject(subject),
       disposition: subject.reviewerSuggestion === "ACCEPT"
         ? "ACCEPTED"
         : "UNANSWERED",
@@ -135,7 +149,7 @@ export function isEvidenceFactReviewDraftComplete(
   const expected = new Set(subjects.map((subject) => subject.subjectRef));
   return Object.values(state.decisions).every((decision) =>
     expected.has(decision.subjectRef) &&
-    (decision.disposition === "ACCEPTED" ||
+    ((decision.acceptAllowed && decision.disposition === "ACCEPTED") ||
       isEvidenceFactCorrectionValid(decision))
   );
 }
@@ -145,12 +159,17 @@ export function reduceEvidenceFactReviewDraft(
   action: DraftAction,
 ): EvidenceFactReviewDraftState {
   if (action.type === "accept") {
-    return replaceDecision(state, action.subjectRef, (current) => ({
-      ...current,
-      disposition: "ACCEPTED",
-      correctionReason: "",
-      correctionInstruction: "",
-    }));
+    if (!state.decisions[action.subjectRef]?.acceptAllowed) return state;
+    return replaceDecision(
+      state,
+      action.subjectRef,
+      (current) => ({
+        ...current,
+        disposition: "ACCEPTED",
+        correctionReason: "",
+        correctionInstruction: "",
+      }),
+    );
   }
   if (action.type === "correct") {
     return replaceDecision(state, action.subjectRef, (current) => ({

@@ -22,6 +22,12 @@ import {
   requireAppCustomer,
   requireAppDossierAccess,
 } from "../_shared/app_customer_auth.ts";
+import {
+  type CustomerInformationRequestCustomerReadV1,
+  type CustomerInformationRequestHistoryEntryV1,
+  type CustomerInformationRequestV1,
+  parseCustomerInformationRequestReadSource,
+} from "../_shared/app_customer_information_request.ts";
 
 type DashboardPayload = {
   dossier_id?: unknown;
@@ -188,6 +194,9 @@ type DashboardResponse = {
   document_slots: SafeDocumentSlot[];
   legal_acceptances: SafeLegalAcceptance[];
   timeline: SafeTimelineEvent[];
+  information_request: CustomerInformationRequestV1 | null;
+  information_request_history:
+    readonly CustomerInformationRequestHistoryEntryV1[];
 };
 
 type ApplicationIndexResponse = {
@@ -199,7 +208,12 @@ type ApplicationIndexResponse = {
 
 type DashboardCaseReadModel = Omit<
   DashboardResponse,
-  "ok" | "mode" | "request_id" | "timeline"
+  | "ok"
+  | "mode"
+  | "request_id"
+  | "timeline"
+  | "information_request"
+  | "information_request_history"
 >;
 
 type NormalizedPayload =
@@ -378,6 +392,23 @@ async function loadCustomerTimeline(
     throw new Error("customer_timeline_projection_failed");
   }
   return safeTimeline;
+}
+
+async function loadCustomerInformationRequest(
+  SB: any,
+  authUserId: string,
+  caseReference: string,
+): Promise<CustomerInformationRequestCustomerReadV1> {
+  const result = await SB.rpc(
+    "app_customer_information_request_customer_read_v1",
+    { p_auth_user_id: authUserId, p_case_ref: caseReference },
+  );
+  if (result.error) throw new Error("customer_information_request_read_failed");
+  const read = parseCustomerInformationRequestReadSource(result.data);
+  if (read === false) {
+    throw new Error("customer_information_request_projection_failed");
+  }
+  return read;
 }
 
 function safeDossierNumber(value: unknown): string | null {
@@ -1129,11 +1160,18 @@ serve(async (req) => {
         );
       })();
 
-    const timeline = await loadCustomerTimeline(
-      SB,
-      authResult.context.authUserId,
-      readModel.selected_dossier.case_id,
-    );
+    const [timeline, informationRequestRead] = await Promise.all([
+      loadCustomerTimeline(
+        SB,
+        authResult.context.authUserId,
+        readModel.selected_dossier.case_id,
+      ),
+      loadCustomerInformationRequest(
+        SB,
+        authResult.context.authUserId,
+        readModel.selected_dossier.case_reference,
+      ),
+    ]);
 
     const response: DashboardResponse = {
       ok: true,
@@ -1141,6 +1179,8 @@ serve(async (req) => {
       request_id: meta.request_id,
       ...readModel,
       timeline,
+      information_request: informationRequestRead.request,
+      information_request_history: informationRequestRead.history,
     };
 
     return appJsonResponse(req, 200, response);

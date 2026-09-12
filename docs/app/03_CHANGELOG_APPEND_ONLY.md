@@ -2049,3 +2049,66 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   no remote migration, deployment or production acceptance is claimed.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-09-11 — Implement bounded customer information requests locally
+
+- Added one separate database-owned text request/response contract: workforce
+  create, customer answer exactly once, withdraw before answer and resolve after
+  answer. Correction tables are not reused as request/response storage; no
+  upload, chat, notification, timeline or lifecycle state was introduced.
+- Added `customer.information_request.manage`; its effective case scope is
+  derived exclusively from the current correction-publication scope and cannot
+  be assigned as an independent scope. R7 remains the customer authority.
+- Added a shared transaction-level case lock and symmetric exclusion with an
+  unanswered correction handoff. Idempotent replay creates no duplicate request,
+  response or audit row; negative paths create no workflow or authority write.
+- Extended the existing dashboard and workforce case-detail projections and
+  reused their cards, forms, buttons, cache and refresh boundaries. Routes,
+  navigation, signing, promotion, customer access grants, timeline and terminal
+  status are unchanged.
+- Isolated database authority/concurrency/ACL proofs, Edge static checks and the
+  app production build are local only. The shared local runtime still has one
+  pending migration; served browser automation, Daan's Firefox acceptance,
+  hosted migration and deployment remain unproven.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-09-12 — Close information-request integration findings locally
+
+- Preserved the separate information-request workflow while giving workforce
+  and customer surfaces the distinct titles `Aanvullende vraag` and
+  `Vraag over uw dossier`.
+- Corrected the earlier local authority description: the named information-
+  request capability requires its own exact case-scope assignment for the same
+  policy population; correction authority is not its scope source or fallback.
+- Added a server-owned request/correction preflight under the shared case lock.
+  Normal correction publication is unavailable while a request is active, and
+  the exact server race returns HTTP 409 with `information_request_active`
+  without database details.
+- Required-missing review subjects now expose only `Correctie nodig`; a
+  database check rejects new accepted decisions. Existing immutable historical
+  decisions remain untouched through a `NOT VALID` forward constraint.
+- Migration-chain/parity, targeted database/Edge/frontend proofs, production
+  build and automated Firefox desktop/mobile flows passed locally. Daan's new
+  human Firefox acceptance, hosted migration and deployment remain open.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-09-12 — Add customer-safe information-request history locally
+
+- Extended the existing customer and workforce case reads with one shared,
+  closed information-request history. Resolved entries retain the full question
+  and customer answer; withdrawn entries retain only the question. Active
+  requests remain exclusively in the existing active block.
+- The database projection applies exact existing R7 or workforce case authority,
+  deterministic newest-first ordering and a fixed 50-entry limit in one read
+  snapshot. The Edge boundary removes the opaque tie-breaker and rejects
+  malformed, extra-field, unordered or oversized results.
+- Added one shared non-empty-only history component and a withdrawal
+  confirmation. No table, workflow, route, timeline event, notification,
+  mutation or direct browser privilege was added.
+- Disposable database and frontend proofs cover resolved/withdrawn history,
+  active exclusion, cross-case denial, stable limiting and zero read writes.
+  Hosted rollout and Daan's final Firefox history acceptance remain open.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

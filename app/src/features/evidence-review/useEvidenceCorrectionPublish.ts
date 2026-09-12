@@ -40,13 +40,28 @@ export const EMPTY_EVIDENCE_CORRECTION_PUBLISH_STATE:
     notice: null,
   });
 
+export const INFORMATION_REQUEST_CORRECTION_BLOCK_MESSAGE =
+  "Er staat een vraag aan de klant open. Rond deze af of trek deze in voordat u correcties verstuurt.";
+
+export function isEvidenceCorrectionBlockedByInformationRequest(
+  detail: EvidenceReviewCaseDetailResponseV1 | null,
+): boolean {
+  return Boolean(
+    detail?.case.canPublishCorrection &&
+      detail.overallReviewStatus === "CORRECTION_REQUIRED" &&
+      detail.currentReviewRound?.outcome === "CORRECTIONS_REQUIRED" &&
+      detail.informationRequest.request,
+  );
+}
+
 export function canPublishEvidenceCorrection(
   detail: EvidenceReviewCaseDetailResponseV1 | null,
 ): boolean {
   return Boolean(
     detail?.case.canPublishCorrection &&
       detail.overallReviewStatus === "CORRECTION_REQUIRED" &&
-      detail.currentReviewRound?.outcome === "CORRECTIONS_REQUIRED",
+      detail.currentReviewRound?.outcome === "CORRECTIONS_REQUIRED" &&
+      !detail.informationRequest.request,
   );
 }
 
@@ -71,6 +86,8 @@ function detailIdentity(
     detail.currentReviewRound?.roundRef ?? "none",
     detail.overallReviewStatus,
     detail.case.canPublishCorrection ? "publish" : "view",
+    detail.informationRequest.request?.requestRef ?? "no-request",
+    detail.informationRequest.request?.state ?? "no-request-state",
   ].join("|");
 }
 
@@ -157,6 +174,15 @@ export function createEvidenceCorrectionPublishSession(
         dependencies.refresh();
         return;
       }
+      if (result.kind === "information_request_active") {
+        attempt = null;
+        emit({
+          ...EMPTY_EVIDENCE_CORRECTION_PUBLISH_STATE,
+          error: INFORMATION_REQUEST_CORRECTION_BLOCK_MESSAGE,
+        });
+        dependencies.refresh();
+        return;
+      }
       emit({
         ...state,
         submitting: false,
@@ -203,6 +229,8 @@ export function useEvidenceCorrectionPublish(
   return Object.freeze({
     state,
     eligible: canPublishEvidenceCorrection(detail),
+    blockedByInformationRequest:
+      isEvidenceCorrectionBlockedByInformationRequest(detail),
     openConfirmation: useCallback(
       () => sessionRef.current?.openConfirmation(),
       [],

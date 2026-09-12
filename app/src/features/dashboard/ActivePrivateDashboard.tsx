@@ -2,6 +2,7 @@ import { type ReactNode, useMemo, useState } from "react";
 import { DocumentUploadCard } from "../documents/DocumentUploadCard";
 import { CustomerCorrectionHandoffPanel } from "./CustomerCorrectionHandoffPanel";
 import { CustomerTimeline } from "./CustomerTimeline";
+import { CustomerInformationRequestPanel } from "../customer-information-request/CustomerInformationRequestPanel";
 import { getDashboardStatusPresentation } from "./dashboardStatusPresentation";
 import {
   getDocumentSectionStatusPresentation,
@@ -75,6 +76,7 @@ export function ActivePrivateDashboard({
     dossierStatus: selectedDossier?.status ?? "",
     timeline: model?.timeline ?? [],
     hasPublishedCorrection,
+    informationRequestState: model?.information_request?.state ?? null,
   });
   const chargerRows = useMemo(() => (model ? buildPortalChargers(model) : []), [
     model,
@@ -165,6 +167,14 @@ export function ActivePrivateDashboard({
               dashboardModel={model}
               onRefreshSelectedDossier={onRefreshSelectedDossier}
               state={correctionHandoff}
+            />
+
+            <CustomerInformationRequestPanel
+              accessToken={accessToken ?? ""}
+              caseRef={model.selected_dossier.case_reference}
+              history={model.information_request_history}
+              onRefresh={onRefreshSelectedDossier}
+              request={model.information_request}
             />
 
             <section

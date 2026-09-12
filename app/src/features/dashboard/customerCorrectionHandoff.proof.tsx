@@ -221,6 +221,8 @@ function dashboardModel(): DashboardReadModel {
     document_slots: [],
     legal_acceptances: [],
     timeline: [],
+    information_request: null,
+    information_request_history: [],
   };
 }
 

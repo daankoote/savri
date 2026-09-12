@@ -29,6 +29,7 @@ import {
 import { loadEvidenceReviewCaseDetailOnce } from "./useEvidenceReviewCaseDetail.ts";
 import {
   buildEvidenceFactReviewFinalizeRequest,
+  canAcceptEvidenceFactReviewSubject,
   initializeEvidenceFactReviewDraft,
   isEvidenceFactCorrectionValid,
   isEvidenceFactReviewDraftComplete,
@@ -40,6 +41,8 @@ import {
 import {
   canPublishEvidenceCorrection,
   createEvidenceCorrectionPublishSession,
+  INFORMATION_REQUEST_CORRECTION_BLOCK_MESSAGE,
+  isEvidenceCorrectionBlockedByInformationRequest,
   type EvidenceCorrectionPublishState,
 } from "./useEvidenceCorrectionPublish.ts";
 import {
@@ -96,7 +99,7 @@ function evidence(
 }
 
 const FIXTURE: EvidenceReviewCaseDetailResponseV1 = {
-  schemaVersion: "evidence-review-case-detail-v5",
+  schemaVersion: "evidence-review-case-detail-v6",
   asOf: "2026-08-18T12:00:00.000Z",
   case: {
     caseRef: CASE_REF,
@@ -175,6 +178,7 @@ const FIXTURE: EvidenceReviewCaseDetailResponseV1 = {
   ],
   currentReviewRound: null,
   overallReviewStatus: "TO_REVIEW",
+  informationRequest: { canManage: true, request: null, history: [] },
 };
 
 const previewSuccess = async () => ({
@@ -196,6 +200,7 @@ function detailHtml(
 ): string {
   return renderToStaticMarkup(
     <EvidenceReviewCaseDetailContent
+      accessToken="proof-token"
       caseRef={CASE_REF}
       finalizeReview={noFinalize}
       loadPreview={previewSuccess}
@@ -331,6 +336,26 @@ const publishEligibleHtml = detailHtml({
   value: publishEligibleFixture,
   error: null,
 });
+const blockedPublishFixture: EvidenceReviewCaseDetailResponseV1 = {
+  ...publishEligibleFixture,
+  informationRequest: {
+    canManage: true,
+    history: [],
+    request: {
+      requestRef: "IRQ-0123456789ABCDEF",
+      state: "OPEN",
+      question: "Welke toelichting kunt u geven?",
+      answer: null,
+      askedAt: "2026-08-19T12:00:00.000Z",
+      answeredAt: null,
+    },
+  },
+};
+const blockedPublishHtml = detailHtml({
+  status: "ready",
+  value: blockedPublishFixture,
+  error: null,
+});
 const waitingHtml = detailHtml({
   status: "ready",
   value: { ...publishEligibleFixture, overallReviewStatus: "WAITING_CUSTOMER" },
@@ -399,12 +424,16 @@ assert(
 );
 assert(
   publishEligibleHtml.includes(">Naar klant sturen<") &&
+    blockedPublishHtml.includes(INFORMATION_REQUEST_CORRECTION_BLOCK_MESSAGE) &&
+    !blockedPublishHtml.includes(">Naar klant sturen<") &&
     !finalizedHtml.includes(">Naar klant sturen<") &&
     !waitingHtml.includes(">Naar klant sturen<") &&
     waitingHtml.includes("Wacht op klant") &&
     !completeHtml.includes(">Naar klant sturen<") &&
     !readyHtml.includes(">Naar klant sturen<") &&
     canPublishEvidenceCorrection(publishEligibleFixture) &&
+    !canPublishEvidenceCorrection(blockedPublishFixture) &&
+    isEvidenceCorrectionBlockedByInformationRequest(blockedPublishFixture) &&
     !canPublishEvidenceCorrection(finalizedFixture) &&
     !canPublishEvidenceCorrection({
       ...publishEligibleFixture,
@@ -570,8 +599,17 @@ const ordinaryConflictResult = await publishEvidenceReviewCorrection({
       status: 409,
     }),
 });
+const informationRequestConflictResult = await publishEvidenceReviewCorrection({
+  ...publishFailureConfig,
+  fetchImpl: async () =>
+    new Response(JSON.stringify({ code: "information_request_active" }), {
+      status: 409,
+    }),
+});
 assert(
   !staleClientResult.ok && staleClientResult.kind === "stale" &&
+    !informationRequestConflictResult.ok &&
+    informationRequestConflictResult.kind === "information_request_active" &&
     !ordinaryConflictResult.ok && ordinaryConflictResult.kind === "ordinary",
   "Q08c_publish_conflict_classification_invalid",
 );
@@ -685,6 +723,25 @@ assert(
 );
 stalePublishSession.dispose();
 
+let informationRequestRefreshes = 0;
+const informationRequestStates: EvidenceCorrectionPublishState[] = [];
+const informationRequestSession = createEvidenceCorrectionPublishSession({
+  send: async () => ({ ok: false, kind: "information_request_active" }),
+  refresh: () => informationRequestRefreshes += 1,
+  publish: (state) => informationRequestStates.push(state),
+});
+informationRequestSession.updateDetail(publishEligibleFixture);
+informationRequestSession.openConfirmation();
+await informationRequestSession.confirm();
+assert(
+  informationRequestRefreshes === 1 &&
+    last(informationRequestStates)?.error ===
+      INFORMATION_REQUEST_CORRECTION_BLOCK_MESSAGE &&
+    last(informationRequestStates)?.confirmationOpen === false,
+  "Q08ia_information_request_race_not_safely_recovered",
+);
+informationRequestSession.dispose();
+
 let dedupedFetches = 0;
 let releaseDedupedFetch: () => void = () => {
   throw new ProofFailure("dedupe_release_not_initialized");
@@ -749,6 +806,50 @@ assert(
 const initialDraft = initializeEvidenceFactReviewDraft(
   FIXTURE.reviewSubjects,
   true,
+);
+const missingRequiredSubject = Object.freeze({
+  ...FIXTURE.reviewSubjects[0],
+  subjectRef: `FRS-${"5".repeat(64)}`,
+  factKey: "deliveryAddress",
+  factCategory: "ADDRESS" as const,
+  factLabel: "Adres",
+  scopeRef: `FRSCOPE-${"6".repeat(64)}`,
+  value: null,
+  valueStatus: "REQUIRED_MISSING" as const,
+  required: true,
+  reviewReason: "REQUIRED_INFORMATION_MISSING" as const,
+  reviewReasonAuthority: "SERVER_REQUIRED_SLOT" as const,
+  reviewerSuggestion: "NONE" as const,
+});
+const missingRequiredFixture: EvidenceReviewCaseDetailResponseV1 = {
+  ...FIXTURE,
+  reviewSubjects: [...FIXTURE.reviewSubjects, missingRequiredSubject],
+};
+const missingRequiredHtml = detailHtml({
+  status: "ready",
+  value: missingRequiredFixture,
+  error: null,
+});
+const missingRequiredRowHtml = factRowHtml(missingRequiredHtml, "Adres");
+const missingRequiredDraft = initializeEvidenceFactReviewDraft(
+  missingRequiredFixture.reviewSubjects,
+  true,
+);
+const rejectedMissingAccept = reduceEvidenceFactReviewDraft(
+  missingRequiredDraft,
+  { type: "accept", subjectRef: missingRequiredSubject.subjectRef },
+);
+assert(
+  !canAcceptEvidenceFactReviewSubject(missingRequiredSubject) &&
+    canAcceptEvidenceFactReviewSubject(FIXTURE.reviewSubjects[0]) &&
+    missingRequiredRowHtml.includes(">Correctie nodig<") &&
+    !missingRequiredRowHtml.includes(">Accepteren<") &&
+    rejectedMissingAccept === missingRequiredDraft &&
+    !isEvidenceFactReviewDraftComplete(
+      missingRequiredFixture.reviewSubjects,
+      rejectedMissingAccept,
+    ),
+  "Q08fa_required_missing_acceptance_guard_invalid",
 );
 const eanSubjectRef = FIXTURE.reviewSubjects[0].subjectRef;
 const brandSubjectRef = FIXTURE.reviewSubjects[1].subjectRef;

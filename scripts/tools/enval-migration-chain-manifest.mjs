@@ -301,6 +301,48 @@ export const TENANT_ENVAL_MIGRATION_CHAIN = Object.freeze({
       sha256:
         "02dbf70b681a1c9d014d9e626a08ef9b23bcc40f53d33d9fdb887378732fa7f0",
     }),
+    Object.freeze({
+      version: "20260911151223",
+      path:
+        "supabase/migrations/20260911151223_app_customer_information_request_v1.sql",
+      sha256:
+        "2f55730ded4522df7db9acac5ac98d6562374806d6c7e1cc0f920f4ad19ec54e",
+    }),
+    Object.freeze({
+      version: "20260912072225",
+      path:
+        "supabase/migrations/20260912072225_app_audit_events_acl_fix.sql",
+      sha256:
+        "d93aa46ecd02c225dea94cf0cad19ec6091913b58fc25e3f54013bfcad554f05",
+    }),
+    Object.freeze({
+      version: "20260912074600",
+      path:
+        "supabase/migrations/20260912074600_app_project_object_acl_consolidation.sql",
+      sha256:
+        "c5e2c783df10bfda87ca0d7e6fa27c3e1b7b6b60d2ac6942a8af2ba44ffe693a",
+    }),
+    Object.freeze({
+      version: "20260912081652",
+      path:
+        "supabase/migrations/20260912081652_app_customer_information_request_scope_constraint_fix.sql",
+      sha256:
+        "55dea5e70fe144b9e88da2d59879c1a49d0e2a6703647b43bb50c0d252b28973",
+    }),
+    Object.freeze({
+      version: "20260912100926",
+      path:
+        "supabase/migrations/20260912100926_app_customer_information_request_integration_guards.sql",
+      sha256:
+        "2e5dac00ff576d09e6ab4ed87c61059295bae39bbf55c54c50eef707dd4b7f90",
+    }),
+    Object.freeze({
+      version: "20260912121643",
+      path:
+        "supabase/migrations/20260912121643_app_customer_information_request_history_v1.sql",
+      sha256:
+        "3706f7cd040e1740cf8f42686f3184399f13b695f586069a5dde60142f97d452",
+    }),
   ]),
   currentPresentAppMigrations: Object.freeze([
     [
