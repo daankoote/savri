@@ -1,10 +1,6 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import {
-  buildPlan,
-  collectChangedPaths,
-  ROOT,
-} from "../tools/enval-verify.mjs";
+import { buildPlan, ROOT } from "../tools/enval-verify.mjs";
 import { VERIFY_MANIFEST } from "../tools/enval-verify-manifest.mjs";
 import {
   classifyTypeScriptEntry,
@@ -16,13 +12,50 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+function assertThrowsWithMessage(callback, expectedMessage, assertionMessage) {
+  try {
+    callback();
+  } catch (error) {
+    assert(error instanceof Error, `${assertionMessage}_non_error`);
+    assert(
+      error.message === expectedMessage,
+      `${assertionMessage}_wrong_error`,
+    );
+    return;
+  }
+
+  throw new Error(assertionMessage);
+}
+
+function requireExternalAppProof(paths) {
+  const externalAppProofs = paths.filter((path) =>
+    path.startsWith("scripts/proofs/") &&
+    existsSync(resolve(ROOT, path)) &&
+    classifyTypeScriptEntry(path, { cwd: ROOT }).authority ===
+      COMPILER_AUTHORITY.APP_TYPESCRIPT
+  );
+
+  assert(externalAppProofs.length > 0, "external_app_proof_fixture_missing");
+  return externalAppProofs;
+}
+
 const inventory = verificationEntryInventory(VERIFY_MANIFEST, { cwd: ROOT });
 assert(
   inventory.every((entry) => entry.authority !== COMPILER_AUTHORITY.UNKNOWN),
   "manifest_typescript_authority_unknown",
 );
 
-const changedPaths = collectChangedPaths(ROOT);
+const externalAppProofFixture =
+  "scripts/proofs/app-signup-unified-presentation.proof.ts";
+const denoRepresentative =
+  "platform/runtime/customer-fact-resolution/customer_fact_resolution_policy.ts";
+const deletedPath =
+  "app/src/features/signup/presentation/CompactFactCorrectionEditor.tsx";
+const changedPaths = [
+  externalAppProofFixture,
+  denoRepresentative,
+  deletedPath,
+];
 const changedTypeScriptPaths = changedPaths.filter((path) =>
   /\.(?:ts|tsx|mts|cts)$/.test(path) && existsSync(resolve(ROOT, path))
 );
@@ -46,19 +79,46 @@ for (const path of changedTypeScriptPaths) {
   );
 }
 
-const externalAppProofs = changedTypeScriptPaths.filter((path) =>
-  path.startsWith("scripts/proofs/") &&
-  classifyTypeScriptEntry(path, { cwd: ROOT }).authority ===
-    COMPILER_AUTHORITY.APP_TYPESCRIPT
+const externalAppProofs = requireExternalAppProof(changedTypeScriptPaths);
+assert(
+  externalAppProofs.length === 1 &&
+    externalAppProofs[0] === externalAppProofFixture,
+  "external_app_proof_fixture_not_recognized",
 );
-assert(externalAppProofs.length > 0, "external_app_proof_fixture_missing");
+assertThrowsWithMessage(
+  () => requireExternalAppProof([]),
+  "external_app_proof_fixture_missing",
+  "missing_external_app_proof_not_rejected",
+);
+assertThrowsWithMessage(
+  () => requireExternalAppProof([denoRepresentative]),
+  "external_app_proof_fixture_missing",
+  "non_app_proof_satisfied_external_app_requirement",
+);
+
+const cleanCheckoutPlan = buildPlan({ paths: [], mode: "INTEGRATION" });
+assert(
+  cleanCheckoutPlan.errors.length === 0 &&
+    cleanCheckoutPlan.unclassifiedPaths.length === 0,
+  "clean_checkout_ownership_plan_invalid",
+);
 
 const fixedExternalAppCommands = inventory.filter((entry) =>
   entry.authority === COMPILER_AUTHORITY.APP_TYPESCRIPT &&
   entry.entrypoints.some((path) => path.startsWith("scripts/proofs/"))
 );
 for (const entry of fixedExternalAppCommands) {
-  const command = plan.selected.find((check) => check.commandId === entry.id);
+  const fixedCommandPlan = buildPlan({
+    paths: entry.entrypoints,
+    mode: "INTEGRATION",
+  });
+  assert(
+    fixedCommandPlan.errors.length === 0,
+    `fixed_app_command_plan_invalid:${entry.id}`,
+  );
+  const command = fixedCommandPlan.selected.find((check) =>
+    check.commandId === entry.id
+  );
   assert(
     command?.argv.includes("scripts/tools/deno-app-proof.json") &&
       command.compilerAuthority === COMPILER_AUTHORITY.APP_TYPESCRIPT,
@@ -66,8 +126,6 @@ for (const entry of fixedExternalAppCommands) {
   );
 }
 
-const denoRepresentative =
-  "platform/runtime/customer-fact-resolution/customer_fact_resolution_policy.ts";
 assert(
   classifyTypeScriptEntry(denoRepresentative, { cwd: ROOT }).authority ===
       COMPILER_AUTHORITY.DENO_NATIVE &&
@@ -78,8 +136,6 @@ assert(
   "deno_native_representative_misclassified",
 );
 
-const deletedPath =
-  "app/src/features/signup/presentation/CompactFactCorrectionEditor.tsx";
 assert(
   changedPaths.includes(deletedPath) &&
     !plan.selected.some((check) => check.path === deletedPath),
@@ -120,4 +176,8 @@ console.log([
   `NON_TYPESCRIPT_ENTRY_COUNT=${counts.NON_TYPESCRIPT}`,
   `UNKNOWN_AUTHORITY_ENTRY_COUNT=${counts.UNKNOWN}`,
   `APP_DEPENDENT_PROOFS_OUTSIDE_APP=${externalAppProofs.join(",")}`,
+  "EXTERNAL_APP_PROOF_POSITIVE=PASS",
+  "MISSING_EXTERNAL_APP_PROOF_REJECTED=PASS",
+  "NON_APP_PROOF_REJECTED=PASS",
+  "CLEAN_CHECKOUT_PATH_SET=PASS",
 ].join("\n"));
