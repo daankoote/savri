@@ -2144,3 +2144,29 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   Edge or hosted authority changed.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-09-13 — Add App workflow e-mail foundation locally
+
+- Added a separate App-owned workflow e-mail outbox: immutable closed-template
+  intents, mutable delivery state and immutable minimized delivery attempts.
+  Legacy `outbound_emails` and `mail-worker` remain frozen.
+- Kept enqueue owner-only for later transactionally coupled domain RPCs.
+  `service_role` can only claim and complete frozen deliveries; browser roles
+  have no function or direct table access.
+- Added the code-versioned plain-text
+  `information-request-created-customer-nl-v1` proof template with exactly three
+  validated variables. It excludes the question text, free subject/body and
+  HTML, and freezes historical output before delivery.
+- Added five-minute leases, expired-lease recovery, bounded back-off, at most
+  five attempts, deterministic provider idempotency and safe failure classes.
+  Recipient address, mail body and raw provider responses are excluded from
+  general audit.
+- Reused the local SMTP primitive for signing OTP without changing that
+  transport contract. The new internal worker enables only strict-local
+  Mailpit; hosted provider, scheduler, secrets and all business-flow activation
+  remain disabled.
+- Disposable database and worker proofs plus migration-chain/schema parity are
+  local only. Hosted delivery, production configuration and deployment remain
+  unproven.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

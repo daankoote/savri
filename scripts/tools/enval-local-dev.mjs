@@ -62,6 +62,7 @@ const CURRENT_EDGE_ENTRYPOINTS = Object.freeze([
   "supabase/functions/api-app-customer-correction-handoff/index.ts",
   "supabase/functions/api-app-customer-correction-signing-challenge/index.ts",
   "supabase/functions/api-app-customer-correction-signing-finalize/index.ts",
+  "supabase/functions/workflow-email-worker/index.ts",
 ]);
 
 function safeDiagnostic(value) {

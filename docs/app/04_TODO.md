@@ -824,7 +824,13 @@ CUSTOMER04C qualification and downstream foundations remain exactly
 None of these targets is inferred from CUSTOMER04C source, parser fixtures,
 customer confirmation, the green Integration gate or local database state.
 
-- Define review email notification contract.
+- [x] Add the App-owned workflow-email foundation with immutable frozen intent,
+      separate attempts, owner-only closed-template enqueue, bounded leasing and
+      strict-local Mailpit proof. No business event is wired yet.
+- Wire information-request mail only after customer/workforce recipient,
+  canonical portal-origin and sender/reply-to authority are explicitly approved.
+- Define correction cover-message and review email notification contract on the
+  shared foundation.
 - Define kWh periodic lifecycle.
 - Define consent renewal/version-expiry lifecycle.
 - Zakelijke/VvE document requirements.

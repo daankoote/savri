@@ -66,6 +66,9 @@ Legacy Supabase functions are frozen.
 - `api-dossier-*` remains fallback/legacy only.
 - `api-lead-submit` remains legacy lead/contact intake only.
 - `mail-worker`, `retention-worker`, and `locked-unpaid-reminder-worker` remain legacy worker/fallback only.
+- `workflow-email-worker` is the separate App-owned internal worker. Its
+  `app_workflow_email_*` tables and owner/service-only RPCs do not extend or
+  reuse legacy `outbound_emails`.
 - Do not add new `/app` behavior to legacy functions.
 - Do not reuse legacy dossier sessions as app account auth.
 - Do not write app audit/idempotency to legacy `dossier_audit_events` or `idempotency_keys`.

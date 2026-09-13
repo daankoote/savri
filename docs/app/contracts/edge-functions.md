@@ -15,6 +15,7 @@ Current app endpoints:
 - `api-app-document-upload-confirm`
 - `api-app-document-download-url`
 - `api-app-document-withdraw-current`
+- `workflow-email-worker` (internal; no browser route)
 
 Future app endpoints must be documented before implementation.
 
@@ -56,6 +57,7 @@ Do not use legacy `dossier_sessions` as app account auth.
 | `api-app-document-upload-confirm` | CURRENT / LOCAL PROOF | CORS / META / IDEM / AUD / AUTH / SRV | Confirms stored object and creates immutable document version. Supports immutable replacement. |
 | `api-app-document-download-url` | CURRENT / LOCAL PROOF | CORS / META / AUTH / SRV | Pure authenticated read. Resolves current document server-side and returns a short-lived signed download URL. No `Idempotency-Key`; successful reads do not write recurring audit events. |
 | `api-app-document-withdraw-current` | CURRENT / LOCAL PROOF | CORS / META / IDEM / AUD / AUTH / SRV | Authenticated service-role mutation. Atomically withdraws current version, clears slot current pointers, preserves evidence, and does not hard-delete storage. |
+| `workflow-email-worker` | CURRENT FOUNDATION / LOCAL PROOF | INTERNAL / SRV / LEASE | Internal worker only. A service-role bearer may claim and complete already-frozen App workflow deliveries. Local Mailpit is the only enabled transport; hosted transport and scheduling are disabled. It cannot enqueue or choose recipients, templates, subjects or bodies. |
 
 `api-app-auth-bootstrap` uses an exceptional but proven database boundary:
 
@@ -147,6 +149,7 @@ Current app classification:
 
 - CORE: `api-app-signup-submit`, `api-app-auth-bootstrap`, `api-app-dashboard-get`, `api-app-document-upload-url`, `api-app-document-upload-confirm`, `api-app-document-download-url`, `api-app-document-withdraw-current`
 - UTILITY: none currently in the app namespace
+- INTERNAL WORKER: `workflow-email-worker`
 
 Do not claim a future endpoint is CURRENT before it exists and is proven.
 

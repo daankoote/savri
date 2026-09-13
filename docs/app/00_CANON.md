@@ -448,6 +448,9 @@ Current technical primitives retained as proven or partially proven where code/p
 - `api-app-document-download-url`
 - `api-app-document-withdraw-current`
 - `api-app-dashboard-get`
+- App-owned workflow e-mail foundation with immutable closed-template intent,
+  separately leased delivery state, append-only attempts, owner-only enqueue,
+  service-role-only claim/completion and strict-local Mailpit transport
 - no legacy dossier dependency in app endpoints
 - provider-neutral managed and static tenant resolution behind
   `TenantResolverPort` / `TenantDataPlaneLocator`
@@ -464,6 +467,12 @@ Current technical primitives retained as proven or partially proven where code/p
   re-resolve or recompute parity
 - server-owned presentation source composition, safe public bootstrap and
   React `PresentationBrandProvider` consumption
+
+No business workflow currently enqueues App workflow e-mail. Supabase Auth
+mail and signing OTP transport remain separate; legacy `outbound_emails` and
+`mail-worker` remain frozen. Hosted provider, scheduler, sender/domain
+configuration, secrets, deployment and delivery are not proven. The exact
+foundation contract is owned by `docs/app/architecture/workflow-email.md`.
 
 These white-label foundations are CURRENT PROVEN LOCAL through TF02-C / commit
 `8480b8f`. TF01 supplies the fixed-plane execution binding. TF02-B adds the

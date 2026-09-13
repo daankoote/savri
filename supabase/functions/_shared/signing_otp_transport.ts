@@ -2,6 +2,7 @@ import {
   isLocalSupabaseRuntime,
   type ServerRuntimeEnvironment,
 } from "./local_supabase_runtime.ts";
+import { sendLocalPlainTextMail } from "./local_mailpit_smtp.ts";
 
 export type SigningOtpDeliveryRequest = {
   challengeReference: string;
@@ -32,30 +33,6 @@ export interface SigningOtpTransportPort {
   ): Promise<SigningOtpDeliveryResult>;
 }
 
-async function readSmtpReply(conn: Deno.Conn): Promise<number> {
-  const buffer = new Uint8Array(2048);
-  let text = "";
-  for (let reads = 0; reads < 8; reads += 1) {
-    const count = await conn.read(buffer);
-    if (count === null) break;
-    text += new TextDecoder().decode(buffer.subarray(0, count));
-    const lines = text.split("\r\n").filter(Boolean);
-    const last = lines.at(-1) || "";
-    if (/^\d{3} /.test(last)) return Number(last.slice(0, 3));
-  }
-  return 0;
-}
-
-async function smtpCommand(
-  conn: Deno.Conn,
-  command: string,
-  expected: number[],
-): Promise<void> {
-  await conn.write(new TextEncoder().encode(`${command}\r\n`));
-  const status = await readSmtpReply(conn);
-  if (!expected.includes(status)) throw new Error("smtp_delivery_failed");
-}
-
 export class LocalMailpitSigningOtpTransportAdapter
   implements SigningOtpTransportPort {
   readonly transportId = "local_mailpit_v1";
@@ -69,28 +46,16 @@ export class LocalMailpitSigningOtpTransportAdapter
   async deliver(
     request: SigningOtpDeliveryRequest,
   ): Promise<SigningOtpDeliveryResult> {
-    let conn: Deno.Conn | null = null;
-    try {
-      conn = await Deno.connect({ hostname: this.host, port: this.port });
-      const greeting = await readSmtpReply(conn);
-      if (greeting !== 220) throw new Error("smtp_unavailable");
-      await smtpCommand(conn, "EHLO enval.local", [250]);
-      await smtpCommand(conn, `MAIL FROM:<${this.sender}>`, [250]);
-      await smtpCommand(conn, `RCPT TO:<${request.deliveryTarget}>`, [
-        250,
-        251,
-      ]);
-      await smtpCommand(conn, "DATA", [354]);
-      const purpose = request.templateVersion ===
-          "customer-correction-signing-otp-nl-v1"
-        ? "je correctie op je ENVAL-dossier te ondertekenen"
-        : "je ENVAL-aanmelding te ondertekenen";
-      const body = [
-        `From: ENVAL <${this.sender}>`,
-        `To: ${request.deliveryTarget}`,
-        "Subject: Je ENVAL ondertekencode",
-        "Content-Type: text/plain; charset=UTF-8",
-        "",
+    const purpose = request.templateVersion ===
+        "customer-correction-signing-otp-nl-v1"
+      ? "je correctie op je ENVAL-dossier te ondertekenen"
+      : "je ENVAL-aanmelding te ondertekenen";
+    const result = await sendLocalPlainTextMail(this.host, this.port, {
+      sender: this.sender,
+      senderName: "ENVAL",
+      recipient: request.deliveryTarget,
+      subject: "Je ENVAL ondertekencode",
+      body: [
         `Gebruik deze eenmalige code om ${purpose}:`,
         "",
         request.secretCode,
@@ -98,27 +63,22 @@ export class LocalMailpitSigningOtpTransportAdapter
         "De code verloopt binnen tien minuten. Deel deze code niet.",
         "",
         `Referentie: ${request.challengeReference}`,
-      ].join("\r\n").replaceAll("\r\n.", "\r\n..");
-      await smtpCommand(conn, `${body}\r\n.`, [250]);
-      await smtpCommand(conn, "QUIT", [221]);
+      ].join("\r\n"),
+    });
+    if (result.accepted) {
       return {
         delivered: true,
         transportId: this.transportId,
         providerDeliveryReference: `mailpit:${request.challengeReference}`,
       };
-    } catch (_error) {
-      return {
-        delivered: false,
-        transportId: this.transportId,
-        safeFailureCode: conn ? "delivery_failed" : "transport_unavailable",
-      };
-    } finally {
-      try {
-        conn?.close();
-      } catch (_error) {
-        // no-op
-      }
     }
+    return {
+      delivered: false,
+      transportId: this.transportId,
+      safeFailureCode: result.safeFailureCode === "delivery_ambiguous"
+        ? "delivery_failed"
+        : result.safeFailureCode,
+    };
   }
 }
 

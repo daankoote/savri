@@ -310,8 +310,7 @@ export const TENANT_ENVAL_MIGRATION_CHAIN = Object.freeze({
     }),
     Object.freeze({
       version: "20260912072225",
-      path:
-        "supabase/migrations/20260912072225_app_audit_events_acl_fix.sql",
+      path: "supabase/migrations/20260912072225_app_audit_events_acl_fix.sql",
       sha256:
         "d93aa46ecd02c225dea94cf0cad19ec6091913b58fc25e3f54013bfcad554f05",
     }),
@@ -342,6 +341,13 @@ export const TENANT_ENVAL_MIGRATION_CHAIN = Object.freeze({
         "supabase/migrations/20260912121643_app_customer_information_request_history_v1.sql",
       sha256:
         "3706f7cd040e1740cf8f42686f3184399f13b695f586069a5dde60142f97d452",
+    }),
+    Object.freeze({
+      version: "20260913161612",
+      path:
+        "supabase/migrations/20260913161612_app_workflow_email_foundation_v1.sql",
+      sha256:
+        "1371c10c30d96130aad748198cda6dc1b6e02637c568e1f0eb7f6c71768408a2",
     }),
   ]),
   currentPresentAppMigrations: Object.freeze([
