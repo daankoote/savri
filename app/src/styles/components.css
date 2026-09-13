@@ -2194,8 +2194,15 @@ button:not(:disabled):active {
 }
 
 .evidence-review-section__body--open {
-  grid-template-columns: minmax(0, 1.08fr) minmax(280px, 0.92fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
+}
+
+.evidence-review-section__body--open .status-pill {
+  max-width: 100%;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .fact-table--evidence-review .fact-table__header,
@@ -2461,10 +2468,6 @@ button:not(:disabled):active {
 }
 
 @media (max-width: 760px) {
-  .evidence-review-section__body--open {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .evidence-review-preview-frame {
     min-height: 520px;
   }

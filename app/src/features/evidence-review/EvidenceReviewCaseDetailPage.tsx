@@ -424,6 +424,14 @@ function EvidenceReviewSection({
           open ? " evidence-review-section__body--open" : ""
         }`}
       >
+        {open
+          ? (
+            <EvidenceReviewPreviewPane
+              onRetry={() => void preview.retry()}
+              state={preview.state}
+            />
+          )
+          : null}
         <EvidenceFacts
           draft={review.state.decisions}
           editable={review.editable}
@@ -436,14 +444,6 @@ function EvidenceReviewSection({
           submitting={review.state.submitting}
           subjects={subjects}
         />
-        {open
-          ? (
-            <EvidenceReviewPreviewPane
-              onRetry={() => void preview.retry()}
-              state={preview.state}
-            />
-          )
-          : null}
       </div>
     </article>
   );

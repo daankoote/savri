@@ -24,6 +24,7 @@ import {
 } from "./evidenceReviewDetailClient.ts";
 import {
   createEvidenceReviewPreviewSession,
+  EvidenceReviewPreviewPane,
   type EvidenceReviewPreviewState,
 } from "./EvidenceReviewPreviewPane.tsx";
 import { loadEvidenceReviewCaseDetailOnce } from "./useEvidenceReviewCaseDetail.ts";
@@ -257,6 +258,33 @@ assert(
 );
 
 const readyHtml = detailHtml({ status: "ready", value: FIXTURE, error: null });
+const openPreviewHtml = renderToStaticMarkup(
+  <EvidenceReviewPreviewPane
+    onRetry={noop}
+    state={{
+      status: "ready",
+      selection: {
+        evidenceVersionRef: ENERGY_VERSION,
+        label: "Energiedocument",
+      },
+      blobUrl: "blob:proof-document",
+      filename: "proof.pdf",
+    }}
+  />,
+);
+const unavailablePreviewHtml = renderToStaticMarkup(
+  <EvidenceReviewPreviewPane
+    onRetry={noop}
+    state={{
+      status: "error",
+      selection: {
+        evidenceVersionRef: ENERGY_VERSION,
+        label: "Energiedocument",
+      },
+      message: "Het document is niet beschikbaar.",
+    }}
+  />,
+);
 assert(
   readyHtml.includes(CASE_REF) &&
     readyHtml.includes("ENVAL beoordelen") &&
@@ -269,9 +297,20 @@ assert(
     !readyHtml.includes("Aangegeven dossiercontext") &&
     !readyHtml.includes(">Bewijsstukken<") &&
     !readyHtml.includes("Actuele gegevens uit het geautoriseerde dossier.") &&
+    !readyHtml.includes("evidence-review-section__body--open") &&
     !readyHtml.includes("Documentweergave") &&
     !readyHtml.includes("Pilotnaam") && !readyHtml.includes("Pilotadres"),
   "Q04_pilot_detail_or_two_evidence_cards_invalid",
+);
+assert(
+  openPreviewHtml.includes("evidence-review-preview-pane") &&
+    openPreviewHtml.includes("evidence-review-preview-frame") &&
+    openPreviewHtml.includes("blob:proof-document") &&
+    unavailablePreviewHtml.includes('role="alert"') &&
+    unavailablePreviewHtml.includes("Document niet beschikbaar") &&
+    unavailablePreviewHtml.includes("Het document is niet beschikbaar.") &&
+    unavailablePreviewHtml.includes("Opnieuw proberen"),
+  "Q04a_open_or_unavailable_preview_presentation_invalid",
 );
 assert(
   readyHtml.includes("EAN") && readyHtml.includes("871234567890123456") &&
@@ -1579,6 +1618,16 @@ assert(
     componentsCss.includes(".portal-card-compact") &&
     componentsCss.includes(".evidence-review-section__body--open") &&
     componentsCss.includes("grid-template-columns: minmax(0, 1fr)") &&
+    !componentsCss.includes(
+      "grid-template-columns: minmax(0, 1.08fr) minmax(280px, 0.92fr)",
+    ) &&
+    detailSource.indexOf("<EvidenceReviewPreviewPane") <
+      detailSource.indexOf("<EvidenceFacts") &&
+    componentsCss.includes(
+      ".evidence-review-section__body--open .status-pill",
+    ) &&
+    componentsCss.includes("white-space: normal") &&
+    componentsCss.includes("overflow-wrap: anywhere") &&
     componentsCss.includes(".evidence-review-preview-frame") &&
     componentsCss.includes(".fact-review-choice--selected") &&
     componentsCss.includes(".fact-review-correction-row") &&
