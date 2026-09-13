@@ -1,5 +1,9 @@
 import type { MouseEvent } from "react";
-import { usePresentationBrand } from "../presentation/PresentationBrandProvider";
+import {
+  type AuthenticatedPresentationSurface,
+  projectAuthenticatedSurfaceIdentity,
+  usePresentationBrand,
+} from "../presentation/PresentationBrandProvider";
 import type {
   AppSurface,
   SurfaceNavigationItem,
@@ -16,6 +20,7 @@ const publicNavigation = [
 ] satisfies readonly SurfaceNavigationItem[];
 
 type AppHeaderProps = {
+  authenticatedIdentitySurface?: AuthenticatedPresentationSurface;
   currentPath: string;
   navigate: (href: string) => void;
   navigation?: readonly SurfaceNavigationItem[];
@@ -35,12 +40,23 @@ function isActiveNavItem(href: string, currentPath: string) {
 }
 
 export function AppHeader({
+  authenticatedIdentitySurface,
   currentPath,
   navigate,
   navigation = publicNavigation,
   surface = "public",
 }: AppHeaderProps) {
   const presentation = usePresentationBrand();
+  const authenticatedIdentity = authenticatedIdentitySurface
+    ? projectAuthenticatedSurfaceIdentity(
+      presentation,
+      authenticatedIdentitySurface,
+    )
+    : null;
+  const organizationName = authenticatedIdentity?.organizationName ??
+    presentation.displayName;
+  const contextLabel = authenticatedIdentity?.contextLabel ??
+    presentation.tagline;
   const handleClick =
     (href: string) => (event: MouseEvent<HTMLAnchorElement>) => {
       event.preventDefault();
@@ -53,17 +69,15 @@ export function AppHeader({
         <a
           className="brand-mark"
           href="/"
-          aria-label={`${presentation.displayName} home`}
+          aria-label={`${organizationName} home`}
           onClick={handleClick("/")}
         >
           <span className="brand-symbol" aria-hidden="true">
-            {presentation.shortMark}
+            {authenticatedIdentity?.shortMark ?? presentation.shortMark}
           </span>
           <span>
-            <strong>{presentation.displayName}</strong>
-            {presentation.tagline
-              ? <small>{presentation.tagline}</small>
-              : null}
+            <strong>{organizationName}</strong>
+            {contextLabel ? <small>{contextLabel}</small> : null}
           </span>
         </a>
 

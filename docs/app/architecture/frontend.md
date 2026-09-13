@@ -168,6 +168,16 @@ The CURRENT local operator shell renders one reusable exact attribution:
 attribution later. It is platform attribution only and must not imply legal,
 operator, controller, contracting-party, or verifier responsibility.
 
+Authenticated surface identity is a presentation concern, not authorization.
+The customer sidebar and admitted tenant-workforce header derive their
+organization name and mark only from the server-resolved presentation provider,
+then add the fixed context label `Klantportaal` or `Dossierbeheer`. They do not
+render the public tagline. The operator label is composed only inside the
+existing server-authorized route guard. The current operator context exposes no
+authoritative ENVAL-platform-actor distinction; `ENVAL · Beheerconsole` remains
+TARGET until such authority exists and must not be inferred from route, role,
+e-mail address or brand text.
+
 ## Routes And Pages
 
 The `/app` frontend uses lightweight client-side routing for now.

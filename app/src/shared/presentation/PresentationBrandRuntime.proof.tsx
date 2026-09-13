@@ -143,6 +143,31 @@ function renderConsumers(
   );
 }
 
+function renderAuthenticatedConsumers(
+  presentation: ReturnType<typeof projectPresentationBrand>,
+) {
+  return renderToStaticMarkup(
+    <PresentationBrandProvider presentation={presentation}>
+      <AppHeader
+        authenticatedIdentitySurface="tenant_operator"
+        currentPath="/beheer"
+        navigate={() => undefined}
+        navigation={[]}
+        surface="tenant_operator"
+      />
+      <AuthProvider>
+        <DashboardSidebar
+          activeSection="active"
+          applications={[]}
+          currentCaseReference={null}
+          navigate={() => undefined}
+          onSelectSection={() => undefined}
+        />
+      </AuthProvider>
+    </PresentationBrandProvider>,
+  );
+}
+
 const managedEnvalReader = managedReader([record()]);
 const managedEnvalComposition = buildServerOwnedPresentationSourceComposition(
   environment({
@@ -206,6 +231,10 @@ assert(
 
 const envalHtml = renderConsumers(managedEnval);
 const syntheticHtml = renderConsumers(managedSynthetic);
+const authenticatedEnvalHtml = renderAuthenticatedConsumers(managedEnval);
+const authenticatedSyntheticHtml = renderAuthenticatedConsumers(
+  managedSynthetic,
+);
 assert(
   envalHtml.includes("ENVAL") && envalHtml.includes(">E<") &&
     envalHtml.includes("ERE inboekservice") &&
@@ -215,7 +244,7 @@ assert(
 assert(
   syntheticHtml.includes("Example Mobility") &&
     syntheticHtml.includes(">EM<") &&
-    syntheticHtml.includes("Mobility portal") &&
+    syntheticHtml.includes("Klantportaal") &&
     !syntheticHtml.includes("nieuwe ENVAL app"),
   "Q04_synthetic_projection_did_not_reach_consumers",
 );
@@ -436,6 +465,18 @@ assert(
     !clientSource.includes("shortMark ==="),
   "Q18_data_plane_switching_or_brand_business_branch_present",
 );
+assert(
+  authenticatedEnvalHtml.includes("ENVAL") &&
+    authenticatedEnvalHtml.includes("Dossierbeheer") &&
+    authenticatedEnvalHtml.includes("Klantportaal") &&
+    !authenticatedEnvalHtml.includes("ERE inboekservice") &&
+    authenticatedSyntheticHtml.includes("Example Mobility") &&
+    authenticatedSyntheticHtml.includes("Dossierbeheer") &&
+    authenticatedSyntheticHtml.includes("Klantportaal") &&
+    !authenticatedSyntheticHtml.includes("Clean mobility service") &&
+    !authenticatedSyntheticHtml.includes("Mobility portal"),
+  "Q19_authenticated_surface_identity_not_server_bound",
+);
 
-console.log("APP_PRESENTATION_RUNTIME_Q01_Q18=PASS");
+console.log("APP_PRESENTATION_RUNTIME_Q01_Q19=PASS");
 Deno.exit(0);

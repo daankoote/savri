@@ -12,7 +12,10 @@ import {
   projectPresentationBrand,
   validatePresentationBrandConfigV1,
 } from "../../../../platform/runtime/presentation/presentation_brand_config.ts";
-import { PresentationBrandProvider } from "./PresentationBrandProvider.tsx";
+import {
+  PresentationBrandProvider,
+  projectAuthenticatedSurfaceIdentity,
+} from "./PresentationBrandProvider.tsx";
 
 class ProofFailure extends Error {}
 
@@ -80,6 +83,33 @@ function renderConsumerSet(
   );
 }
 
+function renderAuthenticatedConsumerSet(
+  presentation = projectPresentationBrand(
+    ENVAL_PRESENTATION_BRAND_CONFIG_V1,
+  ),
+): string {
+  return renderToStaticMarkup(
+    <PresentationBrandProvider presentation={presentation}>
+      <AppHeader
+        authenticatedIdentitySurface="tenant_operator"
+        currentPath="/beheer"
+        navigate={navigate}
+        navigation={[]}
+        surface="tenant_operator"
+      />
+      <AuthProvider>
+        <DashboardSidebar
+          activeSection="active"
+          applications={[]}
+          currentCaseReference={null}
+          navigate={navigate}
+          onSelectSection={selectSection}
+        />
+      </AuthProvider>
+    </PresentationBrandProvider>,
+  );
+}
+
 function renderTenantPublicPath(
   presentation = projectPresentationBrand(
     ENVAL_PRESENTATION_BRAND_CONFIG_V1,
@@ -130,6 +160,10 @@ const envalHtml = renderConsumerSet();
 const syntheticHtml = renderConsumerSet(
   projectPresentationBrand(syntheticResult.value),
 );
+const authenticatedEnvalHtml = renderAuthenticatedConsumerSet();
+const authenticatedSyntheticHtml = renderAuthenticatedConsumerSet(
+  projectPresentationBrand(syntheticResult.value),
+);
 const tenantPublicHtml = renderTenantPublicPath();
 const customerDashboardHtml = renderCustomerDashboardPath();
 assert(
@@ -142,7 +176,7 @@ assert(
   syntheticHtml.includes("Example Mobility") &&
     syntheticHtml.includes(">EM<") &&
     syntheticHtml.includes("Clean mobility service") &&
-    syntheticHtml.includes("Mobility portal") &&
+    syntheticHtml.includes("Klantportaal") &&
     !syntheticHtml.includes(
       "Deze pagina bestaat nog niet in de nieuwe ENVAL app",
     ),
@@ -159,6 +193,40 @@ assert(
     envalHtml.includes("Aanvragen") && syntheticHtml.includes("Aanvragen") &&
     !envalHtml.includes("History") && !syntheticHtml.includes("Settings"),
   "Q04_auth_or_dashboard_behavior_changed_with_presentation",
+);
+assert(
+  authenticatedEnvalHtml.includes("ENVAL") &&
+    authenticatedEnvalHtml.includes("Dossierbeheer") &&
+    authenticatedEnvalHtml.includes("Klantportaal") &&
+    !authenticatedEnvalHtml.includes("ERE inboekservice"),
+  "Q18_authenticated_enval_surface_identity_invalid",
+);
+assert(
+  authenticatedSyntheticHtml.includes("Example Mobility") &&
+    authenticatedSyntheticHtml.includes(">EM<") &&
+    authenticatedSyntheticHtml.includes("Dossierbeheer") &&
+    authenticatedSyntheticHtml.includes("Klantportaal") &&
+    !authenticatedSyntheticHtml.includes("Clean mobility service") &&
+    !authenticatedSyntheticHtml.includes("Mobility portal"),
+  "Q19_authenticated_tenant_surface_identity_invalid",
+);
+
+const customerIdentity = projectAuthenticatedSurfaceIdentity(
+  projectPresentationBrand(syntheticResult.value),
+  "tenant_customer",
+);
+const workforceIdentity = projectAuthenticatedSurfaceIdentity(
+  projectPresentationBrand(syntheticResult.value),
+  "tenant_operator",
+);
+assert(
+  customerIdentity.organizationName === "Example Mobility" &&
+    customerIdentity.shortMark === "EM" &&
+    customerIdentity.contextLabel === "Klantportaal" &&
+    workforceIdentity.organizationName === "Example Mobility" &&
+    workforceIdentity.shortMark === "EM" &&
+    workforceIdentity.contextLabel === "Dossierbeheer",
+  "Q20_authenticated_surface_projection_invalid",
 );
 
 const [
@@ -180,6 +248,12 @@ const [
   signupShellSource,
   dashboardShellSource,
   layoutSource,
+  operatorOverviewRouteSource,
+  complianceRouteSource,
+  evidenceWorklistRouteSource,
+  evidenceDetailRouteSource,
+  accountRouteSource,
+  operatorContextSource,
 ] = await Promise.all([
   source("app/src/shared/presentation/PresentationBrandProvider.tsx"),
   source("app/src/shared/presentation/PresentationBrandRuntime.tsx"),
@@ -199,6 +273,12 @@ const [
   source("app/src/features/signup/SignupPageShell.tsx"),
   source("app/src/features/dashboard/DashboardPageShell.tsx"),
   source("app/src/styles/layout.css"),
+  source("app/src/pages/OperatorOverviewPage.tsx"),
+  source("app/src/pages/ComplianceWorklistPage.tsx"),
+  source("app/src/pages/EvidenceReviewWorklistPage.tsx"),
+  source("app/src/pages/EvidenceReviewCaseDetailPage.tsx"),
+  source("app/src/pages/AccountPage.tsx"),
+  source("app/src/features/operator/operatorContextClient.ts"),
 ]);
 
 assert(
@@ -327,8 +407,34 @@ assert(
     !sidebarSource.includes("History"),
   "Q17_route_or_customer_navigation_scope_invalid",
 );
+assert(
+  [
+    operatorOverviewRouteSource,
+    complianceRouteSource,
+    evidenceWorklistRouteSource,
+    evidenceDetailRouteSource,
+  ].every((value) =>
+    value.includes('authenticatedIdentitySurface="tenant_operator"') &&
+    value.includes("<OperatorRouteGuard")
+  ) &&
+    !accountRouteSource.includes("authenticatedIdentitySurface") &&
+    headerSource.includes("projectAuthenticatedSurfaceIdentity") &&
+    sidebarSource.includes("projectAuthenticatedSurfaceIdentity") &&
+    providerSource.includes('tenant_customer: "Klantportaal"') &&
+    providerSource.includes('tenant_operator: "Dossierbeheer"'),
+  "Q21_authenticated_identity_composition_or_guard_invalid",
+);
+assert(
+  operatorContextSource.includes('actorType: "tenant_workforce"') &&
+    !operatorContextSource.match(
+      /enval_(?:workforce|platform)|platform_actor/,
+    ) &&
+    !providerSource.match(/email|roleName|role_name|location\.pathname/) &&
+    !headerSource.match(/displayName\s*===|organizationName\s*===/),
+  "Q22_unproven_enval_or_browser_identity_heuristic_present",
+);
 
 console.log("CUSTOMER_DASHBOARD_ATTRIBUTION_COUNT=1");
 console.log("TENANT_PUBLIC_ATTRIBUTION_COUNT=1");
-console.log("PRESENTATION_BRAND_CONSUMERS_Q01_Q17=PASS");
+console.log("PRESENTATION_BRAND_CONSUMERS_Q01_Q22=PASS");
 Deno.exit(0);

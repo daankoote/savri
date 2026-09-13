@@ -135,6 +135,15 @@ their later redirect/removal is separately bounded. Ordinary workforce gains
 no implicit `platform_support.request`. The shared operator shell renders the
 exact attribution `Powered by ENVAL` once.
 
+Authenticated customer and tenant-workforce shells use the existing
+server-resolved presentation display name and mark as their organization
+identity. Their fixed surface labels are respectively `Klantportaal` and
+`Dossierbeheer`; the public presentation tagline is not rendered on those
+authenticated shells. The current workforce context proves only
+`tenant_workforce` and does not distinguish an ENVAL platform actor, so
+`Beheerconsole` remains unimplemented rather than inferred from route, role,
+e-mail or presentation copy.
+
 The local status is backed by focused operator-context Q01-Q14, overview Q01-Q10,
 evidence worklist Q01-Q19, unchanged compliance/evidence authorization
 regressions, served allow/deny evidence, a green production build, guarded

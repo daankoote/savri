@@ -4,7 +4,10 @@ import type { AppNavigate } from "../../routes/types";
 import { clearDashboardReadCache } from "./dashboardReadCache";
 import { clearSignupIntakeSession } from "../signup/signupIntakeCapabilityStore";
 import { clearSignupSubmissionReceipt } from "../signup/signupSubmissionReceiptStore";
-import { usePresentationBrand } from "../../shared/presentation/PresentationBrandProvider";
+import {
+  projectAuthenticatedSurfaceIdentity,
+  usePresentationBrand,
+} from "../../shared/presentation/PresentationBrandProvider";
 import type { DashboardDossierSummary } from "./dashboardTypes";
 import {
   buildDashboardApplicationRoute,
@@ -36,6 +39,10 @@ export function DashboardSidebar({
 }: DashboardSidebarProps) {
   const auth = useAuth();
   const presentation = usePresentationBrand();
+  const identity = projectAuthenticatedSurfaceIdentity(
+    presentation,
+    "tenant_customer",
+  );
 
   function handleLogout() {
     clearDashboardReadCache();
@@ -58,13 +65,13 @@ export function DashboardSidebar({
     >
       <div className="portal-sidebar-brand">
         <span className="brand-symbol" aria-hidden="true">
-          {presentation.shortMark}
+          {identity.shortMark}
         </span>
         {!collapsed
           ? (
             <div>
-              <strong>{presentation.displayName}</strong>
-              <small>{presentation.productLabel}</small>
+              <strong>{identity.organizationName}</strong>
+              <small>{identity.contextLabel}</small>
             </div>
           )
           : null}
@@ -93,7 +100,6 @@ export function DashboardSidebar({
         ? (
           <>
             <div className="portal-user-block">
-              <strong>{presentation.productLabel}</strong>
               <span>
                 {applications.length
                   ? `${applications.length} aanvraag${

@@ -2112,3 +2112,19 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   Hosted rollout and Daan's final Firefox history acceptance remain open.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-09-13 — Clarify authenticated surface identity locally
+
+- Reused the server-resolved presentation organization and mark for the
+  authenticated customer sidebar and admitted tenant-workforce header.
+- Added the fixed context labels `Klantportaal` and `Dossierbeheer`; the public
+  `ERE inboekservice` tagline is no longer rendered on those authenticated
+  shells. Public and Auth-route presentation remain unchanged.
+- Kept surface identity presentation-only and downstream of existing guards.
+  No Auth, tenant, R7, capability, route, database, Edge or workflow authority
+  changed.
+- The current workforce context does not prove an ENVAL platform actor.
+  `Beheerconsole` therefore remains unimplemented instead of being inferred
+  from route, role, e-mail address or brand copy.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

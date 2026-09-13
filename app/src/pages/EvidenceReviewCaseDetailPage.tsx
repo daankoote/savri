@@ -26,6 +26,7 @@ export function EvidenceReviewCaseDetailPage({
         <SurfaceShell
           navigation={
             <AppHeader
+              authenticatedIdentitySurface="tenant_operator"
               currentPath={currentPath}
               navigate={navigate}
               navigation={buildOperatorNavigation(context, currentPath)}

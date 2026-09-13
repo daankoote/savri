@@ -18,6 +18,7 @@ export function ComplianceWorklistPage(
         <SurfaceShell
           navigation={
             <AppHeader
+              authenticatedIdentitySurface="tenant_operator"
               currentPath={currentPath}
               navigate={navigate}
               navigation={buildOperatorNavigation(context, currentPath)}

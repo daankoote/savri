@@ -58,6 +58,12 @@ implementation.
   `820x1180` and `375x812` show no horizontal overflow, console/runtime errors
   or product writes. Public and tenant-public signup navigation remain
   unchanged; broader public/tenant IA and responsive navigation are separate.
+- DONE / CURRENT PROVEN LOCAL — `SURFACE_IDENTITY_V1`: authenticated customer
+  and tenant-workforce shells show the server-resolved organization with the
+  fixed context label `Klantportaal` or `Dossierbeheer`; the public
+  `ERE inboekservice` tagline is absent from those shells. The current
+  workforce contract has no authoritative ENVAL-platform-actor distinction,
+  so `Beheerconsole` remains TARGET and is not inferred in React.
 - DONE / CURRENT PROVEN LOCAL — `SL01-C`: the server-resolved immutable signing
   presentation receipt binds tenant, Auth actor, intake and selected
   signing-material/legal provenance. Presentation is not acceptance; explicit
