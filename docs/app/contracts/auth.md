@@ -143,9 +143,12 @@ CURRENT / LOCAL PROOF:
 - Bootstrap does not create a customer, identity, dossier, or Auth session.
 - Bootstrap does not automatically merge customers or identities.
 - Ambiguous identity state and identities bound to another Auth user fail safely.
-- `/account` is implemented for customer account creation and sign-in;
+- `/inloggen` is implemented as the only canonical customer account creation
+  and sign-in route; `/account` replace-redirects to exactly `/inloggen`
+  without forwarding query or fragment input;
   `/account/wachtwoord-vergeten`, `/account/nieuw-wachtwoord` and
-  `/account/verificatiemail-opnieuw` reuse the same account surface.
+  `/account/verificatiemail-opnieuw` reuse the same server-resolved Auth
+  presentation with the fixed context label `Inloggen`.
 - The frontend uses one shared Supabase browser client singleton.
 - Frontend session initialization, Auth state subscription, session restoration, and logout are implemented locally.
 - The frontend calls `api-app-auth-bootstrap` after a verified Auth session and deduplicates bootstrap calls for the same session.

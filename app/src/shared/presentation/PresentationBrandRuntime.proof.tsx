@@ -149,11 +149,18 @@ function renderAuthenticatedConsumers(
   return renderToStaticMarkup(
     <PresentationBrandProvider presentation={presentation}>
       <AppHeader
-        authenticatedIdentitySurface="tenant_operator"
         currentPath="/beheer"
+        identitySurface="tenant_operator"
         navigate={() => undefined}
         navigation={[]}
         surface="tenant_operator"
+      />
+      <AppHeader
+        currentPath="/inloggen"
+        identitySurface="public_auth"
+        navigate={() => undefined}
+        navigation={[]}
+        surface="tenant_customer"
       />
       <AuthProvider>
         <DashboardSidebar
@@ -448,7 +455,8 @@ assert(
 );
 assert(
   appSource.includes('"/aanmelden"') &&
-    appSource.includes("AUTH_ACCOUNT_ROUTE") &&
+    appSource.includes("AUTH_ACCOUNT_COMPATIBILITY_ROUTE") &&
+    appSource.includes("AUTH_LOGIN_ROUTE") &&
     appSource.includes('"/dashboard"') &&
     authProviderSource.includes('setStatus("signed_out")') &&
     authProviderSource.includes('setStatus("ready")') &&
@@ -467,10 +475,12 @@ assert(
 );
 assert(
   authenticatedEnvalHtml.includes("ENVAL") &&
+    authenticatedEnvalHtml.includes("Inloggen") &&
     authenticatedEnvalHtml.includes("Dossierbeheer") &&
     authenticatedEnvalHtml.includes("Klantportaal") &&
     !authenticatedEnvalHtml.includes("ERE inboekservice") &&
     authenticatedSyntheticHtml.includes("Example Mobility") &&
+    authenticatedSyntheticHtml.includes("Inloggen") &&
     authenticatedSyntheticHtml.includes("Dossierbeheer") &&
     authenticatedSyntheticHtml.includes("Klantportaal") &&
     !authenticatedSyntheticHtml.includes("Clean mobility service") &&

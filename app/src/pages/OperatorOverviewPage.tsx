@@ -18,8 +18,8 @@ export function OperatorOverviewPage(
         <SurfaceShell
           navigation={
             <AppHeader
-              authenticatedIdentitySurface="tenant_operator"
               currentPath={currentPath}
+              identitySurface="tenant_operator"
               navigate={navigate}
               navigation={buildOperatorNavigation(context, currentPath)}
               surface="tenant_operator"

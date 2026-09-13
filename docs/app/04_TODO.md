@@ -50,8 +50,9 @@ implementation.
   admin/workforce management UI, ENVAL Control Console, Verifier Console,
   tenant #2, multi-tenant switching, production deployment and later
   `/intern/*` redirect/removal cleanup.
-- DONE / CURRENT PROVEN LOCAL — `F01`: AUTH_SHELL_F01 gives all five Auth/account
-  routes one minimal server-resolved tenant-branded header without public,
+- DONE / CURRENT PROVEN LOCAL — `F01`: AUTH_SHELL_F01 gives the canonical Auth
+  route and three recovery/resend routes one minimal server-resolved
+  tenant-branded header without public,
   customer-portal or operator navigation. `/inloggen` retains its validated
   operator-return audience without exposing protected navigation before
   authority. Focused composition proof and browser evidence at `1440x900`,
@@ -64,6 +65,13 @@ implementation.
   `ERE inboekservice` tagline is absent from those shells. The current
   workforce contract has no authoritative ENVAL-platform-actor distinction,
   so `Beheerconsole` remains TARGET and is not inferred in React.
+- DONE / CURRENT PROVEN LOCAL — `PUBLIC_AUTH_IDENTITY_V1`: `/inloggen` is the
+  only canonical login route; `/account` replace-redirects to it without query
+  or fragment forwarding. The Auth journey uses the server-resolved
+  presentation organization and mark with the fixed label `Inloggen`, never
+  the public `ERE inboekservice` tagline. Internal login links, logout paths,
+  confirmation callbacks and routeguards target `/inloggen`; only the existing
+  allowlisted operator `returnTo` contract remains accepted.
 - DONE / CURRENT PROVEN LOCAL — `SL01-C`: the server-resolved immutable signing
   presentation receipt binds tenant, Auth actor, intake and selected
   signing-material/legal provenance. Presentation is not acceptance; explicit
@@ -244,11 +252,13 @@ controller/processor allocation requires legal review.
 - Atomic confirm/reject RPCs are locally proven.
 - PDF invoice parser adapter and local PDF preview exist for frontend-only preview.
 - Modular frontend Auth/session layer is locally proven.
-- `/account` supports account creation and login locally.
+- `/inloggen` supports account creation and login locally; `/account` is only
+  a compatibility replace-redirect.
 - Frontend session restoration and logout are locally proven.
 - Frontend bootstrap API wiring to `api-app-auth-bootstrap` is locally proven.
 - Dashboard route guard is locally proven.
-- Auth/Supabase frontend code is lazy-loaded for `/account` and `/dashboard`.
+- Auth/Supabase frontend code is lazy-loaded for `/inloggen`, recovery/resend
+  and `/dashboard`.
 - `api-app-dashboard-get` is locally proven.
 - CUSTOMER_PORTAL_IA_V1_CURRENT is CURRENT / LOCAL PROOF: `/dashboard`
   replace-redirects to `/dashboard/aanvragen`; the list and stable

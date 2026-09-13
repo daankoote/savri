@@ -2128,3 +2128,19 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   from route, role, e-mail address or brand copy.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-09-13 — Canonicalize public Auth identity and login route locally
+
+- Made `/inloggen` the only canonical login route. `/account` now
+  replace-redirects to exactly `/inloggen` without forwarding query or fragment
+  input; internal login links, logout paths, confirmation callbacks and
+  routeguards use the canonical route.
+- Reused the server-resolved presentation organization and mark across login,
+  recovery and verification/resend screens with the fixed context label
+  `Inloggen`. The public `ERE inboekservice` tagline is no longer rendered in
+  the current Auth journey.
+- Preserved the existing allowlisted operator `returnTo` contract and existing
+  customer/workforce post-login destinations. No Auth, tenant, R7, database,
+  Edge or hosted authority changed.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

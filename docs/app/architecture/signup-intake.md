@@ -636,8 +636,9 @@ Current backend contract status:
 - The proven upload backend is separate: `api-app-document-upload-url` and `api-app-document-upload-confirm`.
 - Authenticated dashboard document upload/download/withdrawal wiring is implemented through the reusable document module.
 - Public `/aanmelden` upload wiring remains open.
-- Customer-facing Auth/dashboard bootstrap is implemented through `/account`
-  and the protected dashboard. `/aanmelden` recognizes a retained verified Auth
+- Customer-facing Auth/dashboard bootstrap is implemented through the
+  canonical `/inloggen` route and the protected dashboard. `/account` is only
+  a compatibility replace-redirect. `/aanmelden` recognizes a retained verified Auth
   session but still requires the complete signing contract before promotion.
 
 Later backend review must still decide how to:

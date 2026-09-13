@@ -54,7 +54,7 @@ Current write v3 intentionally does not create document uploads, storage objects
 Current customer Auth bootstrap sequence:
 
 1. Signup write v3 creates the pre-auth customer, identity, dossier, location, charger, document-slot, and legal-acceptance structure.
-2. The customer creates an account or signs in through `/account`.
+2. The customer creates an account or signs in through `/inloggen`.
 3. The frontend gets a verified Supabase Auth session and calls `api-app-auth-bootstrap`.
 4. `api-app-auth-bootstrap` derives the verified Auth user ID and verified email server-side.
 5. Bootstrap binds or resolves the existing eligible `app_customer_identity`.
@@ -435,7 +435,8 @@ ENVAL sees internally:
 Current Auth/session direction:
 
 - Supabase Auth is the current customer session layer.
-- `/account` provides account creation and login.
+- `/inloggen` provides account creation and login; `/account` is only a
+  compatibility replace-redirect.
 - Frontend bootstrap calls `api-app-auth-bootstrap` after a verified session.
 - Dashboard route protection is locally proven.
 - The real factual dashboard projection is locally proven.
@@ -794,7 +795,7 @@ After durable signing, the signing Edge route makes one server-owned promotion
 attempt. A failure leaves signing finalized and locked. Refresh or an explicit
 status retry makes at most one new server-owned attempt with the deterministic
 09C1B idempotency key; there is no polling loop. Only `promoted` shows the CTA
-to the existing `/account` route.
+to the existing `/inloggen` route.
 
 Verified Supabase Auth bootstrap binds the existing promoted identity and
 returns the existing case. The signed branch of `api-app-dashboard-get` reads

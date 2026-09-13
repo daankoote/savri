@@ -7,7 +7,7 @@ import {
 import { useAuth } from "./AuthProvider";
 import { AuthFeedbackPanel, AuthPageLayout, type AuthFeedback } from "./AuthPageLayout";
 import {
-  AUTH_ACCOUNT_ROUTE,
+  AUTH_LOGIN_ROUTE,
   getResendCooldownSeconds,
   PASSWORD_RECOVERY_REQUESTED_MESSAGE,
   RESEND_COOLDOWN_MS,
@@ -76,7 +76,7 @@ export function AuthEmailRequestPage({ kind, navigate }: AuthEmailRequestPagePro
   }
 
   return (
-    <AuthPageLayout action={copy.action} audience={auth.audience} helper={copy.helper}>
+    <AuthPageLayout action={copy.action} helper={copy.helper}>
       <form className="account-form" onSubmit={handleSubmit}>
         <label className="field">
           <span>E-mailadres</span>
@@ -105,7 +105,7 @@ export function AuthEmailRequestPage({ kind, navigate }: AuthEmailRequestPagePro
       <AuthFeedbackPanel feedback={feedback} />
 
       <div className="section-actions">
-        <button className="button button-secondary" onClick={() => navigate(AUTH_ACCOUNT_ROUTE)} type="button">
+        <button className="button button-secondary" onClick={() => navigate(AUTH_LOGIN_ROUTE)} type="button">
           Naar inloggen
         </button>
       </div>

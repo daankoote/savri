@@ -3,7 +3,7 @@ import type { AppNavigate } from "../../routes/types";
 import { useAuth } from "./AuthProvider";
 import { safeAuthError } from "./authErrorMapping";
 import { AuthFeedbackPanel, AuthPageLayout, type AuthFeedback } from "./AuthPageLayout";
-import { AUTH_ACCOUNT_ROUTE, AUTH_PASSWORD_REQUEST_ROUTE } from "./authUxFlow";
+import { AUTH_LOGIN_ROUTE, AUTH_PASSWORD_REQUEST_ROUTE } from "./authUxFlow";
 
 export function PasswordRecoveryPage({ navigate }: { navigate: AppNavigate }) {
   const auth = useAuth();
@@ -46,7 +46,6 @@ export function PasswordRecoveryPage({ navigate }: { navigate: AppNavigate }) {
   return (
     <AuthPageLayout
       action="Nieuw wachtwoord instellen"
-      audience={auth.audience}
       helper="Kies een nieuw wachtwoord voor uw account."
     >
       {auth.status === "initializing" ? (
@@ -94,7 +93,7 @@ export function PasswordRecoveryPage({ navigate }: { navigate: AppNavigate }) {
       ) : null}
 
       <div className="section-actions">
-        <button className="button button-secondary" onClick={() => navigate(AUTH_ACCOUNT_ROUTE)} type="button">
+        <button className="button button-secondary" onClick={() => navigate(AUTH_LOGIN_ROUTE)} type="button">
           Naar inloggen
         </button>
         {unavailable ? (

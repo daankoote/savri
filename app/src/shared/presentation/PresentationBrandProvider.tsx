@@ -4,29 +4,31 @@ import {
   type PublicPresentationBrandV1,
 } from "../../../../platform/runtime/presentation/presentation_brand_config.ts";
 
-export type AuthenticatedPresentationSurface =
+export type PresentationIdentitySurface =
+  | "public_auth"
   | "tenant_customer"
   | "tenant_operator";
 
-export type AuthenticatedSurfaceIdentity = Readonly<{
-  contextLabel: "Klantportaal" | "Dossierbeheer";
+export type PresentationSurfaceIdentity = Readonly<{
+  contextLabel: "Inloggen" | "Klantportaal" | "Dossierbeheer";
   organizationName: string;
   shortMark: string;
 }>;
 
-const AUTHENTICATED_CONTEXT_LABELS = Object.freeze(
+const SURFACE_CONTEXT_LABELS = Object.freeze(
   {
+    public_auth: "Inloggen",
     tenant_customer: "Klantportaal",
     tenant_operator: "Dossierbeheer",
-  } as const satisfies Record<AuthenticatedPresentationSurface, string>,
+  } as const satisfies Record<PresentationIdentitySurface, string>,
 );
 
-export function projectAuthenticatedSurfaceIdentity(
+export function projectPresentationSurfaceIdentity(
   presentation: PublicPresentationBrandV1,
-  surface: AuthenticatedPresentationSurface,
-): AuthenticatedSurfaceIdentity {
+  surface: PresentationIdentitySurface,
+): PresentationSurfaceIdentity {
   return Object.freeze({
-    contextLabel: AUTHENTICATED_CONTEXT_LABELS[surface],
+    contextLabel: SURFACE_CONTEXT_LABELS[surface],
     organizationName: presentation.displayName,
     shortMark: presentation.shortMark,
   });

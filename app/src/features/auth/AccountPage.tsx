@@ -117,7 +117,7 @@ function AccountAccessPage({ navigate }: { navigate: AppNavigate }) {
   }
 
   return (
-    <AuthPageLayout action={copy.action} audience={auth.audience} helper={copy.helper}>
+    <AuthPageLayout action={copy.action} helper={copy.helper}>
       {auth.audience === "customer" ? (
         <div className="mode-tabs" aria-label="Account modus">
           <button

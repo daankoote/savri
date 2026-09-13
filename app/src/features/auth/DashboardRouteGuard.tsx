@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import type { AppNavigate } from "../../routes/types";
 import { useAuth } from "./AuthProvider";
+import { AUTH_LOGIN_ROUTE } from "./authUxFlow";
 import { buildInternalLoginRoute } from "./postLoginNavigation";
 
 type DashboardRouteGuardProps = {
@@ -14,7 +15,7 @@ export function DashboardRouteGuard({ children, navigate, returnTo }: DashboardR
 
   useEffect(() => {
     if (auth.status === "signed_out") {
-      navigate(returnTo ? buildInternalLoginRoute(returnTo) : "/account", {
+      navigate(returnTo ? buildInternalLoginRoute(returnTo) : AUTH_LOGIN_ROUTE, {
         replace: true,
       });
     }
@@ -50,7 +51,7 @@ export function DashboardRouteGuard({ children, navigate, returnTo }: DashboardR
                 <button
                   className="button button-secondary"
                   onClick={() => {
-                    void auth.signOut().then(() => navigate("/account"));
+                    void auth.signOut().then(() => navigate(AUTH_LOGIN_ROUTE));
                   }}
                   type="button"
                 >

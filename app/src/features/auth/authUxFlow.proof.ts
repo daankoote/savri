@@ -1,6 +1,7 @@
 import { mapSupabaseRecoveryError, safeAuthError } from "./authErrorMapping.ts";
 import {
-  AUTH_ACCOUNT_ROUTE,
+  AUTH_ACCOUNT_COMPATIBILITY_ROUTE,
+  AUTH_LOGIN_ROUTE,
   AUTH_PASSWORD_REQUEST_ROUTE,
   AUTH_PASSWORD_UPDATE_ROUTE,
   AUTH_VERIFICATION_RESEND_ROUTE,
@@ -30,7 +31,7 @@ const root = new URL("../../../../", import.meta.url);
 const source = (path: string) => Deno.readTextFile(new URL(path, root));
 
 assert(
-  resolveAuthPageKind(AUTH_ACCOUNT_ROUTE) === "account" &&
+  resolveAuthPageKind(AUTH_LOGIN_ROUTE) === "account" &&
     resolveAuthPageKind(AUTH_PASSWORD_REQUEST_ROUTE) === "password_request" &&
     resolveAuthPageKind(AUTH_PASSWORD_UPDATE_ROUTE) === "password_update" &&
     resolveAuthPageKind(AUTH_VERIFICATION_RESEND_ROUTE) ===
@@ -40,10 +41,10 @@ assert(
 
 assert(
   buildFixedAuthCallbackUrl(
-        "account_confirmation",
-        "https://app.enval.nl/ignored",
-      ) ===
-      "https://app.enval.nl/account" &&
+      "account_confirmation",
+      "https://app.enval.nl/ignored",
+    ) ===
+      "https://app.enval.nl/inloggen" &&
     buildFixedAuthCallbackUrl(
         "password_recovery",
         "https://app.enval.nl/ignored",
@@ -91,6 +92,12 @@ assert(
       AUTH_PASSWORD_UPDATE_ROUTE,
   "Q05_callback_cleanup_or_open_redirect_invalid",
 );
+assert(
+  AUTH_ACCOUNT_COMPATIBILITY_ROUTE === "/account" &&
+    AUTH_LOGIN_ROUTE === "/inloggen",
+  "Q01b_login_and_compatibility_routes_not_distinct",
+);
+
 assert(
   hasPasswordRecoveryCallbackData("#type=recovery&access_token=hidden") &&
     hasPasswordRecoveryCallbackData("type=recovery") &&

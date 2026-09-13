@@ -615,7 +615,7 @@ async function gotoLocal(page, request, route) {
 async function signIn(page, request, login, returnTo = null) {
   const route = returnTo
     ? `/inloggen?returnTo=${encodeURIComponent(returnTo)}`
-    : "/account";
+    : "/inloggen";
   await gotoLocal(page, request, route);
   await page.getByLabel("E-mailadres").fill(login.email);
   await page.getByLabel("Wachtwoord", { exact: true }).fill(login.password);
@@ -712,7 +712,7 @@ async function proveAuthOnlyJourney(page, request) {
 }
 
 async function proveActivationJourney(page, request) {
-  await gotoLocal(page, request, "/account#activeren");
+  await gotoLocal(page, request, "/inloggen#activeren");
   await page.getByLabel("E-mailadres").fill(request.logins.activation.email);
   await page.getByLabel("Wachtwoord", { exact: true }).fill(
     request.logins.activation.password,

@@ -675,7 +675,7 @@ async function setup() {
     );
     console.log(`FIXTURE_INTAKE_REFERENCE=${state.intakeId}`);
     console.log(
-      "BROWSER_START_URL=http://127.0.0.1:5175/account?returnTo=%2Faanmelden",
+      "BROWSER_START_URL=http://127.0.0.1:5175/inloggen",
     );
     console.log(
       `BROWSER_LOGIN_METHOD=existing local password form; credentials file ${directory}/browser-login.txt`,

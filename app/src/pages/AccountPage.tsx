@@ -15,6 +15,7 @@ export function AccountPage({ currentPath, navigate }: RoutedPageProps) {
       navigation={
         <AppHeader
           currentPath={currentPath}
+          identitySurface="public_auth"
           navigate={navigate}
           navigation={[]}
           surface={surface}

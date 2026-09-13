@@ -373,7 +373,7 @@ Status: CURRENT / LOCAL PROOF for lean frontend Auth/session flow, backend boots
 Current customer sequence:
 
 ```text
-/account
+/inloggen
 → Supabase Auth signup/sign-in
 → verified Auth session
 → api-app-auth-bootstrap
@@ -383,6 +383,9 @@ Current customer sequence:
 → api-app-dashboard-get
 → real customer-safe dashboard projection
 ```
+
+`/account` is retained only as a compatibility replace-redirect to exactly
+`/inloggen`; it forwards no query or fragment input.
 
 Rules:
 

@@ -11,7 +11,8 @@ import {
 import { AuthProvider } from "./AuthProvider.tsx";
 import type { AuthAudience } from "./authTypes.ts";
 import {
-  AUTH_ACCOUNT_ROUTE,
+  AUTH_ACCOUNT_COMPATIBILITY_ROUTE,
+  AUTH_LOGIN_ROUTE,
   AUTH_PASSWORD_REQUEST_ROUTE,
   AUTH_PASSWORD_UPDATE_ROUTE,
   AUTH_VERIFICATION_RESEND_ROUTE,
@@ -83,8 +84,7 @@ function renderAccountRoute(
 }
 
 const authRoutes = [
-  { path: AUTH_ACCOUNT_ROUTE, intent: "portal" },
-  { path: "/inloggen", intent: "portal" },
+  { path: AUTH_LOGIN_ROUTE, intent: "portal" },
   { path: AUTH_PASSWORD_REQUEST_ROUTE, intent: "public_request" },
   { path: AUTH_PASSWORD_UPDATE_ROUTE, intent: "password_recovery" },
   { path: AUTH_VERIFICATION_RESEND_ROUTE, intent: "public_request" },
@@ -94,6 +94,10 @@ for (const route of authRoutes) {
   const html = renderAccountRoute(route.path, "customer", route.intent);
   assert(
     html.includes("Tenant Merk") &&
+      html.includes("Inloggen") &&
+      !html.includes("Tenantdienst") &&
+      !html.includes("ERE inboekservice") &&
+      !html.includes("Powered by ENVAL") &&
       html.includes('data-app-surface="tenant_customer"') &&
       !html.includes("<nav"),
     `Q01_auth_route_not_minimal_tenant_header:${route.path}`,
@@ -103,7 +107,8 @@ for (const route of authRoutes) {
 const emptyNavigationHtml = renderToStaticMarkup(
   <PresentationBrandProvider presentation={presentation}>
     <AppHeader
-      currentPath={AUTH_ACCOUNT_ROUTE}
+      currentPath={AUTH_LOGIN_ROUTE}
+      identitySurface="public_auth"
       navigate={navigate}
       navigation={[]}
     />
@@ -111,6 +116,8 @@ const emptyNavigationHtml = renderToStaticMarkup(
 );
 assert(
   emptyNavigationHtml.includes("Tenant Merk") &&
+    emptyNavigationHtml.includes("Inloggen") &&
+    !emptyNavigationHtml.includes("Tenantdienst") &&
     !emptyNavigationHtml.includes("<nav"),
   "Q02_explicit_empty_navigation_rendered_landmark",
 );
@@ -139,6 +146,11 @@ for (
 assert(
   publicHeaderHtml.includes('<nav class="header-nav"'),
   "Q03_public_navigation_landmark_missing",
+);
+assert(
+  publicHeaderHtml.includes('href="/inloggen"') &&
+    !publicHeaderHtml.includes('href="/account"'),
+  "Q03_public_login_route_not_canonical",
 );
 
 const homeHtml = renderToStaticMarkup(
@@ -170,7 +182,10 @@ assert(
 const operatorHtml = renderAccountRoute("/inloggen", "operator", "portal");
 assert(
   operatorHtml.includes('data-app-surface="tenant_operator"') &&
-    operatorHtml.includes(">Beheer<") &&
+    operatorHtml.includes("Tenant Merk") &&
+    operatorHtml.includes("Inloggen") &&
+    !operatorHtml.includes(">Beheer<") &&
+    !operatorHtml.includes("Tenantdienst") &&
     !operatorHtml.includes("<nav"),
   "Q06_operator_login_surface_or_navigation_invalid",
 );
@@ -181,21 +196,38 @@ assert(
   "Q07_operator_return_safety_changed",
 );
 
-const [appSource, accountPageSource, headerSource, signupSource] = await Promise
-  .all([
+const [
+  appSource,
+  accountPageSource,
+  authLayoutSource,
+  dashboardGuardSource,
+  dashboardSidebarSource,
+  emailRequestSource,
+  headerSource,
+  passwordRecoverySource,
+  signupSource,
+  uiCollectorSource,
+] = await Promise.all([
     source("app/src/App.tsx"),
     source("app/src/pages/AccountPage.tsx"),
+    source("app/src/features/auth/AuthPageLayout.tsx"),
+    source("app/src/features/auth/DashboardRouteGuard.tsx"),
+    source("app/src/features/dashboard/DashboardSidebar.tsx"),
+    source("app/src/features/auth/AuthEmailRequestPage.tsx"),
     source("app/src/shared/components/AppHeader.tsx"),
+    source("app/src/features/auth/PasswordRecoveryPage.tsx"),
     source("app/src/features/signup/SignupPageShell.tsx"),
+    source("scripts/tools/enval-ui-review-collect.mjs"),
   ]);
 assert(
-  appSource.includes("AUTH_ACCOUNT_ROUTE") &&
-    appSource.includes('path === "/inloggen"') &&
+  appSource.includes("AUTH_ACCOUNT_COMPATIBILITY_ROUTE") &&
+    appSource.includes("AUTH_LOGIN_ROUTE") &&
     appSource.includes("AUTH_PASSWORD_REQUEST_ROUTE") &&
     appSource.includes("AUTH_PASSWORD_UPDATE_ROUTE") &&
     appSource.includes("AUTH_VERIFICATION_RESEND_ROUTE") &&
     appSource.includes("isOperatorRoute(loginReturnTo)") &&
     accountPageSource.includes("navigation={[]}") &&
+    accountPageSource.includes('identitySurface="public_auth"') &&
     accountPageSource.includes('auth.audience === "operator"') &&
     headerSource.includes("navigation = publicNavigation") &&
     headerSource.includes("navigation.length > 0") &&
@@ -203,5 +235,47 @@ assert(
   "Q08_route_or_composition_contract_invalid",
 );
 
-console.log("AUTH_SHELL_F01_Q01_Q08=PASS");
+assert(
+  appSource.includes(
+    'window.history.replaceState(null, "", AUTH_LOGIN_ROUTE)',
+  ) &&
+    appSource.includes(
+      "if (path === AUTH_ACCOUNT_COMPATIBILITY_ROUTE) return <RouteLoading />",
+    ) &&
+    !appSource.includes(
+      "AUTH_ACCOUNT_COMPATIBILITY_ROUTE ||",
+    ) &&
+    AUTH_ACCOUNT_COMPATIBILITY_ROUTE === "/account" &&
+    AUTH_LOGIN_ROUTE === "/inloggen",
+  "Q09_account_compatibility_redirect_not_exact_replace",
+);
+
+assert(
+  [dashboardGuardSource, dashboardSidebarSource, emailRequestSource,
+    passwordRecoverySource].every((value) =>
+    value.includes("AUTH_LOGIN_ROUTE") &&
+    !value.includes('navigate("/account")')
+  ) &&
+    headerSource.includes('{ label: "Inloggen", href: "/inloggen" }') &&
+    !headerSource.includes('{ label: "Inloggen", href: "/account" }'),
+  "Q10_internal_login_caller_not_canonical",
+);
+
+assert(
+  !authLayoutSource.includes("AuthAudience") &&
+    !authLayoutSource.includes(">Beheer<") &&
+    !authLayoutSource.includes(">Klantportaal<") &&
+    accountPageSource.includes('identitySurface="public_auth"') &&
+    !accountPageSource.includes("platformAttribution"),
+  "Q11_auth_identity_or_attribution_contract_invalid",
+);
+
+assert(
+  uiCollectorSource.includes(': "/inloggen"') &&
+    uiCollectorSource.includes('"/inloggen#activeren"') &&
+    !uiCollectorSource.includes('"/account#activeren"'),
+  "Q12_browser_fixture_login_route_stale",
+);
+
+console.log("PUBLIC_AUTH_IDENTITY_V1_Q01_Q12=PASS");
 Deno.exit(0);

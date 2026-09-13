@@ -5,9 +5,10 @@ import { clearDashboardReadCache } from "./dashboardReadCache";
 import { clearSignupIntakeSession } from "../signup/signupIntakeCapabilityStore";
 import { clearSignupSubmissionReceipt } from "../signup/signupSubmissionReceiptStore";
 import {
-  projectAuthenticatedSurfaceIdentity,
+  projectPresentationSurfaceIdentity,
   usePresentationBrand,
 } from "../../shared/presentation/PresentationBrandProvider";
+import { AUTH_LOGIN_ROUTE } from "../auth/authUxFlow";
 import type { DashboardDossierSummary } from "./dashboardTypes";
 import {
   buildDashboardApplicationRoute,
@@ -39,14 +40,14 @@ export function DashboardSidebar({
 }: DashboardSidebarProps) {
   const auth = useAuth();
   const presentation = usePresentationBrand();
-  const identity = projectAuthenticatedSurfaceIdentity(
+  const identity = projectPresentationSurfaceIdentity(
     presentation,
     "tenant_customer",
   );
 
   function handleLogout() {
     clearDashboardReadCache();
-    void auth.signOut().then(() => navigate("/account"));
+    void auth.signOut().then(() => navigate(AUTH_LOGIN_ROUTE));
   }
 
   function handleNewApplication() {

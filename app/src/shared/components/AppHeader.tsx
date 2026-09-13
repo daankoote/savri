@@ -1,7 +1,7 @@
 import type { MouseEvent } from "react";
 import {
-  type AuthenticatedPresentationSurface,
-  projectAuthenticatedSurfaceIdentity,
+  type PresentationIdentitySurface,
+  projectPresentationSurfaceIdentity,
   usePresentationBrand,
 } from "../presentation/PresentationBrandProvider";
 import type {
@@ -16,12 +16,12 @@ const publicNavigation = [
   { label: "Aanmelden", href: "/aanmelden" },
   { label: "ERE info", href: "/ere" },
   { label: "Contact", href: "/contact" },
-  { label: "Inloggen", href: "/account" },
+  { label: "Inloggen", href: "/inloggen" },
 ] satisfies readonly SurfaceNavigationItem[];
 
 type AppHeaderProps = {
-  authenticatedIdentitySurface?: AuthenticatedPresentationSurface;
   currentPath: string;
+  identitySurface?: PresentationIdentitySurface;
   navigate: (href: string) => void;
   navigation?: readonly SurfaceNavigationItem[];
   surface?: AppSurface;
@@ -40,22 +40,22 @@ function isActiveNavItem(href: string, currentPath: string) {
 }
 
 export function AppHeader({
-  authenticatedIdentitySurface,
   currentPath,
+  identitySurface,
   navigate,
   navigation = publicNavigation,
   surface = "public",
 }: AppHeaderProps) {
   const presentation = usePresentationBrand();
-  const authenticatedIdentity = authenticatedIdentitySurface
-    ? projectAuthenticatedSurfaceIdentity(
+  const identity = identitySurface
+    ? projectPresentationSurfaceIdentity(
       presentation,
-      authenticatedIdentitySurface,
+      identitySurface,
     )
     : null;
-  const organizationName = authenticatedIdentity?.organizationName ??
+  const organizationName = identity?.organizationName ??
     presentation.displayName;
-  const contextLabel = authenticatedIdentity?.contextLabel ??
+  const contextLabel = identity?.contextLabel ??
     presentation.tagline;
   const handleClick =
     (href: string) => (event: MouseEvent<HTMLAnchorElement>) => {
@@ -73,7 +73,7 @@ export function AppHeader({
           onClick={handleClick("/")}
         >
           <span className="brand-symbol" aria-hidden="true">
-            {authenticatedIdentity?.shortMark ?? presentation.shortMark}
+            {identity?.shortMark ?? presentation.shortMark}
           </span>
           <span>
             <strong>{organizationName}</strong>

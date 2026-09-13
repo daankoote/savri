@@ -11,7 +11,8 @@ import type { AppNavigate, RoutedPageProps } from "./routes/types";
 import { parseEvidenceReviewDetailRoute } from "./features/evidence-review/evidenceReviewRoutes";
 import { readSafePostLoginReturnRoute } from "./features/auth/postLoginNavigation";
 import {
-  AUTH_ACCOUNT_ROUTE,
+  AUTH_ACCOUNT_COMPATIBILITY_ROUTE,
+  AUTH_LOGIN_ROUTE,
   AUTH_PASSWORD_REQUEST_ROUTE,
   AUTH_PASSWORD_UPDATE_ROUTE,
   AUTH_VERIFICATION_RESEND_ROUTE,
@@ -83,6 +84,12 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    if (path !== AUTH_ACCOUNT_COMPATIBILITY_ROUTE) return;
+    window.history.replaceState(null, "", AUTH_LOGIN_ROUTE);
+    setPath(AUTH_LOGIN_ROUTE);
+  }, [path]);
+
+  useEffect(() => {
     if (path !== "/dashboard") return;
     window.history.replaceState(null, "", DASHBOARD_APPLICATIONS_ROUTE);
     setPath(DASHBOARD_APPLICATIONS_ROUTE);
@@ -111,13 +118,12 @@ export function App() {
 
   const evidenceReviewCaseRef = parseEvidenceReviewDetailRoute(path);
   const dashboardApplicationsRoute = parseDashboardApplicationsRoute(path);
-  const loginReturnTo = path === "/inloggen"
+  const loginReturnTo = path === AUTH_LOGIN_ROUTE
     ? readSafePostLoginReturnRoute(window.location.search)
     : null;
 
   if (
-    path === AUTH_ACCOUNT_ROUTE ||
-    path === "/inloggen" ||
+    path === AUTH_LOGIN_ROUTE ||
     path === AUTH_PASSWORD_REQUEST_ROUTE ||
     path === AUTH_PASSWORD_UPDATE_ROUTE ||
     path === AUTH_VERIFICATION_RESEND_ROUTE
@@ -142,6 +148,8 @@ export function App() {
       </Suspense>
     );
   }
+
+  if (path === AUTH_ACCOUNT_COMPATIBILITY_ROUTE) return <RouteLoading />;
 
   if (path === "/dashboard") return <RouteLoading />;
 

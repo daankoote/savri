@@ -144,6 +144,14 @@ authenticated shells. The current workforce context proves only
 `Beheerconsole` remains unimplemented rather than inferred from route, role,
 e-mail or presentation copy.
 
+The current Auth journey uses the same server-resolved presentation display
+name and mark with the fixed context label `Inloggen`; it never renders the
+public presentation tagline. `/inloggen` is the only canonical login route.
+`/account` is a compatibility route that replace-redirects to exactly
+`/inloggen` without forwarding query or fragment input. Fixed confirmation,
+recovery and resend routes remain on the canonical app origin, and only the
+existing allowlisted operator `returnTo` values are accepted on `/inloggen`.
+
 The local status is backed by focused operator-context Q01-Q14, overview Q01-Q10,
 evidence worklist Q01-Q19, unchanged compliance/evidence authorization
 regressions, served allow/deny evidence, a green production build, guarded
@@ -475,7 +483,8 @@ cutover**.
 
 The recent app frontend Auth/session flow is retained as local proof:
 
-- `/account` supports customer account creation and sign-in.
+- `/inloggen` supports customer account creation and sign-in; `/account`
+  replace-redirects to that canonical route without forwarding browser input.
 - Supabase Auth session restoration and logout are wired locally.
 - `/dashboard` is protected by the current frontend session flow and
   replace-redirects to `/dashboard/aanvragen`.
@@ -483,8 +492,8 @@ The recent app frontend Auth/session flow is retained as local proof:
   applications once; `/dashboard/aanvragen/:caseReference` is the stable
   application detail route. The browser Auth-bootstrap dossier summary is not
   application-index authority.
-- Auth/Supabase frontend code is route-lazy for `/account` and the dashboard
-  route family.
+- Auth/Supabase frontend code is route-lazy for `/inloggen`, the recovery and
+  resend routes, and the dashboard route family.
 - `api-app-dashboard-get` provides an authenticated, customer-safe, account-type-neutral dashboard read projection.
 - Its application-index mode gets `p_auth_user_id` only from the validated JWT
   actor and calls `app_customer_application_index_read_v1`. That service-only

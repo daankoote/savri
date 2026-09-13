@@ -14,7 +14,7 @@ import {
 } from "../../../../platform/runtime/presentation/presentation_brand_config.ts";
 import {
   PresentationBrandProvider,
-  projectAuthenticatedSurfaceIdentity,
+  projectPresentationSurfaceIdentity,
 } from "./PresentationBrandProvider.tsx";
 
 class ProofFailure extends Error {}
@@ -91,11 +91,18 @@ function renderAuthenticatedConsumerSet(
   return renderToStaticMarkup(
     <PresentationBrandProvider presentation={presentation}>
       <AppHeader
-        authenticatedIdentitySurface="tenant_operator"
         currentPath="/beheer"
+        identitySurface="tenant_operator"
         navigate={navigate}
         navigation={[]}
         surface="tenant_operator"
+      />
+      <AppHeader
+        currentPath="/inloggen"
+        identitySurface="public_auth"
+        navigate={navigate}
+        navigation={[]}
+        surface="tenant_customer"
       />
       <AuthProvider>
         <DashboardSidebar
@@ -196,6 +203,7 @@ assert(
 );
 assert(
   authenticatedEnvalHtml.includes("ENVAL") &&
+    authenticatedEnvalHtml.includes("Inloggen") &&
     authenticatedEnvalHtml.includes("Dossierbeheer") &&
     authenticatedEnvalHtml.includes("Klantportaal") &&
     !authenticatedEnvalHtml.includes("ERE inboekservice"),
@@ -204,6 +212,7 @@ assert(
 assert(
   authenticatedSyntheticHtml.includes("Example Mobility") &&
     authenticatedSyntheticHtml.includes(">EM<") &&
+    authenticatedSyntheticHtml.includes("Inloggen") &&
     authenticatedSyntheticHtml.includes("Dossierbeheer") &&
     authenticatedSyntheticHtml.includes("Klantportaal") &&
     !authenticatedSyntheticHtml.includes("Clean mobility service") &&
@@ -211,16 +220,23 @@ assert(
   "Q19_authenticated_tenant_surface_identity_invalid",
 );
 
-const customerIdentity = projectAuthenticatedSurfaceIdentity(
+const authIdentity = projectPresentationSurfaceIdentity(
+  projectPresentationBrand(syntheticResult.value),
+  "public_auth",
+);
+const customerIdentity = projectPresentationSurfaceIdentity(
   projectPresentationBrand(syntheticResult.value),
   "tenant_customer",
 );
-const workforceIdentity = projectAuthenticatedSurfaceIdentity(
+const workforceIdentity = projectPresentationSurfaceIdentity(
   projectPresentationBrand(syntheticResult.value),
   "tenant_operator",
 );
 assert(
-  customerIdentity.organizationName === "Example Mobility" &&
+  authIdentity.organizationName === "Example Mobility" &&
+    authIdentity.shortMark === "EM" &&
+    authIdentity.contextLabel === "Inloggen" &&
+    customerIdentity.organizationName === "Example Mobility" &&
     customerIdentity.shortMark === "EM" &&
     customerIdentity.contextLabel === "Klantportaal" &&
     workforceIdentity.organizationName === "Example Mobility" &&
@@ -312,7 +328,8 @@ assert(
   "Q07_branding_became_security_or_business_authority",
 );
 assert(
-  appSource.includes("AUTH_ACCOUNT_ROUTE") &&
+  appSource.includes("AUTH_ACCOUNT_COMPATIBILITY_ROUTE") &&
+    appSource.includes("AUTH_LOGIN_ROUTE") &&
     appSource.includes('"/dashboard"') &&
     appSource.includes('"/aanmelden"') && appSource.includes('"/privacy"') &&
     appSource.includes('"/voorwaarden"') &&
@@ -398,7 +415,7 @@ assert(
     ) &&
     appSource.includes('<AuthProvider audience="operator">') &&
     sidebarSource.includes("Aanvragen") &&
-    (sidebarSource.match(/navigate\("\/account"\)/g) || []).length === 1 &&
+    sidebarSource.includes("navigate(AUTH_LOGIN_ROUTE)") &&
     !sidebarSource.match(
       /onClick=\{\(\) => navigate\("\/account"\)\}[\s\S]{0,120}>\s*Account/,
     ) &&
@@ -414,12 +431,13 @@ assert(
     evidenceWorklistRouteSource,
     evidenceDetailRouteSource,
   ].every((value) =>
-    value.includes('authenticatedIdentitySurface="tenant_operator"') &&
+    value.includes('identitySurface="tenant_operator"') &&
     value.includes("<OperatorRouteGuard")
   ) &&
-    !accountRouteSource.includes("authenticatedIdentitySurface") &&
-    headerSource.includes("projectAuthenticatedSurfaceIdentity") &&
-    sidebarSource.includes("projectAuthenticatedSurfaceIdentity") &&
+    accountRouteSource.includes('identitySurface="public_auth"') &&
+    headerSource.includes("projectPresentationSurfaceIdentity") &&
+    sidebarSource.includes("projectPresentationSurfaceIdentity") &&
+    providerSource.includes('public_auth: "Inloggen"') &&
     providerSource.includes('tenant_customer: "Klantportaal"') &&
     providerSource.includes('tenant_operator: "Dossierbeheer"'),
   "Q21_authenticated_identity_composition_or_guard_invalid",

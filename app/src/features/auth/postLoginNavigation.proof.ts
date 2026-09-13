@@ -144,8 +144,8 @@ assert(
   "Q07_existing_auth_flow_not_reused",
 );
 assert(
-  appSource.includes("path === AUTH_ACCOUNT_ROUTE") &&
-    appSource.includes('path === "/inloggen"') &&
+  appSource.includes("path === AUTH_ACCOUNT_COMPATIBILITY_ROUTE") &&
+    appSource.includes("path === AUTH_LOGIN_ROUTE") &&
     appSource.includes("parseEvidenceReviewDetailRoute(path)") &&
     appSource.includes("target.search") &&
     appSource.includes("window.history.replaceState") &&

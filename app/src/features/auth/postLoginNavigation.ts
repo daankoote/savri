@@ -1,7 +1,8 @@
 import { parseEvidenceReviewDetailRoute } from "../evidence-review/evidenceReviewRoutes.ts";
+import { AUTH_LOGIN_ROUTE } from "./authUxFlow.ts";
 
 export const DEFAULT_POST_LOGIN_DESTINATION = "/dashboard";
-export const INTERNAL_LOGIN_ROUTE = "/inloggen";
+export const INTERNAL_LOGIN_ROUTE = AUTH_LOGIN_ROUTE;
 export const POST_LOGIN_RETURN_QUERY_KEY = "returnTo";
 
 const SAFE_INTERNAL_RETURN_ROUTES = new Set([

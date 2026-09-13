@@ -1,4 +1,5 @@
-export const AUTH_ACCOUNT_ROUTE = "/account";
+export const AUTH_ACCOUNT_COMPATIBILITY_ROUTE = "/account";
+export const AUTH_LOGIN_ROUTE = "/inloggen";
 export const AUTH_PASSWORD_REQUEST_ROUTE = "/account/wachtwoord-vergeten";
 export const AUTH_PASSWORD_UPDATE_ROUTE = "/account/nieuw-wachtwoord";
 export const AUTH_VERIFICATION_RESEND_ROUTE =
@@ -41,7 +42,7 @@ export function buildFixedAuthCallbackUrl(
   const canonicalOrigin = new URL(appOrigin).origin;
   const pathname = purpose === "password_recovery"
     ? AUTH_PASSWORD_UPDATE_ROUTE
-    : AUTH_ACCOUNT_ROUTE;
+    : AUTH_LOGIN_ROUTE;
 
   return new URL(pathname, canonicalOrigin).toString();
 }

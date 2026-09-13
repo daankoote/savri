@@ -222,11 +222,14 @@ Rules:
 - `/intern/compliance` and `/intern/dossiers` are CURRENT temporary
   compatibility paths using the same server-authorized operator surface and
   authority. Their later redirect/removal cleanup is separately bounded.
-- The five Auth/account routes use the shared server-resolved tenant brand in a
-  minimal Auth header without public, customer-portal or operator navigation.
-  `/inloggen` changes only to the operator Auth audience for a validated
-  internal operator return route; protected navigation remains unavailable
-  until server-derived authority admits the corresponding surface.
+- `/inloggen` and the three recovery/resend routes use the shared
+  server-resolved presentation organization and mark with the fixed context
+  label `Inloggen`, without the public presentation tagline or public,
+  customer-portal or operator navigation. `/account` replace-redirects to
+  exactly `/inloggen` and discards query and fragment input. `/inloggen`
+  changes only to the operator Auth audience for a validated internal operator
+  return route; protected navigation remains unavailable until server-derived
+  authority admits the corresponding surface.
 - The operator route guard sends unauthenticated access through the operator
   login flow, denies authenticated non-workforce with the normal `Geen toegang`
   state, and admits only a server-derived active workforce context. Tenant and
@@ -313,7 +316,8 @@ Current frontend flow:
 
 - shared Supabase browser client
 - Auth state/session provider with session initialization and Auth state subscription
-- `/account` account creation and sign-in surface
+- `/inloggen` canonical account creation and sign-in surface
+- `/account` compatibility replace-redirect to exactly `/inloggen`
 - `/account/wachtwoord-vergeten` neutral password-recovery request
 - `/account/nieuw-wachtwoord` recovery-event/session-gated password update
 - `/account/verificatiemail-opnieuw` neutral signup-verification resend
