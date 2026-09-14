@@ -36,12 +36,14 @@ import {
   inspectDependencyBridge,
 } from "./enval-preview-dependency-bridge.mjs";
 
-const SETUP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const ENVAL_WORKTREES_ROOT = dirname(SETUP_ROOT);
-const ENVAL_ROOT = resolve(ENVAL_WORKTREES_ROOT, "../enval");
+export const ENVAL_ROOT = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "../..",
+);
+export const CANONICAL_REPOSITORY = "/Users/daankoote/dev/enval";
 const HERDR_PROJECT = "ENVAL";
 const APPROVED_PREVIEW_BINDINGS = Object.freeze({
-  Beheer: Object.freeze({ slug: "beheer", branch: "beheer" }),
+  Enval: Object.freeze({ slug: "enval", branch: "main" }),
 });
 
 export function runtimeNamespace(path) {
@@ -169,7 +171,10 @@ function parseWorktrees(output) {
 export function resolvePreviewSpec(workspaceName, run = defaultRun) {
   const binding = APPROVED_PREVIEW_BINDINGS[workspaceName];
   if (!binding) fail("workspace_not_approved");
-  const expectedSource = resolve(ENVAL_WORKTREES_ROOT, binding.slug);
+  if (ENVAL_ROOT !== CANONICAL_REPOSITORY) {
+    fail("repository_root_not_canonical");
+  }
+  const expectedSource = CANONICAL_REPOSITORY;
   const result = checked(
     run,
     "git",

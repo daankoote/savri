@@ -1,10 +1,10 @@
 # Reason: the canonical preview wrapper needs macOS process inspection to prove
 # PID ownership, which is unavailable inside the workspace sandbox; its parser
-# accepts exactly one operation and only the approved Beheer binding.
-# MATCH: /usr/local/bin/node scripts/tools/enval-preview.mjs status Beheer
-# NOT_MATCH: /usr/local/bin/node scripts/tools/enval-preview.mjs status Main
+# accepts exactly one operation and only the approved Enval binding.
+# MATCH: /usr/local/bin/node scripts/tools/enval-preview.mjs status Enval
+# NOT_MATCH: /usr/local/bin/node scripts/tools/enval-preview.mjs status Beheer
 prefix_rule(
-    pattern = ["/usr/local/bin/node", "scripts/tools/enval-preview.mjs", ["start", "status", "stop"], "Beheer"],
+    pattern = ["/usr/local/bin/node", "scripts/tools/enval-preview.mjs", ["start", "status", "stop"], "Enval"],
     decision = "allow",
 )
 

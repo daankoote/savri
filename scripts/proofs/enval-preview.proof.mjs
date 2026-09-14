@@ -26,9 +26,11 @@ import {
   installDependencyBridgeSignalCleanup,
 } from "../tools/enval-preview-dependency-bridge.mjs";
 import {
+  CANONICAL_REPOSITORY,
   copySourceSnapshot,
   dependencyKey,
   ensureDependencies,
+  ENVAL_ROOT,
   excludedPreviewPath,
   fingerprintSource,
   MINIMUM_NODE_MAJOR,
@@ -132,24 +134,26 @@ function dependencyBridgeFixture() {
   return { runtimeRoot, sourceRoot, dependencyRoot };
 }
 
-test("Node runtime and approved Beheer worktree are explicit", () => {
-  assert.ok(Number(process.versions.node.split(".")[0]) >= MINIMUM_NODE_MAJOR);
+test("Node runtime and canonical Enval main repository are explicit", () => {
+  assert.equal(MINIMUM_NODE_MAJOR, 22);
   const output = [
     "worktree /Users/daankoote/dev/enval",
     "branch refs/heads/main",
     "",
-    "worktree /Users/daankoote/dev/enval-worktrees/beheer",
-    "branch refs/heads/beheer",
+    "worktree /Users/daankoote/dev/enval-worktrees/setup",
+    "branch refs/heads/setup",
     "",
   ].join("\0");
-  const spec = resolvePreviewSpec("Beheer", () => ({
+  const spec = resolvePreviewSpec("Enval", () => ({
     status: 0,
     stdout: output,
     stderr: "",
   }));
-  assert.equal(spec.workspaceName, "Beheer");
-  assert.equal(spec.branch, "beheer");
-  assert.equal(spec.sourceRoot, "/Users/daankoote/dev/enval-worktrees/beheer");
+  assert.equal(ENVAL_ROOT, "/Users/daankoote/dev/enval");
+  assert.equal(CANONICAL_REPOSITORY, "/Users/daankoote/dev/enval");
+  assert.equal(spec.workspaceName, "Enval");
+  assert.equal(spec.branch, "main");
+  assert.equal(spec.sourceRoot, ENVAL_ROOT);
   assert.equal(ENVAL_RUNTIME_ROOT, "/private/tmp/enval-runtime/ENVAL");
   assert.equal(
     PREVIEW_BASE,
@@ -166,7 +170,7 @@ test("Node runtime and approved Beheer worktree are explicit", () => {
       PREVIEW_BASE,
       runtimeNamespace(spec.sourceRoot),
       "preview",
-      "beheer",
+      "enval",
     ),
   );
   assert.notEqual(
@@ -175,7 +179,7 @@ test("Node runtime and approved Beheer worktree are explicit", () => {
       PREVIEW_BASE,
       runtimeNamespace("/Users/daankoote/dev/enval-worktrees/setup"),
       "preview",
-      "beheer",
+      "enval",
     ),
   );
   const source = readFileSync(
@@ -185,10 +189,33 @@ test("Node runtime and approved Beheer worktree are explicit", () => {
   assert.match(source, /\$\{delimiter\}\$\{process\.env\.PATH/);
   assert.doesNotMatch(source, /\.herdr-runtime/);
   assert.doesNotMatch(source, /enval-(?:batch|result)\.mjs/);
-  assert.throws(() => resolvePreviewSpec("Beheer 2"), {
+  const rules = readFileSync(
+    new URL("../../.codex/rules/enval.rules", import.meta.url),
+    "utf8",
+  );
+  const activeRules = rules.split("\n").filter((line) =>
+    !line.trimStart().startsWith("#")
+  ).join("\n");
+  assert.match(activeRules, /enval-preview\.mjs"[^\n]+"Enval"/);
+  assert.doesNotMatch(activeRules, /enval-preview\.mjs"[^\n]+"Beheer"/);
+  assert.throws(() => resolvePreviewSpec("Beheer"), {
     name: "PreviewError",
     code: "workspace_not_approved",
   });
+  const legacyOutput = [
+    "worktree /Users/daankoote/dev/enval-worktrees/beheer",
+    "branch refs/heads/beheer",
+    "",
+  ].join("\0");
+  assert.throws(
+    () =>
+      resolvePreviewSpec("Enval", () => ({
+        status: 0,
+        stdout: legacyOutput,
+        stderr: "",
+      })),
+    { name: "PreviewError", code: "worktree_binding_invalid" },
+  );
 });
 
 test("snapshot includes tracked and relevant untracked source but excludes secrets and artifacts", () => {
@@ -355,16 +382,21 @@ test("SIGINT and SIGTERM clean the bridge before the runtime exits", async () =>
     child.stdout.on("data", (chunk) => output += chunk);
     child.stderr.on("data", (chunk) => output += chunk);
     try {
-      const ready = Promise.withResolvers();
+      let resolveReady;
+      let rejectReady;
+      const ready = new Promise((resolve, reject) => {
+        resolveReady = resolve;
+        rejectReady = reject;
+      });
       const timeout = setTimeout(
-        () => ready.reject(new Error(`${signal}_bridge_ready_timeout`)),
+        () => rejectReady(new Error(`${signal}_bridge_ready_timeout`)),
         5_000,
       );
       const observeReady = (chunk) => {
-        if (String(chunk).includes("BRIDGE_READY=YES")) ready.resolve();
+        if (String(chunk).includes("BRIDGE_READY=YES")) resolveReady();
       };
       child.stdout.on("data", observeReady);
-      await ready.promise.finally(() => {
+      await ready.finally(() => {
         clearTimeout(timeout);
         child.stdout.off("data", observeReady);
       });

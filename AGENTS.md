@@ -6,7 +6,11 @@ modular and compatible with future tenant and integration boundaries.
 
 ## Working model
 
-- One primary Codex thread owns each task and is the only writer.
+- The `enval-main` agent in Herdr session `ENVAL`, workspace `Enval`, tab
+  `Codex`, is General/Primary, owns each task and is the only writer in the
+  canonical repository `/Users/daankoote/dev/enval` on branch `main`.
+- The corresponding human command surface is tab `Terminal` in that same
+  session and workspace.
 - Use subagents only for bounded, independent, read-only exploration or review.
 - Make the smallest complete change that satisfies the requested outcome.
 - Reuse existing modules, components, styles, contracts and proof
@@ -17,6 +21,24 @@ modular and compatible with future tenant and integration boundaries.
 - Preserve unrelated tracked, untracked and user-owned work.
 
 The full workflow is in `docs/app/operations/agent-operating-model.md`.
+
+## Canonical execution and result handoff
+
+- Executable instructions name their exact Herdr session, workspace, tab,
+  repository and branch.
+- Codex prompts normally stay below 4,000 characters. Longer prompts require a
+  batch-specific justification.
+- Terminal and browser checks are included only when human execution is needed.
+- `Ctrl+B`, then `Y`, copies recent active-pane output. `Ctrl+B`, then
+  `Shift+Y`, copies the session's latest Codex result. The fallback is
+  `codex-copy-last ENVAL`.
+- Desktop result files and project-specific copy helpers are optional and are
+  never the primary handoff.
+- A Codex result proves only the state at its reporting time. A later human
+  commit, push or deployment requires separate Terminal output.
+- Copied output contains no secrets, tokens, passwords, raw provider payloads,
+  sensitive personal data or full email content.
+- Repository instructions do not manage global Herdr configuration.
 
 ## Product invariants
 

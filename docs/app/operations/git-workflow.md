@@ -8,8 +8,8 @@ live elsewhere.
 
 ## Git authority
 
-The active integration branch is main. Main is the protected integration
-worktree.
+The active integration branch is `main` in the protected canonical repository
+root.
 
 Codex may use only the read-only Git operations permitted by the effective
 policy: status, diff, diff --stat, diff --check, log, show, branch, and
@@ -29,33 +29,42 @@ Ignored migrations are not made visible by changing .gitignore. When Daan
 chooses to stage one intended ignored migration, Daan may use
 git add -f <exact-path>; Codex does not run it.
 
-## Canonical batch entrypoint
+## Canonical runtime entrypoint
 
-Normal batches start from Main with a human-supplied workspace label:
+The active product runtime uses the canonical repository on `main` in the
+single `Enval` workspace:
 
 ~~~text
-node scripts/tools/enval-batch.mjs start Beheer
+WHERE
+Session: ENVAL
+Workspace: Enval
+Tab: Terminal
+Repository: /Users/daankoote/dev/enval
+Branch: main
+
+DO
+node scripts/tools/enval-batch.mjs start Enval
 ~~~
 
-The launcher validates the canonical repository, Main's clean tracked/index
-state, supported Codex and Herdr interfaces, and concrete worktree, workspace,
-tab, pane, and agent conflicts. The supplied label deterministically defines the
-leaf worktree, branch, and agent name. The launcher reuses that exact
-workspace/worktree/tabs/agent on retry or resume and refuses duplicates,
-conflicting bindings, or multiple active agents. Task scope comes from
-`AGENTS.md`, the task contract, and risk-selected verification; Git history and
-integration remain human-controlled.
+The launcher validates the canonical repository, clean tracked/index state,
+`main`, supported Codex and Herdr interfaces, the `Enval` workspace, its
+`Codex` and `Terminal` tabs, and the `enval-main` General/Primary agent. It
+refuses legacy workspace labels, a permanent Reviewer tab, conflicting pane
+bindings, or multiple active agents. It neither creates nor changes branches or
+worktrees; valid setup and integration worktrees remain outside the active
+product topology. Task scope comes from `AGENTS.md`, the task contract and
+risk-selected verification; Git history and integration remain human-controlled.
 
 The launcher keeps technical IDs internal, uses the supported Herdr agent
 mechanism, and launches Codex with on-request user approval, strict config, and
 ordinary product web search disabled. It never
 commits, merges, pushes, deploys, performs product work, or cleans data.
 
+For review work, the primary uses only the temporary read-only specialists
+defined by the project agent configuration and selected under `AGENTS.md`.
+There is no permanent Reviewer tab, central review loop or result publisher.
 For UI work, `scripts/tools/enval-ui-review-collect.mjs` only collects bounded
-browser evidence. The primary task routes that evidence and the explicit
-acceptance to a fresh, standalone read-only `ui_reviewer`; there is no central
-review loop or result publisher. Daan and the main chat determine scope and
-acceptance. Reviewer results return to the primary conversation.
+browser evidence. Daan and the main chat determine scope and acceptance.
 
 Stored Herdr/worktree state does not prove a Codex process survived interruption
 or reboot. Resume/relaunch only after the batch entrypoint has reconciled the
@@ -87,21 +96,21 @@ writes remain fail closed.
 
 ## External worktree preview
 
-Persistent previews are controlled from the approved Beheer worktree with its
-canonical checked-in tool and one approved workspace:
+Persistent previews are controlled from the canonical repository with its
+checked-in tool and the single approved workspace:
 
 ~~~text
-/usr/local/bin/node scripts/tools/enval-preview.mjs start Beheer
-/usr/local/bin/node scripts/tools/enval-preview.mjs status Beheer
-/usr/local/bin/node scripts/tools/enval-preview.mjs stop Beheer
+/usr/local/bin/node scripts/tools/enval-preview.mjs start Enval
+/usr/local/bin/node scripts/tools/enval-preview.mjs status Enval
+/usr/local/bin/node scripts/tools/enval-preview.mjs stop Enval
 ~~~
 
-Run these commands from the approved Beheer worktree root. A preview tool from
-another worktree is a different executable authority and must not inspect or
-control the Beheer preview process.
+Run these commands from `/Users/daankoote/dev/enval` on `main`. A preview tool
+from another worktree is a different executable authority and must not inspect
+or control the Enval preview process.
 
 The tool requires Node 22+ and snapshots the registered worktree below
-`/private/tmp/enval-runtime/ENVAL/repositories/<repository-id>/worktrees/<worktree-id>/preview/beheer`.
+`/private/tmp/enval-runtime/ENVAL/repositories/<repository-id>/worktrees/<worktree-id>/preview/enval`.
 The deterministic path IDs are the first 16 hexadecimal characters of the
 SHA-256 digest of each absolute path, so repositories and worktrees cannot
 collide. Root/app dependencies are installed from unchanged lockfiles into that
@@ -125,27 +134,26 @@ source worktree with its start fingerprint.
 
 ## Human Terminal handoffs
 
-Main -> Terminal is the default location for project-wide Git and
-administration. A batch Terminal is used only for batch-local work.
+`ENVAL` -> `Enval` -> `Terminal` is the location for project-wide Git and
+administration.
 
 Every human action identifies:
 
 ~~~text
 WHERE
-Project: <project>
+Session: <session>
 Workspace: <workspace>
 Tab: Terminal
+Repository: <repository>
+Branch: <branch>
 
 DO
 <one exact command or bounded command block>
 ~~~
 
-Manual evidence uses set -o pipefail, captures complete stdout/stderr with
-2>&1 | tee to a semantic file inside the workspace-bound run directory, and
-then transports that file. Never use terminal-latest.txt; use a step name such
-as commit-sequence-precheck.txt, setup-commit-result.txt, or
-main-integration-check.txt. Do not make Daan select scrollback and do not use
-cat as the primary transport.
+Result handoff and its privacy and time-of-reporting limits are owned by
+`AGENTS.md`. Desktop result files and project-specific copy helpers remain
+optional and are never the primary transport.
 
 Human Terminal blocks must never run shell exit or replace the interactive
 shell with exec. A check reports a non-zero status without closing the tab.

@@ -1,27 +1,31 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { lstatSync, mkdirSync, readFileSync, realpathSync } from "node:fs";
+import { lstatSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const SETUP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-export const ENVAL_WORKTREES_ROOT = dirname(SETUP_ROOT);
-export const ENVAL_ROOT = resolve(ENVAL_WORKTREES_ROOT, "../enval");
+export const ENVAL_ROOT = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "../..",
+);
+export const CANONICAL_REPOSITORY = "/Users/daankoote/dev/enval";
 export const HERDR_PROJECT = "ENVAL";
 export const HERDR_SESSION = HERDR_PROJECT;
 export const HERDR_VERSION = "0.8.2";
-export const PERSISTENT_WORKSPACE = "Main";
-export const MAIN_TABS = Object.freeze(["Codex", "Terminal"]);
-export const BATCH_TABS = Object.freeze(["Codex", "Terminal", "Reviewer"]);
+export const CANONICAL_WORKSPACE = "Enval";
+export const CANONICAL_BRANCH = "main";
+export const CANONICAL_TABS = Object.freeze(["Codex", "Terminal"]);
+export const PRIMARY_AGENT = "enval-main";
 export const CODEX_UPDATE_OVERRIDE = "check_for_update_on_startup=false";
-const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const WORKSPACE_NAME_PATTERN = /^_?[A-Za-z][A-Za-z0-9_-]{0,62}$/;
-const HERDR_AGENT_PATTERN = /^[a-z][a-z0-9_-]{0,31}$/;
+const LEGACY_WORKSPACES = new Set(["Main", "Beheer", "beheer", "_Setup"]);
 const GOVERNANCE_FILES = Object.freeze([
   "AGENTS.md",
   ".codex/config.toml",
   ".codex/rules/enval.rules",
+  ".codex/agents/reviewer.toml",
+  ".codex/agents/ui_reviewer.toml",
+  ".codex/agents/docs_reviewer.toml",
 ]);
 
 export class BatchLaunchError extends Error {
@@ -61,47 +65,42 @@ export function validateGovernance(root) {
   for (
     const setting of [
       /^approval_policy = "on-request"$/m,
-      /^approvals_reviewer = "user"$/m,
+      /^approvals_reviewer = "auto_review"$/m,
       /^default_permissions = "enval-dev"$/m,
+      /^enabled = true$/m,
+      /^max_concurrent_threads_per_session = 2$/m,
     ]
   ) {
     if (!setting.test(config)) fail("codex_config_baseline_invalid");
   }
+  const instructions = readFileSync(join(root, "AGENTS.md"), "utf8");
+  for (const rule of [/`enval-main`/, /General\/Primary/, /only writer/]) {
+    if (!rule.test(instructions)) fail("agent_topology_contract_invalid");
+  }
+  const reviewerProfiles = new Map([
+    [".codex/agents/reviewer.toml", "reviewer"],
+    [".codex/agents/ui_reviewer.toml", "ui_reviewer"],
+    [".codex/agents/docs_reviewer.toml", "docs_reviewer"],
+  ]);
+  for (const [file, name] of reviewerProfiles) {
+    const profile = readFileSync(join(root, file), "utf8");
+    if (
+      !new RegExp(`^name = "${name}"$`, "m").test(profile) ||
+      !/^sandbox_mode = "read-only"$/m.test(profile)
+    ) {
+      fail(`reviewer_profile_not_read_only:${file}`);
+    }
+  }
   return Object.freeze({ files: GOVERNANCE_FILES });
 }
 
-export function deriveBatchSpec(
-  slug,
-  worktreesRoot = ENVAL_WORKTREES_ROOT,
-  branch = slug,
-) {
-  if (
-    typeof slug !== "string" || slug.length > 63 || !SLUG_PATTERN.test(slug) ||
-    typeof branch !== "string" || branch.length > 63 ||
-    !SLUG_PATTERN.test(branch)
-  ) {
-    fail("batch_slug_invalid");
-  }
-  const root = resolve(worktreesRoot);
-  const worktree = resolve(root, slug);
-  if (dirname(worktree) !== root) fail("leaf_worktree_invalid");
-  return Object.freeze({ slug, branch, worktree });
-}
-
 export function deriveBatchIdentity(workspaceName) {
-  if (
-    typeof workspaceName !== "string" ||
-    !WORKSPACE_NAME_PATTERN.test(workspaceName) ||
-    workspaceName === PERSISTENT_WORKSPACE
-  ) fail("workspace_name_invalid");
-  const slug = workspaceName.replace(/^_/, "").replaceAll("_", "-")
-    .toLowerCase();
-  deriveBatchSpec(slug, ENVAL_WORKTREES_ROOT, slug);
-  const agentName = `enval-${slug}`;
-  if (!HERDR_AGENT_PATTERN.test(agentName)) {
-    fail("herdr_agent_name_invalid");
-  }
-  return Object.freeze({ workspaceName, slug, branch: slug, agentName });
+  if (workspaceName !== CANONICAL_WORKSPACE) fail("workspace_name_invalid");
+  return Object.freeze({
+    workspaceName: CANONICAL_WORKSPACE,
+    branch: CANONICAL_BRANCH,
+    agentName: PRIMARY_AGENT,
+  });
 }
 
 function defaultRun(command, args, options) {
@@ -209,7 +208,7 @@ function mainState(run, root, expectedHead = null) {
       root,
       ["branch", "--show-current"],
       "integration_branch_inspection_failed",
-    ).trim() !== "main"
+    ).trim() !== CANONICAL_BRANCH
   ) fail("integration_branch_not_main");
   trackedClean(run, root, "main_tracked_dirty");
   const currentHead = head(run, root);
@@ -217,90 +216,6 @@ function mainState(run, root, expectedHead = null) {
     fail("main_head_changed_during_launch");
   }
   return currentHead;
-}
-
-function pathExists(path) {
-  try {
-    lstatSync(path);
-    return true;
-  } catch (error) {
-    if (error?.code === "ENOENT") return false;
-    throw error;
-  }
-}
-
-function worktreeBindings(run, root) {
-  const output = git(
-    run,
-    root,
-    ["worktree", "list", "--porcelain", "-z"],
-    "worktree_binding_inspection_failed",
-  );
-  const records = [];
-  let record = null;
-  for (const field of output.split("\0")) {
-    if (field.startsWith("worktree ")) {
-      if (record) records.push(record);
-      record = { path: resolve(field.slice("worktree ".length)) };
-    } else if (record && field.startsWith("branch ")) {
-      record.branch = field.slice("branch refs/heads/".length);
-    }
-  }
-  if (record) records.push(record);
-  return records;
-}
-
-function ensureWorktreesRoot(root) {
-  if (!pathExists(root)) mkdirSync(root);
-  const status = lstatSync(root);
-  if (
-    !status.isDirectory() || status.isSymbolicLink() ||
-    realpathSync(root) !== resolve(root)
-  ) fail("worktrees_root_invalid");
-}
-
-function ensureAssignedWorktree(run, root, spec) {
-  const bindings = worktreeBindings(run, root);
-  const byPath = bindings.filter((binding) => binding.path === spec.worktree);
-  const byBranch = bindings.filter((binding) => binding.branch === spec.branch);
-  if (byPath.length > 1 || byBranch.length > 1) {
-    fail("worktree_binding_conflict");
-  }
-  if (byPath.length === 1 || byBranch.length === 1) {
-    if (
-      byPath.length !== 1 || byBranch.length !== 1 ||
-      byPath[0] !== byBranch[0]
-    ) fail("worktree_binding_conflict");
-    return Object.freeze({ created: false, head: head(run, spec.worktree) });
-  }
-  if (pathExists(spec.worktree)) fail("worktree_path_exists");
-
-  const existingBranch = git(
-    run,
-    root,
-    ["branch", "--list", "--format=%(refname)", spec.branch],
-    "branch_binding_inspection_failed",
-  ).trim();
-  ensureWorktreesRoot(dirname(spec.worktree));
-  if (existingBranch === `refs/heads/${spec.branch}`) {
-    git(
-      run,
-      root,
-      ["worktree", "add", spec.worktree, spec.branch],
-      "worktree_reconciliation_failed",
-    );
-  } else if (existingBranch === "") {
-    const baseHead = mainState(run, root);
-    git(
-      run,
-      root,
-      ["worktree", "add", "-b", spec.branch, spec.worktree, baseHead],
-      "worktree_creation_failed",
-    );
-  } else {
-    fail("branch_binding_conflict");
-  }
-  return Object.freeze({ created: true, head: head(run, spec.worktree) });
 }
 
 export function codexLaunchArgv(worktree) {
@@ -350,18 +265,6 @@ export function verifyHerdrCli(run = defaultRun, cwd = ENVAL_ROOT) {
   );
   if (!rootHelp.includes("--session <name>")) {
     fail("herdr_session_semantics_unsupported");
-  }
-
-  const workspaceHelp = herdrChecked(
-    run,
-    ["workspace", "create", "--help"],
-    cwd,
-    "herdr_workspace_help_unavailable",
-  );
-  for (const expected of ["--cwd <PATH>", "--label <TEXT>", "--no-focus"]) {
-    if (!workspaceHelp.includes(expected)) {
-      fail("herdr_workspace_semantics_unsupported");
-    }
   }
 
   const workspaceRenameHelp = herdrChecked(
@@ -489,6 +392,9 @@ function listHerdrPanes(run, cwd, workspaceId) {
 
 function reconcileStandardTabs(run, spec, workspaceId, expectedTabs) {
   let tabs = listHerdrTabs(run, spec.worktree, workspaceId);
+  if (tabs.some((tab) => tab?.label === "Reviewer")) {
+    fail("herdr_permanent_reviewer_rejected");
+  }
   for (const label of expectedTabs) {
     if (tabs.filter((tab) => tab?.label === label).length > 1) {
       fail("herdr_tab_duplicate");
@@ -569,12 +475,15 @@ function reconcileStandardTabs(run, spec, workspaceId, expectedTabs) {
   });
 }
 
-function ensurePersistentWorkspace(run, root) {
+function ensureCanonicalWorkspace(run, root) {
   const workspaces = listHerdrWorkspaces(run, root);
+  if (workspaces.some((workspace) => LEGACY_WORKSPACES.has(workspace?.label))) {
+    fail("herdr_legacy_workspace_rejected");
+  }
   const named = workspaces.filter(
-    (workspace) => workspace?.label === PERSISTENT_WORKSPACE,
+    (workspace) => workspace?.label === CANONICAL_WORKSPACE,
   );
-  if (named.length > 1) fail("herdr_main_workspace_conflict");
+  if (named.length > 1) fail("herdr_canonical_workspace_conflict");
   let workspace = named[0];
   if (!workspace) {
     const rootWorkspaces = workspaces.filter((candidate) => {
@@ -585,7 +494,7 @@ function ensurePersistentWorkspace(run, root) {
         (pane) => typeof pane?.cwd === "string" && resolve(pane.cwd) === root,
       );
     });
-    if (rootWorkspaces.length !== 1) fail("herdr_main_workspace_missing");
+    if (rootWorkspaces.length !== 1) fail("herdr_canonical_workspace_missing");
     workspace = rootWorkspaces[0];
     herdrChecked(
       run,
@@ -595,94 +504,22 @@ function ensurePersistentWorkspace(run, root) {
         "workspace",
         "rename",
         workspace.workspace_id,
-        PERSISTENT_WORKSPACE,
+        CANONICAL_WORKSPACE,
       ],
       root,
-      "herdr_main_workspace_rename_failed",
+      "herdr_canonical_workspace_rename_failed",
     );
   }
   const workspaceId = workspace?.workspace_id;
   if (typeof workspaceId !== "string" || workspaceId === "") {
-    fail("herdr_main_workspace_response_invalid");
+    fail("herdr_canonical_workspace_response_invalid");
   }
   return reconcileStandardTabs(
     run,
     { worktree: root },
     workspaceId,
-    MAIN_TABS,
+    CANONICAL_TABS,
   );
-}
-
-function findAssignedWorkspace(run, root, spec) {
-  const workspaces = listHerdrWorkspaces(run, root);
-  const assigned = workspaces.filter(
-    (workspace) => workspace?.label === spec.workspaceName,
-  );
-  if (assigned.length > 1) fail("herdr_workspace_conflict");
-  for (const workspace of workspaces) {
-    const workspaceId = workspace?.workspace_id;
-    if (typeof workspaceId !== "string" || workspaceId === "") {
-      fail("herdr_workspace_list_response_invalid");
-    }
-    const panes = listHerdrPanes(run, root, workspaceId);
-    if (
-      workspace !== assigned[0] &&
-      panes.some(
-        (pane) =>
-          typeof pane?.cwd === "string" &&
-          resolve(pane.cwd) === spec.worktree,
-      )
-    ) {
-      fail("herdr_workspace_binding_conflict");
-    }
-  }
-  return assigned[0] ?? null;
-}
-
-function createHerdrWorkspace(run, spec) {
-  const result = herdrResponse(
-    run,
-    [
-      "workspace",
-      "create",
-      "--cwd",
-      spec.worktree,
-      "--label",
-      spec.workspaceName,
-      "--no-focus",
-    ],
-    spec.worktree,
-    "workspace_created",
-    "herdr_workspace_creation_failed",
-  );
-  const workspaceId = result.workspace?.workspace_id;
-  const tabId = result.tab?.tab_id;
-  const paneId = result.root_pane?.pane_id;
-  if (
-    typeof workspaceId !== "string" || workspaceId === "" ||
-    typeof tabId !== "string" || tabId === "" ||
-    typeof paneId !== "string" || paneId === "" ||
-    result.workspace?.label !== spec.workspaceName ||
-    result.tab?.workspace_id !== workspaceId ||
-    result.root_pane?.workspace_id !== workspaceId
-  ) {
-    fail("herdr_workspace_creation_response_invalid");
-  }
-  const returnedCwd = result.root_pane?.cwd;
-  const returnedCheckout = result.workspace?.worktree?.checkout_path;
-  if (
-    !(
-      typeof returnedCwd === "string" &&
-      resolve(returnedCwd) === spec.worktree
-    ) &&
-    !(
-      typeof returnedCheckout === "string" &&
-      resolve(returnedCheckout) === spec.worktree
-    )
-  ) {
-    fail("herdr_workspace_cwd_mismatch");
-  }
-  return Object.freeze({ workspaceId, tabId, paneId });
 }
 
 export function launchHerdrCodex(
@@ -726,14 +563,17 @@ export async function startBatch(workspaceName, options = {}) {
     fail("repository_root_missing");
   }
   if (root !== configuredRoot) fail("repository_root_not_canonical");
+  if (options.root === undefined && root !== CANONICAL_REPOSITORY) {
+    fail("repository_root_not_canonical");
+  }
 
   const run = options.run ?? defaultRun;
-  const worktreesRoot = resolve(options.worktreesRoot ?? ENVAL_WORKTREES_ROOT);
   const launch = options.launch ?? launchHerdrCodex;
   const identity = deriveBatchIdentity(workspaceName);
   const spec = Object.freeze({
-    ...deriveBatchSpec(identity.slug, worktreesRoot, identity.branch),
+    worktree: root,
     workspaceName: identity.workspaceName,
+    branch: identity.branch,
     agentName: identity.agentName,
   });
   if (
@@ -747,40 +587,11 @@ export async function startBatch(workspaceName, options = {}) {
 
   governanceTrackedAndClean(run, root);
   validateGovernance(root);
+  const baseHead = mainState(run, root);
   verifyCodexCli(run, root);
   verifyHerdrCli(run, root);
-  ensurePersistentWorkspace(run, root);
-  const existingWorkspace = findAssignedWorkspace(run, root, spec);
-
-  const worktree = ensureAssignedWorktree(run, root, spec);
-
-  if (
-    git(
-      run,
-      spec.worktree,
-      ["branch", "--show-current"],
-      "created_branch_verification_failed",
-    ).trim() !== spec.branch
-  ) fail("created_branch_mismatch");
-  if (head(run, spec.worktree) !== worktree.head) {
-    fail("created_base_head_mismatch");
-  }
-  if (worktree.created) {
-    trackedClean(run, spec.worktree, "created_worktree_tracked_dirty");
-  }
-  validateGovernance(spec.worktree);
-
-  const createdWorkspace = existingWorkspace
-    ? null
-    : createHerdrWorkspace(run, spec);
-  const workspaceId = existingWorkspace?.workspace_id ??
-    createdWorkspace.workspaceId;
-  const herdrWorkspace = reconcileStandardTabs(
-    run,
-    spec,
-    workspaceId,
-    BATCH_TABS,
-  );
+  const herdrWorkspace = ensureCanonicalWorkspace(run, root);
+  const workspaceId = herdrWorkspace.workspaceId;
 
   const agentList = herdrResponse(
     run,
@@ -822,13 +633,13 @@ export async function startBatch(workspaceName, options = {}) {
   }
   return Object.freeze({
     ...spec,
-    baseHead: worktree.head,
+    baseHead,
     herdrSession: HERDR_SESSION,
     herdrWorkspace: workspaceId,
     herdrAgent: spec.agentName,
-    workspaceReused: existingWorkspace !== null,
+    workspaceReused: true,
     agentReused,
-    tabs: BATCH_TABS,
+    tabs: CANONICAL_TABS,
   });
 }
 
@@ -838,6 +649,9 @@ export function formatBatchHandoff(result) {
     `PROJECT=${HERDR_PROJECT}`,
     `WORKSPACE=${result.workspaceName}`,
     `TABS=${result.tabs.join(",")}`,
+    `AGENT=${result.herdrAgent}`,
+    `REPOSITORY=${result.worktree}`,
+    `BRANCH=${result.branch}`,
     "",
   ].join("\n");
 }
