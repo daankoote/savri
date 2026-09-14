@@ -284,8 +284,11 @@ controller/processor allocation requires legal review.
   HTTP 409, and required-missing review subjects cannot be accepted in UI or by
   a new database decision. Closed resolved/withdrawn requests are projected as
   a customer-safe, case-authorized history of at most 50 entries; active
-  requests remain exclusively in the active block. Negative paths and history
-  reads create no workflow or authority writes.
+  requests remain exclusively in the active block. For closed entries,
+  `terminalAt` is the authoritative persisted terminal time, never a
+  browser-derived or `updated_at` fallback; active and answered non-terminal
+  requests expose it as null. Negative paths and history reads create no
+  workflow or authority writes.
 - [x] Apply the migrations locally and prove served operator/customer browser
   automation, including the request/correction HTTP 409 conflict.
 - [x] Daan completed the local Firefox history acceptance. No hosted rollout is

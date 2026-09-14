@@ -122,6 +122,7 @@ const handler = createHandler({
               answer: null,
               asked_at: "2026-09-13T12:00:00.000Z",
               answered_at: null,
+              terminal_at: null,
             },
           },
           error: null,

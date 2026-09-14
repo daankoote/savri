@@ -387,6 +387,7 @@ const blockedPublishFixture: EvidenceReviewCaseDetailResponseV1 = {
       answer: null,
       askedAt: "2026-08-19T12:00:00.000Z",
       answeredAt: null,
+      terminalAt: null,
     },
   },
 };

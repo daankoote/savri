@@ -2192,3 +2192,17 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   unchanged; hosted transport and deployment remain unproven.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-09-14 — Expose safe information-request terminal time locally
+
+- Extended the existing closed customer-safe information-request history with
+  the persisted terminal time for resolved and withdrawn requests. Active and
+  answered non-terminal requests retain a null terminal time.
+- Reused the existing R7/workforce-authorized projection and strict Edge
+  parsers. No actor, policy, scope, reason, audit provenance, new endpoint,
+  browser grant, workflow mutation or timeline UI was added.
+- Disposable database, parser, ACL, fresh migration-chain and active-schema
+  parity proofs are local only. Hosted migration and deployment remain
+  unproven.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

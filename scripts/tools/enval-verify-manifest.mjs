@@ -957,6 +957,7 @@ const CHECK_LIST = [
       "supabase/migrations/20260912100926_app_customer_information_request_integration_guards.sql",
       "supabase/migrations/20260912121643_app_customer_information_request_history_v1.sql",
       "supabase/migrations/20260913192155_information_request_email_v1.sql",
+      "supabase/migrations/20260914153311_customer_information_request_terminal_at_v1.sql",
     ],
     safety: SAFETY.SAFE_PURE,
     minimumMode: "TARGETED",
@@ -994,6 +995,7 @@ const CHECK_LIST = [
       "supabase/migrations/20260912100926_app_customer_information_request_integration_guards.sql",
       "supabase/migrations/20260912121643_app_customer_information_request_history_v1.sql",
       "supabase/migrations/20260913192155_information_request_email_v1.sql",
+      "supabase/migrations/20260914153311_customer_information_request_terminal_at_v1.sql",
     ],
     safety: SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE,
     minimumMode: "LOCAL_SERVICE",
@@ -2720,6 +2722,7 @@ export const PATH_RULES = Object.freeze([
         "supabase/migrations/20260912121643_app_customer_information_request_history_v1.sql",
         "supabase/migrations/20260913192155_information_request_email_v1.sql",
         "supabase/migrations/20260913202433_app_customer_information_request_withdraw_lock_fix.sql",
+        "supabase/migrations/20260914153311_customer_information_request_terminal_at_v1.sql",
       ]),
     }),
     checks: Object.freeze([

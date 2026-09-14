@@ -314,6 +314,10 @@ Resolved and withdrawn requests remain immutable and are read through one
 customer-safe history projection shared by customer and workforce detail. It
 excludes the active request, is ordered by question time and opaque request
 reference, and returns at most 50 entries without actor or authority metadata.
+Each closed entry includes the persisted terminal time from the authoritative
+transition; the browser neither derives it nor substitutes `updated_at`.
+The existing active projection exposes `terminalAt: null` for both open and
+answered non-terminal requests.
 
 Flow:
 

@@ -538,7 +538,12 @@ try {
     and to_regprocedure('public.app_customer_information_request_create_v1(uuid,text,text,text,text,text,timestamptz,jsonb)') is not null
     and to_regprocedure('public.app_customer_information_request_respond_v1(uuid,text,text,text,text,text,text,timestamptz,jsonb)') is not null
     and to_regprocedure('public.app_customer_information_request_transition_v1(uuid,text,text,text,text,text,text,timestamptz,jsonb)') is not null
+    and not has_function_privilege('service_role','public.app_customer_information_request_projection_v1(uuid)','EXECUTE')
+    and not has_function_privilege('anon','public.app_customer_information_request_projection_v1(uuid)','EXECUTE')
+    and not has_function_privilege('authenticated','public.app_customer_information_request_projection_v1(uuid)','EXECUTE')
     and not has_function_privilege('service_role','public.app_customer_information_request_history_projection_v1(uuid,uuid)','EXECUTE')
+    and not has_function_privilege('anon','public.app_customer_information_request_history_projection_v1(uuid,uuid)','EXECUTE')
+    and not has_function_privilege('authenticated','public.app_customer_information_request_history_projection_v1(uuid,uuid)','EXECUTE')
     and not has_function_privilege('anon','public.app_customer_information_request_customer_read_v1(uuid,text)','EXECUTE')
     and not has_function_privilege('authenticated','public.app_customer_information_request_workforce_read_v1(uuid,text)','EXECUTE')
     and has_function_privilege('service_role','public.app_customer_information_request_customer_read_v1(uuid,text)','EXECUTE')
@@ -546,6 +551,10 @@ try {
     and position('limit 50' in lower(pg_get_functiondef('public.app_customer_information_request_history_projection_v1(uuid,uuid)'::regprocedure))) > 0
     and position('created_at desc' in lower(pg_get_functiondef('public.app_customer_information_request_history_projection_v1(uuid,uuid)'::regprocedure))) > 0
     and position('request_reference desc' in lower(pg_get_functiondef('public.app_customer_information_request_history_projection_v1(uuid,uuid)'::regprocedure))) > 0
+    and position('''terminal_at'', history.terminal_at' in lower(pg_get_functiondef('public.app_customer_information_request_history_projection_v1(uuid,uuid)'::regprocedure))) > 0
+    and position('updated_at' in lower(pg_get_functiondef('public.app_customer_information_request_history_projection_v1(uuid,uuid)'::regprocedure))) = 0
+    and position('''terminal_at'', information_request.terminal_at' in lower(pg_get_functiondef('public.app_customer_information_request_projection_v1(uuid)'::regprocedure))) > 0
+    and position('updated_at' in lower(pg_get_functiondef('public.app_customer_information_request_projection_v1(uuid)'::regprocedure))) = 0
     and position('app_customer_information_request_history_projection_v1' in pg_get_functiondef('public.app_customer_information_request_customer_read_v1(uuid,text)'::regprocedure)) > 0
     and position('app_customer_information_request_history_projection_v1' in pg_get_functiondef('public.app_customer_information_request_workforce_read_v1(uuid,text)'::regprocedure)) > 0
     and to_regprocedure('public.app_evidence_review_current_correction_handoff_v1(uuid,text,text)') is not null

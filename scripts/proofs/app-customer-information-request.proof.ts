@@ -484,13 +484,37 @@ async function runProof() {
     has_function_privilege('anon','public.app_customer_information_request_create_v1(uuid,text,text,text,text,text,timestamptz,jsonb)','EXECUTE'),
     has_function_privilege('service_role','public.app_customer_information_request_history_projection_v1(uuid,uuid)','EXECUTE'),
     has_function_privilege('anon','public.app_customer_information_request_history_projection_v1(uuid,uuid)','EXECUTE'),
+    has_function_privilege('authenticated','public.app_customer_information_request_history_projection_v1(uuid,uuid)','EXECUTE'),
+    has_function_privilege('service_role','public.app_customer_information_request_projection_v1(uuid)','EXECUTE'),
+    has_function_privilege('anon','public.app_customer_information_request_projection_v1(uuid)','EXECUTE'),
+    has_function_privilege('authenticated','public.app_customer_information_request_projection_v1(uuid)','EXECUTE'),
     has_table_privilege('anon','public.app_customer_information_requests','SELECT'),
     has_table_privilege('authenticated','public.app_customer_information_responses','SELECT'),
     has_table_privilege('anon','public.app_workflow_email_dispatches','SELECT'),
     has_table_privilege('service_role','public.app_workflow_email_dispatches','SELECT'),
     has_function_privilege('service_role','public.app_customer_information_request_email_notify_v1(text,uuid,text,text,jsonb)','EXECUTE')
   );`);
-  assert(acl === "t|f|f|t|f|f|f|f|f|f|f|f", `acl_invalid:${acl}`);
+  assert(
+    acl === "t|f|f|t|f|f|f|f|f|f|f|f|f|f|f|f",
+    `acl_invalid:${acl}`,
+  );
+  const [anonHistoryDirect, authenticatedReadDirect] = await Promise.all([
+    concurrentPsql(`set role anon;
+      select public.app_customer_information_request_history_projection_v1(
+        '${CASE_IDS[0]}','${CUSTOMER_A}'
+      );`),
+    concurrentPsql(`set role authenticated;
+      select public.app_customer_information_request_customer_read_v1(
+        '${AUTH_CUSTOMER_WIDE}','${CASE_REFS[0]}'
+      );`),
+  ]);
+  assert(
+    anonHistoryDirect.code !== 0 &&
+      anonHistoryDirect.stderr.includes("permission denied for function") &&
+      authenticatedReadDirect.code !== 0 &&
+      authenticatedReadDirect.stderr.includes("permission denied for function"),
+    "direct_browser_function_access_allowed",
+  );
 
   const scopeContract = await psql(`select concat_ws('|',
     (select count(*) from pg_constraint
@@ -738,6 +762,15 @@ async function runProof() {
     '${AUTH_CUSTOMER_WIDE}','${CASE_REFS[0]}'
   )::text;`,
   );
+  const activeTerminal = await psql(`select concat_ws('|',
+    information_request.terminal_action is null,
+    information_request.terminal_at is null,
+    response.id is null
+  )
+  from public.app_customer_information_requests information_request
+  left join public.app_customer_information_responses response
+    on response.information_request_id=information_request.id
+  where information_request.request_reference='${requestRef}';`);
   const caseDenied = await json(
     `select public.app_customer_information_request_customer_read_v1(
     '${AUTH_CUSTOMER_CASE}','${CASE_REFS[0]}'
@@ -750,8 +783,10 @@ async function runProof() {
   );
   assert(
     wideRead.ok === true && (wideRead.request as JsonObject).state === "OPEN" &&
+      (wideRead.request as JsonObject).terminal_at === null &&
       Array.isArray(wideRead.history) && wideRead.history.length === 0 &&
-      caseDenied.status === 404 && otherDenied.status === 404,
+      activeTerminal === "t|t|t" && caseDenied.status === 404 &&
+      otherDenied.status === 404,
     "r7_read_authority_invalid",
   );
 
@@ -777,9 +812,20 @@ async function runProof() {
   );
   assert(
     answered.code === "answered" && answerReplay.code === "answered" &&
-      (answered.request as JsonObject).state === "ANSWERED",
+      (answered.request as JsonObject).state === "ANSWERED" &&
+      (answered.request as JsonObject).terminal_at === null,
     "respond_or_retry_failed",
   );
+  const answeredTerminal = await psql(`select concat_ws('|',
+    information_request.terminal_action is null,
+    information_request.terminal_at is null,
+    response.id is not null
+  )
+  from public.app_customer_information_requests information_request
+  left join public.app_customer_information_responses response
+    on response.information_request_id=information_request.id
+  where information_request.request_reference='${requestRef}';`);
+  assert(answeredTerminal === "t|t|t", "answered_terminal_at_not_null");
   const answeredMail = await psql(`select concat_ws('|',
     count(*),min(recipient_ref::text),min(frozen_subject),
     bool_and(frozen_body = E'Beste medewerker,\n\nDe klant heeft uw vraag over deze aanvraag beantwoord.\n\nAanvraag: INFO-A1\nDossiernummer: ${
@@ -853,6 +899,21 @@ async function runProof() {
   const resolvedHistory = resolvedCustomerHistory.history as JsonObject[];
   const workforceResolvedHistory = resolvedWorkforceHistory
     .history as JsonObject[];
+  const resolvedHistoryTimes = await psql(`select concat_ws('|',
+    (history.entry->>'asked_at')::timestamptz=information_request.created_at,
+    (history.entry->>'answered_at')::timestamptz=response.responded_at,
+    (history.entry->>'terminal_at')::timestamptz=information_request.terminal_at
+  )
+  from public.app_customer_information_requests information_request
+  join public.app_customer_information_responses response
+    on response.information_request_id=information_request.id
+  cross join lateral (
+    select public.app_customer_information_request_history_projection_v1(
+      information_request.case_id,
+      information_request.target_customer_id
+    )->0 as entry
+  ) history
+  where information_request.request_reference='${requestRef}';`);
   assert(
     resolvedCustomerHistory.request === null && resolvedHistory.length === 1 &&
       resolvedHistory[0].outcome === "RESOLVED" &&
@@ -860,6 +921,8 @@ async function runProof() {
       resolvedHistory[0].answer === "Dit is het antwoord." &&
       typeof resolvedHistory[0].asked_at === "string" &&
       typeof resolvedHistory[0].answered_at === "string" &&
+      typeof resolvedHistory[0].terminal_at === "string" &&
+      resolvedHistoryTimes === "t|t|t" &&
       workforceResolvedHistory.length === 1 &&
       workforceResolvedHistory[0].request_ref ===
         resolvedHistory[0].request_ref &&
@@ -869,6 +932,8 @@ async function runProof() {
       workforceResolvedHistory[0].asked_at === resolvedHistory[0].asked_at &&
       workforceResolvedHistory[0].answered_at ===
         resolvedHistory[0].answered_at &&
+      workforceResolvedHistory[0].terminal_at ===
+        resolvedHistory[0].terminal_at &&
       deniedWorkforceHistory.ok !== true &&
       writesAfterResolvedHistory === writesBeforeResolvedHistory,
     "resolved_history_contract_or_authority_invalid",
@@ -929,13 +994,27 @@ async function runProof() {
     )::text;`,
   );
   const withdrawnHistory = withdrawnCustomerHistory.history as JsonObject[];
+  const withdrawnHistoryTimes = await psql(`select concat_ws('|',
+    (history.entry->>'asked_at')::timestamptz=information_request.created_at,
+    (history.entry->>'terminal_at')::timestamptz=information_request.terminal_at
+  )
+  from public.app_customer_information_requests information_request
+  cross join lateral (
+    select public.app_customer_information_request_history_projection_v1(
+      information_request.case_id,
+      information_request.target_customer_id
+    )->0 as entry
+  ) history
+  where information_request.request_reference='${withdrawRef}';`);
   assert(
     withdrawnCustomerHistory.request === null &&
       withdrawnHistory.length === 1 &&
       withdrawnHistory[0].outcome === "WITHDRAWN" &&
       withdrawnHistory[0].question === "Welke toelichting kunt u geven?" &&
       withdrawnHistory[0].answer === null &&
-      withdrawnHistory[0].answered_at === null,
+      withdrawnHistory[0].answered_at === null &&
+      typeof withdrawnHistory[0].terminal_at === "string" &&
+      withdrawnHistoryTimes === "t|t",
     "withdrawn_history_contract_invalid",
   );
 
@@ -1385,6 +1464,7 @@ async function runProof() {
       limitedHistory[0].request_ref === "IRQ-0000000000000033" &&
       limitedHistory[49].request_ref === "IRQ-0000000000000002" &&
       limitedHistory.every((entry) => entry.outcome === "WITHDRAWN") &&
+      limitedHistory.every((entry) => typeof entry.terminal_at === "string") &&
       historyReadCountsAfter === historyReadCountsBefore,
     "history_limit_order_or_zero_write_invalid",
   );

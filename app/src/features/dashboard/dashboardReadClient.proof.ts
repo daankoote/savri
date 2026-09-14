@@ -236,11 +236,13 @@ function dashboardBody(selectedDossierId = DOSSIER_A) {
         answer: "De aansluiting staat op naam van de VvE.",
         askedAt: "2026-07-13T10:00:00.000Z",
         answeredAt: "2026-07-13T10:10:00.000Z",
+        terminalAt: "2026-07-13T10:20:00.000Z",
       },
       {
         status: "Ingetrokken",
         question: "Is een extra toelichting beschikbaar?",
         askedAt: "2026-07-12T10:00:00.000Z",
+        terminalAt: "2026-07-12T10:05:00.000Z",
       },
     ],
     storage_path: "ignored-by-client",
@@ -444,7 +446,11 @@ export async function runDashboardReadClientProof(): Promise<
     success.model.information_request === null &&
       success.model.information_request_history.length === 2 &&
       success.model.information_request_history[0].status === "Afgerond" &&
-      success.model.information_request_history[1].status === "Ingetrokken",
+      success.model.information_request_history[0].terminalAt ===
+        "2026-07-13T10:20:00.000Z" &&
+      success.model.information_request_history[1].status === "Ingetrokken" &&
+      success.model.information_request_history[1].terminalAt ===
+        "2026-07-12T10:05:00.000Z",
     "information request history must parse newest first without an active request",
   );
   const inTreatment = getDashboardStatusPresentation({

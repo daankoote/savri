@@ -10,6 +10,7 @@ export type CustomerInformationRequestV1 = Readonly<{
   answer: string | null;
   askedAt: string;
   answeredAt: string | null;
+  terminalAt: null;
 }>;
 
 export type CustomerInformationRequestHistoryEntryV1 =
@@ -19,11 +20,13 @@ export type CustomerInformationRequestHistoryEntryV1 =
     answer: string;
     askedAt: string;
     answeredAt: string;
+    terminalAt: string;
   }>
   | Readonly<{
     status: "Ingetrokken";
     question: string;
     askedAt: string;
+    terminalAt: string;
   }>;
 
 export type CustomerInformationRequestCustomerReadV1 = Readonly<{
@@ -78,6 +81,7 @@ export function parseCustomerInformationRequestSource(
       "question",
       "request_ref",
       "state",
+      "terminal_at",
     ])
   ) return null;
   const requestRef = typeof value.request_ref === "string"
@@ -96,7 +100,7 @@ export function parseCustomerInformationRequestSource(
     !question || !askedAt ||
     (state === "OPEN" && (answer !== null || answeredAt !== null)) ||
     (state === "ANSWERED" && (!answer || !answeredAt)) ||
-    (answeredAt !== null && answeredAt < askedAt)
+    (answeredAt !== null && answeredAt < askedAt) || value.terminal_at !== null
   ) return null;
   return Object.freeze({
     requestRef,
@@ -105,6 +109,7 @@ export function parseCustomerInformationRequestSource(
     answer,
     askedAt,
     answeredAt,
+    terminalAt: null,
   });
 }
 
@@ -164,6 +169,7 @@ function parseCustomerInformationRequestHistorySource(
         "outcome",
         "question",
         "request_ref",
+        "terminal_at",
       ])
     ) return null;
     const requestRef = typeof entry.request_ref === "string"
@@ -171,7 +177,11 @@ function parseCustomerInformationRequestHistorySource(
       : "";
     const question = boundedText(entry.question);
     const askedAt = normalizedTimestamp(entry.asked_at);
-    if (!REQUEST_REF_RE.test(requestRef) || !question || !askedAt) return null;
+    const terminalAt = normalizedTimestamp(entry.terminal_at);
+    if (
+      !REQUEST_REF_RE.test(requestRef) || !question || !askedAt ||
+      !terminalAt || terminalAt < askedAt
+    ) return null;
     if (
       previous &&
       (askedAt > previous.askedAt ||
@@ -184,6 +194,7 @@ function parseCustomerInformationRequestHistorySource(
         status: "Ingetrokken",
         question,
         askedAt,
+        terminalAt,
       }));
       continue;
     }
@@ -191,7 +202,7 @@ function parseCustomerInformationRequestHistorySource(
     const answeredAt = normalizedTimestamp(entry.answered_at);
     if (
       entry.outcome !== "RESOLVED" || !answer || !answeredAt ||
-      answeredAt < askedAt
+      answeredAt < askedAt || terminalAt < answeredAt
     ) return null;
     safe.push(Object.freeze({
       status: "Afgerond",
@@ -199,6 +210,7 @@ function parseCustomerInformationRequestHistorySource(
       answer,
       askedAt,
       answeredAt,
+      terminalAt,
     }));
   }
   return Object.freeze(safe);
@@ -216,6 +228,7 @@ export function parseCustomerInformationRequestApi(
       "question",
       "requestRef",
       "state",
+      "terminalAt",
     ])
   ) return null;
   return parseCustomerInformationRequestSource({
@@ -225,6 +238,7 @@ export function parseCustomerInformationRequestApi(
     answer: value.answer,
     asked_at: value.askedAt,
     answered_at: value.answeredAt,
+    terminal_at: value.terminalAt,
   });
 }
 
@@ -255,15 +269,24 @@ export function parseCustomerInformationRequestHistoryApi(
     const status = entry.status;
     const question = boundedText(entry.question);
     const askedAt = normalizedTimestamp(entry.askedAt);
+    const terminalAt = normalizedTimestamp(entry.terminalAt);
     if (
-      !question || !askedAt || (previousAskedAt && askedAt > previousAskedAt)
+      !question || !askedAt || !terminalAt || terminalAt < askedAt ||
+      (previousAskedAt && askedAt > previousAskedAt)
     ) {
       return null;
     }
     previousAskedAt = askedAt;
     if (status === "Ingetrokken") {
-      if (!hasExactKeys(entry, ["askedAt", "question", "status"])) return null;
-      safe.push(Object.freeze({ status, question, askedAt }));
+      if (
+        !hasExactKeys(entry, [
+          "askedAt",
+          "question",
+          "status",
+          "terminalAt",
+        ])
+      ) return null;
+      safe.push(Object.freeze({ status, question, askedAt, terminalAt }));
       continue;
     }
     if (
@@ -274,12 +297,22 @@ export function parseCustomerInformationRequestHistoryApi(
         "askedAt",
         "question",
         "status",
+        "terminalAt",
       ])
     ) return null;
     const answer = boundedText(entry.answer);
     const answeredAt = normalizedTimestamp(entry.answeredAt);
-    if (!answer || !answeredAt || answeredAt < askedAt) return null;
-    safe.push(Object.freeze({ status, question, answer, askedAt, answeredAt }));
+    if (
+      !answer || !answeredAt || answeredAt < askedAt || terminalAt < answeredAt
+    ) return null;
+    safe.push(Object.freeze({
+      status,
+      question,
+      answer,
+      askedAt,
+      answeredAt,
+      terminalAt,
+    }));
   }
   return Object.freeze(safe);
 }

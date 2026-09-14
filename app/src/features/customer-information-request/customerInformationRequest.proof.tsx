@@ -28,6 +28,7 @@ const REQUEST = Object.freeze({
   answer: null,
   askedAt: "2026-09-11T12:00:00.000Z",
   answeredAt: null,
+  terminalAt: null,
 });
 const RESOLVED_HISTORY_ENTRY = Object.freeze({
   status: "Afgerond" as const,
@@ -35,6 +36,7 @@ const RESOLVED_HISTORY_ENTRY = Object.freeze({
   answer: "De aansluiting staat op naam van de VvE.",
   askedAt: "2026-09-11T11:00:00.000Z",
   answeredAt: "2026-09-11T11:10:00.000Z",
+  terminalAt: "2026-09-11T11:20:00.000Z",
 });
 const HISTORY = Object.freeze([
   RESOLVED_HISTORY_ENTRY,
@@ -42,6 +44,7 @@ const HISTORY = Object.freeze([
     status: "Ingetrokken" as const,
     question: "Is een extra toelichting beschikbaar?",
     askedAt: "2026-09-10T10:00:00.000Z",
+    terminalAt: "2026-09-10T10:05:00.000Z",
   }),
 ]);
 const SOURCE_HISTORY = Object.freeze([
@@ -52,6 +55,7 @@ const SOURCE_HISTORY = Object.freeze([
     answer: RESOLVED_HISTORY_ENTRY.answer,
     asked_at: RESOLVED_HISTORY_ENTRY.askedAt,
     answered_at: RESOLVED_HISTORY_ENTRY.answeredAt,
+    terminal_at: RESOLVED_HISTORY_ENTRY.terminalAt,
   }),
   Object.freeze({
     request_ref: "IRQ-1111111111111111",
@@ -60,6 +64,7 @@ const SOURCE_HISTORY = Object.freeze([
     answer: null,
     asked_at: HISTORY[1].askedAt,
     answered_at: null,
+    terminal_at: HISTORY[1].terminalAt,
   }),
 ]);
 
@@ -99,6 +104,7 @@ async function run() {
           answer: null,
           asked_at: REQUEST.askedAt,
           answered_at: null,
+          terminal_at: null,
         })?.requestRef === REQUEST_REF &&
       parseCustomerInformationRequestApi(REQUEST)?.state === "OPEN" &&
       parseCustomerInformationRequestWorkforceApi({
@@ -107,11 +113,18 @@ async function run() {
           history: HISTORY,
         })?.history.length === 2 &&
       parsedCustomerRead !== false && parsedCustomerRead.history.length === 2 &&
-      parsedWorkforceRead?.history[0].status === "Afgerond",
+      parsedCustomerRead.history[0].terminalAt ===
+        RESOLVED_HISTORY_ENTRY.terminalAt &&
+      parsedWorkforceRead?.history[0].status === "Afgerond" &&
+      parsedWorkforceRead.history[1].terminalAt === HISTORY[1].terminalAt,
     "information_request_contract_rejected",
   );
   assert(
     !parseCustomerInformationRequestApi({ ...REQUEST, internalId: "secret" }) &&
+      !parseCustomerInformationRequestApi({
+        ...REQUEST,
+        terminalAt: "2026-09-11T12:15:00.000Z",
+      }) &&
       !parseCustomerInformationRequestApi({
         ...REQUEST,
         question: "regel een\nregel twee",
@@ -124,6 +137,15 @@ async function run() {
         { ...HISTORY[0], internalId: "secret" },
       ]) &&
       !parseCustomerInformationRequestHistoryApi([
+        { ...HISTORY[0], updatedAt: HISTORY[0].terminalAt },
+      ]) &&
+      !parseCustomerInformationRequestHistoryApi([
+        { ...HISTORY[0], terminalAt: null },
+      ]) &&
+      !parseCustomerInformationRequestHistoryApi([
+        { ...HISTORY[0], terminalAt: "2026-09-11T11:09:00.000Z" },
+      ]) &&
+      !parseCustomerInformationRequestHistoryApi([
         ...HISTORY,
         ...Array.from({ length: 49 }, () => HISTORY[1]),
       ]) &&
@@ -134,6 +156,23 @@ async function run() {
         code: "ok",
         request: null,
         history: [{ ...SOURCE_HISTORY[0], actor_ref: "internal" }],
+      }) &&
+      !parseCustomerInformationRequestReadSource({
+        ok: true,
+        status: 200,
+        code: "ok",
+        request: null,
+        history: [{ ...SOURCE_HISTORY[0], terminal_at: null }],
+      }) &&
+      !parseCustomerInformationRequestReadSource({
+        ok: true,
+        status: 200,
+        code: "ok",
+        request: null,
+        history: [{
+          ...SOURCE_HISTORY[0],
+          updated_at: SOURCE_HISTORY[0].terminal_at,
+        }],
       }),
     "information_request_fail_closed_contract_invalid",
   );

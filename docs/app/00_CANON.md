@@ -539,13 +539,16 @@ The recent app frontend Auth/session flow is retained as local proof:
   requests disappear from the active projection and are retained in a separate
   customer-safe closed history shared by customer and workforce case detail.
   That history contains only resolved questions with their answer or withdrawn
-  questions without an answer, newest-first with a deterministic tie-break and
-  a fixed limit of 50; active requests never appear twice. It resumes the
-  existing status authority. Create, read and respond accept only
-  the same normalized legacy/signing-v3 case lineages as the application index;
-  no lifecycle or timeline fact is created. Local served-browser and human
-  Firefox acceptance by Daan remains OPEN; local automated served-browser
-  coverage is proven.
+  questions without an answer, plus the authoritative persisted terminal time
+  for either outcome. It is newest-first with a deterministic tie-break and a
+  fixed limit of 50; active requests never appear twice. It resumes the
+  existing status authority. The active projection exposes the same field as
+  null for open and answered non-terminal requests. Create, read and respond
+  accept only the same normalized legacy/signing-v3 case lineages as the
+  application index;
+  no lifecycle or timeline fact is created. Local automated served-browser and
+  Daan's human Firefox history acceptance are proven; hosted rollout remains
+  open.
 - The real customer-safe dashboard frontend projection is CURRENT / LOCAL PROOF and uses `api-app-dashboard-get`.
 - The reusable customer document module is CURRENT / LOCAL PROOF.
 - MID evidence and installation/acquisition invoice PDF upload are supported from the authenticated dashboard.
