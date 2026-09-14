@@ -14,6 +14,10 @@ import {
   requireVerifiedSupabaseAuthUser,
 } from "../_shared/app_customer_auth.ts";
 import {
+  resolveWorkflowEmailServerContext,
+  type WorkflowEmailServerContext,
+} from "../_shared/app_workflow_email_context.ts";
+import {
   configuredExpiry,
   defaultServiceClient,
   type JsonObject,
@@ -39,7 +43,14 @@ export type CustomerInformationRequestHandlerDependencies = {
   requestMeta: typeof getAppRequestMeta;
   hashPayload: typeof payloadHash;
   verifyBearer: typeof requireVerifiedSupabaseAuthUser;
+  resolveEmailContext: (
+    tenantExecution: Parameters<typeof resolveWorkflowEmailServerContext>[1],
+  ) => Promise<WorkflowEmailServerContext | null>;
 };
+
+function serverEnvironment() {
+  return { get: (name: string) => Deno.env.get(name) };
+}
 
 const DEFAULT_DEPENDENCIES: CustomerInformationRequestHandlerDependencies = {
   createServiceClient: defaultServiceClient,
@@ -47,6 +58,8 @@ const DEFAULT_DEPENDENCIES: CustomerInformationRequestHandlerDependencies = {
   requestMeta: getAppRequestMeta,
   hashPayload: payloadHash,
   verifyBearer: requireVerifiedSupabaseAuthUser,
+  resolveEmailContext: (tenantExecution) =>
+    resolveWorkflowEmailServerContext(serverEnvironment(), tenantExecution),
 };
 
 function isObject(value: unknown): value is JsonObject {
@@ -257,6 +270,8 @@ export function createHandler(
       request_ref: request.requestRef ?? null,
       text: request.text ?? null,
     });
+    const emailContext = await deps.resolveEmailContext(meta.tenant_execution)
+      .catch(() => null);
     const rpc = rpcFor(request);
     const result = await serviceClient.rpc(rpc.name, {
       p_auth_user_id: verified.context.authUserId,
@@ -266,6 +281,7 @@ export function createHandler(
       p_idempotency_key: meta.idempotency_key,
       p_payload_sha256: canonicalHash,
       p_idempotency_expires_at: expiresAt,
+      p_email_context: emailContext,
     }) as RpcResult;
     if (result.error || !isObject(result.data)) {
       return appErrorResponse(

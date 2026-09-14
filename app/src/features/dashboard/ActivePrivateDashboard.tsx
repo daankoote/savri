@@ -101,6 +101,7 @@ export function ActivePrivateDashboard({
         <div>
           <h1>{portalContextLabel(application.portal_context)}</h1>
           <p>{application.application_label}</p>
+          <p>Dossiernummer: {application.case_reference}</p>
         </div>
       </header>
 

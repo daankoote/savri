@@ -1,4 +1,5 @@
 import { parseEvidenceReviewDetailRoute } from "../evidence-review/evidenceReviewRoutes.ts";
+import { parseDashboardApplicationsRoute } from "../dashboard/dashboardRoutes.ts";
 import { AUTH_LOGIN_ROUTE } from "./authUxFlow.ts";
 
 export const DEFAULT_POST_LOGIN_DESTINATION = "/dashboard";
@@ -16,8 +17,10 @@ export function normalizeSafeInternalReturnRoute(
   value: string | null | undefined,
 ): string | null {
   if (!value || value !== value.trim()) return null;
+  const dashboardRoute = parseDashboardApplicationsRoute(value);
   return SAFE_INTERNAL_RETURN_ROUTES.has(value) ||
-      parseEvidenceReviewDetailRoute(value)
+      parseEvidenceReviewDetailRoute(value) ||
+      dashboardRoute?.kind === "detail"
     ? value
     : null;
 }

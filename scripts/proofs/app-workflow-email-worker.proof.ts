@@ -12,7 +12,17 @@ function assert(value: unknown, label: string): asserts value {
   if (!value) throw new Error(label);
 }
 
-function claim(index: number) {
+const TEMPLATE_KEYS = [
+  "information-request-created-customer-nl-v1",
+  "information-request-created-customer-nl-v2",
+  "information-request-answered-workforce-nl-v1",
+  "information-request-withdrawn-customer-nl-v1",
+] as const;
+
+function claim(
+  index: number,
+  templateKey: (typeof TEMPLATE_KEYS)[number] = TEMPLATE_KEYS[0],
+) {
   return {
     ok: true,
     delivery: {
@@ -23,7 +33,7 @@ function claim(index: number) {
       provider_idempotency_key: `workflow-email-v1:${"a".repeat(64)}`,
       recipient_email: "customer@example.invalid",
       subject: "Er staat een vraag voor u klaar",
-      template_key: "information-request-created-customer-nl-v1",
+      template_key: templateKey,
     },
   };
 }
@@ -73,7 +83,13 @@ function startSmtpCommitPointFixture(
 }
 
 const completions: Record<string, unknown>[] = [];
-const claims: unknown[] = [claim(1), claim(2), { ok: true, delivery: null }];
+const claims: unknown[] = [
+  claim(1, TEMPLATE_KEYS[0]),
+  claim(2, TEMPLATE_KEYS[1]),
+  claim(3, TEMPLATE_KEYS[2]),
+  claim(4, TEMPLATE_KEYS[3]),
+  { ok: true, delivery: null },
+];
 const client: WorkflowEmailWorkerClient = {
   async rpc(name, args) {
     if (name === "app_workflow_email_claim_v1") {
@@ -98,12 +114,12 @@ const transport: WorkflowEmailTransportPort = {
 
 const result = await runWorkflowEmailWorker(client, transport);
 assert(
-  result.claimed === 2 && result.providerAccepted === 2 && result.failed === 0,
+  result.claimed === 4 && result.providerAccepted === 4 && result.failed === 0,
   "worker_batch_result_invalid",
 );
 assert(
-  deliveredBodies.join("|") === "body-1|body-2" &&
-    completions.length === 2 &&
+  deliveredBodies.join("|") === "body-1|body-2|body-3|body-4" &&
+    completions.length === 4 &&
     completions.every((entry) => entry.p_outcome === "provider_accepted"),
   "worker_delivery_or_completion_invalid",
 );

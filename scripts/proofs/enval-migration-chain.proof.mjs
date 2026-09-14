@@ -406,9 +406,9 @@ try {
     DATABASE,
     `select (
     (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%') = 88
+      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%') = 89
     and (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
-      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%' and c.relrowsecurity) = 88
+      where n.nspname='public' and c.relkind='r' and c.relname like 'app\\_%' and c.relrowsecurity) = 89
     and not exists (select 1 from information_schema.role_table_grants
       where table_schema='public' and table_name like 'app\\_%'
         and grantee in ('anon','authenticated') and privilege_type in ('INSERT','UPDATE','DELETE','TRUNCATE'))
@@ -457,8 +457,15 @@ try {
     and not has_table_privilege('service_role','public.app_workflow_email_intents','SELECT')
     and not has_table_privilege('service_role','public.app_workflow_email_deliveries','SELECT')
     and not has_table_privilege('service_role','public.app_workflow_email_delivery_attempts','SELECT')
+    and not has_table_privilege('service_role','public.app_workflow_email_dispatches','SELECT')
     and not has_function_privilege('service_role','public.app_workflow_email_enqueue_v1(text,text,text,text,uuid,text,jsonb,text)','EXECUTE')
     and not has_function_privilege('service_role','public.app_workflow_email_cancel_v1(text)','EXECUTE')
+    and not has_function_privilege('service_role','public.app_customer_information_request_email_notify_v1(text,uuid,text,text,jsonb)','EXECUTE')
+    and has_function_privilege('service_role','public.app_customer_information_request_create_v1(uuid,text,text,text,text,text,timestamptz,jsonb)','EXECUTE')
+    and has_function_privilege('service_role','public.app_customer_information_request_respond_v1(uuid,text,text,text,text,text,text,timestamptz,jsonb)','EXECUTE')
+    and has_function_privilege('service_role','public.app_customer_information_request_transition_v1(uuid,text,text,text,text,text,text,timestamptz,jsonb)','EXECUTE')
+    and not has_function_privilege('anon','public.app_customer_information_request_create_v1(uuid,text,text,text,text,text,timestamptz,jsonb)','EXECUTE')
+    and not has_function_privilege('authenticated','public.app_customer_information_request_respond_v1(uuid,text,text,text,text,text,text,timestamptz,jsonb)','EXECUTE')
     and has_function_privilege('service_role','public.app_workflow_email_claim_v1()','EXECUTE')
     and has_function_privilege('service_role','public.app_workflow_email_complete_v1(uuid,uuid,text,text,text)','EXECUTE')
     and not has_function_privilege('anon','public.app_workflow_email_claim_v1()','EXECUTE')
@@ -523,9 +530,14 @@ try {
     and to_regclass('public.app_workflow_email_intents') is not null
     and to_regclass('public.app_workflow_email_deliveries') is not null
     and to_regclass('public.app_workflow_email_delivery_attempts') is not null
+    and to_regclass('public.app_workflow_email_dispatches') is not null
     and to_regprocedure('public.app_workflow_email_enqueue_v1(text,text,text,text,uuid,text,jsonb,text)') is not null
     and to_regprocedure('public.app_workflow_email_claim_v1()') is not null
     and to_regprocedure('public.app_workflow_email_complete_v1(uuid,uuid,text,text,text)') is not null
+    and to_regprocedure('public.app_customer_information_request_email_notify_v1(text,uuid,text,text,jsonb)') is not null
+    and to_regprocedure('public.app_customer_information_request_create_v1(uuid,text,text,text,text,text,timestamptz,jsonb)') is not null
+    and to_regprocedure('public.app_customer_information_request_respond_v1(uuid,text,text,text,text,text,text,timestamptz,jsonb)') is not null
+    and to_regprocedure('public.app_customer_information_request_transition_v1(uuid,text,text,text,text,text,text,timestamptz,jsonb)') is not null
     and not has_function_privilege('service_role','public.app_customer_information_request_history_projection_v1(uuid,uuid)','EXECUTE')
     and not has_function_privilege('anon','public.app_customer_information_request_customer_read_v1(uuid,text)','EXECUTE')
     and not has_function_privilege('authenticated','public.app_customer_information_request_workforce_read_v1(uuid,text)','EXECUTE')

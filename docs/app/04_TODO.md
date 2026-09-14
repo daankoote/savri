@@ -275,8 +275,8 @@ controller/processor allocation requires legal review.
   newest-first and limited to 50 without raw payloads or identifiers. Signing
   evidence stays internal; the dashboard presents one shared Dutch current
   status and does not equate checked data with a completed dossier.
-- CUSTOMER_INFORMATION_REQUEST_V1 is IMPLEMENTED / LOCAL STATIC AND ISOLATED
-  DATABASE PROOF: one active case-scoped text question, one customer answer,
+- CUSTOMER_INFORMATION_REQUEST_V1 is CURRENT / LOCAL PROOF: one active
+  case-scoped text question, one customer answer,
   workforce withdraw-before-answer and resolve-after-answer. R7 owns customer
   access; the new capability requires its own exact active case-scope assignment
   for the same policy population as correction publication. Request/correction
@@ -288,7 +288,8 @@ controller/processor allocation requires legal review.
   reads create no workflow or authority writes.
 - [x] Apply the migrations locally and prove served operator/customer browser
   automation, including the request/correction HTTP 409 conflict.
-- [ ] Complete Daan's Firefox history acceptance. No hosted rollout is claimed.
+- [x] Daan completed the local Firefox history acceptance. No hosted rollout is
+  claimed.
 - Successful dashboard reads perform zero database writes.
 - Real dashboard frontend projection is locally proven.
 - Route-selected application support is locally proven.
@@ -826,11 +827,22 @@ customer confirmation, the green Integration gate or local database state.
 
 - [x] Add the App-owned workflow-email foundation with immutable frozen intent,
       separate attempts, owner-only closed-template enqueue, bounded leasing and
-      strict-local Mailpit proof. No business event is wired yet.
-- Wire information-request mail only after customer/workforce recipient,
-  canonical portal-origin and sender/reply-to authority are explicitly approved.
-- Define correction cover-message and review email notification contract on the
-  shared foundation.
+      strict-local Mailpit proof.
+- [x] Wire information-request create, answer and withdraw transactionally to
+      server-resolved R7/workforce recipients, server presentation and a strict
+      portal origin. Current mail freezes the server-resolved application label
+      and case reference with the matching fixed dossier route. Resolve
+      deliberately sends no mail; hosted transport and sender/reply-to
+      activation remain open.
+- `CUSTOMER_TIMELINE_INFORMATION_REQUEST_V1`: project active and historical
+  information-request events into the customer timeline and remove overlapping
+  standalone history only after that projection is authoritative.
+- `WORKFORCE_HEADER_LOGOUT_V1`: add the separately accepted workforce header
+  logout behavior without changing portal authority.
+- `CORRECTION_COVER_MESSAGE_V1`: define controlled cover-message content and
+  its portal projection.
+- `CORRECTION_EMAIL_V1`: connect correction notification to the shared
+  workflow-email foundation only after the cover-message contract is proven.
 - Define kWh periodic lifecycle.
 - Define consent renewal/version-expiry lifecycle.
 - Zakelijke/VvE document requirements.

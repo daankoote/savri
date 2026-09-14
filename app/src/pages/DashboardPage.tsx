@@ -4,7 +4,7 @@ import type { RoutedPageProps } from "../routes/types";
 
 export function DashboardPage({ currentPath, navigate }: RoutedPageProps) {
   return (
-    <DashboardRouteGuard navigate={navigate}>
+    <DashboardRouteGuard navigate={navigate} returnTo={currentPath}>
       <DashboardPageShell currentPath={currentPath} navigate={navigate} />
     </DashboardRouteGuard>
   );

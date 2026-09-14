@@ -11,6 +11,13 @@ const EXPIRES = "2030-01-01T00:00:00Z";
 const AUTH_WORKFORCE = "a1000000-0000-4000-8000-000000000001";
 const AUTH_CUSTOMER_WIDE = "a1000000-0000-4000-8000-000000000002";
 const AUTH_CUSTOMER_CASE = "a1000000-0000-4000-8000-000000000003";
+const AUTH_CUSTOMER_SECOND = "a1000000-0000-4000-8000-000000000008";
+const AUTH_CUSTOMER_THIRD = "a1000000-0000-4000-8000-000000000009";
+const AUTH_CUSTOMER_UNCONFIRMED = "a1000000-0000-4000-8000-000000000010";
+const AUTH_CUSTOMER_DELETED = "a1000000-0000-4000-8000-000000000011";
+const AUTH_CUSTOMER_INACTIVE = "a1000000-0000-4000-8000-000000000012";
+const CASE_AUTHORITY_LAPSE = "a3000000-0000-4000-8000-000000000008";
+const CASE_AUTHORITY_LAPSE_REF = "CASE-A00000000008";
 const AUTH_OTHER = "a1000000-0000-4000-8000-000000000004";
 const AUTH_INFO_OTHER_CASE = "a1000000-0000-4000-8000-000000000005";
 const AUTH_CORRECTION_ONLY = "a1000000-0000-4000-8000-000000000006";
@@ -40,7 +47,7 @@ const CASE_IDS = [
   "a3000000-0000-4000-8000-000000000007",
 ] as const;
 const CASE_REFS = [
-  "CASE-A00000000001",
+  "CASE-a00000000001",
   "CASE-A00000000002",
   "CASE-A00000000003",
   "CASE-A00000000004",
@@ -92,6 +99,23 @@ async function must(name: string, args: string[], stdin?: string) {
 
 async function psql(sql: string): Promise<string> {
   return await must("docker", [
+    "exec",
+    "-i",
+    CONTAINER,
+    "psql",
+    "-X",
+    "-qAt",
+    "-v",
+    "ON_ERROR_STOP=1",
+    "-U",
+    "postgres",
+    "-d",
+    DATABASE,
+  ], sql);
+}
+
+function concurrentPsql(sql: string): Promise<CommandResult> {
+  return command("docker", [
     "exec",
     "-i",
     CONTAINER,
@@ -175,6 +199,15 @@ async function seed() {
       ('${AUTH_INFO_OTHER_CASE}','info-other-case@example.invalid',now(),now(),now()),
       ('${AUTH_CORRECTION_ONLY}','correction-only@example.invalid',now(),now(),now()),
       ('${AUTH_INFO_EXPIRED}','info-expired@example.invalid',now(),now(),now());
+    insert into auth.users (id,email,email_confirmed_at,created_at,updated_at)
+    values
+      ('${AUTH_CUSTOMER_SECOND}','customer-second@example.invalid',now(),now(),now()),
+      ('${AUTH_CUSTOMER_THIRD}','customer-third@example.invalid',now(),now(),now()),
+      ('${AUTH_CUSTOMER_UNCONFIRMED}','customer-unconfirmed@example.invalid',null,now(),now()),
+      ('${AUTH_CUSTOMER_DELETED}','customer-deleted@example.invalid',now(),now(),now()),
+      ('${AUTH_CUSTOMER_INACTIVE}','customer-inactive@example.invalid',now(),now(),now());
+    update auth.users set deleted_at=now()
+    where id='${AUTH_CUSTOMER_DELETED}';
     insert into public.app_customers (id,customer_type,status) values
       ('${CUSTOMER_A}','particulier','active'),
       ('${CUSTOMER_B}','zakelijk','active'),
@@ -199,6 +232,12 @@ async function seed() {
     DOSSIER_IDS[4]
   }','${CUSTOMER_B}','INFO-B5','zakelijk','submitted',now()),
       ('${DOSSIER_IDS[5]}','${CUSTOMER_C}','INFO-C6','vve','submitted',now());
+    insert into public.app_customer_dossiers (
+      id,customer_id,dossier_number,account_type,status,submitted_at
+    ) values (
+      'a2500000-0000-4000-8000-000000000008','${CUSTOMER_A}',
+      'INFO-A8','particulier','submitted',now()
+    );
     insert into public.app_cases (
       id,customer_id,case_reference,created_at,created_by_actor_type,
       created_by_actor_ref,source_class,source_ref,request_id
@@ -236,13 +275,31 @@ async function seed() {
       ('${CASE_IDS[6]}','${CUSTOMER_A}','${
     CASE_REFS[6]
   }',now(),'system','proof','unsupported','unsupported','case-u7');
+    insert into public.app_cases (
+      id,customer_id,case_reference,created_at,created_by_actor_type,
+      created_by_actor_ref,source_class,source_ref,request_id
+    ) values (
+      '${CASE_AUTHORITY_LAPSE}','${CUSTOMER_A}','${CASE_AUTHORITY_LAPSE_REF}',
+      now(),'system','proof','app_customer_dossier',
+      'a2500000-0000-4000-8000-000000000008','case-a8'
+    );
     insert into public.app_customer_identities (
       id,customer_id,auth_user_id,email_normalized,email_verified_at,status
     ) values
       ('a4000000-0000-4000-8000-000000000001','${CUSTOMER_A}',
        '${AUTH_CUSTOMER_WIDE}','customer-wide@example.invalid',now(),'active'),
       ('a4000000-0000-4000-8000-000000000002','${CUSTOMER_B}',
-       '${AUTH_CUSTOMER_CASE}','customer-case@example.invalid',now(),'active');
+       '${AUTH_CUSTOMER_CASE}','customer-case@example.invalid',now(),'active'),
+      ('a4000000-0000-4000-8000-000000000008','${CUSTOMER_A}',
+       '${AUTH_CUSTOMER_SECOND}','customer-second@example.invalid',now(),'active'),
+      ('a4000000-0000-4000-8000-000000000009','${CUSTOMER_A}',
+       '${AUTH_CUSTOMER_THIRD}','customer-third@example.invalid',now(),'active'),
+      ('a4000000-0000-4000-8000-000000000010','${CUSTOMER_A}',
+       '${AUTH_CUSTOMER_UNCONFIRMED}','customer-unconfirmed@example.invalid',now(),'active'),
+      ('a4000000-0000-4000-8000-000000000011','${CUSTOMER_A}',
+       '${AUTH_CUSTOMER_DELETED}','customer-deleted@example.invalid',now(),'active'),
+      ('a4000000-0000-4000-8000-000000000012','${CUSTOMER_A}',
+       '${AUTH_CUSTOMER_INACTIVE}','customer-inactive@example.invalid',now(),'inactive');
     insert into public.app_customer_access_grants (
       auth_user_id,customer_id,granted_case_id,access_basis,source_class,
       source_ref,request_id
@@ -253,7 +310,22 @@ async function seed() {
        'signed_case_contact','app_signup_promotion','proof-case','grant-case'),
       ('${AUTH_CUSTOMER_CASE}','${CUSTOMER_C}','${CASE_IDS[5]}',
        'signed_case_contact','app_signup_promotion','proof-context',
-       'grant-context');
+       'grant-context'),
+      ('${AUTH_CUSTOMER_SECOND}','${CUSTOMER_A}',null,
+       'bound_customer_identity','app_customer_identity','proof-second',
+       'grant-second'),
+      ('${AUTH_CUSTOMER_THIRD}','${CUSTOMER_A}',null,
+       'bound_customer_identity','app_customer_identity','proof-third',
+       'grant-third'),
+      ('${AUTH_CUSTOMER_UNCONFIRMED}','${CUSTOMER_A}',null,
+       'bound_customer_identity','app_customer_identity','proof-unconfirmed',
+       'grant-unconfirmed'),
+      ('${AUTH_CUSTOMER_DELETED}','${CUSTOMER_A}',null,
+       'bound_customer_identity','app_customer_identity','proof-deleted',
+       'grant-deleted'),
+      ('${AUTH_CUSTOMER_INACTIVE}','${CUSTOMER_A}',null,
+       'bound_customer_identity','app_customer_identity','proof-inactive',
+       'grant-inactive');
   `);
   const bootstrap = await json(
     `select public.app_workforce_first_admin_bootstrap_v1(
@@ -281,7 +353,7 @@ async function seed() {
         '${CASE_IDS[0]}'::uuid,'${CASE_IDS[1]}'::uuid,
         '${CASE_IDS[2]}'::uuid,'${CASE_IDS[3]}'::uuid,
         '${CASE_IDS[4]}'::uuid,'${CASE_IDS[5]}'::uuid,
-        '${CASE_IDS[6]}'::uuid
+        '${CASE_IDS[6]}'::uuid,'${CASE_AUTHORITY_LAPSE}'::uuid
       ]) case_id
     )
     insert into public.app_workforce_scope_assignments (
@@ -380,7 +452,11 @@ function createSql(
 ) {
   return `select public.app_customer_information_request_create_v1(
     '${AUTH_WORKFORCE}','${caseRef}','${question}',
-    'create-${suffix}','create-${suffix}','${HASH}','${EXPIRES}'
+    'create-${suffix}','create-${suffix}','${HASH}','${EXPIRES}',
+    jsonb_build_object(
+      'organization_name','ENVAL',
+      'portal_origin','http://127.0.0.1:5175'
+    )
   )::text;`;
 }
 
@@ -404,14 +480,17 @@ async function runProof() {
     has_function_privilege('service_role','public.app_customer_information_request_customer_read_v1(uuid,text)','EXECUTE'),
     has_function_privilege('anon','public.app_customer_information_request_customer_read_v1(uuid,text)','EXECUTE'),
     has_function_privilege('authenticated','public.app_customer_information_request_customer_read_v1(uuid,text)','EXECUTE'),
-    has_function_privilege('service_role','public.app_customer_information_request_create_v1(uuid,text,text,text,text,text,timestamptz)','EXECUTE'),
-    has_function_privilege('anon','public.app_customer_information_request_create_v1(uuid,text,text,text,text,text,timestamptz)','EXECUTE'),
+    has_function_privilege('service_role','public.app_customer_information_request_create_v1(uuid,text,text,text,text,text,timestamptz,jsonb)','EXECUTE'),
+    has_function_privilege('anon','public.app_customer_information_request_create_v1(uuid,text,text,text,text,text,timestamptz,jsonb)','EXECUTE'),
     has_function_privilege('service_role','public.app_customer_information_request_history_projection_v1(uuid,uuid)','EXECUTE'),
     has_function_privilege('anon','public.app_customer_information_request_history_projection_v1(uuid,uuid)','EXECUTE'),
     has_table_privilege('anon','public.app_customer_information_requests','SELECT'),
-    has_table_privilege('authenticated','public.app_customer_information_responses','SELECT')
+    has_table_privilege('authenticated','public.app_customer_information_responses','SELECT'),
+    has_table_privilege('anon','public.app_workflow_email_dispatches','SELECT'),
+    has_table_privilege('service_role','public.app_workflow_email_dispatches','SELECT'),
+    has_function_privilege('service_role','public.app_customer_information_request_email_notify_v1(text,uuid,text,text,jsonb)','EXECUTE')
   );`);
-  assert(acl === "t|f|f|t|f|f|f|f|f", `acl_invalid:${acl}`);
+  assert(acl === "t|f|f|t|f|f|f|f|f|f|f|f", `acl_invalid:${acl}`);
 
   const scopeContract = await psql(`select concat_ws('|',
     (select count(*) from pg_constraint
@@ -432,7 +511,7 @@ async function runProof() {
      where capability_code<>'customer.information_request.manage')
   );`);
   assert(
-    scopeContract === "1|1|9|22",
+    scopeContract === "1|1|10|25",
     `scope_contract_invalid:${scopeContract}`,
   );
 
@@ -589,6 +668,70 @@ async function runProof() {
     second.code === "information_request_already_active",
     "second_active_allowed",
   );
+  const createdMail = await psql(`select concat_ws('|',
+    count(*),
+    count(distinct recipient_ref),
+    string_agg(recipient_ref::text,',' order by recipient_ref),
+    min(template_key),
+    min(frozen_subject),
+    bool_and(frozen_body = E'Beste klant,\n\nENVAL heeft een vraag over uw aanvraag.\n\nAanvraag: INFO-A1\nDossiernummer: ${
+    CASE_REFS[0]
+  }\n\nBekijk en beantwoord de vraag in uw klantportaal:\nhttp://127.0.0.1:5175/dashboard/aanvragen/${
+    CASE_REFS[0]
+  }\n\nMet vriendelijke groet,\nENVAL'),
+    bool_and(frozen_body not like '%Welke toelichting%'),
+    bool_and(template_variables ?& array[
+      'organization_name','application_label','case_reference','action_url'
+    ] and (
+      select count(*)=4
+      from pg_catalog.jsonb_object_keys(template_variables)
+    )),
+    bool_and(template_variables->>'case_reference'='${CASE_REFS[0]}')
+  ) from public.app_workflow_email_intents
+  where event_type='information_request_created_customer'
+    and business_event_ref='${requestRef}';`);
+  assert(
+    createdMail ===
+      `3|3|${AUTH_CUSTOMER_WIDE},${AUTH_CUSTOMER_SECOND},${AUTH_CUSTOMER_THIRD}|information-request-created-customer-nl-v2|Er staat een vraag voor u klaar|t|t|t|t`,
+    `created_recipient_or_template_invalid:${createdMail}`,
+  );
+  const mismatchedCaseReference = await concurrentPsql(`select
+    public.app_workflow_email_enqueue_v1(
+      'information_request_created_customer',
+      'information-request-created-customer-nl-v2',
+      'IRQ-FFFFFFFFFFFFFFF1','customer','${AUTH_CUSTOMER_WIDE}',
+      'customer-wide@proof.invalid',jsonb_build_object(
+        'organization_name','ENVAL','application_label','INFO-A1',
+        'case_reference','${CASE_REFS[1]}','action_url',
+        'http://127.0.0.1:5175/dashboard/aanvragen/${CASE_REFS[0]}'
+      ),'information-request:case-reference-mismatch'
+    );`);
+  assert(
+    mismatchedCaseReference.code !== 0 &&
+      mismatchedCaseReference.stderr.includes(
+        "workflow_email_template_variables_invalid",
+      ),
+    "mismatched_case_reference_not_rejected",
+  );
+  const extraV2Variable = await concurrentPsql(`select
+    public.app_workflow_email_enqueue_v1(
+      'information_request_created_customer',
+      'information-request-created-customer-nl-v2',
+      'IRQ-FFFFFFFFFFFFFFF2','customer','${AUTH_CUSTOMER_WIDE}',
+      'customer-wide@proof.invalid',jsonb_build_object(
+        'organization_name','ENVAL','application_label','INFO-A1',
+        'case_reference','${CASE_REFS[0]}','action_url',
+        'http://127.0.0.1:5175/dashboard/aanvragen/${CASE_REFS[0]}',
+        'question','mag niet mee'
+      ),'information-request:extra-v2-variable'
+    );`);
+  assert(
+    extraV2Variable.code !== 0 &&
+      extraV2Variable.stderr.includes(
+        "workflow_email_template_variables_invalid",
+      ),
+    "extra_v2_template_variable_not_rejected",
+  );
 
   const wideRead = await json(
     `select public.app_customer_information_request_customer_read_v1(
@@ -615,19 +758,47 @@ async function runProof() {
   const answered = await json(
     `select public.app_customer_information_request_respond_v1(
     '${AUTH_CUSTOMER_WIDE}','${CASE_REFS[0]}','${requestRef}',
-    'Dit is het antwoord.','respond-a1','respond-a1','${HASH}','${EXPIRES}'
+    'Dit is het antwoord.','respond-a1','respond-a1','${HASH}','${EXPIRES}',
+    jsonb_build_object(
+      'organization_name','ENVAL',
+      'portal_origin','http://127.0.0.1:5175'
+    )
   )::text;`,
   );
   const answerReplay = await json(
     `select public.app_customer_information_request_respond_v1(
     '${AUTH_CUSTOMER_WIDE}','${CASE_REFS[0]}','${requestRef}',
-    'Dit is het antwoord.','respond-a1','respond-a1','${HASH}','${EXPIRES}'
+    'Dit is het antwoord.','respond-a1','respond-a1','${HASH}','${EXPIRES}',
+    jsonb_build_object(
+      'organization_name','ENVAL',
+      'portal_origin','http://127.0.0.1:5175'
+    )
   )::text;`,
   );
   assert(
     answered.code === "answered" && answerReplay.code === "answered" &&
       (answered.request as JsonObject).state === "ANSWERED",
     "respond_or_retry_failed",
+  );
+  const answeredMail = await psql(`select concat_ws('|',
+    count(*),min(recipient_ref::text),min(frozen_subject),
+    bool_and(frozen_body = E'Beste medewerker,\n\nDe klant heeft uw vraag over deze aanvraag beantwoord.\n\nAanvraag: INFO-A1\nDossiernummer: ${
+    CASE_REFS[0]
+  }\n\nBekijk het antwoord in Dossierbeheer:\nhttp://127.0.0.1:5175/beheer/dossiers/${
+    CASE_REFS[0]
+  }\n\nDit is een automatische melding van ENVAL.'),
+    bool_and(frozen_body not like '%Dit is het antwoord%'),
+    bool_and(frozen_body not like '%Welke toelichting%'),
+    bool_and(template_variables->>'case_reference'='${CASE_REFS[0]}'
+      and (select count(*)=4
+        from pg_catalog.jsonb_object_keys(template_variables)))
+  ) from public.app_workflow_email_intents
+  where event_type='information_request_answered_workforce'
+    and business_event_ref='${requestRef}';`);
+  assert(
+    answeredMail ===
+      `1|${AUTH_WORKFORCE}|Uw vraag is beantwoord|t|t|t|t`,
+    `answer_creator_recipient_invalid:${answeredMail}`,
   );
   const deniedResolve = await json(
     `select public.app_customer_information_request_transition_v1(
@@ -727,10 +898,31 @@ async function runProof() {
   const withdrawn = await json(
     `select public.app_customer_information_request_transition_v1(
     '${AUTH_WORKFORCE}','${CASE_REFS[1]}','${withdrawRef}','WITHDRAW',
-    'withdraw-a2','withdraw-a2','${HASH}','${EXPIRES}'
+    'withdraw-a2','withdraw-a2','${HASH}','${EXPIRES}',
+    jsonb_build_object(
+      'organization_name','ENVAL',
+      'portal_origin','http://127.0.0.1:5175'
+    )
   )::text;`,
   );
   assert(withdrawn.code === "withdrawn", "withdraw_failed");
+  const preDeliveryWithdraw = await psql(`select concat_ws('|',
+    (select count(*) from public.app_workflow_email_intents
+      where event_type='information_request_withdrawn_customer'
+        and business_event_ref='${withdrawRef}'),
+    (select count(*) from public.app_workflow_email_deliveries delivery
+      join public.app_workflow_email_intents intent on intent.id=delivery.intent_id
+      where intent.event_type='information_request_created_customer'
+        and intent.business_event_ref='${withdrawRef}'
+        and delivery.status='cancelled'),
+    (select outcome from public.app_workflow_email_dispatches
+      where event_type='information_request_withdrawn_customer'
+        and business_event_ref='${withdrawRef}')
+  );`);
+  assert(
+    preDeliveryWithdraw === "0|3|cancelled_before_delivery",
+    `pre_delivery_withdraw_invalid:${preDeliveryWithdraw}`,
+  );
   const withdrawnCustomerHistory = await json(
     `select public.app_customer_information_request_customer_read_v1(
       '${AUTH_CUSTOMER_WIDE}','${CASE_REFS[1]}'
@@ -745,6 +937,114 @@ async function runProof() {
       withdrawnHistory[0].answer === null &&
       withdrawnHistory[0].answered_at === null,
     "withdrawn_history_contract_invalid",
+  );
+
+  const lockDefinition = await psql(`select position(
+    'FOR UPDATE OF DELIVERY' in upper(pg_get_functiondef(
+      'public.app_customer_information_request_email_notify_v1(text,uuid,text,text,jsonb)'::regprocedure
+    ))) > 0;`);
+  assert(lockDefinition === "t", "withdraw_delivery_lock_missing");
+
+  const withdrawRaceCreated = await json(
+    createSql(CASE_REFS[1], "withdraw-race"),
+  );
+  const raceRef = String(
+    (withdrawRaceCreated.request as JsonObject).request_ref,
+  );
+  await psql(`begin;
+    set local session_replication_role=replica;
+    update public.app_workflow_email_deliveries
+    set next_attempt_at='2030-01-01T00:00:00Z';
+    with ranked as (
+      select delivery.id,row_number() over(order by intent.recipient_ref) as n
+      from public.app_workflow_email_deliveries delivery
+      join public.app_workflow_email_intents intent on intent.id=delivery.intent_id
+      where intent.event_type='information_request_created_customer'
+        and intent.business_event_ref='${raceRef}'
+    )
+    update public.app_workflow_email_deliveries delivery
+    set status=case when ranked.n=1 then 'queued' else 'cancelled' end,
+        next_attempt_at=case when ranked.n=1 then now() else delivery.next_attempt_at end,
+        cancelled_at=case when ranked.n=1 then null else now() end,
+        updated_at=now()
+    from ranked where delivery.id=ranked.id;
+    set local session_replication_role=origin;
+    commit;`);
+
+  const advisoryKey = 726551901;
+  const worker = concurrentPsql(`begin;
+    select
+      claim->'delivery'->>'delivery_id' as delivery_id,
+      claim->'delivery'->>'lease_token' as lease_token
+    from (select public.app_workflow_email_claim_v1() claim) claimed
+    \\gset
+    select pg_advisory_lock(${advisoryKey});
+    select pg_sleep(2);
+    select public.app_workflow_email_complete_v1(
+      :'delivery_id'::uuid, :'lease_token'::uuid, 'provider_accepted',
+      'proof:withdraw-race', null
+    );
+    select pg_advisory_unlock(${advisoryKey});
+    commit;`);
+
+  let workerHasDeliveryLock = false;
+  for (let attempt = 0; attempt < 200; attempt += 1) {
+    if (
+      await psql(`select not pg_try_advisory_lock(${advisoryKey});`) === "t"
+    ) {
+      workerHasDeliveryLock = true;
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  if (!workerHasDeliveryLock) {
+    const workerFailure = await worker;
+    throw new Error(
+      `worker_claim_lock_not_observed:${
+        workerFailure.stderr || workerFailure.stdout
+      }`,
+    );
+  }
+
+  const concurrentWithdraw = concurrentPsql(`select
+    public.app_customer_information_request_transition_v1(
+      '${AUTH_WORKFORCE}','${CASE_REFS[1]}','${raceRef}','WITHDRAW',
+      'withdraw-race','withdraw-race','${HASH}','${EXPIRES}',
+      jsonb_build_object(
+        'organization_name','ENVAL',
+        'portal_origin','http://127.0.0.1:5175'
+      )
+    )::text;`);
+  const [workerResult, withdrawResult] = await Promise.all([
+    worker,
+    concurrentWithdraw,
+  ]);
+  assert(
+    workerResult.code === 0,
+    `concurrent_worker_failed:${workerResult.stderr}`,
+  );
+  assert(
+    withdrawResult.code === 0 &&
+      withdrawResult.stdout.includes('"code": "withdrawn"'),
+    `concurrent_withdraw_failed:${
+      withdrawResult.stderr || withdrawResult.stdout
+    }`,
+  );
+  const raceState = await psql(`select concat_ws('|',
+    (select terminal_action from public.app_customer_information_requests
+      where request_reference='${raceRef}'),
+    (select count(*) from public.app_workflow_email_deliveries delivery
+      join public.app_workflow_email_intents intent on intent.id=delivery.intent_id
+      where intent.business_event_ref='${raceRef}'
+        and intent.event_type='information_request_created_customer'
+        and delivery.status='provider_accepted'),
+    (select count(*) from public.app_workflow_email_intents
+      where business_event_ref='${raceRef}'
+        and event_type='information_request_withdrawn_customer')
+  );`);
+  assert(
+    raceState === "WITHDRAWN|1|1",
+    `concurrent_claim_withdraw_not_serialized:${raceState}`,
   );
 
   await psql(`
@@ -845,6 +1145,94 @@ async function runProof() {
   end $$; select 'denied';`);
   assert(correctionBlocked === "denied", "request_did_not_block_correction");
 
+  const deliveredRequestRef = String(
+    (requestBeforeCorrection.request as JsonObject).request_ref,
+  );
+  await psql(`with ranked as (
+    select delivery.id,row_number() over (order by intent.recipient_ref) as n
+    from public.app_workflow_email_deliveries delivery
+    join public.app_workflow_email_intents intent on intent.id=delivery.intent_id
+    where intent.event_type='information_request_created_customer'
+      and intent.business_event_ref='${deliveredRequestRef}'
+  )
+  update public.app_workflow_email_deliveries delivery
+  set status=case ranked.n
+        when 1 then 'provider_accepted'
+        when 2 then 'processing'
+        else 'ambiguous_failure' end,
+      attempt_count=1,
+      lease_token=case when ranked.n=2 then gen_random_uuid() else null end,
+      leased_at=case when ranked.n=2 then now() else null end,
+      leased_until=case when ranked.n=2 then now()+interval '5 minutes' else null end,
+      provider_reference=case when ranked.n=1 then 'mailpit:accepted-a4' else null end,
+      provider_accepted_at=case when ranked.n=1 then now() else null end,
+      safe_error_class=case when ranked.n=3 then 'provider_ambiguous' else null end,
+      next_attempt_at=case when ranked.n=3 then now()+interval '1 day'
+        else delivery.next_attempt_at end,
+      updated_at=now()
+  from ranked where delivery.id=ranked.id;`);
+  const deliveredWithdraw = await json(
+    `select public.app_customer_information_request_transition_v1(
+      '${AUTH_WORKFORCE}','${CASE_REFS[3]}','${deliveredRequestRef}','WITHDRAW',
+      'withdraw-a4-delivered','withdraw-a4-delivered','${HASH}','${EXPIRES}',
+      jsonb_build_object(
+        'organization_name','ENVAL',
+        'portal_origin','http://127.0.0.1:5175'
+      )
+    )::text;`,
+  );
+  const deliveredWithdrawReplay = await json(
+    `select public.app_customer_information_request_transition_v1(
+      '${AUTH_WORKFORCE}','${CASE_REFS[3]}','${deliveredRequestRef}','WITHDRAW',
+      'withdraw-a4-delivered','withdraw-a4-delivered','${HASH}','${EXPIRES}',
+      jsonb_build_object(
+        'organization_name','ENVAL',
+        'portal_origin','http://127.0.0.1:5175'
+      )
+    )::text;`,
+  );
+  const deliveredWithdrawState = await psql(`select concat_ws('|',
+    (select count(*) from public.app_workflow_email_intents
+      where event_type='information_request_withdrawn_customer'
+        and business_event_ref='${deliveredRequestRef}'),
+    (select count(distinct recipient_ref) from public.app_workflow_email_intents
+      where event_type='information_request_withdrawn_customer'
+        and business_event_ref='${deliveredRequestRef}'),
+    (select outcome from public.app_workflow_email_dispatches
+      where event_type='information_request_withdrawn_customer'
+        and business_event_ref='${deliveredRequestRef}'),
+    (select bool_and(frozen_subject='De vraag is ingetrokken')
+      from public.app_workflow_email_intents
+      where event_type='information_request_withdrawn_customer'
+        and business_event_ref='${deliveredRequestRef}'),
+    (select bool_and(frozen_body = E'Beste klant,\n\nENVAL heeft de vraag over uw aanvraag ingetrokken. U hoeft hierop niet meer te reageren.\n\nAanvraag: INFO-A4\nDossiernummer: ${
+    CASE_REFS[3]
+  }\n\nBekijk de actuele status in uw klantportaal:\nhttp://127.0.0.1:5175/dashboard/aanvragen/${
+    CASE_REFS[3]
+  }\n\nMet vriendelijke groet,\nENVAL')
+      from public.app_workflow_email_intents
+      where event_type='information_request_withdrawn_customer'
+        and business_event_ref='${deliveredRequestRef}'),
+    (select bool_and(template_variables->>'case_reference'='${CASE_REFS[3]}'
+      and (select count(*)=4
+        from pg_catalog.jsonb_object_keys(template_variables)))
+      from public.app_workflow_email_intents
+      where event_type='information_request_withdrawn_customer'
+        and business_event_ref='${deliveredRequestRef}'),
+    (select string_agg(delivery.status,',' order by delivery.status)
+      from public.app_workflow_email_deliveries delivery
+      join public.app_workflow_email_intents intent on intent.id=delivery.intent_id
+      where intent.event_type='information_request_created_customer'
+        and intent.business_event_ref='${deliveredRequestRef}')
+  );`);
+  assert(
+    deliveredWithdraw.code === "withdrawn" &&
+      deliveredWithdrawReplay.code === "withdrawn" &&
+      deliveredWithdrawState ===
+        "3|3|enqueued|t|t|t|ambiguous_failure,processing,provider_accepted",
+    `delivered_withdraw_matrix_invalid:${deliveredWithdrawState}`,
+  );
+
   const concurrent = await Promise.all([
     json(createSql(CASE_REFS[4], "race-one")),
     json(createSql(CASE_REFS[4], "race-two")),
@@ -943,7 +1331,7 @@ async function runProof() {
     (select count(*) from public.app_audit_events where event_type='customer_information_request_resolved'),
     (select count(*) from public.app_audit_events where event_type='customer_information_request_withdrawn')
   );`);
-  assert(counts === "5|2|1|5|2|2|1", `write_counts_invalid:${counts}`);
+  assert(counts === "6|2|1|6|2|2|3", `write_counts_invalid:${counts}`);
 
   await psql(`insert into public.app_customer_information_requests (
     id,request_reference,case_id,target_customer_id,question_text,
@@ -1000,8 +1388,69 @@ async function runProof() {
       historyReadCountsAfter === historyReadCountsBefore,
     "history_limit_order_or_zero_write_invalid",
   );
+
+  const authorityLapseCreated = await json(
+    createSql(CASE_AUTHORITY_LAPSE_REF, "authority-lapse"),
+  );
+  const authorityLapseRef = String(
+    (authorityLapseCreated.request as JsonObject).request_ref,
+  );
+  await psql(`insert into public.app_workforce_capability_assignments (
+    id,assignment_id,workforce_identity_id,capability_code,event_type,
+    effective_at,valid_until,decision_ref,reason_ref,recorded_by_actor_ref,
+    request_id,supersedes_assignment_event_id
+  )
+  select gen_random_uuid(),granted.assignment_id,
+    granted.workforce_identity_id,granted.capability_code,'revoked',
+    now(),null,'proof-authority-lapse','proof-authority-lapse','proof',
+    'proof-authority-lapse',granted.id
+  from public.app_workforce_capability_assignments granted
+  join public.app_workforce_identities identity
+    on identity.id=granted.workforce_identity_id
+  where identity.auth_user_id='${AUTH_WORKFORCE}'
+    and granted.capability_code='customer.information_request.manage'
+    and granted.event_type='granted'
+    and granted.supersedes_assignment_event_id is null
+    and not exists (
+      select 1 from public.app_workforce_capability_assignments revoked
+      where revoked.assignment_id=granted.assignment_id
+        and revoked.event_type='revoked'
+    );`);
+  const authorityLapseAnswered = await json(
+    `select public.app_customer_information_request_respond_v1(
+      '${AUTH_CUSTOMER_WIDE}','${CASE_AUTHORITY_LAPSE_REF}',
+      '${authorityLapseRef}','Antwoord zonder ontvangerfallback.',
+      'respond-authority-lapse','respond-authority-lapse','${HASH}','${EXPIRES}',
+      jsonb_build_object(
+        'organization_name','ENVAL',
+        'portal_origin','http://127.0.0.1:5175'
+      )
+    )::text;`,
+  );
+  const authorityLapseMail = await psql(`select concat_ws('|',
+    (select count(*) from public.app_workflow_email_intents
+      where event_type='information_request_answered_workforce'
+        and business_event_ref='${authorityLapseRef}'),
+    (select outcome from public.app_workflow_email_dispatches
+      where event_type='information_request_answered_workforce'
+        and business_event_ref='${authorityLapseRef}'),
+    (select reason_code from public.app_workflow_email_dispatches
+      where event_type='information_request_answered_workforce'
+        and business_event_ref='${authorityLapseRef}'),
+    (public.app_workforce_authorize_v1(
+      '${AUTH_WORKFORCE}','evidence.review.correction.publish',
+      '${CASE_AUTHORITY_LAPSE}',null,now()
+    )->>'ok')
+  );`);
+  assert(
+    authorityLapseAnswered.code === "answered" &&
+      authorityLapseMail ===
+        "0|no_delivery|recipient_unavailable|true",
+    `creator_authority_lapse_fallback_invalid:${authorityLapseMail}`,
+  );
   console.log("CUSTOMER_INFORMATION_REQUEST_DB_Q01_Q10=PASS");
   console.log("CUSTOMER_INFORMATION_REQUEST_HISTORY=PASS");
+  console.log("INFORMATION_REQUEST_EMAIL_DB_Q01_Q12=PASS");
   console.log("INFORMATION_REQUEST_UNEXPECTED_WRITES=0");
 }
 

@@ -27,6 +27,8 @@ const detailRoute = "/intern/dossiers/CASE-7E4CC75CD19F";
 const detailLogin = buildInternalLoginRoute(detailRoute);
 const operatorLogin = buildInternalLoginRoute("/beheer");
 const operatorDossiersLogin = buildInternalLoginRoute("/beheer/dossiers");
+const customerDetailRoute = "/dashboard/aanvragen/CASE-7E4CC75CD19F";
+const customerDetailLogin = buildInternalLoginRoute(customerDetailRoute);
 assert(
   dossiersLogin === "/inloggen?returnTo=%2Fintern%2Fdossiers" &&
     resolvePostLoginDestination(new URL(dossiersLogin, "https://enval.local").search) ===
@@ -53,12 +55,20 @@ assert(
   "Q03_normal_login_destination_changed",
 );
 assert(
-  operatorLogin === "/inloggen?returnTo=%2Fbeheer" &&
+    operatorLogin === "/inloggen?returnTo=%2Fbeheer" &&
     operatorDossiersLogin === "/inloggen?returnTo=%2Fbeheer%2Fdossiers" &&
     resolvePostLoginDestination(
       new URL(operatorDossiersLogin, "https://enval.local").search,
     ) === "/beheer/dossiers",
   "Q03b_operator_login_return_invalid",
+);
+assert(
+  customerDetailLogin ===
+      "/inloggen?returnTo=%2Fdashboard%2Faanvragen%2FCASE-7E4CC75CD19F" &&
+    resolvePostLoginDestination(
+        new URL(customerDetailLogin, "https://enval.local").search,
+      ) === customerDetailRoute,
+  "Q03c_customer_detail_login_return_invalid",
 );
 
 for (const target of [
@@ -78,6 +88,10 @@ for (const target of [
   "/account",
   "/inloggen",
   "/dashboard",
+  "/dashboard/aanvragen",
+  "/dashboard/aanvragen/CASE-NOT-HEX",
+  "/dashboard/aanvragen/CASE-7E4CC75CD19F?next=/beheer",
+  "/dashboard/aanvragen/CASE-7E4CC75CD19F/extra",
 ]) {
   assert(
     normalizeSafeInternalReturnRoute(target) === null &&
@@ -131,7 +145,7 @@ assert(
     dossierDetailPageSource.includes("returnTo={currentPath}") &&
     compliancePageSource.includes("returnTo={currentPath}") &&
     dossierRouteSource.includes("DETAIL_ROUTE_RE") &&
-    !dashboardPageSource.includes("returnTo="),
+    dashboardPageSource.includes("returnTo={currentPath}"),
   "Q06_shared_guard_return_intent_not_reused",
 );
 assert(

@@ -250,6 +250,7 @@ function managedLocalConfiguration(controlPlaneStatus, sourceRoot) {
     ENVAL_APPLICATION_ROUTE_REFERENCE: applicationRouteReference,
     ENVAL_DATA_PLANE_SECRET_REFERENCE_ID: secretReferenceId,
     ENVAL_PRESENTATION_SOURCE_MODE: "platform_control_plane_presentation_v1",
+    ENVAL_WORKFLOW_EMAIL_PORTAL_ORIGIN: DEFAULT_VITE_URL,
     ENVAL_CONTROL_PLANE_SUPABASE_URL: controlPlaneApi.toString().replace(
       /\/$/,
       "",
@@ -660,6 +661,8 @@ async function serve(sourceRoot) {
   let dependencyBridge = null;
   let dependencyBridgeOptions = null;
   let dependencyBridgeSignals = null;
+  let workflowEmailPollTimer = null;
+  let workflowEmailPollInFlight = false;
   const directSignalHandlers = new Map();
   const stopFunctionsRuntime = (signal) => functionsRuntime?.kill(signal);
   try {
@@ -705,11 +708,36 @@ async function serve(sourceRoot) {
         stdio: "inherit",
       },
     );
+    const workflowEmailWorkerUrl = new URL(
+      "/functions/v1/workflow-email-worker",
+      tenant.environment.API_URL,
+    );
+    const pollWorkflowEmail = async () => {
+      if (workflowEmailPollInFlight) return;
+      workflowEmailPollInFlight = true;
+      try {
+        await fetch(workflowEmailWorkerUrl, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${tenant.environment.SERVICE_ROLE_KEY}`,
+          },
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        });
+      } catch {
+        // The durable database outbox remains authoritative during startup or
+        // temporary local worker failure.
+      } finally {
+        workflowEmailPollInFlight = false;
+      }
+    };
+    workflowEmailPollTimer = setInterval(pollWorkflowEmail, 1_000);
+    workflowEmailPollTimer.unref();
     process.stdout.write(
       [
         "LOCAL_RUNTIME_PREFLIGHT=PASS",
         "LOCAL_FRONTEND_RUNTIME=OWNED",
         "LOCAL_FUNCTIONS_RUNTIME=OWNED",
+        "LOCAL_WORKFLOW_EMAIL_POLLING=OWNED",
         "TENANT_TARGET=TENANT_ENVAL",
         "PRESENTATION_SOURCE=platform_control_plane_presentation_v1",
         "TENANT_RESOLVER=static_single_tenant_v1",
@@ -729,6 +757,7 @@ async function serve(sourceRoot) {
     }).catch((error) => fail("functions_serve_failed", error));
     process.exitCode = exitCode;
   } finally {
+    if (workflowEmailPollTimer) clearInterval(workflowEmailPollTimer);
     try {
       if (frontend) await frontend.close();
     } finally {

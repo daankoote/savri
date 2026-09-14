@@ -52,7 +52,12 @@ function parseClaim(value: unknown): ClaimedDelivery | null | false {
     typeof delivery.subject !== "string" ||
     typeof delivery.body !== "string" ||
     typeof delivery.provider_idempotency_key !== "string" ||
-    delivery.template_key !== "information-request-created-customer-nl-v1" ||
+    ![
+      "information-request-created-customer-nl-v1",
+      "information-request-created-customer-nl-v2",
+      "information-request-answered-workforce-nl-v1",
+      "information-request-withdrawn-customer-nl-v1",
+    ].includes(String(delivery.template_key)) ||
     !Number.isInteger(delivery.attempt_number)
   ) return false;
   return {

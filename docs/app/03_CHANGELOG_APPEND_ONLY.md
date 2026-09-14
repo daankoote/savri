@@ -2170,3 +2170,25 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   unproven.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-09-13 — Connect information requests to workflow e-mail locally
+
+- Connected information-request create, answer and withdraw to an App-owned
+  workflow e-mail dispatch decision inside the same database transaction. The
+  decision can enqueue, cancel or record no delivery; resolve intentionally
+  creates no mail.
+- Create resolves distinct current confirmed R7 actors for the exact case.
+  Answer targets only the still-authorized original workforce creator.
+  Withdraw cancels certainly unsent originals and creates withdrawal mail only
+  for originally notified actors whose exact R7 access is still current.
+- Added two code-versioned plain-text templates for answered and withdrawn
+  requests and added create template v2 while retaining create v1 for historical
+  renderability. New mail freezes the server-resolved application label and
+  case reference, and shows both with a fixed matching dossier URL; question
+  and answer content are excluded.
+- Added privacy-safe dispatch outcomes for recipient/context omissions, strict
+  server-side presentation and portal-origin resolution, and non-overlapping
+  local worker polling. Legacy mail and Supabase Auth/signing mail remain
+  unchanged; hosted transport and deployment remain unproven.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

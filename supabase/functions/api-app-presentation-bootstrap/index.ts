@@ -1,5 +1,4 @@
 import { serve } from "jsr:@std/http@0.224.0/server";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 import {
   appErrorResponse,
@@ -7,7 +6,7 @@ import {
   appOptionsResponse,
   getAppRequestMeta,
 } from "../_shared/app_foundation.ts";
-import { createPlatformControlPlaneRuntimeReader } from "../_shared/app_control_plane_runtime_reader.ts";
+import { createPlatformControlPlaneRuntimeReaderFromEnvironment } from "../_shared/app_control_plane_runtime_reader.ts";
 import {
   buildServerOwnedPresentationSourceComposition,
   resolveAppPresentationBootstrap,
@@ -18,26 +17,13 @@ function serverEnvironment(): ServerPresentationEnvironmentReader {
   return { get: (name) => Deno.env.get(name) };
 }
 
-function controlPlaneReader() {
-  const url = String(
-    Deno.env.get("ENVAL_CONTROL_PLANE_SUPABASE_URL") ?? "",
-  ).trim();
-  const serviceRoleKey = String(
-    Deno.env.get("ENVAL_CONTROL_PLANE_SERVICE_ROLE_KEY") ?? "",
-  ).trim();
-  if (!url || !serviceRoleKey) return null;
-  const client = createClient(url, serviceRoleKey, {
-    auth: { persistSession: false },
-    db: { schema: "platform" },
-  });
-  return createPlatformControlPlaneRuntimeReader(client);
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") return appOptionsResponse(req);
 
   const environment = serverEnvironment();
-  const managedReader = controlPlaneReader();
+  const managedReader = createPlatformControlPlaneRuntimeReaderFromEnvironment(
+    environment,
+  );
   const meta = await getAppRequestMeta(req, { managedReader });
   if (meta instanceof Response) return meta;
 

@@ -81,6 +81,31 @@ assert.match(source, /configFile: false/);
 assert.match(source, /envDir: dirname\(runtime\.appEnvironmentFile\)/);
 assert.match(source, /"LOCAL_FRONTEND_RUNTIME=OWNED"/);
 assert.match(source, /"LOCAL_FUNCTIONS_RUNTIME=OWNED"/);
+assert.match(
+  source,
+  /ENVAL_WORKFLOW_EMAIL_PORTAL_ORIGIN:\s*DEFAULT_VITE_URL/,
+  "local workflow-email links must use the owned preview origin",
+);
+assert.match(
+  source,
+  /\/functions\/v1\/workflow-email-worker/,
+  "local runtime must poll the owned workflow-email worker",
+);
+assert.match(
+  source,
+  /workflowEmailPollInFlight/,
+  "local worker polling must prevent overlapping claims",
+);
+assert.match(
+  source,
+  /setInterval\(pollWorkflowEmail, 1_000\)/,
+  "local worker polling must be bounded and explicit",
+);
+assert.match(
+  source,
+  /clearInterval\(workflowEmailPollTimer\)/,
+  "local worker polling must be released during runtime cleanup",
+);
 assert.match(source, /TEMPORARY_DEPENDENCY_BRIDGE/);
 assert.match(source, /cleanupDependencyBridge/);
 assert.match(source, /"TRACKED_RUNTIME_LINKS_CREATED=NO"/);

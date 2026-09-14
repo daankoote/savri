@@ -69,6 +69,13 @@ Legacy Supabase functions are frozen.
 - `workflow-email-worker` is the separate App-owned internal worker. Its
   `app_workflow_email_*` tables and owner/service-only RPCs do not extend or
   reuse legacy `outbound_emails`.
+- Information-request create, answer and withdraw call the owner-only workflow
+  notification/dispatch boundary inside the same database transaction. It can
+  conditionally enqueue, cancel or record no delivery. Privacy-safe dispatch
+  records retain no recipient address, subject or body and make no-recipient
+  outcomes durable without rolling back the business transition. The frozen
+  application label, case reference and matching route are projected from
+  server-owned case context.
 - Do not add new `/app` behavior to legacy functions.
 - Do not reuse legacy dossier sessions as app account auth.
 - Do not write app audit/idempotency to legacy `dossier_audit_events` or `idempotency_keys`.

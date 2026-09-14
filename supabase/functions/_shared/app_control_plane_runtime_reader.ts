@@ -1,3 +1,4 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import type {
   PlatformControlPlaneReader,
   PlatformDataPlaneLocatorRecord,
@@ -20,6 +21,10 @@ type PlatformSchemaClient = Readonly<{
 export type PlatformControlPlaneRuntimeReader =
   & PlatformControlPlaneReader
   & PlatformPresentationConfigReader;
+
+export type PlatformControlPlaneEnvironmentReader = Readonly<{
+  get(name: string): string | undefined;
+}>;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -143,4 +148,21 @@ export function createPlatformControlPlaneRuntimeReader(
       );
     },
   });
+}
+
+export function createPlatformControlPlaneRuntimeReaderFromEnvironment(
+  environment: PlatformControlPlaneEnvironmentReader,
+): PlatformControlPlaneRuntimeReader | null {
+  const url = String(
+    environment.get("ENVAL_CONTROL_PLANE_SUPABASE_URL") ?? "",
+  ).trim();
+  const serviceRoleKey = String(
+    environment.get("ENVAL_CONTROL_PLANE_SERVICE_ROLE_KEY") ?? "",
+  ).trim();
+  if (!url || !serviceRoleKey) return null;
+  const client = createClient(url, serviceRoleKey, {
+    auth: { persistSession: false },
+    db: { schema: "platform" },
+  });
+  return createPlatformControlPlaneRuntimeReader(client);
 }

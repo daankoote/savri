@@ -468,11 +468,17 @@ Current technical primitives retained as proven or partially proven where code/p
 - server-owned presentation source composition, safe public bootstrap and
   React `PresentationBrandProvider` consumption
 
-No business workflow currently enqueues App workflow e-mail. Supabase Auth
-mail and signing OTP transport remain separate; legacy `outbound_emails` and
-`mail-worker` remain frozen. Hosted provider, scheduler, sender/domain
+The information-request workflow now records an App workflow e-mail dispatch
+decision in the same transaction as create, answer and withdraw; that decision
+can enqueue, cancel or record no delivery. Resolve intentionally sends none.
+Recipient resolution remains server-owned and authority-bound. Supabase
+Auth mail and signing OTP transport remain separate; legacy `outbound_emails`
+and `mail-worker` remain frozen. Hosted provider, scheduler, sender/domain
 configuration, secrets, deployment and delivery are not proven. The exact
-foundation contract is owned by `docs/app/architecture/workflow-email.md`.
+contract is owned by `docs/app/architecture/workflow-email.md`.
+New information-request mail freezes the application label and exact case
+reference from the same server-resolved `app_cases` context; browser input
+cannot provide either mail context field.
 
 These white-label foundations are CURRENT PROVEN LOCAL through TF02-C / commit
 `8480b8f`. TF01 supplies the fixed-plane execution binding. TF02-B adds the
