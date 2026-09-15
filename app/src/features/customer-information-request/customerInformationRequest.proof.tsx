@@ -10,6 +10,10 @@ import {
 import { CustomerInformationRequestPanel } from "./CustomerInformationRequestPanel.tsx";
 import { CustomerInformationRequestHistory } from "./CustomerInformationRequestHistory.tsx";
 import {
+  buildCustomerTimelineItems,
+  CustomerTimeline,
+} from "../dashboard/CustomerTimeline.tsx";
+import {
   mutateCustomerInformationRequest,
 } from "./customerInformationRequestClient.ts";
 import { WorkforceInformationRequestPanel } from "./WorkforceInformationRequestPanel.tsx";
@@ -70,6 +74,10 @@ const SOURCE_HISTORY = Object.freeze([
 
 function assert(value: unknown, code: string): asserts value {
   if (!value) throw new Error(code);
+}
+
+function occurrences(value: string, needle: string): number {
+  return value.split(needle).length - 1;
 }
 
 function jsonResponse(value: unknown, status = 200): Response {
@@ -181,7 +189,6 @@ async function run() {
     <CustomerInformationRequestPanel
       accessToken="proof-token"
       caseRef={CASE_REF}
-      history={HISTORY}
       onRefresh={() => undefined}
       request={REQUEST}
     />,
@@ -190,7 +197,6 @@ async function run() {
     <CustomerInformationRequestPanel
       accessToken="proof-token"
       caseRef={CASE_REF}
-      history={HISTORY}
       onRefresh={() => undefined}
       request={{
         ...REQUEST,
@@ -242,13 +248,18 @@ async function run() {
   const workforceSource = await Deno.readTextFile(
     "app/src/features/customer-information-request/WorkforceInformationRequestPanel.tsx",
   );
+  const activeDashboardSource = await Deno.readTextFile(
+    "app/src/features/dashboard/ActivePrivateDashboard.tsx",
+  );
   assert(
     customerOpen.includes("Welke toelichting kunt u geven?") &&
       customerOpen.includes("Vraag over uw dossier") &&
       customerOpen.includes("Antwoord versturen") &&
+      !customerOpen.includes("Eerdere vragen en antwoorden") &&
       !customerOpen.includes(">OPEN<") &&
       customerAnswered.includes("Dit is het antwoord.") &&
       !customerAnswered.includes("Antwoord versturen") &&
+      !customerAnswered.includes("Eerdere vragen en antwoorden") &&
       workforceEmpty.includes("Vraag stellen") &&
       workforceEmpty.includes("Aanvullende vraag") &&
       workforceEmpty.includes(
@@ -263,11 +274,125 @@ async function run() {
       history.includes("Afgerond") && history.includes("Ingetrokken") &&
       history.includes("Is een extra toelichting beschikbaar?") &&
       !emptyHistory.includes("Eerdere vragen en antwoorden") &&
+      activeDashboardSource.indexOf("<CustomerInformationRequestPanel") <
+        activeDashboardSource.indexOf("<CustomerTimeline") &&
+      !activeDashboardSource.includes(
+        "history={model.information_request_history}",
+      ) &&
       workforceSource.includes("window.confirm(WITHDRAW_CONFIRMATION)") &&
       workforceSource.includes(
         "De klant kan daarna niet meer antwoorden. De vraag blijft zichtbaar in de geschiedenis.",
       ),
     "information_request_ui_state_matrix_invalid",
+  );
+
+  const baseTimeline = [{
+    event_id: "tle_11111111111111111111111111111111",
+    event_type: "dossier_submitted" as const,
+    occurred_at: "2026-09-11T12:00:00.000Z",
+    title: "Dossier ontvangen",
+    text: "Uw dossier is ontvangen en in behandeling.",
+  }];
+  const openItems = buildCustomerTimelineItems({
+    events: baseTimeline,
+    informationRequest: REQUEST,
+    informationRequestHistory: [],
+  });
+  const answeredRequest = {
+    ...REQUEST,
+    state: "ANSWERED" as const,
+    answer: "Dit is het volledige antwoord.",
+    answeredAt: "2026-09-11T12:10:00.000Z",
+  };
+  const answeredItems = buildCustomerTimelineItems({
+    events: [],
+    informationRequest: answeredRequest,
+    informationRequestHistory: [],
+  });
+  const historyItems = buildCustomerTimelineItems({
+    events: [],
+    informationRequest: null,
+    informationRequestHistory: HISTORY,
+  });
+  const emptyInformationRequestItems = buildCustomerTimelineItems({
+    events: baseTimeline,
+    informationRequest: null,
+    informationRequestHistory: [],
+  });
+  const equalTimestampItems = buildCustomerTimelineItems({
+    events: baseTimeline,
+    informationRequest: {
+      ...answeredRequest,
+      answeredAt: REQUEST.askedAt,
+    },
+    informationRequestHistory: [],
+  });
+  const repeatedItems = buildCustomerTimelineItems({
+    events: baseTimeline,
+    informationRequest: REQUEST,
+    informationRequestHistory: HISTORY,
+  });
+  const switchedCaseItems = buildCustomerTimelineItems({
+    events: [],
+    informationRequest: {
+      ...REQUEST,
+      requestRef: "IRQ-FEDCBA9876543210",
+      question: "Vraag uit het tweede dossier.",
+    },
+    informationRequestHistory: [],
+  });
+  const timelineMarkup = renderToStaticMarkup(
+    <CustomerTimeline
+      events={baseTimeline}
+      informationRequest={REQUEST}
+      informationRequestHistory={HISTORY}
+    />,
+  );
+  assert(
+    openItems.filter((item) => item.title === "Vraag gesteld").length === 1 &&
+      openItems.some((item) =>
+        item.occurredAt === REQUEST.askedAt &&
+        item.text === REQUEST.question
+      ) &&
+      answeredItems.map((item) => item.title).join("|") ===
+        "Antwoord verstuurd|Vraag gesteld" &&
+      answeredItems[0].occurredAt === answeredRequest.answeredAt &&
+      answeredItems[0].text === answeredRequest.answer &&
+      historyItems.map((item) => item.title).join("|") ===
+        "Vraag afgerond|Antwoord verstuurd|Vraag gesteld|Vraag ingetrokken|Vraag gesteld" &&
+      historyItems[0].occurredAt === RESOLVED_HISTORY_ENTRY.terminalAt &&
+      historyItems[1].occurredAt === RESOLVED_HISTORY_ENTRY.answeredAt &&
+      historyItems[1].text === RESOLVED_HISTORY_ENTRY.answer &&
+      historyItems[2].occurredAt === RESOLVED_HISTORY_ENTRY.askedAt &&
+      historyItems[2].text === RESOLVED_HISTORY_ENTRY.question &&
+      historyItems[3].occurredAt === HISTORY[1].terminalAt &&
+      historyItems[3].text === null &&
+      historyItems[4].occurredAt === HISTORY[1].askedAt &&
+      !historyItems.some((item) =>
+        item.title === "Antwoord verstuurd" && item.text === HISTORY[1].question
+      ) &&
+      equalTimestampItems.map((item) => item.title).join("|") ===
+        "Dossier ontvangen|Antwoord verstuurd|Vraag gesteld" &&
+      emptyInformationRequestItems.length === 1 &&
+      emptyInformationRequestItems[0].identity ===
+        `dossier:${baseTimeline[0].event_id}` &&
+      new Set(repeatedItems.map((item) => item.identity)).size ===
+        repeatedItems.length &&
+      JSON.stringify(repeatedItems) === JSON.stringify(
+          buildCustomerTimelineItems({
+            events: baseTimeline,
+            informationRequest: REQUEST,
+            informationRequestHistory: HISTORY,
+          }),
+        ) &&
+      !switchedCaseItems.some((item) => item.text === REQUEST.question) &&
+      switchedCaseItems.some((item) =>
+        item.text === "Vraag uit het tweede dossier."
+      ) &&
+      occurrences(timelineMarkup, "Vraag gesteld") === 3 &&
+      timelineMarkup.includes(REQUEST.question) &&
+      !timelineMarkup.includes("Eerdere vragen en antwoorden"),
+    "customer_information_request_timeline_projection_invalid",
   );
 
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
@@ -330,10 +455,13 @@ async function run() {
   assert(!stale.ok && stale.stale, "information_request_stale_not_detected");
 
   console.log("CUSTOMER_INFORMATION_REQUEST_CLIENT_Q01_Q04=PASS");
+  console.log("CUSTOMER_INFORMATION_REQUEST_TIMELINE_Q01_Q10=PASS");
+  console.log("CUSTOMER_INFORMATION_REQUEST_WORKFORCE_UNCHANGED=PASS");
 }
 
 try {
   await run();
+  Deno.exit(0);
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   Deno.exit(1);

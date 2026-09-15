@@ -289,6 +289,11 @@ controller/processor allocation requires legal review.
   browser-derived or `updated_at` fallback; active and answered non-terminal
   requests expose it as null. Negative paths and history reads create no
   workflow or authority writes.
+- Customer presentation composes active and closed request correspondence into
+  the existing selected-case timeline using only `askedAt`, `answeredAt` and
+  `terminalAt`. The active panel remains above the timeline, its question
+  appears there exactly once, and the overlapping standalone customer history
+  is removed. Workforce presentation remains unchanged.
 - [x] Apply the migrations locally and prove served operator/customer browser
   automation, including the request/correction HTTP 409 conflict.
 - [x] Daan completed the local Firefox history acceptance. No hosted rollout is
@@ -837,9 +842,12 @@ customer confirmation, the green Integration gate or local database state.
       and case reference with the matching fixed dossier route. Resolve
       deliberately sends no mail; hosted transport and sender/reply-to
       activation remain open.
-- `CUSTOMER_TIMELINE_INFORMATION_REQUEST_V1`: project active and historical
-  information-request events into the customer timeline and remove overlapping
-  standalone history only after that projection is authoritative.
+- [x] `CUSTOMER_TIMELINE_INFORMATION_REQUEST_V1`: project active and historical
+      information-request correspondence into the existing customer timeline,
+      retain the actionable active panel and remove overlapping standalone
+      customer history without changing workforce presentation or authority;
+      technical proof and automated Firefox desktop/mobile acceptance are
+      green, while human Firefox acceptance remains open.
 - `WORKFORCE_HEADER_LOGOUT_V1`: add the separately accepted workforce header
   logout behavior without changing portal authority.
 - `CORRECTION_COVER_MESSAGE_V1`: define controlled cover-message content and

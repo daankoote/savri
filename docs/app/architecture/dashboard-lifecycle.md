@@ -119,6 +119,13 @@ Implementation sequence:
   timestamps. Edge owns the fixed Dutch title/text mapping. Customer-visible
   signing is folded into `Dossier ontvangen`; `review_completed` is presented
   only as the past timeline event `Gegevens gecontroleerd`.
+- Customer presentation composes the existing timeline with the exact
+  R7-authorized information-request active/history DTO. Each question, actual
+  answer and resolved/withdrawn terminal outcome becomes a chronologically
+  sorted presentation item using only `askedAt`, `answeredAt` and `terminalAt`.
+  The active request panel remains above the timeline while its question occurs
+  there exactly once. Closed correspondence is no longer rendered as a
+  separate customer section; workforce history remains unchanged.
 - One shared frontend status projection supplies the page subtitle and
   `Huidige status` block from the dossier status, curated timeline
   and active correction/information-request state. An open information request
@@ -309,7 +316,8 @@ is an alias or fallback for the other. A shared advisory case lock prevents an
 active information request and an unanswered correction handoff from
 coexisting. The exact request-versus-correction race maps to HTTP 409 and normal
 publication is unavailable while a request is active. It adds no upload,
-notification, timeline event, chat, lifecycle or terminal dossier status.
+notification, persisted timeline event, chat, lifecycle or terminal dossier
+status.
 Resolved and withdrawn requests remain immutable and are read through one
 customer-safe history projection shared by customer and workforce detail. It
 excludes the active request, is ordered by question time and opaque request
@@ -318,6 +326,13 @@ Each closed entry includes the persisted terminal time from the authoritative
 transition; the browser neither derives it nor substitutes `updated_at`.
 The existing active projection exposes `terminalAt: null` for both open and
 answered non-terminal requests.
+The customer frontend purely composes this safe DTO into the existing
+selected-case timeline: question at `askedAt`, actual answer at `answeredAt`
+and resolved/withdrawn outcome at `terminalAt`, newest-first with a stable
+equal-time tie-break. This composition creates no read-side write or new
+browser authority. The active panel stays actionable above the timeline and
+the standalone customer history is removed; workforce presentation continues
+to use the shared history component.
 
 Flow:
 

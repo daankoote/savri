@@ -2206,3 +2206,20 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   unproven.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-09-14 — Integrate information requests into the customer timeline locally
+
+- Composed active and closed customer-safe information-request correspondence
+  into the existing selected-case timeline. Questions, actual answers and
+  resolved/withdrawn outcomes use only their authoritative `askedAt`,
+  `answeredAt` and `terminalAt` values with deterministic equal-time ordering.
+- Kept the actionable active question panel above the timeline while rendering
+  its question exactly once in that timeline. Removed the overlapping
+  standalone customer history section; workforce presentation is unchanged.
+- Reused the existing R7-authorized DTO, timeline card, typography, spacing and
+  responsive CSS. No database timeline fact, read-side write, browser
+  authority, route, e-mail contract, product lifecycle state or new CSS was
+  added. Technical proof and automated Firefox desktop/mobile acceptance are
+  local; human Firefox acceptance, hosted rollout and deployment remain open.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

@@ -173,7 +173,6 @@ export function ActivePrivateDashboard({
             <CustomerInformationRequestPanel
               accessToken={accessToken ?? ""}
               caseRef={model.selected_dossier.case_reference}
-              history={model.information_request_history}
               onRefresh={onRefreshSelectedDossier}
               request={model.information_request}
             />
@@ -205,7 +204,11 @@ export function ActivePrivateDashboard({
               />
             </section>
 
-            <CustomerTimeline events={model.timeline} />
+            <CustomerTimeline
+              events={model.timeline}
+              informationRequest={model.information_request}
+              informationRequestHistory={model.information_request_history}
+            />
 
             {!hasPublishedCorrection
               ? (

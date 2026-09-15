@@ -536,19 +536,22 @@ The recent app frontend Auth/session flow is retained as local proof:
   HTTP 409, while the workforce UI prevents normal publication during an open
   request. Authoritative required-missing review subjects expose only
   `Correctie nodig` and new accepted decisions are database-rejected. Terminal
-  requests disappear from the active projection and are retained in a separate
+  requests disappear from the active projection and are retained in a
   customer-safe closed history shared by customer and workforce case detail.
   That history contains only resolved questions with their answer or withdrawn
   questions without an answer, plus the authoritative persisted terminal time
   for either outcome. It is newest-first with a deterministic tie-break and a
-  fixed limit of 50; active requests never appear twice. It resumes the
-  existing status authority. The active projection exposes the same field as
-  null for open and answered non-terminal requests. Create, read and respond
-  accept only the same normalized legacy/signing-v3 case lineages as the
-  application index;
-  no lifecycle or timeline fact is created. Local automated served-browser and
-  Daan's human Firefox history acceptance are proven; hosted rollout remains
-  open.
+  fixed limit of 50. Customer presentation projects each question, submitted
+  answer and terminal outcome into the existing selected-case timeline. The
+  active request remains actionable above that timeline and its question occurs
+  there exactly once; closed correspondence has no separate customer history
+  section. Workforce history presentation is unchanged. These are
+  presentation events only: no lifecycle, database timeline fact or terminal
+  dossier status is created. The active projection exposes `terminalAt` as null
+  for open and answered non-terminal requests. Create, read and respond accept
+  only the same normalized legacy/signing-v3 case lineages as the application
+  index. Local technical proof and automated Firefox desktop/mobile acceptance
+  are current; new human Firefox acceptance and hosted rollout remain open.
 - The real customer-safe dashboard frontend projection is CURRENT / LOCAL PROOF and uses `api-app-dashboard-get`.
 - The reusable customer document module is CURRENT / LOCAL PROOF.
 - MID evidence and installation/acquisition invoice PDF upload are supported from the authenticated dashboard.

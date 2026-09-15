@@ -1,15 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import type {
-  CustomerInformationRequestHistoryEntryV1,
   CustomerInformationRequestV1,
 } from "../../../../supabase/functions/_shared/app_customer_information_request.ts";
 import { mutateCustomerInformationRequest } from "./customerInformationRequestClient.ts";
-import { CustomerInformationRequestHistory } from "./CustomerInformationRequestHistory.tsx";
 
 type Props = Readonly<{
   accessToken: string;
   caseRef: string;
-  history: readonly CustomerInformationRequestHistoryEntryV1[];
   request: CustomerInformationRequestV1 | null;
   onRefresh: () => Promise<unknown> | void;
 }>;
@@ -17,7 +14,6 @@ type Props = Readonly<{
 export function CustomerInformationRequestPanel({
   accessToken,
   caseRef,
-  history,
   request,
   onRefresh,
 }: Props) {
@@ -72,58 +68,53 @@ export function CustomerInformationRequestPanel({
     await onRefresh();
   }
 
-  return (
-    <>
-      {request
-        ? (
-          <section
-            className="portal-card-compact"
-            aria-labelledby="customer-question-title"
-          >
-            <h2 id="customer-question-title">Vraag over uw dossier</h2>
-            <p>{request.question}</p>
-            {request.state === "OPEN"
-              ? (
-                <form
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    void submitAnswer();
-                  }}
+  return request
+    ? (
+      <section
+        className="portal-card-compact"
+        aria-labelledby="customer-question-title"
+      >
+        <h2 id="customer-question-title">Vraag over uw dossier</h2>
+        <p>{request.question}</p>
+        {request.state === "OPEN"
+          ? (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void submitAnswer();
+              }}
+            >
+              <label className="field">
+                <span>Uw antwoord</span>
+                <input
+                  maxLength={1000}
+                  onChange={(event) => setAnswer(event.target.value)}
+                  required
+                  type="text"
+                  value={answer}
+                />
+              </label>
+              {error
+                ? <p className="field-message" role="alert">{error}</p>
+                : null}
+              <div className="section-actions">
+                <button
+                  className="button button-primary"
+                  disabled={!answer.trim() || submitting}
+                  type="submit"
                 >
-                  <label className="field">
-                    <span>Uw antwoord</span>
-                    <input
-                      maxLength={1000}
-                      onChange={(event) => setAnswer(event.target.value)}
-                      required
-                      type="text"
-                      value={answer}
-                    />
-                  </label>
-                  {error
-                    ? <p className="field-message" role="alert">{error}</p>
-                    : null}
-                  <div className="section-actions">
-                    <button
-                      className="button button-primary"
-                      disabled={!answer.trim() || submitting}
-                      type="submit"
-                    >
-                      {submitting ? "Bezig…" : "Antwoord versturen"}
-                    </button>
-                  </div>
-                </form>
-              )
-              : (
-                <div>
-                  <strong>Uw antwoord</strong>
-                  <p>{request.answer}</p>
-                </div>
-              )}
-          </section>
-        )
-        : null}
-      <CustomerInformationRequestHistory entries={history} />
-    </>
-  );
+                  {submitting ? "Bezig…" : "Antwoord versturen"}
+                </button>
+              </div>
+            </form>
+          )
+          : (
+            <div>
+              <strong>Uw antwoord</strong>
+              <p>{request.answer}</p>
+            </div>
+          )}
+      </section>
+    )
+    : null;
 }
