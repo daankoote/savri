@@ -8,10 +8,11 @@ remain in `git-workflow.md`; diagnosis mechanics remain in `run-debug.md`.
 
 ## Topology
 
-Daan and the main chat determine scope and acceptance. Each task uses one
-primary Codex thread in an isolated task branch/worktree. The primary
-implements, verifies, updates documentation and produces the handoff within the
-bounded batch. It is the only writer.
+Daan and the main chat determine scope and acceptance. Each task routes to the
+existing `enval-main` General/Primary Codex agent in the canonical repository
+`/Users/daankoote/dev/enval` on branch `main`. The primary implements, verifies,
+updates documentation and produces the handoff within the bounded batch. It is
+the only writer.
 
 Conditional read-only agents:
 
@@ -28,8 +29,9 @@ proves they load correctly. Until then, the primary uses the built-in review
 path or a generic read-only subagent with the same compact contract.
 Agent-loading failure is not a product blocker.
 
-There are no permanent Main, Beheer, Setup, tester, Supabase, Netlify, Git or
-deployment agents. `main` is a protected branch. External systems are tools.
+There are no additional permanent primary agents and no permanent Beheer,
+Setup, reviewer, tester, Supabase, Netlify, Git or deployment agents. `main` is
+a protected branch. External systems are tools.
 
 Default: no subagents. Maximum: two concurrent read-only subagents. Delegate
 only independent work whose quality or latency benefit exceeds the additional
@@ -170,10 +172,12 @@ authority yields `BLOCKED` plus one precise `NEEDS` action.
 ## Communication and results
 
 Operational work remains in the primary Codex conversation. Standalone reviewer
-results return to it automatically. There is no central hook, router, result
-publisher or review loop.
+results return to it automatically. An explicit machine-level Herdr Supervisor
+may dispatch or recover that primary conversation under the integration contract
+in the root `AGENTS.md`; it does not replace the primary or the project-local
+review and review-fix flows.
 
-Statuses: `PASS`, `BLOCKED`, `FAIL`, `CANCELLED`.
+Project-local statuses: `PASS`, `BLOCKED`, `FAIL`, `CANCELLED`.
 
 Required final result fields:
 
@@ -186,7 +190,10 @@ NEXT
 ```
 
 Add `REVIEW`, `COMMIT` or `NEEDS` only when applicable. An incomplete required
-outcome is `BLOCKED` or `FAIL`, not a routine partial result.
+project-local outcome is `BLOCKED` or `FAIL`, not a routine partial result. A
+Supervisor-originated turn additionally ends with the exact result envelope and
+outcome vocabulary supplied by its mission or recovery prompt; that transport
+contract does not redefine the project-local status.
 
 Moshi is optional. Notify only terminal primary outcomes, suppress nested-agent
 pushes and never change task status because notification delivery failed.

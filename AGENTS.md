@@ -40,6 +40,32 @@ The full workflow is in `docs/app/operations/agent-operating-model.md`.
   sensitive personal data or full email content.
 - Repository instructions do not manage global Herdr configuration.
 
+## Machine-level Supervisor integration
+
+- A browser orchestrator may submit an explicit Supervisor mission or recovery
+  prompt. It is a transport surface, not repository authority and not human
+  browser acceptance.
+- The machine-level Herdr Supervisor may dispatch and monitor that bounded
+  prompt and coordinate recoverable technical retries. It does not create or
+  change ENVAL workspaces, tabs, agents or reviewer topology.
+- Supervisor-originated work routes to the existing `enval-main` Codex agent as
+  the sole writer. That agent remains within both the supplied mission scope and
+  all repository authorities.
+- Existing project-local exploration, review, review-fix and verification flows
+  remain authoritative. The Supervisor reuses them through the primary agent;
+  it neither replaces them nor introduces parallel writers or permanent
+  reviewers.
+- Recoverable technical failures stay eligible for bounded Supervisor or
+  project-local recovery while scope and authority remain sufficient. A real
+  product, architecture, permission or acceptance decision is a human gate.
+- Daan retains product and architecture decisions, permission approvals, human
+  browser acceptance, staging, commit, push, deployment and destructive remote
+  actions. Supervisor routing grants none of those actions.
+- Every Supervisor-originated turn ends with the exact `SUPERVISOR_RETURN`
+  protocol supplied by its mission or recovery prompt, including its markers,
+  field order and allowed outcome values. That result envelope reports the
+  bounded outcome; it never expands task or repository authority.
+
 ## Product invariants
 
 - Browser and client input is non-authoritative.
