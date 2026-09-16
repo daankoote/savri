@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect } from "react";
 import type { AppNavigate } from "../../routes/types.ts";
 import { useAuth } from "../auth/AuthProvider.tsx";
+import { completeAuthLogout } from "../auth/authUxFlow.ts";
 import { buildInternalLoginRoute } from "../auth/postLoginNavigation.ts";
 import type {
   OperatorCapability,
@@ -9,7 +10,10 @@ import type {
 import { useOperatorContext } from "./useOperatorContext.ts";
 
 type OperatorRouteGuardProps = Readonly<{
-  children: (context: OperatorContext) => ReactNode;
+  children: (
+    context: OperatorContext,
+    logout: () => Promise<boolean>,
+  ) => ReactNode;
   navigate: AppNavigate;
   requiredCapability: OperatorCapability;
   returnTo: string;
@@ -120,5 +124,13 @@ export function OperatorRouteGuard({
       />
     );
   }
-  return <>{children(operator.state.value)}</>;
+  return (
+    <>
+      {children(operator.state.value, () =>
+        completeAuthLogout({
+          navigate,
+          signOut: auth.signOut,
+        }))}
+    </>
+  );
 }

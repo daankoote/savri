@@ -7,6 +7,7 @@ import {
   AUTH_VERIFICATION_RESEND_ROUTE,
   buildFixedAuthCallbackUrl,
   cleanAuthCallbackLocation,
+  completeAuthLogout,
   getResendCooldownSeconds,
   hasPasswordRecoveryCallbackData,
   PASSWORD_RECOVERY_REQUESTED_MESSAGE,
@@ -15,6 +16,7 @@ import {
   resolveAuthPageKind,
   VERIFICATION_RESEND_REQUESTED_MESSAGE,
 } from "./authUxFlow.ts";
+import { resolveSupabaseSignOutCompletion } from "./authClient.ts";
 
 class ProofFailure extends Error {}
 
@@ -41,9 +43,9 @@ assert(
 
 assert(
   buildFixedAuthCallbackUrl(
-      "account_confirmation",
-      "https://app.enval.nl/ignored",
-    ) ===
+        "account_confirmation",
+        "https://app.enval.nl/ignored",
+      ) ===
       "https://app.enval.nl/inloggen" &&
     buildFixedAuthCallbackUrl(
         "password_recovery",
@@ -142,6 +144,60 @@ assert(
   "Q08_anti_enumeration_copy_invalid",
 );
 
+let signOutAttempts = 0;
+let clearedAuthenticatedState = 0;
+const successfulNavigation: Array<{
+  href: string;
+  options?: { replace?: boolean };
+}> = [];
+const successfulLogout = await completeAuthLogout({
+  navigate: (href, options) => successfulNavigation.push({ href, options }),
+  onSuccess: () => clearedAuthenticatedState += 1,
+  signOut: async () => {
+    signOutAttempts += 1;
+    return true;
+  },
+});
+const failedNavigation: string[] = [];
+const failedLogout = await completeAuthLogout({
+  navigate: (href) => failedNavigation.push(href),
+  onSuccess: () => clearedAuthenticatedState += 1,
+  signOut: async () => false,
+});
+const rejectedLogout = await completeAuthLogout({
+  navigate: (href) => failedNavigation.push(href),
+  signOut: async () => {
+    throw new Error("local proof rejection");
+  },
+});
+assert(
+  successfulLogout && signOutAttempts === 1 &&
+    clearedAuthenticatedState === 1 &&
+    successfulNavigation.length === 1 &&
+    successfulNavigation[0].href === AUTH_LOGIN_ROUTE &&
+    successfulNavigation[0].options?.replace === true &&
+    !failedLogout && !rejectedLogout && failedNavigation.length === 0,
+  "Q08b_logout_success_failure_or_replace_contract_invalid",
+);
+assert(
+  resolveSupabaseSignOutCompletion({
+    sessionAfter: null,
+    sessionReadError: null,
+    signOutError: new Error("provider failure after local removal"),
+  }) &&
+    !resolveSupabaseSignOutCompletion({
+      sessionAfter: { access_token: "retained" },
+      sessionReadError: null,
+      signOutError: new Error("provider failure with retained session"),
+    }) &&
+    !resolveSupabaseSignOutCompletion({
+      sessionAfter: null,
+      sessionReadError: new Error("session state unavailable"),
+      signOutError: new Error("provider failure"),
+    }),
+  "Q08c_logout_provider_error_session_state_invalid",
+);
+
 const [
   appSource,
   accountSource,
@@ -220,7 +276,9 @@ assert(
       'setFeedback({ kind: "info", message: copy.message })',
     ) &&
     emailRequestSource.includes('action: "Geen verificatiemail ontvangen?"') &&
-    emailRequestSource.includes("accountregistratie die nog niet is bevestigd") &&
+    emailRequestSource.includes(
+      "accountregistratie die nog niet is bevestigd",
+    ) &&
     !emailRequestSource.includes("result.error") &&
     passwordRecoverySource.includes("updateRecoveredPassword(password)") &&
     passwordRecoverySource.includes("passwordConfirmation") &&
@@ -240,11 +298,12 @@ assert(
     !authUxSource.includes("sessionStorage") &&
     ![authUxSource, accountSource, emailRequestSource, passwordRecoverySource]
       .some((value) =>
-      /(api-app-auth-bootstrap|app_signup|app_signing|access[_-]?grant|promot)/i
-        .test(value)
+        /(api-app-auth-bootstrap|app_signup|app_signing|access[_-]?grant|promot)/i
+          .test(value)
       ),
   "Q12_callback_data_or_business_authority_leak",
 );
 
 console.log("AUTH_UX_RECOVERY_RESEND_Q01_Q12=PASS");
+console.log("AUTH_LOGOUT_ORCHESTRATION=PASS");
 Deno.exit(0);

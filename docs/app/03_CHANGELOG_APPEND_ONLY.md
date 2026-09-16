@@ -2223,3 +2223,21 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   local; human Firefox acceptance, hosted rollout and deployment remain open.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-09-15 — Add workforce header logout locally
+
+- Extended the existing admitted workforce header with `Uitloggen` after
+  `Overzicht` and `Dossiers` on overview, worklist and dossier-detail surfaces.
+- Reused the existing Supabase Auth session contract and one shared completion
+  flow for workforce and customer callers. Repeated activation is blocked while
+  logout runs; confirmed local session removal clears authenticated
+  presentation state and replace-navigates to exact `/inloggen`. A provider
+  error with a retained session keeps the authenticated surface; unknown
+  session state fails closed.
+- Kept public, Auth and customer-header presentation and all database, RLS,
+  route, information-request and e-mail contracts unchanged. Focused proofs,
+  typecheck/build and automated Firefox at `1440x900`, `820x1180` and `375x812`
+  are local only; human Firefox acceptance, hosted rollout and deployment
+  remain open.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

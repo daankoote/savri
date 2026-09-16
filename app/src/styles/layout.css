@@ -286,7 +286,8 @@
     width: 100%;
   }
 
-  .app-header[data-app-surface-navigation="tenant_operator"] .header-nav a {
+  .app-header[data-app-surface-navigation="tenant_operator"] .header-nav a,
+  .app-header[data-app-surface-navigation="tenant_operator"] .header-nav button {
     flex: 1 1 120px;
     justify-content: center;
   }

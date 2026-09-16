@@ -143,11 +143,43 @@ export async function signInWithSupabasePassword(
   return { ok: true, session: data.session };
 }
 
-export async function signOutWithSupabase(): Promise<void> {
-  const client = getSupabaseBrowserClient();
-  if (!client) return;
+export function resolveSupabaseSignOutCompletion({
+  sessionAfter,
+  sessionReadError,
+  signOutError,
+}: Readonly<{
+  sessionAfter: unknown;
+  sessionReadError: unknown;
+  signOutError: unknown;
+}>): boolean {
+  return !signOutError || (!sessionReadError && sessionAfter === null);
+}
 
-  await client.auth.signOut();
+export async function signOutWithSupabase(): Promise<boolean> {
+  const client = getSupabaseBrowserClient();
+  if (!client) return false;
+
+  try {
+    const { error } = await client.auth.signOut();
+    if (!error) return true;
+    const sessionResult = await client.auth.getSession();
+    return resolveSupabaseSignOutCompletion({
+      sessionAfter: sessionResult.data.session,
+      sessionReadError: sessionResult.error,
+      signOutError: error,
+    });
+  } catch {
+    try {
+      const sessionResult = await client.auth.getSession();
+      return resolveSupabaseSignOutCompletion({
+        sessionAfter: sessionResult.data.session,
+        sessionReadError: sessionResult.error,
+        signOutError: true,
+      });
+    } catch {
+      return false;
+    }
+  }
 }
 
 export async function signOutLocalSupabaseSession(): Promise<boolean> {

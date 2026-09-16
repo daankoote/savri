@@ -25,8 +25,9 @@ capabilities server-side through existing compliance and evidence-review
 application boundaries; denies unauthenticated and non-workforce access; keeps
 `/intern/compliance` and `/intern/dossiers` only as compatibility paths under
 the same authority; and grants no implicit `platform_support.request`.
-Current operator navigation is exactly `Overzicht` and `Dossiers`, with shared
-`Powered by ENVAL` attribution. Broader operator administration, `Klanten`,
+Current operator header navigation is exactly `Overzicht`, `Dossiers`, and
+`Uitloggen`, with shared `Powered by ENVAL` attribution. Broader operator
+administration, `Klanten`,
 `Organisatie`, ENVAL Control Console and Verifier Console remain TARGET.
 
 TF02-B additionally proves the strict versioned tenant-configuration
@@ -595,7 +596,8 @@ through TF02-C. CURRENT PROVEN LOCAL now includes:
 - the TF02-C two-table tenant-data-plane metadata persistence and TF01-bound,
   two-query database reader, with Q01-Q36 and regressions green.
 - the UI-01B server-authorized local `/beheer` Tenant Operator entry, current
-  `Overzicht` and `Dossiers` navigation, unified `/intern/*` compatibility
+  `Overzicht`, `Dossiers` and `Uitloggen` navigation, unified `/intern/*`
+  compatibility
   authority and shared `Powered by ENVAL` attribution.
 
 Still TARGET/DEFERRED or UNKNOWN:

@@ -345,7 +345,12 @@ Customer, tenant-workforce and ENVAL Software platform-support access are separa
 - Unauthenticated `/beheer` access enters the operator login flow with the safe
   return route. Authenticated principals without an active workforce identity
   receive the normal `Geen toegang` state; authorized active workforce is
-  admitted. Current operator navigation is exactly `Overzicht` and `Dossiers`.
+  admitted. Current operator header navigation is exactly `Overzicht`,
+  `Dossiers`, and `Uitloggen`. Logout uses the existing Auth session contract,
+  blocks repeat activation while running, clears authenticated presentation
+  state after confirmed local session removal and replace-navigates to exact
+  `/inloggen`. A provider error retains the authenticated surface when its
+  session remains; unknown session state fails closed.
 - `/intern/compliance` and `/intern/dossiers` remain temporary compatibility
   paths using the same operator context and authority. Later removal/redirect
   cleanup requires a separate bounded task.

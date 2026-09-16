@@ -218,7 +218,10 @@ capabilities from trusted server context by reusing
 `app_workforce_authorize_v1` remains private, and no browser field or JWT role
 selects tenant/workforce authority.
 
-The current operator navigation is exactly `Overzicht` and `Dossiers`.
+The current operator header order is exactly `Overzicht`, `Dossiers`, and
+`Uitloggen`. The action reuses the shared Auth logout contract and completes
+exact `/inloggen` replace-navigation only after confirmed local session
+removal.
 `/beheer` is a dedicated operational overview. It limits each section to three
 items, uses only server-proven `TO_REVIEW`, `WAITING_CUSTOMER` and
 `REVIEW_COMPLETE` projections, and shows no totals. Each bounded overview group

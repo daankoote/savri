@@ -14,7 +14,7 @@ export function ComplianceWorklistPage(
       requiredCapability="compliance.delivery_year.view"
       returnTo={currentPath}
     >
-      {(context) => (
+      {(context, logout) => (
         <SurfaceShell
           navigation={
             <AppHeader
@@ -22,6 +22,7 @@ export function ComplianceWorklistPage(
               identitySurface="tenant_operator"
               navigate={navigate}
               navigation={buildOperatorNavigation(context, currentPath)}
+              onLogout={logout}
               surface="tenant_operator"
             />
           }

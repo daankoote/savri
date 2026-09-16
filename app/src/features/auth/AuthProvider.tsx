@@ -341,11 +341,11 @@ export function AuthProvider({
   }, [bootstrapSession, intent, session]);
 
   const signOut = useCallback(async () => {
-    clearBoundState();
-    setSession(null);
-    setStatus("signed_out");
-    await signOutWithSupabase();
-  }, [clearBoundState]);
+    const signedOut = await signOutWithSupabase();
+    if (!signedOut) return false;
+    setSignedOut();
+    return true;
+  }, [setSignedOut]);
 
   const value = useMemo<AuthContextValue>(() => ({
     audience,

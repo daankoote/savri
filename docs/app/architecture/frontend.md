@@ -148,9 +148,10 @@ Tenant Operator Console MVP navigation is exactly:
 - `Klanten`
 - `Organisatie`
 
-UI-01B proves only the current local operator subset: `Overzicht` and
-`Dossiers`. `Klanten` and `Organisatie` remain TARGET/unimplemented, as do the
-ENVAL Control Console and Verifier Console.
+UI-01B proves only the current local operator route-link subset: `Overzicht`
+and `Dossiers`; the shared header then adds the `Uitloggen` Auth action.
+`Klanten` and `Organisatie` remain TARGET/unimplemented, as do the ENVAL
+Control Console and Verifier Console.
 
 `Overzicht` is action-first and groups `Te beoordelen`, `Wacht op klant`,
 `Geblokkeerd`, `Klaar voor volgende stap`, and `Afgerond`. `Rapportage` is later
@@ -215,10 +216,13 @@ Rules:
   wachten op klant and recent afgeronde dossiers. The complete list partitions
   the same server projection once into those groups plus overige actieve
   dossiers; overview group links target the corresponding list section.
-- The shared operator header marks `Overzicht` or `Dossiers` active on canonical
-  pages, keeps `Dossiers` active on canonical and compatibility detail/list
-  routes, maps `/intern/compliance` to active `Overzicht`, and remains usable
-  without horizontal overflow at narrow widths.
+- The shared operator header renders `Overzicht`, `Dossiers`, then `Uitloggen`.
+  It marks `Overzicht` or `Dossiers` active on canonical pages, keeps `Dossiers`
+  active on canonical and compatibility detail/list routes, maps
+  `/intern/compliance` to active `Overzicht`, and remains usable without
+  horizontal overflow at narrow widths. `Uitloggen` uses the existing Auth
+  session contract, prevents repeat activation while running and
+  replace-navigates to `/inloggen` only after confirmed local session removal.
 - `/intern/compliance` and `/intern/dossiers` are CURRENT temporary
   compatibility paths using the same server-authorized operator surface and
   authority. Their later redirect/removal cleanup is separately bounded.

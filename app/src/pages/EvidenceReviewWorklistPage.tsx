@@ -15,7 +15,7 @@ export function EvidenceReviewWorklistPage({
       requiredCapability="evidence.review.view"
       returnTo={currentPath}
     >
-      {(context) => (
+      {(context, logout) => (
         <SurfaceShell
           navigation={
             <AppHeader
@@ -23,6 +23,7 @@ export function EvidenceReviewWorklistPage({
               identitySurface="tenant_operator"
               navigate={navigate}
               navigation={buildOperatorNavigation(context, currentPath)}
+              onLogout={logout}
               surface="tenant_operator"
             />
           }

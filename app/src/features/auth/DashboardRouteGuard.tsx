@@ -1,7 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import type { AppNavigate } from "../../routes/types";
 import { useAuth } from "./AuthProvider";
-import { AUTH_LOGIN_ROUTE } from "./authUxFlow";
+import { AUTH_LOGIN_ROUTE, completeAuthLogout } from "./authUxFlow";
 import { buildInternalLoginRoute } from "./postLoginNavigation";
 
 type DashboardRouteGuardProps = {
@@ -51,7 +51,10 @@ export function DashboardRouteGuard({ children, navigate, returnTo }: DashboardR
                 <button
                   className="button button-secondary"
                   onClick={() => {
-                    void auth.signOut().then(() => navigate(AUTH_LOGIN_ROUTE));
+                    void completeAuthLogout({
+                      navigate,
+                      signOut: auth.signOut,
+                    });
                   }}
                   type="button"
                 >

@@ -1,4 +1,4 @@
-import type { MouseEvent } from "react";
+import { type MouseEvent, useRef, useState } from "react";
 import {
   type PresentationIdentitySurface,
   projectPresentationSurfaceIdentity,
@@ -24,6 +24,7 @@ type AppHeaderProps = {
   identitySurface?: PresentationIdentitySurface;
   navigate: (href: string) => void;
   navigation?: readonly SurfaceNavigationItem[];
+  onLogout?: () => Promise<boolean>;
   surface?: AppSurface;
 };
 
@@ -44,8 +45,11 @@ export function AppHeader({
   identitySurface,
   navigate,
   navigation = publicNavigation,
+  onLogout,
   surface = "public",
 }: AppHeaderProps) {
+  const logoutRunningRef = useRef(false);
+  const [logoutRunning, setLogoutRunning] = useState(false);
   const presentation = usePresentationBrand();
   const identity = identitySurface
     ? projectPresentationSurfaceIdentity(
@@ -62,6 +66,15 @@ export function AppHeader({
       event.preventDefault();
       navigate(href);
     };
+  const handleLogout = async () => {
+    if (!onLogout || logoutRunningRef.current) return;
+    logoutRunningRef.current = true;
+    setLogoutRunning(true);
+    const signedOut = await onLogout().catch(() => false);
+    if (signedOut) return;
+    logoutRunningRef.current = false;
+    setLogoutRunning(false);
+  };
 
   return (
     <header className="app-header" data-app-surface-navigation={surface}>
@@ -81,7 +94,7 @@ export function AppHeader({
           </span>
         </a>
 
-        {navigation.length > 0
+        {navigation.length > 0 || onLogout
           ? (
             <nav className="header-nav" aria-label="Hoofdnavigatie">
               {navigation.flatMap((item) =>
@@ -103,6 +116,18 @@ export function AppHeader({
                   ]
                   : []
               )}
+              {onLogout
+                ? (
+                  <button
+                    aria-busy={logoutRunning}
+                    disabled={logoutRunning}
+                    onClick={() => void handleLogout()}
+                    type="button"
+                  >
+                    Uitloggen
+                  </button>
+                )
+                : null}
             </nav>
           )
           : null}

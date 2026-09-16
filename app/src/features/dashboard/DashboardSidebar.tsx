@@ -8,7 +8,7 @@ import {
   projectPresentationSurfaceIdentity,
   usePresentationBrand,
 } from "../../shared/presentation/PresentationBrandProvider";
-import { AUTH_LOGIN_ROUTE } from "../auth/authUxFlow";
+import { completeAuthLogout } from "../auth/authUxFlow";
 import type { DashboardDossierSummary } from "./dashboardTypes";
 import {
   buildDashboardApplicationRoute,
@@ -46,8 +46,11 @@ export function DashboardSidebar({
   );
 
   function handleLogout() {
-    clearDashboardReadCache();
-    void auth.signOut().then(() => navigate(AUTH_LOGIN_ROUTE));
+    void completeAuthLogout({
+      navigate,
+      onSuccess: clearDashboardReadCache,
+      signOut: auth.signOut,
+    });
   }
 
   function handleNewApplication() {

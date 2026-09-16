@@ -3816,7 +3816,7 @@ export const PATH_RULES = Object.freeze([
     }),
     checks: Object.freeze([
       "deno-check-app-changed",
-      "auth-shell-f01-pure",
+      "public-auth-identity-v1-pure",
     ]),
   }),
   Object.freeze({

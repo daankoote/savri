@@ -78,5 +78,5 @@ export type AuthContextValue = {
   ) => Promise<AuthActionResult>;
   updateRecoveredPassword: (password: string) => Promise<AuthOperationResult>;
   retryBootstrap: () => Promise<AuthActionResult>;
-  signOut: () => Promise<void>;
+  signOut: () => Promise<boolean>;
 };

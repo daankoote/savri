@@ -28,6 +28,24 @@ export type AuthEventDisposition =
   | "portal_session"
   | "ignore";
 
+type AuthLogoutOptions = Readonly<{
+  navigate: (href: string, options?: { replace?: boolean }) => void;
+  onSuccess?: () => void;
+  signOut: () => Promise<boolean>;
+}>;
+
+export async function completeAuthLogout({
+  navigate,
+  onSuccess,
+  signOut,
+}: AuthLogoutOptions): Promise<boolean> {
+  const signedOut = await signOut().catch(() => false);
+  if (!signedOut) return false;
+  onSuccess?.();
+  navigate(AUTH_LOGIN_ROUTE, { replace: true });
+  return true;
+}
+
 export function resolveAuthPageKind(pathname: string): AuthPageKind {
   if (pathname === AUTH_PASSWORD_REQUEST_ROUTE) return "password_request";
   if (pathname === AUTH_PASSWORD_UPDATE_ROUTE) return "password_update";

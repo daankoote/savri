@@ -28,8 +28,8 @@ implementation.
   workforce. Unauthenticated access enters the operator login flow with a safe
   return route; authenticated non-workforce receives `Geen toegang`; tenant and
   effective capabilities are server-derived through the existing compliance
-  and evidence-review application boundaries. Active navigation is exactly
-  `Overzicht` and `Dossiers`, marks the canonical active destination and stays
+  and evidence-review application boundaries. Active header navigation is
+  exactly `Overzicht`, `Dossiers`, and `Uitloggen`, marks the canonical active destination and stays
   usable on narrow mobile. `/beheer` limits server-proven `TO_REVIEW`,
   `WAITING_CUSTOMER` and recent `REVIEW_COMPLETE` previews to three items each,
   shows no totals and links every group to the canonical complete list.
@@ -848,8 +848,17 @@ customer confirmation, the green Integration gate or local database state.
       customer history without changing workforce presentation or authority;
       technical proof and automated Firefox desktop/mobile acceptance are
       green, while human Firefox acceptance remains open.
-- `WORKFORCE_HEADER_LOGOUT_V1`: add the separately accepted workforce header
-  logout behavior without changing portal authority.
+- DONE / CURRENT PROVEN LOCAL — `WORKFORCE_HEADER_LOGOUT_V1`: the shared
+  workforce header shows `Uitloggen` after `Overzicht` and `Dossiers` on all
+  admitted workforce surfaces. It reuses the existing Auth session contract,
+  prevents repeated activation while running and replace-navigates to exact
+  `/inloggen` only after confirmed local session removal. A provider error with
+  a retained session keeps the authenticated surface; unknown session state
+  fails closed.
+  Public, Auth and customer header presentation and portal authority remain
+  unchanged. Focused proofs, typecheck/build and automated Firefox at
+  `1440x900`, `820x1180` and `375x812` are green; human Firefox acceptance,
+  hosted rollout and deployment remain open.
 - `CORRECTION_COVER_MESSAGE_V1`: define controlled cover-message content and
   its portal projection.
 - `CORRECTION_EMAIL_V1`: connect correction notification to the shared

@@ -112,7 +112,11 @@ receives the normal `Geen toegang` state, and authorized tenant workforce is
 admitted. Tenant and effective capabilities are server-derived by reusing the
 existing compliance and evidence-review application boundaries;
 `app_workforce_authorize_v1` remains private. The current active operator
-navigation is exactly `Overzicht` and `Dossiers`. `/beheer` is the dedicated
+header is exactly `Overzicht`, `Dossiers`, and `Uitloggen`. The logout action
+uses the shared Auth session contract, is disabled while that action runs and
+replace-navigates to `/inloggen` only after confirmed local session removal. A
+provider error retains the authenticated surface when its session remains;
+unknown session state fails closed. `/beheer` is the dedicated
 work-oriented overview with previews of at most three server-proven
 `TO_REVIEW` dossiers, three server-proven `WAITING_CUSTOMER` dossiers and three
 recent server-proven `REVIEW_COMPLETE` dossiers. Each bounded group links to

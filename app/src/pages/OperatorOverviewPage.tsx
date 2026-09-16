@@ -14,7 +14,7 @@ export function OperatorOverviewPage(
       requiredCapability="evidence.review.view"
       returnTo={currentPath}
     >
-      {(context) => (
+      {(context, logout) => (
         <SurfaceShell
           navigation={
             <AppHeader
@@ -22,6 +22,7 @@ export function OperatorOverviewPage(
               identitySurface="tenant_operator"
               navigate={navigate}
               navigation={buildOperatorNavigation(context, currentPath)}
+              onLogout={logout}
               surface="tenant_operator"
             />
           }

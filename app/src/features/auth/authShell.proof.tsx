@@ -189,6 +189,32 @@ assert(
     !operatorHtml.includes("<nav"),
   "Q06_operator_login_surface_or_navigation_invalid",
 );
+const workforceHeaderHtml = renderToStaticMarkup(
+  <PresentationBrandProvider presentation={presentation}>
+    <AppHeader
+      currentPath="/beheer"
+      identitySurface="tenant_operator"
+      navigate={navigate}
+      navigation={[
+        { label: "Overzicht", href: "/beheer", active: true },
+        { label: "Dossiers", href: "/beheer/dossiers" },
+      ]}
+      onLogout={async () => true}
+      surface="tenant_operator"
+    />
+  </PresentationBrandProvider>,
+);
+assert(
+  workforceHeaderHtml.indexOf(">Overzicht</a>") <
+      workforceHeaderHtml.indexOf(">Dossiers</a>") &&
+    workforceHeaderHtml.indexOf(">Dossiers</a>") <
+      workforceHeaderHtml.indexOf(">Uitloggen</button>") &&
+    workforceHeaderHtml.includes('<button aria-busy="false"') &&
+    workforceHeaderHtml.includes('type="button">Uitloggen</button>') &&
+    !operatorHtml.includes(">Uitloggen</button>") &&
+    !publicHeaderHtml.includes(">Uitloggen</button>"),
+  "Q06b_workforce_logout_order_or_surface_isolation_invalid",
+);
 assert(
   readSafePostLoginReturnRoute("?returnTo=%2Fbeheer") === "/beheer" &&
     readSafePostLoginReturnRoute("?returnTo=https%3A%2F%2Fattacker.invalid") ===
@@ -200,6 +226,7 @@ const [
   appSource,
   accountPageSource,
   authLayoutSource,
+  authUxSource,
   dashboardGuardSource,
   dashboardSidebarSource,
   emailRequestSource,
@@ -207,18 +234,33 @@ const [
   passwordRecoverySource,
   signupSource,
   uiCollectorSource,
+  operatorGuardSource,
+  operatorOverviewPageSource,
+  evidenceWorklistPageSource,
+  evidenceDetailPageSource,
+  compliancePageSource,
+  componentsCss,
+  layoutCss,
 ] = await Promise.all([
-    source("app/src/App.tsx"),
-    source("app/src/pages/AccountPage.tsx"),
-    source("app/src/features/auth/AuthPageLayout.tsx"),
-    source("app/src/features/auth/DashboardRouteGuard.tsx"),
-    source("app/src/features/dashboard/DashboardSidebar.tsx"),
-    source("app/src/features/auth/AuthEmailRequestPage.tsx"),
-    source("app/src/shared/components/AppHeader.tsx"),
-    source("app/src/features/auth/PasswordRecoveryPage.tsx"),
-    source("app/src/features/signup/SignupPageShell.tsx"),
-    source("scripts/tools/enval-ui-review-collect.mjs"),
-  ]);
+  source("app/src/App.tsx"),
+  source("app/src/pages/AccountPage.tsx"),
+  source("app/src/features/auth/AuthPageLayout.tsx"),
+  source("app/src/features/auth/authUxFlow.ts"),
+  source("app/src/features/auth/DashboardRouteGuard.tsx"),
+  source("app/src/features/dashboard/DashboardSidebar.tsx"),
+  source("app/src/features/auth/AuthEmailRequestPage.tsx"),
+  source("app/src/shared/components/AppHeader.tsx"),
+  source("app/src/features/auth/PasswordRecoveryPage.tsx"),
+  source("app/src/features/signup/SignupPageShell.tsx"),
+  source("scripts/tools/enval-ui-review-collect.mjs"),
+  source("app/src/features/operator/OperatorRouteGuard.tsx"),
+  source("app/src/pages/OperatorOverviewPage.tsx"),
+  source("app/src/pages/EvidenceReviewWorklistPage.tsx"),
+  source("app/src/pages/EvidenceReviewCaseDetailPage.tsx"),
+  source("app/src/pages/ComplianceWorklistPage.tsx"),
+  source("app/src/styles/components.css"),
+  source("app/src/styles/layout.css"),
+]);
 assert(
   appSource.includes("AUTH_ACCOUNT_COMPATIBILITY_ROUTE") &&
     appSource.includes("AUTH_LOGIN_ROUTE") &&
@@ -230,7 +272,7 @@ assert(
     accountPageSource.includes('identitySurface="public_auth"') &&
     accountPageSource.includes('auth.audience === "operator"') &&
     headerSource.includes("navigation = publicNavigation") &&
-    headerSource.includes("navigation.length > 0") &&
+    headerSource.includes("navigation.length > 0 || onLogout") &&
     !signupSource.includes("navigation={[]}"),
   "Q08_route_or_composition_contract_invalid",
 );
@@ -251,11 +293,16 @@ assert(
 );
 
 assert(
-  [dashboardGuardSource, dashboardSidebarSource, emailRequestSource,
-    passwordRecoverySource].every((value) =>
+  [
+    emailRequestSource,
+    passwordRecoverySource,
+  ].every((value) =>
     value.includes("AUTH_LOGIN_ROUTE") &&
     !value.includes('navigate("/account")')
   ) &&
+    dashboardGuardSource.includes("completeAuthLogout") &&
+    dashboardSidebarSource.includes("completeAuthLogout") &&
+    authUxSource.includes("navigate(AUTH_LOGIN_ROUTE, { replace: true })") &&
     headerSource.includes('{ label: "Inloggen", href: "/inloggen" }') &&
     !headerSource.includes('{ label: "Inloggen", href: "/account" }'),
   "Q10_internal_login_caller_not_canonical",
@@ -277,5 +324,25 @@ assert(
   "Q12_browser_fixture_login_route_stale",
 );
 
+assert(
+  [
+    operatorOverviewPageSource,
+    evidenceWorklistPageSource,
+    evidenceDetailPageSource,
+    compliancePageSource,
+  ].every((value) =>
+    value.includes("{(context, logout) =>") &&
+    value.includes("onLogout={logout}")
+  ) &&
+    operatorGuardSource.includes("completeAuthLogout") &&
+    operatorGuardSource.includes("signOut: auth.signOut") &&
+    headerSource.includes("logoutRunningRef.current") &&
+    headerSource.includes("disabled={logoutRunning}") &&
+    componentsCss.includes(".header-nav button") &&
+    layoutCss.includes(".header-nav button"),
+  "Q13_workforce_logout_composition_loading_or_responsive_contract_invalid",
+);
+
 console.log("PUBLIC_AUTH_IDENTITY_V1_Q01_Q12=PASS");
+console.log("WORKFORCE_HEADER_LOGOUT_STRUCTURE=PASS");
 Deno.exit(0);
