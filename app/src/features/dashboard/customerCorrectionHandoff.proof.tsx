@@ -143,9 +143,10 @@ function body(
   currentReplacementCandidates: unknown[] = [],
 ) {
   return {
-    schemaVersion: "customer-correction-handoff-v5",
+    schemaVersion: "customer-correction-handoff-v6",
     caseRef,
     handoff: {
+      coverMessage: "Controleer en corrigeer de onderstaande gegevens.",
       currentReplacementCandidates,
       handoffRef: "CRH-0123456789ABCDEF",
       publishedAt: "2026-08-19T14:54:34.880Z",
@@ -299,7 +300,7 @@ assert(
   "Q01_customer_safe_response_not_decoded",
 );
 const noHandoff = decodeCustomerCorrectionHandoffResponse({
-  schemaVersion: "customer-correction-handoff-v5",
+  schemaVersion: "customer-correction-handoff-v6",
   caseRef: CASE_A,
   handoff: null,
 }, CASE_A);
@@ -458,9 +459,32 @@ assert(
     publishedHtml.includes("Locatie 1") &&
     publishedHtml.includes("Laadpaal 1") &&
     publishedHtml.includes("Energieleverancier") &&
-    publishedHtml.includes("Reden: Gegeven onjuist") &&
-    publishedHtml.includes("Toelichting: foute invoer") &&
-    publishedHtml.includes('title="Bevestigen niet beschikbaar"') &&
+    [
+      "Gegeven",
+      "Bron",
+      "Info uit bron",
+      "Klant",
+      "ENVAL",
+      "Reden",
+      "Toelichting",
+    ].every((label) => publishedHtml.includes(`>${label}</span>`)) &&
+    publishedHtml.includes("Pilot Energie Nederland B.V.") &&
+    publishedHtml.includes(
+      'aria-label="Energiedocument: Pilot Energie Nederland B.V."',
+    ) &&
+    publishedHtml.includes(
+      'data-label="Reden" role="cell"><span class="fact-review-assessment"><span>Gegeven onjuist</span>',
+    ) &&
+    publishedHtml.includes(
+      'data-label="Toelichting" role="cell"><span class="fact-review-assessment"><span>foute invoer</span>',
+    ) &&
+    publishedHtml.includes('class="fact-table__row-group"') &&
+    !publishedHtml.includes('class="fact-review-correction-row"') &&
+    publishedHtml.includes('aria-colspan="2"') &&
+    !publishedHtml.includes("Energieleverancier · Energiedocument") &&
+    !publishedHtml.includes("Reden:") &&
+    !publishedHtml.includes("Toelichting:") &&
+    publishedHtml.includes('title="Bevestigen"') &&
     publishedHtml.includes('title="Corrigeren"') &&
     !publishedHtml.includes("Energieleverancier nieuwe waarde") &&
     publishedHtml.includes("Wacht op klant") &&
@@ -509,13 +533,53 @@ const multipleHtml = renderDashboard(readyState(multiple.model));
 assert(
   (multipleHtml.match(/class="fact-table__row"/g) || []).length === 8 &&
     !multipleHtml.includes("portal-evidence-card") &&
-    multipleHtml.includes("Reden: Gegeven ontbreekt") &&
-    multipleHtml.includes("Reden: Gegevens komen niet overeen") &&
-    multipleHtml.includes("Reden: Anders") &&
-    (multipleHtml.match(/Toelichting: foute invoer/g) || []).length === 3 &&
+    multipleHtml.includes(
+      'data-label="Reden" role="cell"><span class="fact-review-assessment"><span>Gegeven ontbreekt</span>',
+    ) &&
+    multipleHtml.includes(
+      'data-label="Reden" role="cell"><span class="fact-review-assessment"><span>Gegevens komen niet overeen</span>',
+    ) &&
+    multipleHtml.includes(
+      'data-label="Reden" role="cell"><span class="fact-review-assessment"><span>Anders</span>',
+    ) &&
+    (multipleHtml.match(
+      /data-label="Toelichting" role="cell"><span class="fact-review-assessment"><span>foute invoer<\/span>/g,
+    ) || []).length === 3 &&
+    (multipleHtml.match(/class="fact-table__row-group"/g) || []).length ===
+      8 &&
     customerCorrectionReasonLabel("INCORRECT_INFORMATION") ===
       "Gegeven onjuist",
   "Q10_multiple_items_or_reason_mapping_invalid",
+);
+
+const duplicateDetail = decodeCustomerCorrectionHandoffResponse(
+  body(CASE_A, [
+    item("INCORRECT_INFORMATION", 31, "structuredAddress"),
+    {
+      ...item("INCORRECT_INFORMATION", 32, "structuredAddress"),
+      documentLabel: "Installatiefactuur",
+    },
+  ]),
+  CASE_A,
+);
+assert(duplicateDetail.ok, "Q10b_duplicate_detail_decode_failed");
+const duplicateDetailHtml = renderDashboard(readyState(duplicateDetail.model));
+assert(
+  duplicateDetailHtml.includes("Energiedocument") &&
+    duplicateDetailHtml.includes("Installatiefactuur") &&
+    duplicateDetailHtml.includes(
+      'aria-label="Energiedocument: Pilot Energie Nederland B.V."',
+    ) &&
+    duplicateDetailHtml.includes(
+      'aria-label="Installatiefactuur: Pilot Energie Nederland B.V."',
+    ) &&
+    (duplicateDetailHtml.match(
+      /<span>Gegeven onjuist<\/span>/g,
+    ) || []).length === 1 &&
+    (duplicateDetailHtml.match(
+      /<span>foute invoer<\/span>/g,
+    ) || []).length === 1,
+  "Q10b_identical_correction_detail_not_deduplicated",
 );
 
 const errorHtml = renderDashboard({
@@ -668,7 +732,8 @@ const threeHtml = renderDashboard(readyState(threeDecoded.model));
 assert(
   threeReady.ready && threeReady.responses.length === 3 &&
     (threeHtml.match(/title="Bevestigen niet beschikbaar"/g) || []).length ===
-      3 &&
+      1 &&
+    (threeHtml.match(/title="Bevestigen"/g) || []).length === 2 &&
     (threeHtml.match(/title="Corrigeren"/g) || []).length === 3 &&
     !threeHtml.includes("nieuwe waarde"),
   "Q16_three_fact_single_workspace_invalid",
@@ -692,8 +757,12 @@ const crossHtml = renderDashboard(readyState(crossDecoded.model));
 assert(
   crossHtml.includes("Locatie 1") &&
     crossHtml.includes("Laadpaal 1") &&
-    crossHtml.includes("Energieleverancier · Energiedocument") &&
-    crossHtml.includes("Serienummer · Installatiefactuur") &&
+    crossHtml.includes(">Energieleverancier</span>") &&
+    crossHtml.includes(">Serienummer</span>") &&
+    crossHtml.includes('aria-label="Energiedocument: Gegeven ontbreekt"') &&
+    crossHtml.includes(
+      'aria-label="Installatiefactuur: Gegeven ontbreekt"',
+    ) &&
     (crossHtml.match(/Wijzigingen indienen/g) || []).length === 1,
   "Q17_cross_document_single_action_invalid",
 );

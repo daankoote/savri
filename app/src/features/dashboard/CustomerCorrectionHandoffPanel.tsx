@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { Fragment, useMemo, useRef, useState } from "react";
 import type { DocumentEvidenceUploadCardProps } from "../documents/DocumentEvidenceUploadCard.tsx";
 import {
   allRequiredDocumentEvidenceReady,
@@ -502,30 +502,26 @@ function createCorrectionCustomerWorkflowGroup({
       ? "CONFLICT_SOURCE_SELECTED" as const
       : "CLEAN_SOURCE_CONFIRMED" as const;
     const itemRefs = valueItems.map((item) => item.item.itemRef);
+    const correctionDetails = [...new Map(
+      workspaceItems.map((workspaceItem) => {
+        const reason = customerCorrectionReasonLabel(
+          workspaceItem.item.correctionReason,
+        );
+        const instruction = workspaceItem.item.correctionInstruction;
+        return [
+          `${reason}\u0000${instruction}`,
+          Object.freeze({
+            id: workspaceItem.item.itemRef,
+            reason,
+            instruction,
+          }),
+        ] as const;
+      }),
+    ).values()];
     return Object.freeze({
       factKey: definition.factKey,
-      given: (
-        <span className="fact-review-assessment">
-          {workspaceItems.map((workspaceItem) => (
-            <span
-              className="fact-review-assessment"
-              key={workspaceItem.item.itemRef}
-            >
-              <span>
-                {workspaceItem.item.factLabel} · {workspaceItem.item.documentLabel}
-              </span>
-              <span>
-                Reden: {customerCorrectionReasonLabel(
-                  workspaceItem.item.correctionReason,
-                )}
-              </span>
-              <span>
-                Toelichting: {workspaceItem.item.correctionInstruction}
-              </span>
-            </span>
-          ))}
-        </span>
-      ),
+      given: definition.label,
+      correctionDetails: Object.freeze(correctionDetails),
       sources,
       editable: valueItems.length > 0,
       browserResolution,
@@ -1543,6 +1539,23 @@ function ReadyCustomerCorrectionHandoffPanel({
 
   return (
     <>
+      {handoff.coverMessage
+        ? (
+          <section
+            aria-label="Bericht bij correcties"
+            className="portal-card-compact"
+          >
+            <p>
+              {handoff.coverMessage.split("\n").map((line, index) => (
+                <Fragment key={`${index}:${line}`}>
+                  {index > 0 ? <br /> : null}
+                  {line}
+                </Fragment>
+              ))}
+            </p>
+          </section>
+        )
+        : null}
       <DocumentEvidenceWorkflow {...workflowModel} />
 
       {workspace.hasUnsupportedAction
@@ -1694,7 +1707,7 @@ export function CustomerCorrectionHandoffPanel(
       accessToken={accessToken}
       accountType={accountType}
       dashboardModel={dashboardModel}
-      key={`${state.model.caseRef}:${
+      key={`${state.model.caseRef}:${state.model.handoff.coverMessage ?? ""}:${
         state.model.handoff.items.map((item) => item.itemRef).join(":")
       }`}
       onRefreshSelectedDossier={onRefreshSelectedDossier}

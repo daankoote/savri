@@ -23,6 +23,9 @@ const FACT_IDENTITY_PROJECTION_MIGRATION = read(
 const CANDIDATE_SELECTION_MIGRATION = read(
   "supabase/migrations/20260823120000_app_customer_correction_candidate_selection.sql",
 );
+const COVER_MESSAGE_MIGRATION = read(
+  "supabase/migrations/20260916120526_correction_cover_message_v1.sql",
+);
 const HANDOFF_ENDPOINT = read(
   "supabase/functions/api-app-customer-correction-handoff/index.ts",
 );
@@ -95,7 +98,9 @@ function source(items: unknown[]) {
     code: "ok",
     case_ref: CASE_REF,
     handoff: {
+      cover_message: "Controleer en corrigeer de onderstaande gegevens.",
       current_replacement_candidates: [],
+      customer_publication_snapshot_sha256: "a".repeat(64),
       handoff_ref: "CRH-0123456789ABCDEF",
       published_at: "2026-08-20T12:00:00.000Z",
       signer_authority: {
@@ -145,9 +150,10 @@ for (const items of matrix) {
     )
   ) {
     const client = decodeCustomerCorrectionHandoffResponse({
-      schemaVersion: "customer-correction-handoff-v5",
+      schemaVersion: "customer-correction-handoff-v6",
       caseRef: CASE_REF,
       handoff: {
+        coverMessage: parsed.handoff.coverMessage,
         currentReplacementCandidates: parsed.handoff
           .currentReplacementCandidates,
         handoffRef: "CRH-0123456789ABCDEF",
@@ -247,7 +253,10 @@ for (
   );
 }
 assert(
-  HANDOFF_ENDPOINT.includes("app_customer_correction_handoff_read_v5") &&
+  HANDOFF_ENDPOINT.includes("app_customer_correction_handoff_read_v6") &&
+    COVER_MESSAGE_MIGRATION.includes(
+      "app_correction_customer_publication_snapshot_v1",
+    ) &&
     CANDIDATE_SELECTION_MIGRATION.includes(
       "app_customer_correction_handoff_read_v5",
     ) &&

@@ -61,10 +61,12 @@ function renderMode(mode: "signup" | "correction", ready = true) {
           given: "Energieleverancier",
           sources: [{
             id: `${mode}:energy`,
+            documentLabel: "Energiedocument",
             fileName: longName,
             value: "Voorbeeld Energie B.V.",
           }, {
             id: `${mode}:invoice`,
+            documentLabel: "Installatiefactuur",
             fileName: `${mode}-installatiefactuur.pdf`,
             value: "Voorbeeld Energie B.V.",
           }],
@@ -97,6 +99,7 @@ function renderMode(mode: "signup" | "correction", ready = true) {
           given: "Serienummer",
           sources: [{
             id: `${mode}:serial`,
+            documentLabel: "Installatiefactuur",
             fileName: `${mode}-installatiefactuur.pdf`,
             value: null,
           }],
@@ -163,20 +166,26 @@ assert(
 );
 for (const html of [signup, correction]) {
   assert(
-    ["Gegeven", "Bron", "Info uit bron", "Klant", "ENVAL"].every((header) =>
-      html.includes(`>${header}</span>`)
-    ) &&
+    [
+      "Gegeven",
+      "Bron",
+      "Info uit bron",
+      "Klant",
+      "ENVAL",
+      "Reden",
+      "Toelichting",
+    ].every((header) => html.includes(`>${header}</span>`)) &&
       (html.match(/class="fact-table fact-table--customer"/g) || []).length ===
         2 &&
       (html.match(/class="document-slot-card"/g) || []).length === 2 &&
       html.includes("Laadpaal 1 · Locatie 1") &&
-      html.includes(">-</span>") &&
+      html.includes("Gegeven ontbreekt") &&
       !html.includes("Niet gevonden") &&
-      (html.includes("signup-installatiefactuur.pdf") ||
-        html.includes("correction-installatiefactuur.pdf")) &&
+      html.includes("Energiedocument") &&
+      html.includes("Installatiefactuur") &&
       !html.includes(">+1</small>") &&
-      (html.includes('title="signup-') ||
-        html.includes('title="correction-')),
+      html.includes('title="Energiedocument"') &&
+      html.includes('title="Installatiefactuur"'),
     "Q02_shared_exact_columns_sources_or_groups_invalid",
   );
 }
@@ -263,6 +272,10 @@ const parityMatrix = renderToStaticMarkup(
       given: "Contracthouder",
       sources: correctionSources.map((source) => ({
         id: source.id,
+        documentLabel: source.sourceDocumentType ===
+            "energy_bill_or_contract"
+          ? "Energiedocument" as const
+          : "Installatiefactuur" as const,
         fileName: source.fileName,
         value: source.value,
       })),
@@ -295,9 +308,11 @@ assert(
     correctionSources[1]?.value === null &&
     correctionSources[1]?.usable === false &&
     correctionPolicy.usableIndependentSourceCount === 1 &&
-    parityMatrix.includes("energie.pdf") &&
-    parityMatrix.includes("installatie.pdf") &&
-    parityMatrix.includes(">-</span>") &&
+    parityMatrix.includes("Energiedocument") &&
+    parityMatrix.includes("Installatiefactuur") &&
+    parityMatrix.includes("Voorbeeld Klant") &&
+    parityMatrix.includes("Gegeven ontbreekt") &&
+    !parityMatrix.includes(">-</span>") &&
     !parityMatrix.includes("Niet gevonden"),
   "Q10_current_source_row_or_policy_parity_invalid",
 );
@@ -552,7 +567,9 @@ assert(
     matrixSource.includes('source: "Bron"') &&
     matrixSource.includes('sourceInfo: "Info uit bron"') &&
     matrixSource.includes('customer: "Klant"') &&
-    matrixSource.includes('enval: "ENVAL"'),
+    matrixSource.includes('enval: "ENVAL"') &&
+    matrixSource.includes('reason: "Reden"') &&
+    matrixSource.includes('instruction: "Toelichting"'),
   "Q06_shared_owner_or_column_authority_invalid",
 );
 assert(

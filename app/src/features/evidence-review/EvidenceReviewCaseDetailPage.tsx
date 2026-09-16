@@ -657,10 +657,26 @@ export function EvidenceReviewCaseDetailContent({
                 ? (
                   <div className="evidence-review-final-confirmation">
                     <p>Correcties naar klant sturen?</p>
+                    <label className="field">
+                      <span>Bericht aan klant</span>
+                      <textarea
+                        aria-label="Bericht aan klant"
+                        disabled={correctionPublish.state.submitting}
+                        onChange={(event) =>
+                          correctionPublish.setCoverMessage(
+                            event.currentTarget.value,
+                          )}
+                        required
+                        value={correctionPublish.state.coverMessage}
+                      />
+                    </label>
                     <div className="section-actions">
                       <button
                         className="button button-primary button-compact"
-                        disabled={correctionPublish.state.submitting}
+                        disabled={
+                          correctionPublish.state.submitting ||
+                          !correctionPublish.coverMessageValid
+                        }
                         onClick={() => void correctionPublish.confirm()}
                         type="button"
                       >

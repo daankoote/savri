@@ -16,8 +16,11 @@ import {
   type JsonObject,
   type ServiceClient,
 } from "../_shared/app_workforce_authorization.ts";
+import {
+  isCorrectionCoverMessage,
+} from "../_shared/app_evidence_review_correction_handoff.ts";
 
-const PUBLISH_RPC = "app_evidence_review_correction_publish_v1";
+const PUBLISH_RPC = "app_evidence_review_correction_publish_v2";
 const CASE_REFERENCE_RE =
   /^CASE-(?:[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 const UUID_RE =
@@ -25,7 +28,11 @@ const UUID_RE =
 const HANDOFF_REFERENCE_RE = /^CRH-[0-9A-F]{16}$/;
 
 type RpcResult = { data?: unknown; error?: unknown };
-type PublishRequest = Readonly<{ caseRef: string; roundRef: string }>;
+type PublishRequest = Readonly<{
+  caseRef: string;
+  coverMessage: string;
+  roundRef: string;
+}>;
 
 export type EvidenceReviewCorrectionPublishHandlerDependencies = {
   createServiceClient: () => ServiceClient | null;
@@ -35,13 +42,14 @@ export type EvidenceReviewCorrectionPublishHandlerDependencies = {
   verifyBearer: typeof requireVerifiedSupabaseAuthUser;
 };
 
-const DEFAULT_DEPENDENCIES: EvidenceReviewCorrectionPublishHandlerDependencies = {
-  createServiceClient: defaultServiceClient,
-  idempotencyExpiresAt: configuredExpiry,
-  requestMeta: getAppRequestMeta,
-  hashPayload: payloadHash,
-  verifyBearer: requireVerifiedSupabaseAuthUser,
-};
+const DEFAULT_DEPENDENCIES: EvidenceReviewCorrectionPublishHandlerDependencies =
+  {
+    createServiceClient: defaultServiceClient,
+    idempotencyExpiresAt: configuredExpiry,
+    requestMeta: getAppRequestMeta,
+    hashPayload: payloadHash,
+    verifyBearer: requireVerifiedSupabaseAuthUser,
+  };
 
 function isObject(value: unknown): value is JsonObject {
   return !!value && typeof value === "object" && !Array.isArray(value);
@@ -57,12 +65,19 @@ export function normalizeCorrectionPublishRequest(
 ): PublishRequest | null {
   if (
     !isObject(value) ||
-    Object.keys(value).sort().join("|") !== "caseRef|roundRef" ||
-    typeof value.caseRef !== "string" || value.caseRef !== value.caseRef.trim() ||
+    Object.keys(value).sort().join("|") !==
+      "caseRef|coverMessage|roundRef" ||
+    typeof value.caseRef !== "string" ||
+    value.caseRef !== value.caseRef.trim() ||
     !CASE_REFERENCE_RE.test(value.caseRef) ||
-    typeof value.roundRef !== "string" || !UUID_RE.test(value.roundRef)
+    typeof value.roundRef !== "string" || !UUID_RE.test(value.roundRef) ||
+    !isCorrectionCoverMessage(value.coverMessage)
   ) return null;
-  return Object.freeze({ caseRef: value.caseRef, roundRef: value.roundRef });
+  return Object.freeze({
+    caseRef: value.caseRef,
+    coverMessage: value.coverMessage,
+    roundRef: value.roundRef,
+  });
 }
 
 async function parseBody(req: Request): Promise<unknown> {
@@ -75,28 +90,32 @@ async function parseBody(req: Request): Promise<unknown> {
 
 function safeStatus(code: string): number {
   if (code === "authentication_required") return 401;
-  if ([
-    "authenticated_actor_not_verified",
-    "workforce_identity_missing",
-    "workforce_identity_inactive",
-    "seniority_not_authorized",
-    "capability_not_authorized",
-    "case_scope_denied",
-    "authorization_changed",
-  ].includes(code)) return 403;
+  if (
+    [
+      "authenticated_actor_not_verified",
+      "workforce_identity_missing",
+      "workforce_identity_inactive",
+      "seniority_not_authorized",
+      "capability_not_authorized",
+      "case_scope_denied",
+      "authorization_changed",
+    ].includes(code)
+  ) return 403;
   if (["case_missing", "review_round_missing"].includes(code)) return 404;
-  if ([
-    "stale_review_round",
-    "correction_handoff_not_eligible",
-    "customer_context_unavailable",
-    "correction_bundle_unavailable",
-    "correction_handoff_conflict",
-    "concurrent_write_conflict",
-    "idempotency_conflict",
-    "case_not_reviewable",
-    "review_manifest_unavailable",
-    "information_request_active",
-  ].includes(code)) return 409;
+  if (
+    [
+      "stale_review_round",
+      "correction_handoff_not_eligible",
+      "customer_context_unavailable",
+      "correction_bundle_unavailable",
+      "correction_handoff_conflict",
+      "concurrent_write_conflict",
+      "idempotency_conflict",
+      "case_not_reviewable",
+      "review_manifest_unavailable",
+      "information_request_active",
+    ].includes(code)
+  ) return 409;
   if (code === "invalid_input") return 400;
   return 500;
 }
@@ -190,16 +209,18 @@ export function createHandler(
       );
     }
     const canonicalHash = await deps.hashPayload({
-      contract_version: "evidence-review-correction-publish-v1",
+      contract_version: "evidence-review-correction-publish-v2",
       caller: "api-app-evidence-review-correction-publish",
       auth_user_id: verified.context.authUserId,
       case_ref: request.caseRef,
+      cover_message: request.coverMessage,
       round_ref: request.roundRef,
     });
     const result = await serviceClient.rpc(PUBLISH_RPC, {
       p_auth_user_id: verified.context.authUserId,
       p_case_ref: request.caseRef,
       p_round_id: request.roundRef,
+      p_cover_message: request.coverMessage,
       p_request_id: metaResult.request_id,
       p_idempotency_key: metaResult.idempotency_key,
       p_payload_sha256: canonicalHash,
@@ -236,7 +257,7 @@ export function createHandler(
       );
     }
     return appJsonResponse(req, code === "published" ? 201 : 200, {
-      schemaVersion: "evidence-review-correction-publish-v1",
+      schemaVersion: "evidence-review-correction-publish-v2",
       result: code === "published" ? "PUBLISHED" : "ALREADY_PUBLISHED",
       caseRef: request.caseRef,
       roundRef,

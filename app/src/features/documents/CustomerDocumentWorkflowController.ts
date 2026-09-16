@@ -49,6 +49,7 @@ export type CustomerDocumentWorkflowSourceInput = Readonly<{
 export type CustomerDocumentWorkflowFactInput = Readonly<{
   factKey: DocumentFactKey;
   given?: ReactNode;
+  correctionDetails?: CustomerDocumentFactMatrixRow["correctionDetails"];
   hidden?: boolean;
   sources: readonly CustomerDocumentWorkflowSourceInput[];
   editable: boolean;
@@ -301,6 +302,10 @@ export function createCustomerDocumentWorkflowGroup(
           Boolean(fact.onSelectSource);
         return Object.freeze({
           id: source.sourceRef,
+          documentLabel: source.sourceDocumentType ===
+              "energy_bill_or_contract"
+            ? "Energiedocument" as const
+            : "Installatiefactuur" as const,
           fileName: source.fileName,
           value: source.value,
           relationship: source.relationship,
@@ -315,6 +320,7 @@ export function createCustomerDocumentWorkflowGroup(
         id: rowId,
         hidden: fact.hidden,
         given: fact.given ?? definition.label,
+        correctionDetails: fact.correctionDetails,
         sources: Object.freeze(matrixSources),
         customer: Object.freeze(interaction),
         enval: policy.projectedEnvalRoute,

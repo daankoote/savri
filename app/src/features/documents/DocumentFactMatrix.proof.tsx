@@ -76,18 +76,26 @@ const customerHtml = renderToStaticMarkup(
     rows={[{
       id: "contract-holder",
       given: "Contracthouder",
+      correctionDetails: [{
+        id: "contract-holder-correction",
+        reason: "Gegeven onjuist",
+        instruction: "Controleer de contracthouder.",
+      }],
       sources: [{
         id: "direct",
+        documentLabel: "Energiedocument",
         fileName: "energie.pdf",
         value: "Daan Koote",
         relationship: "direct",
       }, {
         id: "supporting",
+        documentLabel: "Installatiefactuur",
         fileName: "installatie.pdf",
         value: "D. Janssen",
         relationship: "supporting",
       }, {
         id: "missing",
+        documentLabel: "Installatiefactuur",
         fileName: "tweede-installatie.pdf",
         value: null,
         relationship: "direct",
@@ -106,10 +114,40 @@ const customerHtml = renderToStaticMarkup(
   />,
 );
 assert(
-  customerHtml.includes("energie.pdf") &&
-    customerHtml.includes("installatie.pdf") &&
-    customerHtml.includes("tweede-installatie.pdf") &&
-    customerHtml.includes(">-</span>") &&
+  [
+    "Gegeven",
+    "Bron",
+    "Info uit bron",
+    "Klant",
+    "ENVAL",
+    "Reden",
+    "Toelichting",
+  ].every((label) => customerHtml.includes(`>${label}</span>`)) &&
+    customerHtml.includes("Energiedocument") &&
+    customerHtml.includes("Installatiefactuur") &&
+    customerHtml.includes("Daan Koote") &&
+    customerHtml.includes("D. Janssen") &&
+    customerHtml.includes("Gegeven ontbreekt") &&
+    !customerHtml.includes("energie.pdf") &&
+    !customerHtml.includes("installatie.pdf") &&
+    !customerHtml.includes("tweede-installatie.pdf") &&
+    customerHtml.includes('class="fact-table__row-group"') &&
+    customerHtml.includes(
+      'aria-labelledby="customer-fact-given-contract-holder"',
+    ) &&
+    customerHtml.includes('aria-colspan="2"') &&
+    customerHtml.includes(
+      'aria-label="Energiedocument: Daan Koote"',
+    ) &&
+    customerHtml.includes(
+      'aria-label="Installatiefactuur: D. Janssen"',
+    ) &&
+    customerHtml.includes(
+      'data-label="Reden" role="cell"><span class="fact-review-assessment"><span>Gegeven onjuist</span>',
+    ) &&
+    customerHtml.includes(
+      'data-label="Toelichting" role="cell"><span class="fact-review-assessment"><span>Controleer de contracthouder.</span>',
+    ) &&
     !customerHtml.includes("Niet gevonden") &&
     !customerHtml.toLocaleLowerCase("nl-NL").includes("aanvullend"),
   "Q02b_supporting_relationship_visibility_invalid",
@@ -133,7 +171,8 @@ assert(
 );
 assert(
   matrix.includes('role="table"') && matrix.includes('role="columnheader"') &&
-    matrix.includes('role="row"') && matrix.includes('role="cell"') &&
+    matrix.includes('role="rowgroup"') && matrix.includes('role="row"') &&
+    matrix.includes('role="cell"') && matrix.includes("aria-colspan={2}") &&
     matrix.includes("data-label"),
   "Q04_matrix_semantics_or_responsive_labels_missing",
 );
@@ -161,6 +200,12 @@ assert(
 assert(
   css.includes(".fact-table--five-columns") &&
     css.includes(".fact-table__sources") &&
+    css.includes(".fact-table__row-group") &&
+    css.includes(
+      ".fact-table--customer .fact-table__enval .status-pill",
+    ) &&
+    css.includes("white-space: normal") &&
+    css.includes("@media (max-width: 960px)") &&
     css.includes("@media (max-width: 700px)") &&
     css.includes("content: attr(data-label)"),
   "Q07_existing_matrix_css_or_responsive_contract_missing",

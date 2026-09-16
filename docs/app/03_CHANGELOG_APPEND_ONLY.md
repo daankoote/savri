@@ -2241,3 +2241,21 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   remain open.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-09-16 — Add immutable correction cover messages locally
+
+- Required a new trimmed plain-text customer message for every root correction
+  publication and successor. The database stores that message exactly once
+  with the correction items in immutable bundle v3 and hashes the complete
+  customer-publication snapshot.
+- Added one private grantless projector shared by the existing R7 portal read
+  and a future correction-mail reader. The browser receives only the exact
+  customer-safe message; legacy bundle v1/v2 remains readable with a null
+  message, and no correction e-mail intent, delivery, attempt or provider call
+  is activated.
+- Local migration-chain, active-schema, replay/conflict, R7, ACL/RLS, Edge,
+  frontend, typecheck/build and automated desktop/mobile browser evidence are
+  green. Human Firefox acceptance, exact fixture cleanup, hosted migration and
+  deployment remain open.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE

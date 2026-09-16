@@ -18,6 +18,9 @@ import {
 import {
   parseCustomerInformationRequestWorkforceApi,
 } from "../../../../supabase/functions/_shared/app_customer_information_request.ts";
+import {
+  isCorrectionCoverMessage,
+} from "../../../../supabase/functions/_shared/app_evidence_review_correction_handoff.ts";
 import { normalizeSignedDownloadUrlForBrowser } from "../documents/documentDownloadClient.ts";
 import { resolvePublicApiRuntimeConfig } from "../auth/authRuntimeConfig.ts";
 import { isEvidenceReviewCaseRef } from "./evidenceReviewRoutes.ts";
@@ -87,6 +90,7 @@ export type EvidenceFactReviewRoundFinalizeCall = (
 
 export type EvidenceReviewCorrectionPublishRequest = Readonly<{
   caseRef: string;
+  coverMessage: string;
   roundRef: string;
 }>;
 
@@ -769,6 +773,7 @@ export async function publishEvidenceReviewCorrection(
     !accessToken || !idempotencyKey || idempotencyKey.length > 200 ||
     /\s/.test(idempotencyKey) ||
     !isEvidenceReviewCaseRef(config.request.caseRef) ||
+    !isCorrectionCoverMessage(config.request.coverMessage) ||
     !UUID_RE.test(config.request.roundRef)
   ) return { ok: false, kind: "ordinary" };
   const runtime = runtimeConfig(config.runtimeConfig);
@@ -815,7 +820,7 @@ export async function publishEvidenceReviewCorrection(
       "roundRef",
       "schemaVersion",
     ]) ||
-    body.schemaVersion !== "evidence-review-correction-publish-v1" ||
+    body.schemaVersion !== "evidence-review-correction-publish-v2" ||
     body.caseRef !== config.request.caseRef ||
     body.roundRef !== config.request.roundRef ||
     !HANDOFF_REFERENCE_RE.test(String(body.handoffRef)) ||

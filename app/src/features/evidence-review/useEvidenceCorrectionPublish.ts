@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { EvidenceReviewCaseDetailResponseV1 } from "../../../../supabase/functions/_shared/app_evidence_review_case_detail.ts";
+import {
+  isCorrectionCoverMessage,
+} from "../../../../supabase/functions/_shared/app_evidence_review_correction_handoff.ts";
 import type {
   EvidenceReviewCorrectionPublishCall,
   EvidenceReviewCorrectionPublishRequest,
 } from "./evidenceReviewDetailClient.ts";
 
 export type EvidenceCorrectionPublishState = Readonly<{
+  coverMessage: string;
   confirmationOpen: boolean;
   submitting: boolean;
   error: string | null;
@@ -28,12 +32,14 @@ export type EvidenceCorrectionPublishSession = Readonly<{
   updateDetail: (detail: EvidenceReviewCaseDetailResponseV1 | null) => void;
   openConfirmation: () => void;
   cancelConfirmation: () => void;
+  setCoverMessage: (value: string) => void;
   confirm: () => Promise<void>;
   dispose: () => void;
 }>;
 
 export const EMPTY_EVIDENCE_CORRECTION_PUBLISH_STATE:
   EvidenceCorrectionPublishState = Object.freeze({
+    coverMessage: "",
     confirmationOpen: false,
     submitting: false,
     error: null,
@@ -67,12 +73,17 @@ export function canPublishEvidenceCorrection(
 
 function requestForDetail(
   detail: EvidenceReviewCaseDetailResponseV1 | null,
+  coverMessage: string,
 ): EvidenceReviewCorrectionPublishRequest | null {
-  if (!canPublishEvidenceCorrection(detail) || !detail?.currentReviewRound) {
+  if (
+    !canPublishEvidenceCorrection(detail) || !detail?.currentReviewRound ||
+    !isCorrectionCoverMessage(coverMessage)
+  ) {
     return null;
   }
   return Object.freeze({
     caseRef: detail.case.caseRef,
+    coverMessage,
     roundRef: detail.currentReviewRound.roundRef,
   });
 }
@@ -137,13 +148,29 @@ export function createEvidenceCorrectionPublishSession(
     },
     cancelConfirmation: () => {
       if (disposed || submitting) return;
-      emit({ ...state, confirmationOpen: false, error: null });
+      emit({
+        ...EMPTY_EVIDENCE_CORRECTION_PUBLISH_STATE,
+        notice: state.notice,
+      });
+    },
+    setCoverMessage: (value) => {
+      if (disposed || submitting || !state.confirmationOpen) return;
+      attempt = null;
+      emit({ ...state, coverMessage: value, error: null });
     },
     confirm: async () => {
-      const request = requestForDetail(detail);
+      const request = requestForDetail(detail, state.coverMessage);
       if (
         disposed || submitting || !state.confirmationOpen || !request
-      ) return;
+      ) {
+        if (!disposed && state.confirmationOpen) {
+          emit({
+            ...state,
+            error: "Vul een geldig bericht van maximaal 1.000 tekens in.",
+          });
+        }
+        return;
+      }
       const fingerprint = JSON.stringify(request);
       if (attempt?.fingerprint !== fingerprint) {
         attempt = Object.freeze({
@@ -239,6 +266,11 @@ export function useEvidenceCorrectionPublish(
       () => sessionRef.current?.cancelConfirmation(),
       [],
     ),
+    setCoverMessage: useCallback(
+      (value: string) => sessionRef.current?.setCoverMessage(value),
+      [],
+    ),
+    coverMessageValid: isCorrectionCoverMessage(state.coverMessage),
     confirm: useCallback(
       () => sessionRef.current?.confirm() ?? Promise.resolve(),
       [],

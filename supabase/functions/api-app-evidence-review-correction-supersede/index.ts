@@ -17,9 +17,10 @@ import {
 import {
   CUSTOMER_CORRECTION_RESPONSE_REQUIREMENTS,
   type CustomerCorrectionResponseRequirement,
+  isCorrectionCoverMessage,
 } from "../_shared/app_evidence_review_correction_handoff.ts";
 
-const SUPERSEDE_RPC = "app_evidence_review_correction_supersede_v1";
+const SUPERSEDE_RPC = "app_evidence_review_correction_supersede_v2";
 const CASE_REFERENCE_RE =
   /^CASE-(?:[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 const HANDOFF_REFERENCE_RE = /^CRH-[0-9A-F]{16}$/;
@@ -44,6 +45,7 @@ type ItemRequirement = Readonly<{
 
 export type CorrectionSupersedeRequest = Readonly<{
   caseRef: string;
+  coverMessage: string;
   predecessorHandoffRef: string;
   itemRequirements: readonly ItemRequirement[];
   reason: CorrectionSupersessionReason;
@@ -89,6 +91,7 @@ export function normalizeCorrectionSupersedeRequest(
     !isObject(value) ||
     !exactKeys(value, [
       "caseRef",
+      "coverMessage",
       "itemRequirements",
       "predecessorHandoffRef",
       "reason",
@@ -96,6 +99,7 @@ export function normalizeCorrectionSupersedeRequest(
     typeof value.caseRef !== "string" ||
     value.caseRef !== value.caseRef.trim() ||
     !CASE_REFERENCE_RE.test(value.caseRef) ||
+    !isCorrectionCoverMessage(value.coverMessage) ||
     typeof value.predecessorHandoffRef !== "string" ||
     !HANDOFF_REFERENCE_RE.test(value.predecessorHandoffRef) ||
     !CORRECTION_SUPERSESSION_REASONS.includes(
@@ -149,6 +153,7 @@ export function normalizeCorrectionSupersedeRequest(
 
   return Object.freeze({
     caseRef: value.caseRef,
+    coverMessage: value.coverMessage,
     predecessorHandoffRef: value.predecessorHandoffRef,
     itemRequirements: Object.freeze(itemRequirements),
     reason,
@@ -278,10 +283,11 @@ export function createHandler(
       );
     }
     const canonicalHash = await deps.hashPayload({
-      contract_version: "evidence-review-correction-supersede-v1",
+      contract_version: "evidence-review-correction-supersede-v2",
       caller: "api-app-evidence-review-correction-supersede",
       auth_user_id: verified.context.authUserId,
       case_ref: input.caseRef,
+      cover_message: input.coverMessage,
       predecessor_handoff_ref: input.predecessorHandoffRef,
       item_requirements: input.itemRequirements.map((item) => ({
         item_ref: item.itemRef,
@@ -300,6 +306,7 @@ export function createHandler(
       })),
       p_reason: input.reason,
       p_explanation: input.explanation,
+      p_cover_message: input.coverMessage,
       p_request_id: metaResult.request_id,
       p_idempotency_key: metaResult.idempotency_key,
       p_payload_sha256: canonicalHash,
@@ -333,7 +340,7 @@ export function createHandler(
       );
     }
     return appJsonResponse(req, 201, {
-      schemaVersion: "evidence-review-correction-supersede-v1",
+      schemaVersion: "evidence-review-correction-supersede-v2",
       result: "SUPERSEDED",
       caseRef: input.caseRef,
       predecessorHandoffRef: predecessorRef,

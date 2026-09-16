@@ -859,8 +859,13 @@ customer confirmation, the green Integration gate or local database state.
   unchanged. Focused proofs, typecheck/build and automated Firefox at
   `1440x900`, `820x1180` and `375x812` are green; human Firefox acceptance,
   hosted rollout and deployment remain open.
-- `CORRECTION_COVER_MESSAGE_V1`: define controlled cover-message content and
-  its portal projection.
+- CURRENT / LOCAL AUTOMATED PROOF — `CORRECTION_COVER_MESSAGE_V1`: new root
+  publications and successors require their own 1–1000-character plain-text
+  message; immutable bundle v3 binds it to the correction items, and the
+  existing R7 portal read consumes one private customer-publication projector.
+  Active-schema parity, database/security proofs and automated desktop/mobile
+  browser acceptance are green. Human Firefox acceptance, exact fixture
+  cleanup and hosted rollout remain open.
 - `CORRECTION_EMAIL_V1`: connect correction notification to the shared
   workflow-email foundation only after the cover-message contract is proven.
 - Define kWh periodic lifecycle.

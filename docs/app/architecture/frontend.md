@@ -481,6 +481,15 @@ The year overview is customer-facing output and later supports the audit-worthy 
   correction-publication affordance and shows the fixed conflict instruction.
   Both reuse shared cards, fields, buttons and status layout; routes and
   navigation are unchanged.
+- Correction publication extends the existing confirmation form with one
+  required plain-text cover-message field. The existing publish hook owns its
+  validation and includes the exact message in idempotency. The existing
+  customer correction handoff panel renders the R7-projected message once above
+  the existing correction items. Legacy handoffs render no message. No new
+  component, route or CSS authority is introduced, and correction e-mail
+  remains inactive. Active-schema, focused database/security and automated
+  desktop/mobile browser proof are green locally; human Firefox acceptance,
+  exact fixture cleanup and hosted rollout remain open.
 - `CustomerInformationRequestHistory` is the shared customer/workforce
   presentation for closed questions. It renders only non-empty safe history,
   shows resolved answers and withdrawn questions under `Eerdere vragen en

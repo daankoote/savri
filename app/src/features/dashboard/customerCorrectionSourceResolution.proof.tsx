@@ -140,6 +140,31 @@ assert(
   "Q03_current_truth_promoted_to_replacement_evidence",
 );
 
+const publicationSources = selectCustomerCorrectionActiveFactSources({
+  definition: partyDefinition,
+  items: [invoice, energy],
+  scopeRef: "location:publication-proof",
+  sourceFileNameByItemRef: Object.freeze({}),
+  observedValuesByItemRef: Object.freeze({}),
+  extractionMethodsByItemRef: Object.freeze({}),
+  sourceIdentityByItemRef: Object.freeze({}),
+});
+assert(
+  publicationSources.length === 2 &&
+    publicationSources.some((source) =>
+      source.fileName === "Energiedocument" &&
+      source.value === "Proof Person"
+    ) &&
+    publicationSources.some((source) =>
+      source.fileName === "Installatiefactuur" &&
+      source.value === "Dense Browser Testklant"
+    ) &&
+    publicationSources.every((source) =>
+      source.evidenceRootRef.startsWith("handoff:CCI-")
+    ),
+  "Q03b_customer_safe_publication_value_or_document_label_missing",
+);
+
 for (
   const values of [
     ["Proof Person", "Dense Browser Testklant"],

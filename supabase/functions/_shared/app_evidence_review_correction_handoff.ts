@@ -4,7 +4,14 @@ import {
 } from "../../../platform/runtime/document-parsing/document_fact_vocabulary.ts";
 
 export const CUSTOMER_CORRECTION_HANDOFF_SCHEMA_VERSION =
-  "customer-correction-handoff-v5" as const;
+  "customer-correction-handoff-v6" as const;
+
+export function isCorrectionCoverMessage(value: unknown): value is string {
+  if (typeof value !== "string" || value !== value.trim()) return false;
+  const length = [...value].length;
+  return length >= 1 && length <= 1_000 && /[\p{L}\p{N}]/u.test(value) &&
+    !/[\u0000-\u0009\u000B-\u001F\u007F-\u009F]/u.test(value);
+}
 
 export const CUSTOMER_CORRECTION_REASONS = Object.freeze(
   [
@@ -80,6 +87,7 @@ export type CustomerCorrectionHandoffResponse = Readonly<{
   handoff:
     | null
     | Readonly<{
+      coverMessage: string | null;
       handoffRef: string;
       publishedAt: string;
       signerAuthority:
@@ -398,7 +406,9 @@ export function parseCustomerCorrectionHandoffSource(
   }
   if (
     !isObject(value.handoff) || !exactKeys(value.handoff, [
+      "cover_message",
       "current_replacement_candidates",
+      "customer_publication_snapshot_sha256",
       "handoff_ref",
       "items",
       "published_at",
@@ -407,9 +417,17 @@ export function parseCustomerCorrectionHandoffSource(
   ) return null;
   const handoffRef = value.handoff.handoff_ref;
   const publishedAt = normalizedTimestamp(value.handoff.published_at);
+  const coverMessage = value.handoff.cover_message;
+  const publicationHash = value.handoff.customer_publication_snapshot_sha256;
   if (
     typeof handoffRef !== "string" ||
     !HANDOFF_REFERENCE_RE.test(handoffRef) || !publishedAt ||
+    !(
+      (coverMessage === null && publicationHash === null) ||
+      (isCorrectionCoverMessage(coverMessage) &&
+        typeof publicationHash === "string" &&
+        /^[0-9a-f]{64}$/.test(publicationHash))
+    ) ||
     !Array.isArray(value.handoff.items) || value.handoff.items.length < 1 ||
     value.handoff.items.length > 100
   ) return null;
@@ -446,6 +464,7 @@ export function parseCustomerCorrectionHandoffSource(
     schemaVersion: CUSTOMER_CORRECTION_HANDOFF_SCHEMA_VERSION,
     caseRef: value.case_ref,
     handoff: Object.freeze({
+      coverMessage,
       handoffRef,
       publishedAt,
       signerAuthority,

@@ -3,6 +3,9 @@ import {
   type DocumentFactKey,
   isDocumentFactKey,
 } from "../../../../platform/runtime/document-parsing/document_fact_vocabulary.ts";
+import {
+  isCorrectionCoverMessage,
+} from "../../../../supabase/functions/_shared/app_evidence_review_correction_handoff.ts";
 
 export const CUSTOMER_CORRECTION_REASONS = Object.freeze(
   [
@@ -68,6 +71,7 @@ export type CustomerCorrectionHandoffModel = Readonly<{
   handoff:
     | null
     | Readonly<{
+      coverMessage: string | null;
       items: readonly CustomerCorrectionHandoffItem[];
       currentReplacementCandidates:
         readonly CustomerCorrectionCurrentReplacementCandidate[];
@@ -174,7 +178,7 @@ type CustomerCorrectionSigningClientConfig = {
   runtimeConfig?: { apiBaseUrl: string; anonKey: string };
 };
 
-const SCHEMA_VERSION = "customer-correction-handoff-v5";
+const SCHEMA_VERSION = "customer-correction-handoff-v6";
 const CASE_REFERENCE_RE =
   /^CASE-(?:[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 const HANDOFF_REFERENCE_RE = /^CRH-[0-9A-F]{16}$/;
@@ -482,6 +486,7 @@ export function decodeCustomerCorrectionHandoffResponse(
   if (
     !isRecord(value.handoff) ||
     !exactKeys(value.handoff, [
+      "coverMessage",
       "currentReplacementCandidates",
       "handoffRef",
       "items",
@@ -495,6 +500,10 @@ export function decodeCustomerCorrectionHandoffResponse(
     !Number.isFinite(Date.parse(value.handoff.publishedAt)) ||
     !Array.isArray(value.handoff.items) || value.handoff.items.length < 1 ||
     !Array.isArray(value.handoff.currentReplacementCandidates) ||
+    !(
+      value.handoff.coverMessage === null ||
+      isCorrectionCoverMessage(value.handoff.coverMessage)
+    ) ||
     value.handoff.items.length > 100
   ) {
     return {
@@ -547,6 +556,7 @@ export function decodeCustomerCorrectionHandoffResponse(
     model: Object.freeze({
       caseRef: expectedCaseRef,
       handoff: Object.freeze({
+        coverMessage: value.handoff.coverMessage,
         items: Object.freeze(parsedItems),
         currentReplacementCandidates: Object.freeze(
           currentReplacementCandidates as CustomerCorrectionCurrentReplacementCandidate[],

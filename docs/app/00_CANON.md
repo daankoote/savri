@@ -556,6 +556,19 @@ The recent app frontend Auth/session flow is retained as local proof:
   only the same normalized legacy/signing-v3 case lineages as the application
   index. Local technical proof and automated Firefox desktop/mobile acceptance
   are current; new human Firefox acceptance and hosted rollout remain open.
+- CORRECTION_COVER_MESSAGE_V1 is CURRENT / LOCAL AUTOMATED PROOF; human Firefox
+  acceptance, exact fixture cleanup and hosted rollout remain open. Every new
+  root correction publication and every
+  successor requires its own trimmed plain-text customer message of 1–1000
+  Unicode characters with at least one letter or number. LF is allowed; CR and
+  every other control character are rejected. The message is stored once
+  inside immutable correction bundle v3 and is covered by that bundle's hash.
+  A grantless private projector returns the exact customer-publication snapshot
+  and its deterministic hash. The existing R7 customer read carries both
+  internally; the strict Edge/browser DTO exposes only `coverMessage`. Legacy
+  bundle v1/v2 remains readable with a null message. The old service-callable
+  write RPCs are withdrawn, and no correction e-mail intent or delivery is
+  activated.
 - The real customer-safe dashboard frontend projection is CURRENT / LOCAL PROOF and uses `api-app-dashboard-get`.
 - The reusable customer document module is CURRENT / LOCAL PROOF.
 - MID evidence and installation/acquisition invoice PDF upload are supported from the authenticated dashboard.

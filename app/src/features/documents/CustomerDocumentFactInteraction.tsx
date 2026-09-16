@@ -20,6 +20,7 @@ export type CustomerDocumentFactInteractionState =
 
 export type CustomerDocumentFactSourceChoice = Readonly<{
   id: string;
+  documentLabel: "Energiedocument" | "Installatiefactuur";
   fileName: string;
   value: string | null;
   relationship?: CustomerDocumentEvidenceRelationship | null;

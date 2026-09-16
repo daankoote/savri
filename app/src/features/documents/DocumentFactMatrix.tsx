@@ -29,11 +29,18 @@ export const CUSTOMER_DOCUMENT_FACT_MATRIX_COLUMNS = Object.freeze({
   sourceInfo: "Info uit bron",
   customer: "Klant",
   enval: "ENVAL",
+  reason: "Reden",
+  instruction: "Toelichting",
 });
 
 export type CustomerDocumentFactMatrixRow = Readonly<{
   id: string;
   given: ReactNode;
+  correctionDetails?: readonly Readonly<{
+    id: string;
+    reason: ReactNode;
+    instruction: ReactNode;
+  }>[];
   sources: readonly CustomerDocumentFactSourceChoice[];
   customer: CustomerDocumentFactInteractionModel;
   enval:
@@ -45,38 +52,6 @@ export type CustomerDocumentFactMatrixRow = Readonly<{
     | "ENVAL checken";
   hidden?: boolean;
 }>;
-
-function StackedSourceRows({
-  rows,
-  value,
-}: {
-  rows: CustomerDocumentFactMatrixRow["sources"];
-  value: "fileName" | "value";
-}) {
-  if (rows.length === 0) {
-    return <>{value === "fileName" ? "—" : "-"}</>;
-  }
-  return (
-    <span className="fact-table__source-stack">
-      {rows.map((row) => {
-        const text = value === "fileName"
-          ? row.fileName
-          : row.value || "-";
-        return (
-          <span
-            className={row.selected && value === "value"
-              ? "fact-table__source-line fact-table__ellipsis customer-fact-confirmed-value"
-              : "fact-table__source-line fact-table__ellipsis"}
-            key={`${row.id}:${value}`}
-            title={text}
-          >
-            {text}
-          </span>
-        );
-      })}
-    </span>
-  );
-}
 
 type DocumentFactMatrixProps = Readonly<{
   rows: readonly (DocumentFactMatrixRow | CustomerDocumentFactMatrixRow)[];
@@ -100,51 +75,133 @@ export function DocumentFactMatrix({
             <span key={label} role="columnheader">{label}</span>
           ))}
         </div>
-        {visibleRows.map((row) => (
-          <div className="fact-table__row" key={row.id} role="row">
-            <span data-label="Gegeven" role="cell">{row.given}</span>
-            <span className="fact-table__source" data-label="Bron" role="cell">
-              <StackedSourceRows
-                rows={row.sources}
-                value="fileName"
-              />
-            </span>
-            <span
-              className="fact-table__source-info"
-              data-label="Info uit bron"
-              role="cell"
+        {visibleRows.map((row) => {
+          const givenCellId = `customer-fact-given-${row.id}`;
+          const correctionDetails = row.correctionDetails || [];
+          return (
+            <div
+              aria-labelledby={givenCellId}
+              className="fact-table__row-group"
+              key={row.id}
+              role="rowgroup"
             >
-              <StackedSourceRows
-                rows={row.sources}
-                value="value"
-              />
-            </span>
-            <span
-              className="fact-table__customer"
-              data-label="Klant"
-              role="cell"
-            >
-              <CustomerDocumentFactInteraction
-                model={row.customer}
-                sourceChoices={row.sources}
-              />
-            </span>
-            <span className="fact-table__enval" data-label="ENVAL" role="cell">
-              <span
-                className={row.enval === "Wacht op klant"
-                  ? "status-pill"
-                  : row.enval === "Correctie nodig"
-                  ? "status-pill status-pill-danger"
-                  : row.enval === "Akkoord" ||
-                      row.enval === "Klant bevestigd"
-                  ? "status-pill status-pill-ok"
-                  : "status-pill status-pill-warning"}
-              >
-                {row.enval}
-              </span>
-            </span>
-          </div>
-        ))}
+              <div className="fact-table__row" role="row">
+                <span data-label="Gegeven" id={givenCellId} role="cell">
+                  {row.given}
+                </span>
+                <span
+                  aria-colspan={2}
+                  className="fact-table__source-pairs"
+                  role="cell"
+                >
+                  {row.sources.length === 0
+                    ? (
+                      <span
+                        aria-label="Geen document gekozen: gegeven ontbreekt"
+                        className="fact-table__source-pair"
+                        role="group"
+                      >
+                        <span className="fact-table__source" data-label="Bron">
+                          Geen document gekozen
+                        </span>
+                        <span
+                          className="fact-table__source-info"
+                          data-label="Info uit bron"
+                        >
+                          Gegeven ontbreekt
+                        </span>
+                      </span>
+                    )
+                    : row.sources.map((source) => (
+                      <span
+                        aria-label={`${source.documentLabel}: ${
+                          source.value || "Gegeven ontbreekt"
+                        }`}
+                        className="fact-table__source-pair"
+                        key={source.id}
+                        role="group"
+                      >
+                        <span
+                          className="fact-table__source fact-table__ellipsis"
+                          data-label="Bron"
+                          title={source.documentLabel}
+                        >
+                          {source.documentLabel}
+                        </span>
+                        <span
+                          className={source.selected
+                            ? "fact-table__source-info fact-table__ellipsis customer-fact-confirmed-value"
+                            : "fact-table__source-info fact-table__ellipsis"}
+                          data-label="Info uit bron"
+                          title={source.value || "Gegeven ontbreekt"}
+                        >
+                          {source.value || "Gegeven ontbreekt"}
+                        </span>
+                      </span>
+                    ))}
+                </span>
+                <span
+                  className="fact-table__customer"
+                  data-label="Klant"
+                  role="cell"
+                >
+                  <CustomerDocumentFactInteraction
+                    model={row.customer}
+                    sourceChoices={row.sources}
+                  />
+                </span>
+                <span
+                  className="fact-table__enval"
+                  data-label="ENVAL"
+                  role="cell"
+                >
+                  <span
+                    className={row.enval === "Wacht op klant"
+                      ? "status-pill"
+                      : row.enval === "Correctie nodig"
+                      ? "status-pill status-pill-danger"
+                      : row.enval === "Akkoord" ||
+                          row.enval === "Klant bevestigd"
+                      ? "status-pill status-pill-ok"
+                      : "status-pill status-pill-warning"}
+                  >
+                    {row.enval}
+                  </span>
+                </span>
+                <span
+                  className="fact-table__correction-reason"
+                  data-label="Reden"
+                  role="cell"
+                >
+                  {correctionDetails.length > 0
+                    ? (
+                      <span className="fact-review-assessment">
+                        {correctionDetails.map((detail) => (
+                          <span key={detail.id}>{detail.reason}</span>
+                        ))}
+                      </span>
+                    )
+                    : "—"}
+                </span>
+                <span
+                  className="fact-table__correction-instruction"
+                  data-label="Toelichting"
+                  role="cell"
+                >
+                  {correctionDetails.length > 0
+                    ? (
+                      <span className="fact-review-assessment">
+                        {correctionDetails.map((detail) => (
+                          <span key={detail.id}>{detail.instruction}</span>
+                        ))}
+                      </span>
+                    )
+                    : "—"}
+                </span>
+              </div>
+            </div>
+          );
+        })}
       </div>
     );
   }

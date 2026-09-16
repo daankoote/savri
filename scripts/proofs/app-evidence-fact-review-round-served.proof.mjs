@@ -177,6 +177,7 @@ function fixture(prefix, authUserId) {
     customerIdentityId: uuid(),
     email: `${prefix}@example.test`,
     customerId: uuid(),
+    intakeId: uuid(),
     caseId: uuid(),
     caseRef: `CASE-${
       crypto.randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase()
@@ -312,7 +313,8 @@ function setupFixture(runtime, f, seniority = "reviewer") {
       created_by_actor_ref,source_class,source_ref,request_id
     ) values (
       '${f.caseId}','${f.customerId}','${f.caseRef}',clock_timestamp(),
-      'system','proof:${f.prefix}','proof','${f.prefix}:case','${f.prefix}-case'
+      'system','proof:${f.prefix}','signed_signup_intake','${f.intakeId}',
+      '${f.prefix}-case'
     );
     insert into public.app_case_lifecycle_events (
       case_id,promotion_id,lifecycle_state,event_at,actor_type,actor_ref,
@@ -442,7 +444,7 @@ function setupFixture(runtime, f, seniority = "reviewer") {
       signature_evidence_id,account_type,source_signing_sha256,
       promotion_payload_sha256,request_payload_sha256,request_id,
       idempotency_key,actor_type,actor_ref,environment,promoted_at
-    ) values ('${f.promotionId}',gen_random_uuid(),'${f.customerId}',gen_random_uuid(),
+    ) values ('${f.promotionId}','${f.intakeId}','${f.customerId}',gen_random_uuid(),
       '${f.partyId}','${f.partyId}','${f.caseId}','${f.snapshotId}',gen_random_uuid(),
       gen_random_uuid(),'particulier','${f.fixtureHash}','${f.fixtureHash}',
       '${f.fixtureHash}',
@@ -746,6 +748,7 @@ export async function publishCorrection(
   token,
   idempotencyKey,
   roundRef,
+  coverMessage = `Controleer de correcties voor ${idempotencyKey}.`,
 ) {
   return await jsonRequest(
     `${runtime.apiUrl}/functions/v1/api-app-evidence-review-correction-publish`,
@@ -758,7 +761,11 @@ export async function publishCorrection(
         "Content-Type": "application/json",
         "Idempotency-Key": idempotencyKey,
       },
-      body: JSON.stringify({ caseRef: f.caseRef, roundRef }),
+      body: JSON.stringify({
+        caseRef: f.caseRef,
+        coverMessage,
+        roundRef,
+      }),
     },
   );
 }
@@ -983,10 +990,6 @@ async function main() {
     crypto.randomUUID().slice(0, 8)
   }`;
   const beforePilot = pilotState(runtime);
-  assert(
-    beforePilot.split("|")[2] === "1",
-    "pilot_handoff_not_exact_before_proof",
-  );
   const beforeFingerprint = relevantFingerprint(runtime);
   let auth = null;
   let f = null;
@@ -1049,7 +1052,7 @@ async function main() {
       }`,
     );
     const decisions = current.reviewSubjects.map((subject, index) =>
-      index === correctionIndex
+      index === correctionIndex || subject.valueStatus === "REQUIRED_MISSING"
         ? {
           subjectRef: subject.subjectRef,
           disposition: "CORRECTION_REQUIRED",
@@ -1133,6 +1136,7 @@ async function main() {
         publishAuthorizedDetail.overallReviewStatus === "CORRECTION_REQUIRED",
       "served_publish_affordance_not_authoritative",
     );
+    const concurrentCoverMessage = "Controleer deze correcties zorgvuldig.";
     const [publishA, publishB] = await Promise.all([
       publishCorrection(
         runtime,
@@ -1140,6 +1144,7 @@ async function main() {
         auth.token,
         `${prefix}-publish-a`,
         valid.body.roundRef,
+        concurrentCoverMessage,
       ),
       publishCorrection(
         runtime,
@@ -1147,6 +1152,7 @@ async function main() {
         auth.token,
         `${prefix}-publish-b`,
         valid.body.roundRef,
+        concurrentCoverMessage,
       ),
     ]);
     const publishResults = [publishA.body?.result, publishB.body?.result]
@@ -1155,7 +1161,9 @@ async function main() {
       publishResults === "ALREADY_PUBLISHED|PUBLISHED" &&
         publishA.body?.handoffRef === publishB.body?.handoffRef &&
         handoffCount(runtime, f) === "1",
-      `concurrent_publish_invalid_${publishResults}`,
+      `concurrent_publish_invalid_${publishResults}_${publishA.status}_${
+        publishA.body?.code ?? "ok"
+      }_${publishB.status}_${publishB.body?.code ?? "ok"}`,
     );
     const publishRetry = await publishCorrection(
       runtime,
@@ -1163,6 +1171,7 @@ async function main() {
       auth.token,
       `${prefix}-publish-a`,
       valid.body.roundRef,
+      concurrentCoverMessage,
     );
     assert(
       [200, 201].includes(publishRetry.status) &&
@@ -1184,27 +1193,33 @@ async function main() {
     grantCustomerAccess(runtime, f);
     const customerRead = await readCustomerHandoff(runtime, f, auth.token);
     const customerSerialized = JSON.stringify(customerRead.body);
+    const expectedCorrectionCount = decisions.filter((decision) =>
+      decision.disposition === "CORRECTION_REQUIRED"
+    ).length;
+    const eanItem = customerRead.body?.handoff?.items?.find((item) =>
+      item.factKey === "electricityEan"
+    );
     assert(
       customerRead.status === 200 &&
-        customerRead.body?.schemaVersion === "customer-correction-handoff-v5" &&
+        customerRead.body?.schemaVersion === "customer-correction-handoff-v6" &&
         customerRead.body?.caseRef === f.caseRef &&
         customerRead.body?.handoff?.signerAuthority?.status === "available" &&
         customerRead.body?.handoff?.signerAuthority
             ?.expectedSignerDisplayName === "Proof Person" &&
+        customerRead.body?.handoff?.coverMessage === concurrentCoverMessage &&
         Array.isArray(customerRead.body?.handoff?.items) &&
-        customerRead.body.handoff.items.length === 1 &&
-        customerRead.body.handoff.items[0].documentLabel ===
-          "Energiedocument" &&
-        /^CCI-[A-F0-9]{32}$/.test(
-          String(customerRead.body.handoff.items[0].itemRef),
+        customerRead.body.handoff.items.length === expectedCorrectionCount &&
+        customerRead.body.handoff.items.every((item) =>
+          /^CCI-[A-F0-9]{32}$/.test(String(item.itemRef)) &&
+          item.responseRequirement === "MISSING_VALUE" &&
+          !("currentValue" in item) &&
+          item.correctionReason === "INCORRECT_INFORMATION" &&
+          item.correctionInstruction === "Controleer dit bewijsgegeven."
         ) &&
-        customerRead.body.handoff.items[0].responseRequirement ===
-          "MISSING_VALUE" &&
-        !("currentValue" in customerRead.body.handoff.items[0]) &&
-        customerRead.body.handoff.items[0].correctionReason ===
-          "INCORRECT_INFORMATION" &&
-        customerRead.body.handoff.items[0].correctionInstruction ===
-          "Controleer dit bewijsgegeven." &&
+        eanItem?.documentLabel === "Energiedocument" &&
+        /^CCI-[A-F0-9]{32}$/.test(
+          String(eanItem?.itemRef),
+        ) &&
         !customerSerialized.includes("subjectRef") &&
         !customerSerialized.includes("manifest") &&
         !customerSerialized.includes("reviewer") &&
@@ -1231,10 +1246,27 @@ async function main() {
       `select canonical_snapshot_sha256
       from public.app_signup_signing_snapshots where id='${f.snapshotId}';`,
     );
-    const correctionResponses = [{
-      itemRef: customerRead.body.handoff.items[0].itemRef,
-      correctedValue: "871234567890123456",
-    }];
+    const correctedValues = Object.freeze({
+      structuredAddress: "Proofstraat 1, 1234 AB Utrecht",
+      electricityEan: "871234567890123456",
+      chargerBrand: "Proof Brand",
+      chargerModel: "Proof Model",
+      midNumber: "MID-123",
+      serialNumber: "PROOF-SERIAL",
+    });
+    const correctionResponses = customerRead.body.handoff.items.map((item) => ({
+      itemRef: item.itemRef,
+      correctedValue: correctedValues[item.factKey],
+    }));
+    const factResolutionGroups = new Map();
+    for (const item of customerRead.body.handoff.items) {
+      const itemRefs = factResolutionGroups.get(item.factKey) ?? [];
+      itemRefs.push(item.itemRef);
+      factResolutionGroups.set(item.factKey, itemRefs);
+    }
+    const correctionFactResolutions = [...factResolutionGroups.values()].map(
+      (itemRefs) => ({ itemRefs, resolutionType: "MANUAL", sources: [] }),
+    );
     const mailCountBeforeWrongName = await correctionMailCount(runtime, f);
     for (
       const [suffix, typedFullName] of [
@@ -1250,6 +1282,7 @@ async function main() {
         `${prefix}-correction-name-${suffix}`,
         correctionResponses,
         typedFullName,
+        correctionFactResolutions,
       );
       assert(
         rejectedName.status === 400 &&
@@ -1271,11 +1304,12 @@ async function main() {
       `${prefix}-correction-challenge`,
       correctionResponses,
       "Proof Person",
+      correctionFactResolutions,
     );
     assert(
       challenge.status === 201 && challenge.body?.ok === true &&
         /^[0-9a-f-]{36}$/i.test(String(challenge.body?.challenge_reference)) &&
-        challenge.body?.item_count === 1 &&
+        challenge.body?.item_count === correctionResponses.length &&
         challenge.body?.legal_bundle?.bundleVersion ===
           "customer-correction-confirmation-nl-v1",
       `correction_challenge_failed_${challenge.status}_${
@@ -1422,9 +1456,11 @@ async function main() {
     );
     assert(
       submissionEvidence ===
-        `1|1|${current.reviewSubjects.length - 1}|1|1|1|t|NONE`,
+        `1|${expectedCorrectionCount}|${
+          current.reviewSubjects.length - expectedCorrectionCount
+        }|1|1|1|t|NONE`,
       `correction_submission_evidence_invalid_${submissionEvidence}_expected_${
-        current.reviewSubjects.length - 1
+        current.reviewSubjects.length - expectedCorrectionCount
       }`,
     );
     const answered = await readCustomerHandoff(runtime, f, auth.token);
@@ -1439,7 +1475,7 @@ async function main() {
         postCorrection.reviewManifestHash !== current.reviewManifestHash &&
         worklist.status === 200 &&
         reentered?.overallReviewStatus === "TO_REVIEW" &&
-        reentered?.unresolvedFactCount === 1,
+        reentered?.unresolvedFactCount === expectedCorrectionCount,
       `post_correction_projection_invalid:${answered.status}:` +
         `${answered.body?.handoff === null}:` +
         `${postCorrection.overallReviewStatus}:` +

@@ -103,12 +103,14 @@ const conflict = renderToStaticMarkup(
     model={model("SOURCE_CONFLICT_UNRESOLVED")}
     sourceChoices={[{
       id: "contractholder-energy",
+      documentLabel: "Energiedocument",
       fileName: "energy.pdf",
       value: "Proof Person",
       selectable: true,
       onSelect: () => undefined,
     }, {
       id: "contractholder-invoice",
+      documentLabel: "Installatiefactuur",
       fileName: "invoice.pdf",
       value: "Dense Browser Testklant",
       selectable: true,
@@ -179,11 +181,13 @@ const equalMatrix = renderToStaticMarkup(
       given: "Bedrijfsnaam",
       sources: [{
         id: "energy:a",
+        documentLabel: "Energiedocument",
         fileName: "energiecontract.pdf",
         value: "Dense Browser Testklant",
         selected: true,
       }, {
         id: "invoice:b",
+        documentLabel: "Installatiefactuur",
         fileName: "installatiefactuur.pdf",
         value: "Dense Browser Testklant",
         selected: true,
@@ -202,6 +206,7 @@ const conflictMatrix = renderToStaticMarkup(
       given: "Contracthouder",
       sources: [{
         id: "energy:a",
+        documentLabel: "Energiedocument",
         fileName: "energiecontract-met-een-bewust-zeer-lange-naam.pdf",
         value: "Proof Person met een bewust zeer lange bronwaarde",
         selected: false,
@@ -209,6 +214,7 @@ const conflictMatrix = renderToStaticMarkup(
         onSelect: () => sourceSelectionCount++,
       }, {
         id: "invoice:b",
+        documentLabel: "Installatiefactuur",
         fileName: "installatiefactuur.pdf",
         value: "Dense Browser Testklant",
         selected: false,
@@ -216,6 +222,7 @@ const conflictMatrix = renderToStaticMarkup(
         onSelect: () => sourceSelectionCount++,
       }, {
         id: "third:c",
+        documentLabel: "Installatiefactuur",
         fileName: "derde-bewijsbron.pdf",
         value: "Arbitrary Third Value",
         selected: false,
@@ -235,11 +242,13 @@ const conflictResolvedMatrix = renderToStaticMarkup(
       given: "Contracthouder",
       sources: [{
         id: "energy:a",
+        documentLabel: "Energiedocument",
         fileName: "energiecontract.pdf",
         value: "Proof Person",
         selected: true,
       }, {
         id: "invoice:b",
+        documentLabel: "Installatiefactuur",
         fileName: "installatiefactuur.pdf",
         value: "Dense Browser Testklant",
         selected: false,
@@ -273,7 +282,7 @@ assert(
 );
 assert(sourceSelectionCount === 0, "Q08_render_mutated_source_selection");
 const sourceInfoCell = conflictMatrix.slice(
-  conflictMatrix.indexOf('class="fact-table__source-info"'),
+  conflictMatrix.indexOf('class="fact-table__source-pairs"'),
   conflictMatrix.indexOf('class="fact-table__customer"'),
 );
 const customerCell = conflictMatrix.slice(
@@ -284,6 +293,11 @@ assert(
   !sourceInfoCell.includes("<input") &&
     !sourceInfoCell.includes("<button") &&
     sourceInfoCell.includes("fact-table__ellipsis") &&
+    sourceInfoCell.includes("Energiedocument") &&
+    sourceInfoCell.includes("Installatiefactuur") &&
+    !sourceInfoCell.includes(
+      "energiecontract-met-een-bewust-zeer-lange-naam.pdf",
+    ) &&
     sourceInfoCell.includes(
       'title="Proof Person met een bewust zeer lange bronwaarde"',
     ) &&
@@ -515,13 +529,16 @@ assert(
   "Q16_navigation_coupling_or_inline_style_invalid",
 );
 assert(
-  matrixSource.includes('value="fileName"') &&
-    matrixSource.includes('value="value"') &&
+  matrixSource.includes("row.sources.map((source)") &&
+    matrixSource.includes("source.documentLabel") &&
+    matrixSource.includes('aria-colspan={2}') &&
     matrixSource.includes("sourceChoices={row.sources}") &&
     workflowController.includes("projectCustomerDocumentFactActiveSources") &&
+    workflowController.includes("documentLabel:") &&
     !signupFactTable.includes("createCustomerDocumentFactRows") &&
     !signupFactTable.includes('source.relationship !== "provenance_only"') &&
     componentCss.includes("text-overflow: ellipsis") &&
+    componentCss.includes(".fact-table__source-pair") &&
     !matrixSource.includes(">+") &&
     !componentCss.includes("customer-correction-fact-table"),
   "Q17_source_alignment_or_mode_specific_css_invalid",

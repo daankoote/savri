@@ -32,6 +32,9 @@ const SIGNER_AUTHORITY_MIGRATION =
   "supabase/migrations/20260820150000_app_customer_correction_signer_authority.sql";
 const FACT_IDENTITY_PROJECTION_MIGRATION =
   "supabase/migrations/20260822120000_app_customer_correction_handoff_fact_projection.sql";
+const COVER_MESSAGE_MIGRATION =
+  "supabase/migrations/20260916120526_correction_cover_message_v1.sql";
+const COVER_MESSAGE = "Controleer en corrigeer de onderstaande gegevens.";
 const PILOT_CASE_REF = "CASE-7E4CC75CD19F";
 const CASE_REF = `CASE-${
   crypto.randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase()
@@ -272,15 +275,18 @@ async function endpointProof(): Promise<void> {
   assert(
     normalizeCorrectionPublishRequest({
       caseRef: CASE_REF,
+      coverMessage: COVER_MESSAGE,
       roundRef: ROUND_REF,
     }) &&
       !normalizeCorrectionPublishRequest({
         caseRef: CASE_REF,
+        coverMessage: COVER_MESSAGE,
         roundRef: ROUND_REF,
         items: [],
       }) &&
       !normalizeCorrectionPublishRequest({
         caseRef: CASE_REF,
+        coverMessage: COVER_MESSAGE,
         roundRef: ROUND_REF,
         correctionInstruction: "client supplied",
       }),
@@ -293,20 +299,21 @@ async function endpointProof(): Promise<void> {
       serviceClient(async (name, args) => {
         rpcCalls += 1;
         assert(
-          name === "app_evidence_review_correction_publish_v1",
+          name === "app_evidence_review_correction_publish_v2",
           "publish_rpc_changed",
         );
         assert(
           Object.keys(args).sort().join("|") === [
                 "p_auth_user_id",
                 "p_case_ref",
+                "p_cover_message",
                 "p_idempotency_expires_at",
                 "p_idempotency_key",
                 "p_payload_sha256",
                 "p_request_id",
                 "p_round_id",
               ].sort().join("|") && !("items" in args),
-          "publish_rpc_input_widened",
+          "publish_rpc_input_invalid",
         );
         return {
           data: {
@@ -327,6 +334,7 @@ async function endpointProof(): Promise<void> {
       const serialized = JSON.stringify(value);
       assert(
         serialized.includes(CASE_REF) && serialized.includes(ROUND_REF) &&
+          serialized.includes(COVER_MESSAGE) &&
           !serialized.includes("items") &&
           !serialized.includes("correctionInstruction"),
         "client_bundle_reached_hash",
@@ -343,7 +351,11 @@ async function endpointProof(): Promise<void> {
         "content-type": "application/json",
         "idempotency-key": META.idempotency_key!,
       },
-      body: JSON.stringify({ caseRef: CASE_REF, roundRef: ROUND_REF }),
+      body: JSON.stringify({
+        caseRef: CASE_REF,
+        coverMessage: COVER_MESSAGE,
+        roundRef: ROUND_REF,
+      }),
     }),
   );
   const publishedBody = await body(published);
@@ -365,6 +377,7 @@ async function endpointProof(): Promise<void> {
       },
       body: JSON.stringify({
         caseRef: CASE_REF,
+        coverMessage: COVER_MESSAGE,
         roundRef: ROUND_REF,
         items: [{ correctionInstruction: "client supplied" }],
       }),
@@ -394,7 +407,11 @@ async function endpointProof(): Promise<void> {
         "content-type": "application/json",
         "idempotency-key": META.idempotency_key!,
       },
-      body: JSON.stringify({ caseRef: CASE_REF, roundRef: ROUND_REF }),
+      body: JSON.stringify({
+        caseRef: CASE_REF,
+        coverMessage: COVER_MESSAGE,
+        roundRef: ROUND_REF,
+      }),
     }),
   );
   const conflictBody = await body(conflictResponse);
@@ -432,7 +449,9 @@ async function endpointProof(): Promise<void> {
     code: "ok",
     case_ref: CASE_REF,
     handoff: {
+      cover_message: COVER_MESSAGE,
       current_replacement_candidates: [],
+      customer_publication_snapshot_sha256: HASH,
       handoff_ref: "CRH-0123456789ABCDEF",
       published_at: "2026-08-19T19:00:00.000Z",
       signer_authority: {
@@ -488,7 +507,7 @@ async function endpointProof(): Promise<void> {
     createServiceClient: () =>
       serviceClient(async (name, args) => {
         assert(
-          name === "app_customer_correction_handoff_read_v5",
+          name === "app_customer_correction_handoff_read_v6",
           "read_rpc_changed",
         );
         assert(
@@ -780,12 +799,16 @@ async function setupDatabase(): Promise<void> {
   );
   await psql(
     DATABASE,
+    await Deno.readTextFile(COVER_MESSAGE_MIGRATION),
+  );
+  await psql(
+    DATABASE,
     `
     create schema if not exists extensions;
     create extension if not exists pgcrypto with schema extensions;
     grant usage on schema public to service_role, anon, authenticated;
-    grant execute on function public.app_evidence_review_correction_publish_v1(
-      uuid,text,uuid,text,text,text,timestamptz
+    grant execute on function public.app_evidence_review_correction_publish_v2(
+      uuid,text,uuid,text,text,text,text,timestamptz
     ) to service_role;
     grant execute on function public.app_customer_correction_handoff_read_v1(
       uuid,text
@@ -811,9 +834,10 @@ async function rpc(
     DATABASE,
     `begin;
     set local role service_role;
-    select public.app_evidence_review_correction_publish_v1(
+    select public.app_evidence_review_correction_publish_v2(
       '${authUserId}', '${CASE_REF}',
       '${roundRef}',
+      '${COVER_MESSAGE}',
       '${requestId}', '${idempotencyKey}', '${HASH}', '${EXPIRES}'
     )::text;
     commit;`,
@@ -833,7 +857,7 @@ async function databaseProof(): Promise<void> {
       `select concat_ws('|',
       to_regclass('public.app_evidence_review_correction_handoffs') is not null,
       has_function_privilege('service_role',
-        'public.app_evidence_review_correction_publish_v1(uuid,text,uuid,text,text,text,timestamptz)',
+        'public.app_evidence_review_correction_publish_v2(uuid,text,uuid,text,text,text,text,timestamptz)',
         'EXECUTE'),
       has_function_privilege('service_role',
         'public.app_customer_correction_handoff_read_v1(uuid,text)','EXECUTE'),
@@ -941,11 +965,12 @@ async function databaseProof(): Promise<void> {
     const noGrantPublish = await psql(
       DATABASE,
       `begin;
-      select public.app_evidence_review_correction_publish_v1(
+      select public.app_evidence_review_correction_publish_v2(
         '${adminAuth}', '${CASE_REF}',
         (select id from public.app_evidence_review_rounds
          where case_id=(select id from public.app_cases
            where case_reference='${CASE_REF}')),
+        '${COVER_MESSAGE}',
         'review20b-no-grant', 'review20b-no-grant', '${HASH}', '${EXPIRES}'
       )->>'code';
       select count(*) from public.app_evidence_review_correction_handoffs
@@ -972,11 +997,12 @@ async function databaseProof(): Promise<void> {
         'signed_service_recipient','app_signup_promotion',
         'review20b-conflicting-access','review20b-conflicting-access'
       from public.app_cases case_row where case_row.case_reference='${CASE_REF}';
-      select public.app_evidence_review_correction_publish_v1(
+      select public.app_evidence_review_correction_publish_v2(
         '${adminAuth}', '${CASE_REF}',
         (select id from public.app_evidence_review_rounds
          where case_id=(select id from public.app_cases
            where case_reference='${CASE_REF}')),
+        '${COVER_MESSAGE}',
         'review20b-conflict', 'review20b-conflict', '${HASH}', '${EXPIRES}'
       )->>'code';
       select count(*) from public.app_evidence_review_correction_handoffs
@@ -1035,7 +1061,7 @@ async function databaseProof(): Promise<void> {
         where case_id=(select id from public.app_cases where case_reference='${CASE_REF}'));
       set local session_replication_role=origin;
       select concat_ws('|',
-        (public.app_evidence_review_correction_publish_v1(
+        (public.app_evidence_review_correction_publish_v2(
           (select auth_user_id from public.app_workforce_identities i
            join public.app_workforce_scope_assignments s
              on s.workforce_identity_id=i.id
@@ -1046,6 +1072,7 @@ async function databaseProof(): Promise<void> {
           '${CASE_REF}',(select id from public.app_evidence_review_rounds
             where case_id=(select id from public.app_cases
               where case_reference='${CASE_REF}')),
+          '${COVER_MESSAGE}',
           'review19-all-accepted','review19-all-accepted','${HASH}','${EXPIRES}'
         )->>'code'),
         (select count(*) from public.app_evidence_review_correction_handoffs),
@@ -1073,7 +1100,7 @@ async function databaseProof(): Promise<void> {
       where case_id=(select id from public.app_cases where case_reference='${CASE_REF}');
       set local session_replication_role=origin;
       select concat_ws('|',
-        (public.app_evidence_review_correction_publish_v1(
+        (public.app_evidence_review_correction_publish_v2(
           (select auth_user_id from public.app_workforce_identities i
            join public.app_workforce_scope_assignments s
              on s.workforce_identity_id=i.id
@@ -1084,6 +1111,7 @@ async function databaseProof(): Promise<void> {
           '${CASE_REF}',(select id from public.app_evidence_review_rounds
             where case_id=(select id from public.app_cases
               where case_reference='${CASE_REF}')),
+          '${COVER_MESSAGE}',
           'review19-stale','review19-stale','${HASH}','${EXPIRES}'
         )->>'code'),
         (select count(*) from public.app_evidence_review_correction_handoffs),

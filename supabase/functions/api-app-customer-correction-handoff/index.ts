@@ -10,6 +10,7 @@ import {
   requireVerifiedSupabaseAuthUser,
 } from "../_shared/app_customer_auth.ts";
 import {
+  CUSTOMER_CORRECTION_HANDOFF_SCHEMA_VERSION,
   parseCustomerCorrectionHandoffSource,
 } from "../_shared/app_evidence_review_correction_handoff.ts";
 import {
@@ -18,7 +19,7 @@ import {
   type ServiceClient,
 } from "../_shared/app_workforce_authorization.ts";
 
-const READ_RPC = "app_customer_correction_handoff_read_v5";
+const READ_RPC = "app_customer_correction_handoff_read_v6";
 const CASE_REFERENCE_RE =
   /^CASE-(?:[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 
@@ -188,9 +189,14 @@ export function createHandler(
     }
     const customerResponse = response.handoff
       ? Object.freeze({
-        ...response,
+        schemaVersion: CUSTOMER_CORRECTION_HANDOFF_SCHEMA_VERSION,
+        caseRef: response.caseRef,
         handoff: Object.freeze({
-          ...response.handoff,
+          coverMessage: response.handoff.coverMessage,
+          handoffRef: response.handoff.handoffRef,
+          publishedAt: response.handoff.publishedAt,
+          signerAuthority: response.handoff.signerAuthority,
+          items: response.handoff.items,
           currentReplacementCandidates: Object.freeze(
             response.handoff.currentReplacementCandidates.map((candidate) =>
               Object.freeze({
@@ -202,7 +208,11 @@ export function createHandler(
           ),
         }),
       })
-      : response;
+      : Object.freeze({
+        schemaVersion: CUSTOMER_CORRECTION_HANDOFF_SCHEMA_VERSION,
+        caseRef: response.caseRef,
+        handoff: null,
+      });
     return appJsonResponse(req, 200, customerResponse);
   };
 }

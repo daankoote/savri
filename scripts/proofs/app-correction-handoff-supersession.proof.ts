@@ -70,6 +70,7 @@ function requestBody(
 ): JsonObject {
   return {
     caseRef: CASE_REF,
+    coverMessage: "Controleer opnieuw de onderstaande gegevens.",
     predecessorHandoffRef: PREDECESSOR_REF,
     itemRequirements: [{
       itemRef: ITEM_REF,
@@ -157,13 +158,15 @@ async function endpointProof(): Promise<void> {
   const body = await response.json();
   assert(
     response.status === 201 &&
-      body?.schemaVersion === "evidence-review-correction-supersede-v1" &&
+      body?.schemaVersion === "evidence-review-correction-supersede-v2" &&
       body?.predecessorHandoffRef === PREDECESSOR_REF &&
       body?.successorHandoffRef === SUCCESSOR_REF &&
-      rpcName === "app_evidence_review_correction_supersede_v1" &&
+      rpcName === "app_evidence_review_correction_supersede_v2" &&
       rpcArgs.p_auth_user_id === AUTH_USER &&
       rpcArgs.p_case_ref === CASE_REF &&
       rpcArgs.p_predecessor_handoff_ref === PREDECESSOR_REF &&
+      rpcArgs.p_cover_message ===
+        "Controleer opnieuw de onderstaande gegevens." &&
       !("customer_id" in rpcArgs) &&
       !("workforce_identity_id" in rpcArgs),
     "endpoint_did_not_preserve_server_authority",

@@ -574,6 +574,7 @@ const publishResult = await publishEvidenceReviewCorrection({
   idempotencyKey: "review20-publish-attempt",
   request: {
     caseRef: CASE_REF,
+    coverMessage: "Controleer en corrigeer de onderstaande gegevens.",
     roundRef: publishEligibleFixture.currentReviewRound!.roundRef,
   },
   runtimeConfig: {
@@ -586,7 +587,7 @@ const publishResult = await publishEvidenceReviewCorrection({
     publishInit = init;
     return new Response(
       JSON.stringify({
-        schemaVersion: "evidence-review-correction-publish-v1",
+        schemaVersion: "evidence-review-correction-publish-v2",
         result: "PUBLISHED",
         caseRef: CASE_REF,
         roundRef: publishEligibleFixture.currentReviewRound!.roundRef,
@@ -607,8 +608,11 @@ assert(
     publishHeaders.get("authorization") === "Bearer proof-access-token" &&
     publishHeaders.get("apikey") === "proof-anon-key" &&
     publishHeaders.get("idempotency-key") === "review20-publish-attempt" &&
-    Object.keys(publishBody).sort().join("|") === "caseRef|roundRef" &&
+    Object.keys(publishBody).sort().join("|") ===
+      "caseRef|coverMessage|roundRef" &&
     publishBody.caseRef === CASE_REF &&
+    publishBody.coverMessage ===
+      "Controleer en corrigeer de onderstaande gegevens." &&
     publishBody.roundRef ===
       publishEligibleFixture.currentReviewRound!.roundRef,
   "Q08c_publish_client_contract_invalid",
@@ -618,6 +622,7 @@ const publishFailureConfig = {
   idempotencyKey: "review20-publish-failure",
   request: {
     caseRef: CASE_REF,
+    coverMessage: "Controleer en corrigeer de onderstaande gegevens.",
     roundRef: publishEligibleFixture.currentReviewRound!.roundRef,
   },
   runtimeConfig: {
@@ -691,6 +696,9 @@ assert(
   "Q08e_cancel_wrote_or_did_not_close",
 );
 publishSession.openConfirmation();
+publishSession.setCoverMessage(
+  "Controleer en corrigeer de onderstaande gegevens.",
+);
 const firstPublish = publishSession.confirm();
 const duplicatePublish = publishSession.confirm();
 await Promise.resolve();
@@ -706,6 +714,7 @@ assert(
     JSON.stringify(sentRequest) === JSON.stringify({
         request: {
           caseRef: CASE_REF,
+          coverMessage: "Controleer en corrigeer de onderstaande gegevens.",
           roundRef: publishEligibleFixture.currentReviewRound!.roundRef,
         },
         idempotencyKey: "review20-memory-only-key",
@@ -731,6 +740,7 @@ const ordinarySession = createEvidenceCorrectionPublishSession({
 });
 ordinarySession.updateDetail(publishEligibleFixture);
 ordinarySession.openConfirmation();
+ordinarySession.setCoverMessage("Corrigeer de onderstaande gegevens.");
 await ordinarySession.confirm();
 await ordinarySession.confirm();
 assert(
@@ -753,6 +763,7 @@ const stalePublishSession = createEvidenceCorrectionPublishSession({
 });
 stalePublishSession.updateDetail(publishEligibleFixture);
 stalePublishSession.openConfirmation();
+stalePublishSession.setCoverMessage("Corrigeer de onderstaande gegevens.");
 await stalePublishSession.confirm();
 assert(
   Number(staleRefreshes) === 1 &&
@@ -772,6 +783,9 @@ const informationRequestSession = createEvidenceCorrectionPublishSession({
 });
 informationRequestSession.updateDetail(publishEligibleFixture);
 informationRequestSession.openConfirmation();
+informationRequestSession.setCoverMessage(
+  "Corrigeer de onderstaande gegevens.",
+);
 await informationRequestSession.confirm();
 assert(
   informationRequestRefreshes === 1 &&
@@ -1597,7 +1611,7 @@ assert(
     detailEndpointSource.includes("app_evidence_review_case_detail_read_v7") &&
     finalizeEndpointSource.includes("app_evidence_review_round_finalize_v1") &&
     publishEndpointSource.includes(
-      "app_evidence_review_correction_publish_v1",
+      "app_evidence_review_correction_publish_v2",
     ) &&
     previewEndpointSource.includes(
       "app_evidence_review_preview_source_read_v1",
@@ -1682,6 +1696,7 @@ assert(
     statusSource.includes("Afgerond") &&
     detailSource.includes("Naar klant sturen") &&
     detailSource.includes("Correcties naar klant sturen?") &&
+    detailSource.includes("Bericht aan klant") &&
     detailSource.includes("Ja, sturen") &&
     !detailSource.includes("{evidence.reviewStatus}") &&
     !detailSource.includes("Correcties nodig") &&
@@ -1704,7 +1719,7 @@ assert(
     !correctionPublishHookSource.includes("sessionStorage") &&
     !detailClientSource.includes("api-app-customer-correction-handoff") &&
     customerHandoffEndpointSource.includes(
-      "app_customer_correction_handoff_read_v5",
+      "app_customer_correction_handoff_read_v6",
     ) &&
     !detailClientSource.includes("api-app-evidence-review-decision") &&
     !detailSource.includes("api-app-evidence-review-decision") &&

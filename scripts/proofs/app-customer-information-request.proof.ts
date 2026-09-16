@@ -1164,7 +1164,7 @@ async function runProof() {
     ) select 'a6000000-0000-4000-8000-000000000001','CRH-0000000000000001',
       '${CASE_IDS[2]}','a5000000-0000-4000-8000-000000000001',
       'fact-review-manifest-v1','${HASH}','${CUSTOMER_A}',
-      '{"schema_version":"evidence-review-correction-handoff-bundle-v1","items":[{}]}',
+      '{"schema_version":"evidence-review-correction-handoff-bundle-v3","customer_publication":{"schema_version":"correction-customer-publication-v1","cover_message":"Controleer de gevraagde correcties."},"items":[{}]}',
       '${HASH}',workforce.id,scope.id,'evidence.review.correction.publish',
       '00000000-0000-4000-8000-000000003601','${HASH}',
       'handoff-a3','handoff-a3',now() from workforce,scope;
@@ -1181,13 +1181,15 @@ async function runProof() {
     "request_for_correction_guard_failed",
   );
   const correctionRpcBlocked = await json(`select
-    public.app_evidence_review_correction_publish_v1(
+    public.app_evidence_review_correction_publish_v2(
       '${AUTH_WORKFORCE}','${CASE_REFS[3]}',gen_random_uuid(),
+      'Controleer de gevraagde correcties.',
       'handoff-a4-rpc','handoff-a4-rpc','${HASH}','${EXPIRES}'
     )::text;`);
   const correctionRpcUnauthorized = await json(`select
-    public.app_evidence_review_correction_publish_v1(
+    public.app_evidence_review_correction_publish_v2(
       '${AUTH_CORRECTION_ONLY}','${CASE_REFS[3]}',gen_random_uuid(),
+      'Controleer de gevraagde correcties.',
       'handoff-a4-denied','handoff-a4-denied','${HASH}','${EXPIRES}'
     )::text;`);
   assert(
@@ -1206,7 +1208,7 @@ async function runProof() {
         request_id,idempotency_key,published_at
       ) select gen_random_uuid(),'CRH-0000000000000002','${CASE_IDS[3]}',
         gen_random_uuid(),'fact-review-manifest-v1','${HASH}','${CUSTOMER_A}',
-        '{"schema_version":"evidence-review-correction-handoff-bundle-v1","items":[{}]}',
+        '{"schema_version":"evidence-review-correction-handoff-bundle-v3","customer_publication":{"schema_version":"correction-customer-publication-v1","cover_message":"Controleer de gevraagde correcties."},"items":[{}]}',
         '${HASH}',identity.id,scope.id,'evidence.review.correction.publish',
         '00000000-0000-4000-8000-000000003601','${HASH}',
         'handoff-a4','handoff-a4',now()

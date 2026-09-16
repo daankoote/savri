@@ -150,8 +150,8 @@ export function selectCustomerCorrectionActiveFactSourceInputs({
   const slots = new Map<string, CustomerCorrectionWorkspaceItem[]>();
   for (const item of items) {
     const itemRef = item.item.itemRef;
-    const sourceIdentity = sourceIdentityByItemRef[itemRef] || "";
-    if (!sourceIdentity) continue;
+    const sourceIdentity = sourceIdentityByItemRef[itemRef] ||
+      `handoff:${itemRef}`;
     const key = `${sourceIdentity}:${correctionSourceDocumentType(item)}`;
     const slotItems = slots.get(key) || [];
     slotItems.push(item);
@@ -163,6 +163,9 @@ export function selectCustomerCorrectionActiveFactSourceInputs({
     const factItem = slotItems.find((item) =>
       item.item.factKey === definition.factKey
     );
+    const slotItemRef = slotItem.item.itemRef;
+    const replacementSource = Boolean(sourceIdentityByItemRef[slotItemRef]);
+    if (!factItem && !replacementSource) return [];
     const factItemRef = factItem?.item.itemRef || "";
     const semanticRole = factItem
       ? customerDocumentSemanticRoleFor(
@@ -184,24 +187,29 @@ export function selectCustomerCorrectionActiveFactSourceInputs({
         sourceDocumentType,
       );
     if (!displayBinding) return [];
-    const slotItemRef = slotItem.item.itemRef;
-    const sourceIdentity = sourceIdentityByItemRef[slotItemRef] || "";
+    const sourceIdentity = sourceIdentityByItemRef[slotItemRef] ||
+      `handoff:${slotItemRef}`;
+    const observedValue = factItemRef in observedValuesByItemRef
+      ? observedValuesByItemRef[factItemRef]
+      : factItem && "currentValue" in factItem.item
+      ? customerCorrectionCurrentValueText(factItem.item.currentValue) || null
+      : null;
+    const relationship = observedBinding?.relationship === "direct" ||
+        observedBinding?.relationship === "supporting"
+      ? observedBinding.relationship
+      : displayBinding.relationship;
     return [Object.freeze({
       sourceRef: `${sourceIdentity}:${definition.id}`,
       evidenceRootRef: sourceIdentity,
       contentFingerprint:
         sourceContentFingerprintByItemRef[slotItemRef] || null,
-      fileName: sourceFileNameByItemRef[slotItemRef] || "",
+      fileName: sourceFileNameByItemRef[slotItemRef] ||
+        slotItem.item.documentLabel,
       sourceDocumentType,
       semanticRole: semanticRole || displayBinding.semanticRoles[0],
-      relationship: observedBinding?.relationship === "direct" ||
-          observedBinding?.relationship === "supporting"
-        ? observedBinding.relationship
-        : displayBinding.relationship,
-      observedValue: factItemRef in observedValuesByItemRef &&
-          (observedBinding?.relationship === "direct" ||
-            observedBinding?.relationship === "supporting")
-        ? observedValuesByItemRef[factItemRef]
+      relationship,
+      observedValue: relationship === "direct" || relationship === "supporting"
+        ? observedValue
         : null,
       current: true,
     })];

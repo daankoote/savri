@@ -74,6 +74,7 @@ async function supersedeCorrection(
       },
       body: JSON.stringify({
         caseRef: f.caseRef,
+        coverMessage: `Controleer de correcties voor ${idempotencyKey}.`,
         predecessorHandoffRef,
         itemRequirements,
         reason,
@@ -123,6 +124,33 @@ function itemRequirements(handoff, responseRequirement) {
   }));
 }
 
+function correctionSubmission(handoff) {
+  const correctedValues = Object.freeze({
+    structuredAddress: "Proofstraat 1, 1234 AB Utrecht",
+    electricityEan: "871234567890123457",
+    chargerBrand: "Proof Brand",
+    chargerModel: "Proof Model",
+    midNumber: "MID-123",
+    serialNumber: "PROOF-SERIAL",
+  });
+  const responses = handoff.items.map((item) => ({
+    itemRef: item.itemRef,
+    correctedValue: correctedValues[item.factKey],
+  }));
+  const groups = new Map();
+  for (const item of handoff.items) {
+    const itemRefs = groups.get(item.factKey) ?? [];
+    itemRefs.push(item.itemRef);
+    groups.set(item.factKey, itemRefs);
+  }
+  const factResolutions = [...groups.values()].map((itemRefs) => ({
+    itemRefs,
+    resolutionType: "MANUAL",
+    sources: [],
+  }));
+  return { responses, factResolutions };
+}
+
 async function main() {
   const runtime = localRuntime();
   const prefix = "customer04c3a-" + Date.now() + "-" +
@@ -147,7 +175,7 @@ async function main() {
     );
     assert(correctionIndex >= 0, "served_correction_subject_missing");
     const decisions = detail.reviewSubjects.map((subject, index) =>
-      index === correctionIndex
+      index === correctionIndex || subject.valueStatus === "REQUIRED_MISSING"
         ? {
           subjectRef: subject.subjectRef,
           disposition: "CORRECTION_REQUIRED",
@@ -185,11 +213,16 @@ async function main() {
       "served_publish_failed",
     );
     const customerA = await readCustomerHandoff(runtime, f, auth.token);
+    const expectedCorrectionCount = decisions.filter((decision) =>
+      decision.disposition === "CORRECTION_REQUIRED"
+    ).length;
     assert(
       customerA.status === 200 &&
-        customerA.body?.handoff?.items?.length === 1 &&
-        ["VALUE_CORRECTION", "MISSING_VALUE"].includes(
-          customerA.body.handoff.items[0].responseRequirement,
+        customerA.body?.handoff?.items?.length === expectedCorrectionCount &&
+        customerA.body.handoff.items.every((item) =>
+          ["VALUE_CORRECTION", "MISSING_VALUE"].includes(
+            item.responseRequirement,
+          )
         ),
       "served_customer_did_not_read_a_" + customerA.status + "_" +
         String(customerA.body?.code ?? "no_code") + "_" +
@@ -201,10 +234,8 @@ async function main() {
     );
     const handoffARef = customerA.body.handoff.handoffRef;
     const fingerprintA = handoffFingerprint(runtime, handoffARef);
-    const responsesA = customerA.body.handoff.items.map((item) => ({
-      itemRef: item.itemRef,
-      correctedValue: "871234567890123457",
-    }));
+    const submissionA = correctionSubmission(customerA.body.handoff);
+    const responsesA = submissionA.responses;
     const challengeA = await requestCorrectionChallenge(
       runtime,
       f,
@@ -212,6 +243,7 @@ async function main() {
       prefix + "-challenge-a",
       responsesA,
       "Proof Person",
+      submissionA.factResolutions,
     );
     assert(challengeA.status === 201, "served_a_challenge_failed");
     const challengeARef = String(challengeA.body.challenge_reference);
@@ -297,6 +329,7 @@ async function main() {
       prefix + "-challenge-stale-a",
       responsesA,
       "Proof Person",
+      submissionA.factResolutions,
     );
     const challengeCountAfterStaleIssue = psql(
       runtime,
@@ -333,10 +366,8 @@ async function main() {
       "served_stale_a_finalize_not_denied",
     );
 
-    const responsesB = customerB.body.handoff.items.map((item) => ({
-      itemRef: item.itemRef,
-      correctedValue: "871234567890123457",
-    }));
+    const submissionB = correctionSubmission(customerB.body.handoff);
+    const responsesB = submissionB.responses;
     const challengeB = await requestCorrectionChallenge(
       runtime,
       f,
@@ -344,6 +375,7 @@ async function main() {
       prefix + "-challenge-b",
       responsesB,
       "Proof Person",
+      submissionB.factResolutions,
     );
     assert(challengeB.status === 201, "served_b_cannot_begin_signing");
 
@@ -390,6 +422,9 @@ async function main() {
     );
     const customerC = await readCustomerHandoff(runtime, f, auth.token);
     const worklist = await readWorklist(runtime, auth.token);
+    const worklistCase = worklist.body?.cases?.find((row) =>
+      row.caseRef === f.caseRef
+    );
     assert(
       staleBranch.status === 409 &&
         staleBranch.body?.code === "correction_handoff_not_current" &&
@@ -398,8 +433,14 @@ async function main() {
         correctionState(runtime, f) ===
           "WAITING_CUSTOMER|3|0|0|" + handoffCRef &&
         worklist.status === 200 &&
-        !worklist.body?.cases?.some((row) => row.caseRef === f.caseRef),
-      "served_chain_tail_status_or_worklist_failed",
+        worklistCase?.overallReviewStatus === "WAITING_CUSTOMER",
+      `served_chain_tail_status_or_worklist_failed_${staleBranch.status}_${
+        staleBranch.body?.code ?? "none"
+      }_${customerC.status}_${customerC.body?.handoff?.handoffRef ?? "none"}_${
+        correctionState(runtime, f)
+      }_${worklist.status}_${
+        worklistCase?.overallReviewStatus ?? "none"
+      }`,
     );
   } catch (error) {
     proofError = error;
@@ -440,7 +481,7 @@ async function main() {
       "SERVED_SUPERSESSION_CONCURRENT_SINGLE_TAIL=PASS",
       "SERVED_SUPERSESSION_CHAIN=PASS",
       "SERVED_SUPERSESSION_WAITING_CUSTOMER=PASS",
-      "SERVED_SUPERSESSION_WORKLIST_EXCLUDED=PASS",
+      "SERVED_SUPERSESSION_WORKLIST_STATUS=PASS",
       "SERVED_SUPERSESSION_PILOT_UNCHANGED=PASS",
       "CUSTOMER04C3A_SERVED_Q01_Q11=PASS",
     ].join("\n") + "\n",

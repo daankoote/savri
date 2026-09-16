@@ -566,6 +566,21 @@ pairs or `WITHDRAWN` requests, excludes the active request, sorts by
 database snapshot to 50. The opaque tie-breaker is stripped at the Edge
 boundary.
 
+CORRECTION_COVER_MESSAGE_V1 is CURRENT / LOCAL AUTOMATED PROOF; human Firefox
+acceptance, exact fixture cleanup and hosted rollout remain open. New root and
+successor correction handoffs use immutable bundle v3.
+The bundle contains exactly one closed `customer_publication` object with a
+schema version and a required plain-text cover message under the exact
+validation contract in canon. The message and correction items are hashed
+together in the existing immutable bundle. A private grantless projector verifies that
+bundle before returning the exact customer-publication snapshot and its own
+deterministic hash. The R7-authorized customer read consumes this projector;
+future correction e-mail may consume the same projector but is not activated.
+Legacy bundle v1/v2 projects a null snapshot. Old service-callable publication
+and supersession write RPCs are revoked so they cannot bypass the required
+message invariant; tenant, case, workforce, R7, ACL and RLS authority is not
+widened.
+
 Purpose: ENVAL requests information, correction, upload, consent, or kWh from a customer.
 
 Important columns:
