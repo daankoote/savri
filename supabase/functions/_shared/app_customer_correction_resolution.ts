@@ -1,7 +1,6 @@
 export const CUSTOMER_CORRECTION_RESOLUTION_TYPES = Object.freeze([
   "SOURCE_CONFIRMED",
-  "SOURCE_CONFLICT_SELECTED",
-  "MANUAL",
+  "DOCUMENT_TRANSCRIPTION",
 ] as const);
 
 export type CustomerCorrectionResolutionType =
@@ -60,8 +59,8 @@ export function deriveCustomerCorrectionResolutionRoute(
     evidenceStrength !== "MULTI_SOURCE_MATCH"
   ) return null;
   if (
-    resolutionType === "SOURCE_CONFLICT_SELECTED" &&
-    evidenceStrength !== "SOURCE_CONFLICT"
+    resolutionType === "DOCUMENT_TRANSCRIPTION" &&
+    evidenceStrength !== "NO_SOURCE"
   ) return null;
   return Object.freeze({
     resolutionType,

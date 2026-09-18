@@ -27,6 +27,7 @@ function assert(value: unknown, code: string): asserts value {
 
 function model(
   state: CustomerDocumentFactInteractionModel["state"],
+  manualEditAllowed?: boolean,
 ): CustomerDocumentFactInteractionModel {
   const missing = state === "MISSING_SOURCE_UNRESOLVED";
   const conflict = state === "SOURCE_CONFLICT_UNRESOLVED";
@@ -42,6 +43,7 @@ function model(
     canRestoreSources: !missing,
     emptyValue: "",
     editor: "text",
+    manualEditAllowed,
     isValid: (value) => typeof value === "string" && Boolean(value.trim()),
     onConfirm: () => undefined,
     onCancelResolution: () => undefined,
@@ -127,6 +129,16 @@ const evidenceNotReady = renderToStaticMarkup(
 const locked = renderToStaticMarkup(
   <CustomerDocumentFactInteraction model={model("LOCKED")} />,
 );
+const documentFirstSource = renderToStaticMarkup(
+  <CustomerDocumentFactInteraction
+    model={model("SOURCE_UNRESOLVED", false)}
+  />,
+);
+const documentFirstMissing = renderToStaticMarkup(
+  <CustomerDocumentFactInteraction
+    model={model("MISSING_SOURCE_UNRESOLVED", false)}
+  />,
+);
 
 assert(
   sourceInitial.includes('title="Bevestigen"') &&
@@ -172,6 +184,13 @@ assert(
     !evidenceNotReady.includes("<button") &&
     locked.includes("Vastgelegd") && !locked.includes("customer-fact-edit"),
   "Q05_missing_or_locked_state_invalid",
+);
+assert(
+  documentFirstSource.includes('title="Bevestigen"') &&
+    !documentFirstSource.includes('title="Corrigeren"') &&
+    !documentFirstMissing.includes("<button") &&
+    !documentFirstMissing.includes('type="text"'),
+  "Q05_document_first_manual_entry_not_closed",
 );
 
 const equalMatrix = renderToStaticMarkup(
@@ -494,7 +513,13 @@ assert(
 assert(
   workflowController.includes("resolveCustomerFactResolutionPolicy") &&
     workflowController.includes("actualReviewTruth: fact.actualReviewTruth") &&
-    correction.includes("actualReviewTruth: valueItems.length === 0") &&
+    correction.includes("actualReviewTruth: factStatusByScopeAndFact.get") &&
+    correction.includes(
+      "correctionScopeFactKey(authorityScopeRef, definition.factKey)",
+    ) &&
+    correction.includes(
+      "correctionAuthorityScopeRef(",
+    ) &&
     !interaction.includes("server acceptance") &&
     !interaction.includes("workforce accepted"),
   "Q13_projection_not_derived_or_manufactures_acceptance",
@@ -531,7 +556,7 @@ assert(
 assert(
   matrixSource.includes("row.sources.map((source)") &&
     matrixSource.includes("source.documentLabel") &&
-    matrixSource.includes('aria-colspan={2}') &&
+    matrixSource.includes("aria-colspan={2}") &&
     matrixSource.includes("sourceChoices={row.sources}") &&
     workflowController.includes("projectCustomerDocumentFactActiveSources") &&
     workflowController.includes("documentLabel:") &&

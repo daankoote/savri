@@ -750,6 +750,22 @@ export async function publishCorrection(
   roundRef,
   coverMessage = `Controleer de correcties voor ${idempotencyKey}.`,
 ) {
+  const itemRequirements = JSON.parse(psql(
+    runtime,
+    `begin read only;
+    select coalesce(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+      'subjectRef', decision.subject_ref,
+      'responseRequirement', 'VALUE_PLUS_DOCUMENT_REPLACEMENT'
+    ) order by decision.subject_ref), '[]'::jsonb)::text
+    from public.app_evidence_review_round_subject_decisions decision
+    where decision.round_id='${roundRef}'
+      and decision.disposition='CORRECTION_REQUIRED';
+    rollback;`,
+  ));
+  assert(
+    Array.isArray(itemRequirements) && itemRequirements.length > 0,
+    "correction_publish_requirements_missing",
+  );
   return await jsonRequest(
     `${runtime.apiUrl}/functions/v1/api-app-evidence-review-correction-publish`,
     {
@@ -764,6 +780,7 @@ export async function publishCorrection(
       body: JSON.stringify({
         caseRef: f.caseRef,
         coverMessage,
+        itemRequirements,
         roundRef,
       }),
     },
@@ -806,7 +823,98 @@ function roundCounts(runtime, f) {
   );
 }
 
+const cleanupIdempotencyLineageByCase = new Map();
+
+function sqlLiteral(value) {
+  return `'${String(value).replaceAll("'", "''")}'`;
+}
+
+export function fixtureIdempotencyLineage(runtime, f) {
+  const value = psql(
+    runtime,
+    `begin read only;
+    select coalesce(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+      'id', idempotency.id,
+      'key', idempotency.key,
+      'scope', idempotency.scope,
+      'payloadHash', idempotency.payload_hash
+    ) order by idempotency.id), '[]'::jsonb)::text
+    from public.app_idempotency_keys idempotency
+    where idempotency.key like '${f.prefix}-%'
+       or pg_catalog.strpos(idempotency.scope, '${f.caseId}') > 0
+       or pg_catalog.strpos(coalesce(idempotency.response_body::text, ''),
+            '${f.caseRef}') > 0
+       or exists (
+         select 1
+         from public.app_evidence_review_correction_handoffs handoff
+         where handoff.case_id='${f.caseId}'
+           and (
+             pg_catalog.strpos(idempotency.scope, handoff.id::text) > 0
+             or pg_catalog.strpos(
+               coalesce(idempotency.response_body::text, ''),
+               handoff.handoff_reference
+             ) > 0
+           )
+       )
+       or exists (
+         select 1
+         from public.app_customer_correction_replacement_uploads upload
+         where upload.case_id='${f.caseId}'
+           and (
+             pg_catalog.strpos(
+               idempotency.scope, upload.replacement_target_ref
+             ) > 0
+             or pg_catalog.strpos(
+               coalesce(idempotency.response_body::text, ''),
+               upload.replacement_target_ref
+             ) > 0
+           )
+       );
+    rollback;`,
+  );
+  const rows = JSON.parse(value);
+  assert(Array.isArray(rows), "fixture_idempotency_lineage_not_array");
+  for (const row of rows) {
+    assert(
+      row && typeof row === "object" &&
+        /^[0-9a-f-]{36}$/i.test(String(row.id)) &&
+        typeof row.key === "string" && row.key.length > 0 &&
+        typeof row.scope === "string" && row.scope.length > 0 &&
+        /^[0-9a-f]{64}$/.test(String(row.payloadHash)),
+      "fixture_idempotency_lineage_invalid",
+    );
+  }
+  return Object.freeze(rows.map((row) => Object.freeze({ ...row })));
+}
+
 export function cleanupFixture(runtime, f) {
+  const idempotencyLineage = fixtureIdempotencyLineage(runtime, f);
+  cleanupIdempotencyLineageByCase.set(f.caseId, idempotencyLineage);
+  const idempotencyDelete = idempotencyLineage.length === 0 ? "" : `do $$
+      declare deleted_count integer;
+      begin
+        delete from public.app_idempotency_keys idempotency using (values
+          ${
+    idempotencyLineage.map((row) =>
+      `(
+            ${sqlLiteral(row.id)}::uuid,
+            ${sqlLiteral(row.scope)}::text,
+            ${sqlLiteral(row.key)}::text,
+            ${sqlLiteral(row.payloadHash)}::text
+          )`
+    ).join(",")
+  }
+        ) expected(id, scope, key, payload_hash)
+        where idempotency.id=expected.id
+          and idempotency.scope=expected.scope
+          and idempotency.key=expected.key
+          and idempotency.payload_hash=expected.payload_hash;
+        get diagnostics deleted_count = row_count;
+        if deleted_count <> ${idempotencyLineage.length} then
+          raise exception 'fixture idempotency lineage changed';
+        end if;
+      end;
+    $$;`;
   psql(
     runtime,
     `begin;
@@ -903,7 +1011,7 @@ export function cleanupFixture(runtime, f) {
     delete from public.app_parties where id='${f.partyId}';
     delete from public.app_audit_events
       where request_id like '${f.prefix}-%' or scope_id='${f.caseId}';
-    delete from public.app_idempotency_keys where key like '${f.prefix}-%';
+    ${idempotencyDelete}
     delete from public.app_workforce_scope_assignments s using
       public.app_workforce_identities i
       where s.workforce_identity_id=i.id and i.auth_user_id='${f.authUserId}';
@@ -926,9 +1034,17 @@ export function cleanupFixture(runtime, f) {
     delete from public.app_customers where id='${f.customerId}';
     commit;`,
   );
+  return idempotencyLineage;
 }
 
 export function residueCount(runtime, f) {
+  const idempotencyLineage = cleanupIdempotencyLineageByCase.get(f.caseId) ??
+    [];
+  const recordedIdempotencyIds = idempotencyLineage.length === 0
+    ? "false"
+    : `id in (${
+      idempotencyLineage.map((row) => `${sqlLiteral(row.id)}::uuid`).join(",")
+    })`;
   return psql(
     runtime,
     `begin read only; select
@@ -980,7 +1096,11 @@ export function residueCount(runtime, f) {
     (select count(*) from public.app_audit_events
       where request_id like '${f.prefix}-%') +
     (select count(*) from public.app_idempotency_keys
-      where key like '${f.prefix}-%'); rollback;`,
+      where key like '${f.prefix}-%'
+         or pg_catalog.strpos(scope, '${f.caseId}') > 0
+         or pg_catalog.strpos(coalesce(response_body::text, ''),
+              '${f.caseRef}') > 0
+         or ${recordedIdempotencyIds}); rollback;`,
   );
 }
 
@@ -1560,6 +1680,7 @@ export {
   grantCustomerAccess,
   grantPublishScope,
   handoffCount,
+  HASH,
   jsonRequest,
   localRuntime,
   pilotState,

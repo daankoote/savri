@@ -47,18 +47,17 @@ const duplicateBytes = deriveCustomerCorrectionResolutionRoute(
     { contentSha256: shaA, normalizedValue: "waarde-a" },
   ],
 );
-const conflictSelected = deriveCustomerCorrectionResolutionRoute(
-  "SOURCE_CONFLICT_SELECTED",
+const transcriptionNoSource = deriveCustomerCorrectionResolutionRoute(
+  "DOCUMENT_TRANSCRIPTION",
+  [],
+);
+const transcriptionConflict = deriveCustomerCorrectionResolutionRoute(
+  "DOCUMENT_TRANSCRIPTION",
   [
     { contentSha256: shaA, normalizedValue: "waarde-a" },
     { contentSha256: shaB, normalizedValue: "waarde-b" },
   ],
 );
-const manualNoSource = deriveCustomerCorrectionResolutionRoute("MANUAL", []);
-const manualConflict = deriveCustomerCorrectionResolutionRoute("MANUAL", [
-  { contentSha256: shaA, normalizedValue: "waarde-a" },
-  { contentSha256: shaB, normalizedValue: "waarde-b" },
-]);
 
 assert(
   oneSource?.resolutionType === "SOURCE_CONFIRMED" &&
@@ -76,18 +75,11 @@ assert(
   "same_byte_duplicate_increased_strength",
 );
 assert(
-  conflictSelected?.resolutionType === "SOURCE_CONFLICT_SELECTED" &&
-    conflictSelected.evidenceStrength === "SOURCE_CONFLICT" &&
-    conflictSelected.requiresEnvalAttention,
-  "conflict_selection_route_failed",
-);
-assert(
-  manualNoSource?.resolutionType === "MANUAL" &&
-    manualNoSource.evidenceStrength === "NO_SOURCE" &&
-    manualNoSource.requiresEnvalAttention &&
-    manualConflict?.evidenceStrength === "SOURCE_CONFLICT" &&
-    manualConflict.requiresEnvalAttention,
-  "manual_route_strength_failed",
+  transcriptionNoSource?.resolutionType === "DOCUMENT_TRANSCRIPTION" &&
+    transcriptionNoSource.evidenceStrength === "NO_SOURCE" &&
+    transcriptionNoSource.requiresEnvalAttention &&
+    transcriptionConflict === null,
+  "document_transcription_route_strength_failed",
 );
 assert(
   oneSource?.downstreamVerificationBypassAllowed === false &&
@@ -97,7 +89,7 @@ assert(
 assert(
   deriveCustomerCorrectionResolutionRoute("SOURCE_CONFIRMED", []) === null &&
     deriveCustomerCorrectionResolutionRoute(
-        "SOURCE_CONFLICT_SELECTED",
+        "DOCUMENT_TRANSCRIPTION",
         [{ contentSha256: shaA, normalizedValue: "waarde-a" }],
       ) === null,
   "invalid_route_strength_pair_accepted",
@@ -168,15 +160,14 @@ assert(
   !migration.includes("HUMAN_ACCEPTED") &&
     !migration.includes("'evidence_strength', v_resolution.value") &&
     migration.includes("never an internal or external review decision") &&
-    challengeEndpoint.includes("app_customer_correction_challenge_issue_v4") &&
-    finalizeEndpoint.includes("app_customer_correction_finalize_v3") &&
+    challengeEndpoint.includes("app_customer_correction_challenge_issue_v5") &&
+    finalizeEndpoint.includes("app_customer_correction_finalize_v4") &&
     panel.includes("createCustomerDocumentWorkflowGroup") &&
     panel.includes("resolutionType: resolved.resolutionType") &&
     !panel.includes("resolutionType: manuallyAdjusted") &&
+    panel.includes('? "DOCUMENT_TRANSCRIPTION"') &&
     workflowController.includes("function resolvedType(") &&
-    workflowController.includes('return "SOURCE_CONFIRMED"') &&
-    workflowController.includes('return "SOURCE_CONFLICT_SELECTED"') &&
-    workflowController.includes('return "MANUAL"'),
+    workflowController.includes('return "SOURCE_CONFIRMED"'),
   "authority_or_ui_wiring_boundary_failed",
 );
 

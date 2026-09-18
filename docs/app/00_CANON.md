@@ -124,7 +124,10 @@ its group in the canonical complete dossier list; the overview presents no
 totals. `/beheer/dossiers` partitions every authorized current-tenant dossier
 exactly once into interne beoordeling, wachten op klant, afgerond or overige
 actieve dossiers, preserves the server order and uses the existing safe detail
-route. The shared navigation remains reachable on overview, list, detail and
+route. `REVIEW_COMPLETE` is presented as `Beoordeling afgerond` with detail
+phase `Gegevens geaccepteerd`; this completes the current document and data
+review and does not claim a terminal dossier lifecycle. The shared navigation
+remains reachable on overview, list, detail and
 compatibility pages, maps `/intern/compliance` to active `Overzicht`, marks
 dossier compatibility routes as active `Dossiers` and stays usable at narrow
 viewport widths. `WAITING_CUSTOMER` requires an exact finalized
@@ -556,19 +559,52 @@ The recent app frontend Auth/session flow is retained as local proof:
   only the same normalized legacy/signing-v3 case lineages as the application
   index. Local technical proof and automated Firefox desktop/mobile acceptance
   are current; new human Firefox acceptance and hosted rollout remain open.
-- CORRECTION_COVER_MESSAGE_V1 is CURRENT / LOCAL AUTOMATED PROOF; human Firefox
-  acceptance, exact fixture cleanup and hosted rollout remain open. Every new
-  root correction publication and every
-  successor requires its own trimmed plain-text customer message of 1–1000
+- The CORRECTION_COVER_MESSAGE_V1 invariant is CURRENT / LOCAL AUTOMATED PROOF;
+  human Firefox acceptance, exact fixture cleanup and hosted rollout remain
+  open. Its proven bundle-v3 baseline requires every root correction
+  publication and every successor to carry its own trimmed plain-text customer
+  message of 1–1000
   Unicode characters with at least one letter or number. LF is allowed; CR and
   every other control character are rejected. The message is stored once
-  inside immutable correction bundle v3 and is covered by that bundle's hash.
+  inside the immutable correction bundle and is covered by that bundle's hash.
+  Document-driven bundle v4 preserves the same cover-message snapshot for new
+  handoffs; its active local schema parity is proven.
   A grantless private projector returns the exact customer-publication snapshot
   and its deterministic hash. The existing R7 customer read carries both
   internally; the strict Edge/browser DTO exposes only `coverMessage`. Legacy
   bundle v1/v2 remains readable with a null message. The old service-callable
   write RPCs are withdrawn, and no correction e-mail intent or delivery is
   activated.
+- DOCUMENT_DRIVEN_CUSTOMER_CORRECTION_V1 is CURRENT / LOCAL SCHEMA + RUNTIME +
+  BROWSER PROOF; FINAL PRESENTATION FIREFOX RECHECK PENDING. For new root and
+  successor handoffs, immutable bundle v4 binds each of
+  the
+  eight supported correction facts to its required primary document, parser
+  profile and either `DOCUMENT_REPLACEMENT` or
+  `VALUE_PLUS_DOCUMENT_REPLACEMENT`. Location, party, EAN and supplier facts
+  use only the energy document as primary evidence; charger brand, model, MID
+  and serial use only the installation invoice. Supporting documents cannot
+  independently carry acceptance. New browser, Edge and service-role writes
+  cannot create generic `MANUAL`, `NO_SOURCE` or value-only submissions.
+  Document-bound transcription is available only for an exact current
+  candidate whose parser has no single usable direct value; it is stored as a
+  customer assertion and always routes to workforce review. Customer-facing
+  `Akkoord` is a server projection requiring a present valid normalized value,
+  current manifest/evidence/hash binding, direct primary-source lineage and a
+  current immutable workforce acceptance or valid hash-equivalent
+  carry-forward. Legacy bundle v1–v3 and historical manual submissions remain
+  immutable and readable. Read v8 preserves the terminal
+  `not_available`/`handoff=null` contract and separately projects only current
+  primary customer-safe facts. Per-fact `Akkoord` additionally requires the
+  exact current manifest, evidence version, either a unique matching direct
+  parser observation or exact immutable document-first submission binding, and
+  a fully accepted current review round; supporting, missing, ambiguous and
+  stale facts remain non-accepted. The root publish, upload, challenge and
+  finalize fixture journey plus the terminal read-v8 projection, active-schema
+  parity and post-acceptance three-viewport browser proof are green. The Edge
+  contract matrix continues to own endpoint-specific successor/removal proof
+  status. Final presentation Firefox reacceptance, exact fixture cleanup and
+  hosted rollout remain open.
 - The real customer-safe dashboard frontend projection is CURRENT / LOCAL PROOF and uses `api-app-dashboard-get`.
 - The reusable customer document module is CURRENT / LOCAL PROOF.
 - MID evidence and installation/acquisition invoice PDF upload are supported from the authenticated dashboard.

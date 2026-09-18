@@ -23,6 +23,7 @@ import {
   useEvidenceReviewPreviewSession,
 } from "./EvidenceReviewPreviewPane.tsx";
 import type { EvidenceReviewCaseDetailReadState } from "./useEvidenceReviewCaseDetail.ts";
+import type { EvidenceReviewOperationalStatus } from "../../../../supabase/functions/_shared/app_evidence_review_overall_status.ts";
 import { useEvidenceReviewCaseDetail } from "./useEvidenceReviewCaseDetail.ts";
 import {
   canAcceptEvidenceFactReviewSubject,
@@ -108,7 +109,13 @@ function formatServerDateTime(value: string): string {
   }).format(parsed);
 }
 
-function lifecycleLabel(value: string): string {
+function lifecycleLabel(
+  value: string,
+  overallReviewStatus: EvidenceReviewOperationalStatus,
+): string {
+  if (overallReviewStatus === "REVIEW_COMPLETE") {
+    return "Gegevens geaccepteerd";
+  }
   return value === "submitted_for_review"
     ? "Ingediend voor beoordeling"
     : value;
@@ -539,7 +546,12 @@ export function EvidenceReviewCaseDetailContent({
               {overallStatus.label}
             </span>
           </h1>
-          <p>Dossierfase: {lifecycleLabel(readyDetail.case.lifecycle)}</p>
+          <p>
+            Dossierfase: {lifecycleLabel(
+              readyDetail.case.lifecycle,
+              readyDetail.overallReviewStatus,
+            )}
+          </p>
         </div>
         <BackToWorklist onBack={onBack} />
       </header>
@@ -673,10 +685,8 @@ export function EvidenceReviewCaseDetailContent({
                     <div className="section-actions">
                       <button
                         className="button button-primary button-compact"
-                        disabled={
-                          correctionPublish.state.submitting ||
-                          !correctionPublish.coverMessageValid
-                        }
+                        disabled={correctionPublish.state.submitting ||
+                          !correctionPublish.coverMessageValid}
                         onClick={() => void correctionPublish.confirm()}
                         type="button"
                       >

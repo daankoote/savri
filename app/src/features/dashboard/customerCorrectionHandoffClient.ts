@@ -52,22 +52,41 @@ export type CustomerCorrectionCurrentReplacementCandidate = Readonly<{
   replacementTargetRef: string;
   candidateRef: string;
   fileName: string;
-  contentFingerprint: string | null;
-  parserObservation:
-    | null
-    | Readonly<{
-      observedFacts: ReadonlyArray<
-        Readonly<{
-          factKey: DocumentFactKey;
-          observedValue: string | null;
-          extractionMethod: string | null;
-        }>
-      >;
-    }>;
+  sourceFacts: ReadonlyArray<
+    Readonly<{
+      factKey: DocumentFactKey;
+      documentLabel: "Energiedocument" | "Installatiefactuur";
+      observedValue: string | null;
+      relationship: "direct" | null;
+      sourceRef: string;
+      transcriptionAllowed: boolean;
+    }>
+  >;
+}>;
+
+export type CustomerCorrectionFactProjection = Readonly<{
+  factRef: string;
+  sourceRef: string;
+  replacementTargetRef: string;
+  factKey: DocumentFactKey;
+  factLabel: string;
+  value: string | null;
+  sources: readonly Readonly<{
+    sourceRef: string;
+    documentLabel: "Energiedocument" | "Installatiefactuur";
+    value: string | null;
+    relationship: "direct" | "supporting";
+  }>[];
+  envalStatus:
+    | "Wacht op klant"
+    | "Nog te beoordelen"
+    | "Correctie nodig"
+    | "Akkoord";
 }>;
 
 export type CustomerCorrectionHandoffModel = Readonly<{
   caseRef: string;
+  factProjections: readonly CustomerCorrectionFactProjection[];
   handoff:
     | null
     | Readonly<{
@@ -75,6 +94,7 @@ export type CustomerCorrectionHandoffModel = Readonly<{
       items: readonly CustomerCorrectionHandoffItem[];
       currentReplacementCandidates:
         readonly CustomerCorrectionCurrentReplacementCandidate[];
+      factProjections: readonly CustomerCorrectionFactProjection[];
       signerAuthority:
         | Readonly<{
           status: "available";
@@ -130,7 +150,9 @@ export type CustomerCorrectionFactResolution = Readonly<{
   resolutionType:
     | "SOURCE_CONFIRMED"
     | "SOURCE_CONFLICT_SELECTED"
-    | "MANUAL";
+    | "MANUAL"
+    | "DOCUMENT_TRANSCRIPTION";
+  transcriptionCandidateRef?: string;
   sources: readonly CustomerCorrectionFactResolutionSource[];
 }>;
 
@@ -178,7 +200,7 @@ type CustomerCorrectionSigningClientConfig = {
   runtimeConfig?: { apiBaseUrl: string; anonKey: string };
 };
 
-const SCHEMA_VERSION = "customer-correction-handoff-v6";
+const SCHEMA_VERSION = "customer-correction-handoff-v8";
 const CASE_REFERENCE_RE =
   /^CASE-(?:[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 const HANDOFF_REFERENCE_RE = /^CRH-[0-9A-F]{16}$/;
@@ -353,100 +375,132 @@ function parseCurrentReplacementCandidate(
     !isRecord(value) ||
     !exactKeys(value, [
       "candidateRef",
-      "contentFingerprint",
       "fileName",
-      "parserObservation",
       "replacementTargetRef",
+      "sourceFacts",
     ]) ||
     typeof value.replacementTargetRef !== "string" ||
     !REPLACEMENT_TARGET_REFERENCE_RE.test(value.replacementTargetRef) ||
     typeof value.candidateRef !== "string" ||
     !REPLACEMENT_CANDIDATE_REFERENCE_RE.test(value.candidateRef) ||
-    !(value.contentFingerprint === null ||
-      (typeof value.contentFingerprint === "string" &&
-        /^[0-9a-f]{64}$/.test(value.contentFingerprint))) ||
-    !boundedString(value.fileName, 180)
+    !boundedString(value.fileName, 180) || !Array.isArray(value.sourceFacts)
   ) return null;
-  if (value.parserObservation === null) {
-    return Object.freeze({
-      replacementTargetRef: value.replacementTargetRef,
-      candidateRef: value.candidateRef,
-      fileName: value.fileName as string,
-      contentFingerprint: value.contentFingerprint as string | null,
-      parserObservation: null,
-    });
-  }
-  if (
-    !isRecord(value.parserObservation) ||
-    !exactKeys(value.parserObservation, [
-      "observedFacts",
-      "outcome",
-      "parserProfile",
-      "schemaVersion",
-    ]) ||
-    value.parserObservation.schemaVersion !==
-      "customer-correction-replacement-observation-v1" ||
-    ![
-      "energy_document_v1",
-      "installation_invoice_v1",
-      "kvk_extract_v1",
-      "generic_charger_evidence_v1",
-    ].includes(String(value.parserObservation.parserProfile)) ||
-    !["completed", "completed_with_limitations", "failed"].includes(
-      String(value.parserObservation.outcome),
-    ) ||
-    !Array.isArray(value.parserObservation.observedFacts)
-  ) return null;
-  const observedFacts = value.parserObservation.observedFacts.map((fact) => {
+  const sourceFacts = value.sourceFacts.map((fact) => {
     if (
       !isRecord(fact) ||
       !exactKeys(fact, [
-        "extractionMethod",
+        "documentLabel",
         "factKey",
         "observedValue",
-        "status",
+        "relationship",
+        "sourceRef",
+        "transcriptionAllowed",
       ]) ||
       !isDocumentFactKey(fact.factKey) ||
-      !["observed", "not_observed"].includes(String(fact.status)) ||
+      !["Energiedocument", "Installatiefactuur"].includes(
+        String(fact.documentLabel),
+      ) ||
       !(fact.observedValue === null ||
         typeof fact.observedValue === "string") ||
-      (fact.status === "observed" &&
-        (typeof fact.observedValue !== "string" ||
-          fact.observedValue.trim().length < 1)) ||
-      (fact.status === "not_observed" && fact.observedValue !== null) ||
-      !(fact.extractionMethod === null ||
-        boundedString(fact.extractionMethod, 120))
+      !(fact.relationship === null || fact.relationship === "direct") ||
+      typeof fact.sourceRef !== "string" ||
+      !/^CRS-[A-F0-9]{32}$/.test(fact.sourceRef) ||
+      typeof fact.transcriptionAllowed !== "boolean"
     ) return null;
     return Object.freeze({
       factKey: fact.factKey,
+      documentLabel: fact.documentLabel as
+        | "Energiedocument"
+        | "Installatiefactuur",
       observedValue: fact.observedValue,
-      extractionMethod: fact.extractionMethod as string | null,
+      relationship: fact.relationship as "direct" | null,
+      sourceRef: fact.sourceRef,
+      transcriptionAllowed: fact.transcriptionAllowed,
     });
   });
   if (
-    observedFacts.some((fact) => fact === null) ||
-    new Set(observedFacts.map((fact) => fact?.factKey)).size !==
-      observedFacts.length
+    sourceFacts.some((fact) => fact === null) ||
+    new Set(sourceFacts.map((fact) => fact?.factKey)).size !==
+      sourceFacts.length
   ) return null;
   return Object.freeze({
     replacementTargetRef: value.replacementTargetRef,
     candidateRef: value.candidateRef,
     fileName: value.fileName as string,
-    contentFingerprint: typeof value.contentFingerprint === "string" &&
-        /^[0-9a-f]{64}$/.test(value.contentFingerprint)
-      ? value.contentFingerprint
-      : null,
-    parserObservation: Object.freeze({
-      observedFacts: Object.freeze(
-        observedFacts as Array<
-          Readonly<{
-            factKey: DocumentFactKey;
-            observedValue: string | null;
-            extractionMethod: string | null;
-          }>
-        >,
-      ),
-    }),
+    sourceFacts: Object.freeze(
+      sourceFacts as CustomerCorrectionCurrentReplacementCandidate[
+        "sourceFacts"
+      ][number][],
+    ),
+  });
+}
+
+function parseFactProjection(
+  value: unknown,
+): CustomerCorrectionFactProjection | null {
+  if (
+    !isRecord(value) || !exactKeys(value, [
+      "envalStatus",
+      "factKey",
+      "factLabel",
+      "factRef",
+      "replacementTargetRef",
+      "sourceRef",
+      "sources",
+      "value",
+    ]) ||
+    !isDocumentFactKey(value.factKey) ||
+    typeof value.factRef !== "string" ||
+    !/^CFR-[A-F0-9]{32}$/.test(value.factRef) ||
+    typeof value.sourceRef !== "string" ||
+    !/^CES-[A-F0-9]{32}$/.test(value.sourceRef) ||
+    typeof value.replacementTargetRef !== "string" ||
+    !REPLACEMENT_TARGET_REFERENCE_RE.test(value.replacementTargetRef) ||
+    !boundedString(value.factLabel, 240) ||
+    !(value.value === null ||
+      (typeof value.value === "string" && boundedString(value.value, 2_000))) ||
+    !["Wacht op klant", "Nog te beoordelen", "Correctie nodig", "Akkoord"]
+      .includes(String(value.envalStatus)) ||
+    !Array.isArray(value.sources) || value.sources.length !== 1
+  ) return null;
+  const source = value.sources[0];
+  if (
+    !isRecord(source) || !exactKeys(source, [
+      "documentLabel",
+      "relationship",
+      "sourceRef",
+      "value",
+    ]) ||
+    source.sourceRef !== value.sourceRef ||
+    !["Energiedocument", "Installatiefactuur"].includes(
+      String(source.documentLabel),
+    ) ||
+    !["direct", "supporting"].includes(String(source.relationship)) ||
+    !(source.value === null ||
+      (typeof source.value === "string" &&
+        boundedString(source.value, 2_000))) ||
+    source.value !== value.value ||
+    (source.relationship === "direct" && source.value === null) ||
+    (value.envalStatus === "Akkoord" &&
+      (value.value === null || source.relationship !== "direct"))
+  ) return null;
+  return Object.freeze({
+    factRef: value.factRef,
+    sourceRef: value.sourceRef,
+    replacementTargetRef: value.replacementTargetRef,
+    factKey: value.factKey,
+    factLabel: value.factLabel as string,
+    value: value.value,
+    sources: Object.freeze([Object.freeze({
+      sourceRef: source.sourceRef,
+      documentLabel: source.documentLabel as
+        | "Energiedocument"
+        | "Installatiefactuur",
+      value: source.value,
+      relationship: source.relationship as "direct" | "supporting",
+    })]),
+    envalStatus: value
+      .envalStatus as CustomerCorrectionFactProjection["envalStatus"],
   });
 }
 
@@ -467,8 +521,31 @@ export function decodeCustomerCorrectionHandoffResponse(
 ): CustomerCorrectionHandoffResult {
   if (
     !CASE_REFERENCE_RE.test(expectedCaseRef) || !isRecord(value) ||
-    !exactKeys(value, ["caseRef", "handoff", "schemaVersion"]) ||
+    !exactKeys(value, [
+      "caseRef",
+      "factProjections",
+      "handoff",
+      "schemaVersion",
+    ]) ||
     value.schemaVersion !== SCHEMA_VERSION || value.caseRef !== expectedCaseRef
+  ) {
+    return {
+      ok: false,
+      error: customerCorrectionHandoffSafeError("invalid_response"),
+    };
+  }
+
+  if (!Array.isArray(value.factProjections)) {
+    return {
+      ok: false,
+      error: customerCorrectionHandoffSafeError("invalid_response"),
+    };
+  }
+  const rootFactProjections = value.factProjections.map(parseFactProjection);
+  if (
+    rootFactProjections.some((fact) => fact === null) ||
+    new Set(rootFactProjections.map((fact) => fact?.factRef)).size !==
+      rootFactProjections.length
   ) {
     return {
       ok: false,
@@ -479,7 +556,13 @@ export function decodeCustomerCorrectionHandoffResponse(
   if (value.handoff === null) {
     return {
       ok: true,
-      model: Object.freeze({ caseRef: expectedCaseRef, handoff: null }),
+      model: Object.freeze({
+        caseRef: expectedCaseRef,
+        factProjections: Object.freeze(
+          rootFactProjections as CustomerCorrectionFactProjection[],
+        ),
+        handoff: null,
+      }),
     };
   }
 
@@ -488,6 +571,7 @@ export function decodeCustomerCorrectionHandoffResponse(
     !exactKeys(value.handoff, [
       "coverMessage",
       "currentReplacementCandidates",
+      "factProjections",
       "handoffRef",
       "items",
       "publishedAt",
@@ -500,6 +584,7 @@ export function decodeCustomerCorrectionHandoffResponse(
     !Number.isFinite(Date.parse(value.handoff.publishedAt)) ||
     !Array.isArray(value.handoff.items) || value.handoff.items.length < 1 ||
     !Array.isArray(value.handoff.currentReplacementCandidates) ||
+    !Array.isArray(value.handoff.factProjections) ||
     !(
       value.handoff.coverMessage === null ||
       isCorrectionCoverMessage(value.handoff.coverMessage)
@@ -516,10 +601,15 @@ export function decodeCustomerCorrectionHandoffResponse(
   const currentReplacementCandidates = value.handoff
     .currentReplacementCandidates.map(parseCurrentReplacementCandidate);
   const signerAuthority = parseSignerAuthority(value.handoff.signerAuthority);
+  const factProjections = value.handoff.factProjections.map(
+    parseFactProjection,
+  );
   if (
     !signerAuthority || items.some((item) => !item) ||
     new Set(items.map((item) => item?.itemRef)).size !== items.length ||
     currentReplacementCandidates.some((candidate) => candidate === null) ||
+    factProjections.some((fact) => fact === null) ||
+    JSON.stringify(factProjections) !== JSON.stringify(rootFactProjections) ||
     new Set(
         currentReplacementCandidates.map((candidate) =>
           candidate?.replacementTargetRef
@@ -540,7 +630,7 @@ export function decodeCustomerCorrectionHandoffResponse(
     );
     if (
       targetItems.length < 1 ||
-      candidate.parserObservation?.observedFacts.some((fact) =>
+      candidate.sourceFacts.some((fact) =>
         !targetItems.some((item) => item.factKey === fact.factKey)
       )
     ) {
@@ -555,11 +645,17 @@ export function decodeCustomerCorrectionHandoffResponse(
     ok: true,
     model: Object.freeze({
       caseRef: expectedCaseRef,
+      factProjections: Object.freeze(
+        rootFactProjections as CustomerCorrectionFactProjection[],
+      ),
       handoff: Object.freeze({
         coverMessage: value.handoff.coverMessage,
         items: Object.freeze(parsedItems),
         currentReplacementCandidates: Object.freeze(
           currentReplacementCandidates as CustomerCorrectionCurrentReplacementCandidate[],
+        ),
+        factProjections: Object.freeze(
+          factProjections as CustomerCorrectionFactProjection[],
         ),
         signerAuthority,
       }),

@@ -16,7 +16,7 @@ import {
 } from "../_shared/app_workforce_authorization.ts";
 import { minutesFromNow } from "../_shared/signup_quarantine.ts";
 
-const WITHDRAW_RPC = "app_customer_correction_replacement_withdraw_v1";
+const WITHDRAW_RPC = "app_customer_correction_replacement_withdraw_v2";
 type RpcResult = { data?: unknown; error?: unknown };
 
 export type CorrectionReplacementRemoveDependencies = {

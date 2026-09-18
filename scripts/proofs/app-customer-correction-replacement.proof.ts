@@ -123,7 +123,11 @@ function handoffSource(items: unknown[]) {
     code: "ok",
     case_ref: CASE_REF,
     handoff: {
+      bundle_version: 4,
+      cover_message: null,
       current_replacement_candidates: [],
+      customer_publication_snapshot_sha256: null,
+      fact_projections: [],
       handoff_ref: "CRH-0123456789ABCDEF",
       published_at: "2026-08-20T22:00:00.000Z",
       signer_authority: { status: "unavailable" },
@@ -249,7 +253,7 @@ async function endpointProof(): Promise<void> {
   const issuedBody = await issued.json();
   assert(
     issued.status === 201 && issuedBody.uploadRef === UPLOAD_REF &&
-      issueName === "app_customer_correction_replacement_upload_issue_v1" &&
+      issueName === "app_customer_correction_replacement_upload_issue_v2" &&
       issueArgs.p_auth_user_id === AUTH_USER &&
       issueArgs.p_replacement_target_ref === TARGET_REF &&
       !("storageBucket" in issuedBody) && !("storagePath" in issuedBody),
@@ -261,7 +265,7 @@ async function endpointProof(): Promise<void> {
   const confirmHandler = createConfirmHandler({
     createServiceClient: () =>
       client(async (name, args) => {
-        if (name.endsWith("_resolve_v1")) {
+        if (name.endsWith("_resolve_v2")) {
           return {
             data: {
               ok: true,
@@ -311,7 +315,7 @@ async function endpointProof(): Promise<void> {
   assert(
     confirmed.status === 200 &&
       confirmName ===
-        "app_customer_correction_replacement_upload_confirm_v1" &&
+        "app_customer_correction_replacement_upload_confirm_v2" &&
       confirmArgs.p_actual_size_bytes === null &&
       confirmArgs.p_detected_mime_type === null &&
       confirmArgs.p_server_sha256 === null &&

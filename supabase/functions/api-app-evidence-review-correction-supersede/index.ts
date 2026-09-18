@@ -20,7 +20,7 @@ import {
   isCorrectionCoverMessage,
 } from "../_shared/app_evidence_review_correction_handoff.ts";
 
-const SUPERSEDE_RPC = "app_evidence_review_correction_supersede_v2";
+const SUPERSEDE_RPC = "app_evidence_review_correction_supersede_v3";
 const CASE_REFERENCE_RE =
   /^CASE-(?:[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 const HANDOFF_REFERENCE_RE = /^CRH-[0-9A-F]{16}$/;
@@ -131,7 +131,7 @@ export function normalizeCorrectionSupersedeRequest(
       !exactKeys(item, ["itemRef", "responseRequirement"]) ||
       typeof item.itemRef !== "string" ||
       !ITEM_REFERENCE_RE.test(item.itemRef) ||
-      !CUSTOMER_CORRECTION_RESPONSE_REQUIREMENTS.includes(
+      !["DOCUMENT_REPLACEMENT", "VALUE_PLUS_DOCUMENT_REPLACEMENT"].includes(
         item.responseRequirement as CustomerCorrectionResponseRequirement,
       )
     ) return null;

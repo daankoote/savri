@@ -51,6 +51,7 @@ export type DocumentEvidenceWorkflowModel = Readonly<{
   eyebrow?: string;
   title?: string;
   reviewTitle?: string;
+  showUploads?: boolean;
 }>;
 
 /**
@@ -65,6 +66,7 @@ export function DocumentEvidenceWorkflow({
   interactionLocked = false,
   primaryAction,
   reviewTitle = "Controleer de documentgegevens",
+  showUploads = true,
   title = "Upload en controle",
   uploadActions,
   uploads,
@@ -77,31 +79,37 @@ export function DocumentEvidenceWorkflow({
   return (
     <section
       aria-busy={interactionLocked || undefined}
-      aria-labelledby={titleId}
+      aria-labelledby={showUploads ? titleId : reviewTitleId}
       className="signup-section document-evidence-workflow"
       id={id}
       inert={interactionLocked || undefined}
     >
-      <div className="signup-section-header">
-        <p className="eyebrow">{eyebrow}</p>
-        <h2 id={titleId}>{title}</h2>
-      </div>
+      {showUploads
+        ? (
+          <>
+            <div className="signup-section-header">
+              <p className="eyebrow">{eyebrow}</p>
+              <h2 id={titleId}>{title}</h2>
+            </div>
 
-      <div className="document-location-group">
-        {uploadPrelude}
-        <div className="document-upload-grid">
-          {uploads.map((upload) => (
-            <DocumentEvidenceUploadCard
-              key={upload.id}
-              {...upload.card}
-              action={upload.itemAction}
-            />
-          ))}
-        </div>
-        {uploadActions
-          ? <div className="section-actions">{uploadActions}</div>
-          : null}
-      </div>
+            <div className="document-location-group">
+              {uploadPrelude}
+              <div className="document-upload-grid">
+                {uploads.map((upload) => (
+                  <DocumentEvidenceUploadCard
+                    key={upload.id}
+                    {...upload.card}
+                    action={upload.itemAction}
+                  />
+                ))}
+              </div>
+              {uploadActions
+                ? <div className="section-actions">{uploadActions}</div>
+                : null}
+            </div>
+          </>
+        )
+        : null}
 
       <div
         aria-labelledby={reviewTitleId}

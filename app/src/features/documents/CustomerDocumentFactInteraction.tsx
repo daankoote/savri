@@ -54,6 +54,7 @@ export type CustomerDocumentFactInteractionModel = Readonly<{
   editor: "text" | "address";
   locationId?: string;
   maxLength?: number;
+  manualEditAllowed?: boolean;
   isValid: (value: DocumentFirstFactValue) => boolean;
   normalize?: (value: DocumentFirstFactValue) => DocumentFirstFactValue;
   formatValue?: (value: DocumentFirstFactValue) => string;
@@ -219,18 +220,22 @@ export function CustomerDocumentFactInteraction({
         >
           <span aria-hidden="true">✓</span>
         </button>
-        <button
-          aria-label="Corrigeren"
-          className="button button-ghost button-icon customer-fact-edit"
-          onClick={() => {
-            setDraft(initialValue(model));
-            setEditing(true);
-          }}
-          title="Corrigeren"
-          type="button"
-        >
-          <span aria-hidden="true">✎</span>
-        </button>
+        {model.manualEditAllowed !== false
+          ? (
+            <button
+              aria-label="Corrigeren"
+              className="button button-ghost button-icon customer-fact-edit"
+              onClick={() => {
+                setDraft(initialValue(model));
+                setEditing(true);
+              }}
+              title="Corrigeren"
+              type="button"
+            >
+              <span aria-hidden="true">✎</span>
+            </button>
+          )
+          : null}
       </span>
     );
   }
@@ -242,27 +247,35 @@ export function CustomerDocumentFactInteraction({
   ) {
     return (
       <span className="customer-fact-interaction customer-fact-interaction--actions">
-        <button
-          aria-label="Bevestigen"
-          className="button button-icon customer-fact-confirm"
-          disabled
-          title="Bevestigen niet beschikbaar"
-          type="button"
-        >
-          <span aria-hidden="true">✓</span>
-        </button>
-        <button
-          aria-label="Corrigeren"
-          className="button button-ghost button-icon customer-fact-edit"
-          onClick={() => {
-            setDraft(initialValue(model));
-            setEditing(true);
-          }}
-          title="Corrigeren"
-          type="button"
-        >
-          <span aria-hidden="true">✎</span>
-        </button>
+        {model.manualEditAllowed !== false
+          ? (
+            <button
+              aria-label="Bevestigen"
+              className="button button-icon customer-fact-confirm"
+              disabled
+              title="Bevestigen niet beschikbaar"
+              type="button"
+            >
+              <span aria-hidden="true">✓</span>
+            </button>
+          )
+          : null}
+        {model.manualEditAllowed !== false
+          ? (
+            <button
+              aria-label="Corrigeren"
+              className="button button-ghost button-icon customer-fact-edit"
+              onClick={() => {
+                setDraft(initialValue(model));
+                setEditing(true);
+              }}
+              title="Corrigeren"
+              type="button"
+            >
+              <span aria-hidden="true">✎</span>
+            </button>
+          )
+          : null}
       </span>
     );
   }
@@ -320,18 +333,22 @@ export function CustomerDocumentFactInteraction({
             );
           })}
         </span>
-        <button
-          aria-label="Corrigeren"
-          className="button button-ghost button-icon customer-fact-edit"
-          onClick={() => {
-            setDraft(initialValue(model));
-            setEditing(true);
-          }}
-          title="Corrigeren"
-          type="button"
-        >
-          <span aria-hidden="true">✎</span>
-        </button>
+        {model.manualEditAllowed !== false
+          ? (
+            <button
+              aria-label="Corrigeren"
+              className="button button-ghost button-icon customer-fact-edit"
+              onClick={() => {
+                setDraft(initialValue(model));
+                setEditing(true);
+              }}
+              title="Corrigeren"
+              type="button"
+            >
+              <span aria-hidden="true">✎</span>
+            </button>
+          )
+          : null}
       </span>
     );
   }

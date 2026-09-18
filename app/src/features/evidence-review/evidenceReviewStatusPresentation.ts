@@ -19,7 +19,10 @@ export const EVIDENCE_REVIEW_STATUS_PRESENTATION: Readonly<
     className: "status-pill-warning",
     label: "Wacht op klant",
   },
-  REVIEW_COMPLETE: { className: "status-pill-ok", label: "Afgerond" },
+  REVIEW_COMPLETE: {
+    className: "status-pill-ok",
+    label: "Beoordeling afgerond",
+  },
   REVIEW_MODEL_UNAVAILABLE: {
     className: "status-pill-danger",
     label: "Beoordelingsmodel niet beschikbaar",

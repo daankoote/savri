@@ -99,7 +99,7 @@ const response = await handler(
 const body = await response.json();
 invariant(
   response.status === 200 && body.status === "withdrawn" &&
-    rpcName === "app_customer_correction_replacement_withdraw_v1" &&
+    rpcName === "app_customer_correction_replacement_withdraw_v2" &&
     rpcArgs.p_auth_user_id === AUTH_USER &&
     rpcArgs.p_replacement_target_ref === TARGET_REF &&
     rpcArgs.p_candidate_ref === CANDIDATE_REF &&

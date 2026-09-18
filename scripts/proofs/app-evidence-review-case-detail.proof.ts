@@ -394,9 +394,74 @@ async function endpointProof(): Promise<void> {
     ...rpcSuccess(),
     overall_review_status: "WAITING_CUSTOMER",
   });
+  const supportingCustomerConfirmedNone = rpcSuccess([sourceEvidence({
+    evidence_file_ref: INVOICE_FILE,
+    evidence_version_ref: INVOICE_VERSION,
+    kind: "installation_invoice",
+    canonical_facts: [{
+      category: "PARTY_NAME",
+      value: "Declared Person",
+      truth_class: "CUSTOMER_CONFIRMED",
+      review_reason: null,
+    }],
+  })]);
+  supportingCustomerConfirmedNone.review_subjects = [{
+    ...sourceSubject(INVOICE_VERSION, "installation_invoice", "8"),
+    fact_key: "partyName",
+    fact_category: "PARTY_NAME",
+    fact_label: "Naam",
+    required: false,
+    truth_class: "CUSTOMER_CONFIRMED",
+    review_reason: null,
+    review_reason_authority: null,
+    reviewer_suggestion: "NONE",
+  }];
+  const supportingCustomerConfirmedAccept = structuredClone(
+    supportingCustomerConfirmedNone,
+  );
+  (supportingCustomerConfirmedAccept.review_subjects as JsonObject[])[0]
+    .reviewer_suggestion = "ACCEPT";
+  const primaryCustomerConfirmedNone = rpcSuccess();
+  primaryCustomerConfirmedNone.review_subjects = [{
+    ...sourceSubject(ENERGY_VERSION, "energy_bill_or_contract", "7"),
+    fact_key: "partyName",
+    fact_category: "PARTY_NAME",
+    fact_label: "Naam",
+    truth_class: "CUSTOMER_CONFIRMED",
+    review_reason: null,
+    review_reason_authority: null,
+    reviewer_suggestion: "NONE",
+  }];
+  const unknownSupportingKind = structuredClone(
+    supportingCustomerConfirmedNone,
+  );
+  (unknownSupportingKind.evidence as JsonObject[])[0].kind = "other_document";
+  (unknownSupportingKind.review_subjects as JsonObject[])[0].evidence_kind =
+    "other_document";
+  const wrongDisposition = structuredClone(supportingCustomerConfirmedNone);
+  (wrongDisposition.review_subjects as JsonObject[])[0].truth_class =
+    "REVIEW_REQUIRED";
+  const missingSuggestion = structuredClone(supportingCustomerConfirmedNone);
+  delete (missingSuggestion.review_subjects as JsonObject[])[0]
+    .reviewer_suggestion;
+  const extraSubjectField = structuredClone(supportingCustomerConfirmedNone);
+  (extraSubjectField.review_subjects as JsonObject[])[0].source_authority =
+    "supporting";
   assert(
-    malformed === null && prematureWaiting === null,
-    "unknown_or_unbacked_status_allowed",
+    malformed === null && prematureWaiting === null &&
+      parseEvidenceReviewCaseDetailSource(
+          supportingCustomerConfirmedNone,
+        )?.reviewSubjects[0]?.reviewerSuggestion === "NONE" &&
+      parseEvidenceReviewCaseDetailSource(
+          supportingCustomerConfirmedAccept,
+        )?.reviewSubjects[0]?.reviewerSuggestion === "ACCEPT" &&
+      parseEvidenceReviewCaseDetailSource(primaryCustomerConfirmedNone) ===
+        null &&
+      parseEvidenceReviewCaseDetailSource(unknownSupportingKind) === null &&
+      parseEvidenceReviewCaseDetailSource(wrongDisposition) === null &&
+      parseEvidenceReviewCaseDetailSource(missingSuggestion) === null &&
+      parseEvidenceReviewCaseDetailSource(extraSubjectField) === null,
+    "supporting_subject_or_fail_closed_contract_invalid",
   );
   for (const code of [
     "authenticated_actor_not_verified",

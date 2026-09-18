@@ -62,6 +62,7 @@ export type CustomerDocumentWorkflowFactInput = Readonly<{
   editor: "text" | "address";
   locationId?: string;
   maxLength?: number;
+  manualEditAllowed?: boolean;
   isValid: (value: DocumentFirstFactValue) => boolean;
   normalize?: (value: DocumentFirstFactValue) => DocumentFirstFactValue;
   formatValue?: (value: DocumentFirstFactValue) => string;
@@ -276,6 +277,7 @@ export function createCustomerDocumentWorkflowGroup(
         editor: fact.editor,
         locationId: fact.locationId,
         maxLength: fact.maxLength,
+        manualEditAllowed: fact.manualEditAllowed,
         isValid: fact.isValid,
         normalize: fact.normalize,
         formatValue: fact.formatValue,

@@ -2259,3 +2259,88 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   deployment remain open.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-09-17 — Make new customer corrections document-driven locally
+
+- Added immutable correction bundle v4 with one server-owned primary document,
+  parser and response requirement for each of the eight current correction
+  facts. Existing document candidates, parser observations, evidence versions,
+  source resolutions, audit and private Storage remain the only data model.
+- Withdrew service execution from older publish, supersede, upload, challenge
+  and finalize write paths that could bypass document-first requirements. New
+  writes accept document replacement with parsed primary values or an exact
+  document-bound transcription after a parser miss/ambiguity; every
+  transcription remains a customer assertion and routes to workforce review.
+- Added the R7 v7 customer-safe projection and made customer `Akkoord`
+  server-owned: a present valid normalized value, current hashes/manifest,
+  direct primary source and current workforce acceptance are all required.
+  Technical parser and authority metadata remains private; correction mail is
+  unchanged and inactive.
+- Fresh-chain construction, typecheck, build and focused source checks are green.
+  A bounded local transaction reconciled the two reviewed function bodies and
+  the migration-owned ACL block from the exact migration source. A later
+  fixture found a missing `required` input in immutable resulting subject
+  references; the migration now binds that reference to the exact
+  server-derived resulting manifest subject. Renewed active-schema,
+  function-source, RLS/ACL, privilege and
+  behavioral parity, fixture-backed database/browser proof, human Firefox
+  acceptance, cleanup and hosted rollout remain open.
+
+TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
+
+## 2026-09-18 — Preserve accepted correction facts after terminal handoff
+
+- Added a versioned R7 read-v8 source contract that keeps the terminal
+  `not_available`/`handoff=null` shape and separately projects only the eight
+  current primary customer-safe facts. Per-fact `Akkoord` requires a present
+  normalized value, exact current manifest and evidence-version binding, and
+  either exactly one matching direct parser observation across all envelopes
+  for the evidence/profile/fact, or an exact immutable
+  document-first submission binding, plus `ACCEPTED` in the current fully
+  accepted review round. Supporting, missing, ambiguous or stale facts cannot
+  project acceptance.
+- Extended the strict Edge/frontend DTO and reused the existing shared
+  seven-column `DocumentFactMatrix` in read-only mode. No new component, CSS,
+  browser authority or internal provenance exposure was introduced.
+- Pure DTO/UI proofs, typecheck and a full disposable fresh-chain rebuild are
+  green. Exact local migration apply, active-schema/security parity,
+  post-acceptance browser proof and final Firefox acceptance remain open.
+
+## 2026-09-18 — Prepare exact read-v8 customer-binding repair
+
+- The first read-only active v8 customer call failed before projection because
+  the new projector referenced non-existent `handoff.customer_id`; the
+  authoritative handoff column is `target_customer_id`.
+- Added CLI migration `20260918081541`, whose function body is byte-equal to
+  v2 after only `create or replace` and that single identifier correction. The
+  existing ACL block is repeated unchanged; R7, return shape and error behavior
+  are unchanged.
+- Pure source comparison, full disposable fresh-chain, RLS/privilege checks,
+  manifests and ownership are green. Execution policy prevented local apply;
+  active runtime parity and browser acceptance remain open.
+
+## 2026-09-18 — Prove terminal accepted-fact projection locally
+
+- Applied forward migration `20260918081541` locally after its exact
+  customer-binding repair was fresh-chain proven. Active `prosrc`, signature,
+  stability, definer mode, empty search path, owner and ACL match the bounded
+  source contract.
+- The real R7 customer read returns `200/not_available`, `handoff=null` and
+  exactly eight current customer-safe primary facts. All eight accepted fixture
+  facts have present values, direct primary lineage and current fully accepted
+  review decisions; workforce and second-case reads remain denied and the read
+  causes zero writes.
+- The post-acceptance customer/workforce matrix is green on 1440×900,
+  820×1180 and 375×812 without horizontal overflow, console errors or failed
+  requests. Final human Firefox acceptance, exact fixture cleanup and hosted
+  rollout remain open.
+
+## 2026-09-18 — Clarify completed workforce review presentation
+
+- Reused the server-authoritative `REVIEW_COMPLETE` projection to present the
+  workforce badge as `Beoordeling afgerond` and the detail phase as `Gegevens
+  geaccepteerd`. The underlying dossier lifecycle remains unchanged and is not
+  presented as terminal.
+- Focused UI proofs, typecheck, production build and the existing read-only
+  desktop/tablet/mobile fixture matrix are green. Final human Firefox
+  reacceptance and exact fixture cleanup remain open.

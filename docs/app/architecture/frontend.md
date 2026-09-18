@@ -215,7 +215,10 @@ Rules:
   The overview shows bounded server-status previews for interne beoordeling,
   wachten op klant and recent afgeronde dossiers. The complete list partitions
   the same server projection once into those groups plus overige actieve
-  dossiers; overview group links target the corresponding list section.
+  dossiers; overview group links target the corresponding list section. A
+  server-projected `REVIEW_COMPLETE` uses badge `Beoordeling afgerond` and
+  detail phase `Gegevens geaccepteerd`; neither label derives a terminal
+  dossier lifecycle from client state.
 - The shared operator header renders `Overzicht`, `Dossiers`, then `Uitloggen`.
   It marks `Overzicht` or `Dossiers` active on canonical pages, keeps `Dossiers`
   active on canonical and compatibility detail/list routes, maps
@@ -487,9 +490,27 @@ The year overview is customer-facing output and later supports the audit-worthy 
   customer correction handoff panel renders the R7-projected message once above
   the existing correction items. Legacy handoffs render no message. No new
   component, route or CSS authority is introduced, and correction e-mail
-  remains inactive. Active-schema, focused database/security and automated
+  remains inactive. For the prior CORRECTION_COVER_MESSAGE_V1 bundle-v3
+  baseline, active-schema, focused database/security and automated
   desktop/mobile browser proof are green locally; human Firefox acceptance,
   exact fixture cleanup and hosted rollout remain open.
+- New correction handoffs are document-first. The existing publish hook sends
+  an explicit document response requirement for every correction subject; the
+  existing correction panel reuses the shared upload card, fact matrix,
+  interaction and responsive seven-column/card presentation. Parsed primary
+  values are supplied by the strict v8 customer DTO. Free source-less editing
+  is absent; the existing editor is enabled only when the server marks the
+  exact current document candidate as eligible for document-bound
+  transcription after a parser miss or ambiguity. The panel renders the
+  server-owned fact status and never infers `Akkoord` from locked UI state,
+  missing correction items or customer confirmation. After terminal handoff,
+  the same shared fact matrix consumes the separate v8 primary-fact projection;
+  it keeps `handoff=null` and shows `Akkoord` only after the current fully
+  accepted review round. The shared workflow gained only a no-upload display
+  mode; no component, route, stylesheet or inline style was added. Local v8
+  apply, active parity and the post-acceptance three-viewport browser proof are
+  green. Final presentation Firefox reacceptance, exact fixture cleanup and
+  hosted rollout remain open.
 - `CustomerInformationRequestHistory` is the shared customer/workforce
   presentation for closed questions. It renders only non-empty safe history,
   shows resolved answers and withdrawn questions under `Eerdere vragen en

@@ -91,16 +91,19 @@ function sourceItem({
   };
 }
 
-function source(items: unknown[]) {
+function source(items: unknown[], factProjections: unknown[] = []) {
   return {
     ok: true,
     status: 200,
     code: "ok",
     case_ref: CASE_REF,
+    fact_projections: factProjections,
     handoff: {
+      bundle_version: 3,
       cover_message: "Controleer en corrigeer de onderstaande gegevens.",
       current_replacement_candidates: [],
       customer_publication_snapshot_sha256: "a".repeat(64),
+      fact_projections: factProjections,
       handoff_ref: "CRH-0123456789ABCDEF",
       published_at: "2026-08-20T12:00:00.000Z",
       signer_authority: {
@@ -150,12 +153,14 @@ for (const items of matrix) {
     )
   ) {
     const client = decodeCustomerCorrectionHandoffResponse({
-      schemaVersion: "customer-correction-handoff-v6",
+      schemaVersion: "customer-correction-handoff-v8",
       caseRef: CASE_REF,
+      factProjections: parsed.factProjections,
       handoff: {
         coverMessage: parsed.handoff.coverMessage,
         currentReplacementCandidates: parsed.handoff
           .currentReplacementCandidates,
+        factProjections: parsed.handoff.factProjections,
         handoffRef: "CRH-0123456789ABCDEF",
         publishedAt: "2026-08-20T12:00:00.000Z",
         signerAuthority: parsed.handoff.signerAuthority,
@@ -203,8 +208,9 @@ const challenge = parseCorrectionChallengeRequest({
   caseRef: CASE_REF,
   factResolutions: [{
     itemRefs: [ITEM_REF(1)],
-    resolutionType: "MANUAL",
+    resolutionType: "DOCUMENT_TRANSCRIPTION",
     sources: [],
+    transcriptionCandidateRef: `CRC-${"B".repeat(32)}`,
   }],
   responses: [{ itemRef: ITEM_REF(1), correctedValue: "Corrected" }],
   typedFullName: "Proof Person",
@@ -221,8 +227,9 @@ assert(
       caseRef: CASE_REF,
       factResolutions: [{
         itemRefs: [ITEM_REF(1)],
-        resolutionType: "MANUAL",
+        resolutionType: "DOCUMENT_TRANSCRIPTION",
         sources: [],
+        transcriptionCandidateRef: `CRC-${"B".repeat(32)}`,
       }],
       typedFullName: "Proof Person",
       responses: [
@@ -253,15 +260,15 @@ for (
   );
 }
 assert(
-  HANDOFF_ENDPOINT.includes("app_customer_correction_handoff_read_v6") &&
+  HANDOFF_ENDPOINT.includes("app_customer_correction_handoff_read_v8") &&
     COVER_MESSAGE_MIGRATION.includes(
       "app_correction_customer_publication_snapshot_v1",
     ) &&
     CANDIDATE_SELECTION_MIGRATION.includes(
       "app_customer_correction_handoff_read_v5",
     ) &&
-    CHALLENGE_ENDPOINT.includes("app_customer_correction_challenge_issue_v4") &&
-    FINALIZE_ENDPOINT.includes("app_customer_correction_finalize_v3") &&
+    CHALLENGE_ENDPOINT.includes("app_customer_correction_challenge_issue_v5") &&
+    FINALIZE_ENDPOINT.includes("app_customer_correction_finalize_v4") &&
     SIGNER_AUTHORITY_MIGRATION.includes(
       "app_customer_correction_signer_context_v1",
     ) &&
@@ -295,15 +302,15 @@ with pilot as (
   where grant_row.granted_case_id is null or grant_row.granted_case_id=pilot.id
   limit 1
 ), first_read as (
-  select public.app_customer_correction_handoff_read_v4(
+  select public.app_customer_correction_handoff_read_v8(
     actor.auth_user_id,pilot.case_reference
   ) body from actor,pilot
 ), second_read as (
-  select public.app_customer_correction_handoff_read_v4(
+  select public.app_customer_correction_handoff_read_v8(
     actor.auth_user_id,pilot.case_reference
   ) body from actor,pilot
 ), unauthorized as (
-  select public.app_customer_correction_handoff_read_v4(
+  select public.app_customer_correction_handoff_read_v8(
     '00000000-0000-4000-8000-000000000001'::uuid,pilot.case_reference
   ) body from pilot
 )

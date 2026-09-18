@@ -91,6 +91,10 @@ export type EvidenceFactReviewRoundFinalizeCall = (
 export type EvidenceReviewCorrectionPublishRequest = Readonly<{
   caseRef: string;
   coverMessage: string;
+  itemRequirements: readonly Readonly<{
+    subjectRef: string;
+    responseRequirement: "VALUE_PLUS_DOCUMENT_REPLACEMENT";
+  }>[];
   roundRef: string;
 }>;
 
@@ -181,6 +185,33 @@ const REVIEW_FACT_KEYS = new Set([
   "serialNumber",
 ]);
 
+const ENERGY_PRIMARY_FACT_KEYS = new Set([
+  "partyName",
+  "structuredAddress",
+  "electricityEan",
+  "energySupplier",
+]);
+
+const INSTALLATION_PRIMARY_FACT_KEYS = new Set([
+  "chargerBrand",
+  "chargerModel",
+  "midNumber",
+  "serialNumber",
+]);
+
+function isSupportingReviewSubject(
+  factKey: string,
+  evidenceKind: string,
+): boolean {
+  return (
+    ENERGY_PRIMARY_FACT_KEYS.has(factKey) &&
+    evidenceKind === "installation_invoice"
+  ) || (
+    INSTALLATION_PRIMARY_FACT_KEYS.has(factKey) &&
+    evidenceKind === "energy_bill_or_contract"
+  );
+}
+
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -233,12 +264,9 @@ function parseFact(value: unknown): EvidenceReviewCanonicalFactV1 | null {
     ...(truthClass === "REVIEW_REQUIRED"
       ? {
         reviewReason,
-        ...(isHistoricalFallback
-          ? {}
-          : {
-            reviewReasonAuthority:
-              "CUSTOMER_SIGNED_RESOLUTION" as const,
-          }),
+        ...(isHistoricalFallback ? {} : {
+          reviewReasonAuthority: "CUSTOMER_SIGNED_RESOLUTION" as const,
+        }),
       }
       : {}),
   });
@@ -284,7 +312,9 @@ function parseEvidence(value: unknown): EvidenceReviewEvidenceV1 | null {
   });
 }
 
-function parseReviewSubject(value: unknown): EvidenceFactReviewSubjectV1 | null {
+function parseReviewSubject(
+  value: unknown,
+): EvidenceFactReviewSubjectV1 | null {
   if (
     !isRecord(value) ||
     !hasExactFields(value, [
@@ -324,7 +354,8 @@ function parseReviewSubject(value: unknown): EvidenceFactReviewSubjectV1 | null 
     typeof value.scopeRef !== "string" ||
     !/^FRSCOPE-[0-9a-f]{64}$/.test(value.scopeRef) ||
     !["PRESENT", "REQUIRED_MISSING"].includes(valueStatus) ||
-    typeof value.required !== "boolean" || !FACT_TRUTH_CLASSES.has(truthClass) ||
+    typeof value.required !== "boolean" ||
+    !FACT_TRUTH_CLASSES.has(truthClass) ||
     !["ACCEPT", "NONE"].includes(String(value.reviewerSuggestion)) ||
     (valueStatus === "PRESENT" && !boundedString(value.value, 2_000)) ||
     (valueStatus === "REQUIRED_MISSING" &&
@@ -332,7 +363,10 @@ function parseReviewSubject(value: unknown): EvidenceFactReviewSubjectV1 | null 
   ) return null;
   if (
     truthClass === "CUSTOMER_CONFIRMED" &&
-    (valueStatus !== "PRESENT" || value.reviewerSuggestion !== "ACCEPT" ||
+    (valueStatus !== "PRESENT" ||
+      (value.reviewerSuggestion !== "ACCEPT" &&
+        !(value.reviewerSuggestion === "NONE" &&
+          isSupportingReviewSubject(value.factKey, value.evidenceKind))) ||
       reviewReason !== undefined || reviewReasonAuthority !== undefined)
   ) return null;
   if (truthClass === "REVIEW_REQUIRED") {
@@ -370,13 +404,11 @@ function parseReviewSubject(value: unknown): EvidenceFactReviewSubjectV1 | null 
         reviewReason: reviewReason as
           | EvidenceReviewReason
           | "REQUIRED_INFORMATION_MISSING",
-        ...(reviewReasonAuthority === undefined
-          ? {}
-          : {
-            reviewReasonAuthority: reviewReasonAuthority as
-              | "CUSTOMER_SIGNED_RESOLUTION"
-              | "SERVER_REQUIRED_SLOT",
-          }),
+        ...(reviewReasonAuthority === undefined ? {} : {
+          reviewReasonAuthority: reviewReasonAuthority as
+            | "CUSTOMER_SIGNED_RESOLUTION"
+            | "SERVER_REQUIRED_SLOT",
+        }),
       }
       : {}),
     reviewerSuggestion: value.reviewerSuggestion as "ACCEPT" | "NONE",
@@ -404,7 +436,8 @@ function parseCurrentReviewRound(
     !["ALL_FACTS_ACCEPTED", "CORRECTIONS_REQUIRED"].includes(
       String(value.outcome),
     ) || !isIsoTimestamp(value.finalizedAt) ||
-    !Array.isArray(value.decisions) || value.decisions.length !== subjectRefs.size
+    !Array.isArray(value.decisions) ||
+    value.decisions.length !== subjectRefs.size
   ) return false;
 
   const decisions: EvidenceFactReviewFinalizedDecisionV1[] = [];
@@ -440,8 +473,8 @@ function parseCurrentReviewRound(
     decisions.push(Object.freeze({
       subjectRef,
       disposition,
-      correctionReason:
-        rawDecision.correctionReason as EvidenceFactReviewCorrectionReason,
+      correctionReason: rawDecision
+        .correctionReason as EvidenceFactReviewCorrectionReason,
       correctionInstruction: rawDecision.correctionInstruction,
     }));
   }
@@ -820,7 +853,7 @@ export async function publishEvidenceReviewCorrection(
       "roundRef",
       "schemaVersion",
     ]) ||
-    body.schemaVersion !== "evidence-review-correction-publish-v2" ||
+    body.schemaVersion !== "evidence-review-correction-publish-v3" ||
     body.caseRef !== config.request.caseRef ||
     body.roundRef !== config.request.roundRef ||
     !HANDOFF_REFERENCE_RE.test(String(body.handoffRef)) ||

@@ -6,9 +6,9 @@ import {
   type DocumentEvidenceWorkflowGroup,
 } from "../documents/DocumentEvidenceWorkflow.tsx";
 import {
+  createCustomerDocumentUploadCardModel,
   createCustomerDocumentWorkflowGroup,
   createCustomerDocumentWorkflowModel,
-  createCustomerDocumentUploadCardModel,
   type CustomerDocumentWorkflowFactInput,
   type CustomerDocumentWorkflowSourceInput,
 } from "../documents/CustomerDocumentWorkflowController.ts";
@@ -34,6 +34,7 @@ import {
   CUSTOMER_CORRECTION_LEGAL_BUNDLE,
   type CustomerCorrectionChallengeReceipt,
   type CustomerCorrectionCurrentReplacementCandidate,
+  type CustomerCorrectionFactProjection,
   type CustomerCorrectionFactResolution,
   type CustomerCorrectionHandoffItem,
   type CustomerCorrectionReason,
@@ -145,7 +146,8 @@ export async function submitCustomerCorrectionFinalization(
     ok: false as const,
     error: Object.freeze({
       code: "service_unavailable" as const,
-      message: "Ondertekenen is tijdelijk niet beschikbaar. Probeer het opnieuw.",
+      message:
+        "Ondertekenen is tijdelijk niet beschikbaar. Probeer het opnieuw.",
     }),
   }));
   if (result.ok) {
@@ -270,9 +272,12 @@ function retainedReplacementUploads(
         candidateRef: candidate.candidateRef,
         replacementTargetRef: candidate.replacementTargetRef,
         fileName: candidate.fileName,
-        contentFingerprint: candidate.contentFingerprint,
-        observedFacts: candidate.parserObservation?.observedFacts ??
-          Object.freeze([]),
+        contentFingerprint: null,
+        observedFacts: Object.freeze(candidate.sourceFacts.map((fact) => ({
+          factKey: fact.factKey,
+          observedValue: fact.observedValue,
+          extractionMethod: null,
+        }))),
       }),
     }),
   ])));
@@ -293,11 +298,15 @@ function initialCorrectionInputs(
     const target = targets.find((entry) =>
       entry.replacementTargetRef === candidate.replacementTargetRef
     );
-    if (!target || !candidate.parserObservation) continue;
+    if (!target) continue;
     const projection = projectCustomerCorrectionParserFacts(
       items,
       target,
-      candidate.parserObservation.observedFacts,
+      candidate.sourceFacts.map((fact) => ({
+        factKey: fact.factKey,
+        observedValue: fact.observedValue,
+        extractionMethod: null,
+      })),
     );
     for (const prefill of projection.prefills) {
       const item = items.find((entry) => entry.itemRef === prefill.itemRef);
@@ -349,12 +358,30 @@ function chargerCurrentValue(
   return "";
 }
 
+function correctionScopeFactKey(scopeRef: string, factKey: string): string {
+  return `${scopeRef}\u0000${factKey}`;
+}
+
+function correctionAuthorityScopeRef(
+  workspaceItems: readonly CustomerCorrectionWorkspaceItem[],
+  fallbackScopeRef: string,
+): string {
+  const targetRefs = new Set(
+    workspaceItems.flatMap((workspaceItem) =>
+      workspaceItem.item.replacementTarget?.replacementTargetRef
+        ? [workspaceItem.item.replacementTarget.replacementTargetRef]
+        : []
+    ),
+  );
+  return targetRefs.size === 1 ? [...targetRefs][0] : fallbackScopeRef;
+}
 
 function createCorrectionCustomerWorkflowGroup({
   group,
   title,
   definitions,
   evidenceReady,
+  factStatusByScopeAndFact,
   items,
   currentValue,
   observedValuesByItemRef,
@@ -364,6 +391,7 @@ function createCorrectionCustomerWorkflowGroup({
   sourceContentFingerprintByItemRef,
   sourceIdentityByItemRef,
   sourceSelections,
+  transcriptionCandidateByScopeAndFact,
   factResolutions,
   lockedSources,
   onConfirmValue,
@@ -375,6 +403,10 @@ function createCorrectionCustomerWorkflowGroup({
   title: string;
   definitions: readonly CustomerDocumentFactRowDefinition[];
   evidenceReady: boolean;
+  factStatusByScopeAndFact: ReadonlyMap<
+    string,
+    "Nog te beoordelen" | "Akkoord" | "Correctie nodig"
+  >;
   items: readonly CustomerCorrectionWorkspaceItem[];
   currentValue: (factKey: string) => string;
   observedValuesByItemRef: Readonly<Record<string, string | null>>;
@@ -384,6 +416,7 @@ function createCorrectionCustomerWorkflowGroup({
   sourceContentFingerprintByItemRef: Readonly<Record<string, string | null>>;
   sourceIdentityByItemRef: Readonly<Record<string, string>>;
   sourceSelections: Readonly<Record<string, CustomerCorrectionSourceSelection>>;
+  transcriptionCandidateByScopeAndFact: ReadonlyMap<string, string>;
   factResolutions: CustomerCorrectionFactResolution[];
   lockedSources: (
     definition: CustomerDocumentFactRowDefinition,
@@ -412,174 +445,177 @@ function createCorrectionCustomerWorkflowGroup({
     factItems.push(item);
     itemByFactKey.set(item.item.factKey, factItems);
   }
-  const replacedSourceTypes = new Set(
-    items.flatMap((item) =>
-      item.requiresReplacement
-        ? [item.item.documentLabel === "Energiedocument"
-          ? "energy_bill_or_contract" as const
-          : "installation_invoice" as const]
-        : []
-    ),
-  );
   const valueItemsByFactKey = new Map<
     string,
     readonly CustomerCorrectionWorkspaceItem[]
   >();
-  const facts = definitions.map((definition): CustomerDocumentWorkflowFactInput => {
-    const workspaceItems = itemByFactKey.get(definition.factKey) || [];
-    const valueItems = workspaceItems.filter((item) => item.requiresValue);
-    valueItemsByFactKey.set(definition.factKey, valueItems);
-    const current = currentValue(definition.factKey);
-    if (workspaceItems.length === 0) {
-      const sources: CustomerDocumentWorkflowSourceInput[] = lockedSources(
+  const groupAuthorityScopeRef = correctionAuthorityScopeRef(items, scopeRef);
+  const facts = definitions.map(
+    (definition): CustomerDocumentWorkflowFactInput => {
+      const workspaceItems = itemByFactKey.get(definition.factKey) || [];
+      const valueItems = workspaceItems.filter((item) => item.requiresValue);
+      const authorityScopeRef = correctionAuthorityScopeRef(
+        workspaceItems,
+        groupAuthorityScopeRef,
+      );
+      valueItemsByFactKey.set(definition.factKey, valueItems);
+      const current = currentValue(definition.factKey);
+      if (workspaceItems.length === 0) {
+        const sources: CustomerDocumentWorkflowSourceInput[] = lockedSources(
+          definition,
+        ).flatMap((source, index) => {
+          const binding = definition.evidenceBindings.find((candidate) =>
+            candidate.sourceDocumentType === source.sourceDocumentType &&
+            candidate.relationship === "direct"
+          ) || definition.evidenceBindings.find((candidate) =>
+            candidate.sourceDocumentType === source.sourceDocumentType
+          );
+          if (!binding) {
+            return [];
+          }
+          return [Object.freeze({
+            sourceRef: scopeRef + ":" + definition.id + ":locked:" + index,
+            evidenceRootRef: scopeRef + ":locked:" + source.fileName,
+            contentFingerprint: null,
+            fileName: source.fileName,
+            sourceDocumentType: source.sourceDocumentType,
+            semanticRole: binding.semanticRoles[0],
+            relationship: binding.relationship,
+            observedValue: current || null,
+            current: true,
+          })];
+        });
+        return Object.freeze({
+          factKey: definition.factKey,
+          sources,
+          editable: false,
+          browserResolution: "LOCKED",
+          actualReviewTruth: factStatusByScopeAndFact.get(
+            correctionScopeFactKey(authorityScopeRef, definition.factKey),
+          ) ??
+            "Nog te beoordelen",
+          customerValue: current || undefined,
+          currentValue: current,
+          emptyValue: "",
+          editor: "text",
+          isValid: () => false,
+        });
+      }
+      const sources = selectCustomerCorrectionActiveFactSourceInputs({
         definition,
-      ).flatMap((source, index) => {
-        const binding = definition.evidenceBindings.find((candidate) =>
-          candidate.sourceDocumentType === source.sourceDocumentType &&
-          candidate.relationship === "direct"
-        ) || definition.evidenceBindings.find((candidate) =>
-          candidate.sourceDocumentType === source.sourceDocumentType
-        );
-        if (!binding) return [];
-        return [Object.freeze({
-          sourceRef: scopeRef + ":" + definition.id + ":locked:" + index,
-          evidenceRootRef: scopeRef + ":locked:" + source.fileName,
-          contentFingerprint: null,
-          fileName: source.fileName,
-          sourceDocumentType: source.sourceDocumentType,
-          semanticRole: binding.semanticRoles[0],
-          relationship: binding.relationship,
-          observedValue: current || null,
-          current: true,
-        })];
+        items,
+        scopeRef,
+        sourceFileNameByItemRef,
+        sourceContentFingerprintByItemRef,
+        observedValuesByItemRef,
+        extractionMethodsByItemRef,
+        sourceIdentityByItemRef,
       });
+      const valueConfirmed = valueItems.length > 0 &&
+        valueItems.every((item) =>
+          Boolean(item.normalizedValue) && !item.sameAsCurrentValue &&
+          !item.parserPrefillNeedsConfirmation
+        );
+      const selectedSource = valueItems.map((item) =>
+        sourceSelections[item.item.itemRef]
+      ).find((selection) => selection !== undefined);
+      const manuallyAdjusted = valueConfirmed &&
+        valueItems.every((item) =>
+          manualResolutionItemRefs.has(item.item.itemRef)
+        );
+      const browserResolution = valueItems.length === 0
+        ? "LOCKED" as const
+        : !valueConfirmed
+        ? "UNRESOLVED" as const
+        : manuallyAdjusted
+        ? "MANUAL_CONFIRMED" as const
+        : selectedSource
+        ? "CONFLICT_SOURCE_SELECTED" as const
+        : "CLEAN_SOURCE_CONFIRMED" as const;
+      const itemRefs = valueItems.map((item) => item.item.itemRef);
+      const correctionDetails = [...new Map(
+        workspaceItems.map((workspaceItem) => {
+          const reason = customerCorrectionReasonLabel(
+            workspaceItem.item.correctionReason,
+          );
+          const instruction = workspaceItem.item.correctionInstruction;
+          return [
+            `${reason}\u0000${instruction}`,
+            Object.freeze({
+              id: workspaceItem.item.itemRef,
+              reason,
+              instruction,
+            }),
+          ] as const;
+        }),
+      ).values()];
       return Object.freeze({
         factKey: definition.factKey,
+        given: definition.label,
+        correctionDetails: Object.freeze(correctionDetails),
         sources,
-        editable: false,
-        browserResolution: "LOCKED",
-        actualReviewTruth: definition.evidenceBindings.some((binding) =>
-            replacedSourceTypes.has(binding.sourceDocumentType)
-          )
-          ? "Nog te beoordelen"
-          : "Akkoord",
-        customerValue: current || undefined,
+        editable: valueItems.length > 0,
+        browserResolution,
+        actualReviewTruth: factStatusByScopeAndFact.get(
+          correctionScopeFactKey(authorityScopeRef, definition.factKey),
+        ) ??
+          "Nog te beoordelen",
+        customerValue: valueItems[0]?.normalizedValue || undefined,
         currentValue: current,
+        selectedSourceRef: selectedSource?.sourceId,
         emptyValue: "",
         editor: "text",
-        isValid: () => false,
-      });
-    }
-    const sources = selectCustomerCorrectionActiveFactSourceInputs({
-      definition,
-      items,
-      scopeRef,
-      sourceFileNameByItemRef,
-      sourceContentFingerprintByItemRef,
-      observedValuesByItemRef,
-      extractionMethodsByItemRef,
-      sourceIdentityByItemRef,
-    });
-    const valueConfirmed = valueItems.length > 0 &&
-      valueItems.every((item) =>
-        Boolean(item.normalizedValue) && !item.sameAsCurrentValue &&
-        !item.parserPrefillNeedsConfirmation
-      );
-    const selectedSource = valueItems.map((item) =>
-      sourceSelections[item.item.itemRef]
-    ).find((selection) => selection !== undefined);
-    const manuallyAdjusted = valueConfirmed &&
-      valueItems.every((item) =>
-        manualResolutionItemRefs.has(item.item.itemRef)
-      );
-    const browserResolution = valueItems.length === 0
-      ? "LOCKED" as const
-      : !valueConfirmed
-      ? "UNRESOLVED" as const
-      : manuallyAdjusted
-      ? "MANUAL_CONFIRMED" as const
-      : selectedSource
-      ? "CONFLICT_SOURCE_SELECTED" as const
-      : "CLEAN_SOURCE_CONFIRMED" as const;
-    const itemRefs = valueItems.map((item) => item.item.itemRef);
-    const correctionDetails = [...new Map(
-      workspaceItems.map((workspaceItem) => {
-        const reason = customerCorrectionReasonLabel(
-          workspaceItem.item.correctionReason,
-        );
-        const instruction = workspaceItem.item.correctionInstruction;
-        return [
-          `${reason}\u0000${instruction}`,
-          Object.freeze({
-            id: workspaceItem.item.itemRef,
-            reason,
-            instruction,
-          }),
-        ] as const;
-      }),
-    ).values()];
-    return Object.freeze({
-      factKey: definition.factKey,
-      given: definition.label,
-      correctionDetails: Object.freeze(correctionDetails),
-      sources,
-      editable: valueItems.length > 0,
-      browserResolution,
-      actualReviewTruth: valueItems.length === 0
-        ? "Nog te beoordelen"
-        : "Correctie nodig",
-      customerValue: valueItems[0]?.normalizedValue || undefined,
-      currentValue: current,
-      selectedSourceRef: selectedSource?.sourceId,
-      emptyValue: "",
-      editor: "text",
-      maxLength: CUSTOMER_CORRECTION_VALUE_MAX_LENGTH,
-      isValid: (next) => {
-        if (typeof next !== "string") return false;
-        const normalized = normalizeCustomerCorrectionValue(next);
-        return normalized.length >= 1 &&
-          normalized.length <= CUSTOMER_CORRECTION_VALUE_MAX_LENGTH &&
-          valueItems.every((item) =>
-            !("currentValue" in item.item) ||
-            normalized !== normalizeCustomerCorrectionValue(
-              customerCorrectionCurrentValueText(item.item.currentValue),
+        maxLength: CUSTOMER_CORRECTION_VALUE_MAX_LENGTH,
+        manualEditAllowed: transcriptionCandidateByScopeAndFact.has(
+          correctionScopeFactKey(authorityScopeRef, definition.factKey),
+        ),
+        isValid: (next) => {
+          if (typeof next !== "string") return false;
+          const normalized = normalizeCustomerCorrectionValue(next);
+          return normalized.length >= 1 &&
+            normalized.length <= CUSTOMER_CORRECTION_VALUE_MAX_LENGTH &&
+            valueItems.every((item) =>
+              !("currentValue" in item.item) ||
+              normalized !== normalizeCustomerCorrectionValue(
+                  customerCorrectionCurrentValueText(item.item.currentValue),
+                )
+            );
+        },
+        normalize: (next) =>
+          typeof next === "string"
+            ? normalizeCustomerCorrectionValue(next)
+            : next,
+        onConfirm: valueItems.length > 0
+          ? (next, resolution) => {
+            if (typeof next === "string") {
+              onConfirmValue(itemRefs, next, resolution);
+            }
+          }
+          : undefined,
+        onCancel: valueItems.length > 0
+          ? (sourceValue) =>
+            onRestoreSource(
+              itemRefs,
+              typeof sourceValue === "string" ? sourceValue : "",
             )
-          );
-      },
-      normalize: (next) =>
-        typeof next === "string"
-          ? normalizeCustomerCorrectionValue(next)
-          : next,
-      onConfirm: valueItems.length > 0
-        ? (next, resolution) => {
-          if (typeof next === "string") {
-            onConfirmValue(itemRefs, next, resolution);
+          : undefined,
+        onRestoreSource: valueItems.length > 0
+          ? (sourceValue) =>
+            onRestoreSource(
+              itemRefs,
+              typeof sourceValue === "string" ? sourceValue : "",
+            )
+          : undefined,
+        onSelectSource: valueItems.length > 0
+          ? (source) => {
+            if (source.value !== null) {
+              onSelectSource(itemRefs, source.id, source.value);
+            }
           }
-        }
-        : undefined,
-      onCancel: valueItems.length > 0
-        ? (sourceValue) =>
-          onRestoreSource(
-            itemRefs,
-            typeof sourceValue === "string" ? sourceValue : "",
-          )
-        : undefined,
-      onRestoreSource: valueItems.length > 0
-        ? (sourceValue) =>
-          onRestoreSource(
-            itemRefs,
-            typeof sourceValue === "string" ? sourceValue : "",
-          )
-        : undefined,
-      onSelectSource: valueItems.length > 0
-        ? (source) => {
-          if (source.value !== null) {
-            onSelectSource(itemRefs, source.id, source.value);
-          }
-        }
-        : undefined,
-    });
-  });
+          : undefined,
+      });
+    },
+  );
   const controlled = createCustomerDocumentWorkflowGroup({
     group,
     scopeRef,
@@ -590,23 +626,38 @@ function createCorrectionCustomerWorkflowGroup({
   for (const resolved of controlled.facts) {
     if (!resolved.resolutionType) continue;
     const valueItems = valueItemsByFactKey.get(resolved.factKey) || [];
+    const authorityScopeRef = correctionAuthorityScopeRef(
+      itemByFactKey.get(resolved.factKey) || [],
+      groupAuthorityScopeRef,
+    );
     const selectedSource = valueItems.map((item) =>
       sourceSelections[item.item.itemRef]
     ).find((selection) => selection !== undefined);
     factResolutions.push(Object.freeze({
       itemRefs: Object.freeze(valueItems.map((item) => item.item.itemRef)),
-      resolutionType: resolved.resolutionType,
-      sources: Object.freeze(resolved.sources.flatMap((source) =>
-        (source.relationship === "direct" ||
-            source.relationship === "supporting") &&
+      resolutionType: resolved.resolutionType === "MANUAL"
+        ? "DOCUMENT_TRANSCRIPTION"
+        : resolved.resolutionType,
+      ...(resolved.resolutionType === "MANUAL"
+        ? {
+          transcriptionCandidateRef: transcriptionCandidateByScopeAndFact.get(
+            correctionScopeFactKey(authorityScopeRef, resolved.factKey),
+          ),
+        }
+        : {}),
+      sources: Object.freeze(
+        resolved.sources.flatMap((source) =>
+          (source.relationship === "direct" ||
+              source.relationship === "supporting") &&
             source.value !== null
-          ? [Object.freeze({
-            candidateRef: source.evidenceRootRef,
-            relationship: source.relationship,
-            selected: selectedSource?.sourceId === source.id,
-          })]
-          : []
-      )),
+            ? [Object.freeze({
+              candidateRef: source.evidenceRootRef,
+              relationship: source.relationship,
+              selected: selectedSource?.sourceId === source.id,
+            })]
+            : []
+        ),
+      ),
     }));
   }
   return controlled.group;
@@ -1231,6 +1282,32 @@ function ReadyCustomerCorrectionHandoffPanel({
   const sourceFileNameByItemRef: Record<string, string> = {};
   const sourceContentFingerprintByItemRef: Record<string, string | null> = {};
   const sourceIdentityByItemRef: Record<string, string> = {};
+  const transcriptionCandidateByScopeAndFact = new Map<string, string>();
+  const factStatusByScopeAndFact = new Map<
+    string,
+    "Nog te beoordelen" | "Akkoord" | "Correctie nodig"
+  >();
+  for (const fact of handoff.factProjections) {
+    factStatusByScopeAndFact.set(
+      correctionScopeFactKey(fact.replacementTargetRef, fact.factKey),
+      fact.envalStatus === "Akkoord" || fact.envalStatus === "Correctie nodig"
+        ? fact.envalStatus
+        : "Nog te beoordelen",
+    );
+  }
+  for (const candidate of handoff.currentReplacementCandidates) {
+    for (const fact of candidate.sourceFacts) {
+      if (fact.transcriptionAllowed) {
+        transcriptionCandidateByScopeAndFact.set(
+          correctionScopeFactKey(
+            candidate.replacementTargetRef,
+            fact.factKey,
+          ),
+          candidate.candidateRef,
+        );
+      }
+    }
+  }
   for (const target of workspace.replacementTargets) {
     const upload = replacementUploads[target.replacementTargetRef];
     if (
@@ -1353,6 +1430,7 @@ function ReadyCustomerCorrectionHandoffPanel({
         title: displayedSingleLocation?.label || `Locatie ${index + 1}`,
         definitions: locationDefinitions,
         evidenceReady,
+        factStatusByScopeAndFact,
         items: scope.items,
         currentValue: (factKey) =>
           locationCurrentValue(displayedSingleLocation, factKey),
@@ -1363,6 +1441,7 @@ function ReadyCustomerCorrectionHandoffPanel({
         sourceContentFingerprintByItemRef,
         sourceIdentityByItemRef,
         sourceSelections,
+        transcriptionCandidateByScopeAndFact,
         factResolutions: factResolutionDrafts,
         lockedSources: (definition) => {
           const sourceTypes = new Set(
@@ -1372,12 +1451,13 @@ function ReadyCustomerCorrectionHandoffPanel({
           );
           const energySources = sourceTypes.has("energy_bill_or_contract")
             ? [currentLocationFileName(displayedSingleLocation)].flatMap(
-              (fileName) => fileName
-                ? [{
-                  fileName,
-                  sourceDocumentType: "energy_bill_or_contract" as const,
-                }]
-                : [],
+              (fileName) =>
+                fileName
+                  ? [{
+                    fileName,
+                    sourceDocumentType: "energy_bill_or_contract" as const,
+                  }]
+                  : [],
             )
             : [];
           const currentInstallationSources =
@@ -1385,12 +1465,14 @@ function ReadyCustomerCorrectionHandoffPanel({
               ? dashboardModel.document_slots.filter((slot) =>
                 slot.location_id === displayedSingleLocation?.location_id &&
                 Boolean(slot.charger_id)
-              ).flatMap((slot) => slot.current_file_name
-                ? [{
-                  fileName: slot.current_file_name,
-                  sourceDocumentType: "installation_invoice" as const,
-                }]
-                : [])
+              ).flatMap((slot) =>
+                slot.current_file_name
+                  ? [{
+                    fileName: slot.current_file_name,
+                    sourceDocumentType: "installation_invoice" as const,
+                  }]
+                  : []
+              )
               : [];
           return [...new Map(
             [...energySources, ...currentInstallationSources].map((source) => [
@@ -1421,32 +1503,35 @@ function ReadyCustomerCorrectionHandoffPanel({
             : index + 1
         }`,
         definitions: chargerDefinitions,
-          evidenceReady,
-          items: scope.items,
-          currentValue: (factKey) =>
-            chargerCurrentValue(displayedSingleCharger, location, factKey),
-          observedValuesByItemRef,
-          extractionMethodsByItemRef,
-          manualResolutionItemRefs,
-          sourceFileNameByItemRef,
-          sourceContentFingerprintByItemRef,
-          sourceIdentityByItemRef,
-          sourceSelections,
-          factResolutions: factResolutionDrafts,
-          lockedSources: () =>
-            [currentChargerFileName(displayedSingleCharger)].flatMap(
-              (fileName) => fileName
+        evidenceReady,
+        factStatusByScopeAndFact,
+        items: scope.items,
+        currentValue: (factKey) =>
+          chargerCurrentValue(displayedSingleCharger, location, factKey),
+        observedValuesByItemRef,
+        extractionMethodsByItemRef,
+        manualResolutionItemRefs,
+        sourceFileNameByItemRef,
+        sourceContentFingerprintByItemRef,
+        sourceIdentityByItemRef,
+        sourceSelections,
+        transcriptionCandidateByScopeAndFact,
+        factResolutions: factResolutionDrafts,
+        lockedSources: () =>
+          [currentChargerFileName(displayedSingleCharger)].flatMap(
+            (fileName) =>
+              fileName
                 ? [{
                   fileName,
                   sourceDocumentType: "installation_invoice" as const,
                 }]
                 : [],
-            ),
-          onConfirmValue: confirmValues,
-          onRestoreSource: restoreSourceValues,
-          onSelectSource: selectSourceValue,
-          scopeRef: scope.scopeRef,
-        });
+          ),
+        onConfirmValue: confirmValues,
+        onRestoreSource: restoreSourceValues,
+        onSelectSource: selectSourceValue,
+        scopeRef: scope.scopeRef,
+      });
     }),
   ];
   const factResolutions = workspace.ready
@@ -1701,7 +1786,54 @@ export function CustomerCorrectionHandoffPanel(
     );
   }
 
-  if (!state.model.handoff || !accessToken) return null;
+  if (!accessToken) return null;
+  if (!state.model.handoff) {
+    const groupedFacts = ([
+      "Energiedocument",
+      "Installatiefactuur",
+    ] as const).flatMap((documentLabel) => {
+      const facts = state.model.factProjections.filter((fact) =>
+        fact.sources[0]?.documentLabel === documentLabel
+      );
+      return facts.length === 0 ? [] : [{
+        id: `terminal-${documentLabel}`,
+        title: documentLabel,
+        rows: facts.map((fact: CustomerCorrectionFactProjection) => ({
+          id: fact.factRef,
+          given: fact.factLabel,
+          sources: fact.sources.map((source) => ({
+            id: source.sourceRef,
+            documentLabel: source.documentLabel,
+            fileName: source.documentLabel,
+            value: source.value,
+            relationship: source.relationship,
+            selected: true,
+            selectable: false,
+          })),
+          customer: {
+            id: `${fact.factRef}:locked`,
+            label: fact.factLabel,
+            state: "LOCKED" as const,
+            projectedEnvalRoute: fact.envalStatus,
+            customerValue: fact.value ?? "",
+            emptyValue: "",
+            editor: "text" as const,
+            isValid: () => false,
+          },
+          enval: fact.envalStatus,
+        })),
+      }];
+    });
+    if (groupedFacts.length === 0) return null;
+    return (
+      <DocumentEvidenceWorkflow
+        groups={groupedFacts}
+        id="customer-correction-terminal-facts"
+        showUploads={false}
+        uploads={[]}
+      />
+    );
+  }
   return (
     <ReadyCustomerCorrectionHandoffPanel
       accessToken={accessToken}

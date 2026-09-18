@@ -244,6 +244,33 @@ const REVIEW_FACT_KEYS = new Set([
   "serialNumber",
 ]);
 
+const ENERGY_PRIMARY_FACT_KEYS = new Set([
+  "partyName",
+  "structuredAddress",
+  "electricityEan",
+  "energySupplier",
+]);
+
+const INSTALLATION_PRIMARY_FACT_KEYS = new Set([
+  "chargerBrand",
+  "chargerModel",
+  "midNumber",
+  "serialNumber",
+]);
+
+function isSupportingReviewSubject(
+  factKey: string,
+  evidenceKind: string,
+): boolean {
+  return (
+    ENERGY_PRIMARY_FACT_KEYS.has(factKey) &&
+    evidenceKind === "installation_invoice"
+  ) || (
+    INSTALLATION_PRIMARY_FACT_KEYS.has(factKey) &&
+    evidenceKind === "energy_bill_or_contract"
+  );
+}
+
 function isObject(value: unknown): value is JsonObject {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
@@ -415,7 +442,10 @@ function parseReviewSubject(value: unknown): EvidenceFactReviewSubjectV1 | null 
   if (
     truthClass === "CUSTOMER_CONFIRMED" &&
     (valueStatus !== "PRESENT" || reviewReason !== null ||
-      reviewReasonAuthority !== null || suggestion !== "ACCEPT")
+      reviewReasonAuthority !== null ||
+      (suggestion !== "ACCEPT" &&
+        !(suggestion === "NONE" &&
+          isSupportingReviewSubject(factKey, evidenceKind))))
   ) return null;
   if (truthClass === "REVIEW_REQUIRED") {
     if (suggestion !== "NONE") return null;

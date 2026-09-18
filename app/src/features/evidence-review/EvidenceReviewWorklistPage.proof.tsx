@@ -152,6 +152,7 @@ assert(
     groupedHtml.includes("Interne beoordeling") &&
     groupedHtml.includes("Wacht op klant") &&
     groupedHtml.includes("Afgerond") &&
+    groupedHtml.includes("Beoordeling afgerond") &&
     groupedHtml.includes("Overige actieve dossiers") &&
     [
       "CASE-PROOF-REVIEW",

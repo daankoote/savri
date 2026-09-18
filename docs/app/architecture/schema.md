@@ -566,9 +566,11 @@ pairs or `WITHDRAWN` requests, excludes the active request, sorts by
 database snapshot to 50. The opaque tie-breaker is stripped at the Edge
 boundary.
 
-CORRECTION_COVER_MESSAGE_V1 is CURRENT / LOCAL AUTOMATED PROOF; human Firefox
-acceptance, exact fixture cleanup and hosted rollout remain open. New root and
-successor correction handoffs use immutable bundle v3.
+CORRECTION_COVER_MESSAGE_V1 is CURRENT / LOCAL AUTOMATED PROOF.
+DOCUMENT_DRIVEN_CUSTOMER_CORRECTION_V1 is CURRENT / LOCAL SCHEMA + SOURCE
+PROOF. Fixture-backed browser acceptance, exact fixture cleanup and hosted
+rollout remain open. New root and successor correction handoffs use immutable
+bundle v4.
 The bundle contains exactly one closed `customer_publication` object with a
 schema version and a required plain-text cover message under the exact
 validation contract in canon. The message and correction items are hashed
@@ -580,6 +582,31 @@ Legacy bundle v1/v2 projects a null snapshot. Old service-callable publication
 and supersession write RPCs are revoked so they cannot bypass the required
 message invariant; tenant, case, workforce, R7, ACL and RLS authority is not
 widened.
+
+Bundle v4 additionally stores an exact per-item document requirement for the
+eight current correction facts. Energy-document facts and
+installation-invoice facts have separate strict primary-source mappings and
+reuse the existing parser-observation, candidate, evidence-version and
+replacement tables. No parallel correction or Storage model is introduced.
+Versioned publish, supersede, upload, prepare, challenge and finalize RPCs are
+the only service-callable v4 write surface; superseded write versions are
+grantless. Document-bound transcription pins the customer, case, handoff,
+target, candidate, document type, byte hash and parser observation, records a
+customer assertion rather than parser truth and cannot bypass `TO_REVIEW`.
+The v8 R7 read retains the active v7 customer-safe handoff projection and the
+terminal `not_available`/`handoff=null` shape. Its separate fact projection
+contains only current primary labels, values, truthful direct/supporting source
+labels and opaque
+references. `Akkoord` requires a present normalized value, an exact current
+manifest/evidence-version binding and `ACCEPTED` in the current fully accepted
+review round. Source validity is either exactly one hash- and value-matching
+direct parser observation across all envelopes for the evidence/profile/fact,
+or an exact immutable document-first submission-item
+binding for the accepted subject. Supporting, missing, ambiguous or stale facts
+cannot project `Akkoord`.
+Parser profile, extraction method, confidence, limitations, hashes and internal
+IDs stay private. The v8 migration is fresh-chain proven and locally applied;
+active-schema, function-source, privilege and behavioral parity are green.
 
 Purpose: ENVAL requests information, correction, upload, consent, or kWh from a customer.
 

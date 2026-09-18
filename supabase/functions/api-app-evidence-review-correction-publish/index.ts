@@ -20,7 +20,7 @@ import {
   isCorrectionCoverMessage,
 } from "../_shared/app_evidence_review_correction_handoff.ts";
 
-const PUBLISH_RPC = "app_evidence_review_correction_publish_v2";
+const PUBLISH_RPC = "app_evidence_review_correction_publish_v3";
 const CASE_REFERENCE_RE =
   /^CASE-(?:[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 const UUID_RE =
@@ -31,6 +31,10 @@ type RpcResult = { data?: unknown; error?: unknown };
 type PublishRequest = Readonly<{
   caseRef: string;
   coverMessage: string;
+  itemRequirements: readonly Readonly<{
+    subjectRef: string;
+    responseRequirement: "VALUE_PLUS_DOCUMENT_REPLACEMENT";
+  }>[];
   roundRef: string;
 }>;
 
@@ -66,16 +70,38 @@ export function normalizeCorrectionPublishRequest(
   if (
     !isObject(value) ||
     Object.keys(value).sort().join("|") !==
-      "caseRef|coverMessage|roundRef" ||
+      "caseRef|coverMessage|itemRequirements|roundRef" ||
     typeof value.caseRef !== "string" ||
     value.caseRef !== value.caseRef.trim() ||
     !CASE_REFERENCE_RE.test(value.caseRef) ||
     typeof value.roundRef !== "string" || !UUID_RE.test(value.roundRef) ||
-    !isCorrectionCoverMessage(value.coverMessage)
+    !isCorrectionCoverMessage(value.coverMessage) ||
+    !Array.isArray(value.itemRequirements) ||
+    value.itemRequirements.length < 1 || value.itemRequirements.length > 100
+  ) return null;
+  const itemRequirements = value.itemRequirements.map((item) => {
+    if (
+      !isObject(item) ||
+      Object.keys(item).sort().join("|") !==
+        "responseRequirement|subjectRef" ||
+      typeof item.subjectRef !== "string" ||
+      !/^FRS-[0-9a-f]{64}$/.test(item.subjectRef) ||
+      item.responseRequirement !== "VALUE_PLUS_DOCUMENT_REPLACEMENT"
+    ) return null;
+    return Object.freeze({
+      subjectRef: item.subjectRef,
+      responseRequirement: item.responseRequirement,
+    });
+  });
+  if (
+    itemRequirements.some((item) => item === null) ||
+    new Set(itemRequirements.map((item) => item?.subjectRef)).size !==
+      itemRequirements.length
   ) return null;
   return Object.freeze({
     caseRef: value.caseRef,
     coverMessage: value.coverMessage,
+    itemRequirements: Object.freeze(itemRequirements) as PublishRequest["itemRequirements"],
     roundRef: value.roundRef,
   });
 }
@@ -209,17 +235,22 @@ export function createHandler(
       );
     }
     const canonicalHash = await deps.hashPayload({
-      contract_version: "evidence-review-correction-publish-v2",
+      contract_version: "evidence-review-correction-publish-v3",
       caller: "api-app-evidence-review-correction-publish",
       auth_user_id: verified.context.authUserId,
       case_ref: request.caseRef,
       cover_message: request.coverMessage,
+      item_requirements: request.itemRequirements,
       round_ref: request.roundRef,
     });
     const result = await serviceClient.rpc(PUBLISH_RPC, {
       p_auth_user_id: verified.context.authUserId,
       p_case_ref: request.caseRef,
       p_round_id: request.roundRef,
+      p_item_requirements: request.itemRequirements.map((item) => ({
+        subject_ref: item.subjectRef,
+        response_requirement: item.responseRequirement,
+      })),
       p_cover_message: request.coverMessage,
       p_request_id: metaResult.request_id,
       p_idempotency_key: metaResult.idempotency_key,
@@ -257,7 +288,7 @@ export function createHandler(
       );
     }
     return appJsonResponse(req, code === "published" ? 201 : 200, {
-      schemaVersion: "evidence-review-correction-publish-v2",
+      schemaVersion: "evidence-review-correction-publish-v3",
       result: code === "published" ? "PUBLISHED" : "ALREADY_PUBLISHED",
       caseRef: request.caseRef,
       roundRef,

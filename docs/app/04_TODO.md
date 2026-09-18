@@ -50,6 +50,10 @@ implementation.
   admin/workforce management UI, ENVAL Control Console, Verifier Console,
   tenant #2, multi-tenant switching, production deployment and later
   `/intern/*` redirect/removal cleanup.
+- TARGET / SEPARATE FOLLOW-UP — `AUTHORIZED_PORTAL_REDIRECT_V1`; not implemented
+  by the current correction milestone.
+- TARGET / SEPARATE FOLLOW-UP — `MULTI_DOCUMENT_EVIDENCE_WORKSPACE_V1`; not
+  implemented by the current correction milestone.
 - DONE / CURRENT PROVEN LOCAL — `F01`: AUTH_SHELL_F01 gives the canonical Auth
   route and three recovery/resend routes one minimal server-resolved
   tenant-branded header without public,
@@ -859,13 +863,35 @@ customer confirmation, the green Integration gate or local database state.
   unchanged. Focused proofs, typecheck/build and automated Firefox at
   `1440x900`, `820x1180` and `375x812` are green; human Firefox acceptance,
   hosted rollout and deployment remain open.
-- CURRENT / LOCAL AUTOMATED PROOF — `CORRECTION_COVER_MESSAGE_V1`: new root
-  publications and successors require their own 1–1000-character plain-text
-  message; immutable bundle v3 binds it to the correction items, and the
-  existing R7 portal read consumes one private customer-publication projector.
+- CURRENT / LOCAL AUTOMATED PROOF — `CORRECTION_COVER_MESSAGE_V1`: the proven
+  bundle-v3 baseline requires root publications and successors to carry their
+  own 1–1000-character plain-text message; bundle v4 preserves the same
+  immutable cover snapshot for new document-driven handoffs. The existing R7
+  portal read consumes one private
+  customer-publication projector.
   Active-schema parity, database/security proofs and automated desktop/mobile
   browser acceptance are green. Human Firefox acceptance, exact fixture
   cleanup and hosted rollout remain open.
+- CURRENT / LOCAL SCHEMA + RUNTIME + BROWSER PROOF; FINAL PRESENTATION FIREFOX
+  RECHECK PENDING —
+  `DOCUMENT_DRIVEN_CUSTOMER_CORRECTION_V1`:
+  new bundle-v4 handoffs for the eight current facts require strict primary
+  document/parser lineage; source-less manual and value-only write paths are
+  withdrawn, document-bound transcription is server-gated and always returns
+  to workforce review, and only the server projects `Akkoord` after current
+  accepted primary evidence. Read v8 preserves terminal `handoff=null` while
+  exposing the eight current primary customer-safe facts separately; only an
+  exact current fully accepted round may project per-fact `Akkoord`.
+  Fresh-chain, DTO/Edge/frontend pure proofs and typecheck are green. The first
+  local v8 runtime call exposed and fail-closed on an invalid
+  `handoff.customer_id` reference; forward migration `20260918081541` replaces
+  only that identifier with authoritative `handoff.target_customer_id` and is
+  source/fresh-chain proven and locally applied. Active-schema, function-source,
+  ACL/RLS, privilege, behavioral and terminal read-v8 parity plus the
+  root publish/upload/challenge/finalize fixture journey and three-viewport
+  post-acceptance browser evidence are green. The Edge contract matrix retains
+  endpoint-specific successor/removal proof status. OPEN: final presentation
+  Firefox reacceptance, exact fixture cleanup and hosted rollout.
 - `CORRECTION_EMAIL_V1`: connect correction notification to the shared
   workflow-email foundation only after the cover-message contract is proven.
 - Define kWh periodic lifecycle.

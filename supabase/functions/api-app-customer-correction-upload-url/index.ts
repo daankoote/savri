@@ -26,7 +26,7 @@ import {
   type ServiceClient,
 } from "../_shared/app_workforce_authorization.ts";
 
-const ISSUE_RPC = "app_customer_correction_replacement_upload_issue_v1";
+const ISSUE_RPC = "app_customer_correction_replacement_upload_issue_v2";
 
 type RpcResult = { data?: unknown; error?: unknown };
 

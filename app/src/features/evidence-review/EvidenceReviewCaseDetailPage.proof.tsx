@@ -42,9 +42,9 @@ import {
 import {
   canPublishEvidenceCorrection,
   createEvidenceCorrectionPublishSession,
+  type EvidenceCorrectionPublishState,
   INFORMATION_REQUEST_CORRECTION_BLOCK_MESSAGE,
   isEvidenceCorrectionBlockedByInformationRequest,
-  type EvidenceCorrectionPublishState,
 } from "./useEvidenceCorrectionPublish.ts";
 import {
   buildEvidenceReviewDetailRoute,
@@ -67,8 +67,55 @@ function last<T>(values: readonly T[]): T | undefined {
   return values[values.length - 1];
 }
 
+function occurrences(value: string, needle: string): number {
+  return value.split(needle).length - 1;
+}
+
+function hasExactKeys(
+  value: Readonly<Record<string, unknown>>,
+  expected: readonly string[],
+): boolean {
+  const actual = Object.keys(value).sort();
+  const sortedExpected = [...expected].sort();
+  return actual.length === sortedExpected.length &&
+    actual.every((key, index) => key === sortedExpected[index]);
+}
+
+function correctionRequirementsFor(
+  detail: EvidenceReviewCaseDetailResponseV1,
+) {
+  return Object.freeze(
+    (detail.currentReviewRound?.decisions ?? [])
+      .filter((decision) => decision.disposition === "CORRECTION_REQUIRED")
+      .map((decision) =>
+        Object.freeze({
+          subjectRef: decision.subjectRef,
+          responseRequirement: "VALUE_PLUS_DOCUMENT_REPLACEMENT" as const,
+        })
+      )
+      .sort((left, right) => left.subjectRef.localeCompare(right.subjectRef)),
+  );
+}
+
 const root = new URL("../../../../", import.meta.url);
 const source = (path: string) => Deno.readTextFile(new URL(path, root));
+const PROOF_CONTRACT_AUTHORITY = Object.freeze({
+  responseSchema: Object.freeze({
+    caseDetail: "evidence-review-case-detail-v6",
+    correctionPublish: "evidence-review-correction-publish-v3",
+    rejectedLegacyCorrectionPublish: "evidence-review-correction-publish-v2",
+    roundFinalization: "evidence-fact-review-round-finalization-v1",
+    preview: "evidence-review-preview-v1",
+  }),
+  manifestVersion: "fact-review-manifest-v1",
+  rpc: Object.freeze({
+    caseDetailRead: "app_evidence_review_case_detail_read_v7",
+    correctionPublish: "app_evidence_review_correction_publish_v3",
+    customerHandoffRead: "app_customer_correction_handoff_read_v8",
+    previewRead: "app_evidence_review_preview_source_read_v1",
+    roundFinalize: "app_evidence_review_round_finalize_v1",
+  }),
+});
 const CASE_REF = "CASE-7E4CC75CD19F";
 const ENERGY_VERSION = "e8000000-0000-4000-8000-000000000001";
 const INSTALLATION_VERSION = "e8000000-0000-4000-8000-000000000002";
@@ -100,7 +147,7 @@ function evidence(
 }
 
 const FIXTURE: EvidenceReviewCaseDetailResponseV1 = {
-  schemaVersion: "evidence-review-case-detail-v6",
+  schemaVersion: PROOF_CONTRACT_AUTHORITY.responseSchema.caseDetail,
   asOf: "2026-08-18T12:00:00.000Z",
   case: {
     caseRef: CASE_REF,
@@ -141,7 +188,7 @@ const FIXTURE: EvidenceReviewCaseDetailResponseV1 = {
       },
     ]),
   ],
-  reviewManifestVersion: "fact-review-manifest-v1",
+  reviewManifestVersion: PROOF_CONTRACT_AUTHORITY.manifestVersion,
   reviewManifestHash: "a".repeat(64),
   reviewSubjects: [
     {
@@ -289,11 +336,11 @@ assert(
   readyHtml.includes(CASE_REF) &&
     readyHtml.includes("ENVAL beoordelen") &&
     readyHtml.includes("Ingediend voor beoordeling") &&
-    readyHtml.split("Document bekijken").length - 1 === 2 &&
+    occurrences(readyHtml, "Document bekijken") === 2 &&
     !readyHtml.includes(">PENDING<") &&
     !readyHtml.includes(">ACCEPTED<") &&
     !readyHtml.includes(">CORRECTION_REQUIRED<") &&
-    readyHtml.split('role="columnheader"').length - 1 === 10 &&
+    occurrences(readyHtml, 'role="columnheader"') === 10 &&
     !readyHtml.includes("Aangegeven dossiercontext") &&
     !readyHtml.includes(">Bewijsstukken<") &&
     !readyHtml.includes("Actuele gegevens uit het geautoriseerde dossier.") &&
@@ -325,8 +372,8 @@ assert(
   "Q05_fact_truth_presentation_invalid",
 );
 assert(
-  readyHtml.split(">Accepteren<").length - 1 === 1 &&
-    readyHtml.split(">Correctie nodig<").length - 1 === 1 &&
+  occurrences(readyHtml, ">Accepteren<") === 1 &&
+    occurrences(readyHtml, ">Correctie nodig<") === 1 &&
     !readyHtml.includes('aria-pressed="true"') &&
     readyHtml.includes("Review afronden") && readyHtml.includes("disabled") &&
     !/(Beoordeling opslaan|Check uitvoeren)/i.test(readyHtml),
@@ -375,6 +422,9 @@ const publishEligibleHtml = detailHtml({
   value: publishEligibleFixture,
   error: null,
 });
+const publishItemRequirements = correctionRequirementsFor(
+  publishEligibleFixture,
+);
 const blockedPublishFixture: EvidenceReviewCaseDetailResponseV1 = {
   ...publishEligibleFixture,
   informationRequest: {
@@ -431,6 +481,12 @@ const completeHtml = detailHtml({
 const finalizedAcceptedEanRowHtml = factRowHtml(completeHtml, "EAN");
 const unmatchedLegacyMidRowHtml = factRowHtml(completeHtml, "MID");
 assert(
+  completeHtml.includes("Beoordeling afgerond") &&
+    completeHtml.includes("Dossierfase: Gegevens geaccepteerd") &&
+    !completeHtml.includes("Dossierfase: Ingediend voor beoordeling"),
+  "Q06a_complete_review_presentation_invalid",
+);
+assert(
   !viewOnlyHtml.includes(">Accepteren<") &&
     !viewOnlyHtml.includes(">Correctie nodig<") &&
     !viewOnlyHtml.includes("Review afronden") &&
@@ -461,6 +517,14 @@ assert(
     correctedReviewRequiredPresentation.label === "Correctie nodig" &&
     correctedReviewRequiredPresentation.className === "status-pill-danger",
   "Q06aa_finalized_decision_did_not_override_pending_source_presentation",
+);
+assert(
+  FIXTURE.currentReviewRound === null &&
+    FIXTURE.overallReviewStatus === "TO_REVIEW" &&
+    readyHtml.includes("ENVAL beoordelen") &&
+    !readyHtml.includes(">Geaccepteerd<") &&
+    !readyHtml.includes(">Akkoord<"),
+  "Q06ad_to_review_reentry_or_premature_acceptance_invalid",
 );
 assert(
   publishEligibleHtml.includes(">Naar klant sturen<") &&
@@ -569,12 +633,21 @@ assert(
 let publishPosts = 0;
 let publishUrl = "";
 let publishInit: RequestInit | undefined;
+const validPublishResponse = {
+  schemaVersion: PROOF_CONTRACT_AUTHORITY.responseSchema.correctionPublish,
+  result: "PUBLISHED",
+  caseRef: CASE_REF,
+  roundRef: publishEligibleFixture.currentReviewRound!.roundRef,
+  handoffRef: "CRH-0123456789ABCDEF",
+  publishedAt: "2026-08-19T12:00:00.000Z",
+};
 const publishResult = await publishEvidenceReviewCorrection({
   accessToken: "proof-access-token",
   idempotencyKey: "review20-publish-attempt",
   request: {
     caseRef: CASE_REF,
     coverMessage: "Controleer en corrigeer de onderstaande gegevens.",
+    itemRequirements: publishItemRequirements,
     roundRef: publishEligibleFixture.currentReviewRound!.roundRef,
   },
   runtimeConfig: {
@@ -586,14 +659,7 @@ const publishResult = await publishEvidenceReviewCorrection({
     publishUrl = String(input);
     publishInit = init;
     return new Response(
-      JSON.stringify({
-        schemaVersion: "evidence-review-correction-publish-v2",
-        result: "PUBLISHED",
-        caseRef: CASE_REF,
-        roundRef: publishEligibleFixture.currentReviewRound!.roundRef,
-        handoffRef: "CRH-0123456789ABCDEF",
-        publishedAt: "2026-08-19T12:00:00.000Z",
-      }),
+      JSON.stringify(validPublishResponse),
       { status: 201 },
     );
   },
@@ -608,8 +674,12 @@ assert(
     publishHeaders.get("authorization") === "Bearer proof-access-token" &&
     publishHeaders.get("apikey") === "proof-anon-key" &&
     publishHeaders.get("idempotency-key") === "review20-publish-attempt" &&
-    Object.keys(publishBody).sort().join("|") ===
-      "caseRef|coverMessage|roundRef" &&
+    hasExactKeys(publishBody, [
+      "caseRef",
+      "coverMessage",
+      "itemRequirements",
+      "roundRef",
+    ]) &&
     publishBody.caseRef === CASE_REF &&
     publishBody.coverMessage ===
       "Controleer en corrigeer de onderstaande gegevens." &&
@@ -623,6 +693,7 @@ const publishFailureConfig = {
   request: {
     caseRef: CASE_REF,
     coverMessage: "Controleer en corrigeer de onderstaande gegevens.",
+    itemRequirements: publishItemRequirements,
     roundRef: publishEligibleFixture.currentReviewRound!.roundRef,
   },
   runtimeConfig: {
@@ -651,12 +722,52 @@ const informationRequestConflictResult = await publishEvidenceReviewCorrection({
       status: 409,
     }),
 });
+const legacyV2Result = await publishEvidenceReviewCorrection({
+  ...publishFailureConfig,
+  fetchImpl: async () =>
+    new Response(
+      JSON.stringify({
+        ...validPublishResponse,
+        schemaVersion: PROOF_CONTRACT_AUTHORITY.responseSchema
+          .rejectedLegacyCorrectionPublish,
+      }),
+      { status: 201 },
+    ),
+});
+const malformedPublishResult = await publishEvidenceReviewCorrection({
+  ...publishFailureConfig,
+  fetchImpl: async () =>
+    new Response(
+      JSON.stringify({
+        ...validPublishResponse,
+        publishedAt: 1,
+      }),
+      { status: 201 },
+    ),
+});
+const extraFieldPublishResult = await publishEvidenceReviewCorrection({
+  ...publishFailureConfig,
+  fetchImpl: async () =>
+    new Response(
+      JSON.stringify({
+        ...validPublishResponse,
+        unexpected: true,
+      }),
+      { status: 201 },
+    ),
+});
 assert(
   !staleClientResult.ok && staleClientResult.kind === "stale" &&
     !informationRequestConflictResult.ok &&
     informationRequestConflictResult.kind === "information_request_active" &&
     !ordinaryConflictResult.ok && ordinaryConflictResult.kind === "ordinary",
   "Q08c_publish_conflict_classification_invalid",
+);
+assert(
+  !legacyV2Result.ok && legacyV2Result.kind === "ordinary" &&
+    !malformedPublishResult.ok && malformedPublishResult.kind === "ordinary" &&
+    !extraFieldPublishResult.ok && extraFieldPublishResult.kind === "ordinary",
+  "Q08c_publish_response_fail_closed_invalid",
 );
 
 let releasePublish: (
@@ -715,6 +826,7 @@ assert(
         request: {
           caseRef: CASE_REF,
           coverMessage: "Controleer en corrigeer de onderstaande gegevens.",
+          itemRequirements: publishItemRequirements,
           roundRef: publishEligibleFixture.currentReviewRound!.roundRef,
         },
         idempotencyKey: "review20-memory-only-key",
@@ -1036,8 +1148,12 @@ const changedAttempt = selectEvidenceFactReviewFinalizeAttempt(
 assert(
   firstAttempt === retryAttempt &&
     changedAttempt.idempotencyKey === "fact-round-attempt-2" &&
-    Object.keys(finalizeRequest).sort().join("|") ===
-      "caseRef|decisions|manifestHash|manifestVersion" &&
+    hasExactKeys(finalizeRequest, [
+      "caseRef",
+      "decisions",
+      "manifestHash",
+      "manifestVersion",
+    ]) &&
     finalizeRequest.decisions.length === FIXTURE.reviewSubjects.length &&
     !JSON.stringify(finalizeRequest).match(
       /reviewer|workforce|tenant|capability|timestamp/i,
@@ -1059,7 +1175,8 @@ const finalizeResult = await finalizeEvidenceFactReviewRound({
     finalizeCalls.push({ url: String(input), init });
     return new Response(
       JSON.stringify({
-        schemaVersion: "evidence-fact-review-round-finalization-v1",
+        schemaVersion:
+          PROOF_CONTRACT_AUTHORITY.responseSchema.roundFinalization,
         caseRef: CASE_REF,
         roundRef: "a8000000-0000-4000-8000-000000000011",
         manifestVersion: FIXTURE.reviewManifestVersion,
@@ -1248,7 +1365,7 @@ const previewResult = await loadEvidenceReviewPreview({
     }
     return new Response(
       JSON.stringify({
-        schemaVersion: "evidence-review-preview-v1",
+        schemaVersion: PROOF_CONTRACT_AUTHORITY.responseSchema.preview,
         evidenceVersionRef: ENERGY_VERSION,
         filename: "energy.pdf",
         mimeType: "application/pdf",
@@ -1441,6 +1558,70 @@ for (const status of [403, 404]) {
   );
 }
 
+const supportingCustomerConfirmedNone = JSON.parse(JSON.stringify(FIXTURE));
+supportingCustomerConfirmedNone.reviewSubjects[1] = {
+  ...supportingCustomerConfirmedNone.reviewSubjects[1],
+  evidenceKind: "installation_invoice",
+  factKey: "partyName",
+  factCategory: "PARTY_NAME",
+  factLabel: "Naam",
+  value: "Pilotnaam",
+  required: false,
+  truthClass: "CUSTOMER_CONFIRMED",
+  reviewerSuggestion: "NONE",
+};
+const supportingCustomerConfirmedAccept = structuredClone(
+  supportingCustomerConfirmedNone,
+);
+supportingCustomerConfirmedAccept.reviewSubjects[1].reviewerSuggestion =
+  "ACCEPT";
+const primaryCustomerConfirmedNone = JSON.parse(JSON.stringify(FIXTURE));
+primaryCustomerConfirmedNone.reviewSubjects[1].reviewerSuggestion = "NONE";
+const unknownSupportingKind = structuredClone(
+  supportingCustomerConfirmedNone,
+);
+unknownSupportingKind.reviewSubjects[1].evidenceKind = "other_document";
+const wrongSupportingDisposition = structuredClone(
+  supportingCustomerConfirmedNone,
+);
+wrongSupportingDisposition.reviewSubjects[1].truthClass = "REVIEW_REQUIRED";
+const missingSupportingSuggestion = structuredClone(
+  supportingCustomerConfirmedNone,
+);
+delete missingSupportingSuggestion.reviewSubjects[1].reviewerSuggestion;
+const extraSupportingField = structuredClone(
+  supportingCustomerConfirmedNone,
+);
+extraSupportingField.reviewSubjects[1].sourceAuthority = "supporting";
+
+assert(
+  decodeEvidenceReviewCaseDetailResponse(supportingCustomerConfirmedNone).ok &&
+    decodeEvidenceReviewCaseDetailResponse(supportingCustomerConfirmedAccept)
+      .ok &&
+    !decodeEvidenceReviewCaseDetailResponse(primaryCustomerConfirmedNone).ok &&
+    !decodeEvidenceReviewCaseDetailResponse(unknownSupportingKind).ok &&
+    !decodeEvidenceReviewCaseDetailResponse(wrongSupportingDisposition).ok &&
+    !decodeEvidenceReviewCaseDetailResponse(missingSupportingSuggestion).ok &&
+    !decodeEvidenceReviewCaseDetailResponse(extraSupportingField).ok,
+  "Q12b_supporting_subject_or_fail_closed_contract_invalid",
+);
+const supportingSubject = supportingCustomerConfirmedNone.reviewSubjects[1];
+const supportingDraft = initializeEvidenceFactReviewDraft(
+  supportingCustomerConfirmedNone.reviewSubjects,
+  true,
+);
+const supportingPresentation = evidenceReviewFactStatusPresentation(
+  supportingSubject,
+);
+assert(
+  supportingSubject.reviewerSuggestion === "NONE" &&
+    supportingDraft.decisions[supportingSubject.subjectRef].disposition ===
+      "UNANSWERED" &&
+    !isEvidenceFactReviewSubjectActionable(supportingSubject) &&
+    supportingPresentation.label === "Door klant bevestigd",
+  "Q12c_supporting_subject_never_prematurely_accepted",
+);
+
 assert(
   !decodeEvidenceReviewCaseDetailResponse({
     ...FIXTURE,
@@ -1607,17 +1788,24 @@ assert(
   ) =>
     !/(role\s*===|email\s*===|caseOwner|case_owner|workforceId|workforce_id|tenantId|tenant_id)/
       .test(value)
-  ) &&
-    detailEndpointSource.includes("app_evidence_review_case_detail_read_v7") &&
-    finalizeEndpointSource.includes("app_evidence_review_round_finalize_v1") &&
+  ),
+  "Q17a_client_authority_boundary_invalid",
+);
+assert(
+  detailEndpointSource.includes(PROOF_CONTRACT_AUTHORITY.rpc.caseDetailRead) &&
+    finalizeEndpointSource.includes(
+      PROOF_CONTRACT_AUTHORITY.rpc.roundFinalize,
+    ) &&
     publishEndpointSource.includes(
-      "app_evidence_review_correction_publish_v2",
-    ) &&
-    previewEndpointSource.includes(
-      "app_evidence_review_preview_source_read_v1",
-    ) &&
-    previewEndpointSource.includes("createSignedUrl"),
-  "Q17_client_authority_or_backend_reuse_invalid",
+      PROOF_CONTRACT_AUTHORITY.rpc.correctionPublish,
+    ),
+  "Q17b_backend_rpc_reuse_invalid",
+);
+assert(
+  previewEndpointSource.includes(
+    PROOF_CONTRACT_AUTHORITY.rpc.previewRead,
+  ) && previewEndpointSource.includes("createSignedUrl"),
+  "Q17c_preview_storage_boundary_invalid",
 );
 assert(
   detailSource.includes("portal-content-stack") &&
@@ -1693,22 +1881,28 @@ assert(
     statusSource.includes("ENVAL beoordelen") &&
     statusSource.includes("Correctie nodig") &&
     statusSource.includes("Wacht op klant") &&
-    statusSource.includes("Afgerond") &&
+    statusSource.includes("Beoordeling afgerond") &&
     detailSource.includes("Naar klant sturen") &&
     detailSource.includes("Correcties naar klant sturen?") &&
     detailSource.includes("Bericht aan klant") &&
     detailSource.includes("Ja, sturen") &&
     !detailSource.includes("{evidence.reviewStatus}") &&
-    !detailSource.includes("Correcties nodig") &&
-    factDraftSource.includes('reviewerSuggestion === "ACCEPT"') &&
+    !detailSource.includes("Correcties nodig"),
+  "Q20a_fact_round_ui_and_status_authority_invalid",
+);
+assert(
+  factDraftSource.includes('reviewerSuggestion === "ACCEPT"') &&
     factDraftSource.includes("Dossier is gewijzigd. Controleer opnieuw.") &&
     factDraftSource.includes("attempt.current") &&
     factDraftSource.includes("onRefresh()") &&
     detailSource.includes('review.state.submitting ? "Bezig…"') &&
     !factDraftSource.includes("fetch(") &&
     !factDraftSource.includes("setInterval") &&
-    !factDraftSource.includes("setTimeout") &&
-    correctionPublishHookSource.includes("canPublishCorrection") &&
+    !factDraftSource.includes("setTimeout"),
+  "Q20b_fact_round_submission_authority_invalid",
+);
+assert(
+  correctionPublishHookSource.includes("canPublishCorrection") &&
     correctionPublishHookSource.includes(
       "Dossier is gewijzigd. Controleer opnieuw.",
     ) &&
@@ -1716,15 +1910,18 @@ assert(
     correctionPublishHookSource.includes("dependencies.refresh()") &&
     !correctionPublishHookSource.includes("fetch(") &&
     !correctionPublishHookSource.includes("localStorage") &&
-    !correctionPublishHookSource.includes("sessionStorage") &&
-    !detailClientSource.includes("api-app-customer-correction-handoff") &&
+    !correctionPublishHookSource.includes("sessionStorage"),
+  "Q20c_correction_publish_session_authority_invalid",
+);
+assert(
+  !detailClientSource.includes("api-app-customer-correction-handoff") &&
     customerHandoffEndpointSource.includes(
-      "app_customer_correction_handoff_read_v6",
+      PROOF_CONTRACT_AUTHORITY.rpc.customerHandoffRead,
     ) &&
     !detailClientSource.includes("api-app-evidence-review-decision") &&
     !detailSource.includes("api-app-evidence-review-decision") &&
     !factDraftSource.includes("api-app-evidence-review-decision"),
-  "Q20_fact_round_ui_network_or_authority_boundary_invalid",
+  "Q20d_customer_and_decision_route_separation_invalid",
 );
 
 console.log("EVIDENCE_REVIEW_CASE_DETAIL_UI_Q01_Q20=PASS");

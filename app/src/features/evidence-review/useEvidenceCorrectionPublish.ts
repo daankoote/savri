@@ -84,6 +84,15 @@ function requestForDetail(
   return Object.freeze({
     caseRef: detail.case.caseRef,
     coverMessage,
+    itemRequirements: Object.freeze(
+      detail.currentReviewRound.decisions
+        .filter((decision) => decision.disposition === "CORRECTION_REQUIRED")
+        .map((decision) => Object.freeze({
+          subjectRef: decision.subjectRef,
+          responseRequirement: "VALUE_PLUS_DOCUMENT_REPLACEMENT" as const,
+        }))
+        .sort((left, right) => left.subjectRef.localeCompare(right.subjectRef)),
+    ),
     roundRef: detail.currentReviewRound.roundRef,
   });
 }

@@ -141,13 +141,16 @@ function body(
   caseRef = CASE_A,
   items: unknown[] = [item()],
   currentReplacementCandidates: unknown[] = [],
+  factProjections: unknown[] = [],
 ) {
   return {
-    schemaVersion: "customer-correction-handoff-v6",
+    schemaVersion: "customer-correction-handoff-v8",
     caseRef,
+    factProjections,
     handoff: {
       coverMessage: "Controleer en corrigeer de onderstaande gegevens.",
       currentReplacementCandidates,
+      factProjections,
       handoffRef: "CRH-0123456789ABCDEF",
       publishedAt: "2026-08-19T14:54:34.880Z",
       signerAuthority: {
@@ -156,6 +159,40 @@ function body(
       },
       items,
     },
+  };
+}
+
+function factProjection(
+  factKey: DocumentFactKey,
+  replacementTargetRef: string,
+  envalStatus:
+    | "Wacht op klant"
+    | "Nog te beoordelen"
+    | "Correctie nodig"
+    | "Akkoord",
+  suffix: string,
+) {
+  const factLabels: Partial<Record<DocumentFactKey, string>> = {
+    energySupplier: "Energieleverancier",
+    midNumber: "MID",
+    serialNumber: "Serienummer",
+  };
+  return {
+    factRef: `CFR-${suffix.repeat(32)}`,
+    sourceRef: `CES-${suffix.repeat(32)}`,
+    replacementTargetRef,
+    factKey,
+    factLabel: factLabels[factKey] ?? factKey,
+    value: `Waarde ${suffix}`,
+    sources: [{
+      sourceRef: `CES-${suffix.repeat(32)}`,
+      documentLabel: factKey === "midNumber" || factKey === "serialNumber"
+        ? "Installatiefactuur"
+        : "Energiedocument",
+      value: `Waarde ${suffix}`,
+      relationship: "direct",
+    }],
+    envalStatus,
   };
 }
 
@@ -300,13 +337,47 @@ assert(
   "Q01_customer_safe_response_not_decoded",
 );
 const noHandoff = decodeCustomerCorrectionHandoffResponse({
-  schemaVersion: "customer-correction-handoff-v6",
+  schemaVersion: "customer-correction-handoff-v8",
   caseRef: CASE_A,
+  factProjections: [],
   handoff: null,
 }, CASE_A);
 assert(
   noHandoff.ok && noHandoff.model.handoff === null,
   "Q02_no_handoff_not_decoded",
+);
+const acceptedTerminal = decodeCustomerCorrectionHandoffResponse({
+  schemaVersion: "customer-correction-handoff-v8",
+  caseRef: CASE_A,
+  factProjections: [
+    factProjection("energySupplier", TARGET_ENERGY, "Akkoord", "A"),
+    factProjection("serialNumber", TARGET_INVOICE, "Akkoord", "B"),
+  ],
+  handoff: null,
+}, CASE_A);
+assert(acceptedTerminal.ok, "Q02a_terminal_fact_projection_not_decoded");
+const acceptedTerminalMarkup = renderDashboard(readyState(
+  acceptedTerminal.model,
+));
+const acceptedTerminalSection = acceptedTerminalMarkup.split(
+  'id="customer-correction-terminal-facts"',
+)[1]?.split('id="current-status-title"')[0] ?? "";
+assert(
+  acceptedTerminalMarkup.includes("Controleer de documentgegevens") &&
+    acceptedTerminalMarkup.includes("Energiedocument") &&
+    acceptedTerminalMarkup.includes("Installatiefactuur") &&
+    acceptedTerminalMarkup.includes("Energieleverancier") &&
+    acceptedTerminalMarkup.includes("Serienummer"),
+  "Q02b_terminal_fact_matrix_incomplete",
+);
+assert(
+  acceptedTerminalSection.match(/Akkoord/g)?.length === 2,
+  "Q02c_terminal_fact_status_count_invalid",
+);
+assert(
+  !acceptedTerminalMarkup.includes("Upload en controle") &&
+    !acceptedTerminalMarkup.includes("Wijzigingen indienen"),
+  "Q02d_terminal_fact_matrix_not_read_only",
 );
 assert(
   !decodeCustomerCorrectionHandoffResponse({
@@ -485,7 +556,7 @@ assert(
     !publishedHtml.includes("Reden:") &&
     !publishedHtml.includes("Toelichting:") &&
     publishedHtml.includes('title="Bevestigen"') &&
-    publishedHtml.includes('title="Corrigeren"') &&
+    !publishedHtml.includes('title="Corrigeren"') &&
     !publishedHtml.includes("Energieleverancier nieuwe waarde") &&
     publishedHtml.includes("Wacht op klant") &&
     !publishedHtml.includes('aria-label="Dossier"') &&
@@ -543,8 +614,8 @@ assert(
       'data-label="Reden" role="cell"><span class="fact-review-assessment"><span>Anders</span>',
     ) &&
     (multipleHtml.match(
-      /data-label="Toelichting" role="cell"><span class="fact-review-assessment"><span>foute invoer<\/span>/g,
-    ) || []).length === 3 &&
+        /data-label="Toelichting" role="cell"><span class="fact-review-assessment"><span>foute invoer<\/span>/g,
+      ) || []).length === 3 &&
     (multipleHtml.match(/class="fact-table__row-group"/g) || []).length ===
       8 &&
     customerCorrectionReasonLabel("INCORRECT_INFORMATION") ===
@@ -574,11 +645,11 @@ assert(
       'aria-label="Installatiefactuur: Pilot Energie Nederland B.V."',
     ) &&
     (duplicateDetailHtml.match(
-      /<span>Gegeven onjuist<\/span>/g,
-    ) || []).length === 1 &&
+        /<span>Gegeven onjuist<\/span>/g,
+      ) || []).length === 1 &&
     (duplicateDetailHtml.match(
-      /<span>foute invoer<\/span>/g,
-    ) || []).length === 1,
+        /<span>foute invoer<\/span>/g,
+      ) || []).length === 1,
   "Q10b_identical_correction_detail_not_deduplicated",
 );
 
@@ -701,8 +772,8 @@ const missingReady = buildCustomerCorrectionWorkspace([missingItem], {
 assert(
   missingReady.ready && missingReady.responses.length === 1 &&
     missingHtml.includes("Info uit bron") &&
-    missingHtml.includes('title="Bevestigen niet beschikbaar"') &&
-    missingHtml.includes('title="Corrigeren"') &&
+    !missingHtml.includes('title="Bevestigen niet beschikbaar"') &&
+    !missingHtml.includes('title="Corrigeren"') &&
     !missingHtml.includes("Energieleverancier nieuwe waarde"),
   "Q15_missing_value_fabricated_current_or_not_editable",
 );
@@ -732,9 +803,9 @@ const threeHtml = renderDashboard(readyState(threeDecoded.model));
 assert(
   threeReady.ready && threeReady.responses.length === 3 &&
     (threeHtml.match(/title="Bevestigen niet beschikbaar"/g) || []).length ===
-      1 &&
+      0 &&
     (threeHtml.match(/title="Bevestigen"/g) || []).length === 2 &&
-    (threeHtml.match(/title="Corrigeren"/g) || []).length === 3 &&
+    (threeHtml.match(/title="Corrigeren"/g) || []).length === 0 &&
     !threeHtml.includes("nieuwe waarde"),
   "Q16_three_fact_single_workspace_invalid",
 );
@@ -1340,6 +1411,100 @@ assert(
   "Q30_cross_document_targets_or_all_ready_gate_invalid",
 );
 
+const secondInvoiceTarget = `CRT-${"D".repeat(32)}`;
+const repeatedFactDecoded = decodeCustomerCorrectionHandoffResponse(
+  body(
+    CASE_A,
+    [
+      documentItem(
+        "DOCUMENT_REPLACEMENT",
+        1,
+        replacementTarget(TARGET_INVOICE, "Installatiefactuur"),
+        "serialNumber",
+      ),
+      documentItem(
+        "DOCUMENT_REPLACEMENT",
+        2,
+        replacementTarget(secondInvoiceTarget, "Installatiefactuur"),
+        "serialNumber",
+      ),
+    ],
+    [],
+    [
+      factProjection("serialNumber", TARGET_INVOICE, "Akkoord", "A"),
+      factProjection(
+        "serialNumber",
+        secondInvoiceTarget,
+        "Correctie nodig",
+        "B",
+      ),
+    ],
+  ),
+  CASE_A,
+);
+assert(repeatedFactDecoded.ok, "Q30_repeated_fact_decode_failed");
+const repeatedFactBaseModel = dashboardModel();
+const repeatedFactHtml = renderDashboard(
+  readyState(repeatedFactDecoded.model),
+  {
+    ...repeatedFactBaseModel,
+    chargers: [
+      ...repeatedFactBaseModel.chargers,
+      {
+        ...repeatedFactBaseModel.chargers[0],
+        charger_id: "55555555-5555-4555-8555-555555555555",
+      },
+    ],
+  },
+);
+assert(
+  repeatedFactHtml.includes("Akkoord") &&
+    repeatedFactHtml.includes("Correctie nodig"),
+  "Q30_repeated_fact_status_not_target_isolated",
+);
+
+const singleTargetDecoded = decodeCustomerCorrectionHandoffResponse(
+  body(
+    CASE_A,
+    [
+      documentItem(
+        "VALUE_PLUS_DOCUMENT_REPLACEMENT",
+        3,
+        replacementTarget(TARGET_INVOICE, "Installatiefactuur"),
+        "serialNumber",
+      ),
+    ],
+    [{
+      replacementTargetRef: TARGET_INVOICE,
+      candidateRef: CANDIDATE_INVOICE,
+      fileName: "installation-parser-miss.pdf",
+      sourceFacts: [{
+        factKey: "serialNumber",
+        documentLabel: "Installatiefactuur",
+        observedValue: null,
+        relationship: null,
+        sourceRef: `CRS-${"E".repeat(32)}`,
+        transcriptionAllowed: true,
+      }],
+    }],
+    [
+      factProjection("serialNumber", TARGET_INVOICE, "Correctie nodig", "E"),
+      factProjection("chargerBrand", TARGET_INVOICE, "Akkoord", "F"),
+    ],
+  ),
+  CASE_A,
+);
+assert(singleTargetDecoded.ok, "Q30_single_target_decode_failed");
+const singleTargetHtml = renderDashboard(
+  readyState(singleTargetDecoded.model),
+);
+assert(
+  singleTargetHtml.includes("Wacht op klant") &&
+    singleTargetHtml.includes('title="Corrigeren"') &&
+    singleTargetHtml.includes("Akkoord"),
+  "Q30_single_target_transcription_scope_not_preserved",
+);
+
 const denseDecoded = decodeCustomerCorrectionHandoffResponse(
   body(CASE_A, [
     ...([
@@ -1376,44 +1541,45 @@ const denseDecoded = decodeCustomerCorrectionHandoffResponse(
     replacementTargetRef: TARGET_ENERGY,
     candidateRef: CANDIDATE_ENERGY,
     fileName: "energy-current.pdf",
-    contentFingerprint: "a".repeat(64),
-    parserObservation: {
-      schemaVersion: "customer-correction-replacement-observation-v1",
-      parserProfile: "energy_document_v1",
-      outcome: "completed",
-      observedFacts: [
-        {
-          factKey: "partyName",
-          status: "observed",
-          observedValue: "Parser Klant",
-          extractionMethod: "semantic_contract_holder_block",
-        },
-        {
-          factKey: "structuredAddress",
-          status: "observed",
-          observedValue: "Parserstraat 1",
-          extractionMethod: "semantic_delivery_address_block",
-        },
-        {
-          factKey: "electricityEan",
-          status: "not_observed",
-          observedValue: null,
-          extractionMethod: null,
-        },
-        {
-          factKey: "energySupplier",
-          status: "observed",
-          observedValue: "Parser Energie",
-          extractionMethod: "semantic_energy_supplier_block",
-        },
-      ],
-    },
+    sourceFacts: [
+      {
+        factKey: "partyName",
+        documentLabel: "Energiedocument",
+        observedValue: "Parser Klant",
+        relationship: "direct",
+        sourceRef: `CRS-${"1".repeat(32)}`,
+        transcriptionAllowed: false,
+      },
+      {
+        factKey: "structuredAddress",
+        documentLabel: "Energiedocument",
+        observedValue: "Parserstraat 1",
+        relationship: "direct",
+        sourceRef: `CRS-${"2".repeat(32)}`,
+        transcriptionAllowed: false,
+      },
+      {
+        factKey: "electricityEan",
+        documentLabel: "Energiedocument",
+        observedValue: null,
+        relationship: null,
+        sourceRef: `CRS-${"3".repeat(32)}`,
+        transcriptionAllowed: true,
+      },
+      {
+        factKey: "energySupplier",
+        documentLabel: "Energiedocument",
+        observedValue: "Parser Energie",
+        relationship: "direct",
+        sourceRef: `CRS-${"4".repeat(32)}`,
+        transcriptionAllowed: false,
+      },
+    ],
   }, {
     replacementTargetRef: TARGET_INVOICE,
     candidateRef: CANDIDATE_INVOICE,
     fileName: "installation-current.pdf",
-    contentFingerprint: "b".repeat(64),
-    parserObservation: null,
+    sourceFacts: [],
   }]),
   CASE_A,
 );

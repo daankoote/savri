@@ -203,7 +203,7 @@ export function createHandler(
     );
     const legalBundleSha256 = await correctionLegalBundleHash();
     const issued = await serviceClient.rpc(
-      "app_customer_correction_challenge_issue_v4",
+      "app_customer_correction_challenge_issue_v5",
       {
         p_auth_user_id: verified.context.authUserId,
         p_case_ref: input.caseRef,

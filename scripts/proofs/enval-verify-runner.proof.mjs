@@ -522,6 +522,10 @@ const customerCorrectionDocumentFinalizationLocalService = buildPlan({
     "supabase/migrations/20260821100000_app_customer_correction_document_finalization.sql",
     "scripts/proofs/app-customer-correction-document-finalization.proof.ts",
     "scripts/proofs/app-customer-correction-document-finalization-served.proof.mjs",
+    "scripts/proofs/app-customer-correction-document-finalization-upload-candidate-served.proof.mjs",
+    "scripts/proofs/app-customer-correction-document-finalization-challenge-replay-served.proof.mjs",
+    "scripts/proofs/app-customer-correction-document-finalization-finalize-reentry-served.proof.mjs",
+    "scripts/proofs/app-customer-correction-document-finalization-transactional-rollback-served.proof.mjs",
   ],
   mode: "LOCAL_SERVICE",
 });
@@ -532,9 +536,10 @@ assert(
     customerCorrectionDocumentFinalizationLocalService.selected.filter((
         check,
       ) =>
-        check.commandId ===
-          "customer-correction-document-finalization-served-local"
-      ).length === 1 &&
+        check.commandId.startsWith(
+          "customer-correction-document-finalization-",
+        ) && check.commandId.endsWith("-served-local")
+      ).length === 4 &&
     customerCorrectionDocumentFinalizationLocalService.selected.filter((
         check,
       ) => check.commandId === "tenant-migration-chain-local"
@@ -546,7 +551,7 @@ assert(
     ) &&
     customerCorrectionDocumentFinalizationLocalService.selected.some((check) =>
       check.commandId ===
-        "customer-correction-document-finalization-served-local" &&
+        "customer-correction-document-finalization-finalize-reentry-served-local" &&
       check.safety === SAFETY.SAFE_LOCAL_TENANT_EPHEMERAL_WRITE &&
       check.mutatesState && !check.remote && !check.destructive
     ) &&

@@ -28,7 +28,7 @@ const ITEM_REF = `CCI-${"A".repeat(32)}`;
 const CANDIDATE_REF = `CRC-${"B".repeat(32)}`;
 
 assert(
-      parseCorrectionChallengeRequest({
+  parseCorrectionChallengeRequest({
         caseRef: CASE_REF,
         factResolutions: [],
         typedFullName: "Proof Person",
@@ -41,8 +41,9 @@ assert(
         caseRef: CASE_REF,
         factResolutions: [{
           itemRefs: [ITEM_REF],
-          resolutionType: "MANUAL",
+          resolutionType: "DOCUMENT_TRANSCRIPTION",
           sources: [],
+          transcriptionCandidateRef: CANDIDATE_REF,
         }],
         typedFullName: "Proof Person",
         responses: [{
@@ -126,8 +127,8 @@ assert(
     !migration.includes("DOCUMENT_PARSER.parse") &&
     !migration.includes("storage.objects") &&
     !migration.includes("HUMAN_ACCEPTED") &&
-    challengeEndpoint.includes("app_customer_correction_challenge_issue_v4") &&
-    finalizeEndpoint.includes("app_customer_correction_finalize_v3") &&
+    challengeEndpoint.includes("app_customer_correction_challenge_issue_v5") &&
+    finalizeEndpoint.includes("app_customer_correction_finalize_v4") &&
     confirmEndpoint.includes("DOCUMENT_PARSER.parse") &&
     confirmEndpoint.includes("persistParserObservation"),
   "reuse_or_authority_boundary_failed",

@@ -55,6 +55,7 @@ export type CorrectionFactResolution = Readonly<{
   itemRefs: readonly string[];
   resolutionType: CustomerCorrectionResolutionType;
   sources: readonly CorrectionFactResolutionSource[];
+  transcriptionCandidateRef?: string;
 }>;
 
 export type CorrectionFinalizeRequest = {
@@ -166,7 +167,8 @@ export function parseCorrectionChallengeRequest(
   for (const resolution of value.factResolutions) {
     if (
       !isRecord(resolution) ||
-      !hasExactKeys(resolution, ["itemRefs", "resolutionType", "sources"]) ||
+      !(hasExactKeys(resolution, ["itemRefs", "resolutionType", "sources"]) ||
+        hasExactKeys(resolution, ["itemRefs", "resolutionType", "sources", "transcriptionCandidateRef"])) ||
       !Array.isArray(resolution.itemRefs) ||
       resolution.itemRefs.length < 1 || resolution.itemRefs.length > 100 ||
       typeof resolution.resolutionType !== "string" ||
@@ -206,16 +208,18 @@ export function parseCorrectionChallengeRequest(
         selected: source.selected,
       }));
     }
-    if (
-      (resolution.resolutionType === "SOURCE_CONFLICT_SELECTED" &&
-        selectedCount !== 1) ||
-      (resolution.resolutionType !== "SOURCE_CONFLICT_SELECTED" &&
-        selectedCount !== 0)
-    ) return null;
+    const transcriptionCandidateRef = typeof resolution.transcriptionCandidateRef === "string"
+      ? resolution.transcriptionCandidateRef
+      : null;
+    if (selectedCount !== 0 ||
+      (resolution.resolutionType === "SOURCE_CONFIRMED" && transcriptionCandidateRef !== null) ||
+      (resolution.resolutionType === "DOCUMENT_TRANSCRIPTION" &&
+        (!transcriptionCandidateRef || !REPLACEMENT_CANDIDATE_REFERENCE_RE.test(transcriptionCandidateRef) || sources.length !== 0))) return null;
     factResolutions.push(Object.freeze({
       itemRefs: Object.freeze(resolutionItemRefs),
       resolutionType: resolution.resolutionType as CustomerCorrectionResolutionType,
       sources: Object.freeze(sources),
+      ...(transcriptionCandidateRef ? { transcriptionCandidateRef } : {}),
     }));
   }
   if (

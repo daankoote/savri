@@ -40,8 +40,8 @@ import {
 } from "../_shared/app_workforce_authorization.ts";
 import { minutesFromNow } from "../_shared/signup_quarantine.ts";
 
-const RESOLVE_RPC = "app_customer_correction_replacement_upload_resolve_v1";
-const CONFIRM_RPC = "app_customer_correction_replacement_upload_confirm_v1";
+const RESOLVE_RPC = "app_customer_correction_replacement_upload_resolve_v2";
+const CONFIRM_RPC = "app_customer_correction_replacement_upload_confirm_v2";
 const DOCUMENT_PARSER = createDocumentParserPort(
   CURRENT_PDF_PARSER_ADAPTER,
   payloadHash,
