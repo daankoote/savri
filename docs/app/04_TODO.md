@@ -50,19 +50,31 @@ implementation.
   admin/workforce management UI, ENVAL Control Console, Verifier Console,
   tenant #2, multi-tenant switching, production deployment and later
   `/intern/*` redirect/removal cleanup.
-- TARGET / SEPARATE FOLLOW-UP — `AUTHORIZED_PORTAL_REDIRECT_V1`; not implemented
-  by the current correction milestone.
+- IN PROGRESS / SOURCE AND FOCUSED PROOFS GREEN —
+  `AUTHORIZED_PORTAL_REDIRECT_V1`: canonical login resolves existing customer
+  and workforce authorities, exact authorized case routes and
+  capability-specific landings. Multi-portal actors can reopen the authorized
+  choice from either portal without changing session; zero-portal actors can
+  sign out through `Ander account gebruiken`. Final focused browser and human
+  Firefox acceptance remain open.
+- TARGET / SEPARATE FOLLOW-UP — `BRAND_CONFIGURATION_V1`: extend the existing
+  deployment-/tenant-bound presentation configuration into one validated brand
+  contract with safe ENVAL defaults for display name, logo/assets, initials,
+  customer contact, website, approved e-mail sender identity and legal entity.
+  Branding remains presentation/configuration data and grants no authorization;
+  existing customer, dossier, workflow and legal authority stay unchanged.
 - TARGET / SEPARATE FOLLOW-UP — `MULTI_DOCUMENT_EVIDENCE_WORKSPACE_V1`; not
   implemented by the current correction milestone.
 - DONE / CURRENT PROVEN LOCAL — `F01`: AUTH_SHELL_F01 gives the canonical Auth
   route and three recovery/resend routes one minimal server-resolved
   tenant-branded header without public,
-  customer-portal or operator navigation. `/inloggen` retains its validated
-  operator-return audience without exposing protected navigation before
-  authority. Focused composition proof and browser evidence at `1440x900`,
-  `820x1180` and `375x812` show no horizontal overflow, console/runtime errors
-  or product writes. Public and tenant-public signup navigation remain
-  unchanged; broader public/tenant IA and responsive navigation are separate.
+  customer-portal or operator navigation. At F01 closure, `/inloggen` retained
+  the validated operator-return presentation intent without exposing protected
+  navigation before authority. Focused composition proof and browser evidence
+  at `1440x900`, `820x1180` and `375x812` show no horizontal overflow,
+  console/runtime errors or product writes. Public and tenant-public signup
+  navigation remain unchanged; broader public/tenant IA and responsive
+  navigation are separate.
 - DONE / CURRENT PROVEN LOCAL — `SURFACE_IDENTITY_V1`: authenticated customer
   and tenant-workforce shells show the server-resolved organization with the
   fixed context label `Klantportaal` or `Dossierbeheer`; the public
@@ -74,8 +86,9 @@ implementation.
   or fragment forwarding. The Auth journey uses the server-resolved
   presentation organization and mark with the fixed label `Inloggen`, never
   the public `ERE inboekservice` tagline. Internal login links, logout paths,
-  confirmation callbacks and routeguards target `/inloggen`; only the existing
-  allowlisted operator `returnTo` contract remains accepted.
+  confirmation callbacks and routeguards target `/inloggen`. The current
+  post-login portal resolver is tracked separately above until its browser and
+  human acceptance gates are complete.
 - DONE / CURRENT PROVEN LOCAL — `SL01-C`: the server-resolved immutable signing
   presentation receipt binds tenant, Auth actor, intake and selected
   signing-material/legal provenance. Presentation is not acceptance; explicit

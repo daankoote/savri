@@ -2,7 +2,9 @@ import { type ReactNode, useEffect } from "react";
 import type { AppNavigate } from "../../routes/types.ts";
 import { useAuth } from "../auth/AuthProvider.tsx";
 import { completeAuthLogout } from "../auth/authUxFlow.ts";
+import { AUTH_LOGIN_ROUTE } from "../auth/authUxFlow.ts";
 import { buildInternalLoginRoute } from "../auth/postLoginNavigation.ts";
+import { canSwitchAuthorizedPortal } from "../auth/postLoginNavigation.ts";
 import type {
   OperatorCapability,
   OperatorContext,
@@ -13,6 +15,7 @@ type OperatorRouteGuardProps = Readonly<{
   children: (
     context: OperatorContext,
     logout: () => Promise<boolean>,
+    switchPortal: (() => void) | null,
   ) => ReactNode;
   navigate: AppNavigate;
   requiredCapability: OperatorCapability;
@@ -126,11 +129,17 @@ export function OperatorRouteGuard({
   }
   return (
     <>
-      {children(operator.state.value, () =>
-        completeAuthLogout({
-          navigate,
-          signOut: auth.signOut,
-        }))}
+      {children(
+        operator.state.value,
+        () =>
+          completeAuthLogout({
+            navigate,
+            signOut: auth.signOut,
+          }),
+        canSwitchAuthorizedPortal(auth.portalNavigation)
+          ? () => navigate(AUTH_LOGIN_ROUTE)
+          : null,
+      )}
     </>
   );
 }

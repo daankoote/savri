@@ -189,6 +189,29 @@ assert(
     !operatorHtml.includes("<nav"),
   "Q06_operator_login_surface_or_navigation_invalid",
 );
+const portalHtml = renderAccountRoute("/inloggen", "portal", "portal");
+assert(
+  portalHtml.includes('data-app-surface="tenant_public"') &&
+    portalHtml.includes("Tenant Merk") &&
+    portalHtml.includes("Inloggen") &&
+    portalHtml.includes("Account aanmaken") &&
+    !portalHtml.includes("Tenantdienst") &&
+    !portalHtml.includes("<nav"),
+  "Q06a_portal_resolution_login_surface_invalid",
+);
+window.location.search = "?returnTo=%2Fbeheer";
+const workforceIntentPortalHtml = renderAccountRoute(
+  "/inloggen",
+  "portal",
+  "portal",
+);
+window.location.search = "";
+assert(
+  workforceIntentPortalHtml.includes("Inloggen") &&
+    !workforceIntentPortalHtml.includes("Account aanmaken") &&
+    !workforceIntentPortalHtml.includes("Geen verificatiemail ontvangen?"),
+  "Q06aa_workforce_login_intent_exposes_customer_actions",
+);
 const workforceHeaderHtml = renderToStaticMarkup(
   <PresentationBrandProvider presentation={presentation}>
     <AppHeader
@@ -198,6 +221,7 @@ const workforceHeaderHtml = renderToStaticMarkup(
       navigation={[
         { label: "Overzicht", href: "/beheer", active: true },
         { label: "Dossiers", href: "/beheer/dossiers" },
+        { label: "Portaal wisselen", onSelect: () => undefined },
       ]}
       onLogout={async () => true}
       surface="tenant_operator"
@@ -208,9 +232,14 @@ assert(
   workforceHeaderHtml.indexOf(">Overzicht</a>") <
       workforceHeaderHtml.indexOf(">Dossiers</a>") &&
     workforceHeaderHtml.indexOf(">Dossiers</a>") <
+      workforceHeaderHtml.indexOf(">Portaal wisselen</button>") &&
+    workforceHeaderHtml.indexOf(">Portaal wisselen</button>") <
       workforceHeaderHtml.indexOf(">Uitloggen</button>") &&
     workforceHeaderHtml.includes('<button aria-busy="false"') &&
     workforceHeaderHtml.includes('type="button">Uitloggen</button>') &&
+    workforceHeaderHtml.includes(
+      'type="button">Portaal wisselen</button>',
+    ) &&
     !operatorHtml.includes(">Uitloggen</button>") &&
     !publicHeaderHtml.includes(">Uitloggen</button>"),
   "Q06b_workforce_logout_order_or_surface_isolation_invalid",
@@ -225,6 +254,7 @@ assert(
 const [
   appSource,
   accountPageSource,
+  accountContentSource,
   authLayoutSource,
   authUxSource,
   dashboardGuardSource,
@@ -244,6 +274,7 @@ const [
 ] = await Promise.all([
   source("app/src/App.tsx"),
   source("app/src/pages/AccountPage.tsx"),
+  source("app/src/features/auth/AccountPage.tsx"),
   source("app/src/features/auth/AuthPageLayout.tsx"),
   source("app/src/features/auth/authUxFlow.ts"),
   source("app/src/features/auth/DashboardRouteGuard.tsx"),
@@ -267,7 +298,9 @@ assert(
     appSource.includes("AUTH_PASSWORD_REQUEST_ROUTE") &&
     appSource.includes("AUTH_PASSWORD_UPDATE_ROUTE") &&
     appSource.includes("AUTH_VERIFICATION_RESEND_ROUTE") &&
-    appSource.includes("isOperatorRoute(loginReturnTo)") &&
+    appSource.includes(
+      'audience={path === AUTH_LOGIN_ROUTE ? "portal" : "customer"}',
+    ) &&
     accountPageSource.includes("navigation={[]}") &&
     accountPageSource.includes('identitySurface="public_auth"') &&
     accountPageSource.includes('auth.audience === "operator"') &&
@@ -275,6 +308,19 @@ assert(
     headerSource.includes("navigation.length > 0 || onLogout") &&
     !signupSource.includes("navigation={[]}"),
   "Q08_route_or_composition_contract_invalid",
+);
+assert(
+  accountContentSource.includes(
+    "U bent ingelogd, maar dit account heeft geen toegang tot een portaal.",
+  ) &&
+    accountContentSource.includes("Ander account gebruiken") &&
+    accountContentSource.includes("completeAuthLogout") &&
+    accountContentSource.includes("signOut: auth.signOut") &&
+    accountContentSource.includes('setMode("signin")') &&
+    accountContentSource.includes('setEmail("")') &&
+    accountContentSource.includes('setPassword("")') &&
+    accountContentSource.includes("setSubmitting(false)"),
+  "Q08a_zero_portal_account_switch_contract_invalid",
 );
 
 assert(
@@ -312,6 +358,8 @@ assert(
   !authLayoutSource.includes("AuthAudience") &&
     !authLayoutSource.includes(">Beheer<") &&
     !authLayoutSource.includes(">Klantportaal<") &&
+    authLayoutSource.includes("headingRef.current?.focus") &&
+    authLayoutSource.includes("tabIndex={focusHeading ? -1 : undefined}") &&
     accountPageSource.includes('identitySurface="public_auth"') &&
     !accountPageSource.includes("platformAttribution"),
   "Q11_auth_identity_or_attribution_contract_invalid",
@@ -331,13 +379,16 @@ assert(
     evidenceDetailPageSource,
     compliancePageSource,
   ].every((value) =>
-    value.includes("{(context, logout) =>") &&
+    value.includes("{(context, logout, switchPortal) =>") &&
+    value.includes("switchPortal") &&
     value.includes("onLogout={logout}")
   ) &&
     operatorGuardSource.includes("completeAuthLogout") &&
     operatorGuardSource.includes("signOut: auth.signOut") &&
     headerSource.includes("logoutRunningRef.current") &&
     headerSource.includes("disabled={logoutRunning}") &&
+    headerSource.includes("item.onSelect") &&
+    dashboardSidebarSource.includes("Portaal wisselen") &&
     componentsCss.includes(".header-nav button") &&
     layoutCss.includes(".header-nav button"),
   "Q13_workforce_logout_composition_loading_or_responsive_contract_invalid",

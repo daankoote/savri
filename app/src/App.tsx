@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, type ReactElement } from "react";
+import { lazy, type ReactElement, Suspense, useEffect, useState } from "react";
 import { ContactPage } from "./pages/ContactPage";
 import { EreInfoPage } from "./pages/EreInfoPage";
 import { HomePage } from "./pages/HomePage";
@@ -9,7 +9,6 @@ import { TermsPage } from "./pages/TermsPage";
 import { UploadPage } from "./pages/UploadPage";
 import type { AppNavigate, RoutedPageProps } from "./routes/types";
 import { parseEvidenceReviewDetailRoute } from "./features/evidence-review/evidenceReviewRoutes";
-import { readSafePostLoginReturnRoute } from "./features/auth/postLoginNavigation";
 import {
   AUTH_ACCOUNT_COMPATIBILITY_ROUTE,
   AUTH_LOGIN_ROUTE,
@@ -22,28 +21,40 @@ import {
   parseDashboardApplicationsRoute,
 } from "./features/dashboard/dashboardRoutes";
 
-const AccountPage = lazy(() => import("./pages/AccountPage").then((module) => ({ default: module.AccountPage })));
+const AccountPage = lazy(() =>
+  import("./pages/AccountPage").then((module) => ({
+    default: module.AccountPage,
+  }))
+);
 const DashboardPage = lazy(() =>
-  import("./pages/DashboardPage").then((module) => ({ default: module.DashboardPage })),
+  import("./pages/DashboardPage").then((module) => ({
+    default: module.DashboardPage,
+  }))
 );
 const ComplianceWorklistPage = lazy(() =>
-  import("./pages/ComplianceWorklistPage").then((module) => ({ default: module.ComplianceWorklistPage })),
+  import("./pages/ComplianceWorklistPage").then((module) => ({
+    default: module.ComplianceWorklistPage,
+  }))
 );
 const OperatorOverviewPage = lazy(() =>
-  import("./pages/OperatorOverviewPage").then((module) => ({ default: module.OperatorOverviewPage })),
+  import("./pages/OperatorOverviewPage").then((module) => ({
+    default: module.OperatorOverviewPage,
+  }))
 );
 const EvidenceReviewWorklistPage = lazy(() =>
   import("./pages/EvidenceReviewWorklistPage").then((module) => ({
     default: module.EvidenceReviewWorklistPage,
-  })),
+  }))
 );
 const EvidenceReviewCaseDetailPage = lazy(() =>
   import("./pages/EvidenceReviewCaseDetailPage").then((module) => ({
     default: module.EvidenceReviewCaseDetailPage,
-  })),
+  }))
 );
 const AuthProvider = lazy(() =>
-  import("./features/auth/AuthProvider").then((module) => ({ default: module.AuthProvider })),
+  import("./features/auth/AuthProvider").then((module) => ({
+    default: module.AuthProvider,
+  }))
 );
 
 function normalizePath(pathname: string) {
@@ -65,14 +76,10 @@ const routes = {
 
 type PageComponent = (props: RoutedPageProps) => ReactElement;
 
-function isOperatorRoute(path: string): boolean {
-  return path === "/beheer" || path === "/beheer/dossiers" ||
-    path === "/intern/compliance" || path === "/intern/dossiers" ||
-    parseEvidenceReviewDetailRoute(path) !== null;
-}
-
 export function App() {
-  const [path, setPath] = useState(() => normalizePath(window.location.pathname));
+  const [path, setPath] = useState(() =>
+    normalizePath(window.location.pathname)
+  );
 
   useEffect(() => {
     const handlePopState = () => {
@@ -109,7 +116,9 @@ export function App() {
 
     if (target.hash) {
       window.requestAnimationFrame(() => {
-        document.querySelector(target.hash)?.scrollIntoView({ behavior: "smooth" });
+        document.querySelector(target.hash)?.scrollIntoView({
+          behavior: "smooth",
+        });
       });
     } else {
       window.scrollTo({ top: 0 });
@@ -118,10 +127,6 @@ export function App() {
 
   const evidenceReviewCaseRef = parseEvidenceReviewDetailRoute(path);
   const dashboardApplicationsRoute = parseDashboardApplicationsRoute(path);
-  const loginReturnTo = path === AUTH_LOGIN_ROUTE
-    ? readSafePostLoginReturnRoute(window.location.search)
-    : null;
-
   if (
     path === AUTH_LOGIN_ROUTE ||
     path === AUTH_PASSWORD_REQUEST_ROUTE ||
@@ -138,9 +143,7 @@ export function App() {
       <Suspense fallback={<RouteLoading />}>
         <AuthProvider
           key={authIntent}
-          audience={loginReturnTo && isOperatorRoute(loginReturnTo)
-            ? "operator"
-            : "customer"}
+          audience={path === AUTH_LOGIN_ROUTE ? "portal" : "customer"}
           intent={authIntent}
         >
           <AccountPage navigate={navigate} currentPath={path} />
@@ -217,7 +220,8 @@ export function App() {
     );
   }
 
-  const Page: PageComponent = routes[path as keyof typeof routes] ?? NotFoundPage;
+  const Page: PageComponent = routes[path as keyof typeof routes] ??
+    NotFoundPage;
 
   return <Page navigate={navigate} currentPath={path} />;
 }

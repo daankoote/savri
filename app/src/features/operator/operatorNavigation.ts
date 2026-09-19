@@ -4,6 +4,7 @@ import type { OperatorContext } from "./operatorContextClient.ts";
 export function buildOperatorNavigation(
   context: OperatorContext,
   currentPath: string,
+  switchPortal: (() => void) | null = null,
 ): readonly SurfaceNavigationItem[] {
   const items: SurfaceNavigationItem[] = [];
   if (
@@ -23,6 +24,12 @@ export function buildOperatorNavigation(
         currentPath.startsWith("/beheer/dossiers/") ||
         currentPath === "/intern/dossiers" ||
         currentPath.startsWith("/intern/dossiers/"),
+    });
+  }
+  if (switchPortal) {
+    items.push({
+      label: "Portaal wisselen",
+      onSelect: switchPortal,
     });
   }
   return Object.freeze(items);

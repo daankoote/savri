@@ -97,24 +97,32 @@ export function AppHeader({
         {navigation.length > 0 || onLogout
           ? (
             <nav className="header-nav" aria-label="Hoofdnavigatie">
-              {navigation.flatMap((item) =>
+              {navigation.map((item) =>
                 item.href
-                  ? [
-                    (
-                      <a
-                        aria-current={(item.active ??
-                            isActiveNavItem(item.href, currentPath))
-                          ? "page"
-                          : undefined}
-                        href={item.href}
-                        key={item.label}
-                        onClick={handleClick(item.href)}
-                      >
-                        {item.label}
-                      </a>
-                    ),
-                  ]
-                  : []
+                  ? (
+                    <a
+                      aria-current={(item.active ??
+                          isActiveNavItem(item.href, currentPath))
+                        ? "page"
+                        : undefined}
+                      href={item.href}
+                      key={item.label}
+                      onClick={handleClick(item.href)}
+                    >
+                      {item.label}
+                    </a>
+                  )
+                  : item.onSelect
+                  ? (
+                    <button
+                      key={item.label}
+                      onClick={item.onSelect}
+                      type="button"
+                    >
+                      {item.label}
+                    </button>
+                  )
+                  : null
               )}
               {onLogout
                 ? (

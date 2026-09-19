@@ -8,7 +8,9 @@ export function AccountPage({ currentPath, navigate }: RoutedPageProps) {
   const auth = useAuth();
   const surface = auth.audience === "operator"
     ? "tenant_operator"
-    : "tenant_customer";
+    : auth.audience === "customer"
+    ? "tenant_customer"
+    : "tenant_public";
 
   return (
     <SurfaceShell

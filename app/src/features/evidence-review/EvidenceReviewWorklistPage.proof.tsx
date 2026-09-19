@@ -6,9 +6,11 @@ import type {
 } from "../../../../supabase/functions/_shared/app_evidence_review_worklist.ts";
 import { EvidenceReviewWorklistContent } from "./EvidenceReviewWorklistPage.tsx";
 import {
+  clearEvidenceReviewWorklistSessionCache,
   decodeEvidenceReviewWorklistResponse,
   type EvidenceReviewWorklistSafeError,
   loadEvidenceReviewWorklist,
+  loadEvidenceReviewWorklistOnce,
 } from "./evidenceReviewWorklistClient.ts";
 
 class ProofFailure extends Error {}
@@ -276,6 +278,105 @@ assert(
   "Q12_authenticated_get_contract_invalid",
 );
 
+clearEvidenceReviewWorklistSessionCache();
+let sharedFetchCount = 0;
+const sharedConfig = {
+  ...clientConfig,
+  accessToken: "shared-proof-access-token",
+  fetchImpl: async () => {
+    sharedFetchCount += 1;
+    return new Response(JSON.stringify(response([])), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  },
+};
+const sharedFirst = loadEvidenceReviewWorklistOnce(sharedConfig);
+const sharedSecond = loadEvidenceReviewWorklistOnce(sharedConfig);
+assert(
+  sharedFirst === sharedSecond,
+  "Q12a_pending_session_read_not_deduplicated",
+);
+const [sharedFirstResult, sharedSecondResult] = await Promise.all([
+  sharedFirst,
+  sharedSecond,
+]);
+const sharedRemountResult = await loadEvidenceReviewWorklistOnce(sharedConfig);
+assert(
+  sharedFirstResult.ok && sharedSecondResult.ok && sharedRemountResult.ok &&
+    sharedFetchCount === 1,
+  "Q12b_stable_session_read_not_reused_once",
+);
+await loadEvidenceReviewWorklistOnce(sharedConfig, { refresh: true });
+assert(
+  Number(sharedFetchCount) === 2,
+  "Q12c_explicit_refresh_not_fetched_once",
+);
+const nextActorResult = await loadEvidenceReviewWorklistOnce({
+  ...sharedConfig,
+  accessToken: "next-actor-proof-access-token",
+});
+assert(
+  nextActorResult.ok && Number(sharedFetchCount) === 3,
+  "Q12d_cross_actor_session_result_reused",
+);
+
+let staleResolve: (response: Response) => void = () => undefined;
+let currentResolve: (response: Response) => void = () => undefined;
+let generationFetchCount = 0;
+const generationConfig = {
+  ...clientConfig,
+  accessToken: "generation-proof-access-token",
+  fetchImpl: () => {
+    generationFetchCount += 1;
+    return new Promise<Response>((resolve) => {
+      if (generationFetchCount === 1) staleResolve = resolve;
+      else currentResolve = resolve;
+    });
+  },
+};
+clearEvidenceReviewWorklistSessionCache();
+const staleGenerationRead = loadEvidenceReviewWorklistOnce(generationConfig);
+clearEvidenceReviewWorklistSessionCache(
+  generationConfig.accessToken,
+);
+const currentGenerationRead = loadEvidenceReviewWorklistOnce(generationConfig);
+currentResolve(
+  new Response(
+    JSON.stringify(response([
+      caseItem("CASE-CCCC00000001", ["FACT_REVIEW_REQUIRED"]),
+    ])),
+    {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    },
+  ),
+);
+const currentGenerationResult = await currentGenerationRead;
+staleResolve(
+  new Response(
+    JSON.stringify(response([
+      caseItem("CASE-AAAA00000001", ["FACT_REVIEW_REQUIRED"]),
+    ])),
+    {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    },
+  ),
+);
+await staleGenerationRead;
+const retainedGenerationResult = await loadEvidenceReviewWorklistOnce(
+  generationConfig,
+);
+assert(
+  generationFetchCount === 2 && currentGenerationResult.ok &&
+    retainedGenerationResult.ok &&
+    retainedGenerationResult.value.cases[0]?.caseRef ===
+      "CASE-CCCC00000001",
+  "Q12e_stale_session_generation_repopulated_cache",
+);
+clearEvidenceReviewWorklistSessionCache();
+
 for (
   const [status, code] of [[401, "unauthorized"], [403, "forbidden"]] as const
 ) {
@@ -357,7 +458,9 @@ assert(
     !/(Goedkeuren|Afwijzen|Toewijzen|Beoordeling opslaan|Opnieuw uitvoeren)/i
       .test(featureSource) &&
     hookSource.includes("setRefreshNonce") &&
-    hookSource.includes("loadEvidenceReviewWorklist"),
+    hookSource.includes("loadEvidenceReviewWorklistOnce") &&
+    hookSource.includes("clearEvidenceReviewWorklistSessionCache") &&
+    !hookSource.includes("AbortController"),
   "Q17_mutation_cache_or_check_claim_present",
 );
 assert(

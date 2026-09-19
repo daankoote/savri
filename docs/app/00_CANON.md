@@ -156,8 +156,19 @@ name and mark with the fixed context label `Inloggen`; it never renders the
 public presentation tagline. `/inloggen` is the only canonical login route.
 `/account` is a compatibility route that replace-redirects to exactly
 `/inloggen` without forwarding query or fragment input. Fixed confirmation,
-recovery and resend routes remain on the canonical app origin, and only the
-existing allowlisted operator `returnTo` values are accepted on `/inloggen`.
+recovery and resend routes remain on the canonical app origin. After verified
+login, `/inloggen` resolves customer and workforce portal access only through
+their existing server authorities. A local allowlisted `returnTo` is followed
+only when that resolved actor can access its portal; a stale, external,
+malformed, unknown or unauthorized value grants no authority. One accessible
+portal opens its existing landing, multiple accessible portals produce a
+neutral choice containing only those portals, and only zero accessible portals
+produces the generic no-access state. An authenticated actor with both portals
+can reopen that same server-authorized choice from either protected navigation
+without logout or a new login. Single-portal and zero-portal actors receive no
+switch action. The zero-portal state remains authenticated, explains only that
+no portal is accessible and offers `Ander account gebruiken`, which signs out
+before showing the normal login screen.
 
 The local status is backed by focused operator-context Q01-Q14, overview Q01-Q10,
 evidence worklist Q01-Q19, unchanged compliance/evidence authorization

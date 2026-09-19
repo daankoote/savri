@@ -9,6 +9,8 @@ import {
   usePresentationBrand,
 } from "../../shared/presentation/PresentationBrandProvider";
 import { completeAuthLogout } from "../auth/authUxFlow";
+import { AUTH_LOGIN_ROUTE } from "../auth/authUxFlow";
+import { canSwitchAuthorizedPortal } from "../auth/postLoginNavigation";
 import type { DashboardDossierSummary } from "./dashboardTypes";
 import {
   buildDashboardApplicationRoute,
@@ -185,6 +187,17 @@ export function DashboardSidebar({
               >
                 Naar website
               </button>
+              {canSwitchAuthorizedPortal(auth.portalNavigation)
+                ? (
+                  <button
+                    className="portal-nav-item"
+                    onClick={() => navigate(AUTH_LOGIN_ROUTE)}
+                    type="button"
+                  >
+                    Portaal wisselen
+                  </button>
+                )
+                : null}
               <button
                 className="portal-nav-item"
                 onClick={handleLogout}

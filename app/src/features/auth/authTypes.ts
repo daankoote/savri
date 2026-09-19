@@ -1,7 +1,17 @@
 import type { Session } from "@supabase/supabase-js";
 
 export type AuthMode = "activate" | "signin";
-export type AuthAudience = "customer" | "operator";
+export type AuthAudience = "customer" | "operator" | "portal";
+export type AuthorizedPortal = "customer" | "workforce";
+
+export type AuthorizedPortalNavigation = Readonly<{
+  portals: readonly AuthorizedPortal[];
+  customerCaseReferences: readonly string[];
+  workforceCaseReferences: readonly string[];
+  workforceDefaultDestination: "/beheer" | "/intern/compliance" | null;
+  workforceEvidenceReview: boolean;
+  workforceCompliance: boolean;
+}>;
 
 export type AuthStatus =
   | "initializing"
@@ -64,6 +74,7 @@ export type AuthOperationResult =
 
 export type AuthContextValue = {
   audience: AuthAudience;
+  portalNavigation: AuthorizedPortalNavigation | null;
   status: AuthStatus;
   session: Session | null;
   summary: AuthBootstrapSummary | null;

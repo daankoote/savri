@@ -25,12 +25,33 @@ export type EvidenceReviewWorklistLoadResult =
     status?: number;
   }>;
 
-type EvidenceReviewWorklistClientConfig = Readonly<{
+export type EvidenceReviewWorklistClientConfig = Readonly<{
   accessToken: string;
   fetchImpl?: typeof fetch;
   runtimeConfig?: Readonly<{ anonKey: string; apiBaseUrl: string }>;
   signal?: AbortSignal;
 }>;
+
+const cachedSessionReads = new Map<string, EvidenceReviewWorklistLoadResult>();
+const pendingSessionReads = new Map<
+  string,
+  Promise<EvidenceReviewWorklistLoadResult>
+>();
+let sessionReadGeneration = 0;
+
+export function clearEvidenceReviewWorklistSessionCache(
+  accessToken?: string,
+): void {
+  sessionReadGeneration += 1;
+  const scope = accessToken?.trim();
+  if (scope) {
+    cachedSessionReads.delete(scope);
+    pendingSessionReads.delete(scope);
+    return;
+  }
+  cachedSessionReads.clear();
+  pendingSessionReads.clear();
+}
 
 type JsonRecord = Record<string, unknown>;
 
@@ -103,8 +124,8 @@ function parseCase(value: unknown): EvidenceReviewWorklistCaseV4 | null {
         value.reviewAttentionReasons.length !== 1 ||
         value.reviewAttentionReasons[0] !== "REVIEW_MODEL_UNAVAILABLE")) ||
     (["CORRECTION_REQUIRED", "WAITING_CUSTOMER", "REVIEW_COMPLETE"].includes(
-        value.overallReviewStatus as string,
-      ) &&
+      value.overallReviewStatus as string,
+    ) &&
       (Number(value.unresolvedFactCount) !== 0 ||
         value.reviewAttentionReasons.length !== 0))
   ) return null;
@@ -220,4 +241,35 @@ export async function loadEvidenceReviewWorklist(
     return { ok: false, error: safeError("invalid_response") };
   }
   return decodeEvidenceReviewWorklistResponse(body);
+}
+
+export function loadEvidenceReviewWorklistOnce(
+  config: EvidenceReviewWorklistClientConfig,
+  options: Readonly<{ refresh?: boolean }> = {},
+): Promise<EvidenceReviewWorklistLoadResult> {
+  const scope = config.accessToken.trim();
+  if (!scope) return loadEvidenceReviewWorklist(config);
+  if (options.refresh) clearEvidenceReviewWorklistSessionCache(scope);
+  const cached = cachedSessionReads.get(scope);
+  if (cached) return Promise.resolve(cached);
+  const pending = pendingSessionReads.get(scope);
+  if (pending) return pending;
+
+  const generation = sessionReadGeneration;
+  const { signal: _consumerSignal, ...sharedConfig } = config;
+  const request = loadEvidenceReviewWorklist(sharedConfig);
+  pendingSessionReads.set(scope, request);
+  void request.then((result) => {
+    if (
+      result.ok && sessionReadGeneration === generation &&
+      pendingSessionReads.get(scope) === request
+    ) {
+      cachedSessionReads.set(scope, result);
+    }
+  }).finally(() => {
+    if (pendingSessionReads.get(scope) === request) {
+      pendingSessionReads.delete(scope);
+    }
+  });
+  return request;
 }

@@ -2344,3 +2344,20 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 - Focused UI proofs, typecheck, production build and the existing read-only
   desktop/tablet/mobile fixture matrix are green. Final human Firefox
   reacceptance and exact fixture cleanup remain open.
+
+## 2026-09-18 — Resolve authorized post-login portals
+
+- Changed canonical `/inloggen` to resolve customer and workforce access from
+  the existing strict server-authoritative clients before choosing a portal.
+  Valid authorized deep links remain exact; stale, cross-portal and unsafe
+  return values grant no authority and fall back to the actor's actual portal.
+- Added the authorized-only multi-portal choice and generic zero-portal state
+  by reusing the existing Auth layout, buttons and responsive action layout.
+  Portal decisions are cleared with bound Auth state. Portal authority is never
+  derived from user metadata, route prefix alone, e-mail or browser-owned roles.
+- Reused that same session-bound resolution to expose `Portaal wisselen` from
+  customer and workforce navigation only for actors with both portals. The
+  zero-portal state now explains that the authenticated account has no portal
+  and uses `Ander account gebruiken` to complete normal logout before login.
+- Focused pure Auth/navigation proofs and typecheck are green. Runtime browser
+  validation and human Firefox acceptance remain open.

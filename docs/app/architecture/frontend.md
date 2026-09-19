@@ -234,9 +234,16 @@ Rules:
   label `Inloggen`, without the public presentation tagline or public,
   customer-portal or operator navigation. `/account` replace-redirects to
   exactly `/inloggen` and discards query and fragment input. `/inloggen`
-  changes only to the operator Auth audience for a validated internal operator
-  return route; protected navigation remains unavailable until server-derived
-  authority admits the corresponding surface.
+  resolves both portal types through the existing strict customer-bootstrap
+  and workforce-context clients. It follows an allowlisted local `returnTo`
+  only when that resolved actor can access the corresponding portal, otherwise
+  it opens the sole accessible portal, offers a neutral authorized-only choice,
+  or shows generic no access. Protected routes revalidate their own server
+  authority after navigation. Customer and workforce navigation expose
+  `Portaal wisselen` only while the same session's server-resolved portal set
+  contains both portals; the action returns to the existing neutral chooser and
+  grants no authority itself. The zero-portal action signs out before returning
+  to the ordinary login form.
 - The operator route guard sends unauthenticated access through the operator
   login flow, denies authenticated non-workforce with the normal `Geen toegang`
   state, and admits only a server-derived active workforce context. Tenant and
