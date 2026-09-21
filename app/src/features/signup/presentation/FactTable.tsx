@@ -9,6 +9,10 @@ import type {
   FactPresentationRow,
   FactPresentationSource,
 } from "./factPresentationModel";
+import {
+  formatPresentationBrandCopy,
+  usePresentationBrand,
+} from "../../../shared/presentation/PresentationBrandProvider";
 
 type FactTableColumns = {
   label?: string;
@@ -36,17 +40,19 @@ type FactTableProps = {
   ) => void;
 };
 
-type SignupFactRowsProps = Pick<
-  FactTableProps,
-  | "onConfirm"
-  | "onCorrect"
-  | "onInvalidateConfirmation"
-  | "onReplaceDocument"
-  | "onRestoreSource"
-  | "onSelectSource"
-  | "rows"
-  | "variant"
->;
+type SignupFactRowsProps =
+  & Pick<
+    FactTableProps,
+    | "onConfirm"
+    | "onCorrect"
+    | "onInvalidateConfirmation"
+    | "onReplaceDocument"
+    | "onRestoreSource"
+    | "onSelectSource"
+    | "rows"
+    | "variant"
+  >
+  & Readonly<{ displayName?: string }>;
 
 function judgmentClass(judgment: FactPresentationRow["judgment"]): string {
   return judgment === "Bevestigd"
@@ -67,6 +73,7 @@ export function FactTable({
   rows,
   variant,
 }: FactTableProps) {
+  const presentation = usePresentationBrand();
   return (
     <DocumentFactMatrix
       columns={{
@@ -87,6 +94,7 @@ export function FactTable({
         onSelectSource,
         rows,
         variant,
+        displayName: presentation.displayName,
       })}
       variant={variant}
     />
@@ -102,6 +110,7 @@ export function createSignupDocumentFactRows({
   onSelectSource,
   rows,
   variant,
+  displayName = "ENVAL",
 }: SignupFactRowsProps): DocumentFactMatrixRow[] {
   return rows.map((row) => ({
     id: row.id,
@@ -138,7 +147,7 @@ export function createSignupDocumentFactRows({
     status: row.judgment
       ? (
         <span className={judgmentClass(row.judgment)}>
-          {row.judgment}
+          {formatPresentationBrandCopy(row.judgment, displayName)}
         </span>
       )
       : null,

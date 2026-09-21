@@ -40,6 +40,10 @@ import {
   EVIDENCE_REVIEW_STATUS_PRESENTATION,
   evidenceReviewFactStatusPresentation,
 } from "./evidenceReviewStatusPresentation.ts";
+import {
+  formatPresentationBrandCopy,
+  usePresentationBrand,
+} from "../../shared/presentation/PresentationBrandProvider.tsx";
 
 type EvidenceReviewCaseDetailContentProps = Readonly<{
   accessToken: string;
@@ -475,6 +479,7 @@ export function EvidenceReviewCaseDetailContent({
   publishCorrection,
   state,
 }: EvidenceReviewCaseDetailContentProps) {
+  const presentation = usePresentationBrand();
   const detail = state.status === "ready" ? state.value : null;
   const review = useEvidenceFactReviewDraft(detail, finalizeReview, onRefresh);
   const correctionPublish = useEvidenceCorrectionPublish(
@@ -543,7 +548,10 @@ export function EvidenceReviewCaseDetailContent({
           <h1>
             {readyDetail.case.caseRef}{" "}
             <span className={`status-pill ${overallStatus.className}`}>
-              {overallStatus.label}
+              {formatPresentationBrandCopy(
+                overallStatus.label,
+                presentation.displayName,
+              )}
             </span>
           </h1>
           <p>

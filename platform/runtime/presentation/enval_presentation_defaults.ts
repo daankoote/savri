@@ -18,6 +18,13 @@ const candidate = {
     altText: "ENVAL",
   },
   exportBasename: "enval-aanmelddocumenten",
+  identity: {
+    websiteUrl: "https://www.enval.nl",
+    contactRoute: "/contact",
+    mailDisplayName: "ENVAL",
+    mailAddress: "noreply@enval.local",
+    legalName: "ENVAL B.V.",
+  },
 } as const;
 
 const validated = validatePresentationBrandConfigV1(candidate);

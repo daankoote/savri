@@ -69,6 +69,7 @@ const syntheticValidation = validatePresentationBrandConfigV1({
     logo: "/assets/brand/example-mobility.svg",
     altText: "Example Mobility",
   },
+  identity: ENVAL_PRESENTATION_BRAND_CONFIG_V1.identity,
   exportBasename: "example-mobility-documents",
 });
 assert(syntheticValidation.ok, "synthetic_config_invalid");
@@ -416,15 +417,21 @@ assert(
     controlPlaneConfig.includes(
       'schemas = ["public", "graphql_public", "platform"]',
     ) &&
-    endpointSource.includes('db: { schema: "platform" }'),
+    controlPlaneReaderSource.includes('db: { schema: "platform" }'),
   "Q12_managed_control_plane_runtime_reader_not_wired",
 );
 assert(
-  endpointSource.includes("ENVAL_CONTROL_PLANE_SERVICE_ROLE_KEY") &&
-    !clientSource.includes("CONTROL_PLANE") &&
-    !JSON.stringify(managedEnval).match(
-      /(tenant|routing|locator|secret|credential|service.?role|data.?plane)/i,
-    ),
+  controlPlaneReaderSource.includes("ENVAL_CONTROL_PLANE_SERVICE_ROLE_KEY"),
+  "Q13_control_plane_service_key_not_server_owned",
+);
+assert(
+  !clientSource.includes("CONTROL_PLANE"),
+  "Q13_control_plane_configuration_reached_browser_client",
+);
+assert(
+  !JSON.stringify(managedEnval).match(
+    /(tenant|routing|locator|secret|credential|service.?role|data.?plane)/i,
+  ),
   "Q13_secret_or_locator_reached_browser_projection",
 );
 assert(

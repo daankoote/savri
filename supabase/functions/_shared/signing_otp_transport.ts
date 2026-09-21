@@ -14,6 +14,9 @@ export type SigningOtpDeliveryRequest = {
     | "signup-signing-otp-nl-v1"
     | "customer-correction-signing-otp-nl-v1";
   requestReference: string;
+  displayName: string;
+  senderName: string;
+  senderAddress: string;
 };
 
 export type SigningOtpDeliveryResult = {
@@ -33,6 +36,34 @@ export interface SigningOtpTransportPort {
   ): Promise<SigningOtpDeliveryResult>;
 }
 
+export function createSigningOtpMailContent(
+  request: SigningOtpDeliveryRequest,
+): Readonly<{
+  senderName: string;
+  senderAddress: string;
+  subject: string;
+  body: string;
+}> {
+  const purpose = request.templateVersion ===
+      "customer-correction-signing-otp-nl-v1"
+    ? `je correctie op je ${request.displayName}-dossier te ondertekenen`
+    : `je ${request.displayName}-aanmelding te ondertekenen`;
+  return Object.freeze({
+    senderName: request.senderName,
+    senderAddress: request.senderAddress,
+    subject: `Je ${request.displayName} ondertekencode`,
+    body: [
+      `Gebruik deze eenmalige code om ${purpose}:`,
+      "",
+      request.secretCode,
+      "",
+      "De code verloopt binnen tien minuten. Deel deze code niet.",
+      "",
+      `Referentie: ${request.challengeReference}`,
+    ].join("\r\n"),
+  });
+}
+
 export class LocalMailpitSigningOtpTransportAdapter
   implements SigningOtpTransportPort {
   readonly transportId = "local_mailpit_v1";
@@ -40,30 +71,18 @@ export class LocalMailpitSigningOtpTransportAdapter
   constructor(
     private readonly host: string,
     private readonly port: number,
-    private readonly sender: string,
   ) {}
 
   async deliver(
     request: SigningOtpDeliveryRequest,
   ): Promise<SigningOtpDeliveryResult> {
-    const purpose = request.templateVersion ===
-        "customer-correction-signing-otp-nl-v1"
-      ? "je correctie op je ENVAL-dossier te ondertekenen"
-      : "je ENVAL-aanmelding te ondertekenen";
+    const content = createSigningOtpMailContent(request);
     const result = await sendLocalPlainTextMail(this.host, this.port, {
-      sender: this.sender,
-      senderName: "ENVAL",
+      sender: content.senderAddress,
+      senderName: content.senderName,
       recipient: request.deliveryTarget,
-      subject: "Je ENVAL ondertekencode",
-      body: [
-        `Gebruik deze eenmalige code om ${purpose}:`,
-        "",
-        request.secretCode,
-        "",
-        "De code verloopt binnen tien minuten. Deel deze code niet.",
-        "",
-        `Referentie: ${request.challengeReference}`,
-      ].join("\r\n"),
+      subject: content.subject,
+      body: content.body,
     });
     if (result.accepted) {
       return {
@@ -114,6 +133,9 @@ export class ConfiguredSigningOtpTransportAdapter
           code: request.secretCode,
           expires_at: request.expiresAt,
           reference: request.challengeReference,
+          display_name: request.displayName,
+          sender_name: request.senderName,
+          sender_address: request.senderAddress,
         }),
       });
       return response.ok
@@ -152,7 +174,6 @@ export function resolveSigningOtpTransport(
     return new LocalMailpitSigningOtpTransportAdapter(
       environment.get("SIGNING_OTP_LOCAL_SMTP_HOST") || "inbucket",
       port,
-      environment.get("SIGNING_OTP_LOCAL_SENDER") || "noreply@enval.local",
     );
   }
   if (driver === "configured_http") {

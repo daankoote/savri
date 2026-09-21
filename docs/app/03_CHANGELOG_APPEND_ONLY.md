@@ -2361,3 +2361,30 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   and uses `Ander account gebruiken` to complete normal logout before login.
 - Focused pure Auth/navigation proofs and typecheck are green. Runtime browser
   validation and human Firefox acceptance remain open.
+
+## 2026-09-21 — Centralize deployment brand configuration
+
+- Extended the existing strict `PresentationBrandConfigV1` instead of adding a
+  second authority. One server-resolved `displayName` now owns classified
+  ordinary product-name copy and browser metadata; mark, product label,
+  tagline, assets, export basename, website/contact route, approved mail
+  display/address and legal name remain explicit independent fields with safe
+  ENVAL defaults.
+- Custom configuration is exact-key and complete. Missing, empty, malformed or
+  extra-field input fails closed; display name never derives domains, e-mail,
+  legal identity, tenant, route or authorization. Existing Auth, R7, tenant,
+  case and capability authorities are unchanged.
+- Export filename, legal export title and visible mail sender consume their
+  own explicit fields; signing-code and workflow mail product copy consume the
+  display name while provider credentials remain separate. New workflow-mail
+  intents freeze their validated sender name/address and presentation-config
+  version inside the hashed immutable payload; legacy intents are not
+  reinterpreted or backfilled. Shared `Powered by` attribution now consumes
+  `displayName`. Immutable legal/signing snapshots, fee and operational-role
+  copy, technical identifiers, migrations and historical documentation remain
+  deliberately ENVAL-specific. Local migration apply, active-schema/security
+  parity, sender snapshot/retry/replay proofs, the three-viewport browser matrix
+  and human Firefox acceptance for ENVAL defaults and
+  `noorderlicht-local-v1` are green. Exact cleanup proved zero fixture residue
+  and unchanged non-fixture fingerprints; hosted configuration and deployment
+  remain open.

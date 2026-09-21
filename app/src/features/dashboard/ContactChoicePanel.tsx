@@ -1,9 +1,12 @@
+import { usePresentationBrand } from "../../shared/presentation/PresentationBrandProvider";
+
 export function ContactChoicePanel() {
+  const presentation = usePresentationBrand();
   return (
     <div className="portal-content-stack">
       <header className="portal-content-header">
         <div>
-          <h1>Contact ENVAL</h1>
+          <h1>Contact {presentation.displayName}</h1>
           <p>Kies hoe u contact wilt opnemen.</p>
         </div>
       </header>
@@ -12,12 +15,16 @@ export function ContactChoicePanel() {
         <article className="portal-card-compact">
           <h2>AI bot</h2>
           <p>Mock placeholder. Nog geen bot of backend.</p>
-          <button className="button button-secondary" type="button">Start chat</button>
+          <button className="button button-secondary" type="button">
+            Start chat
+          </button>
         </article>
         <article className="portal-card-compact">
           <h2>Bericht sturen</h2>
           <p>Mock placeholder. Nog geen berichtverzending.</p>
-          <button className="button button-secondary" type="button">Bericht maken</button>
+          <button className="button button-secondary" type="button">
+            Bericht maken
+          </button>
         </article>
       </section>
     </div>

@@ -38,6 +38,21 @@ export function PresentationBrandRuntime(
     };
   }, []);
 
+  useEffect(() => {
+    if (state.status !== "ready") return;
+    document.title =
+      `${state.presentation.displayName} ${state.presentation.productLabel}`;
+    const favicon = state.presentation.assets.favicon;
+    if (!favicon) return;
+    let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "icon";
+      document.head.append(link);
+    }
+    link.href = favicon;
+  }, [state]);
+
   if (state.status === "loading") {
     return (
       <main className="page-shell">

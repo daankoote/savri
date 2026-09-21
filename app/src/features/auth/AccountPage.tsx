@@ -30,18 +30,22 @@ import {
   readRequestedPortal,
   resolveAuthorizedPostLoginDecision,
 } from "./postLoginNavigation";
+import {
+  formatPresentationBrandCopy,
+  usePresentationBrand,
+} from "../../shared/presentation/PresentationBrandProvider";
 
 type AccountPageContentProps = {
   currentPath: string;
   navigate: AppNavigate;
 };
 
-function modeCopy(mode: AuthMode) {
+function modeCopy(mode: AuthMode, displayName: string) {
   if (mode === "activate") {
     return {
       action: "Account aanmaken",
       helper:
-        "Maak een account aan voor het ENVAL-klantportaal. Een aanvraag kan daarna worden gestart.",
+        `Maak een account aan voor het ${displayName}-klantportaal. Een aanvraag kan daarna worden gestart.`,
       submit: "Account aanmaken",
     };
   }
@@ -53,13 +57,17 @@ function modeCopy(mode: AuthMode) {
   };
 }
 
-function safeErrorText(error: AuthSafeError | null) {
-  return error?.message ||
-    "Inloggen is tijdelijk niet beschikbaar. Probeer het opnieuw.";
+function safeErrorText(error: AuthSafeError | null, displayName: string) {
+  return formatPresentationBrandCopy(
+    error?.message ||
+      "Inloggen is tijdelijk niet beschikbaar. Probeer het opnieuw.",
+    displayName,
+  );
 }
 
 function AccountAccessPage({ navigate }: { navigate: AppNavigate }) {
   const auth = useAuth();
+  const presentation = usePresentationBrand();
   const requestedPortal = readRequestedPortal(window.location.search);
   const showCustomerAccountActions = auth.audience === "customer" ||
     (auth.audience === "portal" && requestedPortal !== "workforce");
@@ -75,7 +83,7 @@ function AccountAccessPage({ navigate }: { navigate: AppNavigate }) {
   const [submitting, setSubmitting] = useState(false);
   const hasNavigatedRef = useRef(false);
   const logoutRunningRef = useRef(false);
-  const copy = modeCopy(mode);
+  const copy = modeCopy(mode, presentation.displayName);
   const portalNavigation: AuthorizedPortalNavigation = auth.audience ===
       "portal"
     ? auth.portalNavigation ?? {
@@ -365,7 +373,7 @@ function AccountAccessPage({ navigate }: { navigate: AppNavigate }) {
       {auth.status === "error" && !feedback
         ? (
           <div className="review-panel" role="alert">
-            <p>{safeErrorText(auth.error)}</p>
+            <p>{safeErrorText(auth.error, presentation.displayName)}</p>
           </div>
         )
         : null}

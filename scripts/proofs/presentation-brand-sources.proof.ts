@@ -105,9 +105,22 @@ const syntheticValidation = validatePresentationBrandConfigV1({
     altText: "Example Mobility",
   },
   exportBasename: "example-mobility-documents",
+  identity: ENVAL_PRESENTATION_BRAND_CONFIG_V1.identity,
 });
 assert(syntheticValidation.ok, "synthetic_config_invalid");
 const synthetic = syntheticValidation.value;
+const standaloneIdentityValidation = validatePresentationBrandConfigV1({
+  ...synthetic,
+  configVersion: "example-mobility-identity-v1",
+  identity: {
+    websiteUrl: "https://mobility.example/",
+    contactRoute: "/contact",
+    mailDisplayName: "Mobility Mail",
+    mailAddress: "mail@mobility.example",
+    legalName: "Mobility Legal B.V.",
+  },
+});
+assert(standaloneIdentityValidation.ok, "standalone_identity_config_invalid");
 
 const managedEnval = new PlatformControlPlanePresentationV1Source(
   reader([record()]),
@@ -160,6 +173,27 @@ assert(
       JSON.stringify(staticSyntheticResult.value) &&
     managedSyntheticResult.value.displayName === "Example Mobility",
   "Q02_synthetic_managed_static_parity_failed",
+);
+
+const standaloneIdentityCreation = createStaticPresentationConfigV1Source([{
+  tenantId: TENANT_ID,
+  environment: "local",
+  presentationMode: "CUSTOM_V1",
+  presentationConfig: standaloneIdentityValidation.value,
+}]);
+assert(standaloneIdentityCreation.ok, "standalone_identity_source_invalid");
+const standaloneIdentity = await resolve(standaloneIdentityCreation.source);
+assert(
+  standaloneIdentity.ok &&
+    standaloneIdentity.value.displayName === "Example Mobility" &&
+    standaloneIdentity.value.identity.legalName === "Mobility Legal B.V." &&
+    standaloneIdentity.value.identity.mailDisplayName === "Mobility Mail" &&
+    standaloneIdentity.value.identity.mailAddress ===
+      "mail@mobility.example" &&
+    standaloneIdentity.value.identity.websiteUrl ===
+      "https://mobility.example/" &&
+    standaloneIdentity.value.identity.contactRoute === "/contact",
+  "Q02b_standalone_identity_fields_not_independent",
 );
 
 const missing = await resolve(
@@ -284,8 +318,8 @@ assert(
 const projected = projectPresentationBrand(managedSyntheticResult.value);
 assert(
   Object.keys(projected).sort().join("|") ===
-      "assets|configVersion|displayName|exportBasename|productLabel|schemaVersion|shortMark|tagline" &&
-    !/(tenant|locator|routing|secret|credential|legal|support|password|token)/i
+      "assets|configVersion|displayName|exportBasename|identity|productLabel|schemaVersion|shortMark|tagline" &&
+    !/(tenant|locator|routing|secret|credential|support|password|token)/i
       .test(JSON.stringify(projected)),
   "Q08_public_projection_contains_authority_or_secret_material",
 );

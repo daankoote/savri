@@ -34,6 +34,13 @@ export function projectPresentationSurfaceIdentity(
   });
 }
 
+export function formatPresentationBrandCopy(
+  value: string,
+  displayName: string,
+): string {
+  return value.split("ENVAL").join(displayName);
+}
+
 const PresentationBrandContext = createContext<
   PublicPresentationBrandV1 | null
 >(null);

@@ -1,4 +1,5 @@
 import type { ElementType, ReactNode } from "react";
+import { usePresentationBrand } from "../presentation/PresentationBrandProvider";
 import type { AppSurface } from "../surfaces/surfaceModel";
 
 type SurfaceShellProps = Readonly<{
@@ -19,6 +20,7 @@ export function SurfaceShell({
   surface,
 }: SurfaceShellProps) {
   const Root = as as ElementType;
+  const presentation = usePresentationBrand();
 
   return (
     <Root className={className} data-app-surface={surface}>
@@ -27,7 +29,7 @@ export function SurfaceShell({
       {platformAttribution
         ? (
           <footer className="surface-attribution">
-            Powered by ENVAL
+            Powered by {presentation.displayName}
           </footer>
         )
         : null}

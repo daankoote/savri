@@ -5,6 +5,7 @@ import {
   type ResolvedPresentationSourceContext,
 } from "../presentation_brand_source.ts";
 import { validatePresentationBrandConfigV1 } from "../presentation_brand_config.ts";
+import { ENVAL_PRESENTATION_BRAND_CONFIG_V1 } from "../enval_presentation_defaults.ts";
 
 export type PlatformPresentationConfigRecord = Readonly<{
   tenantId: string;
@@ -124,6 +125,7 @@ export class PlatformControlPlanePresentationV1Source
       ...(record.exportBasename === null
         ? {}
         : { exportBasename: record.exportBasename }),
+      identity: ENVAL_PRESENTATION_BRAND_CONFIG_V1.identity,
     });
     return validated.ok
       ? { ok: true, value: validated.value }

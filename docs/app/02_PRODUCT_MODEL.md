@@ -136,8 +136,9 @@ verification may vary by annual case. Do not create permanent-asset or meter
 copies per calendar year.
 
 Customer dossier communication is tenant customer-to-workforce. ENVAL platform
-support is a separate capability-gated system. Shared shells may show the exact
-attribution `Powered by ENVAL`; attribution never establishes legal, operator,
+support is a separate capability-gated system. Shared shells may show the
+presentation-owned attribution `Powered by <displayName>`; attribution never
+establishes legal, operator,
 controller, mandate, fee, or verifier identity.
 
 ## API And CRM Readiness

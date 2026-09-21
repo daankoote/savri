@@ -20,6 +20,7 @@ import {
   type SignupStepTransitionEnvironment,
   transitionSignupStep,
 } from "../../app/src/features/signup/signupStepTransition.ts";
+import { createSigningOtpMailContent } from "../../supabase/functions/_shared/signing_otp_transport.ts";
 
 const ROOT = new URL("../../", import.meta.url);
 
@@ -100,6 +101,11 @@ assert(
 );
 
 const bundle = createLegalBundleDocument({ documents, mandate });
+const alternateBundle = createLegalBundleDocument({
+  documents,
+  legalName: "Voorbeeld Legal B.V.",
+  mandate,
+});
 const rendered = renderBrowserHtmlLegalBundleV1(bundle);
 assert(
   bundle.sections.map((section) => section.documentType).join("|") ===
@@ -109,6 +115,8 @@ assert(
     rendered.includes("Vergoedingsvoorwaarden") &&
     rendered.includes("Machtiging") &&
     rendered.includes("Voorbeeld B.V.") &&
+    bundle.title === "Documenten aanmelding ENVAL" &&
+    alternateBundle.title === "Documenten aanmelding Voorbeeld Legal B.V." &&
     rendered.includes("871687400000000001") &&
     !rendered.includes("unverified") && !rendered.includes("draft-v1"),
   "self_contained_bundle_render_failed",
@@ -154,6 +162,57 @@ assert(
     anchor.rel === "noopener noreferrer" && urls.length === 2 &&
     revoked.join("|") === urls.join("|"),
   "preview_download_lifecycle_is_not_state_safe",
+);
+
+const alternateExporter = createBrowserHtmlLegalBundleV1(
+  exportEnvironment,
+  "voorbeeld-documenten",
+);
+assert(alternateExporter.download(alternateBundle), "custom_download_failed");
+assert(
+  anchor.download === "voorbeeld-documenten.html" &&
+    anchor.clickCount === 2,
+  "configured_export_basename_not_used",
+);
+
+const signingMailRequest = {
+  challengeReference: "signup-signing-proof",
+  verifiedChannelReference: "verified-channel-proof",
+  deliveryTarget: "recipient@example.test",
+  secretCode: "123456",
+  expiresAt: "2026-09-21T12:10:00.000Z",
+  templateVersion: "signup-signing-otp-nl-v1" as const,
+  requestReference: "request-proof",
+};
+const defaultSigningMail = createSigningOtpMailContent({
+  ...signingMailRequest,
+  displayName: "ENVAL",
+  senderName: "ENVAL",
+  senderAddress: "noreply@enval.local",
+});
+const alternateSigningMail = createSigningOtpMailContent({
+  ...signingMailRequest,
+  displayName: "Voorbeeld Energie",
+  senderName: "Voorbeeld Service",
+  senderAddress: "ondertekenen@example.test",
+});
+assert(
+  defaultSigningMail.subject === "Je ENVAL ondertekencode" &&
+    defaultSigningMail.body.includes("je ENVAL-aanmelding te ondertekenen") &&
+    defaultSigningMail.senderName === "ENVAL" &&
+    defaultSigningMail.senderAddress === "noreply@enval.local",
+  "default_signing_mail_brand_invalid",
+);
+assert(
+  alternateSigningMail.subject === "Je Voorbeeld Energie ondertekencode" &&
+    alternateSigningMail.body.includes(
+      "je Voorbeeld Energie-aanmelding te ondertekenen",
+    ) &&
+    alternateSigningMail.senderName === "Voorbeeld Service" &&
+    alternateSigningMail.senderAddress === "ondertekenen@example.test" &&
+    !alternateSigningMail.subject.includes("ENVAL") &&
+    !alternateSigningMail.body.includes("ENVAL"),
+  "alternate_signing_mail_brand_invalid",
 );
 
 const transitions: string[] = [];
@@ -309,14 +368,16 @@ for (
       "e34f195df8e7f44f716f88d919dbefcc5bf6f2c8a78d9ff8e9c1e0825fad3f4b",
     "app/src/features/signup/signupSubmitMapper.ts":
       "d348960a22701e5baec962fdb8e8964d8025b3afa6d8f7d3b30ba5ede147ad06",
-    [resolveTenantEnvalArchivedMigrationPath(
-      "supabase/migrations/20260730150000_app_signup_connection_declaration_sources.sql",
-    )]:
-      "c9a82157dcc77577edf833950ee97eb886ebbaa645cfada20a98e492b2771ff8",
-    [resolveTenantEnvalArchivedMigrationPath(
-      "supabase/migrations/20260730170000_app_assisted_connection_capture_correction.sql",
-    )]:
-      "561a80fee5c04cc073d8c099e54b7ad721abff021b23522d4cfa8588f4afcb25",
+    [
+      resolveTenantEnvalArchivedMigrationPath(
+        "supabase/migrations/20260730150000_app_signup_connection_declaration_sources.sql",
+      )
+    ]: "c9a82157dcc77577edf833950ee97eb886ebbaa645cfada20a98e492b2771ff8",
+    [
+      resolveTenantEnvalArchivedMigrationPath(
+        "supabase/migrations/20260730170000_app_assisted_connection_capture_correction.sql",
+      )
+    ]: "561a80fee5c04cc073d8c099e54b7ad721abff021b23522d4cfa8588f4afcb25",
     "supabase/functions/api-app-signup-submit/index.ts":
       "97f9afe03ac39dc4dfde89d4906432c06c79397be33a649f90160bae6a718b01",
   })

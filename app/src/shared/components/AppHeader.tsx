@@ -9,15 +9,19 @@ import type {
   SurfaceNavigationItem,
 } from "../surfaces/surfaceModel";
 
-const publicNavigation = [
-  { label: "Home", href: "/" },
-  { label: "Opbrengst", href: "/#opbrengst" },
-  { label: "Aanmerking", href: "/#aanmerking" },
-  { label: "Aanmelden", href: "/aanmelden" },
-  { label: "ERE info", href: "/ere" },
-  { label: "Contact", href: "/contact" },
-  { label: "Inloggen", href: "/inloggen" },
-] satisfies readonly SurfaceNavigationItem[];
+function publicNavigation(
+  contactRoute: string,
+): readonly SurfaceNavigationItem[] {
+  return [
+    { label: "Home", href: "/" },
+    { label: "Opbrengst", href: "/#opbrengst" },
+    { label: "Aanmerking", href: "/#aanmerking" },
+    { label: "Aanmelden", href: "/aanmelden" },
+    { label: "ERE info", href: "/ere" },
+    { label: "Contact", href: contactRoute },
+    { label: "Inloggen", href: "/inloggen" },
+  ];
+}
 
 type AppHeaderProps = {
   currentPath: string;
@@ -44,13 +48,15 @@ export function AppHeader({
   currentPath,
   identitySurface,
   navigate,
-  navigation = publicNavigation,
+  navigation,
   onLogout,
   surface = "public",
 }: AppHeaderProps) {
   const logoutRunningRef = useRef(false);
   const [logoutRunning, setLogoutRunning] = useState(false);
   const presentation = usePresentationBrand();
+  const effectiveNavigation = navigation ??
+    publicNavigation(presentation.identity.contactRoute);
   const identity = identitySurface
     ? projectPresentationSurfaceIdentity(
       presentation,
@@ -94,10 +100,10 @@ export function AppHeader({
           </span>
         </a>
 
-        {navigation.length > 0 || onLogout
+        {effectiveNavigation.length > 0 || onLogout
           ? (
             <nav className="header-nav" aria-label="Hoofdnavigatie">
-              {navigation.map((item) =>
+              {effectiveNavigation.map((item) =>
                 item.href
                   ? (
                     <a

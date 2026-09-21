@@ -4,6 +4,10 @@ import {
   type CustomerDocumentFactInteractionModel,
   type CustomerDocumentFactSourceChoice,
 } from "./CustomerDocumentFactInteraction";
+import {
+  formatPresentationBrandCopy,
+  usePresentationBrand,
+} from "../../shared/presentation/PresentationBrandProvider";
 
 export type DocumentFactMatrixColumns = Readonly<{
   label?: string;
@@ -64,6 +68,7 @@ export function DocumentFactMatrix({
   rows,
   variant,
 }: DocumentFactMatrixProps) {
+  const presentation = usePresentationBrand();
   if (variant === "customer") {
     const visibleRows = (rows as readonly CustomerDocumentFactMatrixRow[])
       .filter((row) => !row.hidden);
@@ -71,7 +76,10 @@ export function DocumentFactMatrix({
     return (
       <div className="fact-table fact-table--customer" role="table">
         <div className="fact-table__header" role="row">
-          {Object.values(CUSTOMER_DOCUMENT_FACT_MATRIX_COLUMNS).map((label) => (
+          {Object.values({
+            ...CUSTOMER_DOCUMENT_FACT_MATRIX_COLUMNS,
+            enval: presentation.displayName,
+          }).map((label) => (
             <span key={label} role="columnheader">{label}</span>
           ))}
         </div>
@@ -152,7 +160,7 @@ export function DocumentFactMatrix({
                 </span>
                 <span
                   className="fact-table__enval"
-                  data-label="ENVAL"
+                  data-label={presentation.displayName}
                   role="cell"
                 >
                   <span
@@ -165,7 +173,10 @@ export function DocumentFactMatrix({
                       ? "status-pill status-pill-ok"
                       : "status-pill status-pill-warning"}
                   >
-                    {row.enval}
+                    {formatPresentationBrandCopy(
+                      row.enval,
+                      presentation.displayName,
+                    )}
                   </span>
                 </span>
                 <span

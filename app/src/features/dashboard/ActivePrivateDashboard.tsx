@@ -18,6 +18,10 @@ import type {
 } from "./dashboardTypes";
 import type { DashboardReadState } from "./useDashboardRead";
 import type { CustomerCorrectionHandoffState } from "./useCustomerCorrectionHandoff";
+import {
+  formatPresentationBrandCopy,
+  usePresentationBrand,
+} from "../../shared/presentation/PresentationBrandProvider";
 
 type AccordionSection =
   | "charger"
@@ -57,6 +61,7 @@ export function ActivePrivateDashboard({
   onRefreshSelectedDossier,
   selectedDossierId,
 }: ActivePrivateDashboardProps) {
+  const presentation = usePresentationBrand();
   const [selectedChargerId, setSelectedChargerId] = useState<string | null>(
     null,
   );
@@ -154,7 +159,7 @@ export function ActivePrivateDashboard({
         ? (
           <DashboardNotice
             title="Geen dossier gevonden"
-            note="Er is nog geen gekoppeld ENVAL-dossier gevonden."
+            note={`Er is nog geen gekoppeld ${presentation.displayName}-dossier gevonden.`}
           />
         )
         : null}
@@ -193,7 +198,10 @@ export function ActivePrivateDashboard({
                   {
                     identity: "current-step",
                     label: "Nu",
-                    value: currentStatus.currentStep,
+                    value: formatPresentationBrandCopy(
+                      currentStatus.currentStep,
+                      presentation.displayName,
+                    ),
                   },
                   {
                     identity: "customer-action",

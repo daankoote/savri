@@ -271,28 +271,35 @@ Status: CURRENT PROVEN LOCAL for
 `platform.tenant_presentation_configs` and its security-invoker current view.
 
 Presentation configuration is append-only and versioned per exact
-`tenant_id`/environment. The implemented bounded fields contain schema/config
+`tenant_id`/environment. `PresentationBrandConfigV1` contains schema/config
 version, display name, short mark, product label, optional tagline, safe
-repository asset references/alt text and optional export basename. The
-managed and static source adapters validate the same
-`PresentationBrandConfigV1` contract and expose only
-`PublicPresentationBrandV1` to the browser.
+repository asset references/alt text, optional export basename and one complete
+identity block with website URL, local contact route, approved mail display
+name/address and legal name. Static custom deployment configuration supplies
+that complete exact-key contract. The current managed control-plane record
+persists only the older presentation subset; its adapter supplies canonical
+ENVAL identity defaults pending a separately authorized forward migration. Both
+source adapters validate the same final `PresentationBrandConfigV1` contract
+and expose only `PublicPresentationBrandV1` to the browser.
 
 Presentation config is `PUBLIC_PRESENTATION_CONFIG`, not routing, tenant,
 Auth/RLS, customer/case, legal-operator, signing, representation or support
 authority. It stores no locator, project reference, credential, raw secret,
 customer truth or finalized signing/legal snapshot. Missing, invalid,
 ambiguous, tenant-mismatched or environment-mismatched configuration fails
-closed. Canonical ENVAL defaults are allowed only through explicit
-server-owned standalone configuration, never as a global white-label fallback.
+closed. The complete canonical ENVAL default presentation is allowed only
+through explicit server-owned standalone configuration, never as a global
+white-label fallback; this does not prohibit the managed adapter from supplying
+only the canonical identity defaults for fields its current record cannot yet
+persist.
 
-Future safe extensions are limited to controlled display name, logo/asset
-reference, approved design-token/accent values, tenant customer-support identity,
-customer-facing contact details and approved e-mail display identity. Arbitrary
-tenant CSS, JavaScript, HTML and per-tenant frontend code are forbidden. The
-preferred future default routing namespace is an ENVAL-owned tenant subdomain
-such as `<tenant>.enval.nl`; custom enterprise domains require separately
-verified ownership and trusted-ingress controls and are not MVP scope.
+Future safe extensions are limited to approved design-token/accent values,
+broader tenant customer-support identity and a brand-administration UI.
+Arbitrary tenant CSS, JavaScript, HTML and per-tenant frontend code are
+forbidden. The preferred future default routing namespace is an ENVAL-owned
+tenant subdomain such as `<tenant>.enval.nl`; custom enterprise domains require
+separately verified ownership and trusted-ingress controls and are not MVP
+scope.
 
 ### 3.10 Tenant Operational Configuration Boundary
 

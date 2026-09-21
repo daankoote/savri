@@ -528,8 +528,8 @@ const target = resolveSupabaseTarget({
   cwd: ROOT,
 });
 assert(target.localOnly && target.projectId === "enval", "target_guard_failed");
-const before = activeFingerprint();
-assert(before, "active_fingerprint_missing");
+const before = FRESH_ONLY ? null : activeFingerprint();
+if (!FRESH_ONLY) assert(before, "active_fingerprint_missing");
 
 try {
   const activeFiles = readdirSync(resolve(ROOT, chain.activeRoot))
@@ -1155,12 +1155,14 @@ try {
   try {
     docker(["dropdb", "-U", "postgres", "--force", "--if-exists", DATABASE]);
   } catch {}
-  const after = activeFingerprint();
-  if (before !== after) {
-    console.error("ACTIVE_DATABASE_UNCHANGED=FAIL");
-    process.exitCode = 1;
-  } else if (!process.exitCode) {
-    console.log("ACTIVE_DATABASE_UNCHANGED=PASS");
-    console.log("FIRST_ADMIN_STATE_UNCHANGED=PASS");
+  if (!FRESH_ONLY) {
+    const after = activeFingerprint();
+    if (before !== after) {
+      console.error("ACTIVE_DATABASE_UNCHANGED=FAIL");
+      process.exitCode = 1;
+    } else if (!process.exitCode) {
+      console.log("ACTIVE_DATABASE_UNCHANGED=PASS");
+      console.log("FIRST_ADMIN_STATE_UNCHANGED=PASS");
+    }
   }
 }

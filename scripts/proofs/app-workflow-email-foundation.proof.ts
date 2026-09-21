@@ -202,7 +202,13 @@ async function seedRealInformationRequest(): Promise<string> {
   return request.request_ref;
 }
 
-function enqueueSql(requestRef: string, organization = "ENVAL") {
+function enqueueSql(
+  requestRef: string,
+  organization = "ENVAL",
+  senderDisplayName = "ENVAL",
+  senderAddress = "noreply@enval.local",
+  presentationConfigVersion = "enval-presentation-v1",
+) {
   const dedupeRequestRef = requestRef.toLowerCase();
   return `select public.app_workflow_email_enqueue_v1(
     'information_request_created_customer',
@@ -212,7 +218,10 @@ function enqueueSql(requestRef: string, organization = "ENVAL") {
     jsonb_build_object(
       'organization_name','${organization}',
       'application_label','Aanvraag WF-MAIL-1',
-      'action_url','http://127.0.0.1:5175/dashboard/aanvragen/${CASE_REF}'
+      'action_url','http://127.0.0.1:5175/dashboard/aanvragen/${CASE_REF}',
+      'sender_display_name','${senderDisplayName}',
+      'sender_address','${senderAddress}',
+      'presentation_config_version','${presentationConfigVersion}'
     ),
     'information-request:${dedupeRequestRef}:customer:${AUTH_CUSTOMER}'
   )::text;`;
@@ -316,24 +325,34 @@ async function runProof(): Promise<void> {
   );
   assert(!parts[2].includes("Welke toelichting"), "question_text_leaked");
 
-  const conflict = await command("docker", [
-    "exec",
-    "-i",
-    CONTAINER,
-    "psql",
-    "-X",
-    "-qAt",
-    "-v",
-    "ON_ERROR_STOP=1",
-    "-U",
-    "postgres",
-    "-d",
-    DATABASE,
-  ], enqueueSql(requestRef, "Andere organisatie"));
+  const conflict = await command(
+    "docker",
+    [
+      "exec",
+      "-i",
+      CONTAINER,
+      "psql",
+      "-X",
+      "-qAt",
+      "-v",
+      "ON_ERROR_STOP=1",
+      "-U",
+      "postgres",
+      "-d",
+      DATABASE,
+    ],
+    enqueueSql(
+      requestRef,
+      "ENVAL",
+      "Nieuwe Afzender",
+      "nieuw@example.test",
+      "new-presentation-v1",
+    ),
+  );
   assert(
     conflict.code !== 0 &&
       conflict.stderr.includes("workflow_email_dedupe_conflict"),
-    "dedupe_payload_conflict_not_rejected",
+    "sender_snapshot_dedupe_conflict_not_rejected",
   );
 
   const invalidTemplate = await command(
@@ -399,6 +418,35 @@ async function runProof(): Promise<void> {
     "non_string_template_variable_not_rejected",
   );
 
+  const nonCanonicalSenderSnapshot = await command(
+    "docker",
+    [
+      "exec",
+      "-i",
+      CONTAINER,
+      "psql",
+      "-X",
+      "-qAt",
+      "-v",
+      "ON_ERROR_STOP=1",
+      "-U",
+      "postgres",
+      "-d",
+      DATABASE,
+    ],
+    enqueueSql(requestRef, "ENVAL", " ENVAL").replace(
+      `information-request:${requestRef.toLowerCase()}`,
+      `information-request-whitespace:${requestRef.toLowerCase()}`,
+    ),
+  );
+  assert(
+    nonCanonicalSenderSnapshot.code !== 0 &&
+      nonCanonicalSenderSnapshot.stderr.includes(
+        "workflow_email_template_variables_invalid",
+      ),
+    "non_canonical_sender_snapshot_not_rejected",
+  );
+
   const claimOne = await json(`set role service_role;
     select public.app_workflow_email_claim_v1()::text; reset role;`);
   const claimTwo = await json(`set role service_role;
@@ -408,7 +456,10 @@ async function runProof(): Promise<void> {
     typeof deliveryOne.delivery_id === "string" &&
       claimTwo.delivery === null &&
       deliveryOne.body === expectedBody &&
-      deliveryOne.provider_idempotency_key === parts[3],
+      deliveryOne.provider_idempotency_key === parts[3] &&
+      deliveryOne.sender_display_name === "ENVAL" &&
+      deliveryOne.sender_address === "noreply@enval.local" &&
+      deliveryOne.presentation_config_version === "enval-presentation-v1",
     "single_lease_or_frozen_claim_invalid",
   );
 
@@ -434,7 +485,10 @@ async function runProof(): Promise<void> {
     const delivery = claimed.delivery as JsonObject;
     assert(
       delivery.body === expectedBody &&
-        delivery.provider_idempotency_key === parts[3],
+        delivery.provider_idempotency_key === parts[3] &&
+        delivery.sender_display_name === "ENVAL" &&
+        delivery.sender_address === "noreply@enval.local" &&
+        delivery.presentation_config_version === "enval-presentation-v1",
       `retry_frozen_payload_changed_${attempt}`,
     );
     const completed = await json(`set role service_role;
@@ -457,6 +511,38 @@ async function runProof(): Promise<void> {
   const afterLimit = await json(`set role service_role;
     select public.app_workflow_email_claim_v1()::text; reset role;`);
   assert(afterLimit.delivery === null, "attempt_limit_not_enforced");
+
+  await psql(`
+    insert into public.app_workflow_email_intents (
+      id,event_type,template_key,business_event_ref,recipient_kind,
+      recipient_ref,recipient_email,template_variables,frozen_subject,
+      frozen_body,payload_sha256,provider_idempotency_key,dedupe_key
+    ) values (
+      'b7000000-0000-4000-8000-000000000001',
+      'information_request_created_customer',
+      'information-request-created-customer-nl-v1',
+      'IRQ-0000000000000001','customer','${AUTH_CUSTOMER}',
+      'workflow.customer@example.invalid',
+      jsonb_build_object(
+        'organization_name','ENVAL',
+        'application_label','Legacy intent',
+        'action_url','http://127.0.0.1:5175/dashboard/aanvragen/${CASE_REF}'
+      ),
+      'Er staat een vraag voor u klaar','Legacy body','${"d".repeat(64)}',
+      'workflow-email-v1:${"e".repeat(64)}','legacy-intent-proof'
+    );
+    insert into public.app_workflow_email_deliveries (intent_id)
+    values ('b7000000-0000-4000-8000-000000000001');
+  `);
+  const legacyClaim = await json(`set role service_role;
+    select public.app_workflow_email_claim_v1()::text; reset role;`);
+  const legacyState = await psql(`select concat_ws('|',status,attempt_count)
+    from public.app_workflow_email_deliveries
+    where intent_id='b7000000-0000-4000-8000-000000000001';`);
+  assert(
+    legacyClaim.delivery === null && legacyState === "queued|0",
+    `legacy_intent_not_fail_closed:${legacyState}`,
+  );
 
   const mutationDenied = await command("docker", [
     "exec",

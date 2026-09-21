@@ -17,6 +17,10 @@ import {
   type EvidenceReviewWorklistGroup,
 } from "./evidenceReviewRoutes.ts";
 import { EVIDENCE_REVIEW_STATUS_PRESENTATION } from "./evidenceReviewStatusPresentation.ts";
+import {
+  formatPresentationBrandCopy,
+  usePresentationBrand,
+} from "../../shared/presentation/PresentationBrandProvider.tsx";
 
 type EvidenceReviewWorklistContentProps = Readonly<{
   state: EvidenceReviewWorklistReadState;
@@ -85,6 +89,7 @@ export function EvidenceReviewCaseRow({
   item: EvidenceReviewWorklistCaseV4;
   onOpenCase: (caseRef: string) => void;
 }>) {
+  const presentation = usePresentationBrand();
   const detailRoute = buildEvidenceReviewDetailRoute(item.caseRef);
   const unresolvedLabel = unresolvedFactLabel(item);
   const status = EVIDENCE_REVIEW_STATUS_PRESENTATION[item.overallReviewStatus];
@@ -110,7 +115,10 @@ export function EvidenceReviewCaseRow({
         <span className={`status-pill ${status.className}`}>
           {item.reviewAttentionReasons.length === 1
             ? REASON_PRESENTATION[item.reviewAttentionReasons[0]].label
-            : status.label}
+            : formatPresentationBrandCopy(
+              status.label,
+              presentation.displayName,
+            )}
         </span>
         {detailRoute
           ? (

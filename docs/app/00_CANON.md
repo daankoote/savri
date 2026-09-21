@@ -139,8 +139,8 @@ tenant workforce administration, ENVAL Control Console and Verifier Console
 remain TARGET/unimplemented. `/intern/compliance` and `/intern/dossiers` are
 temporarily retained compatibility paths under the same operator authority;
 their later redirect/removal is separately bounded. Ordinary workforce gains
-no implicit `platform_support.request`. The shared operator shell renders the
-exact attribution `Powered by ENVAL` once.
+no implicit `platform_support.request`. The shared operator shell renders one
+`Powered by <displayName>` attribution from the same presentation authority.
 
 Authenticated customer and tenant-workforce shells use the existing
 server-resolved presentation display name and mark as their organization
@@ -192,9 +192,27 @@ justified, tenant/actor/purpose/resource/time-bound, least-privilege and audited
 No permanent universal ENVAL data-plane access or universal service role is
 allowed; break-glass remains a separate future high-assurance mechanism.
 
-White-label presentation may expose only controlled fields such as display name,
-logo reference, approved design-token/accent values, tenant support identity,
-customer-facing contact details and approved e-mail display identity. Arbitrary
+White-label presentation exposes only the strict `PresentationBrandConfigV1`
+fields: display name, short mark, product label, optional tagline, allowlisted
+repository assets, export basename and one complete identity block containing
+website URL, local contact route, approved mail display name/address and legal
+name. A custom config must supply the complete exact-key contract; invalid,
+unknown, empty or partial input fails closed before any brand is rendered. The
+ENVAL default is server-owned. Changing `displayName` never derives or mutates
+the short mark, assets, export basename, website, contact route, mail identity
+or legal name.
+
+Ordinary product-name copy, document title/favicon, Auth shell, portal choice,
+customer/workforce shell and customer-facing status labels consume that same
+server-resolved display name. Export filenames consume `exportBasename`, while
+the generated legal-bundle title consumes the separately configured legal
+name. Workflow e-mail body and signing-code copy consume the display name;
+their visible sender name/address consume the two explicit mail fields.
+Transport credentials and provider configuration remain separate server-owned
+operational authority. The shared attribution renders
+`Powered by <displayName>`. Historical changelog/migrations, immutable
+signing/legal snapshots, technical identifiers, fee terms and explicit ENVAL
+operational-role copy are not renamed by presentation configuration. Arbitrary
 tenant CSS, JavaScript, HTML and per-tenant frontend forks are prohibited. The
 preferred future default is an ENVAL-owned tenant subdomain such as
 `<tenant>.enval.nl`; custom domains require verified ownership and are future
@@ -214,11 +232,12 @@ support are separate systems. Only `platform_support.request` permits the latter
 the request grants no tenant-data access. Platform support elevation is a
 separate purpose-, tenant-, actor-, scope-, time- and audit-bound authority.
 
-Controlled tenant presentation may later include display name, logo, approved
-accent/design tokens and tenant customer-support name/e-mail/phone. Branding is
-never contracting-party, regulated-operator, controller, mandate-grantee, fee,
-legal-version or verifier authority. Relevant shells may render the exact shared
-platform attribution `Powered by ENVAL`; it is attribution only.
+Controlled tenant presentation is never contracting-party,
+regulated-operator, controller, mandate-grantee, fee, legal-version or verifier
+authority. Relevant shells may render the shared presentation attribution
+`Powered by <displayName>`; it is attribution only. Uploaded assets, accent/design
+tokens, customer-support identity beyond the validated contact route, and a
+brand-administration UI remain future scope.
 
 API/CRM readiness is a TARGET design constraint, not authorization to build a
 public API. UI and future versioned tenant CRM/ERP/BI/provider adapters must
@@ -467,8 +486,9 @@ Current technical primitives retained as proven or partially proven where code/p
 - `api-app-document-withdraw-current`
 - `api-app-dashboard-get`
 - App-owned workflow e-mail foundation with immutable closed-template intent,
-  separately leased delivery state, append-only attempts, owner-only enqueue,
-  service-role-only claim/completion and strict-local Mailpit transport
+  immutable validated sender/config-version snapshot, separately leased
+  delivery state, append-only attempts, owner-only enqueue, service-role-only
+  claim/completion and strict-local Mailpit transport
 - no legacy dossier dependency in app endpoints
 - provider-neutral managed and static tenant resolution behind
   `TenantResolverPort` / `TenantDataPlaneLocator`
@@ -496,10 +516,23 @@ configuration, secrets, deployment and delivery are not proven. The exact
 contract is owned by `docs/app/architecture/workflow-email.md`.
 New information-request mail freezes the application label and exact case
 reference from the same server-resolved `app_cases` context; browser input
-cannot provide either mail context field.
+cannot provide either mail context field. New intents also freeze the validated
+mail display name, mail address and presentation-config version inside the
+hashed immutable payload. Claim, retries and worker delivery use only that
+stored snapshot. Legacy intents without the complete snapshot remain immutable
+and fail closed without being leased; they are not backfilled from current
+branding.
 
-These white-label foundations are CURRENT PROVEN LOCAL through TF02-C / commit
-`8480b8f`. TF01 supplies the fixed-plane execution binding. TF02-B adds the
+The pre-BRAND_CONFIGURATION_V1 tenant-resolution and presentation foundations
+remain CURRENT PROVEN LOCAL through TF02-C / commit `8480b8f`. The expanded
+strict identity fields, configurable attribution and immutable workflow-mail
+sender snapshot described above are CURRENT PROVEN LOCAL. Migration
+`20260921130223` is applied to the local ENVAL schema; active-schema,
+ACL/RLS, snapshot/retry/replay, three-viewport browser and human Firefox
+acceptance are green for both ENVAL defaults and `noorderlicht-local-v1`. The
+exact fixture cleanup proved zero residue and unchanged non-fixture
+fingerprints. Hosted configuration and deployment remain unproven. TF01
+supplies the fixed-plane execution binding. TF02-B adds the
 strict versioned tenant-configuration manifest/revision-reference contract and
 safe static selection authority for operational, legal, fee/commercial and
 provider/integration concerns. Selection is bound to

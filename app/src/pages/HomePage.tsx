@@ -8,6 +8,7 @@ import { StepCard } from "../shared/components/StepCard";
 import { RevenueCalculator } from "../features/calculator/RevenueCalculator";
 import type { RoutedPageProps } from "../routes/types";
 import { SurfaceShell } from "../shared/components/SurfaceShell";
+import { usePresentationBrand } from "../shared/presentation/PresentationBrandProvider";
 
 const steps = [
   {
@@ -83,6 +84,7 @@ const faqs = [
 ];
 
 export function HomePage({ currentPath, navigate }: RoutedPageProps) {
+  const presentation = usePresentationBrand();
   return (
     <SurfaceShell
       navigation={<AppHeader currentPath={currentPath} navigate={navigate} />}
@@ -92,12 +94,20 @@ export function HomePage({ currentPath, navigate }: RoutedPageProps) {
         <HeroSection navigate={navigate} />
         <RevenueCalculator />
 
-        <section className="section" id="aanmerking" aria-labelledby="eligibility-title">
+        <section
+          className="section"
+          id="aanmerking"
+          aria-labelledby="eligibility-title"
+        >
           <div className="container">
             <SectionHeader eyebrow="Aanmerking" title="Kom ik in aanmerking?" />
             <div className="benefit-grid">
               {eligibilityItems.map((item) => (
-                <BenefitCard key={item.title} title={item.title} description={item.description} />
+                <BenefitCard
+                  key={item.title}
+                  title={item.title}
+                  description={item.description}
+                />
               ))}
             </div>
             <div className="section-actions">
@@ -115,7 +125,11 @@ export function HomePage({ currentPath, navigate }: RoutedPageProps) {
           </div>
         </section>
 
-        <section className="section" id="werkwijze" aria-labelledby="steps-title">
+        <section
+          className="section"
+          id="werkwijze"
+          aria-labelledby="steps-title"
+        >
           <div className="container">
             <SectionHeader eyebrow="Werkwijze" title="Vijf stappen." />
             <div className="step-grid">
@@ -131,12 +145,23 @@ export function HomePage({ currentPath, navigate }: RoutedPageProps) {
           </div>
         </section>
 
-        <section className="section section-muted" id="waarom" aria-labelledby="benefits-title">
+        <section
+          className="section section-muted"
+          id="waarom"
+          aria-labelledby="benefits-title"
+        >
           <div className="container">
-            <SectionHeader eyebrow="Waarom ENVAL" title="Lager tarief. Minder gedoe." />
+            <SectionHeader
+              eyebrow={`Waarom ${presentation.displayName}`}
+              title="Lager tarief. Minder gedoe."
+            />
             <div className="benefit-grid">
               {benefits.map((item) => (
-                <BenefitCard key={item.title} title={item.title} description={item.description} />
+                <BenefitCard
+                  key={item.title}
+                  title={item.title}
+                  description={item.description}
+                />
               ))}
             </div>
           </div>
@@ -147,7 +172,11 @@ export function HomePage({ currentPath, navigate }: RoutedPageProps) {
             <SectionHeader eyebrow="FAQ" title="Korte antwoorden." />
             <div className="faq-list">
               {faqs.map((item) => (
-                <FaqItem key={item.question} question={item.question} answer={item.answer} />
+                <FaqItem
+                  key={item.question}
+                  question={item.question}
+                  answer={item.answer}
+                />
               ))}
             </div>
           </div>

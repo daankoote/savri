@@ -1,4 +1,8 @@
-import { renderToStaticMarkup } from "react-dom/server";
+import type { ReactNode } from "react";
+import { renderToStaticMarkup as renderReactToStaticMarkup } from "react-dom/server";
+import { ENVAL_PRESENTATION_BRAND_CONFIG_V1 } from "../../../../platform/runtime/presentation/enval_presentation_defaults.ts";
+import { projectPresentationBrand } from "../../../../platform/runtime/presentation/presentation_brand_config.ts";
+import { PresentationBrandProvider } from "../../shared/presentation/PresentationBrandProvider.tsx";
 import {
   CustomerDocumentFactInteraction,
   type CustomerDocumentFactInteractionModel,
@@ -23,6 +27,18 @@ const source = (path: string) => Deno.readTextFile(new URL(path, root));
 
 function assert(value: unknown, code: string): asserts value {
   if (!value) throw new Error(code);
+}
+
+function renderToStaticMarkup(node: ReactNode): string {
+  return renderReactToStaticMarkup(
+    <PresentationBrandProvider
+      presentation={projectPresentationBrand(
+        ENVAL_PRESENTATION_BRAND_CONFIG_V1,
+      )}
+    >
+      {node}
+    </PresentationBrandProvider>,
+  );
 }
 
 function model(

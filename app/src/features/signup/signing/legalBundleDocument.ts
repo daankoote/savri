@@ -15,7 +15,7 @@ export type LegalBundleSection = {
 
 export type LegalBundleDocument = {
   schemaVersion: "legal-bundle-document-v1";
-  title: "Documenten aanmelding ENVAL";
+  title: string;
   sections: readonly LegalBundleSection[];
 };
 
@@ -42,11 +42,12 @@ function mandateParagraphs(model: MandateDocumentModel): readonly string[] {
 
 export function createLegalBundleDocument(input: {
   documents: readonly LegalDocumentMetadata[];
+  legalName?: string;
   mandate: MandateDocumentModel;
 }): LegalBundleDocument {
   return {
     schemaVersion: "legal-bundle-document-v1",
-    title: "Documenten aanmelding ENVAL",
+    title: `Documenten aanmelding ${input.legalName ?? "ENVAL"}`,
     sections: input.documents.map((document) => ({
       documentType: document.documentType,
       title: document.title,

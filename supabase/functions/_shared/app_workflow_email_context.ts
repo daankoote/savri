@@ -1,5 +1,5 @@
-import type { AppTenantExecutionContext } from "./app_tenant_resolution_shadow.ts";
 import {
+  type AppPresentationTenantBinding,
   buildServerOwnedPresentationSourceComposition,
   resolveAppPresentationBootstrap,
   type ServerPresentationEnvironmentReader,
@@ -13,6 +13,16 @@ import {
 export type WorkflowEmailServerContext = Readonly<{
   organization_name: string;
   portal_origin: string;
+  sender_display_name: string;
+  sender_address: string;
+  presentation_config_version: string;
+}>;
+
+export type PresentationMailIdentity = Readonly<{
+  configVersion: string;
+  displayName: string;
+  mailDisplayName: string;
+  mailAddress: string;
 }>;
 
 const LOCAL_PORTAL_ORIGIN =
@@ -47,14 +57,34 @@ function canonicalPortalOrigin(
 
 export async function resolveWorkflowEmailServerContext(
   environment: ServerPresentationEnvironmentReader,
-  tenantExecution: AppTenantExecutionContext | undefined,
+  tenantExecution: AppPresentationTenantBinding | undefined,
   providedReader?: PlatformControlPlaneRuntimeReader,
 ): Promise<WorkflowEmailServerContext | null> {
   if (!tenantExecution) return null;
   const portalOrigin = canonicalPortalOrigin(environment);
+  const mailIdentity = await resolvePresentationMailIdentity(
+    environment,
+    tenantExecution,
+    providedReader,
+  );
+  if (!portalOrigin || !mailIdentity) return null;
+  return Object.freeze({
+    organization_name: mailIdentity.displayName,
+    portal_origin: portalOrigin,
+    sender_display_name: mailIdentity.mailDisplayName,
+    sender_address: mailIdentity.mailAddress,
+    presentation_config_version: mailIdentity.configVersion,
+  });
+}
+
+export async function resolvePresentationMailIdentity(
+  environment: ServerPresentationEnvironmentReader,
+  tenantExecution: AppPresentationTenantBinding | undefined,
+  providedReader?: PlatformControlPlaneRuntimeReader,
+): Promise<PresentationMailIdentity | null> {
+  if (!tenantExecution) return null;
   const managedReader = providedReader ??
     createPlatformControlPlaneRuntimeReaderFromEnvironment(environment);
-  if (!portalOrigin || !managedReader) return null;
   const composition = buildServerOwnedPresentationSourceComposition(
     environment,
     tenantExecution,
@@ -67,7 +97,21 @@ export async function resolveWorkflowEmailServerContext(
   );
   if (!presentation.ok) return null;
   return Object.freeze({
-    organization_name: presentation.value.presentation.displayName,
-    portal_origin: portalOrigin,
+    configVersion: presentation.value.presentation.configVersion,
+    displayName: presentation.value.presentation.displayName,
+    mailDisplayName: presentation.value.presentation.identity.mailDisplayName,
+    mailAddress: presentation.value.presentation.identity.mailAddress,
+  });
+}
+
+export async function resolveDeploymentPresentationMailIdentity(
+  environment: ServerPresentationEnvironmentReader,
+): Promise<PresentationMailIdentity | null> {
+  const tenantId = environmentValue(environment, "ENVAL_TENANT_REFERENCE");
+  const runtimeEnvironment = environmentValue(environment, "ENVIRONMENT");
+  if (!tenantId || !runtimeEnvironment) return null;
+  return await resolvePresentationMailIdentity(environment, {
+    tenantId,
+    environment: runtimeEnvironment,
   });
 }

@@ -136,14 +136,16 @@ TF02-B configuration authority map:
 | presentation | separate `PresentationBrandConfigV1`; no legal/fee/provider authority |
 | current business consumers | none |
 
-`PresentationBrandConfigV1` is presentation-only. Tenant identity,
-presentation brand, legal operator identity and support-provider identity are
-separate concepts. Presentation values grant no Auth/RLS/customer/case access,
-platform membership, workforce capability or representation authority, and
-cannot rewrite finalized signing/legal evidence. A customer context or case
-role also does not by itself prove representation authority. Current ENVAL
-rendering parity and synthetic alternate-brand behavior are deterministic
-local proof only.
+`PresentationBrandConfigV1` is presentation-only. Its exact public shape owns
+the display name, mark, product label, optional tagline, allowlisted assets,
+export basename and a complete identity block for website, contact route,
+approved mail display/address and legal name. These fields are independent:
+changing `displayName` derives none of the others. Tenant identity,
+presentation brand, legal/operator authority and support-provider authority
+remain separate. No brand field grants Auth/RLS/customer/case access, platform
+membership, workforce capability or representation authority, and none can
+rewrite finalized signing/legal evidence. Current ENVAL rendering parity and
+synthetic alternate-brand behavior are deterministic local proof only.
 
 Implementation and proof anchors:
 
@@ -238,8 +240,9 @@ handoff proves the outgoing customer request. Finalized subject decisions take
 presentation precedence over the source truth class so review status, decision
 and dossier phase do not conflict visibly.
 `/intern/compliance` and `/intern/dossiers` remain temporary compatibility paths
-using the same authority. The shared operator shell renders `Powered by ENVAL`
-once, and ordinary workforce gains no implicit
+using the same authority. The shared operator shell renders one
+`Powered by <displayName>` attribution from the presentation authority, and
+ordinary workforce gains no implicit
 `platform_support.request`.
 
 Focused operator-context Q01-Q14, overview Q01-Q10, evidence worklist Q01-Q19,

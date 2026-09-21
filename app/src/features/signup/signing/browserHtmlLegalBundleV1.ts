@@ -78,6 +78,7 @@ function objectUrl(
 
 export function createBrowserHtmlLegalBundleV1(
   environment: BrowserHtmlLegalBundleEnvironment = browserEnvironment(),
+  exportBasename = "enval-aanmelddocumenten",
 ): LegalBundleExportPort {
   return {
     preview(bundle) {
@@ -91,7 +92,7 @@ export function createBrowserHtmlLegalBundleV1(
       const url = objectUrl(bundle, environment);
       const anchor = environment.createAnchor();
       anchor.href = url;
-      anchor.download = "enval-aanmelddocumenten.html";
+      anchor.download = `${exportBasename}.html`;
       anchor.rel = "noopener noreferrer";
       environment.appendAnchor(anchor);
       anchor.click();

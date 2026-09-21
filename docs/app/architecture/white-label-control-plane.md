@@ -26,7 +26,7 @@ application boundaries; denies unauthenticated and non-workforce access; keeps
 `/intern/compliance` and `/intern/dossiers` only as compatibility paths under
 the same authority; and grants no implicit `platform_support.request`.
 Current operator header navigation is exactly `Overzicht`, `Dossiers`, and
-`Uitloggen`, with shared `Powered by ENVAL` attribution. Broader operator
+`Uitloggen`, with shared `Powered by <displayName>` attribution. Broader operator
 administration, `Klanten`,
 `Organisatie`, ENVAL Control Console and Verifier Console remain TARGET.
 
@@ -298,8 +298,8 @@ One Auth foundation may authenticate all four actor classes, but customer,
 workforce, ENVAL platform and verifier contexts are independently server-derived
 and authorized. Shared login code does not create shared business authority.
 
-Relevant dashboard shells may show one reusable exact attribution:
-`Powered by ENVAL`. This is platform attribution only and never legal/operator,
+Relevant dashboard shells may show one reusable attribution:
+`Powered by <displayName>`. This is presentation only and never legal/operator,
 controller, contracting-party, mandate-grantee or verifier truth.
 
 ## D3. TARGET Tenant Integration/API Seam
@@ -427,11 +427,42 @@ authoritative gate is proven for the repository-inventoried CURRENT
 functions or future entrypoints.
 
 Presentation resolution follows tenant resolution. `PresentationBrandConfigV1`
-and the managed/static presentation adapters yield the same safe public shape;
-the control plane stores versioned public presentation configuration while
-legal operator, support provider, Auth/RLS and signing evidence remain separate
-authorities. Finalized signing/legal snapshots are never rewritten by current
-presentation configuration.
+and the managed/static presentation adapters yield the same safe public shape.
+The strict contract contains presentation name/mark/label/tagline, allowlisted
+assets, export basename and one exact-key identity block for website, local
+contact route, approved mail display name/address and legal name. Static custom
+deployment configuration supplies the complete contract. The existing managed
+control-plane record continues to supply its persisted presentation fields and
+the adapter supplies the canonical ENVAL identity defaults; extending managed
+identity persistence requires a separately authorized forward migration.
+Invalid, unknown, empty, incomplete, ambiguous or mismatched input fails closed.
+No field selects tenant, data plane, Auth/RLS, capability, case scope or route
+authority, and `displayName` never derives a domain, e-mail address, legal name
+or sender identity. Finalized signing/legal snapshots are never rewritten by
+current presentation configuration.
+
+Server-side mail composition resolves the same presentation snapshot. Ordinary
+workflow/signing mail copy uses `displayName`; the visible From name/address
+uses only `mailDisplayName`/`mailAddress`. Provider selection, endpoint,
+credentials and delivery authority remain separate and cannot be supplied by
+the browser or inferred from branding. Each new workflow-mail intent freezes
+the validated mail display name, mail address and presentation-config version
+inside its immutable hashed payload. Claim, retries and delivery reuse that
+snapshot; legacy intents without it remain immutable and unclaimed rather than
+being reinterpreted from current presentation configuration.
+
+The runtime literal classification is deliberately narrow:
+
+| classification | CURRENT treatment |
+|---|---|
+| ordinary product presentation | header/shell identity, login and portal copy, contact labels, customer/workforce status labels, page metadata and the configured export basename consume the public presentation projection |
+| deployment presentation configuration | strict `PresentationBrandConfigV1`; a custom static deployment supplies the whole exact-key contract or fails closed |
+| tenant presentation | resolved only after the trusted tenant execution context; it grants no tenant or case authority |
+| operational identity and mail transport | explicit mail fields control only visible sender presentation; workflow roles, provider adapters and transport credentials remain separate and `displayName` cannot change them |
+| legal and fee identity | current legal text, immutable signing snapshots and ENVAL fee wording stay under their existing legal/fee authorities; only the explicit presentation `legalName` labels newly generated browser export packaging |
+| product attribution | the single shared `Powered by <displayName>` attribution consumes the same public presentation name and grants no legal, tenant or authorization authority |
+| historical documentation and migrations | retained verbatim because changing them would rewrite recorded truth or migration lineage |
+| proof fixtures and internal identifiers | retained where they name the ENVAL project, contract, environment or canonical default rather than user-facing deployment presentation |
 
 ## G. Storage And Evidence Isolation
 
@@ -572,7 +603,8 @@ the ENVAL data plane.
 
 The original WL02 statement that no control-plane or resolver implementation
 existed is a LEGACY pre-implementation status snapshot, superseded by WL05
-through TF02-C. CURRENT PROVEN LOCAL now includes:
+through TF02-C. The pre-BRAND_CONFIGURATION_V1 CURRENT PROVEN LOCAL baseline
+includes:
 
 - a separate `platform/control-plane/` Supabase workdir, migrations and
   fail-closed target/migration verification;
@@ -585,8 +617,8 @@ through TF02-C. CURRENT PROVEN LOCAL now includes:
 - immutable fixed-execution parity and propagated `tenant_execution` context
   for the 33/33 point-in-time current tenant-business endpoint inventory, with
   zero manual duplicate parity implementations and zero ungated endpoints;
-- `PresentationBrandConfigV1`, managed/static presentation sources and a
-  versioned local control-plane presentation table/view;
+- `PresentationBrandConfigV1`, managed/static presentation sources, canonical
+  ENVAL defaults and a versioned local control-plane presentation table/view;
 - a safe server-issued public presentation bootstrap and React
   `PresentationBrandProvider`; and
 - deterministic ENVAL parity plus synthetic alternate-brand proof.
@@ -597,8 +629,16 @@ through TF02-C. CURRENT PROVEN LOCAL now includes:
   two-query database reader, with Q01-Q36 and regressions green.
 - the UI-01B server-authorized local `/beheer` Tenant Operator entry, current
   `Overzicht`, `Dossiers` and `Uitloggen` navigation, unified `/intern/*`
-  compatibility
-  authority and shared `Powered by ENVAL` attribution.
+  compatibility authority and shared surface shell.
+
+BRAND_CONFIGURATION_V1's expanded strict identity fields, configurable
+`Powered by <displayName>` attribution and immutable workflow-mail sender
+snapshot are CURRENT PROVEN LOCAL. Migration `20260921130223` is active on the
+local ENVAL schema; active-schema/security parity, immutable sender
+snapshot/retry/replay, the desktop/tablet/mobile browser matrix and human
+Firefox acceptance for ENVAL defaults and `noorderlicht-local-v1` are green.
+The exact fixture cleanup proved zero residue and unchanged non-fixture
+fingerprints. Hosted configuration and deployment remain unproven.
 
 Still TARGET/DEFERRED or UNKNOWN:
 
@@ -662,8 +702,8 @@ Current local implementation evidence is intentionally concise:
 | physical separation and migration targeting | `platform/control-plane/`, `enval-supabase-target.mjs`, ENVAL verifier | `platform-control-plane-foundation.proof.ts`, `enval-verify-runner.proof.mjs` | CURRENT PROVEN LOCAL; no remote project/deploy |
 | tenant resolution and ingress | `platform/runtime/tenant-resolution/`, `app_tenant_resolution_shadow.ts` | `tenant-resolution-composition.proof.ts`, `trusted-ingress-boundary.proof.ts`, `app-tenant-resolution-shadow.proof.ts` | CURRENT PROVEN LOCAL; production ingress UNKNOWN |
 | CURRENT app gate, fixed execution parity and context propagation | `app_tenant_resolution_shadow.ts`, shared app foundation/workforce authorization | `app-tenant-resolution-shadow.proof.ts`, `api-app-ops-location-callers.proof.ts` | CURRENT PROVEN LOCAL at `034691e`; point-in-time 33/33, 0 manual duplicate, 0 ungated |
-| presentation sources/config | `platform/runtime/presentation/`, control-plane presentation migration | `presentation-brand-config.proof.ts`, `presentation-brand-sources.proof.ts` | CURRENT PROVEN LOCAL; no brand administration |
-| public bootstrap/provider | `app_presentation_bootstrap.ts`, `api-app-presentation-bootstrap/`, `app/src/shared/presentation/` | `PresentationBrandRuntime.proof.tsx`, `PresentationBrandProvider.proof.tsx` | CURRENT PROVEN LOCAL; no remote/browser acceptance claim |
+| presentation sources/config | `platform/runtime/presentation/`, control-plane presentation migration | `presentation-brand-config.proof.ts`, `presentation-brand-sources.proof.ts` | CURRENT PROVEN LOCAL; managed identity persistence and brand administration remain deferred; hosted configuration and deployment remain unproven |
+| public bootstrap/provider | `app_presentation_bootstrap.ts`, `api-app-presentation-bootstrap/`, `app/src/shared/presentation/` | `PresentationBrandRuntime.proof.tsx`, `PresentationBrandProvider.proof.tsx` | CURRENT PROVEN LOCAL; local browser and human acceptance are green; hosted configuration and deployment remain unproven |
 | Tenant Operator entry | `api-app-operator-context`, `OperatorRouteGuard`, shared surface shell and existing compliance/evidence pages | `app-operator-context.proof.ts`, route/auth/presentation proofs and human browser acceptance | CURRENT PROVEN LOCAL; no tenant #2, administration, remote or production claim |
 
 ## Deferred Decisions And Next Gate

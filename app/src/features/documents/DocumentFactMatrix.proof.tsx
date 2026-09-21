@@ -1,4 +1,8 @@
-import { renderToStaticMarkup } from "react-dom/server";
+import type { ReactNode } from "react";
+import { renderToStaticMarkup as renderReactToStaticMarkup } from "react-dom/server";
+import { ENVAL_PRESENTATION_BRAND_CONFIG_V1 } from "../../../../platform/runtime/presentation/enval_presentation_defaults.ts";
+import { projectPresentationBrand } from "../../../../platform/runtime/presentation/presentation_brand_config.ts";
+import { PresentationBrandProvider } from "../../shared/presentation/PresentationBrandProvider.tsx";
 import { DocumentFactMatrix } from "./DocumentFactMatrix.tsx";
 
 declare const Deno: {
@@ -11,6 +15,18 @@ const source = (path: string) => Deno.readTextFile(new URL(path, root));
 
 function assert(value: unknown, code: string): asserts value {
   if (!value) throw new Error(code);
+}
+
+function renderToStaticMarkup(node: ReactNode): string {
+  return renderReactToStaticMarkup(
+    <PresentationBrandProvider
+      presentation={projectPresentationBrand(
+        ENVAL_PRESENTATION_BRAND_CONFIG_V1,
+      )}
+    >
+      {node}
+    </PresentationBrandProvider>,
+  );
 }
 
 const reviewHtml = renderToStaticMarkup(
@@ -153,15 +169,18 @@ assert(
   "Q02b_supporting_relationship_visibility_invalid",
 );
 
-const [matrix, workflow, controller, signupAdapter, correctionAdapter, css] = await Promise
-  .all([
-    source("app/src/features/documents/DocumentFactMatrix.tsx"),
-    source("app/src/features/documents/DocumentEvidenceWorkflow.tsx"),
-    source("app/src/features/documents/CustomerDocumentWorkflowController.ts"),
-    source("app/src/features/signup/presentation/FactTable.tsx"),
-    source("app/src/features/dashboard/CustomerCorrectionHandoffPanel.tsx"),
-    source("app/src/styles/components.css"),
-  ]);
+const [matrix, workflow, controller, signupAdapter, correctionAdapter, css] =
+  await Promise
+    .all([
+      source("app/src/features/documents/DocumentFactMatrix.tsx"),
+      source("app/src/features/documents/DocumentEvidenceWorkflow.tsx"),
+      source(
+        "app/src/features/documents/CustomerDocumentWorkflowController.ts",
+      ),
+      source("app/src/features/signup/presentation/FactTable.tsx"),
+      source("app/src/features/dashboard/CustomerCorrectionHandoffPanel.tsx"),
+      source("app/src/styles/components.css"),
+    ]);
 assert(
   signupAdapter.includes("DocumentFactMatrix") &&
     correctionAdapter.includes("DocumentEvidenceWorkflow") &&

@@ -42,7 +42,7 @@ implementation.
   `/intern/compliance` and `/intern/dossiers` remain temporary compatibility
   paths under the same authority. Ordinary workforce
   gains no implicit `platform_support.request`, and the shared operator shell
-  renders `Powered by ENVAL` once. Focused Q01-Q14, authorization regressions,
+  renders `Powered by <displayName>` once. Focused Q01-Q14, authorization regressions,
   served allow/deny evidence, typecheck/build, guarded Firefox evidence at
   desktop `1440x900` and narrow mobile `375x812` with zero console/runtime
   errors or product writes, and fresh independent reviewer PASS are green.
@@ -57,12 +57,21 @@ implementation.
   choice from either portal without changing session; zero-portal actors can
   sign out through `Ander account gebruiken`. Final focused browser and human
   Firefox acceptance remain open.
-- TARGET / SEPARATE FOLLOW-UP — `BRAND_CONFIGURATION_V1`: extend the existing
-  deployment-/tenant-bound presentation configuration into one validated brand
-  contract with safe ENVAL defaults for display name, logo/assets, initials,
-  customer contact, website, approved e-mail sender identity and legal entity.
-  Branding remains presentation/configuration data and grants no authorization;
-  existing customer, dossier, workflow and legal authority stay unchanged.
+- DONE / CURRENT PROVEN LOCAL — `BRAND_CONFIGURATION_V1`:
+  the existing deployment-/tenant-bound `PresentationBrandConfigV1` is the
+  single strict brand contract with safe ENVAL defaults. Ordinary product copy
+  consumes `displayName`; mark, label, tagline, assets, export basename,
+  website/contact route, approved mail identity and legal name remain explicit
+  independent fields. New workflow-mail intents freeze the validated sender
+  identity/config version in their hashed immutable payload; legacy intents
+  without that snapshot remain immutable and unclaimed. Branding grants no
+  authorization and does not mutate existing customer, dossier, workflow or
+  immutable legal authority. Managed
+  local migration apply, active-schema/security parity, immutable sender
+  snapshot/retry/replay proofs, the desktop/tablet/mobile browser matrix and
+  human Firefox acceptance for ENVAL defaults and `noorderlicht-local-v1` are
+  green. Exact cleanup proved zero fixture residue and unchanged non-fixture
+  fingerprints. Hosted configuration and deployment remain open.
 - TARGET / SEPARATE FOLLOW-UP — `MULTI_DOCUMENT_EVIDENCE_WORKSPACE_V1`; not
   implemented by the current correction milestone.
 - DONE / CURRENT PROVEN LOCAL — `F01`: AUTH_SHELL_F01 gives the canonical Auth

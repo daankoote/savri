@@ -1,4 +1,8 @@
 import { type ReactNode, useEffect, useRef } from "react";
+import {
+  formatPresentationBrandCopy,
+  usePresentationBrand,
+} from "../../shared/presentation/PresentationBrandProvider";
 
 export type AuthFeedback = {
   kind: "info" | "error";
@@ -43,6 +47,7 @@ export function AuthPageLayout(
 export function AuthFeedbackPanel(
   { feedback }: { feedback: AuthFeedback | null },
 ) {
+  const presentation = usePresentationBrand();
   if (!feedback) return null;
 
   return (
@@ -52,7 +57,12 @@ export function AuthFeedbackPanel(
         : "review-panel review-panel-ok"}
       role="status"
     >
-      <p>{feedback.message}</p>
+      <p>
+        {formatPresentationBrandCopy(
+          feedback.message,
+          presentation.displayName,
+        )}
+      </p>
     </div>
   );
 }

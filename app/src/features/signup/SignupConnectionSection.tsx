@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { usePresentationBrand } from "../../shared/presentation/PresentationBrandProvider";
 import {
   type InvoicePdfParserAdapterResult,
   parseInvoicePdfInput,
@@ -69,6 +70,7 @@ export function SignupConnectionSection({
   onReviewLocation,
   onSelectLocation,
 }: SignupConnectionSectionProps) {
+  const presentation = usePresentationBrand();
   const parserAttempts = useRef(new Map<string, number>());
   const activeLocation =
     locations.find((location) => location.clientId === activeLocationId) ||
@@ -182,8 +184,9 @@ export function SignupConnectionSection({
         <p className="eyebrow">Stap 3</p>
         <h2 id="signup-connection-title">Aansluiting</h2>
         <p className="fine-print">
-          Upload je energienota of energiecontract. ENVAL gebruikt dit na
-          accountactivatie om je aansluiting te controleren.
+          Upload je energienota of energiecontract. {presentation.displayName}
+          {" "}
+          gebruikt dit na accountactivatie om je aansluiting te controleren.
         </p>
       </div>
 

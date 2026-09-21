@@ -64,6 +64,13 @@ const presentationResult = validatePresentationBrandConfigV1({
     logo: "/assets/tenant-logo.svg",
     altText: "Tenant Merk",
   },
+  identity: {
+    websiteUrl: "https://tenant.example/",
+    contactRoute: "/contact",
+    mailDisplayName: "Tenant Mail",
+    mailAddress: "mail@tenant.example",
+    legalName: "Tenant Merk B.V.",
+  },
   exportBasename: "tenant-documenten",
 });
 assert(presentationResult.ok, "proof_presentation_invalid");
@@ -304,8 +311,11 @@ assert(
     accountPageSource.includes("navigation={[]}") &&
     accountPageSource.includes('identitySurface="public_auth"') &&
     accountPageSource.includes('auth.audience === "operator"') &&
-    headerSource.includes("navigation = publicNavigation") &&
-    headerSource.includes("navigation.length > 0 || onLogout") &&
+    headerSource.includes("navigation ??") &&
+    headerSource.includes(
+      "publicNavigation(presentation.identity.contactRoute)",
+    ) &&
+    headerSource.includes("effectiveNavigation.length > 0 || onLogout") &&
     !signupSource.includes("navigation={[]}"),
   "Q08_route_or_composition_contract_invalid",
 );

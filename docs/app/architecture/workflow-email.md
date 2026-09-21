@@ -17,7 +17,8 @@ Edge code, `service_role`, `anon` and `authenticated` cannot call that helper.
 
 - `app_workflow_email_intents` is immutable. It freezes the event, template,
   business-event reference, recipient snapshot, validated variables, subject,
-  plain-text body, payload hash, provider idempotency key and dedupe key.
+  plain-text body, validated sender display name/address, presentation-config
+  version, payload hash, provider idempotency key and dedupe key.
 - `app_workflow_email_deliveries` owns mutable operational state, attempt count,
   next-attempt time, one lease and minimized provider classification.
 - `app_workflow_email_delivery_attempts` is the immutable attempt ledger. It
@@ -40,10 +41,11 @@ The closed catalog contains exactly these information-request pairs:
 - `information_request_withdrawn_customer` /
   `information-request-withdrawn-customer-nl-v1`.
 
-Create v1 retains exactly `organization_name`, `application_label` and
-`action_url`. Create v2, answer v1 and withdraw v1 use exactly those variables
-plus `case_reference`. The case reference and fixed dossier route come from the
-same server-resolved `app_cases` row.
+Every new intent includes exactly `sender_display_name`, `sender_address` and
+`presentation_config_version`. Create v1 additionally uses exactly
+`organization_name`, `application_label` and `action_url`. Create v2, answer v1
+and withdraw v1 use those variables plus `case_reference`. The case reference
+and fixed dossier route come from the same server-resolved `app_cases` row.
 
 The fixed Dutch subject and body are rendered inside the owner-only database
 helper and frozen before claim. Callers cannot provide subject, body, HTML or
@@ -73,7 +75,9 @@ Organization presentation uses the existing server-side presentation source.
 The portal origin is separate server-only configuration and must also be in the
 server allowlist. Browser payloads cannot choose either value. Customer and
 workforce links target their fixed exact case routes without a continuation
-parameter.
+parameter. The validated mail display name, mail address and presentation
+config version are frozen in the same immutable hashed intent. A later branding
+change cannot alter an existing intent or its provider idempotency key.
 
 ## Delivery contract
 
@@ -83,6 +87,8 @@ parameter.
 - each claim leases at most one delivery for five minutes;
 - expired leases become an ambiguous attempt with bounded back-off;
 - retries use the same frozen content and provider idempotency key;
+- claim and worker delivery use only the stored sender snapshot, never the
+  then-current presentation configuration;
 - at most five attempts are permitted;
 - delivery states are closed to `queued`, `processing`, `provider_accepted`,
   `retryable_failure`, `permanent_failure`, `ambiguous_failure` and `cancelled`;
@@ -96,6 +102,10 @@ polls it without overlapping claims. The local adapter uses
 the existing Supabase Mailpit SMTP boundary and is selected only for a strict
 local Supabase URL. No hosted adapter or fallback exists, so a hosted runtime
 without a future explicit provider fails closed before claiming mail.
+
+Legacy intents created without all three sender-snapshot fields remain valid
+immutable history, but the claim contract leaves them unleased and unchanged.
+They are not backfilled or reinterpreted using current branding.
 
 ## Deferred activation
 

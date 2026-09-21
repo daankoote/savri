@@ -1,6 +1,10 @@
 import { useState } from "react";
 import type { ConsentDraft, ValidationIssue } from "./signupTypes";
 import { signupFieldErrorId } from "./signupValidation";
+import {
+  formatPresentationBrandCopy,
+  usePresentationBrand,
+} from "../../shared/presentation/PresentationBrandProvider";
 
 type LegalModalType = "terms" | "privacy" | "fee";
 
@@ -47,6 +51,7 @@ const legalDrafts: Record<LegalModalType, { title: string; points: string[] }> =
 export function ConsentSignatureSection(
   { error, value, onChange }: ConsentSignatureSectionProps,
 ) {
+  const presentation = usePresentationBrand();
   const [activeModal, setActiveModal] = useState<LegalModalType | null>(null);
   const modal = activeModal ? legalDrafts[activeModal] : null;
 
@@ -103,7 +108,10 @@ export function ConsentSignatureSection(
             id={signupFieldErrorId(error.fieldPath)}
             role="alert"
           >
-            {error.message}
+            {formatPresentationBrandCopy(
+              error.message,
+              presentation.displayName,
+            )}
           </small>
         )
         : null}

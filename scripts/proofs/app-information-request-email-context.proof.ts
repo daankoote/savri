@@ -1,6 +1,9 @@
 import {
+  resolveDeploymentPresentationMailIdentity,
+  resolvePresentationMailIdentity,
   resolveWorkflowEmailServerContext,
 } from "../../supabase/functions/_shared/app_workflow_email_context.ts";
+import { ENVAL_PRESENTATION_BRAND_CONFIG_V1 } from "../../platform/runtime/presentation/enval_presentation_defaults.ts";
 import {
   createHandler,
 } from "../../supabase/functions/api-app-customer-information-request/index.ts";
@@ -73,8 +76,62 @@ const resolved = await resolveWorkflowEmailServerContext(
 );
 assert(
   resolved?.organization_name === "Voorbeeldorganisatie" &&
-    resolved.portal_origin === "http://127.0.0.1:5175",
+    resolved.portal_origin === "http://127.0.0.1:5175" &&
+    resolved.sender_display_name === "ENVAL" &&
+    resolved.sender_address === "noreply@enval.local" &&
+    resolved.presentation_config_version === "proof-presentation-v1",
   "server_owned_email_context_not_resolved",
+);
+const managedMailIdentity = await resolvePresentationMailIdentity(
+  environment,
+  tenantExecution,
+  reader,
+);
+assert(
+  managedMailIdentity?.displayName === "Voorbeeldorganisatie" &&
+    managedMailIdentity.configVersion === "proof-presentation-v1" &&
+    managedMailIdentity.mailDisplayName === "ENVAL" &&
+    managedMailIdentity.mailAddress === "noreply@enval.local",
+  "managed_mail_identity_defaults_invalid",
+);
+
+const alternateConfig = {
+  ...ENVAL_PRESENTATION_BRAND_CONFIG_V1,
+  configVersion: "alternate-mail-presentation-v1",
+  displayName: "Alternatief Merk",
+  identity: {
+    ...ENVAL_PRESENTATION_BRAND_CONFIG_V1.identity,
+    mailDisplayName: "Alternatieve Afzender",
+    mailAddress: "mail@alternate.test",
+  },
+};
+const staticValues: Record<string, string> = {
+  ENVIRONMENT: "local",
+  ENVAL_TENANT_REFERENCE: tenantExecution.tenantId,
+  ENVAL_PRESENTATION_SOURCE_MODE: "static_presentation_config_v1",
+  ENVAL_STATIC_PRESENTATION_MODE: "CUSTOM_V1",
+  ENVAL_STATIC_PRESENTATION_CONFIG_V1: JSON.stringify(alternateConfig),
+};
+const deploymentMailIdentity = await resolveDeploymentPresentationMailIdentity({
+  get: (name: string) => staticValues[name],
+});
+assert(
+  deploymentMailIdentity?.displayName === "Alternatief Merk" &&
+    deploymentMailIdentity.configVersion ===
+      "alternate-mail-presentation-v1" &&
+    deploymentMailIdentity.mailDisplayName === "Alternatieve Afzender" &&
+    deploymentMailIdentity.mailAddress === "mail@alternate.test",
+  "static_deployment_mail_identity_not_resolved",
+);
+staticValues.ENVAL_STATIC_PRESENTATION_CONFIG_V1 = JSON.stringify({
+  ...alternateConfig,
+  unexpected: true,
+});
+assert(
+  await resolveDeploymentPresentationMailIdentity({
+    get: (name: string) => staticValues[name],
+  }) === null,
+  "malformed_deployment_mail_identity_not_fail_closed",
 );
 
 values.ENVAL_WORKFLOW_EMAIL_PORTAL_ORIGIN = "https://evil.example";
@@ -154,6 +211,9 @@ const handler = createHandler({
     Promise.resolve({
       organization_name: "Voorbeeldorganisatie",
       portal_origin: "http://127.0.0.1:5175",
+      sender_display_name: "Voorbeeld Mail",
+      sender_address: "mail@example.test",
+      presentation_config_version: "proof-presentation-v1",
     }),
 });
 const edgeResponse = await handler(
@@ -178,6 +238,9 @@ assert(
   JSON.stringify(rpcCalls[0].p_email_context) === JSON.stringify({
         organization_name: "Voorbeeldorganisatie",
         portal_origin: "http://127.0.0.1:5175",
+        sender_display_name: "Voorbeeld Mail",
+        sender_address: "mail@example.test",
+        presentation_config_version: "proof-presentation-v1",
       }) && !("recipient" in rpcCalls[0]) && !("template_key" in rpcCalls[0]),
   "edge_did_not_use_server_owned_email_context",
 );

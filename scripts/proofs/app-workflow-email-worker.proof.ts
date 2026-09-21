@@ -32,8 +32,11 @@ function claim(
       lease_token: `20000000-0000-4000-8000-00000000000${index}`,
       provider_idempotency_key: `workflow-email-v1:${"a".repeat(64)}`,
       recipient_email: "customer@example.invalid",
+      sender_address: `sender-${index}@example.test`,
+      sender_display_name: `Snapshot Sender ${index}`,
       subject: "Er staat een vraag voor u klaar",
       template_key: templateKey,
+      presentation_config_version: `snapshot-v${index}`,
     },
   };
 }
@@ -101,10 +104,12 @@ const client: WorkflowEmailWorkerClient = {
   },
 };
 const deliveredBodies: string[] = [];
+const deliveredSenders: string[] = [];
 const transport: WorkflowEmailTransportPort = {
   transportId: "local_mailpit_v1",
   async deliver(request) {
     deliveredBodies.push(request.body);
+    deliveredSenders.push(`${request.senderName}<${request.senderAddress}>`);
     return {
       outcome: "provider_accepted",
       providerReference: `mailpit:${"b".repeat(64)}`,
@@ -120,6 +125,11 @@ assert(
 assert(
   deliveredBodies.join("|") === "body-1|body-2|body-3|body-4" &&
     completions.length === 4 &&
+    deliveredSenders.join("|") ===
+      "Snapshot Sender 1<sender-1@example.test>|" +
+        "Snapshot Sender 2<sender-2@example.test>|" +
+        "Snapshot Sender 3<sender-3@example.test>|" +
+        "Snapshot Sender 4<sender-4@example.test>" &&
     completions.every((entry) => entry.p_outcome === "provider_accepted"),
   "worker_delivery_or_completion_invalid",
 );
@@ -183,6 +193,8 @@ assert(malformedRejected, "malformed_claim_not_rejected");
 
 const deliveryRequest = {
   recipientEmail: "customer@example.invalid",
+  senderName: "Voorbeeld Mail",
+  senderAddress: "mail@example.test",
   subject: "Er staat een vraag voor u klaar",
   body: "Beste klant,\n\nDit is een transporttest.",
   providerIdempotencyKey: `workflow-email-v1:${"c".repeat(64)}`,
@@ -191,7 +203,6 @@ const uncertainSmtp = startSmtpCommitPointFixture("close_during_data_reply");
 const uncertainResult = await new LocalMailpitWorkflowEmailTransportAdapter(
   "127.0.0.1",
   uncertainSmtp.port,
-  "noreply@enval.local",
 ).deliver(deliveryRequest);
 await uncertainSmtp.finished;
 assert(
@@ -204,7 +215,6 @@ const acceptedSmtp = startSmtpCommitPointFixture("close_during_quit_reply");
 const acceptedResult = await new LocalMailpitWorkflowEmailTransportAdapter(
   "127.0.0.1",
   acceptedSmtp.port,
-  "noreply@enval.local",
 ).deliver(deliveryRequest);
 await acceptedSmtp.finished;
 assert(

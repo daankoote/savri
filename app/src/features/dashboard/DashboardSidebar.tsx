@@ -174,19 +174,18 @@ export function DashboardSidebar({
               onClick={() => onSelectSection("contact")}
               type="button"
             >
-              Contact ENVAL
+              Contact {presentation.displayName}
             </button>
 
             <div className="portal-sidebar-divider" />
 
             <div className="portal-sidebar-bottom">
-              <button
+              <a
                 className="portal-nav-item"
-                onClick={() => navigate("/")}
-                type="button"
+                href={presentation.identity.websiteUrl}
               >
                 Naar website
-              </button>
+              </a>
               {canSwitchAuthorizedPortal(auth.portalNavigation)
                 ? (
                   <button

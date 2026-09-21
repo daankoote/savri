@@ -28,6 +28,13 @@ function candidate(overrides: Record<string, unknown> = {}) {
       altText: "Example Brand",
     },
     exportBasename: "example-documents",
+    identity: {
+      websiteUrl: "https://example.test/",
+      contactRoute: "/contact",
+      mailDisplayName: "Example Mail",
+      mailAddress: "mail@example.test",
+      legalName: "Example Legal B.V.",
+    },
     ...overrides,
   };
 }
@@ -40,7 +47,12 @@ assert(
     defaultsValidation.value.displayName === "ENVAL" &&
     defaultsValidation.value.shortMark === "E" &&
     defaultsValidation.value.productLabel === "Klantportaal" &&
-    defaultsValidation.value.tagline === "ERE inboekservice",
+    defaultsValidation.value.tagline === "ERE inboekservice" &&
+    defaultsValidation.value.identity.legalName === "ENVAL B.V." &&
+    defaultsValidation.value.identity.mailDisplayName === "ENVAL" &&
+    defaultsValidation.value.identity.mailAddress === "noreply@enval.local" &&
+    defaultsValidation.value.identity.websiteUrl === "https://www.enval.nl/" &&
+    defaultsValidation.value.identity.contactRoute === "/contact",
   "Q01_enval_defaults_invalid",
 );
 const appHeaderSource = await Deno.readTextFile(
@@ -80,7 +92,8 @@ assert(
 
 assert(
   Object.isFrozen(ENVAL_PRESENTATION_BRAND_CONFIG_V1) &&
-    Object.isFrozen(ENVAL_PRESENTATION_BRAND_CONFIG_V1.assets),
+    Object.isFrozen(ENVAL_PRESENTATION_BRAND_CONFIG_V1.assets) &&
+    Object.isFrozen(ENVAL_PRESENTATION_BRAND_CONFIG_V1.identity),
   "Q02_enval_defaults_not_deeply_immutable",
 );
 try {
@@ -103,7 +116,9 @@ const projectionB = projectPresentationBrand(
 assert(
   JSON.stringify(projectionA) === JSON.stringify(projectionB) &&
     projectionA !== projectionB && projectionA.assets !== projectionB.assets &&
-    Object.isFrozen(projectionA) && Object.isFrozen(projectionA.assets),
+    projectionA.identity !== projectionB.identity &&
+    Object.isFrozen(projectionA) && Object.isFrozen(projectionA.assets) &&
+    Object.isFrozen(projectionA.identity),
   "Q03_public_projection_not_deterministic_or_immutable",
 );
 
@@ -125,6 +140,7 @@ for (
     "shortMark",
     "productLabel",
     "assets",
+    "identity",
   ]
 ) {
   const missing = candidate();
@@ -154,6 +170,37 @@ assert(
       tagline: "<script>alert(1)</script>",
     })).ok,
   "Q07_unsafe_text_accepted",
+);
+
+const identity = candidate().identity as Record<string, unknown>;
+for (const field of Object.keys(identity)) {
+  const incomplete = candidate({ identity: { ...identity } });
+  delete (incomplete.identity as Record<string, unknown>)[field];
+  assert(
+    !validatePresentationBrandConfigV1(incomplete).ok,
+    `Q07b_incomplete_identity_accepted:${field}`,
+  );
+}
+assert(
+  !validatePresentationBrandConfigV1(candidate({
+    identity: { ...identity, extra: "forbidden" },
+  })).ok &&
+    !validatePresentationBrandConfigV1(candidate({
+      identity: { ...identity, websiteUrl: "javascript:alert(1)" },
+    })).ok &&
+    !validatePresentationBrandConfigV1(candidate({
+      identity: { ...identity, contactRoute: "//example.test" },
+    })).ok &&
+    !validatePresentationBrandConfigV1(candidate({
+      identity: { ...identity, mailAddress: "invalid" },
+    })).ok &&
+    !validatePresentationBrandConfigV1(candidate({
+      identity: {
+        ...identity,
+        mailAddress: `${"a".repeat(65)}@example.test`,
+      },
+    })).ok,
+  "Q07c_invalid_identity_accepted",
 );
 
 for (
@@ -224,7 +271,7 @@ try {
 }
 assert(
   forgedProjectionRejected &&
-    !/(tenant|routing|supabase|data.?plane|locator|secret|credential|legal|kvk|privacy.?controller|representation|support)/i
+    !/(tenant|routing|supabase|data.?plane|locator|secret|credential|kvk|privacy.?controller|representation|support)/i
       .test(publicJson),
   "Q11_public_projection_contains_authority_or_secret_field",
 );
@@ -233,11 +280,16 @@ const legalBefore = JSON.stringify(SIGNING_LEGAL_RUNTIME_DOCUMENTS);
 const rebrand = validatePresentationBrandConfigV1(candidate({
   displayName: "Rebranded Presentation",
   shortMark: "RP",
+  identity: ENVAL_PRESENTATION_BRAND_CONFIG_V1.identity,
 }));
 assert(rebrand.ok, "Q12_rebrand_candidate_invalid");
 projectPresentationBrand(rebrand.value);
 assert(
-  JSON.stringify(SIGNING_LEGAL_RUNTIME_DOCUMENTS) === legalBefore,
+  JSON.stringify(SIGNING_LEGAL_RUNTIME_DOCUMENTS) === legalBefore &&
+    rebrand.value.identity.legalName === "ENVAL B.V." &&
+    rebrand.value.identity.mailDisplayName === "ENVAL" &&
+    rebrand.value.identity.mailAddress === "noreply@enval.local" &&
+    rebrand.value.identity.websiteUrl === "https://www.enval.nl/",
   "Q12_rebrand_mutated_legal_runtime_documents",
 );
 

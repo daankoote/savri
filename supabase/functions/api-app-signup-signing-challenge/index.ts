@@ -29,6 +29,10 @@ import {
 } from "../_shared/signing_legal_runtime.ts";
 import { resolveSigningOtpTransport } from "../_shared/signing_otp_transport.ts";
 import {
+  resolveDeploymentPresentationMailIdentity,
+  resolvePresentationMailIdentity,
+} from "../_shared/app_workflow_email_context.ts";
+import {
   channelReference,
   generateSigningOtp,
   maskEmail,
@@ -172,6 +176,22 @@ serve(async (req) => {
       400,
       "Aanvraagcode ontbreekt.",
       "missing_idempotency_key",
+    );
+  }
+  const mailIdentity = meta.tenant_execution
+    ? await resolvePresentationMailIdentity(
+      { get: (name: string) => Deno.env.get(name) },
+      meta.tenant_execution,
+    )
+    : await resolveDeploymentPresentationMailIdentity({
+      get: (name: string) => Deno.env.get(name),
+    });
+  if (!mailIdentity) {
+    return appErrorResponse(
+      req,
+      503,
+      "Ondertekenen is tijdelijk niet beschikbaar.",
+      "service_unavailable",
     );
   }
   const code = generateSigningOtp();
@@ -368,6 +388,9 @@ serve(async (req) => {
     expiresAt,
     templateVersion: "signup-signing-otp-nl-v1",
     requestReference: meta.request_id,
+    displayName: mailIdentity.displayName,
+    senderName: mailIdentity.mailDisplayName,
+    senderAddress: mailIdentity.mailAddress,
   });
   const deliveryUpdate = delivery.delivered
     ? {

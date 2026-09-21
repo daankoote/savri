@@ -12,6 +12,9 @@ type ClaimedDelivery = Readonly<{
   recipientEmail: string;
   subject: string;
   body: string;
+  senderDisplayName: string;
+  senderAddress: string;
+  presentationConfigVersion: string;
   providerIdempotencyKey: string;
 }>;
 
@@ -39,9 +42,12 @@ function parseClaim(value: unknown): ClaimedDelivery | null | false {
     "lease_token",
     "provider_idempotency_key",
     "recipient_email",
+    "sender_address",
+    "sender_display_name",
     "subject",
     "template_key",
-  ];
+    "presentation_config_version",
+  ].sort();
   const actual = Object.keys(delivery).sort();
   if (
     actual.length !== expected.length ||
@@ -51,6 +57,9 @@ function parseClaim(value: unknown): ClaimedDelivery | null | false {
     typeof delivery.recipient_email !== "string" ||
     typeof delivery.subject !== "string" ||
     typeof delivery.body !== "string" ||
+    typeof delivery.sender_display_name !== "string" ||
+    typeof delivery.sender_address !== "string" ||
+    typeof delivery.presentation_config_version !== "string" ||
     typeof delivery.provider_idempotency_key !== "string" ||
     ![
       "information-request-created-customer-nl-v1",
@@ -66,6 +75,9 @@ function parseClaim(value: unknown): ClaimedDelivery | null | false {
     recipientEmail: delivery.recipient_email,
     subject: delivery.subject,
     body: delivery.body,
+    senderDisplayName: delivery.sender_display_name,
+    senderAddress: delivery.sender_address,
+    presentationConfigVersion: delivery.presentation_config_version,
     providerIdempotencyKey: delivery.provider_idempotency_key,
   };
 }
@@ -96,6 +108,8 @@ export async function runWorkflowEmailWorker(
     try {
       delivery = await transport.deliver({
         recipientEmail: claim.recipientEmail,
+        senderName: claim.senderDisplayName,
+        senderAddress: claim.senderAddress,
         subject: claim.subject,
         body: claim.body,
         providerIdempotencyKey: claim.providerIdempotencyKey,

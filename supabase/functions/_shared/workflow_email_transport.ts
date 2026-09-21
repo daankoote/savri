@@ -6,6 +6,8 @@ import { sendLocalPlainTextMail } from "./local_mailpit_smtp.ts";
 
 export type WorkflowEmailDeliveryRequest = Readonly<{
   recipientEmail: string;
+  senderName: string;
+  senderAddress: string;
   subject: string;
   body: string;
   providerIdempotencyKey: string;
@@ -39,15 +41,14 @@ export class LocalMailpitWorkflowEmailTransportAdapter
   constructor(
     private readonly host: string,
     private readonly port: number,
-    private readonly sender: string,
   ) {}
 
   async deliver(
     request: WorkflowEmailDeliveryRequest,
   ): Promise<WorkflowEmailDeliveryResult> {
     const result = await sendLocalPlainTextMail(this.host, this.port, {
-      sender: this.sender,
-      senderName: "ENVAL",
+      sender: request.senderAddress,
+      senderName: request.senderName,
       recipient: request.recipientEmail,
       subject: request.subject,
       body: request.body,
@@ -86,6 +87,5 @@ export function resolveWorkflowEmailTransport(
   return new LocalMailpitWorkflowEmailTransportAdapter(
     environment.get("WORKFLOW_EMAIL_LOCAL_SMTP_HOST") || "inbucket",
     port,
-    environment.get("WORKFLOW_EMAIL_LOCAL_SENDER") || "noreply@enval.local",
   );
 }

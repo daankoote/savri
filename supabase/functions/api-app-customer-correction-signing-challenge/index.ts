@@ -21,6 +21,10 @@ import {
 } from "../_shared/app_workforce_authorization.ts";
 import { resolveSigningOtpTransport } from "../_shared/signing_otp_transport.ts";
 import {
+  type PresentationMailIdentity,
+  resolvePresentationMailIdentity,
+} from "../_shared/app_workflow_email_context.ts";
+import {
   channelReference,
   generateSigningOtp,
   maskEmail,
@@ -70,12 +74,20 @@ export type CorrectionChallengeDependencies = {
   createServiceClient: () => ServiceClient | null;
   requestMeta: typeof getAppRequestMeta;
   verifyBearer: typeof requireVerifiedSupabaseAuthUser;
+  resolveMailIdentity: (
+    tenantExecution: Parameters<typeof resolvePresentationMailIdentity>[1],
+  ) => Promise<PresentationMailIdentity | null>;
 };
 
 const DEFAULT_DEPENDENCIES: CorrectionChallengeDependencies = {
   createServiceClient: defaultServiceClient,
   requestMeta: getAppRequestMeta,
   verifyBearer: requireVerifiedSupabaseAuthUser,
+  resolveMailIdentity: (tenantExecution) =>
+    resolvePresentationMailIdentity(
+      { get: (name: string) => Deno.env.get(name) },
+      tenantExecution,
+    ),
 };
 
 export function createHandler(
@@ -140,6 +152,15 @@ export function createHandler(
         401,
         "Authenticatie vereist.",
         "authentication_required",
+      );
+    }
+    const mailIdentity = await deps.resolveMailIdentity(meta.tenant_execution);
+    if (!mailIdentity) {
+      return appErrorResponse(
+        req,
+        503,
+        "Ondertekenen is tijdelijk niet beschikbaar.",
+        "service_unavailable",
       );
     }
     const signerResult = await serviceClient.rpc(
@@ -302,6 +323,9 @@ export function createHandler(
       expiresAt,
       templateVersion: "customer-correction-signing-otp-nl-v1",
       requestReference: meta.request_id,
+      displayName: mailIdentity.displayName,
+      senderName: mailIdentity.mailDisplayName,
+      senderAddress: mailIdentity.mailAddress,
     });
     const table = serviceClient.from("app_signup_signing_challenges") as {
       update: (values: JsonObject) => {

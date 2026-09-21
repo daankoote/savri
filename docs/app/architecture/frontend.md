@@ -164,9 +164,9 @@ tabs.
 The ENVAL Control IA is tenant/configuration/platform-health/support/audit
 metadata-first. It is never a universal tenant-data console.
 
-The CURRENT local operator shell renders one reusable exact attribution:
-`Powered by ENVAL`. Other relevant dashboard shells may adopt the same shared
-attribution later. It is platform attribution only and must not imply legal,
+The CURRENT local operator shell renders one reusable attribution:
+`Powered by <displayName>`. Other relevant dashboard shells may adopt the same
+shared attribution later. It is presentation only and must not imply legal,
 operator, controller, contracting-party, or verifier responsibility.
 
 Authenticated surface identity is a presentation concern, not authorization.
@@ -178,6 +178,18 @@ existing server-authorized route guard. The current operator context exposes no
 authoritative ENVAL-platform-actor distinction; `ENVAL · Beheerconsole` remains
 TARGET until such authority exists and must not be inferred from route, role,
 e-mail address or brand text.
+
+`BRAND_CONFIGURATION_V1` keeps one React authority:
+`PresentationBrandRuntime` validates the server bootstrap and
+`PresentationBrandProvider` supplies the complete immutable public config.
+Ordinary product-name copy uses `displayName`; the document title/favicon,
+public/Auth shell, customer sidebar, workforce header, contact presentation and
+customer-facing status labels consume that same value. `shortMark`,
+`productLabel`, `tagline`, assets, export basename, website/contact routes,
+mail identity and legal name remain explicit independent fields and are never
+derived from `displayName`. Existing buttons, navigation, status pills, table
+and responsive primitives own the rendering; no page-local brand state, CSS or
+authorization branch is allowed.
 
 ## Routes And Pages
 

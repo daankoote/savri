@@ -1,4 +1,5 @@
 import type { SignupSubmitResult } from "./signupSubmitClient";
+import { usePresentationBrand } from "../../shared/presentation/PresentationBrandProvider";
 
 export type SignupSubmitState =
   | { status: "idle" }
@@ -10,7 +11,10 @@ type SignupSubmitStatusPanelProps = {
   state: SignupSubmitState;
 };
 
-export function SignupSubmitStatusPanel({ state }: SignupSubmitStatusPanelProps) {
+export function SignupSubmitStatusPanel(
+  { state }: SignupSubmitStatusPanelProps,
+) {
+  const presentation = usePresentationBrand();
   if (state.status === "idle") return null;
 
   if (state.status === "submitting") {
@@ -32,13 +36,23 @@ export function SignupSubmitStatusPanel({ state }: SignupSubmitStatusPanelProps)
   }
 
   return (
-    <div className="review-panel review-panel-ok" role="status" aria-live="polite">
+    <div
+      className="review-panel review-panel-ok"
+      role="status"
+      aria-live="polite"
+    >
       <h3>Aanmelding ontvangen</h3>
-      <p>ENVAL heeft je aanmelding ontvangen. Je dossier is aangemaakt voor beoordeling.</p>
+      <p>
+        {presentation.displayName}{" "}
+        heeft je aanmelding ontvangen. Je dossier is aangemaakt voor
+        beoordeling.
+      </p>
       <p>
         <strong>Dossier ID:</strong> {state.result.dossier_id}
       </p>
-      <p className="fine-print">Geen garantie op toekenning, opbrengst of termijn.</p>
+      <p className="fine-print">
+        Geen garantie op toekenning, opbrengst of termijn.
+      </p>
     </div>
   );
 }

@@ -4,6 +4,12 @@ import { DashboardPageShell } from "../../features/dashboard/DashboardPageShell.
 import { DashboardSidebar } from "../../features/dashboard/DashboardSidebar.tsx";
 import { SignupPageShell } from "../../features/signup/SignupPageShell.tsx";
 import { NotFoundPage } from "../../pages/NotFoundPage.tsx";
+import { HomePage } from "../../pages/HomePage.tsx";
+import { PrivacyPage } from "../../pages/PrivacyPage.tsx";
+import { AccountPage } from "../../pages/AccountPage.tsx";
+import { ContactChoicePanel } from "../../features/dashboard/ContactChoicePanel.tsx";
+import { SignupSubmitStatusPanel } from "../../features/signup/SignupSubmitStatusPanel.tsx";
+import { ConsentSignatureSection } from "../../features/signup/ConsentSignatureSection.tsx";
 import { AppHeader } from "../components/AppHeader.tsx";
 import { SurfaceShell } from "../components/SurfaceShell.tsx";
 import { APP_SURFACES } from "../surfaces/surfaceModel.ts";
@@ -13,6 +19,7 @@ import {
   validatePresentationBrandConfigV1,
 } from "../../../../platform/runtime/presentation/presentation_brand_config.ts";
 import {
+  formatPresentationBrandCopy,
   PresentationBrandProvider,
   projectPresentationSurfaceIdentity,
 } from "./PresentationBrandProvider.tsx";
@@ -148,6 +155,56 @@ function renderCustomerDashboardPath(
   );
 }
 
+function renderOrdinaryBrandCopy(
+  presentation = projectPresentationBrand(
+    ENVAL_PRESENTATION_BRAND_CONFIG_V1,
+  ),
+): string {
+  const previousHash = window.location.hash;
+  window.location.hash = "#activeren";
+  const html = renderToStaticMarkup(
+    <PresentationBrandProvider presentation={presentation}>
+      <HomePage currentPath="/" navigate={navigate} />
+      <PrivacyPage currentPath="/privacy" navigate={navigate} />
+      <ContactChoicePanel />
+      <AuthProvider audience="portal" intent="portal">
+        <AccountPage currentPath="/inloggen" navigate={navigate} />
+      </AuthProvider>
+      <SignupSubmitStatusPanel
+        state={{
+          status: "success",
+          result: {
+            ok: true,
+            mode: "write_v3",
+            request_id: "request-proof",
+            customer_id: "customer-proof",
+            dossier_id: "dossier-proof",
+            location_count: 1,
+            charger_count: 1,
+            document_slot_count: 1,
+            legal_acceptance_count: 1,
+            payload_hash: "hash-proof",
+            message: "ok",
+          },
+        }}
+      />
+      <ConsentSignatureSection
+        error={{
+          id: "consents.terms.required",
+          fieldPath: "consents.termsBundleAccepted",
+          message:
+            "Accepteer de voorwaarden voordat ENVAL uw dossier kan starten.",
+          severity: "error",
+        }}
+        value={{ termsBundleAccepted: false }}
+        onChange={() => undefined}
+      />
+    </PresentationBrandProvider>,
+  );
+  window.location.hash = previousHash;
+  return html;
+}
+
 const syntheticResult = validatePresentationBrandConfigV1({
   schemaVersion: "presentation-brand-config-v1",
   configVersion: "example-mobility-presentation-v1",
@@ -159,9 +216,22 @@ const syntheticResult = validatePresentationBrandConfigV1({
     logo: "/assets/brand/example-mobility.svg",
     altText: "Example Mobility",
   },
+  identity: {
+    websiteUrl: "https://example.test/",
+    contactRoute: "/contact",
+    mailDisplayName: "Example Mobility",
+    mailAddress: "mail@example.test",
+    legalName: "Example Mobility B.V.",
+  },
   exportBasename: "example-mobility-documents",
 });
 assert(syntheticResult.ok, "synthetic_presentation_invalid");
+const displayNameOnlyResult = validatePresentationBrandConfigV1({
+  ...ENVAL_PRESENTATION_BRAND_CONFIG_V1,
+  configVersion: "testname-presentation-v1",
+  displayName: "Testnaam",
+});
+assert(displayNameOnlyResult.ok, "display_name_only_config_invalid");
 
 const envalHtml = renderConsumerSet();
 const syntheticHtml = renderConsumerSet(
@@ -173,6 +243,13 @@ const authenticatedSyntheticHtml = renderAuthenticatedConsumerSet(
 );
 const tenantPublicHtml = renderTenantPublicPath();
 const customerDashboardHtml = renderCustomerDashboardPath();
+const envalOrdinaryCopyHtml = renderOrdinaryBrandCopy();
+const syntheticOrdinaryCopyHtml = renderOrdinaryBrandCopy(
+  projectPresentationBrand(syntheticResult.value),
+);
+const displayNameOnlyHtml = renderOrdinaryBrandCopy(
+  projectPresentationBrand(displayNameOnlyResult.value),
+);
 assert(
   envalHtml.includes("ENVAL") && envalHtml.includes(">E<") &&
     envalHtml.includes("ERE inboekservice") &&
@@ -191,8 +268,9 @@ assert(
 );
 assert(
   envalHtml.includes("Contact ENVAL") &&
-    syntheticHtml.includes("Contact ENVAL"),
-  "Q03_support_identity_changed_with_presentation",
+    syntheticHtml.includes("Contact Example Mobility") &&
+    !syntheticHtml.includes("Contact ENVAL"),
+  "Q03_product_contact_copy_not_branded",
 );
 assert(
   envalHtml.includes("Nieuwe aanvraag") &&
@@ -200,6 +278,64 @@ assert(
     envalHtml.includes("Aanvragen") && syntheticHtml.includes("Aanvragen") &&
     !envalHtml.includes("History") && !syntheticHtml.includes("Settings"),
   "Q04_auth_or_dashboard_behavior_changed_with_presentation",
+);
+for (
+  const [label, expected] of [
+    ["home", "Waarom ENVAL"],
+    ["privacy", "Privacyinformatie voor de ENVAL"],
+    ["contact", "Contact ENVAL"],
+    ["auth", "ENVAL-klantportaal"],
+    ["signup", "ENVAL heeft je aanmelding ontvangen"],
+    ["validation", "voordat ENVAL uw dossier kan starten"],
+  ] as const
+) {
+  assert(
+    envalOrdinaryCopyHtml.includes(expected),
+    `Q04a_enval_ordinary_copy_missing:${label}`,
+  );
+}
+for (
+  const [label, expected, stale] of [
+    ["home", "Waarom Example Mobility", "Waarom ENVAL"],
+    [
+      "privacy",
+      "Privacyinformatie voor de Example Mobility",
+      "Privacyinformatie voor de ENVAL",
+    ],
+    ["contact", "Contact Example Mobility", "Contact ENVAL"],
+    ["auth", "Example Mobility-klantportaal", "ENVAL-klantportaal"],
+    [
+      "signup",
+      "Example Mobility heeft je aanmelding ontvangen",
+      "ENVAL heeft je aanmelding ontvangen",
+    ],
+    [
+      "validation",
+      "voordat Example Mobility uw dossier kan starten",
+      "voordat ENVAL uw dossier kan starten",
+    ],
+  ] as const
+) {
+  assert(
+    syntheticOrdinaryCopyHtml.includes(expected) &&
+      !syntheticOrdinaryCopyHtml.includes(stale),
+    `Q04a_synthetic_ordinary_copy_invalid:${label}`,
+  );
+}
+assert(
+  displayNameOnlyHtml.includes("Waarom Testnaam") &&
+    displayNameOnlyHtml.includes("Contact Testnaam") &&
+    !displayNameOnlyHtml.includes("Waarom ENVAL") &&
+    !displayNameOnlyHtml.includes("Contact ENVAL") &&
+    displayNameOnlyResult.value.shortMark === "E" &&
+    displayNameOnlyResult.value.productLabel === "Klantportaal" &&
+    displayNameOnlyResult.value.identity.legalName === "ENVAL B.V." &&
+    displayNameOnlyResult.value.identity.mailDisplayName === "ENVAL" &&
+    displayNameOnlyResult.value.identity.mailAddress ===
+      "noreply@enval.local" &&
+    displayNameOnlyResult.value.identity.websiteUrl ===
+      "https://www.enval.nl/",
+  "Q04b_primary_display_name_changed_independent_identity",
 );
 assert(
   authenticatedEnvalHtml.includes("ENVAL") &&
@@ -243,6 +379,21 @@ assert(
     workforceIdentity.shortMark === "EM" &&
     workforceIdentity.contextLabel === "Dossierbeheer",
   "Q20_authenticated_surface_projection_invalid",
+);
+assert(
+  formatPresentationBrandCopy(
+        "ENVAL controleert uw dossier.",
+        syntheticResult.value.displayName,
+      ) === "Example Mobility controleert uw dossier." &&
+    formatPresentationBrandCopy(
+        "ENVAL beoordelen",
+        syntheticResult.value.displayName,
+      ) === "Example Mobility beoordelen" &&
+    formatPresentationBrandCopy(
+        "ENVAL checken",
+        syntheticResult.value.displayName,
+      ) === "Example Mobility checken",
+  "Q20a_classified_status_copy_not_branded",
 );
 
 const [
@@ -344,8 +495,8 @@ assert(
   "Q09_auth_tenant_or_signing_legal_source_depends_on_branding",
 );
 assert(
-  sidebarSource.includes("Contact ENVAL") &&
-    !sidebarSource.includes("Contact ${presentation") &&
+  sidebarSource.includes("Contact {presentation.displayName}") &&
+    sidebarSource.includes("presentation.identity.websiteUrl") &&
     legalSource.includes("ENVAL B.V.") &&
     signingFinalizeSource.includes("content_sha256") &&
     signingFinalizeSource.includes("canonical_snapshot"),
@@ -376,8 +527,9 @@ assert(
   APP_SURFACES.join("|") ===
       "public|tenant_public|tenant_customer|tenant_operator|enval_control|verifier" &&
     syntheticHtml.includes('data-app-surface="tenant_public"') &&
-    syntheticHtml.includes(">Powered by ENVAL</footer>") &&
-    (syntheticHtml.match(/Powered by ENVAL/g) || []).length === 1,
+    syntheticHtml.includes(">Powered by Example Mobility</footer>") &&
+    !syntheticHtml.includes("Powered by ENVAL") &&
+    (syntheticHtml.match(/Powered by Example Mobility/g) || []).length === 1,
   "Q13_surface_model_or_shared_attribution_invalid",
 );
 assert(
@@ -385,7 +537,8 @@ assert(
     signupShellSource.includes('surface="tenant_public"') &&
     dashboardShellSource.includes('surface="tenant_customer"') &&
     (dashboardShellSource.match(/platformAttribution/g) || []).length === 1 &&
-    (surfaceShellSource.match(/Powered by ENVAL/g) || []).length === 1 &&
+    surfaceShellSource.includes("Powered by {presentation.displayName}") &&
+    !surfaceShellSource.includes("Powered by ENVAL") &&
     !surfaceShellSource.match(/useAuth|Supabase|capability|tenantId/) &&
     !surfaceModelSource.match(/useAuth|Supabase|capability|tenantId/) &&
     !surfaceShellSource.includes("style={{"),

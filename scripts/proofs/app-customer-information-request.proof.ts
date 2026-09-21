@@ -455,7 +455,9 @@ function createSql(
     'create-${suffix}','create-${suffix}','${HASH}','${EXPIRES}',
     jsonb_build_object(
       'organization_name','ENVAL',
-      'portal_origin','http://127.0.0.1:5175'
+      'portal_origin','http://127.0.0.1:5175',
+      'sender_display_name','ENVAL','sender_address','noreply@enval.local',
+      'presentation_config_version','enval-presentation-v1'
     )
   )::text;`;
 }
@@ -705,9 +707,10 @@ async function runProof() {
   }\n\nMet vriendelijke groet,\nENVAL'),
     bool_and(frozen_body not like '%Welke toelichting%'),
     bool_and(template_variables ?& array[
-      'organization_name','application_label','case_reference','action_url'
+      'organization_name','application_label','case_reference','action_url',
+      'sender_display_name','sender_address','presentation_config_version'
     ] and (
-      select count(*)=4
+      select count(*)=7
       from pg_catalog.jsonb_object_keys(template_variables)
     )),
     bool_and(template_variables->>'case_reference'='${CASE_REFS[0]}')
@@ -727,7 +730,9 @@ async function runProof() {
       'customer-wide@proof.invalid',jsonb_build_object(
         'organization_name','ENVAL','application_label','INFO-A1',
         'case_reference','${CASE_REFS[1]}','action_url',
-        'http://127.0.0.1:5175/dashboard/aanvragen/${CASE_REFS[0]}'
+        'http://127.0.0.1:5175/dashboard/aanvragen/${CASE_REFS[0]}',
+        'sender_display_name','ENVAL','sender_address','noreply@enval.local',
+        'presentation_config_version','enval-presentation-v1'
       ),'information-request:case-reference-mismatch'
     );`);
   assert(
@@ -746,6 +751,8 @@ async function runProof() {
         'organization_name','ENVAL','application_label','INFO-A1',
         'case_reference','${CASE_REFS[0]}','action_url',
         'http://127.0.0.1:5175/dashboard/aanvragen/${CASE_REFS[0]}',
+        'sender_display_name','ENVAL','sender_address','noreply@enval.local',
+        'presentation_config_version','enval-presentation-v1',
         'question','mag niet mee'
       ),'information-request:extra-v2-variable'
     );`);
@@ -796,7 +803,9 @@ async function runProof() {
     'Dit is het antwoord.','respond-a1','respond-a1','${HASH}','${EXPIRES}',
     jsonb_build_object(
       'organization_name','ENVAL',
-      'portal_origin','http://127.0.0.1:5175'
+      'portal_origin','http://127.0.0.1:5175',
+      'sender_display_name','ENVAL','sender_address','noreply@enval.local',
+      'presentation_config_version','enval-presentation-v1'
     )
   )::text;`,
   );
@@ -806,7 +815,9 @@ async function runProof() {
     'Dit is het antwoord.','respond-a1','respond-a1','${HASH}','${EXPIRES}',
     jsonb_build_object(
       'organization_name','ENVAL',
-      'portal_origin','http://127.0.0.1:5175'
+      'portal_origin','http://127.0.0.1:5175',
+      'sender_display_name','ENVAL','sender_address','noreply@enval.local',
+      'presentation_config_version','enval-presentation-v1'
     )
   )::text;`,
   );
@@ -836,7 +847,7 @@ async function runProof() {
     bool_and(frozen_body not like '%Dit is het antwoord%'),
     bool_and(frozen_body not like '%Welke toelichting%'),
     bool_and(template_variables->>'case_reference'='${CASE_REFS[0]}'
-      and (select count(*)=4
+      and (select count(*)=7
         from pg_catalog.jsonb_object_keys(template_variables)))
   ) from public.app_workflow_email_intents
   where event_type='information_request_answered_workforce'
@@ -966,7 +977,9 @@ async function runProof() {
     'withdraw-a2','withdraw-a2','${HASH}','${EXPIRES}',
     jsonb_build_object(
       'organization_name','ENVAL',
-      'portal_origin','http://127.0.0.1:5175'
+      'portal_origin','http://127.0.0.1:5175',
+      'sender_display_name','ENVAL','sender_address','noreply@enval.local',
+      'presentation_config_version','enval-presentation-v1'
     )
   )::text;`,
   );
@@ -1091,7 +1104,9 @@ async function runProof() {
       'withdraw-race','withdraw-race','${HASH}','${EXPIRES}',
       jsonb_build_object(
         'organization_name','ENVAL',
-        'portal_origin','http://127.0.0.1:5175'
+        'portal_origin','http://127.0.0.1:5175',
+        'sender_display_name','ENVAL','sender_address','noreply@enval.local',
+        'presentation_config_version','enval-presentation-v1'
       )
     )::text;`);
   const [workerResult, withdrawResult] = await Promise.all([
@@ -1164,7 +1179,7 @@ async function runProof() {
     ) select 'a6000000-0000-4000-8000-000000000001','CRH-0000000000000001',
       '${CASE_IDS[2]}','a5000000-0000-4000-8000-000000000001',
       'fact-review-manifest-v1','${HASH}','${CUSTOMER_A}',
-      '{"schema_version":"evidence-review-correction-handoff-bundle-v3","customer_publication":{"schema_version":"correction-customer-publication-v1","cover_message":"Controleer de gevraagde correcties."},"items":[{}]}',
+      '{"schema_version":"evidence-review-correction-handoff-bundle-v4","customer_publication":{"schema_version":"correction-customer-publication-v1","cover_message":"Controleer de gevraagde correcties."},"items":[{"fact_key":"partyName","evidence_kind":"energy_bill_or_contract","response_requirement":"VALUE_PLUS_DOCUMENT_REPLACEMENT","document_requirement":{"document_type":"energy_bill_or_contract","parser_profile":"energy_document_v1","relationship":"direct","response_requirement":"VALUE_PLUS_DOCUMENT_REPLACEMENT"}}]}',
       '${HASH}',workforce.id,scope.id,'evidence.review.correction.publish',
       '00000000-0000-4000-8000-000000003601','${HASH}',
       'handoff-a3','handoff-a3',now() from workforce,scope;
@@ -1208,7 +1223,7 @@ async function runProof() {
         request_id,idempotency_key,published_at
       ) select gen_random_uuid(),'CRH-0000000000000002','${CASE_IDS[3]}',
         gen_random_uuid(),'fact-review-manifest-v1','${HASH}','${CUSTOMER_A}',
-        '{"schema_version":"evidence-review-correction-handoff-bundle-v3","customer_publication":{"schema_version":"correction-customer-publication-v1","cover_message":"Controleer de gevraagde correcties."},"items":[{}]}',
+        '{"schema_version":"evidence-review-correction-handoff-bundle-v4","customer_publication":{"schema_version":"correction-customer-publication-v1","cover_message":"Controleer de gevraagde correcties."},"items":[{"fact_key":"partyName","evidence_kind":"energy_bill_or_contract","response_requirement":"VALUE_PLUS_DOCUMENT_REPLACEMENT","document_requirement":{"document_type":"energy_bill_or_contract","parser_profile":"energy_document_v1","relationship":"direct","response_requirement":"VALUE_PLUS_DOCUMENT_REPLACEMENT"}}]}',
         '${HASH}',identity.id,scope.id,'evidence.review.correction.publish',
         '00000000-0000-4000-8000-000000003601','${HASH}',
         'handoff-a4','handoff-a4',now()
@@ -1258,7 +1273,9 @@ async function runProof() {
       'withdraw-a4-delivered','withdraw-a4-delivered','${HASH}','${EXPIRES}',
       jsonb_build_object(
         'organization_name','ENVAL',
-        'portal_origin','http://127.0.0.1:5175'
+        'portal_origin','http://127.0.0.1:5175',
+        'sender_display_name','ENVAL','sender_address','noreply@enval.local',
+        'presentation_config_version','enval-presentation-v1'
       )
     )::text;`,
   );
@@ -1268,7 +1285,9 @@ async function runProof() {
       'withdraw-a4-delivered','withdraw-a4-delivered','${HASH}','${EXPIRES}',
       jsonb_build_object(
         'organization_name','ENVAL',
-        'portal_origin','http://127.0.0.1:5175'
+        'portal_origin','http://127.0.0.1:5175',
+        'sender_display_name','ENVAL','sender_address','noreply@enval.local',
+        'presentation_config_version','enval-presentation-v1'
       )
     )::text;`,
   );
@@ -1295,7 +1314,7 @@ async function runProof() {
       where event_type='information_request_withdrawn_customer'
         and business_event_ref='${deliveredRequestRef}'),
     (select bool_and(template_variables->>'case_reference'='${CASE_REFS[3]}'
-      and (select count(*)=4
+      and (select count(*)=7
         from pg_catalog.jsonb_object_keys(template_variables)))
       from public.app_workflow_email_intents
       where event_type='information_request_withdrawn_customer'
@@ -1505,7 +1524,9 @@ async function runProof() {
       'respond-authority-lapse','respond-authority-lapse','${HASH}','${EXPIRES}',
       jsonb_build_object(
         'organization_name','ENVAL',
-        'portal_origin','http://127.0.0.1:5175'
+        'portal_origin','http://127.0.0.1:5175',
+        'sender_display_name','ENVAL','sender_address','noreply@enval.local',
+        'presentation_config_version','enval-presentation-v1'
       )
     )::text;`,
   );

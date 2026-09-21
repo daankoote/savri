@@ -38,6 +38,7 @@ import {
   type SignupSubmissionReceipt,
   writeSignupSubmissionReceipt,
 } from "./signupSubmissionReceiptStore";
+import { usePresentationBrand } from "../../shared/presentation/PresentationBrandProvider";
 
 export type SigningCustomerState = {
   summaryConfirmed: boolean;
@@ -77,11 +78,19 @@ export function DocumentFirstSigningSummary(
     onFinalized: (receipt: SignupSubmissionReceipt) => void;
   },
 ) {
+  const brand = usePresentationBrand();
   const { legalActions, mandateYear, signerInput, summaryConfirmed } =
     customerState;
   const presentation = selectUnifiedFactPresentation(draft);
   const method = getActiveSignupSignatureMethod();
-  const exporter = useMemo(() => createBrowserHtmlLegalBundleV1(), []);
+  const exporter = useMemo(
+    () =>
+      createBrowserHtmlLegalBundleV1(
+        undefined,
+        brand.exportBasename ?? "enval-aanmelddocumenten",
+      ),
+    [brand.exportBasename],
+  );
   const yearOptions = getMandateYearOptions();
   const [challenge, setChallenge] = useState<SigningChallengeReceipt | null>(
     null,
@@ -176,6 +185,7 @@ export function DocumentFirstSigningSummary(
       signingIntent.mandate
         ? createLegalBundleDocument({
           documents: legalDocuments,
+          legalName: brand.identity.legalName,
           mandate: signingIntent.mandate,
         })
         : null,
