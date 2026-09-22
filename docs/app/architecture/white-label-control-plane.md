@@ -96,9 +96,9 @@ isolated in separate data planes.
     customer-owned cloud and contractually agreed
     standalone/self-hosted/source-license deployment. Commercial packaging
     never selects a code fork.
-14. Tenant/operator, deployment ownership, branding, support model and
-    conflict-registry participation are orthogonal configuration dimensions;
-    none is a combined tenant type.
+14. Tenant/operator, deployment ownership, branding, support model, license
+    status, regulated role and conflict-registry participation are orthogonal
+    concerns; none is a combined tenant type or implicit authority grant.
 15. Branding is presentation only and grants no identity, routing, Auth,
     customer/case ownership or legal authority.
 16. Physical support is an explicit tenant-scoped service relationship, not
@@ -112,6 +112,9 @@ isolated in separate data planes.
     general tenant workforce escalates internally.
 19. Tenant presentation permits controlled values only; arbitrary CSS,
     JavaScript, HTML and per-tenant frontend forks are prohibited.
+20. Only an organization in the `approved tenant/license registry` (`tenant
+    allowlist`) with an active license may be admitted as a tenant. Admission
+    grants no NEa, REV, verifier, dossier or workforce authority.
 
 ## B. CURRENT Tenant #1 Data-Plane State
 
@@ -199,7 +202,9 @@ configuration content, approval UI/capability lifecycle, secret resolution or
 current business consumer. The TARGET plane split remains: central
 control-plane publishing intent/opaque references only, with durable
 reconstructable material configuration truth in the owning tenant data plane.
-The next bounded batch is signing/legal tenant-config provenance cutover.
+At the TF02-C checkpoint, the recorded next bounded batch was signing/legal
+tenant-config provenance cutover. That dated successor is historical and does
+not override the CURRENT product roadmap in `docs/app/04_TODO.md`.
 
 ## D. Minimum Separate Control Plane
 
@@ -209,7 +214,7 @@ broader logical responsibilities below remain TARGET where not implemented.
 
 | central domain | why central | data class and authority | security / retention boundary |
 |---|---|---|---|
-| tenant registry and status | identify an approved participant and whether routing is allowed | authoritative platform metadata; no ordinary customer PII | restricted platform writes; lifecycle and status history retained/audited |
+| approved tenant/license registry (`tenant allowlist`) | admit only a pre-approved organization with an active license and determine whether tenant routing is allowed | authoritative platform admission metadata only; no NEa, REV, verifier, dossier or workforce authority; no ordinary customer PII | restricted platform writes; lifecycle and license status history retained/audited |
 | trusted host/domain mapping | resolve a request before selecting a data plane | authoritative routing metadata; no customer PII | verified ownership/change control; fail closed on ambiguity |
 | public branding/config | select tenant-owned public presentation and non-secret product configuration | authoritative public config; no customer truth | versioned and cache-safe; signed legal evidence remains tenant-local |
 | data-plane locator | identify the approved tenant application/data-plane destination | authoritative infrastructure reference; sensitive but not customer PII | never browser-selectable; no secret values; change-audited |
@@ -238,6 +243,7 @@ commercial/deployment models without code forks:
 The independent dimensions are:
 
 - operator/tenant: who operates the inbooking service;
+- license admission: active entry in the `approved tenant/license registry`;
 - deployment ownership: at least `ENVAL_MANAGED_DEDICATED` or
   `CUSTOMER_MANAGED_SELF_HOSTED`;
 - branding mode: ENVAL, LabelUP/co-brand or customer-owned presentation;
@@ -247,11 +253,12 @@ The independent dimensions are:
 - conflict-registry participation: connected opt-in/eligible participation or
   no platform-wide participation, independent of deployment ownership.
 
-These dimensions may constrain compatible adapters/capabilities, but no value
-creates Auth, tenant identity, dossier access, case ownership or legal
-authority. SLA and license packaging compose configuration, capabilities and
-optional integrations around the shared core; they do not copy the app,
-database domain or business rules.
+These dimensions may constrain compatible adapters or deployment composition,
+but no value creates Auth, dossier access, case ownership, workforce
+capability, verifier status, REV access or legal authority. An active registry
+entry permits tenant admission only. SLA and license packaging compose
+configuration and optional integrations around the shared core; they do not
+copy the app, database domain or business rules.
 
 LabelUP is not a commercial-mode authority value. Where contractually
 involved, it is currently only a conceptual optional support-provider
@@ -674,7 +681,7 @@ to its component, owning plane, security boundary and deterministic proof.
 | `WL-ISO-001` separate customer data planes | tenant Auth/Postgres/Storage/Edge deployment | tenant data plane | no cross-tenant credential, network or object reach | negative tenant-A/tenant-B Auth, SQL, RPC and Storage tests |
 | `WL-CUR-001` preserve current ENVAL foundations | reference/data-plane #1; operator identity unresolved | tenant data plane | no convenience `tenant_id` rewrite | schema/data hash and current-proof preservation |
 | `WL-AUTH-001` tenant-local customer Auth | tenant Auth configuration and customer access helpers | tenant data plane | no central customer authority | wrong-tenant token and identity denial |
-| `WL-CTRL-001` minimum control plane | tenant registry, membership and platform audit | control plane | no ordinary tenant truth | schema allowlist and forbidden-field/data-flow proof |
+| `WL-CTRL-001` minimum control plane | approved tenant/license registry, membership and platform audit | control plane | admission grants no ordinary tenant truth or regulated authority | schema allowlist and forbidden-field/data-flow proof |
 | `WL-ROUTE-001` trusted resolution | `TenantResolverPort` | control plane boundary | server-observed host only; ambiguity fails closed | host spoof, unknown host and browser-override rejection |
 | `WL-LOC-001` restricted locator | `TenantDataPlaneLocator` | control plane boundary | active resolved tenant only; no secret values | locator mismatch, inactive tenant and secret-output denial |
 | `WL-CRED-001` tenant-specific credentials | secret references and tenant deployment secrets | both, separated | no universal service role; no browser secret | credential-scope and log/redaction proof |
@@ -706,7 +713,7 @@ Current local implementation evidence is intentionally concise:
 | public bootstrap/provider | `app_presentation_bootstrap.ts`, `api-app-presentation-bootstrap/`, `app/src/shared/presentation/` | `PresentationBrandRuntime.proof.tsx`, `PresentationBrandProvider.proof.tsx` | CURRENT PROVEN LOCAL; local browser and human acceptance are green; hosted configuration and deployment remain unproven |
 | Tenant Operator entry | `api-app-operator-context`, `OperatorRouteGuard`, shared surface shell and existing compliance/evidence pages | `app-operator-context.proof.ts`, route/auth/presentation proofs and human browser acceptance | CURRENT PROVEN LOCAL; no tenant #2, administration, remote or production claim |
 
-## Deferred Decisions And Next Gate
+## Deferred Decisions And Domain Gate
 
 Still DEFERRED / UNKNOWN:
 
@@ -724,6 +731,7 @@ Still DEFERRED / UNKNOWN:
   retention, correction and deletion; and
 - production availability, observability, incident and disaster-recovery SLOs.
 
-The next bounded implementation gate must select one deferred responsibility
-only. The completed local foundation grants no blanket product, remote,
-deployment or production authorization.
+Any future bounded implementation gate within this white-label/control-plane
+architecture must select one deferred responsibility only and follow the
+CURRENT ordering in `docs/app/04_TODO.md`. The completed local foundation grants
+no blanket product, remote, deployment or production authorization.

@@ -8,8 +8,14 @@ CURRENT PROVEN only where explicitly tied to current code/schema/proof.
 ENVAL is one generic B2B managed-SaaS and white-label software platform for
 separate ERE-E inboekdienstverleners. The current ENVAL-branded portal is the
 reference/default tenant journey. It is not proof that ENVAL Software is the
-regulated operator, REV account holder, ERE trader, independent verifier or
-end-customer contracting party.
+regulated operator, REV account holder, ERE trader, independent verifier,
+legal representative or end-customer contracting party.
+
+Only organizations in the `approved tenant/license registry` (`tenant
+allowlist`) with an active license may become a tenant. Admission and licensing
+grant no NEa status, REV access, verifier role, dossier authority or workforce
+capability. Those authorities require their own tenant-bound evidence and
+server-side grants.
 
 The platform:
 
@@ -21,22 +27,32 @@ The platform:
 - keeps generic platform ownership/configuration separate from tenant business
   truth and authority.
 
-The tenant/inboekdienstverlener carries the regulated operational
-responsibility. ENVAL supplies the software layer. Tenant identity,
+The tenant/inboekdienstverlener owns its customer relationship, statutory and
+operational responsibility, data, workforce, audit, REV/inbooking workflow and
+verifier relationship. ENVAL supplies the software layer. Tenant identity,
 presentation brand, legal operator, support provider, customer contracting
 party and privacy role are separate concepts.
+
+Managed SaaS, managed white-label, customer-owned cloud and contractually
+agreed self-hosted/source-license deployments use the same modular core.
+Deployment ownership, branding, support, license and regulated role remain
+independent concerns; no commercial package creates regulatory or dossier
+authority.
 
 Status split:
 
 - CURRENT PROVEN: intake capture, app dossier foundation, app audit/idempotency, authenticated dashboard document lifecycle, immutable document versions, and customer-safe dashboard projection where current code/schema/proofs show them.
-- TARGET: tenant-bound legal identity, branding, customer contracts, fee
-  configuration, signing/legal bundles, audit and deny-by-default isolation,
-  with the minimum tenant-ready sequence governed by the completed SaaS gap
-  audit. TF01 fixed-plane execution binding and the TF02-B strict versioned
-  tenant-configuration manifest/revision-reference contract with safe static
-  server-time selection are CURRENT PROVEN LOCAL. Real approved configuration
-  content, durable persistence/read authority, business-consumer provenance
-  cutover, portable provenance, tenant #2 and production isolation are not.
+- CURRENT PROVEN LOCAL: the strict presentation-brand configuration, current
+  presentation consumers and immutable workflow-mail sender snapshot, including
+  their local persistence, read and replay boundaries.
+- TARGET: tenant-bound legal identity, customer contracts, fee configuration,
+  signing/legal bundles, managed brand-identity administration, hosted
+  configuration, tenant onboarding, broader business-consumer provenance,
+  portable provenance, tenant #2, deny-by-default production isolation and
+  production deployment. TF01 fixed-plane execution binding and the TF02-B
+  strict versioned tenant-configuration manifest/revision-reference contract
+  with safe static server-time selection remain CURRENT PROVEN LOCAL; real
+  approved operational/legal/commercial configuration content remains absent.
 - SUPERSEDED/HISTORICAL: 30/70 or 70/30 operational partnership, IP transfer
   or shared ownership, an assumed partner as first tenant, ENVAL B.V. as the
   generic fixed operator/end-customer contracting party, and 90/10 as a
@@ -48,7 +64,8 @@ Status split:
 Role boundaries:
 
 - ENVAL Software is geen inboekdienstverlener, REV-rekeninghouder,
-  ERE-handelaar, verificateur of certificeerder by default.
+  ERE-handelaar, verificateur, certificeerder of wettelijke vertegenwoordiger
+  by default.
 - The resolved tenant must not claim NEa approval, accreditation, REV access,
   list publication, mandate volume, verifier readiness or production
   eligibility until tenant-bound evidence proves it.
@@ -108,9 +125,12 @@ and reporting remains later without a concrete requirement.
 Auth principal, tenant, workforce membership, customer party, representation
 authority and case authority are separate. A tenant owns its workforce, end
 customers, cases, evidence, signing truth and audit inside its isolated data
-plane. Workforce business authority is capability-based; friendly owner/admin,
-reviewer, support and operations roles may compose capabilities but never grant
-authority by name alone.
+plane, together with its regulated inbooking and verifier relationship.
+Workforce business authority is capability-based; friendly owner/admin,
+reviewer, support and operations roles may compose capabilities but never
+grant authority by name alone. Tenant admission additionally requires an
+active entry in the `approved tenant/license registry`; that entry never
+substitutes for workforce, dossier or regulated authority.
 
 Only tenant principals with explicit `platform_support.request` may open ENVAL
 platform-support requests. Default assignment may be tenant owner/admin or a

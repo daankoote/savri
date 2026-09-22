@@ -1,10 +1,9 @@
 # ENVAL App TODO
 
-Status: CURRENT app/MVP TODO — Wave A1, TF01, TF02-C and SL01-B current local
-proof reconciled through commit `8bfc56c` on 2026-09-01. SL01-C and UI-01B are
-CURRENT PROVEN LOCAL after their bounded automated and human browser evidence.
-Earlier
-bounded work-package records retain their own dated proof status.
+Status: CURRENT active roadmap — synchronized on 2026-09-22. Completed local
+proof status includes `AUTHORIZED_PORTAL_REDIRECT_V1` at commit `1486802` and
+`BRAND_CONFIGURATION_V1` at commit `334930b`. Production, hosted deployment and
+regulatory acceptance remain separately unproven.
 
 This queue is primarily for the new `/app`, `api-app-*`, and `app_*`
 implementation. Bounded legacy-caller cutover and white-label foundation status
@@ -12,7 +11,74 @@ are recorded only where they affect the current product/MVP boundary. Removed
 legacy documentation and external historical copies do not drive new app
 implementation.
 
-## Single Current NEXT
+## Active Roadmap
+
+1. **MULTI_DOCUMENT_EVIDENCE_WORKSPACE_V1** — NEXT / TARGET / NOT IMPLEMENTED
+   - Support multiple documents and photos per dossier without a fixed limit of
+     two uploads.
+   - Reuse the existing upload, document, parser, evidence and review
+     authorities; do not create a parallel evidence workflow.
+   - Model document roles as `primary`, `supporting` or `unknown` under
+     server-owned authority.
+   - Fail closed when documents, extracted facts or source roles conflict.
+   - Deliver separate bounded contract, UI, parser and browser batches.
+2. **PARSER_CORPUS_V1** — TARGET / NOT IMPLEMENTED
+   - Keep real, synthetic and intentionally manipulated documents strictly
+     separated.
+   - Never place raw documents in Git, production data, logs or external
+     providers.
+   - Register only a pseudonymous corpus ID, SHA-256, document type, source
+     category and expected extraction in the corpus manifest.
+   - Keep ground truth separate from parser input and emit no personal data in
+     proof or error output.
+   - Measure parser quality, document conflicts and fraud signals separately.
+   - Produce no automatic fraud judgment, evidence acceptance or customer
+     rejection.
+   - Split delivery into modular batches for text PDFs, scans/photos/OCR,
+     multi-document conflict handling and later fraud resistance.
+3. **EXTERNAL_VERIFICATION_RESEARCH_V1** — RESEARCH / EXTERNAL EVIDENCE REQUIRED
+   - Establish attributable requirements for verifier exchange, external
+     providers and regulatory interoperability before selecting contracts or
+     adapters.
+   - Research creates no verifier, NEa, REV or production acceptance claim.
+4. **LEGAL_OPERATIONAL_GATES_V1** — BLOCKED / EXTERNAL DECISIONS REQUIRED
+   - Resolve tenant-specific legal identity, controller/processor allocation,
+     mandate, retention, customer terms, verifier responsibilities and
+     operational REV/inbooking gates through attributable advice and explicit
+     decisions.
+   - Preserve current internal controls without presenting them as regulatory
+     acceptance.
+5. **PILOT_PRODUCTIONIZATION_V1** — LATER / GATED
+   - Convert the locally proven journey into a bounded pilot only after the
+     applicable legal, operational, security, provider and deployment gates are
+     satisfied.
+   - Production, hosted deployment and regulator acceptance remain unproven.
+6. **PLATFORM_ADMIN_AND_TENANT_2 — LATER**
+   - Add platform administration, approved tenant onboarding and a second
+     isolated tenant only after concrete demand and a separately approved
+     authority, isolation and operations batch.
+   - The future admission authority is the `approved tenant/license registry`
+     (`tenant allowlist`) with an active license. Admission grants no NEa, REV,
+     verifier, dossier or workforce authority.
+
+## Completed / Current Proven Local
+
+- `AUTHORIZED_PORTAL_REDIRECT_V1` — DONE / CURRENT PROVEN LOCAL, committed in
+  `1486802`. Automated proof, production build and human Firefox acceptance are
+  complete; hosted deployment remains unproven.
+- `BRAND_CONFIGURATION_V1` — DONE / CURRENT PROVEN LOCAL, committed in
+  `334930b`. Local migration/schema/security proof, browser matrix, ENVAL and
+  alternate-brand Firefox acceptance and exact cleanup are complete; hosted
+  configuration and deployment remain unproven.
+
+## HISTORICAL CHECKPOINTS — NOT THE ACTIVE EXECUTION QUEUE
+
+The records below preserve dated implementation and proof context. They do not
+override the active six-item roadmap above. A dated open gate remains useful
+historical evidence only where current Canon or the active roadmap has not
+closed or replaced it.
+
+### Previous Single Current NEXT snapshot
 
 - CURRENT CLOSURE — `UI-01B` is CURRENT PROVEN LOCAL for the secure canonical
   Tenant Operator entry and its dedicated `/beheer` operational overview. This
@@ -50,14 +116,15 @@ implementation.
   admin/workforce management UI, ENVAL Control Console, Verifier Console,
   tenant #2, multi-tenant switching, production deployment and later
   `/intern/*` redirect/removal cleanup.
-- IN PROGRESS / SOURCE AND FOCUSED PROOFS GREEN —
+- DONE / CURRENT PROVEN LOCAL at commit `1486802` —
   `AUTHORIZED_PORTAL_REDIRECT_V1`: canonical login resolves existing customer
   and workforce authorities, exact authorized case routes and
   capability-specific landings. Multi-portal actors can reopen the authorized
   choice from either portal without changing session; zero-portal actors can
-  sign out through `Ander account gebruiken`. Final focused browser and human
-  Firefox acceptance remain open.
-- DONE / CURRENT PROVEN LOCAL — `BRAND_CONFIGURATION_V1`:
+  sign out through `Ander account gebruiken`. Focused browser and human Firefox
+  acceptance are complete.
+- DONE / CURRENT PROVEN LOCAL at commit `334930b` —
+  `BRAND_CONFIGURATION_V1`:
   the existing deployment-/tenant-bound `PresentationBrandConfigV1` is the
   single strict brand contract with safe ENVAL defaults. Ordinary product copy
   consumes `displayName`; mark, label, tagline, assets, export basename,
@@ -95,9 +162,9 @@ implementation.
   or fragment forwarding. The Auth journey uses the server-resolved
   presentation organization and mark with the fixed label `Inloggen`, never
   the public `ERE inboekservice` tagline. Internal login links, logout paths,
-  confirmation callbacks and routeguards target `/inloggen`. The current
-  post-login portal resolver is tracked separately above until its browser and
-  human acceptance gates are complete.
+  confirmation callbacks and routeguards target `/inloggen`. The post-login
+  portal resolver is CURRENT PROVEN LOCAL through
+  `AUTHORIZED_PORTAL_REDIRECT_V1`.
 - DONE / CURRENT PROVEN LOCAL — `SL01-C`: the server-resolved immutable signing
   presentation receipt binds tenant, Auth actor, intake and selected
   signing-material/legal provenance. Presentation is not acceptance; explicit
@@ -165,7 +232,7 @@ implementation.
   domains, custom-theme administration, Verifier Workspace or a cross-tenant
   collision service in GOV-UX00/UX01.
 
-## Managed-SaaS / White-Label Strategic Roadmap
+### Historical Managed-SaaS / White-Label Strategic Roadmap
 
 Status: DECIDED/TARGET — 2026-09-01
 
@@ -186,7 +253,7 @@ availability remain UNKNOWN. Tenant legal identity, brand, contracts, fees,
 signing/legal bundles and audit are TARGET tenant-bound concerns;
 controller/processor allocation requires legal review.
 
-## Completed Regulatory Source Decision
+### Completed Regulatory Source Decision
 
 - `REG-CONFLICT-001` — RESOLVED on 2026-08-16 as a documentation
   interpretation error, not one conflicting deadline:
@@ -202,7 +269,7 @@ controller/processor allocation requires legal review.
     external verifier handoff, REV operations and the complete year-end
     runbook remain unimplemented.
 
-## Current / Locally Proven
+### Current / Locally Proven
 
 - The former Wave A1 signing-idempotency blocker is CLOSED through commits
   `5dfaed1` and `4f0542f`. Current local qualification status is owned by
@@ -677,7 +744,7 @@ controller/processor allocation requires legal review.
 
 Local proof is not production proof. Remote migration/function deploy, production bucket/policy proof, and production browser QA remain open.
 
-## P0
+### P0
 
 - WP2 customer/person/organization/representation/case:
   - WP2 remains IN PROGRESS; WP2A four-table and WP2B-I two-table foundations are CURRENT PROVEN — LOCAL within their cited proof boundaries.
@@ -827,7 +894,7 @@ Local proof is not production proof. Remote migration/function deploy, productio
 - Verifier/inboeking integration boundary.
 - Rotate any previously exposed token/key-like value before production or deploy use.
 
-## P1 — Remaining
+### P1 — Remaining
 
 Collecting quarantine/capability transport, the public document-first flow,
 `submitted_for_review`, atomic case-owned promotion, internal retry,
@@ -873,7 +940,7 @@ customer confirmation, the green Integration gate or local database state.
       retain the actionable active panel and remove overlapping standalone
       customer history without changing workforce presentation or authority;
       technical proof and automated Firefox desktop/mobile acceptance are
-      green, while human Firefox acceptance remains open.
+      green, and human Firefox acceptance is complete.
 - DONE / CURRENT PROVEN LOCAL — `WORKFORCE_HEADER_LOGOUT_V1`: the shared
   workforce header shows `Uitloggen` after `Overzicht` and `Dossiers` on all
   admitted workforce surfaces. It reuses the existing Auth session contract,
@@ -932,7 +999,7 @@ customer confirmation, the green Integration gate or local database state.
 - Customer request/response model for missing information.
 - Yearly kWh input/readout contract.
 
-## P2
+### P2
 
 - Content/article migration into the new app content model.
 - NL/EN language structure.
@@ -941,7 +1008,7 @@ customer confirmation, the green Integration gate or local database state.
 - Resolved-tenant workforce review/admin tooling with capability-based authority.
 - Image OCR worker/internal analysis lane.
 
-## Boundaries
+### Boundaries
 
 - Future execution batches follow the canonical discipline in
   `docs/app/00_CANON.md`; do not duplicate it here.
@@ -956,7 +1023,7 @@ historical `OPEN`, `NOT IMPLEMENTED` or successor wording records the state at
 that checkpoint and is superseded only by a later explicit CURRENT/P0 entry
 above; it is not a second current-priority queue.
 
-## PILOT-CASE-01 checkpoint — 2026-07-29
+### PILOT-CASE-01 checkpoint — 2026-07-29
 
 - [x] CURRENT PROVEN — LOCAL ONLY: verified Auth bootstrap v2 atomically creates/resolves one canonical immutable case per active non-minimized customer dossier and returns safe case fields.
 - [x] CURRENT PROVEN — LOCAL ONLY: dashboard case projection is customer-bounded, one bulkread, write-free, strict and shown through the existing `Zaakreferentie` row without CSS or fallback.
@@ -967,7 +1034,7 @@ above; it is not a second current-priority queue.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-SIGNUP-SIGNED-RECEIPT-09B2C checkpoint
+### PILOT-SIGNUP-SIGNED-RECEIPT-09B2C checkpoint
 
 CURRENT PROVEN — LOCAL SERVER RECORDS + SERVER-AUTHORITATIVE RECOVERY.
 
@@ -992,7 +1059,7 @@ CURRENT PROVEN — LOCAL SERVER RECORDS + SERVER-AUTHORITATIVE RECOVERY.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-SIGNUP-UNIFIED-PRESENTATION-08 checkpoint
+### PILOT-SIGNUP-UNIFIED-PRESENTATION-08 checkpoint
 
 SOURCE IMPLEMENTED — LOCAL FRONTEND PROOF ONLY.
 
@@ -1012,7 +1079,7 @@ SOURCE IMPLEMENTED — LOCAL FRONTEND PROOF ONLY.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-SIGNUP-DOCUMENT-FIRST-UI-01 checkpoint
+### PILOT-SIGNUP-DOCUMENT-FIRST-UI-01 checkpoint
 
 CURRENT PROVEN — LOCAL ONLY — DOCUMENT-FIRST KISS SIGNUP UI AND GAP-DRIVEN CONFIRMATION MODEL
 
@@ -1038,7 +1105,7 @@ CURRENT PROVEN — LOCAL ONLY — DOCUMENT-FIRST KISS SIGNUP UI AND GAP-DRIVEN C
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-SIGNUP-PARTY-NAME-CROSSCHECK-03 checkpoint
+### PILOT-SIGNUP-PARTY-NAME-CROSSCHECK-03 checkpoint
 
 CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF ONLY.
 
@@ -1062,7 +1129,7 @@ CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF ONLY.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-SIGNUP-PARTY-RUNTIME-04 checkpoint
+### PILOT-SIGNUP-PARTY-RUNTIME-04 checkpoint
 
 CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF ONLY.
 
@@ -1079,7 +1146,7 @@ CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF ONLY.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-SIGNUP-DOCUMENT-CROSSCHECK-02 checkpoint
+### PILOT-SIGNUP-DOCUMENT-CROSSCHECK-02 checkpoint
 
 CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF AND PROOF-ONLY LOCAL PDFS.
 
@@ -1105,7 +1172,7 @@ CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF AND PROOF-ONLY LOCAL PDFS.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-SIGNUP-EAN-PREFLIGHT-02 checkpoint
+### PILOT-SIGNUP-EAN-PREFLIGHT-02 checkpoint
 
 - [x] Required errors are hidden until the first submit attempt; validation
       truth remains continuously computed.
@@ -1126,7 +1193,7 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-SIGNUP-EAN-PREFLIGHT-01 checkpoint
+### PILOT-SIGNUP-EAN-PREFLIGHT-01 checkpoint
 
 - [x] Energy-document selection invokes the existing client-side PDF parser;
       candidates retain compact source context and stay observed/derived.
@@ -1145,7 +1212,7 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-SIGNUP-JOURNEY-02 checkpoint — historical, superseded frontend slice
+### PILOT-SIGNUP-JOURNEY-02 checkpoint — historical, superseded frontend slice
 
 - [x] Current visible order is exactly Aanvrager, Locatie, Aansluiting,
       Laadpalen and Ondertekenen.
@@ -1164,7 +1231,7 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-SIGNUP-JOURNEY-01 checkpoint
+### PILOT-SIGNUP-JOURNEY-01 checkpoint
 
 - [x] Visible order is exactly Aanvrager, Aansluiting en locatie, Laadpalen,
       Aanvullende documenten, Controleren en afronden.
@@ -1183,7 +1250,7 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-CONNECTION-01B checkpoint
+### PILOT-CONNECTION-01B checkpoint
 
 CURRENT PROVEN — LOCAL ONLY — ASSISTED AND CUSTOMER-CONFIRMED EAN ACQUISITION
 WITH MANUAL FALLBACK
@@ -1208,7 +1275,7 @@ WITH MANUAL FALLBACK
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-PARTY-01A checkpoint — 2026-07-29
+### PILOT-PARTY-01A checkpoint — 2026-07-29
 
 - [x] CURRENT PROVEN — LOCAL ONLY: verified Auth bootstrap v3 atomically
   creates/resolves one canonical root party per current customer and reuses it
@@ -1225,7 +1292,7 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-PROFILE-02 checkpoint
+### PILOT-PROFILE-02 checkpoint
 
 CURRENT PROVEN — LOCAL ONLY: Auth bootstrap v4 promotes complete equivalent
 immutable signup declarations to one declared profile and creates or resolves
@@ -1239,7 +1306,7 @@ browser-live, remote, deploy and production remain open.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-SIGNUP-ENERGY-DOCUMENT-CROSSCHECK-01 recovery checkpoint
+### PILOT-SIGNUP-ENERGY-DOCUMENT-CROSSCHECK-01 recovery checkpoint
 
 CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF AND PROOF-ONLY REAL PDF.
 
@@ -1263,7 +1330,7 @@ CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF AND PROOF-ONLY REAL PDF.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-SIGNUP-ATOMIC-01 checkpoint
+### PILOT-SIGNUP-ATOMIC-01 checkpoint
 
 CURRENT PROVEN — LOCAL ONLY for the bounded current direct-signup transaction.
 `app_submit_signup_v4` owns customer/identity, one dossier, submitted child
@@ -1277,7 +1344,7 @@ acceptance, kWh, eligibility, browser-live, remote, deploy and production.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-SIGNUP-DOCUMENT-FIRST-REVIEW-02 checkpoint
+### PILOT-SIGNUP-DOCUMENT-FIRST-REVIEW-02 checkpoint
 
 CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF AND TWO LOCAL REAL PDF FIXTURES.
 
@@ -1296,7 +1363,7 @@ CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF AND TWO LOCAL REAL PDF FIXTURES.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-SIGNUP-DOCUMENT-DECISION-03 checkpoint
+### PILOT-SIGNUP-DOCUMENT-DECISION-03 checkpoint
 
 CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF AND TWO LOCAL REAL PDF FIXTURES.
 
@@ -1317,7 +1384,7 @@ CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF AND TWO LOCAL REAL PDF FIXTURES.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-SIGNUP-UNIFIED-DOCUMENT-PARSER-04 historical checkpoint
+### PILOT-SIGNUP-UNIFIED-DOCUMENT-PARSER-04 historical checkpoint
 
 HISTORICAL LOCAL PROOF — CUSTOMER TYPE-GATING SUPERSEDED BY
 PILOT-SIGNUP-GENERIC-DOCUMENT-FACTS-05.
@@ -1334,7 +1401,7 @@ PILOT-SIGNUP-GENERIC-DOCUMENT-FACTS-05.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-SIGNUP-GENERIC-DOCUMENT-FACTS-05 checkpoint
+### PILOT-SIGNUP-GENERIC-DOCUMENT-FACTS-05 checkpoint
 
 CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF, TWO LOCAL REAL PDF FIXTURES AND
 ONE LOCAL NO-FACT PDF.
@@ -1356,7 +1423,7 @@ ONE LOCAL NO-FACT PDF.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-SIGNUP-FACT-APPLICABILITY-SUMMARY-06 checkpoint
+### PILOT-SIGNUP-FACT-APPLICABILITY-SUMMARY-06 checkpoint
 
 CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF AND TWO LOCAL REAL PDF FIXTURES.
 
@@ -1382,7 +1449,7 @@ CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF AND TWO LOCAL REAL PDF FIXTURES.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-SIGNUP-ORGANIZATION-DOCUMENT-FIRST-07 checkpoint
+### PILOT-SIGNUP-ORGANIZATION-DOCUMENT-FIRST-07 checkpoint
 
 SOURCE IMPLEMENTED — LOCAL REAL-FIXTURE GATE BLOCKED.
 
@@ -1407,7 +1474,7 @@ SOURCE IMPLEMENTED — LOCAL REAL-FIXTURE GATE BLOCKED.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-SIGNUP-FACT-RESOLUTION-08B checkpoint
+### PILOT-SIGNUP-FACT-RESOLUTION-08B checkpoint
 
 CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF; REAL KVK FIXTURE GATES BLOCKED.
 
@@ -1432,7 +1499,7 @@ CURRENT PROVEN — LOCAL FRONTEND SOURCE/PROOF; REAL KVK FIXTURE GATES BLOCKED.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-SIGNUP-SIGNATURE-CORE-09A checkpoint
+### PILOT-SIGNUP-SIGNATURE-CORE-09A checkpoint
 
 CURRENT PROVEN — LOCAL FRONTEND CONTRACT/PRESENTATION ONLY.
 
@@ -1456,7 +1523,7 @@ CURRENT PROVEN — LOCAL FRONTEND CONTRACT/PRESENTATION ONLY.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-SIGNUP-SIGNING-KISS-09A1 checkpoint
+### PILOT-SIGNUP-SIGNING-KISS-09A1 checkpoint
 
 CURRENT PROVEN — LOCAL FRONTEND CONTRACT/PRESENTATION ONLY.
 
@@ -1475,7 +1542,7 @@ CURRENT PROVEN — LOCAL FRONTEND CONTRACT/PRESENTATION ONLY.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-SIGNUP-SIGNING-LAYOUT-09A2 checkpoint
+### PILOT-SIGNUP-SIGNING-LAYOUT-09A2 checkpoint
 
 CURRENT PROVEN — LOCAL FRONTEND PRESENTATION ONLY.
 
@@ -1496,7 +1563,7 @@ CURRENT PROVEN — LOCAL FRONTEND PRESENTATION ONLY.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-SIGNUP-QUARANTINE-UPLOAD-09B1 checkpoint
+### PILOT-SIGNUP-QUARANTINE-UPLOAD-09B1 checkpoint
 
 CURRENT PROVEN — LOCAL RUNTIME/SOURCE ONLY.
 
@@ -1511,7 +1578,7 @@ CURRENT PROVEN — LOCAL RUNTIME/SOURCE ONLY.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## Historical 09B2A–09B2A3 Legal/Commercial Decision Checkpoints
+### Historical 09B2A–09B2A3 Legal/Commercial Decision Checkpoints
 
 Strategic overlay (2026-09-01): the completed mechanics/documentation work
 below remains historical evidence. Fixed ENVAL B.V. P-01/T-01, generic F-01
@@ -1520,7 +1587,7 @@ defaults. New TARGET is a tenant-bound legal identity, privacy-role decision,
 customer contract, fee configuration and signing/legal bundle. SaaS pricing,
 SLA and controller/processor allocation remain UNKNOWN / TARGET LEGAL REVIEW.
 
-## PILOT-SIGNUP-LEGAL-BUNDLE-APPROVAL-09B2A checkpoint
+### PILOT-SIGNUP-LEGAL-BUNDLE-APPROVAL-09B2A checkpoint
 
 DOCUMENTATION/DECISION ONLY — LEGAL BUNDLE DRAFT; OTP ARCHITECTURE AUTHORIZED.
 
@@ -1580,7 +1647,7 @@ Decision sources:
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-SIGNUP-FEE-DECISION-09B2A1 checkpoint
+### PILOT-SIGNUP-FEE-DECISION-09B2A1 checkpoint
 
 APPROVED COMMERCIAL DIRECTION — LEGAL, TAX AND PAYMENT-REGULATORY VALIDATION REQUIRED.
 
@@ -1607,7 +1674,7 @@ APPROVED COMMERCIAL DIRECTION — LEGAL, TAX AND PAYMENT-REGULATORY VALIDATION R
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-SIGNUP-ENTITY-TERM-MANDATE-DECISIONS-09B2A2 checkpoint
+### PILOT-SIGNUP-ENTITY-TERM-MANDATE-DECISIONS-09B2A2 checkpoint
 
 DOCUMENTATION/DECISION ONLY — FIVE TARGET DIRECTIONS APPROVED; NO LEGAL OR
 RUNTIME PROMOTION.
@@ -1646,7 +1713,7 @@ RUNTIME PROMOTION.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## PILOT-SIGNUP-LEGAL-CONSOLIDATION-09B2A3 checkpoint
+### PILOT-SIGNUP-LEGAL-CONSOLIDATION-09B2A3 checkpoint
 
 DOCUMENTATION/DECISION ONLY — INTERNALLY APPROVED VALIDATION CANDIDATES;
 EXTERNAL LIVE GATES OPEN.
@@ -1677,7 +1744,7 @@ EXTERNAL LIVE GATES OPEN.
 
 TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
 
-## 09C0/09C1A/09C1B/09C1C post-signing lifecycle convergence checkpoint
+### 09C0/09C1A/09C1B/09C1C post-signing lifecycle convergence checkpoint
 
 09C1A DATABASE/RPC FOUNDATION, 09C1B SERVER-ONLY STORAGE/EDGE ORCHESTRATION AND 09C1C CUSTOMER HANDOFF CURRENT PROVEN — LOCAL ONLY.
 

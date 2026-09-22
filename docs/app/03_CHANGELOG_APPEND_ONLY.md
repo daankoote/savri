@@ -2388,3 +2388,28 @@ TKV ALIGNMENT GUARD — INTERNAL ARCHITECTURE, NOT REGULATORY ACCEPTANCE
   `noorderlicht-local-v1` are green. Exact cleanup proved zero fixture residue
   and unchanged non-fixture fingerprints; hosted configuration and deployment
   remain open.
+
+## 2026-09-22 — Restore the active roadmap and tenant-license boundary
+
+- Replaced the stale single-next presentation in `04_TODO.md` with the active
+  ordered roadmap: multi-document evidence workspace, parser corpus, external
+  verification research, legal/operational gates, pilot productionization and
+  later platform administration/tenant #2. Older work-package records remain
+  available under `HISTORICAL CHECKPOINTS — NOT THE ACTIVE EXECUTION QUEUE`.
+- Made the platform/tenant split explicit: ENVAL is the licensable modular
+  software platform and is not by default an inboekdienstverlener, verifier,
+  REV account holder or legal representative. Only an organization in the
+  `approved tenant/license registry` (`tenant allowlist`) with an active license
+  may be admitted as a tenant; admission grants no regulated, dossier or
+  workforce authority.
+- Recorded the tenant as the actual inboekdienstverlener owning its customer
+  relationship, statutory and operational responsibility, data, workforce,
+  audit, REV/inbooking workflow and verifier relationship. Managed SaaS,
+  white-label, customer-owned cloud and self-hosted/source-license deployments
+  continue to use the same modular core with deployment, branding, support,
+  license and regulated role kept separate.
+- Corrected current status to show `AUTHORIZED_PORTAL_REDIRECT_V1` committed in
+  `1486802` and `BRAND_CONFIGURATION_V1` committed in `334930b`, both DONE /
+  CURRENT PROVEN LOCAL with their completed browser and Firefox acceptance.
+  This documentation-only correction claims no production, hosted or
+  regulatory acceptance.

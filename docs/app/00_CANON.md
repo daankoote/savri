@@ -10,7 +10,13 @@ Blanket implementation authorization: NO
 
 Approval applies to the ENVAL canon and target architecture direction. It is not CURRENT PROVEN implementation or built compliance, does not expand existing bounded foundations, and grants no code, schema, UI, Edge Function, remote, deployment, or general implementation authority. CURRENT PROVEN remains reserved exclusively for built behavior with green proof; `READY`, `IN PROGRESS`, `TODO`, and `BLOCKED — EXTERNAL` remain independently controlling per work package.
 
-Decision evidence: Daan's explicit 2026-07-22 decision, recorded in `docs/app/10_ARCHITECTURE_GO_NO_GO_AUDIT.md` and the append-only changelog. The documentation baseline remains commit `e2943d746d9bc9f1aa0992b16a83b51dcd10d805`; bounded execution state is tracked only in `docs/app/operations/nea-implementation-roadmap.md`.
+Decision evidence: Daan's explicit 2026-07-22 decision, recorded in
+`docs/app/10_ARCHITECTURE_GO_NO_GO_AUDIT.md` and the append-only changelog. The
+documentation baseline remains commit
+`e2943d746d9bc9f1aa0992b16a83b51dcd10d805`. The sole CURRENT product execution
+queue is `docs/app/04_TODO.md`; the NEa implementation roadmap preserves its
+regulatory/operational checkpoint history and cannot select the current product
+NEXT.
 
 ## Phase 0 Managed-SaaS And White-Label Decision
 
@@ -22,14 +28,27 @@ the ENVAL software, architecture and generic IP. No 30/70 or 70/30 operational
 partnership, IP transfer, shared ownership or assumed partner-as-first-tenant
 remains part of the active direction.
 
+Only an organization recorded in the `approved tenant/license registry`
+(`tenant allowlist`) with an active license may be admitted as an ENVAL tenant.
+That registry and license are platform admission controls only. They grant no
+NEa status, REV access, verifier role, dossier access, workforce capability or
+other regulated authority.
+
 The resolved tenant is the regulated inboekdienstverlener/operator. ENVAL
 Software, as generic platform supplier, is not by default the
 inboekdienstverlener, REV account holder, ERE trader, independent verifier or
-contracting party of the tenant's end customer. A tenant owns its operational
-regulatory responsibility and tenant-local business truth. Tenant legal
-identity, branding, customer contract bundle, fee configuration, signing/legal
-bundle and operational audit must be explicitly tenant-bound and must never be
-inferred from the ENVAL presentation brand or platform identity.
+legal representative, and is not the contracting party of the tenant's end
+customer. The tenant owns its customer relationship, statutory and operational
+responsibility, tenant-local data, workforce, audit, REV/inbooking workflow and
+verifier relationship. Tenant legal identity, branding, customer contract
+bundle, fee configuration, signing/legal bundle and operational audit must be
+explicitly tenant-bound and must never be inferred from the ENVAL presentation
+brand or platform identity.
+
+Managed SaaS, managed white-label, customer-owned cloud and contractually
+agreed self-hosted/source-license deployments use the same modular core.
+Deployment ownership, branding, support, license status and regulated role are
+separate concerns and authorities.
 
 The current ENVAL-branded portal and root data plane remain the
 reference/default tenant journey and technical compatibility baseline. That
@@ -379,7 +398,7 @@ Primary canon documents:
 | `docs/app/06_NEA_REQUIREMENTS.md` | single primary requirement set | CURRENT / PARTIAL — ELECTRICITY TKV MAPPED; OTHER LEGAL/EXTERNAL GAPS OPEN |
 | `docs/app/07_NEA_TARGET_ARCHITECTURE.md` | single primary target architecture: contexts, truth ownership, module/adapter/security boundaries, requirement families, principles | TARGET — APPROVED, NOT CURRENT PROVEN / REGULATORY PARTIAL |
 | `docs/app/08_NEA_TRACEABILITY_MATRIX.md` | single primary source-to-requirement-to-control traceability matrix | PROVISIONAL |
-| `docs/app/09_NEA_MVP_PLAN.md` | single primary execution order and normative gates | PACKAGE-SPECIFIC GATES; NO BLANKET IMPLEMENTATION AUTHORIZATION |
+| `docs/app/09_NEA_MVP_PLAN.md` | normative NEa/MVP package gates; not the CURRENT product execution queue | PACKAGE-SPECIFIC GATES; NO BLANKET IMPLEMENTATION AUTHORIZATION |
 
 Supporting documents have one responsibility each and do not compete with the primary canon:
 
@@ -394,7 +413,7 @@ Supporting documents have one responsibility each and do not compete with the pr
 | `docs/app/architecture/platform-control-plane-physical-foundation.md` | repository, project, local-targeting, schema/runtime, fixed data-plane parity and presentation-bootstrap boundary for the separate control plane | CURRENT PROVEN LOCAL foundation through TF01 / commit `034691e` plus TARGET remote/operations and LEGACY completed-plan snapshot; REMOTE PROVIDER / PRODUCTION NOT SELECTED |
 | `docs/app/decisions/architecture-and-environment-decisions.md` | historical/current architecture and environment strategy decisions | DECISION RECORD — BOUNDED INTERNAL FOUNDATION GO; EXCLUDED SCOPES NO-GO |
 | `docs/app/operations/remote-baseline-and-retirement.md` | legacy freeze, baseline waves, cutover, rollback, retirement conditions, execution prerequisites, abort criteria | TARGET — EXECUTION NOT APPROVED |
-| `docs/app/operations/nea-implementation-roadmap.md` | compact daily sequence, progress, evidence, blockers, and internal/external work tracks; subordinate to requirements, traceability, target architecture, and MVP gates | TARGET — LIVE EXECUTION TRACKER |
+| `docs/app/operations/nea-implementation-roadmap.md` | historical/regulatory operational sequence, evidence and blockers; subordinate to Canon and the CURRENT product queue in `04_TODO.md` | HISTORICAL / REGULATORY OPERATIONAL TRACKER — NOT THE CURRENT PRODUCT NEXT |
 | `docs/app/proofs/remote-baseline-and-recovery-gate.md` | dated remote inventory, Phase 0, recovery/PostgREST evidence, remote gate | PROOF ONLY — NO IMPLEMENTATION APPROVAL |
 | `docs/app/contracts/**` | durable technical contracts | CURRENT/TARGET as stated inside each file |
 | `docs/app/operations/**` | workflow, runtime freeze, debug, and execution planning without execution permission | OPERATIONS |
@@ -544,8 +563,9 @@ TF02-C adds local tenant-data-plane metadata persistence and a TF01-bound
 database reader that reuses TF02-B selection. It adds no real tenant
 configuration content, approval/write governance, secret binding,
 business-consumer cutover, tenant #2, dynamic data-plane switching or production
-isolation. The next bounded batch is **signing/legal tenant-config provenance
-cutover**.
+isolation. At the TF02-C checkpoint, the recorded next bounded batch was
+**signing/legal tenant-config provenance cutover**. That dated successor is
+historical and does not override the CURRENT roadmap in `04_TODO.md`.
 
 The recent app frontend Auth/session flow is retained as local proof:
 
@@ -601,8 +621,8 @@ The recent app frontend Auth/session flow is retained as local proof:
   dossier status is created. The active projection exposes `terminalAt` as null
   for open and answered non-terminal requests. Create, read and respond accept
   only the same normalized legacy/signing-v3 case lineages as the application
-  index. Local technical proof and automated Firefox desktop/mobile acceptance
-  are current; new human Firefox acceptance and hosted rollout remain open.
+  index. Local technical proof, automated Firefox desktop/mobile acceptance and
+  human Firefox acceptance are current; hosted rollout remains open.
 - The CORRECTION_COVER_MESSAGE_V1 invariant is CURRENT / LOCAL AUTOMATED PROOF;
   human Firefox acceptance, exact fixture cleanup and hosted rollout remain
   open. Its proven bundle-v3 baseline requires every root correction
@@ -873,10 +893,10 @@ Public copy must not expose internal legal/audit/anti-fraud doctrine except in l
 - Technical database appendix: `docs/app/architecture/database-target-model.md`
 - Architecture/environment decisions: `docs/app/decisions/architecture-and-environment-decisions.md`
 - Remote baseline/retirement operations: `docs/app/operations/remote-baseline-and-retirement.md`
-- Daily NEa execution tracker: `docs/app/operations/nea-implementation-roadmap.md` — operational progress only; never overrides the official TKV source, requirements, traceability, target architecture, or MVP gates.
+- Historical/regulatory NEa execution tracker: `docs/app/operations/nea-implementation-roadmap.md` — preserves operational progress and blockers; never selects the CURRENT product NEXT.
 - Remote baseline/recovery proof: `docs/app/proofs/remote-baseline-and-recovery-gate.md`
 - Preliminary execution plan: `docs/app/09_NEA_MVP_PLAN.md`
-- App TODO: `docs/app/04_TODO.md`
+- CURRENT product execution queue: `docs/app/04_TODO.md`
 - Signup/dashboard contract: `docs/app/contracts/signup-dashboard.md`
 - Target intake verification/promotion contract: `docs/app/contracts/intake-verification-promotion.md`
 - Auth contract: `docs/app/contracts/auth.md`
